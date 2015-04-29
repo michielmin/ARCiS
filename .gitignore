@@ -1,0 +1,10 @@
+*~
+\#*
+*.o
+*.mod
+*.i
+_*
+gitversion.h
+.DS_Store
+ELMO
+
