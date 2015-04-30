@@ -110,6 +110,7 @@ c-----------------------------------------------------------------------
 
 
 	subroutine tellertje(i,n)
+	use GlobalSetup
 	IMPLICIT NONE
 	integer i,n,f
 	

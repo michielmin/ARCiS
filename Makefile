@@ -24,9 +24,9 @@ endif
 
 # Platform specific compilation options
 ifeq ($(gfort),true)
-  FLAG_ALL      = -O3 -g -fdefault-double-8 $(DEBUGGING)
+  FLAG_ALL      = -O3 -g $(DEBUGGING)
   FLAG_LINUX    = -cpp
-  FLAG_MAC      = -m64 -cpp
+  FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else
   FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(DEBUGGING)
   FLAG_LINUX    = -xHOST -fpp
@@ -44,20 +44,20 @@ ifeq ($(shell uname),Linux)
   LIBS     = -lm $(LIBS_FITS)
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
-  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
+  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) -lgfortran
   LIBS    =  -L/usr/local/lib $(LIBS_FITS)
 endif
 
 
 # files to make
 OBJS	= Modules.o \
+		InputOutput.o \
 		Main.o \
 		Init.o \
 		SetupStructure.o \
 		SetupOpacities.o \
 		Raytrace.o \
 		WriteOutput.o \
-		InputOutput.o \
 		Version.o \
 		AdjustParameters.o
 
@@ -66,7 +66,7 @@ PROGRAM       = ELMO
 DEST	      = ${HOME}/bin
 
 # make actions 
-all:		version $(PROGRAM)
+all:		$(PROGRAM)
 version:;	echo "#define gitversion \"$(shell git rev-parse HEAD)\"" > gitversion.h
 clean:;		rm -f $(OBJS) $(PROGRAM) *.mod *.i
 install:	$(PROGRAM)
@@ -84,7 +84,7 @@ install:	$(PROGRAM)
 .F.o:
 	$(FC) $(LDFLAGS) -c $<
 
-$(PROGRAM):     $(OBJS)
+$(PROGRAM):     version  $(OBJS)
 		$(LINKER) $(LDFLAGS) $(OBJS) $(LIBS) -o $(PROGRAM)
 
 # recompile everything if Modules.f has changed 

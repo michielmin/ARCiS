@@ -1,18 +1,9 @@
-	subroutine VersionDateTime(string)
-	character*500 version,string
-	parameter(version=trim(__DATE__)//' '//trim(__TIME__))
-
-	string=version
-	
-	return
-	end
-	
-	
-	subroutine VersionGIT(string)
-	character*500 string
+	character*500 function VersionGIT()
+	IMPLICIT NONE
+	character*500 gitversion
 #include "gitversion.h"
 
-	string=gitversion
+	VersionGIT=trim(gitversion)
 	
 	return
 	end
