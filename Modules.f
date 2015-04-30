@@ -34,6 +34,7 @@ c===============================================================================
 	real*8,allocatable :: dens(:),T(:),P(:)					! radius
 	real*8,allocatable :: gas_dens(:,:),dust_dens(:,:)		! radius, component
 	real*8,allocatable :: R(:)								! radius
+	real*8,allocatable :: abun(:)							! component
 	real*8,allocatable :: opac(:,:,:,:)						! component,wav,T,P
 	integer nT,np,nrad,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	character*500 outputdir

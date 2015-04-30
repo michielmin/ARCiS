@@ -107,6 +107,8 @@ c allocate the arrays
 			read(key%value,'(a)') Mol(i)%filetype
 		case("file","linefile")
 			read(key%value,'(a)') Mol(i)%filename
+		case("abun")
+			read(key%value,*) abun(i)
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
