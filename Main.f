@@ -14,8 +14,6 @@ c terms of use
 	call output("By using ELMO you agree to the terms of use.")
 	call output("It basically means you offer us co-author rights on any paper.")
 	call output("that uses results computed with ELMO.")
-	call output("- Michiel Min")
-	call output("- Remco de Kok")
 
 	call output("==================================================================")
 	call output("Let's get the show on the road!!")
