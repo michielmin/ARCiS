@@ -21,7 +21,10 @@ c allocate the arrays
 	do while(.not.key%last)
 
 	select case(key%key1)
-		case("comp","part","molecule")
+		case("molecule","mol")
+			call ReadMol(key)
+		case("part")
+
 		case("nr")
 			read(key%value,*) nrad
 		case("mp")
@@ -82,6 +85,28 @@ c allocate the arrays
 			read(key%value,'(a)') obs(i)%type
 		case("file")
 			read(key%value,'(a)') obs(i)%filename
+		case default
+			call output("Keyword not recognised: " // trim(key%key2))
+	end select
+	
+	return
+	end
+
+	
+	subroutine ReadMol(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i
+	i=key%nr1
+	
+	select case(key%key2)
+		case("filetype")
+			read(key%value,'(a)') Mol(i)%filetype
+		case("file","linefile")
+			read(key%value,'(a)') Mol(i)%filename
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

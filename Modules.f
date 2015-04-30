@@ -35,7 +35,7 @@ c===============================================================================
 	real*8,allocatable :: gas_dens(:,:),dust_dens(:,:)		! radius, component
 	real*8,allocatable :: R(:)								! radius
 	real*8,allocatable :: opac(:,:,:,:)						! component,wav,T,P
-	integer nT,np,nrad,ncomp,nlam,nobs		! #T, #P, #radial points, #components, #wavelength bins, #obs
+	integer nT,np,nrad,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	character*500 outputdir
 	integer nr
 	logical retrieval
@@ -49,13 +49,14 @@ c===============================================================================
 	type(Observation),allocatable :: obs(:)
 
 	type Line
-		integer ju,jl
-		real*8 Aul,Blu,Bul,freq,Eup
+		integer jup,jlow
+		real*8 Aul,Blu,Bul,freq,Eup,lam
 		real*8 gamma_air,gamma_self
 	end type Line
 
 	type Molecule
-		character*10 name
+		character*10 name,filetype
+		character*500 filename
 		integer nlines,nlevels
 		real*8,allocatable :: E(:),g(:) ! dimension is number of levels
 		real*8,allocatable :: Z(:),T(:)	! partition function
@@ -274,13 +275,14 @@ c===============================================================================
 
 	key => firstkey
 
-	ncomp=1
+	nmol=1
+	nobs=1
 	do while(.not.key%last)
 		select case(key%key1)
-			case("comp","part","molecule")
+			case("molecule","mol")
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
-				if(key%nr1.gt.ncomp) ncomp=key%nr1
+				if(key%nr1.gt.nmol) nmol=key%nr1
 			case("obs")
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
@@ -289,10 +291,11 @@ c===============================================================================
 		key=>key%next
 	enddo
 
-	call output('Number of components:   ' // int2string(ncomp,'(i4)'))
+	call output('Number of molecules:    ' // int2string(nmol,'(i4)'))
 	call output('Number of observations: ' // int2string(nobs,'(i4)'))
 
 	allocate(obs(nobs))
+	allocate(Mol(nmol))
 
 	return
 	end subroutine CountStuff

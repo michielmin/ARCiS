@@ -59,7 +59,8 @@ OBJS	= Modules.o \
 		Raytrace.o \
 		WriteOutput.o \
 		Version.o \
-		AdjustParameters.o
+		AdjustParameters.o \
+		ReadLambdaFiles.o
 
 # program name and install location
 PROGRAM       = ELMO
