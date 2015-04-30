@@ -38,11 +38,6 @@ c===============================================================================
 	integer nT,np,nrad,ncomp,nlam,nobs		! #T, #P, #radial points, #components, #wavelength bins, #obs
 	character*500 outputdir
 	integer nr
-
-c string converting functions
-c	character*20 int2string,dbl2string
-c	external int2string,dbl2string
-
 	logical retrieval
 
 	type Observation
@@ -52,6 +47,29 @@ c	external int2string,dbl2string
 	end type Observation
 
 	type(Observation),allocatable :: obs(:)
+
+	type Line
+		integer ju,jl
+		real*8 Aul,Blu,Bul,freq,Eup
+		real*8 gamma_air,gamma_self
+	end type Line
+
+	type Molecule
+		character*10 name
+		integer nlines,nlevels
+		real*8,allocatable :: E(:),g(:) ! dimension is number of levels
+		real*8,allocatable :: Z(:),T(:)	! partition function
+		type(Line),allocatable :: L(:) ! dimension is number of lines
+c total mass of the molecule
+		real*8 M
+	end type Molecule
+
+	type(Molecule),allocatable :: Mol(:)
+	
+
+c========================================================
+c Interfaces for input/output subroutines
+c========================================================
 
 	interface
 		subroutine outputform(string,form)
@@ -83,6 +101,7 @@ c	external int2string,dbl2string
 
 
 c==============================================================================	
+c Module for reading keywords
 c==============================================================================	
 	module ReadKeywords
 	IMPLICIT NONE
