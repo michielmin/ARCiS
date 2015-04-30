@@ -62,7 +62,15 @@ c allocate the arrays
 	use Constants
 	IMPLICIT NONE
 	type(SettingKey) key
+	integer i
+	i=key%nr1
 	
+	select case(key%key2)
+		case("type")
+			read(key%value,'(a)') obs(i)%type
+		case default
+			call output("Keyword not recognised: " // trim(key%key2))
+	end select
 	
 	return
 	end
