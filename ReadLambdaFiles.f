@@ -34,13 +34,20 @@
 
 		Mol(imol)%L(i)%freq=Mol(imol)%L(i)%freq*1d9
 		Mol(imol)%L(i)%lam=clight*1d4/(Mol(imol)%L(i)%freq)
-
-		i_low=Mol(imol)%L(i)%jlow
-		i_up=Mol(imol)%L(i)%jup
-		Mol(imol)%L(i)%Bul=Mol(imol)%L(i)%Aul/(2d0*hplanck*Mol(imol)%L(i)%freq**3/clight**2)
-		Mol(imol)%L(i)%Blu=Mol(imol)%L(i)%Bul*Mol(imol)%g(i_up)/Mol(imol)%g(i_low)
 	enddo
 	close(unit=80)
+
+c compute the partition function
+	Mol(imol)%nT=500
+	allocate(Mol(imol)%Z(Mol(imol)%nT))
+	allocate(Mol(imol)%T(Mol(imol)%nT))
+	do i=1,Mol(imol)%nT
+		Mol(imol)%T(i)=10d0**(4d0*real(i-1)/real(Mol(imol)%nT-1))
+		Mol(imol)%Z(i)=0d0
+		do j=1,Mol(imol)%nlevels
+			Mol(imol)%Z(i)=Mol(imol)%Z(i)+Mol(imol)%g(j)*exp(-Mol(imol)%E(j)/Mol(imol)%T(i))
+		enddo
+	enddo
 
 	return
 	end

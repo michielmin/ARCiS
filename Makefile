@@ -60,7 +60,9 @@ OBJS	= Modules.o \
 		WriteOutput.o \
 		Version.o \
 		AdjustParameters.o \
-		ReadLambdaFiles.o
+		ReadLambdaFiles.o \
+		Subroutines.o \
+		Voigt.o
 
 # program name and install location
 PROGRAM       = ELMO

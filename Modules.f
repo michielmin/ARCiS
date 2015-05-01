@@ -3,7 +3,7 @@ c module containing the physical constants in cgs (moet nog naar SI)
 c=========================================================================================
 	module Constants
 	IMPLICIT NONE
-	real*8 pi,G,Msun,AU,clight,Rsun,mp,kb,hplanck,parsec,Lsun,sigma
+	real*8 pi,Ggrav,Msun,AU,clight,Rsun,mp,kb,hplanck,parsec,Lsun,sigma
 	real*8 Mearth,Rearth,Mjup,Rjup,year
 	parameter(pi=3.14159265358979323846264338328d0)
 	parameter(clight=2.9979245800d10) !cm/s
@@ -15,7 +15,7 @@ c===============================================================================
 	parameter(kb=1.3806503d-16)
 	parameter(sigma=5.6704d-5)
 	parameter(mp=1.67262178d-24)	!proton mass
-	parameter(G=6.67300d-8) ! in cm^3/g/s^2
+	parameter(Ggrav=6.67300d-8) ! in cm^3/g/s^2
 	parameter(hplanck=6.626068d-27) ! cm^2 g/s
 	parameter(Mearth=5.97219d27)
 	parameter(Mjup=1.89813d30)
@@ -51,7 +51,7 @@ c===============================================================================
 
 	type Line
 		integer jup,jlow
-		real*8 Aul,Blu,Bul,freq,Eup,lam
+		real*8 Aul,freq,Eup,lam
 		real*8 gamma_air,gamma_self
 	end type Line
 
@@ -61,6 +61,7 @@ c===============================================================================
 		integer nlines,nlevels
 		real*8,allocatable :: E(:),g(:) ! dimension is number of levels
 		real*8,allocatable :: Z(:),T(:)	! partition function
+		integer nT
 		type(Line),allocatable :: L(:) ! dimension is number of lines
 c total mass of the molecule
 		real*8 M
