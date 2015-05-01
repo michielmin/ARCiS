@@ -22,13 +22,23 @@ ifeq ($(debug),true)
   endif
 endif
 
+# enforce multi core compilation with:
+# cl> make multi=true
+ifeq ($(multi),true)
+	MULTICORE = -openmp -fp-model strict -DUSE_OPENMP
+	ifeq ($(debug),true)
+  		MULTICORE = -openmp -DUSE_OPENMP
+	endif
+endif
+
+
 # Platform specific compilation options
 ifeq ($(gfort),true)
-  FLAG_ALL      = -O3 -g $(DEBUGGING)
+  FLAG_ALL      = -O3 -g $(DEBUGGING) $(MULTICORE) -lgfortran
   FLAG_LINUX    = -cpp
   FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else
-  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(DEBUGGING)
+  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(DEBUGGING) $(MULTICORE)
   FLAG_LINUX    = -xHOST -fpp
   FLAG_MAC      = -xHOST -opt-prefetch -static-intel -fpp
 endif
@@ -44,7 +54,7 @@ ifeq ($(shell uname),Linux)
   LIBS     = -lm $(LIBS_FITS)
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
-  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) -lgfortran
+  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
   LIBS    =  -L/usr/local/lib $(LIBS_FITS)
 endif
 

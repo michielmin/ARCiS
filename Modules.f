@@ -38,7 +38,8 @@ c===============================================================================
 	real*8,allocatable :: opac(:,:,:,:)						! component,wav,T,P
 	integer nT,np,nrad,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	character*500 outputdir
-	integer nr
+	integer nr,idum
+!$OMP THREADPRIVATE(idum)
 	logical retrieval
 
 	type Observation

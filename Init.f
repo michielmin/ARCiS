@@ -4,6 +4,22 @@
 	use ReadKeywords
 	IMPLICIT NONE
 	type(SettingKey),pointer :: key,first
+	integer i,j,omp_get_max_threads,omp_get_thread_num
+
+	idum=-42
+#ifdef USE_OPENMP
+	j=omp_get_max_threads()
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& SHARED(j)
+!$OMP DO SCHEDULE(STATIC,j)
+	do i=1,j
+		idum=-42-omp_get_thread_num()
+	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+#endif
 
 	allocate(key)
 	first => key

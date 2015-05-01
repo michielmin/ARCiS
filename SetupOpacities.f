@@ -17,8 +17,8 @@
 
 	Temp=800d0
 	dens0=1d-10
-	nu1=900d0*clight
-	nu2=1100d0*clight
+	nu1=800d0*clight
+	nu2=1200d0*clight
 	ng=100
 	call ComputeKtable(dens0,Temp,nu1,nu2,kappa,g,ng)
 
@@ -34,22 +34,40 @@
 	integer ng
 	real*8 dens0,Temp,nu1,nu2,kappa(ng),g(ng),w,dnu,gamma
 	real*8,allocatable :: nu(:),kline(:),kdis(:),dis(:)
-	real*8 Eu,El,A,x,kmax,kmin,V
-	integer nnu,inu,iT,imol,i,ju,jl,j,nkdis
+	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random
+	integer nnu,inu,iT,imol,i,ju,jl,j,nkdis,NV,nl,k
 	
-	nnu=1000d0*(nu2/clight-nu1/clight)
+	nnu=10d0*(nu2/clight-nu1/clight)
 	allocate(nu(nnu))
 	allocate(kline(nnu))
 	do inu=1,nnu
 		nu(inu)=nu1+real(inu-1)*(nu2-nu1)/real(nnu-1)
 	enddo
+	scale=real(nnu)/(nu2-nu1)
+
+	nl=0
+	do imol=1,nmol
+		do i=1,Mol(imol)%nlines
+			if(Mol(imol)%L(i)%freq.gt.nu1.and.Mol(imol)%L(i)%freq.lt.nu2) nl=nl+1
+		enddo
+	enddo
+	NV=nnu*100/nl+100
+	print*,nl,NV
+
 
 	kline=0d0
+	do k=1,1000
 	do imol=1,nmol
 		call hunt(Mol(imol)%T,Mol(imol)%nT,Temp,iT)
 
 c This part needs some serious attention!!!
 		w=sqrt(2d0*kb*Temp/(Mol(imol)%M*mp))
+
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,gamma,ju,jl,Eu,El,A,x1,x2,x,inu,j,V)
+!$OMP& SHARED(Mol,Temp,iT,NV,imol,nu1,nu2,scale,nnu,kline,w)
+!$OMP DO SCHEDULE(STATIC,j)
 		do i=1,Mol(imol)%nlines
 			gamma=w*Mol(imol)%L(i)%freq/clight
 			if(Mol(imol)%L(i)%freq.gt.nu1.and.Mol(imol)%L(i)%freq.lt.nu2) then
@@ -60,17 +78,43 @@ c This part needs some serious attention!!!
 				A=Mol(imol)%g(ju)*Mol(imol)%L(i)%Aul*(exp(-El/Temp)-exp(-Eu/Temp))
 				A=A/(Mol(imol)%L(i)%freq**3*Mol(imol)%Z(iT))/(gamma*sqrt(pi))
 				A=A*1d50
-				do inu=1,nnu
-					dnu=Mol(imol)%L(i)%freq-nu(inu)
-					x=dnu**2/gamma**2
-					call voigt(5000d0,x,V)
-					kline(inu)=kline(inu)+A*V
+
+c	Random sampling of the Voigt profile
+				A=A/real(NV)
+				do j=1,NV
+					x1=gasdev(idum)/sqrt(2d0)
+					x2=tan((random(idum)-0.5d0)*pi)
+					x=((x1+500*x2)*gamma+Mol(imol)%L(i)%freq-nu1)*scale
+					inu=int(x)
+					if(inu.ge.1.and.inu.le.nnu) then
+						kline(inu)=kline(inu)+A
+					endif
 				enddo
+c	exact computation of the Voigt profile
+c				do inu=1,nnu
+c					dnu=Mol(imol)%L(i)%freq-nu(inu)
+c					x=dnu/gamma
+cc					if(x.lt.500d0*100d0/gamma) then
+c						call voigt(500d0,x,V)
+c						kline(inu)=kline(inu)+A*V
+cc					endif
+c				enddo
+
 			endif
 		enddo
 c Above is crap, just to figure out if stuff works
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 
 	enddo
+	enddo
+	
+	do i=1,nnu
+		write(90,*) nu(i),kline(i)
+	enddo
+
+
 	kmin=1d200
 	kmax=0d0
 	do inu=1,nnu	
@@ -100,9 +144,6 @@ c Above is crap, just to figure out if stuff works
 
 	dis(1:nkdis-1)=dis(1:nkdis-1)/dis(nkdis)
 	dis(nkdis)=1d0
-	do i=1,nkdis
-		write(90,*) kdis(i),dis(i)
-	enddo
 
 	do i=1,ng
 		g(i)=(real(i)-0.5)/real(ng)
