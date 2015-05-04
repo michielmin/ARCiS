@@ -50,7 +50,7 @@ c
  
 c++
 c++
-      PARAMETER (NMOL=51,Max_ISO=20)
+      PARAMETER (NMOL=46,Max_ISO=20)
 c++
       PARAMETER (NT=119)
 c++
@@ -352,37 +352,12 @@ c
       ENDIF     
 c
       IF(MOL.EQ.45) THEN 
-      CALL QT_C2N2(Temp,ISO,gi,QT)
+      CALL QT_H2(Temp,ISO,gi,QT)
       go to 100
       ENDIF     
 c
       IF(MOL.EQ.46) THEN 
       CALL QT_CS(Temp,ISO,gi,QT)
-      go to 100
-      ENDIF     
-c
-      IF(MOL.EQ.47) THEN 
-      CALL QT_H2(Temp,ISO,gi,QT)
-      go to 100
-      ENDIF     
-c
-      IF(MOL.EQ.48) THEN 
-      CALL QT_SO(Temp,ISO,gi,QT)
-      go to 100
-      ENDIF     
-c
-      IF(MOL.EQ.49) THEN 
-      CALL QT_C3H4(Temp,ISO,gi,QT)
-      go to 100
-      ENDIF     
-c
-      IF(MOL.EQ.50) THEN 
-      CALL QT_CH3(Temp,ISO,gi,QT)
-      go to 100
-      ENDIF     
-c
-      IF(MOL.EQ.51) THEN 
-      CALL QT_CS2(Temp,ISO,gi,QT)
       go to 100
       ENDIF     
 C 
@@ -423,7 +398,7 @@ c      March 20, 1990
 c...date last changed 2 February, 2011
 c
 c++
-      PARAMETER (NMOL=51,Max_ISO=20)
+      PARAMETER (NMOL=46,Max_ISO=20)
 c++:  bd-MOL
       CHARACTER*6 MOLID
 c++:  bd-MOL
@@ -436,8 +411,7 @@ c
      4'    N2','   HCN',' CH3Cl','  H2O2','  C2H2','  C2H6','   PH3',
      5'  COF2','   SF6','   H2S',' HCOOH','   HO2','     O','ClONO2',
      6'   NO+','  HOBr','  C2H4',' CH3OH',' CH3Br',' CH3CN','   CF4',
-     7'  C4H2','  HC3N','  C2N2','    CS','    H2','    SO','  C3H4',
-     8'   CH3','   CS2'/
+     7'  C4H2','  HC3N','    H2','    CS'/
 c
       END
 
@@ -447,7 +421,7 @@ c  ****************************************
       implicit DOUBLE PRECISION (a-h,o-z)
 c
 c++
-      PARAMETER (NMOL=51,Max_ISO=20)
+      PARAMETER (NMOL=46,Max_ISO=20)
 c++
       COMMON /ISO_data/ ISO82(NMOL,Max_ISO),ISONM(NMOL)
 
@@ -470,13 +444,9 @@ c  #    29,  30   31     32   33 34      35    36    37    38
 c     COF2, SF6, H2S, HCOOH, HO2, O, ClONO2,  NO+, HOBr, C2H4
      +   1,   1,   3,     1,   1, 1,      2,    1,    2,    2,
      
-c  #     39     40     41   42    43    44    45    46   47   
-c     CH3OH, CH3Br, CH3CN, CF4, C4H2, HC3N, C2N2,   CS,  H2','    
-     +   1,      2,     4,   1,    1,    6,    2,    4,   2, 
-
-c  #     48     49     50     51
-c        SO,  C3H4    CH3,   CS2
-     +   3,      1,     1,     4/
+c  #     39     40     41   42    43    44    45    46
+c     CH3OH, CH3Br, CH3CN, CF4, C4H2, HC3N,   H2,   CS
+     +   1,      2,     4,   1,    1,    6,    2,    4/
 c
 
 c 1     H2O
@@ -697,7 +667,7 @@ c
       implicit DOUBLE PRECISION (a-h,o-z)
 c
 c++
-      PARAMETER (NMOL=51,Max_ISO=20)
+      PARAMETER (NMOL=46,Max_ISO=20)
 c++
       COMMON /ISO_data/ ISO82(NMOL,Max_ISO),ISONM(NMOL)
 

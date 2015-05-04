@@ -6,6 +6,7 @@
 	type(SettingKey),pointer :: key,first
 	integer i,j,omp_get_max_threads,omp_get_thread_num
 	character*500 TPfile
+
 	TPfile=' '
 
 	idum=-42
@@ -39,8 +40,6 @@ c allocate the arrays
 	do while(.not.key%last)
 
 	select case(key%key1)
-		case("molecule","mol")
-			call ReadMol(key)
 		case("part")
 
 		case("nr")
@@ -61,8 +60,15 @@ c allocate the arrays
 		case("tpfile")
 			read(key%value,'(a)') TPfile
 		case default
+			do i=1,47
+				if(key%key.eq.molname(i)) then
+					read(key%value,*) mixrat(i)
+					goto 1
+				endif
+			enddo
 			call output("Keyword not recognised: " // trim(key%key1))
 			stop
+1			continue
 	end select
 
 	key => key%next
@@ -103,6 +109,7 @@ c allocate the arrays
 	character*500 TPfile
 	
 	allocate(dens(nr))
+	allocate(Ndens(nr))
 	allocate(R(nr+1))
 	allocate(T(nr))
 	allocate(P(nr))
@@ -133,14 +140,15 @@ c allocate the arrays
 		else
 			dp=(P(i-1)-P(i+1))/2d0
 		endif
-		dens(i)=P(i)/(kb*T(i))
-		dz=dp/(dens(i)*mp*mu*g)
+		Ndens(i)=P(i)/(kb*T(i))
+		dens(i)=Ndens(i)*mp*mu
+		dz=dp/(dens(i)*g)
 		R(i+1)=R(i)+dz
 	enddo
 
 	open(unit=50,file=trim(outputdir) // 'densityprofile.dat',RECL=1000)
 	do i=1,nr
-		write(50,*) sqrt(R(i)*R(i+1)),dens(i),T(i),P(i)
+		write(50,*) sqrt(R(i)*R(i+1)),dens(i),Ndens(i),T(i),P(i)
 	enddo
 	close(unit=20)
 
@@ -159,6 +167,8 @@ c allocate the arrays
 	lam1=1d0
 	lam2=15d0
 	specres=10d0
+
+	mixrat=-1d0
 	
 	do i=1,nobs
 		obs(i)%type='EMIS'
@@ -172,7 +182,7 @@ c allocate the arrays
 	Pmax=1d0
 
 	HITRANfile='~/HITRAN/HITRAN2012.par'
-		
+	
 	return
 	end
 
@@ -198,27 +208,7 @@ c allocate the arrays
 	return
 	end
 
-	
-	subroutine ReadMol(key)
-	use GlobalSetup
-	use Constants
-	use ReadKeywords
-	IMPLICIT NONE
-	type(SettingKey) key
-	integer i
-	i=key%nr1
-	
-	select case(key%key2)
-		case("abun")
-			read(key%value,*) abun(i)
-		case default
-			call output("Keyword not recognised: " // trim(key%key2))
-	end select
-	
-	return
-	end
-
-	
+		
 	subroutine GetOutputDir
 	use GlobalSetup
 	IMPLICIT NONE

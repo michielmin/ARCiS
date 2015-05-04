@@ -8,12 +8,13 @@
 	
 	call ReadHITRAN()
 
-	Temp=800d0
+	Temp=200d0
 	dens0=1d-10
-	call LineWidths(dens0,Temp)
+	call LineStrengthWidth(dens0,Temp)
 
 	ng=100
 	do i=1,nlam-1
+		call tellertje(i,nlam-1)
 		nu1=freq(i+1)
 		nu2=freq(i)
 		call ComputeKtable(dens0,Temp,nu1,nu2,kappa,g,ng)
@@ -25,7 +26,7 @@
 	return
 	end
 	
-	subroutine LineWidths(dens0,Temp)
+	subroutine LineStrengthWidth(dens0,Temp)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
@@ -72,8 +73,6 @@
 		if((Lines(i)%freq+gamma).gt.nu1.and.(Lines(i)%freq-gamma).lt.nu2) nl=nl+1
 	enddo
 	NV=nnu*100/(nl+1)+100
-	print*,nl,NV
-
 
 	kline=0d0
 	call hunt(TZ,nTZ,Temp,iT)
@@ -96,7 +95,7 @@ c This part needs some serious attention!!!
 			El=Eu-Lines(i)%freq*hplanck
 			A=gu*Lines(i)%Aul*(exp(-El/Temp)-exp(-Eu/Temp))
 			A=A/(Lines(i)%freq**3*ZZ(imol,iiso,iT))/(Lines(i)%a_therm*sqrt(pi))
-			A=A*1d50
+			A=A*1d50*mixrat(imol)
 
 c	Random sampling of the Voigt profile
 			A=A/real(NV)

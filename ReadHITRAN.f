@@ -8,27 +8,36 @@
 	type(Line),pointer :: L
 	real*8 scale
 
+	call output("Reading HITRAN database")
+	call output("file: " // trim(HITRANfile))
+
 	open(unit=30,file=HITRANfile,RECL=500)
 
 	nlines=0
-1	read(30,*,end=2)
-	nlines=nlines+1
+1	read(30,'(a2)',end=2) imol
+	read(imol,*) j
+	if(j.le.nmol) then
+		if(mixrat(j).gt.0d0) nlines=nlines+1
+	endif
 	goto 1
 2	close(unit=30)
 
 	allocate(Lines(nlines))
 
-	call output("Reading HITRAN database")
 	call output("number of lines: " // trim(int2string(nlines)))
 
-	nmol=0
+c	nmol=0
 	maxiiso=0
 	open(unit=30,file=HITRANfile,RECL=500)
-	do i=1,nlines
+	i=0
+3	read(30,'(a2,a1,a12,a10,a10,a5,a5,a10,a4,a8,a79,a7,a7)',end=4) 
+     &			imol,iiso,nu,S,A,gamma_air,gamma_self,E,n,delta,dummy,gu,gl
+	read(imol,*) j
+	if(j.le.nmol) then
+	if(mixrat(j).ge.0d0) then
+		i=i+1
 		call tellertje(i,nlines)
 		L => Lines(i)
-		read(30,'(a2,a1,a12,a10,a10,a5,a5,a10,a4,a8,a79,a7,a7)') 
-     &			imol,iiso,nu,S,A,gamma_air,gamma_self,E,n,delta,dummy,gu,gl
 		read(imol,*) L%imol
 		if(L%imol.gt.nmol) nmol=L%imol
 		read(iiso,*) L%iiso
@@ -44,7 +53,10 @@ c		read(n,*) L%imol
 c		read(delta,*) L%imol
 		read(gu,*) L%gu
 		read(gl,*) L%gl
-	enddo
+	endif
+	endif
+	goto 3
+4	close(unit=30)
 
 	allocate(niso(nmol))
 	niso=0

@@ -33,10 +33,10 @@ c===============================================================================
 	module GlobalSetup
 	IMPLICIT NONE
 	real*8 Mplanet,Rplanet									! mass and radius of the planet
-	real*8,allocatable :: dens(:),T(:),P(:)					! radius
-	real*8,allocatable :: gas_dens(:,:),dust_dens(:,:)		! radius, component
+	real*8,allocatable :: dens(:),T(:),P(:),Ndens(:)		! radius
+	real*8,allocatable :: dust_dens(:,:)					! radius, component
 	real*8,allocatable :: R(:)								! radius
-	real*8,allocatable :: abun(:)							! component
+	real*8,allocatable :: mixrat(:)							! component
 	real*8,allocatable :: opac(:,:,:,:)						! component,wav,T,P
 	integer nT,np,nrad,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines
@@ -50,6 +50,13 @@ c===============================================================================
 	integer nTZ
 	integer,allocatable :: niso(:)
 	real*8,allocatable :: Mmol(:)
+	character*10 molname(47)
+	parameter(molname = (/ 'H2O','CO2','O3','N2O','CO','CH4','O2','CO2','SO2','NO2',
+     &	'NH3','HNO3','OH','HF','HCl','HBr','HI','ClO','OCS','H2CO','HOCl','N2',
+     &	'HCN','CH3Cl','H2O2','C2H2','C2H6','PH3','COF2','SF6','H2S','HCOOH','HO2',
+     &	'O','ClONO2','NO+','HOBr','C2H4','CH3OH','CH3Br','CH3CN','CF4','C4H2',
+     &	'HC3N','H2','CS','SO3' /))
+
 
 	type Observation
 		character*500 filename
@@ -61,7 +68,7 @@ c===============================================================================
 
 	type Line
 		integer imol,iiso
-		real*8 Aul,freq,Eup,lam,S
+		real*8 Aul,freq,Eup,lam,S0,S
 		real*8 gamma_air,gamma_self
 		real*8 a_therm,a_press
 		real*8 gu,gl
@@ -110,7 +117,7 @@ c==============================================================================
 	IMPLICIT NONE
 
 	type SettingKey
-		character*100 key1,key2,value
+		character*100 key1,key2,value,key
 		integer nr1,nr2
 		logical last
 		type(SettingKey),pointer :: next
@@ -181,7 +188,7 @@ c				all arguments are read
 	allocate(key%next)
 	key => key%next
 	key%last=.false.
-	call get_key_value(readline,key%key1,key%key2,key%value,key%nr1,key%nr2)
+	call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2)
 
 c read another command, so go back
 	goto 10
@@ -200,10 +207,10 @@ c===============================================================================
 c This subroutine just seperates the key and value component of a string given
 c key=value syntax. Key is transformed to lowercase.
 c=========================================================================================
-	subroutine get_key_value(line,key1,key2,value,nr1,nr2)
+	subroutine get_key_value(line,key,key1,key2,value,nr1,nr2)
 	IMPLICIT NONE
 	character*1000 line
-	character*100 key1,key2,value
+	character*100 key,key1,key2,value
 	integer i,nr1,nr2,ikey1,ikey2
 	
 	ikey1=index(line,'=')
@@ -214,11 +221,13 @@ c===============================================================================
 	nr2=1
 	if(ikey2.gt.0) then
 		key1=line(1:ikey2-1)
+		key=key1
 		key2=line(ikey2+1:ikey1-1)
 		call checknr(key1,nr1)
 		call checknr(key2,nr2)
 	else
 		key1=line(1:ikey1-1)
+		key=key1
 		key2=' '
 		call checknr(key1,nr1)
 	endif
@@ -273,32 +282,36 @@ c===============================================================================
 	IMPLICIT NONE
 	type(SettingKey),target :: firstkey
 	type(SettingKey),pointer :: key
-	integer i
+	integer i,j
 
 	key => firstkey
 
 	nmol=1
 	nobs=1
+	j=0
 	do while(.not.key%last)
 		select case(key%key1)
-			case("molecule","mol")
-				if(key%nr1.eq.0) key%nr1=1
-				if(key%nr2.eq.0) key%nr2=1
-				if(key%nr1.gt.nmol) nmol=key%nr1
 			case("obs")
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nobs) nobs=key%nr1
+			case default
+				do i=1,47
+					if(key%key.eq.molname(i)) then
+						if(i.gt.nmol) nmol=i
+						j=j+1
+					endif
+				enddo
 		end select
 		key=>key%next
 	enddo
 
-	call output('Number of molecules:    ' // int2string(nmol,'(i4)'))
+	call output('Number of molecules:    ' // int2string(j,'(i4)'))
 	call output('Number of observations: ' // int2string(nobs,'(i4)'))
 
 	allocate(obs(nobs))
 	allocate(Mmol(nmol))
-	allocate(abun(nmol))
+	allocate(mixrat(nmol))
 
 	return
 	end subroutine CountStuff
