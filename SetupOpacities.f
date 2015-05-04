@@ -3,63 +3,84 @@
 	use Constants
 	IMPLICIT NONE
 	integer imol
-	real*8 kappa(100),g(100),nu1,nu2,Temp,dens0
-	integer ng,i,j
+	real*8 kappa(ng),nu1,nu2,opac_tot(nlam,ng)
+	integer i,j,ir
 	
 	call ReadHITRAN()
 
-	Temp=200d0
-	dens0=1d-10
-	call LineStrengthWidth(dens0,Temp)
-
-	ng=100
-	do i=1,nlam-1
-		call tellertje(i,nlam-1)
-		nu1=freq(i+1)
-		nu2=freq(i)
-		call ComputeKtable(dens0,Temp,nu1,nu2,kappa,g,ng)
-		do j=1,ng
-			write(90,*) sqrt(lam(i)*lam(i+1))/micron,sum(kappa)/real(ng),kappa(j)
+	opac_tot=0d0
+	do ir=1,nr
+		call output("Opacities for layer: " // 
+     &		trim(int2string(ir,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
+		call output("T = " // trim(dbl2string(T(ir),'(f8.2)')) // " K")
+		call output("P = " // trim(dbl2string(P(ir),'(es8.2)')) // " Ba")
+		call LineStrengthWidth(ir)
+		do i=1,nlam-1
+			call tellertje(i,nlam-1)
+			nu1=freq(i+1)
+			nu2=freq(i)
+			call ComputeKtable(ir,nu1,nu2,kappa)
+			opac(ir,i,1:ng)=kappa(1:ng)
+			opac_tot(i,1:ng)=opac_tot(i,1:ng)+opac(ir,i,1:ng)*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
 	enddo
 	
+	open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
+	do i=1,nlam-1
+		write(30,*) sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng),opac_tot(i,1:ng)
+	enddo
+	close(unit=30)
+
 	return
 	end
 	
-	subroutine LineStrengthWidth(dens0,Temp)
+	subroutine LineStrengthWidth(ir)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 dens0,Temp,w
-	integer imol,iT,i
-	
+	real*8 w,x1,x2,x3,x4
+	integer imol,iT,i,ir,iiso
+
+	call hunt(TZ,nTZ,T(ir),iT)
+
 	do i=1,nlines
-		call tellertje(i,nlines)
 		imol=Lines(i)%imol
-		w=sqrt(2d0*kb*Temp/(Mmol(imol)*mp))
+		iiso=Lines(i)%iiso
+c thermal broadening
+		w=(sqrt(2d0*kb*T(ir)/(Mmol(imol)*mp)))
 		Lines(i)%a_therm=w*Lines(i)%freq/clight
-		Lines(i)%a_press=Lines(i)%a_therm*500d0
+c pressure broadening
+		Lines(i)%a_press=Lines(i)%gamma_air*P(ir)*(1d0-mixrat(imol))
+		Lines(i)%a_press=Lines(i)%a_press+Lines(i)%gamma_air*P(ir)*mixrat(imol)
+		Lines(i)%a_press=Lines(i)%a_press*(296d0/T(ir))**Lines(i)%n
+c line strength
+		x1=exp(-hplanck*clight*Lines(i)%Elow/(kb*T(ir)))
+		x2=exp(-hplanck*clight*Lines(i)%freq/(kb*T(ir)))
+		x3=exp(-hplanck*clight*Lines(i)%Elow/(kb*296d0))
+		x4=exp(-hplanck*clight*Lines(i)%freq/(kb*296d0))
+		Lines(i)%S=Lines(i)%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 	enddo
 	
 	return
 	end
 	
 	
-	subroutine ComputeKtable(dens0,Temp,nu1,nu2,kappa,g,ng)
+	subroutine ComputeKtable(ir,nu1,nu2,kappa)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer ng
-	real*8 dens0,Temp,nu1,nu2,kappa(ng),g(ng),w,dnu,gamma
+	real*8 nu1,nu2,kappa(ng),g(ng),w,dnu,gamma,fact
 	real*8,allocatable :: nu(:),kline(:),kdis(:),dis(:)
 	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
-	integer nnu,inu,iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso
+	integer nnu,inu,iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso,ir
+	real*8 f,a_t,a_p
 	
 	do i=1,ng
 		g(i)=(real(i)-0.5)/real(ng)
 	enddo
 
-	nnu=10d0*(nu2/clight-nu1/clight)
+	fact=50d0
+	nnu=10d0*(nu2-nu1)
 	allocate(nu(nnu))
 	allocate(kline(nnu))
 	do inu=1,nnu
@@ -69,41 +90,38 @@
 
 	nl=0
 	do i=1,nlines
-		gamma=50d0*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
+		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
 		if((Lines(i)%freq+gamma).gt.nu1.and.(Lines(i)%freq-gamma).lt.nu2) nl=nl+1
 	enddo
 	NV=nnu*100/(nl+1)+100
 
 	kline=0d0
-	call hunt(TZ,nTZ,Temp,iT)
+	call hunt(TZ,nTZ,T(ir),iT)
 
 c This part needs some serious attention!!!
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,gamma,ju,jl,Eu,El,A,x1,x2,x,inu,j,V)
-!$OMP& SHARED(Mol,Temp,iT,NV,imol,nu1,nu2,scale,nnu,kline,w)
-!$OMP DO SCHEDULE(STATIC,j)
+!$OMP& PRIVATE(i,imol,iiso,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu)
+!$OMP& SHARED(fact,Lines,mixrat,scale,NV,kline,nnu,nu1,nu2,nlines)
+!$OMP DO SCHEDULE(STATIC,1)
 	do i=1,nlines
-		gamma=50d0*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
+		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
 		if((Lines(i)%freq+gamma).gt.nu1.and.(Lines(i)%freq-gamma).lt.nu2) then
 			imol=Lines(i)%imol
 			iiso=Lines(i)%iiso
-			gu=Lines(i)%gu
-			gl=Lines(i)%gl
-			Eu=Lines(i)%Eup
-			El=Eu-Lines(i)%freq*hplanck
-			A=gu*Lines(i)%Aul*(exp(-El/Temp)-exp(-Eu/Temp))
-			A=A/(Lines(i)%freq**3*ZZ(imol,iiso,iT))/(Lines(i)%a_therm*sqrt(pi))
-			A=A*1d50*mixrat(imol)
+			A=Lines(i)%S*mixrat(imol)*scale
+			a_t=Lines(i)%a_therm
+			a_p=Lines(i)%a_press
+			f=Lines(i)%freq
 
 c	Random sampling of the Voigt profile
 			A=A/real(NV)
 			do j=1,NV
 				x1=gasdev(idum)/sqrt(2d0)
-				x1=x1*Lines(i)%a_therm
+				x1=x1*a_t
 				x2=tan((random(idum)-0.5d0)*pi)
-				x2=x2*Lines(i)%a_press
+				x2=x2*a_p
 				rr=random(idum)
 				if(rr.lt.0.25) then
 					x=x1+x2
@@ -114,22 +132,12 @@ c	Random sampling of the Voigt profile
 				else
 					x=-x1-x2
 				endif
-				x=(x+Lines(i)%freq-nu1)*scale
+				x=(x+f-nu1)*scale
 				inu=int(x)
 				if(inu.ge.1.and.inu.le.nnu) then
 					kline(inu)=kline(inu)+A
 				endif
 			enddo
-c	exact computation of the Voigt profile
-c				do inu=1,nnu
-c					dnu=Lines(i)%freq-nu(inu)
-c					x=dnu/gamma
-cc					if(x.lt.500d0*100d0/gamma) then
-c						call voigt(500d0,x,V)
-c						kline(inu)=kline(inu)+A*V
-cc					endif
-c				enddo
-
 		endif
 	enddo
 c Above is crap, just to figure out if stuff works
@@ -176,6 +184,9 @@ c Above is crap, just to figure out if stuff works
 			kappa(i)=kdis(j)
 		endif
 	enddo
+
+	deallocate(dis)
+	deallocate(kdis)
 
 	deallocate(nu)
 	deallocate(kline)

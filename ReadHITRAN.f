@@ -43,14 +43,13 @@ c	nmol=0
 		read(iiso,*) L%iiso
 		if(L%iiso.gt.maxiiso) maxiiso=L%iiso
 		read(nu,*) L%freq
-		L%freq=clight*L%freq
-		read(S,*) L%S
+		read(S,*) L%S0
 		read(A,*) L%Aul
 		read(gamma_air,*) L%gamma_air
 		read(gamma_self,*) L%gamma_self
-		read(E,*) L%Eup
-c		read(n,*) L%imol
-c		read(delta,*) L%imol
+		read(E,*) L%Elow
+		read(n,*) L%n
+c		read(delta,*) L%delta
 		read(gu,*) L%gu
 		read(gl,*) L%gl
 	endif
@@ -73,7 +72,7 @@ c		read(delta,*) L%imol
 	enddo
 	do j=1,nmol
 		do k=1,niso(j)
-			call TIPS_2011(j,k,295d0,scale)
+			call TIPS_2011(j,k,296d0,scale)
 			do it=1,nTZ
 				call TIPS_2011(j,k,TZ(it),ZZ(j,k,it))
 				ZZ(j,k,it)=ZZ(j,k,it)/scale

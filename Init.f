@@ -43,7 +43,7 @@ c allocate the arrays
 		case("part")
 
 		case("nr")
-			read(key%value,*) nrad
+			read(key%value,*) nr
 		case("mp")
 			read(key%value,*) Mplanet
 		case("rp")
@@ -55,10 +55,16 @@ c allocate the arrays
 		case("lam")
 			if(key%nr1.eq.1) read(key%value,*) lam1
 			if(key%nr1.eq.2) read(key%value,*) lam2
+		case("lmin")
+			read(key%value,*) lam1
+		case("lmax")
+			read(key%value,*) lam2
 		case("specres")
 			read(key%value,*) specres
 		case("tpfile")
 			read(key%value,'(a)') TPfile
+		case("ng")
+			read(key%value,*) ng
 		case default
 			do i=1,47
 				if(key%key.eq.molname(i)) then
@@ -79,6 +85,8 @@ c allocate the arrays
 
 	call InitFreq()
 	call InitDens(TPfile)
+
+	allocate(opac(nr,nlam,ng))
 
 	call output("==================================================================")
 	
@@ -121,7 +129,7 @@ c allocate the arrays
 		call regridlog(TPfile,P0,T0,nr)
 	else
 		do i=1,nr
-			T0(i)=exp(log(4000d0)-log(20d0)*(real(i-1)/real(nr-1)))
+			T0(i)=exp(log(2700d0)-log(10d0)*(real(i-1)/real(nr-1)))
 		enddo
 	endif
 
@@ -178,10 +186,12 @@ c allocate the arrays
 	retrieval=.false.
 	nr=100
 	
-	Pmin=1d-7
-	Pmax=1d0
+	Pmin=1d-5
+	Pmax=10d0
 
 	HITRANfile='~/HITRAN/HITRAN2012.par'
+	
+	ng=50
 	
 	return
 	end
@@ -264,7 +274,7 @@ c allocate the arrays
 	lam(nlam)=lam2
 	
 	do i=1,nlam
-		freq(i)=clight/lam(i)
+		freq(i)=1d0/lam(i)
 	enddo
 
 	return

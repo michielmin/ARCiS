@@ -37,11 +37,11 @@ c===============================================================================
 	real*8,allocatable :: dust_dens(:,:)					! radius, component
 	real*8,allocatable :: R(:)								! radius
 	real*8,allocatable :: mixrat(:)							! component
-	real*8,allocatable :: opac(:,:,:,:)						! component,wav,T,P
-	integer nT,np,nrad,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
-	integer nlines
+	real*8,allocatable :: opac(:,:,:)						! radius,wav,g
+	integer nT,np,nr,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
+	integer nlines,ng
 	character*500 outputdir,HITRANfile
-	integer nr,idum
+	integer idum
 !$OMP THREADPRIVATE(idum)
 	logical retrieval
 	real*8 lam1,lam2,specres,Pmin,Pmax
@@ -68,9 +68,9 @@ c===============================================================================
 
 	type Line
 		integer imol,iiso
-		real*8 Aul,freq,Eup,lam,S0,S
+		real*8 Aul,freq,Elow,lam,S0,S
 		real*8 gamma_air,gamma_self
-		real*8 a_therm,a_press
+		real*8 a_therm,a_press,n
 		real*8 gu,gl
 	end type Line
 
