@@ -4,7 +4,7 @@
 	IMPLICIT NONE
 	integer imol
 	real*8 kappa(100),g(100),nu1,nu2,Temp,dens0
-	integer ng
+	integer ng,i,j
 	
 	do imol=1,nmol
 		select case(Mol(imol)%filetype)
@@ -17,11 +17,36 @@
 
 	Temp=800d0
 	dens0=1d-10
-	nu1=800d0*clight
-	nu2=1200d0*clight
-	ng=100
-	call ComputeKtable(dens0,Temp,nu1,nu2,kappa,g,ng)
+	call LineWidths(dens0,Temp)
 
+	ng=100
+	do i=1,nlam-1
+		nu1=freq(i+1)
+		nu2=freq(i)
+		call ComputeKtable(dens0,Temp,nu1,nu2,kappa,g,ng)
+		do j=1,ng
+			write(90,*) sqrt(lam(i)*lam(i+1))/micron,sum(kappa)/real(ng),kappa(j)
+		enddo
+	enddo
+	
+	return
+	end
+	
+	subroutine LineWidths(dens0,Temp)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 dens0,Temp,w
+	integer imol,iT,i
+	
+	do imol=1,nmol
+		call hunt(Mol(imol)%T,Mol(imol)%nT,Temp,iT)
+		w=sqrt(2d0*kb*Temp/(Mol(imol)%M*mp))
+		do i=1,Mol(imol)%nlines
+			Mol(imol)%L(i)%a_therm=w*Mol(imol)%L(i)%freq/clight
+			Mol(imol)%L(i)%a_press=Mol(imol)%L(i)%a_therm*500d0
+		enddo
+	enddo
 	
 	return
 	end
@@ -34,9 +59,13 @@
 	integer ng
 	real*8 dens0,Temp,nu1,nu2,kappa(ng),g(ng),w,dnu,gamma
 	real*8,allocatable :: nu(:),kline(:),kdis(:),dis(:)
-	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random
+	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr
 	integer nnu,inu,iT,imol,i,ju,jl,j,nkdis,NV,nl,k
 	
+	do i=1,ng
+		g(i)=(real(i)-0.5)/real(ng)
+	enddo
+
 	nnu=10d0*(nu2/clight-nu1/clight)
 	allocate(nu(nnu))
 	allocate(kline(nnu))
@@ -48,20 +77,19 @@
 	nl=0
 	do imol=1,nmol
 		do i=1,Mol(imol)%nlines
-			if(Mol(imol)%L(i)%freq.gt.nu1.and.Mol(imol)%L(i)%freq.lt.nu2) nl=nl+1
+			gamma=50d0*sqrt(Mol(imol)%L(i)%a_therm**2+Mol(imol)%L(i)%a_press**2)
+			if((Mol(imol)%L(i)%freq+gamma).gt.nu1.and.(Mol(imol)%L(i)%freq-gamma).lt.nu2) nl=nl+1
 		enddo
 	enddo
-	NV=nnu*100/nl+100
+	NV=nnu*100/(nl+1)+100
 	print*,nl,NV
 
 
 	kline=0d0
-	do k=1,1000
 	do imol=1,nmol
 		call hunt(Mol(imol)%T,Mol(imol)%nT,Temp,iT)
 
 c This part needs some serious attention!!!
-		w=sqrt(2d0*kb*Temp/(Mol(imol)%M*mp))
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -69,22 +97,34 @@ c This part needs some serious attention!!!
 !$OMP& SHARED(Mol,Temp,iT,NV,imol,nu1,nu2,scale,nnu,kline,w)
 !$OMP DO SCHEDULE(STATIC,j)
 		do i=1,Mol(imol)%nlines
-			gamma=w*Mol(imol)%L(i)%freq/clight
-			if(Mol(imol)%L(i)%freq.gt.nu1.and.Mol(imol)%L(i)%freq.lt.nu2) then
+			gamma=50d0*sqrt(Mol(imol)%L(i)%a_therm**2+Mol(imol)%L(i)%a_press**2)
+			if((Mol(imol)%L(i)%freq+gamma).gt.nu1.and.(Mol(imol)%L(i)%freq-gamma).lt.nu2) then
 				ju=Mol(imol)%L(i)%jup
 				jl=Mol(imol)%L(i)%jlow
 				Eu=Mol(imol)%E(ju)
 				El=Mol(imol)%E(jl)
 				A=Mol(imol)%g(ju)*Mol(imol)%L(i)%Aul*(exp(-El/Temp)-exp(-Eu/Temp))
-				A=A/(Mol(imol)%L(i)%freq**3*Mol(imol)%Z(iT))/(gamma*sqrt(pi))
+				A=A/(Mol(imol)%L(i)%freq**3*Mol(imol)%Z(iT))/(Mol(imol)%L(i)%a_therm*sqrt(pi))
 				A=A*1d50
 
 c	Random sampling of the Voigt profile
 				A=A/real(NV)
 				do j=1,NV
 					x1=gasdev(idum)/sqrt(2d0)
+					x1=x1*Mol(imol)%L(i)%a_therm
 					x2=tan((random(idum)-0.5d0)*pi)
-					x=((x1+500*x2)*gamma+Mol(imol)%L(i)%freq-nu1)*scale
+					x2=x2*Mol(imol)%L(i)%a_press
+					rr=random(idum)
+					if(rr.lt.0.25) then
+						x=x1+x2
+					else if(rr.lt.0.5) then
+						x=-x1+x2
+					else if(rr.lt.0.75) then
+						x=x1-x2
+					else
+						x=-x1-x2
+					endif
+					x=(x+Mol(imol)%L(i)%freq-nu1)*scale
 					inu=int(x)
 					if(inu.ge.1.and.inu.le.nnu) then
 						kline(inu)=kline(inu)+A
@@ -108,12 +148,7 @@ c Above is crap, just to figure out if stuff works
 !$OMP END PARALLEL
 
 	enddo
-	enddo
 	
-	do i=1,nnu
-		write(90,*) nu(i),kline(i)
-	enddo
-
 
 	kmin=1d200
 	kmax=0d0
@@ -146,7 +181,6 @@ c Above is crap, just to figure out if stuff works
 	dis(nkdis)=1d0
 
 	do i=1,ng
-		g(i)=(real(i)-0.5)/real(ng)
 		if(g(i).lt.dis(1)) then
 			kappa(i)=kdis(1)
 		else
@@ -155,9 +189,8 @@ c Above is crap, just to figure out if stuff works
 		endif
 	enddo
 
-	do i=1,ng
-		write(91,*) g(i),kappa(i)
-	enddo
+	deallocate(nu)
+	deallocate(kline)
 
 	return
 	end

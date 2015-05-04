@@ -4,7 +4,7 @@ c===============================================================================
 	module Constants
 	IMPLICIT NONE
 	real*8 pi,Ggrav,Msun,AU,clight,Rsun,mp,kb,hplanck,parsec,Lsun,sigma
-	real*8 Mearth,Rearth,Mjup,Rjup,year
+	real*8 Mearth,Rearth,Mjup,Rjup,year,micron,mu
 	parameter(pi=3.14159265358979323846264338328d0)
 	parameter(clight=2.9979245800d10) !cm/s
 	parameter(AU=1.49598d13)
@@ -15,6 +15,7 @@ c===============================================================================
 	parameter(kb=1.3806503d-16)
 	parameter(sigma=5.6704d-5)
 	parameter(mp=1.67262178d-24)	!proton mass
+	parameter(mu=2.3) 		!mean molecular weight
 	parameter(Ggrav=6.67300d-8) ! in cm^3/g/s^2
 	parameter(hplanck=6.626068d-27) ! cm^2 g/s
 	parameter(Mearth=5.97219d27)
@@ -22,6 +23,7 @@ c===============================================================================
 	parameter(Rearth=6.3781d8)
 	parameter(Rjup=7.1492d9)
 	parameter(year=24d0*60d0*60d0*265.25d0)
+	parameter(micron=1d-4)
 	
 	end module Constants
 
@@ -41,6 +43,8 @@ c===============================================================================
 	integer nr,idum
 !$OMP THREADPRIVATE(idum)
 	logical retrieval
+	real*8 lam1,lam2,specres,Pmin,Pmax
+	real*8,allocatable :: lam(:),freq(:)
 
 	type Observation
 		character*500 filename
@@ -54,6 +58,7 @@ c===============================================================================
 		integer jup,jlow
 		real*8 Aul,freq,Eup,lam
 		real*8 gamma_air,gamma_self
+		real*8 a_therm,a_press
 	end type Line
 
 	type Molecule

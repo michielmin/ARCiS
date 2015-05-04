@@ -5,6 +5,7 @@
 	IMPLICIT NONE
 	type(SettingKey),pointer :: key,first
 	integer i,j,omp_get_max_threads,omp_get_thread_num
+	character*500 TPfile
 
 	idum=-42
 #ifdef USE_OPENMP
@@ -51,6 +52,13 @@ c allocate the arrays
 			read(key%value,*) Rplanet
 		case("obs")
 			call ReadObs(key)
+		case("lam")
+			if(key%nr1.eq.1) read(key%value,*) lam1
+			if(key%nr1.eq.2) read(key%value,*) lam2
+		case("specres")
+			read(key%value,*) specres
+		case("tpfile")
+			read(key%value,'(a)') TPfile
 		case default
 			call output("Keyword not recognised: " // trim(key%key1))
 			stop
@@ -60,12 +68,76 @@ c allocate the arrays
 	
 	enddo
 
-	call output("==================================================================")
+	call ConvertUnits()
 
+	call InitFreq()
+	call InitDens(TPfile)
+
+	call output("==================================================================")
 	
 	return
 	end
+
+
+	subroutine ConvertUnits()
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
 	
+	Rplanet=Rplanet*Rjup
+	Mplanet=Mplanet*Mjup
+	lam1=lam1*micron
+	lam2=lam2*micron
+	
+	return
+	end
+		
+
+	subroutine InitDens(TPfile)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	integer i
+	real*8 g,dp,dz,P0(nr),T0(nr)
+	character*500 TPfile
+	
+	allocate(dens(nr))
+	allocate(R(nr+1))
+	allocate(T(nr))
+	allocate(P(nr))
+	
+	do i=1,nr
+		P0(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nr-1))
+	enddo
+	call regridlog(TPfile,P0,T0,nr)
+	do i=1,nr
+		T(i)=T0(nr+1-i)
+		P(i)=P0(nr+1-i)
+	enddo
+
+	g=Ggrav*Mplanet/Rplanet**2
+	R(1)=Rplanet
+	do i=1,nr
+		if(i.eq.1) then
+			dp=P(1)-P(2)
+		else if(i.eq.nr) then
+			dp=P(nr-1)-P(nr)
+		else
+			dp=(P(i-1)-P(i+1))/2d0
+		endif
+		dens(i)=P(i)/(kb*T(i))
+		dz=dp/(dens(i)*mp*mu*g)
+		R(i+1)=R(i)+dz
+	enddo
+
+	open(unit=50,file=trim(outputdir) // 'densityprofile.dat',RECL=1000)
+	do i=1,nr
+		write(50,*) sqrt(R(i)*R(i+1)),dens(i),T(i),P(i)
+	enddo
+	close(unit=20)
+
+	return
+	end	
 
 	subroutine SetDefaults()
 	use GlobalSetup
@@ -76,6 +148,10 @@ c allocate the arrays
 	Mplanet=1d0
 	Rplanet=1d0
 	
+	lam1=1d0
+	lam2=15d0
+	specres=10d0
+	
 	do i=1,nobs
 		obs(i)%type='EMIS'
 		obs(i)%filename=' '
@@ -84,8 +160,12 @@ c allocate the arrays
 	retrieval=.false.
 	nr=100
 	
+	Pmin=1d-7
+	Pmax=1d0
+	
 	return
 	end
+
 	
 	subroutine ReadObs(key)
 	use GlobalSetup
@@ -161,3 +241,36 @@ c allocate the arrays
 	return
 	end
 
+
+	subroutine InitFreq()
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 lam0
+	integer i
+	
+	lam0=lam1
+	nlam=1
+	do while(lam0.le.lam2)
+		lam0=lam0+lam0/specres
+		nlam=nlam+1
+	enddo
+	
+	allocate(lam(nlam))
+	allocate(freq(nlam))
+	
+	i=1
+	lam(i)=lam1
+	do while(lam(i).le.lam2)
+		i=i+1
+		lam(i)=lam(i-1)+lam(i-1)/specres
+	enddo
+	lam(nlam)=lam2
+	
+	do i=1,nlam
+		freq(i)=clight/lam(i)
+	enddo
+
+	return
+	end
+	
