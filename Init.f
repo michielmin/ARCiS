@@ -6,6 +6,7 @@
 	type(SettingKey),pointer :: key,first
 	integer i,j,omp_get_max_threads,omp_get_thread_num
 	character*500 TPfile
+	TPfile=' '
 
 	idum=-42
 #ifdef USE_OPENMP
@@ -109,7 +110,14 @@ c allocate the arrays
 	do i=1,nr
 		P0(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nr-1))
 	enddo
-	call regridlog(TPfile,P0,T0,nr)
+	if(TPfile.ne.' ') then
+		call regridlog(TPfile,P0,T0,nr)
+	else
+		do i=1,nr
+			T0(i)=exp(log(4000d0)-log(20d0)*(real(i-1)/real(nr-1)))
+		enddo
+	endif
+
 	do i=1,nr
 		T(i)=T0(nr+1-i)
 		P(i)=P0(nr+1-i)
@@ -162,7 +170,9 @@ c allocate the arrays
 	
 	Pmin=1d-7
 	Pmax=1d0
-	
+
+	HITRANfile='~/HITRAN/HITRAN2012.par'
+		
 	return
 	end
 
@@ -199,10 +209,6 @@ c allocate the arrays
 	i=key%nr1
 	
 	select case(key%key2)
-		case("filetype")
-			read(key%value,'(a)') Mol(i)%filetype
-		case("file","linefile")
-			read(key%value,'(a)') Mol(i)%filename
 		case("abun")
 			read(key%value,*) abun(i)
 		case default

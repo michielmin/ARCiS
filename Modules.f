@@ -39,12 +39,17 @@ c===============================================================================
 	real*8,allocatable :: abun(:)							! component
 	real*8,allocatable :: opac(:,:,:,:)						! component,wav,T,P
 	integer nT,np,nrad,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
-	character*500 outputdir
+	integer nlines
+	character*500 outputdir,HITRANfile
 	integer nr,idum
 !$OMP THREADPRIVATE(idum)
 	logical retrieval
 	real*8 lam1,lam2,specres,Pmin,Pmax
 	real*8,allocatable :: lam(:),freq(:)
+	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
+	integer nTZ
+	integer,allocatable :: niso(:)
+	real*8,allocatable :: Mmol(:)
 
 	type Observation
 		character*500 filename
@@ -55,26 +60,15 @@ c===============================================================================
 	type(Observation),allocatable :: obs(:)
 
 	type Line
-		integer jup,jlow
-		real*8 Aul,freq,Eup,lam
+		integer imol,iiso
+		real*8 Aul,freq,Eup,lam,S
 		real*8 gamma_air,gamma_self
 		real*8 a_therm,a_press
+		real*8 gu,gl
 	end type Line
 
-	type Molecule
-		character*10 name,filetype
-		character*500 filename
-		integer nlines,nlevels
-		real*8,allocatable :: E(:),g(:) ! dimension is number of levels
-		real*8,allocatable :: Z(:),T(:)	! partition function
-		integer nT
-		type(Line),allocatable :: L(:) ! dimension is number of lines
-c total mass of the molecule
-		real*8 M
-	end type Molecule
+	type(Line),allocatable,target :: Lines(:)
 
-	type(Molecule),allocatable :: Mol(:)
-	
 
 c========================================================
 c Interfaces for input/output subroutines
@@ -303,7 +297,8 @@ c===============================================================================
 	call output('Number of observations: ' // int2string(nobs,'(i4)'))
 
 	allocate(obs(nobs))
-	allocate(Mol(nmol))
+	allocate(Mmol(nmol))
+	allocate(abun(nmol))
 
 	return
 	end subroutine CountStuff

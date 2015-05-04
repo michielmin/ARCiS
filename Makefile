@@ -70,9 +70,10 @@ OBJS	= Modules.o \
 		WriteOutput.o \
 		Version.o \
 		AdjustParameters.o \
-		ReadLambdaFiles.o \
+		ReadHITRAN.o \
 		Subroutines.o \
-		Voigt.o
+		Voigt.o \
+		TIPS_2011_v1p0_sub.o
 
 # program name and install location
 PROGRAM       = ELMO
