@@ -4,7 +4,29 @@
 	IMPLICIT NONE
 	integer imol
 	real*8 kappa(ng),nu1,nu2,opac_tot(nlam,ng)
+	real*8 x1,x2,rr,gasdev,random
+	real*8,allocatable :: k_line(:),nu_line(:)
+	integer n_nu_line
 	integer i,j,ir
+
+	n_voigt=1d6
+	allocate(a_therm(n_voigt))
+	allocate(a_press(n_voigt))
+	do i=1,n_voigt
+		x1=gasdev(idum)/sqrt(2d0)
+		x2=tan((random(idum)-0.5d0)*pi)
+		rr=random(idum)
+		if(rr.lt.0.25) then
+			x1=-x1
+		else if(rr.lt.0.5) then
+			x2=-x2
+		else if(rr.lt.0.75) then
+			x1=-x1
+			x2=-x2
+		endif
+		a_therm(i)=x1
+		a_press(i)=x2
+	enddo
 
 	opac_tot=0d0
 	do ir=1,nr
@@ -71,6 +93,7 @@ c line strength
 	real*8,allocatable :: nu(:),kline(:),kdis(:),dis(:),kline0(:)
 	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
 	integer nnu,inu,iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso,ir,NV0,iter,maxiter
+	integer i_therm,i_press
 	logical converged
 	real*8 f,a_t,a_p
 	
@@ -81,7 +104,16 @@ c line strength
 	maxiter=5
 
 	fact=50d0
-	nnu=10d0*(nu2-nu1)
+
+	dnu=0.01d0
+	nl=0
+	do i=1,nlines
+		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
+		if((Lines(i)%freq+gamma).gt.nu1.and.(Lines(i)%freq-gamma).lt.nu2) nl=nl+1
+	enddo
+
+	nnu=abs(nu2-nu1)/dnu
+
 	allocate(nu(nnu))
 	allocate(kline(nnu))
 	allocate(kline0(nnu))
@@ -91,12 +123,7 @@ c line strength
 	enddo
 	scale=real(nnu)/(nu2-nu1)
 
-	nl=0
-	do i=1,nlines
-		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
-		if((Lines(i)%freq+gamma).gt.nu1.and.(Lines(i)%freq-gamma).lt.nu2) nl=nl+1
-	enddo
-	NV=nnu*100/(nl+1)+25
+	NV=nnu*100/(nl+1)+50
 
 	kline=0d0
 	call hunt(TZ,nTZ,T(ir),iT)
@@ -126,21 +153,30 @@ c line strength
 
 c	Random sampling of the Voigt profile
 			A=A/real(NV)
+			i_therm=random(idum)*real(n_voigt)
+			i_press=random(idum)*real(n_voigt)
 			do j=1,NV
-				x1=gasdev(idum)/sqrt(2d0)
+				i_therm=i_therm+1
+				i_press=i_press+1
+				if(i_therm.gt.n_voigt) i_therm=1
+				if(i_press.gt.n_voigt) i_press=1
+c				x1=gasdev(idum)/sqrt(2d0)
+				x1=a_therm(i_therm)
 				x1=x1*a_t
-				x2=tan((random(idum)-0.5d0)*pi)
+c				x2=tan((random(idum)-0.5d0)*pi)
+				x2=a_press(i_press)
 				x2=x2*a_p
-				rr=random(idum)
-				if(rr.lt.0.25) then
-					x=x1+x2
-				else if(rr.lt.0.5) then
-					x=-x1+x2
-				else if(rr.lt.0.75) then
-					x=x1-x2
-				else
-					x=-x1-x2
-				endif
+				x=x1+x2
+c				rr=random(idum)
+c				if(rr.lt.0.25) then
+c					x=x1+x2
+c				else if(rr.lt.0.5) then
+c					x=-x1+x2
+c				else if(rr.lt.0.75) then
+c					x=x1-x2
+c				else
+c					x=-x1-x2
+c				endif
 				x=(x+f-nu1)*scale
 				inu=int(x)
 				if(inu.ge.1.and.inu.le.nnu) then

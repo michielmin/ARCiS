@@ -56,6 +56,8 @@ c===============================================================================
      &	'HCN','CH3Cl','H2O2','C2H2','C2H6','PH3','COF2','SF6','H2S','HCOOH','HO2',
      &	'O','ClONO2','NO+','HOBr','C2H4','CH3OH','CH3Br','CH3CN','CF4','C4H2',
      &	'HC3N','H2','CS','SO3' /))
+	real*8,allocatable :: a_therm(:),a_press(:)
+	integer n_voigt
 
 
 	type Observation
