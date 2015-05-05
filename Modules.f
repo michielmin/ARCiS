@@ -44,7 +44,7 @@ c===============================================================================
 	integer idum
 !$OMP THREADPRIVATE(idum)
 	logical retrieval
-	real*8 lam1,lam2,specres,Pmin,Pmax
+	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk
 	real*8,allocatable :: lam(:),freq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ

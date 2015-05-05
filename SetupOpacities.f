@@ -5,8 +5,6 @@
 	integer imol
 	real*8 kappa(ng),nu1,nu2,opac_tot(nlam,ng)
 	integer i,j,ir
-	
-	call ReadHITRAN()
 
 	opac_tot=0d0
 	do ir=1,nr
@@ -19,7 +17,7 @@
 			call tellertje(i,nlam-1)
 			nu1=freq(i+1)
 			nu2=freq(i)
-			call ComputeKtable(ir,nu1,nu2,kappa)
+			call ComputeKtable(ir,nu1,nu2,kappa,epsCk)
 			opac(ir,i,1:ng)=kappa(1:ng)
 			opac_tot(i,1:ng)=opac_tot(i,1:ng)+opac(ir,i,1:ng)*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
@@ -65,24 +63,29 @@ c line strength
 	end
 	
 	
-	subroutine ComputeKtable(ir,nu1,nu2,kappa)
+	subroutine ComputeKtable(ir,nu1,nu2,kappa,eps)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 nu1,nu2,kappa(ng),g(ng),w,dnu,gamma,fact
-	real*8,allocatable :: nu(:),kline(:),kdis(:),dis(:)
+	real*8 nu1,nu2,kappa(ng),g(ng),w,dnu,gamma,fact,kappa0(ng),eps
+	real*8,allocatable :: nu(:),kline(:),kdis(:),dis(:),kline0(:)
 	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
-	integer nnu,inu,iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso,ir
+	integer nnu,inu,iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso,ir,NV0,iter,maxiter
+	logical converged
 	real*8 f,a_t,a_p
 	
 	do i=1,ng
 		g(i)=(real(i)-0.5)/real(ng)
 	enddo
 
+	maxiter=5
+
 	fact=50d0
 	nnu=10d0*(nu2-nu1)
 	allocate(nu(nnu))
 	allocate(kline(nnu))
+	allocate(kline0(nnu))
+	
 	do inu=1,nnu
 		nu(inu)=nu1+real(inu-1)*(nu2-nu1)/real(nnu-1)
 	enddo
@@ -93,12 +96,18 @@ c line strength
 		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
 		if((Lines(i)%freq+gamma).gt.nu1.and.(Lines(i)%freq-gamma).lt.nu2) nl=nl+1
 	enddo
-	NV=nnu*100/(nl+1)+100
+	NV=nnu*100/(nl+1)+25
 
 	kline=0d0
 	call hunt(TZ,nTZ,T(ir),iT)
 
-c This part needs some serious attention!!!
+	nkdis=1000
+	allocate(dis(nkdis))
+	allocate(kdis(nkdis))
+
+	converged=.false.
+	iter=0
+	do while(.not.converged)
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -140,11 +149,13 @@ c	Random sampling of the Voigt profile
 			enddo
 		endif
 	enddo
-c Above is crap, just to figure out if stuff works
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
-	
+
+	if(iter.gt.0) then
+		kline=(real(NV)*kline+real(NV0)*kline0)/real(NV+NV0)
+	endif
 
 	kmin=1d200
 	kmax=0d0
@@ -156,9 +167,6 @@ c Above is crap, just to figure out if stuff works
 	kmin=log10(kmin)
 	kmax=log10(kmax)
 
-	nkdis=1000
-	allocate(dis(nkdis))
-	allocate(kdis(nkdis))
 	do i=1,nkdis
 		kdis(i)=10d0**(kmin+real(i-1)*(kmax-kmin)/real(nkdis-1))
 	enddo
@@ -181,8 +189,35 @@ c Above is crap, just to figure out if stuff works
 			kappa(i)=kdis(1)
 		else
 			call hunt(dis,nkdis,g(i),j)
+			if(j.lt.nkdis) then
+				if(abs(dis(j+1)-g(i)).lt.abs(dis(j)-g(i))) j=j+1
+			endif
 			kappa(i)=kdis(j)
 		endif
+	enddo
+	kappa(ng)=10d0**kmax
+
+	if(iter.gt.maxiter) then
+		converged=.true.
+	else if(iter.eq.0) then
+		kappa0=kappa
+		kline0=kline
+		NV0=NV
+		converged=.false.
+		iter=iter+1
+	else if(maxval(abs(kappa0-kappa)/(kappa0+kappa)).gt.eps) then
+		kappa0=kappa
+		kline0=kline
+		if(iter.gt.0) then
+			NV=NV0*2
+		endif
+		NV0=NV
+		converged=.false.
+		iter=iter+1
+	else
+		converged=.true.
+	endif
+
 	enddo
 
 	deallocate(dis)

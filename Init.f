@@ -59,6 +59,12 @@ c allocate the arrays
 			read(key%value,*) lam1
 		case("lmax")
 			read(key%value,*) lam2
+		case("pmin")
+			read(key%value,*) pmin
+		case("pmax")
+			read(key%value,*) pmax
+		case("eps","epsck")
+			read(key%value,*) epsCk
 		case("specres")
 			read(key%value,*) specres
 		case("tpfile")
@@ -85,8 +91,13 @@ c allocate the arrays
 
 	call InitFreq()
 	call InitDens(TPfile)
+	call InitObs()
 
 	allocate(opac(nr,nlam,ng))
+
+	call output("==================================================================")
+
+	call ReadHITRAN()
 
 	call output("==================================================================")
 	
@@ -106,7 +117,7 @@ c allocate the arrays
 	
 	return
 	end
-		
+
 
 	subroutine InitDens(TPfile)
 	use GlobalSetup
@@ -138,28 +149,6 @@ c allocate the arrays
 		P(i)=P0(nr+1-i)
 	enddo
 
-	g=Ggrav*Mplanet/Rplanet**2
-	R(1)=Rplanet
-	do i=1,nr
-		if(i.eq.1) then
-			dp=P(1)-P(2)
-		else if(i.eq.nr) then
-			dp=P(nr-1)-P(nr)
-		else
-			dp=(P(i-1)-P(i+1))/2d0
-		endif
-		Ndens(i)=P(i)/(kb*T(i))
-		dens(i)=Ndens(i)*mp*mu
-		dz=dp/(dens(i)*g)
-		R(i+1)=R(i)+dz
-	enddo
-
-	open(unit=50,file=trim(outputdir) // 'densityprofile.dat',RECL=1000)
-	do i=1,nr
-		write(50,*) sqrt(R(i)*R(i+1)),dens(i),Ndens(i),T(i),P(i)
-	enddo
-	close(unit=20)
-
 	return
 	end	
 
@@ -184,18 +173,34 @@ c allocate the arrays
 	enddo
 
 	retrieval=.false.
-	nr=100
+	nr=20
 	
 	Pmin=1d-5
 	Pmax=10d0
 
 	HITRANfile='~/HITRAN/HITRAN2012.par'
 	
-	ng=50
+	ng=25
+	epsCk=0.25d0
 	
 	return
 	end
 
+	
+	subroutine InitObs()
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	integer iobs
+	
+	do iobs=1,nobs
+		allocate(obs(iobs)%lam(nlam))
+		allocate(obs(iobs)%flux(nlam))
+	enddo
+	
+	return
+	end
+	
 	
 	subroutine ReadObs(key)
 	use GlobalSetup
