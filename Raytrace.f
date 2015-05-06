@@ -8,6 +8,10 @@
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig
 	logical in
 	
+
+	call output("==================================================================")
+	call output("Raytracing over the planet disk")
+
 	ndisk=10
 	
 	nrtrace=nr+ndisk-1
@@ -21,6 +25,7 @@
 	enddo
 
 	do ilam=1,nlam-1
+		call tellertje(ilam,nlam-1)
 		freq0=sqrt(freq(ilam)*freq(ilam+1))
 		obs(iobs)%lam(ilam)=sqrt(lam(ilam)*lam(ilam+1))
 		obs(iobs)%flux(ilam)=0d0
@@ -67,9 +72,11 @@
 					goto 1
 				endif
 			enddo
+			obs(iobs)%flux(ilam)=obs(iobs)%flux(ilam)+fluxg/real(ng)
 		enddo
-		obs(iobs)%flux(ilam)=obs(iobs)%flux(ilam)+fluxg/real(ng)
 	enddo
+	
+	obs(iobs)%flux=obs(iobs)%flux*1d23/distance**2
 	
 	deallocate(rtrace)
 	
@@ -86,9 +93,8 @@ c-----------------------------------------------------------------------
 	real*8 T,nu,x
 
 	x=hplanck*nu*clight/(kb*T)
-	Planck=(2d0*hplanck*nu**3/clight**2)/(exp(x)-1d0)
+	Planck=(2d0*hplanck*nu**3*clight)/(exp(x)-1d0)
 
 	return
 	end
-
 

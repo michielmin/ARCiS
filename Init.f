@@ -71,6 +71,8 @@ c allocate the arrays
 			read(key%value,'(a)') TPfile
 		case("ng")
 			read(key%value,*) ng
+		case("distance")
+			read(key%value,*) distance
 		case default
 			do i=1,47
 				if(key%key.eq.molname(i)) then
@@ -114,6 +116,8 @@ c allocate the arrays
 	Mplanet=Mplanet*Mjup
 	lam1=lam1*micron
 	lam2=lam2*micron
+	
+	distance=distance*parsec
 	
 	return
 	end
@@ -180,8 +184,10 @@ c allocate the arrays
 
 	HITRANfile='~/HITRAN/HITRAN2012.par'
 	
-	ng=25
+	ng=100
 	epsCk=0.25d0
+	
+	distance=10d0
 	
 	return
 	end
