@@ -144,7 +144,7 @@ c allocate the arrays
 		call regridlog(TPfile,P0,T0,nr)
 	else
 		do i=1,nr
-			T0(i)=exp(log(2700d0)-log(10d0)*(real(i-1)/real(nr-1)))
+			T0(i)=exp(log(270d0)+log(10d0)*(real(i-1)/real(nr-1)))
 		enddo
 	endif
 
