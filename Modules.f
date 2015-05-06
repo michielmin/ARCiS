@@ -4,7 +4,7 @@ c===============================================================================
 	module Constants
 	IMPLICIT NONE
 	real*8 pi,Ggrav,Msun,AU,clight,Rsun,mp,kb,hplanck,parsec,Lsun,sigma
-	real*8 Mearth,Rearth,Mjup,Rjup,year,micron,mu,Rgas,Avogadro
+	real*8 Mearth,Rearth,Mjup,Rjup,year,micron,Rgas,Avogadro
 	parameter(pi=3.14159265358979323846264338328d0)
 	parameter(clight=2.9979245800d10) !cm/s
 	parameter(AU=1.49598d13)
@@ -15,7 +15,6 @@ c===============================================================================
 	parameter(kb=1.3806503d-16)
 	parameter(sigma=5.6704d-5)
 	parameter(mp=1.67262178d-24)	!proton mass
-	parameter(mu=18.0) 		!mean molecular weight
 	parameter(Ggrav=6.67300d-8) ! in cm^3/g/s^2
 	parameter(hplanck=6.626068d-27) ! cm^2 g/s
 	parameter(Mearth=5.97219d27)
@@ -51,13 +50,20 @@ c===============================================================================
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ
 	integer,allocatable :: niso(:)
-	real*8,allocatable :: Mmol(:)
+	real*8 Mmol(47),mu
 	character*10 molname(47)
 	parameter(molname = (/ 'H2O','CO2','O3','N2O','CO','CH4','O2','CO2','SO2','NO2',
      &	'NH3','HNO3','OH','HF','HCl','HBr','HI','ClO','OCS','H2CO','HOCl','N2',
      &	'HCN','CH3Cl','H2O2','C2H2','C2H6','PH3','COF2','SF6','H2S','HCOOH','HO2',
      &	'O','ClONO2','NO+','HOBr','C2H4','CH3OH','CH3Br','CH3CN','CF4','C4H2',
      &	'HC3N','H2','CS','SO3' /))
+	parameter(Mmol = (/     17.8851,  43.6918,  47.6511,  43.6947,  27.8081,  15.9272,  
+     &	31.7674,  29.7889,  63.5840,  45.6607,  16.9072,  62.5442,  16.8841,  19.8619,  
+     &	36.1973,  80.3271, 126.9884,  51.0760,  59.6379,  29.8088,  52.0765,  27.8112,  
+     &	26.8304,  50.1116,  33.7598,  25.8499,  29.8518,  33.7516,  65.5261, 144.9081,  
+     &	33.8332,  45.6731,  32.7593,  15.8794,  96.7366,  29.7813,  96.2063,  27.8507,  
+     &	31.7949,  94.2413,  40.7302,  87.3580,  49.6543,  50.6424,   2.0014,  43.7539,  
+     &	79.3792 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt
 
@@ -314,7 +320,6 @@ c===============================================================================
 	call output('Number of observations: ' // int2string(nobs,'(i4)'))
 
 	allocate(obs(nobs))
-	allocate(Mmol(nmol))
 	allocate(mixrat(nmol))
 
 	return

@@ -4,11 +4,20 @@
 	IMPLICIT NONE
 	real*8 g,dp,dz,dlogp,RgasBar,sh
 	parameter(RgasBar=82.05736*1.01325)
-	integer i
+	integer i,imol
 
-	g=Ggrav*Mplanet/Rplanet**2
 	R(1)=Rplanet
 	do i=1,nr
+		g=Ggrav*Mplanet/R(i)**2
+		mu=1d0
+		do imol=1,nmol
+			mu=mu-mixrat(imol)
+		enddo
+		mu=mu*2d0
+		do imol=1,nmol
+			mu=mu+mixrat(imol)*Mmol(imol)
+		enddo
+		
 		if(i.eq.nr) then
 			dp=P(nr-1)-P(nr)
 			dlogp=log(P(nr-1)/P(nr))

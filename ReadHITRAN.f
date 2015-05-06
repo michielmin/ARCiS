@@ -80,8 +80,6 @@ c		read(delta,*) L%delta
 		enddo
 	enddo
 	
-	Mmol=20d0
-	
 	return
 	end
 	
