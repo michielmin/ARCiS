@@ -111,6 +111,8 @@ c allocate the arrays
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
+	real*8 tot
+	integer i
 	
 	Rplanet=Rplanet*Rjup
 	Mplanet=Mplanet*Mjup
@@ -118,6 +120,15 @@ c allocate the arrays
 	lam2=lam2*micron
 	
 	distance=distance*parsec
+	
+	tot=0d0
+	do i=1,nmol
+		if(mixrat(i).gt.0d0) tot=tot+mixrat(i)
+	enddo
+	if(tot.gt.1d0) then
+		call output("Summed mixing ratio above 1. Renormalizing.")
+		mixrat=mixrat/tot
+	endif
 	
 	return
 	end
@@ -236,7 +247,7 @@ c allocate the arrays
 	integer ncla
 	character*500 readline,command
 
-	outputdir='./outputELMO/'
+	outputdir='./outputSPARC/'
 
 	ncla=2
 1	continue

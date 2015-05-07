@@ -11,13 +11,13 @@
 
 c terms of use
 	call output("==================================================================")
-	call output("By using ELMO you agree to the terms of use.")
+	call output("By using SPARC you agree to the terms of use.")
 	call output("It basically means you offer us co-author rights on any paper.")
-	call output("that uses results computed with ELMO.")
+	call output("that uses results computed with SPARC.")
 
 	call output("==================================================================")
 	call output("Let's get the show on the road!!")
-	call output("ELMO "//trim(VersionGIT()))
+	call output("SPARC "//trim(VersionGIT()))
 	call output("==================================================================")
 
 	call Init()
