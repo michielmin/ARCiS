@@ -11,11 +11,11 @@
 		g=Ggrav*Mplanet/R(i)**2
 		mu=1d0
 		do imol=1,nmol
-			mu=mu-mixrat(imol)
+			if(mixrat(imol).gt.0d0) mu=mu-mixrat(imol)
 		enddo
 		mu=mu*2d0
 		do imol=1,nmol
-			mu=mu+mixrat(imol)*Mmol(imol)
+			if(mixrat(imol).gt.0d0) mu=mu+mixrat(imol)*Mmol(imol)
 		enddo
 		
 		if(i.eq.nr) then

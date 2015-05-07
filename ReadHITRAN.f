@@ -34,7 +34,7 @@ c	nmol=0
      &			imol,iiso,nu,S,A,gamma_air,gamma_self,E,n,delta,dummy,gu,gl
 	read(imol,*) j
 	if(j.le.nmol) then
-	if(mixrat(j).ge.0d0) then
+	if(mixrat(j).gt.0d0) then
 		i=i+1
 		call tellertje(i,nlines)
 		L => Lines(i)

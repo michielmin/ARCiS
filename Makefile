@@ -76,7 +76,7 @@ OBJS	= Modules.o \
 		TIPS_2011_v1p0_sub.o
 
 # program name and install location
-PROGRAM       = ELMO
+PROGRAM       = SPARC
 DEST	      = ${HOME}/bin
 
 # make actions 

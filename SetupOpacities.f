@@ -60,10 +60,6 @@
 			opac(ir,i,1:ng)=kappa(1:ng)
 			opac_tot(i,1:ng)=opac_tot(i,1:ng)+opac(ir,i,1:ng)*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
-		deallocate(k_line)
-		deallocate(nu_line)
-		deallocate(dnu_line)
-	enddo
 	
 	open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
 	write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
@@ -71,6 +67,11 @@
 		write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
 	enddo
 	close(unit=30)
+
+		deallocate(k_line)
+		deallocate(nu_line)
+		deallocate(dnu_line)
+	enddo
 
 	return
 	end
@@ -188,7 +189,7 @@ c line strength
 		endif
 	enddo
 	kappa(ng)=10d0**kmax
-
+	
 	deallocate(dis)
 	deallocate(kdis)
 
