@@ -52,6 +52,8 @@ c allocate the arrays
 			read(key%value,*) Rplanet
 		case("obs")
 			call ReadObs(key)
+		case("cia")
+			call ReadCIA(key)
 		case("lam")
 			if(key%nr1.eq.1) read(key%value,*) lam1
 			if(key%nr1.eq.2) read(key%value,*) lam2
@@ -172,6 +174,7 @@ c allocate the arrays
 	use Constants
 	IMPLICIT NONE
 	integer i
+	character*100 homedir
 	
 	Mplanet=1d0
 	Rplanet=1d0
@@ -193,7 +196,9 @@ c allocate the arrays
 	Pmin=1d-5
 	Pmax=10d0
 
-	HITRANfile='~/HITRAN/HITRAN2012.par'
+	call getenv('HOME',homedir) 
+
+	HITRANfile=trim(homedir) // '/HITRAN/HITRAN2012.par'
 	
 	ng=100
 	epsCk=0.25d0
@@ -233,6 +238,25 @@ c allocate the arrays
 			read(key%value,'(a)') obs(i)%type
 		case("file")
 			read(key%value,'(a)') obs(i)%filename
+		case default
+			call output("Keyword not recognised: " // trim(key%key2))
+	end select
+	
+	return
+	end
+
+	subroutine ReadCIA(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i
+	i=key%nr1
+	
+	select case(key%key2)
+		case("file")
+			read(key%value,'(a)') CIA(i)%filename
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

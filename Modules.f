@@ -40,7 +40,7 @@ c===============================================================================
 	real*8,allocatable :: mixrat(:)							! component
 	real*8,allocatable :: opac(:,:,:)						! radius,wav,g
 	integer nT,np,nr,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
-	integer nlines,ng
+	integer nlines,ng,ncia
 	character*500 outputdir,HITRANfile
 	integer idum
 !$OMP THREADPRIVATE(idum)
@@ -50,20 +50,22 @@ c===============================================================================
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ
 	integer,allocatable :: niso(:)
-	real*8 Mmol(47),mu
-	character*10 molname(47)
-	parameter(molname = (/ 'H2O','CO2','O3','N2O','CO','CH4','O2','CO2','SO2','NO2',
-     &	'NH3','HNO3','OH','HF','HCl','HBr','HI','ClO','OCS','H2CO','HOCl','N2',
-     &	'HCN','CH3Cl','H2O2','C2H2','C2H6','PH3','COF2','SF6','H2S','HCOOH','HO2',
-     &	'O','ClONO2','NO+','HOBr','C2H4','CH3OH','CH3Br','CH3CN','CF4','C4H2',
-     &	'HC3N','H2','CS','SO3' /))
+	real*8 Mmol(48),mu
+	character*10 molname(48)
+	parameter(molname = (/'H2O   ','CO2   ','O3    ','N2O   ','CO    ','CH4   ',
+     &	'O2    ','CO2   ','SO2   ','NO2   ','NH3   ','HNO3  ','OH    ','HF    ',
+     &	'HCl   ','HBr   ','HI    ','ClO   ','OCS   ','H2CO  ','HOCl  ','N2    ',
+     &	'HCN   ','CH3Cl ','H2O2  ','C2H2  ','C2H6  ','PH3   ','COF2  ','SF6   ',
+     &	'H2S   ','HCOOH ','HO2   ','O     ','ClONO2','NO+   ','HOBr  ','C2H4  ',
+     &	'CH3OH ','CH3Br ','CH3CN ','CF4   ','C4H2  ','HC3N  ','H2    ','CS    ',
+     &	'SO3   ','He    ' /))
 	parameter(Mmol = (/     17.8851,  43.6918,  47.6511,  43.6947,  27.8081,  15.9272,  
      &	31.7674,  29.7889,  63.5840,  45.6607,  16.9072,  62.5442,  16.8841,  19.8619,  
      &	36.1973,  80.3271, 126.9884,  51.0760,  59.6379,  29.8088,  52.0765,  27.8112,  
      &	26.8304,  50.1116,  33.7598,  25.8499,  29.8518,  33.7516,  65.5261, 144.9081,  
      &	33.8332,  45.6731,  32.7593,  15.8794,  96.7366,  29.7813,  96.2063,  27.8507,  
      &	31.7949,  94.2413,  40.7302,  87.3580,  49.6543,  50.6424,   2.0014,  43.7539,  
-     &	79.3792 /))
+     &	79.3792,   2.0000 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt
 
@@ -86,6 +88,15 @@ c===============================================================================
 
 	type(Line),allocatable,target :: Lines(:)
 
+	type CIA_pair
+		character*20 name
+		character*500 filename
+		real*8,allocatable :: T(:),Cabs(:,:)
+		integer nT,imol1,imol2
+	end type CIA_pair
+	
+	type(CIA_pair),allocatable :: CIA(:)
+	real*8 cia_mixrat(50)
 
 c========================================================
 c Interfaces for input/output subroutines
@@ -298,6 +309,7 @@ c===============================================================================
 
 	nmol=1
 	nobs=1
+	ncia=0
 	j=0
 	do while(.not.key%last)
 		select case(key%key1)
@@ -305,6 +317,10 @@ c===============================================================================
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nobs) nobs=key%nr1
+			case("cia")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr2.eq.0) key%nr2=1
+				if(key%nr1.gt.ncia) ncia=key%nr1
 			case default
 				do i=1,47
 					if(key%key.eq.molname(i)) then
@@ -316,11 +332,14 @@ c===============================================================================
 		key=>key%next
 	enddo
 
-	call output('Number of molecules:    ' // int2string(j,'(i4)'))
-	call output('Number of observations: ' // int2string(nobs,'(i4)'))
+	call output('Number of molecules:       ' // int2string(j,'(i4)'))
+	call output('Number of collision pairs: ' // int2string(ncia,'(i4)'))
+	call output('Number of observations:    ' // int2string(nobs,'(i4)'))
 
 	allocate(obs(nobs))
 	allocate(mixrat(nmol))
+
+	allocate(CIA(max(ncia,1)))
 
 	return
 	end subroutine CountStuff

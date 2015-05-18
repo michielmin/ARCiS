@@ -16,7 +16,7 @@ endif
 # array boundary check
 ifeq ($(debug),true)
   ifeq ($(gfort),true)
-    DEBUGGING = -fbounds-check -fbacktrace
+    DEBUGGING = -fbounds-check -fbacktrace -fcheck=all
   else	
     DEBUGGING = -check all -traceback -check bounds -O0 -g -check -fpe1
   endif
@@ -73,7 +73,8 @@ OBJS	= Modules.o \
 		ReadHITRAN.o \
 		Subroutines.o \
 		Voigt.o \
-		TIPS_2011_v1p0_sub.o
+		TIPS_2011_v1p0_sub.o \
+		CIA.o
 
 # program name and install location
 PROGRAM       = SPARC

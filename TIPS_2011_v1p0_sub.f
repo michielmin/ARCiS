@@ -626,32 +626,32 @@ c44     HC3N
      +  12224,12234,12324,13224,12225,22224/
 
       DATA (ISO82(45,J),J=1,2)/
+c45     H2
+     +  11,12/
+c      DATA (ISO82(45,J),J=1,2)/
 c45     C2N2
-     +  4224,5225/
+c     +  4224,5225/
 
       DATA (ISO82(46,J),J=1,4)/
 c46     CS
      +  22,24,32,23/
 
-      DATA (ISO82(47,J),J=1,2)/
-c47     H2
-     +  11,12/
 
-      DATA (ISO82(48,J),J=1,3)/
+c      DATA (ISO82(48,J),J=1,3)/
 c48     SO
-     +  26,46,28/
+c     +  26,46,28/
 
-      DATA (ISO82(49,J),J=1,1)/
+c      DATA (ISO82(49,J),J=1,1)/
 c49     C3H4
-     +  1221/
+c     +  1221/
 
-      DATA (ISO82(50,J),J=1,1)/
+c      DATA (ISO82(50,J),J=1,1)/
 c50     CH3
-     +  2111/
+c     +  2111/
 
-      DATA (ISO82(51,J),J=1,4)/
+c      DATA (ISO82(51,J),J=1,4)/
 c51       CS2
-     +  222,224,223,232/
+c     +  222,224,223,232/
 
 
       end
@@ -6174,7 +6174,7 @@ c...input:  aa
 c...output: bb 
       implicit DOUBLE PRECISION (a-h,o-z)
       Parameter (Nmax=600)
-      dimension A(Nmax),B(Nmax)
+      dimension A(*),B(*)
 c
 C 
 c

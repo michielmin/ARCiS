@@ -4,9 +4,9 @@
 	IMPLICIT NONE
 	integer imol
 	real*8 kappa(ng),nu1,nu2,opac_tot(nlam,ng)
-	real*8 x1,x2,rr,gasdev,random,dnu
+	real*8 x1,x2,rr,gasdev,random,dnu,cia_tot(nlam)
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
-	integer n_nu_line
+	integer n_nu_line,iT
 	integer i,j,ir
 
 	n_voigt=1d6
@@ -29,7 +29,7 @@
 	enddo
 
 	opac_tot=0d0
-	
+
 	do ir=1,nr
 		call output("Opacities for layer: " // 
      &		trim(int2string(ir,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
@@ -51,12 +51,25 @@
 			nu_line(i)=exp(log(freq(1))+log(freq(nlam)/freq(1))*real(i-1)/real(n_nu_line-1))
 			dnu_line(i)=nu_line(i)*dnu
 		enddo
+		cia_tot=0d0
+		do i=1,ncia
+			if(T(ir).lt.CIA(i)%T(1)) then
+				iT=1
+			else if(T(iR).gt.CIA(i)%T(CIA(i)%nT)) then
+				iT=CIA(i)%nT
+			else
+				do iT=1,CIA(i)%nT-1
+					if(T(ir).ge.CIA(i)%T(iT).and.T(ir).le.CIA(i)%T(iT+1)) exit
+				enddo
+			endif
+			cia_tot(1:nlam)=cia_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
+		enddo
 		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line)
 		do i=1,nlam-1
 			call tellertje(i,nlam-1)
 			nu1=freq(i+1)
 			nu2=freq(i)
-			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa)
+			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cia_tot(i))
 			opac(ir,i,1:ng)=kappa(1:ng)
 			opac_tot(i,1:ng)=opac_tot(i,1:ng)+opac(ir,i,1:ng)*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
@@ -115,13 +128,13 @@ c line strength
 	end
 	
 	
-	subroutine ComputeKtable(ir,nu1,nu2,nu,kline,nnu,kappa)
+	subroutine ComputeKtable(ir,nu1,nu2,nu,kline,nnu,kappa,Ccont)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
 	integer nnu
 	real*8 nu1,nu2,kappa(ng),g(ng),w,dnu,gamma,fact,eps
-	real*8 nu(nnu),kline(nnu)
+	real*8 nu(nnu),kline(nnu),Ccont
 	real*8,allocatable :: kdis(:),dis(:)
 	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
 	integer inu,iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso,ir,NV0,iter,maxiter
@@ -149,8 +162,8 @@ c line strength
 	kmin=1d200
 	kmax=0d0
 	do inu=inu1,inu2
-		if(kline(inu).gt.kmax) kmax=kline(inu)
-		if(kline(inu).lt.kmin) kmin=kline(inu)
+		if((kline(inu)+Ccont).gt.kmax) kmax=kline(inu)+Ccont
+		if((kline(inu)+Ccont).lt.kmin) kmin=kline(inu)+Ccont
 	enddo
 	if(kmax.eq.0d0) then
 		kappa=0d0
@@ -166,7 +179,7 @@ c line strength
 	dis=0d0
 	do inu=inu1,inu2
 		do i=nkdis,1,-1
-			if(kline(inu).le.kdis(i)) then
+			if((kline(inu)+Ccont).le.kdis(i)) then
 				dis(i)=dis(i)+1d0
 			else
 				exit
@@ -211,6 +224,7 @@ c line strength
 	real*8 f,a_t,a_p
 	
 	fact=50d0
+	kline=0d0
 
 	nl=0
 	do i=1,nlines
@@ -222,7 +236,6 @@ c line strength
 
 	NV=nnu*10/(nl+1)+1000
 
-	kline=0d0
 	il=0
 	call hunt(TZ,nTZ,T(ir),iT)
 

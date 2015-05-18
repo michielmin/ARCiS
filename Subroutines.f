@@ -95,7 +95,7 @@
       REAL*8 gasdev
 CU    USES ran1
       INTEGER iset
-      REAL*8 fac,gset,rsq,v1,v2,ran2
+      REAL*8 fac,gset,rsq,v1,v2,random
       SAVE iset,gset
       DATA iset/0/
       if (iset.eq.0) then

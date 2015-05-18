@@ -12,7 +12,7 @@
 		open(unit=30,file=filename,RECL=1000)
 		write(30,'("#",a13,a19)') "lambda [mu]","flux [Jy]"
 		do i=1,nlam-1
-			write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,obs(iobs)%flux(i)
+			write(30,'(f12.6,es19.7)') sqrt(lam(i)*lam(i+1))/micron,obs(iobs)%flux(i)
 		enddo
 		close(unit=30)
 	enddo
