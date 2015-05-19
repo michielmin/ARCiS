@@ -5,6 +5,7 @@
 	character*20 name,cmin,cmax,cn,cT
 	real*8 x0,y0,x1,y1
 	
+	call output("Reading file:" // trim(CIA(icia)%filename))
 	iT=0
 	open(unit=20,file=CIA(icia)%filename,RECL=100)
 1	read(20,'(a20,a10,a10,a7,a7)',err=1,end=2) name,cmin,cmax,cn,cT
