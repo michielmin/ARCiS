@@ -30,6 +30,7 @@ c terms of use
 
 	call cpu_time(stoptime)
 	call output("Initialisation time: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+	call output("==================================================================")
 	starttime=stoptime
 
 	converged=.false.
@@ -52,9 +53,8 @@ c terms of use
 	call WriteOutput()
 
 	call cpu_time(stoptime)
-	call output("Total runtime:       " // trim(dbl2string((stoptime-starttime0),'(f10.2)')) // " s")
-
 	call output("==================================================================")
+	call output("Total runtime:       " // trim(dbl2string((stoptime-starttime0),'(f10.2)')) // " s")
 	call output("All done!")
 	call output("==================================================================")
 
