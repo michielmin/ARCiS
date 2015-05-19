@@ -24,8 +24,14 @@
 		rtrace(i+ndisk-1)=R(i+1)
 	enddo
 
+	call tellertje(1,nlam)
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau)
+!$OMP& SHARED(nlam,freq,obs,iobs,nrtrace,ng,rtrace,nr,R,Ndens,opac,T,lam)
+!$OMP DO SCHEDULE(STATIC, 1)
 	do ilam=1,nlam-1
-		call tellertje(ilam,nlam-1)
+		call tellertje(ilam+1,nlam+1)
 		freq0=sqrt(freq(ilam)*freq(ilam+1))
 		obs(iobs)%lam(ilam)=sqrt(lam(ilam)*lam(ilam+1))
 		obs(iobs)%flux(ilam)=0d0
@@ -75,6 +81,10 @@
 			obs(iobs)%flux(ilam)=obs(iobs)%flux(ilam)+fluxg/real(ng)
 		enddo
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+	call tellertje(nlam,nlam)
 	
 	obs(iobs)%flux=obs(iobs)%flux*1d23/distance**2
 	
