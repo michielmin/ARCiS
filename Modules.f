@@ -322,7 +322,7 @@ c===============================================================================
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.ncia) ncia=key%nr1
 			case default
-				do i=1,47
+				do i=1,48
 					if(key%key.eq.molname(i)) then
 						if(i.gt.nmol) nmol=i
 						j=j+1
