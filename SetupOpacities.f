@@ -65,13 +65,14 @@
 			cia_tot(1:nlam)=cia_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
 		enddo
 		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line)
+		call tellertje(1,nlam-1)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,nu1,nu2,kappa)
 !$OMP& SHARED(nlam,freq,ir,nu_line,k_line,n_nu_line,cia_tot,opac,opac_tot,Ndens,R,ng)
-!$OMP DO SCHEDULE(DYNAMIC, 1)
+!$OMP DO SCHEDULE(STATIC, 1)
 		do i=1,nlam-1
-			call tellertje(i,nlam-1)
+			call tellertje(i+1,nlam+1)
 			nu1=freq(i+1)
 			nu2=freq(i)
 			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cia_tot(i))
@@ -81,6 +82,7 @@
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
+		call tellertje(nlam,nlam)
 	
 	open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
 	write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
@@ -238,16 +240,17 @@ c line strength
 	il=0
 	call hunt(TZ,nTZ,T(ir),iT)
 
+	call tellertje(1,nl)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,imol,iiso,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm)
 !$OMP& SHARED(fact,Lines,mixrat,scale,NV,kline,nnu,nu,dnu,nlines,a_therm,a_press,il,nl,n_voigt)
-!$OMP DO SCHEDULE(DYNAMIC, 1)
+!$OMP DO SCHEDULE(STATIC, 1)
 	do i=1,nlines
 		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
 		if((Lines(i)%freq+gamma).gt.nu(nnu).and.(Lines(i)%freq-gamma).lt.nu(1)) then
 			il=il+1
-			call tellertje(il,nl)
+			call tellertje(il+1,nl+2)
 			imol=Lines(i)%imol
 			iiso=Lines(i)%iiso
 			A=Lines(i)%S*mixrat(imol)
@@ -281,6 +284,7 @@ c				x=(log(x)-log(nu(1)))/log(nu(nnu)/nu(1))*real(nnu-1)+1
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
+	call tellertje(nl,nl)
 
 	return
 	end

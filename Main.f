@@ -4,6 +4,10 @@
 	character*500 VersionGIT
 	logical converged
 	integer i
+	real*8 starttime,starttime0,stoptime
+
+	call cpu_time(starttime)
+	starttime0=starttime
 
 	call GetOutputDir
 	open(unit=9,file=trim(outputdir) // "log.dat",RECL=6000)
@@ -24,6 +28,10 @@ c terms of use
 
 	if(retrieval) call ReadObs()
 
+	call cpu_time(stoptime)
+	call output("Initialisation time: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+	starttime=stoptime
+
 	converged=.false.
 	do while(.not.converged)
 		call SetupStructure()
@@ -36,9 +44,15 @@ c terms of use
 		else
 			converged=.true.
 		endif
+		call cpu_time(stoptime)
+		call output("Model runtime:   " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+		starttime=stoptime
 	enddo
 
 	call WriteOutput()
+
+	call cpu_time(stoptime)
+	call output("Total runtime:       " // trim(dbl2string((stoptime-starttime0),'(f10.2)')) // " s")
 
 	call output("==================================================================")
 	call output("All done!")
