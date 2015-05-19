@@ -76,7 +76,7 @@ c allocate the arrays
 		case("distance")
 			read(key%value,*) distance
 		case default
-			do i=1,47
+			do i=1,48
 				if(key%key.eq.molname(i)) then
 					read(key%value,*) mixrat(i)
 					goto 1
