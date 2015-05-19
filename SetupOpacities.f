@@ -7,7 +7,7 @@
 	real*8 x1,x2,rr,gasdev,random,dnu,cia_tot(nlam)
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
 	integer n_nu_line,iT
-	integer i,j,ir
+	integer i,j,ir,inu1(nlam),inu2(nlam)
 
 	n_voigt=1d6
 	allocate(a_therm(n_voigt))
@@ -65,6 +65,11 @@
 			cia_tot(1:nlam)=cia_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
 		enddo
 		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line)
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,nu1,nu2,kappa)
+!$OMP& SHARED(nlam,freq,ir,nu_line,k_line,n_nu_line,cia_tot,opac,opac_tot,Ndens,R,ng)
+!$OMP DO SCHEDULE(DYNAMIC, 1)
 		do i=1,nlam-1
 			call tellertje(i,nlam-1)
 			nu1=freq(i+1)
@@ -73,6 +78,9 @@
 			opac(ir,i,1:ng)=kappa(1:ng)
 			opac_tot(i,1:ng)=opac_tot(i,1:ng)+opac(ir,i,1:ng)*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 	
 	open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
 	write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
@@ -132,12 +140,13 @@ c line strength
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer nnu
+	integer nnu,nkdis
+	parameter(nkdis=1000)
 	real*8 nu1,nu2,kappa(ng),g(ng),w,dnu,gamma,fact,eps
 	real*8 nu(nnu),kline(nnu),Ccont
-	real*8,allocatable :: kdis(:),dis(:)
+	real*8 kdis(nkdis),dis(nkdis)
 	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
-	integer inu,iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso,ir,NV0,iter,maxiter
+	integer inu,iT,imol,i,ju,jl,j,NV,nl,k,iiso,ir,NV0,iter,maxiter
 	integer i_therm,i_press,inu1,inu2
 	logical converged
 	real*8 f,a_t,a_p
@@ -146,18 +155,11 @@ c line strength
 		g(i)=(real(i)-0.5)/real(ng)
 	enddo
 
-	nkdis=1000
-	allocate(dis(nkdis))
-	allocate(kdis(nkdis))
-
-	inu1=nnu
-	inu2=1
-	do inu=1,nnu
-		if(nu(inu).lt.nu2.and.nu(inu).gt.nu1) then
-			if(inu.gt.inu2) inu2=inu
-			if(inu.lt.inu1) inu1=inu
-		endif
-	enddo
+	call hunt(nu,nnu,nu1,inu2)
+	call hunt(nu,nnu,nu2,inu1)
+	inu1=inu1+1
+	if(inu1.gt.nnu) inu1=nnu
+	if(inu2.gt.nnu) inu2=nnu
 
 	kmin=1d200
 	kmax=0d0
@@ -202,9 +204,6 @@ c line strength
 		endif
 	enddo
 	kappa(ng)=10d0**kmax
-	
-	deallocate(dis)
-	deallocate(kdis)
 
 	return
 	end
@@ -241,9 +240,9 @@ c line strength
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,imol,iiso,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu)
-!$OMP& SHARED(fact,Lines,mixrat,scale,NV,kline,nnu,nu1,nu2,nlines)
-!$OMP DO SCHEDULE(STATIC,1)
+!$OMP& PRIVATE(i,imol,iiso,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm)
+!$OMP& SHARED(fact,Lines,mixrat,scale,NV,kline,nnu,nu,dnu,nlines,a_therm,a_press,il,nl,n_voigt)
+!$OMP DO SCHEDULE(DYNAMIC, 1)
 	do i=1,nlines
 		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
 		if((Lines(i)%freq+gamma).gt.nu(nnu).and.(Lines(i)%freq-gamma).lt.nu(1)) then

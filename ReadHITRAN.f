@@ -80,9 +80,10 @@ c		read(delta,*) L%delta
 		enddo
 	enddo
 
-	call output("Reading CIA opacities")
+	if(ncia.gt.0) call output("Reading CIA opacities")
 	do i=1,ncia
 		call InitCIA(i)
+		call output("CIA: " // trim(molname(CIA(i)%imol1)) // "-" // trim(molname(CIA(i)%imol1)))
 	enddo
 
 	cia_mixrat=-1d0
