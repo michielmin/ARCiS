@@ -116,8 +116,8 @@ c thermal broadening
 		w=(sqrt(2d0*kb*T(ir)/(Mmol(imol)*mp)))
 		Lines(i)%a_therm=w*Lines(i)%freq/clight
 c pressure broadening
-		Lines(i)%a_press=Lines(i)%gamma_air*P(ir)*(1d0-mixrat(imol))
-		Lines(i)%a_press=Lines(i)%a_press+Lines(i)%gamma_air*P(ir)*mixrat(imol)
+		Lines(i)%a_press=Lines(i)%gamma_air*P(ir)*(1d0-mixrat(imol))/atm
+		Lines(i)%a_press=Lines(i)%a_press+Lines(i)%gamma_self*P(ir)*mixrat(imol)/atm
 		Lines(i)%a_press=Lines(i)%a_press*(296d0/T(ir))**Lines(i)%n
 c line strength
 		x1=exp(-hplanck*clight*Lines(i)%Elow/(kb*T(ir)))
@@ -128,9 +128,11 @@ c line strength
 		Lines(i)%S=Lines(i)%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 
 		if((Lines(i)%freq).gt.nu1.and.(Lines(i)%freq).lt.nu2) then
-		if(sqrt(Lines(i)%a_press**2+Lines(i)%a_therm**2)/Lines(i)%freq.lt.minw) then
-			minw=sqrt(Lines(i)%a_press**2+Lines(i)%a_therm**2)/Lines(i)%freq
-		endif
+			if(sqrt(Lines(i)%a_press**2+Lines(i)%a_therm**2)/Lines(i)%freq.lt.minw) then
+c			if(Lines(i)%a_therm/Lines(i)%freq.lt.minw) then
+				minw=sqrt(Lines(i)%a_press**2+Lines(i)%a_therm**2)/Lines(i)%freq
+c				minw=Lines(i)%a_therm/Lines(i)%freq
+			endif
 		endif
 	enddo
 	
@@ -143,18 +145,21 @@ c line strength
 	use Constants
 	IMPLICIT NONE
 	integer nnu,nkdis
-	parameter(nkdis=1000)
+	parameter(nkdis=100)
 	real*8 nu1,nu2,kappa(ng),g(ng),w,dnu,gamma,fact,eps
-	real*8 nu(nnu),kline(nnu),Ccont
-	real*8 kdis(nkdis),dis(nkdis)
+	real*8 nu(nnu),kline(nnu),Ccont,kap
+	real*8 kdis(nkdis),dis(nkdis),gb(ng+1)
 	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
 	integer inu,iT,imol,i,ju,jl,j,NV,nl,k,iiso,ir,NV0,iter,maxiter
-	integer i_therm,i_press,inu1,inu2
+	integer i_therm,i_press,inu1,inu2,ig(ng+1)
 	logical converged
 	real*8 f,a_t,a_p
 	
 	do i=1,ng
 		g(i)=(real(i)-0.5)/real(ng)
+	enddo
+	do i=1,ng+1
+		gb(i)=real(i-1)/real(ng)
 	enddo
 
 	call hunt(nu,nnu,nu1,inu2)
@@ -163,11 +168,16 @@ c line strength
 	if(inu1.gt.nnu) inu1=nnu
 	if(inu2.gt.nnu) inu2=nnu
 
-	kmin=1d200
-	kmax=0d0
-	do inu=inu1,inu2
-		if((kline(inu)+Ccont).gt.kmax) kmax=kline(inu)+Ccont
-		if((kline(inu)+Ccont).lt.kmin) kmin=kline(inu)+Ccont
+	kmin=Ccont
+	kmax=Ccont
+	do inu=inu1+1,inu2-1
+		kap=kline(inu)+Ccont
+		if(kap.gt.kmax) then
+			if(kline(inu-1).gt.kline(inu)*exp(-0.25).and.kline(inu+1).gt.kline(inu)*exp(-0.25)) then
+				kmax=kap
+			endif
+		endif
+		if(kap.lt.kmin) kmin=kline(inu)+Ccont
 	enddo
 	if(kmax.eq.0d0) then
 		kappa=0d0
@@ -194,18 +204,14 @@ c line strength
 	dis(1:nkdis-1)=dis(1:nkdis-1)/dis(nkdis)
 	dis(nkdis)=1d0
 
-	do i=1,ng
-		if(g(i).lt.dis(1)) then
-			kappa(i)=kdis(1)
-		else
-			call hunt(dis,nkdis,g(i),j)
-			if(j.lt.nkdis) then
-				if(abs(dis(j+1)-g(i)).lt.abs(dis(j)-g(i))) j=j+1
-			endif
-			kappa(i)=kdis(j)
-		endif
+	do i=1,ng+1
+		call hunt(dis,nkdis,gb(i),ig(i))
+		if(ig(i).lt.1) ig(i)=1
+		if(ig(i).gt.nkdis) ig(i)=nkdis
 	enddo
-	kappa(ng)=10d0**kmax
+	do i=1,ng
+		kappa(i)=sqrt(kdis(ig(i))*kdis(ig(i+1)))
+	enddo
 
 	return
 	end
@@ -235,7 +241,7 @@ c line strength
 
 	scale=real(nnu-1)/log(nu(nnu)/nu(1))
 
-	NV=nnu*10/(nl+1)+1000
+	NV=real(nnu)*10d0/real(nl+1)+100d0
 
 	il=0
 	call hunt(TZ,nTZ,T(ir),iT)
@@ -244,7 +250,7 @@ c line strength
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,imol,iiso,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm)
-!$OMP& SHARED(fact,Lines,mixrat,scale,NV,kline,nnu,nu,dnu,nlines,a_therm,a_press,il,nl,n_voigt)
+!$OMP& SHARED(fact,Lines,mixrat,scale,NV,kline,nnu,nu,nlines,a_therm,a_press,il,nl,n_voigt,P,ir)
 !$OMP DO SCHEDULE(STATIC, 1)
 	do i=1,nlines
 		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
@@ -276,7 +282,7 @@ c				x=(log(x)-log(nu(1)))/log(nu(nnu)/nu(1))*real(nnu-1)+1
 				x=log(x/nu(1))*scale
 				inu=int(x)+1
 				if(inu.ge.1.and.inu.le.nnu) then
-					kline(inu)=kline(inu)+A/dnu(inu)
+					kline(inu)=kline(inu)+A
 				endif
 			enddo
 		endif
@@ -285,6 +291,8 @@ c				x=(log(x)-log(nu(1)))/log(nu(nnu)/nu(1))*real(nnu-1)+1
 !$OMP FLUSH
 !$OMP END PARALLEL
 	call tellertje(nl,nl)
+
+	kline=kline/dnu
 
 	return
 	end

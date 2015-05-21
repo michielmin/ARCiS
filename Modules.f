@@ -4,7 +4,7 @@ c===============================================================================
 	module Constants
 	IMPLICIT NONE
 	real*8 pi,Ggrav,Msun,AU,clight,Rsun,mp,kb,hplanck,parsec,Lsun,sigma
-	real*8 Mearth,Rearth,Mjup,Rjup,year,micron,Rgas,Avogadro
+	real*8 Mearth,Rearth,Mjup,Rjup,year,micron,Rgas,Avogadro,atm
 	parameter(pi=3.14159265358979323846264338328d0)
 	parameter(clight=2.9979245800d10) !cm/s
 	parameter(AU=1.49598d13)
@@ -25,6 +25,7 @@ c===============================================================================
 	parameter(micron=1d-4)
 	parameter(Rgas=8.3144621e7)
 	parameter(Avogadro=6.02214129e23)
+	parameter(atm=1.01325)	! bar
 	
 	end module Constants
 
@@ -83,7 +84,7 @@ c===============================================================================
 		real*8 Aul,freq,Elow,lam,S0,S
 		real*8 gamma_air,gamma_self
 		real*8 a_therm,a_press,n
-		real*8 gu,gl
+		real*8 gu,gl,delta
 	end type Line
 
 	type(Line),allocatable,target :: Lines(:)

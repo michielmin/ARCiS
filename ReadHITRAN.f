@@ -49,7 +49,7 @@ c	nmol=0
 		read(gamma_self,*) L%gamma_self
 		read(E,*) L%Elow
 		read(n,*) L%n
-c		read(delta,*) L%delta
+		read(delta,*) L%delta
 		read(gu,*) L%gu
 		read(gl,*) L%gl
 	endif
