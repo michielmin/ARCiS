@@ -224,10 +224,12 @@ c				minw=Lines(i)%a_therm/Lines(i)%freq
 	IMPLICIT NONE
 	integer nnu
 	real*8 w,gamma,fact
-	real*8 nu(nnu),kline(nnu),dnu(nnu)
+	real*8 nu(nnu),dnu(nnu)
+	real*8,target :: kline(nnu)
 	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
-	integer inu,iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso,ir,NV0,iter,maxiter
+	integer iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso,ir,NV0,iter,maxiter
 	integer i_therm,i_press,il
+	integer,allocatable :: inu(:)
 	real*8 f,a_t,a_p
 	
 	fact=50d0
@@ -241,7 +243,8 @@ c				minw=Lines(i)%a_therm/Lines(i)%freq
 
 	scale=real(nnu-1)/log(nu(nnu)/nu(1))
 
-	NV=real(nnu)*10d0/real(nl+1)+100d0
+	NV=real(nnu)*100d0/real(nl+1)+10d0
+	allocate(inu(NV))
 
 	il=0
 	call hunt(TZ,nTZ,T(ir),iT)
@@ -263,7 +266,6 @@ c				minw=Lines(i)%a_therm/Lines(i)%freq
 			a_t=Lines(i)%a_therm
 			a_p=Lines(i)%a_press
 			f=Lines(i)%freq
-
 c	Random sampling of the Voigt profile
 			A=A/real(NV)
 			i_therm=random(idum)*real(n_voigt)
@@ -278,11 +280,12 @@ c	Random sampling of the Voigt profile
 				x2=a_press(i_press)
 				x2=x2*a_p
 				x=x1+x2+f
-c				x=(log(x)-log(nu(1)))/log(nu(nnu)/nu(1))*real(nnu-1)+1
 				x=log(x/nu(1))*scale
-				inu=int(x)+1
-				if(inu.ge.1.and.inu.le.nnu) then
-					kline(inu)=kline(inu)+A
+				inu(j)=int(x)+1
+			enddo
+			do j=1,NV
+				if(inu(j).ge.1.and.inu(j).le.nnu) then
+					kline(inu(j))=kline(inu(j))+A
 				endif
 			enddo
 		endif
