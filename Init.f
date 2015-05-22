@@ -31,6 +31,8 @@
 c Count the number of zones, particles, and stars
 c allocate the arrays
 	key => first%next
+
+	do_cia=.true.
 	call CountStuff(key)
 
 	call SetDefaults
@@ -49,11 +51,17 @@ c allocate the arrays
 		case("rp")
 			read(key%value,*) Rplanet
 		case("retrieval")
-			read(key%value,*) Rplanet
+			read(key%value,*) retrieval
+		case("outputopacity","writeopacity")
+			read(key%value,*) outputopacity
 		case("obs")
 			call ReadObs(key)
 		case("cia")
 			call ReadCIA(key)
+		case("cutoff","cutoff_lor")
+			read(key%value,*) cutoff_lor
+		case("cutoff_abs")
+			read(key%value,*) cutoff_abs
 		case("lam")
 			if(key%nr1.eq.1) read(key%value,*) lam1
 			if(key%nr1.eq.2) read(key%value,*) lam2
@@ -191,6 +199,7 @@ c allocate the arrays
 	enddo
 
 	retrieval=.false.
+	outputopacity=.false.
 	nr=20
 	
 	Pmin=1d-5
@@ -204,6 +213,9 @@ c allocate the arrays
 	epsCk=0.25d0
 	
 	distance=10d0
+	
+	cutoff_abs=1d200
+	cutoff_lor=1d200
 	
 	return
 	end
@@ -254,13 +266,17 @@ c allocate the arrays
 	integer i
 	i=key%nr1
 	
-	select case(key%key2)
-		case("file")
-			read(key%value,'(a)') CIA(i)%filename
-		case default
-			call output("Keyword not recognised: " // trim(key%key2))
-	end select
-	
+	if(key%key2.eq.' ') then
+		read(key%value,*) do_cia
+	else
+		select case(key%key2)
+			case("file")
+				read(key%value,'(a)') CIA(i)%filename
+			case default
+				call output("Keyword not recognised: " // trim(key%key2))
+		end select
+	endif
+		
 	return
 	end
 

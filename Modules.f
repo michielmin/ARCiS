@@ -45,8 +45,9 @@ c===============================================================================
 	character*500 outputdir,HITRANfile
 	integer idum
 !$OMP THREADPRIVATE(idum)
-	logical retrieval
+	logical retrieval,outputopacity,do_cia
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance
+	real*8 cutoff_abs,cutoff_lor
 	real*8,allocatable :: lam(:),freq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ
@@ -304,7 +305,9 @@ c===============================================================================
 	IMPLICIT NONE
 	type(SettingKey),target :: firstkey
 	type(SettingKey),pointer :: key
-	integer i,j
+	integer i,j,ncia0
+	character*500 homedir,h2h2file,h2hefile,h2ch4file
+	logical existh2h2,existh2he,existh2ch4
 
 	key => firstkey
 
@@ -319,9 +322,13 @@ c===============================================================================
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nobs) nobs=key%nr1
 			case("cia")
-				if(key%nr1.eq.0) key%nr1=1
-				if(key%nr2.eq.0) key%nr2=1
-				if(key%nr1.gt.ncia) ncia=key%nr1
+				if(key%key2.eq.' ') then
+					read(key%value,*) do_cia
+				else
+					if(key%nr1.eq.0) key%nr1=1
+					if(key%nr2.eq.0) key%nr2=1
+					if(key%nr1.gt.ncia) ncia=key%nr1
+				endif
 			case default
 				do i=1,48
 					if(key%key.eq.molname(i)) then
@@ -333,14 +340,90 @@ c===============================================================================
 		key=>key%next
 	enddo
 
-	call output('Number of molecules:       ' // int2string(j,'(i4)'))
-	call output('Number of collision pairs: ' // int2string(ncia,'(i4)'))
-	call output('Number of observations:    ' // int2string(nobs,'(i4)'))
-
 	allocate(obs(nobs))
 	allocate(mixrat(nmol))
 
-	allocate(CIA(max(ncia,1)))
+	ncia0=0
+	existh2h2=.false.
+	existh2he=.false.
+	existh2ch4=.false.
+	if(do_cia) then
+		call getenv('HOME',homedir)
+c find H2-H2 cia file
+		h2h2file=trim(homedir) // '/HITRAN/H2-H2_2011.cia'
+		inquire(file=h2h2file,exist=existh2h2)
+		if(existh2h2) then
+			ncia0=ncia0+1
+		else
+			h2h2file=trim(homedir) // '/HITRAN/CIA/H2-H2_2011.cia'
+			inquire(file=h2h2file,exist=existh2h2)
+			if(existh2h2) then
+				ncia0=ncia0+1
+			else
+				h2h2file=trim(homedir) // '/CIA/H2-H2_2011.cia'
+				inquire(file=h2h2file,exist=existh2h2)
+				if(existh2h2) then
+					ncia0=ncia0+1
+				endif
+			endif
+		endif
+c find H2-He cia file
+		h2hefile=trim(homedir) // '/HITRAN/H2-He_2011.cia'
+		inquire(file=h2hefile,exist=existh2he)
+		if(existh2he) then
+			ncia0=ncia0+1
+		else
+			h2hefile=trim(homedir) // '/HITRAN/CIA/H2-He_2011.cia'
+			inquire(file=h2hefile,exist=existh2he)
+			if(existh2he) then
+				ncia0=ncia0+1
+			else
+				h2hefile=trim(homedir) // '/CIA/H2-He_2011.cia'
+				inquire(file=h2hefile,exist=existh2he)
+				if(existh2he) then
+					ncia0=ncia0+1
+				endif
+			endif
+		endif
+c find H2-CH4 cia file
+		h2ch4file=trim(homedir) // '/HITRAN/H2-CH4_eq_2011.cia'
+		inquire(file=h2ch4file,exist=existh2ch4)
+		if(existh2ch4) then
+			ncia0=ncia0+1
+		else
+			h2ch4file=trim(homedir) // '/HITRAN/CIA/H2-CH4_eq_2011.cia'
+			inquire(file=h2ch4file,exist=existh2ch4)
+			if(existh2ch4) then
+				ncia0=ncia0+1
+			else
+				h2ch4file=trim(homedir) // '/CIA/H2-CH4_eq_2011.cia'
+				inquire(file=h2ch4file,exist=existh2ch4)
+				if(existh2ch4) then
+					ncia0=ncia0+1
+				endif
+			endif
+		endif
+	endif
+
+	allocate(CIA(max(ncia+ncia0,1)))
+
+	if(existh2h2) then
+		ncia=ncia+1
+		CIA(ncia)%filename=h2h2file
+	endif
+	if(existh2he) then
+		ncia=ncia+1
+		CIA(ncia)%filename=h2hefile
+	endif
+	if(existh2ch4) then
+		ncia=ncia+1
+		CIA(ncia)%filename=h2ch4file
+	endif
+
+	call output('Number of molecules:       ' // int2string(j,'(i4)'))
+	call output('Number of collision pairs: ' // int2string(ncia,'(i4)'))
+	call output('Number of observations:    ' // int2string(nobs,'(i4)'))
+	
 
 	return
 	end subroutine CountStuff

@@ -3,7 +3,8 @@
 	use Constants
 	IMPLICIT NONE
 	character*12 imol,iiso,nu,S,A,gamma_air,gamma_self,E,n,delta,gu,gl
-	character*100 dummy
+	character*100 dummy,homedir,file
+	logical exist
 	integer i,j,k,maxiiso,it
 	type(Line),pointer :: L
 	real*8 scale
@@ -63,7 +64,7 @@ c	nmol=0
 		if(Lines(i)%iiso.gt.niso(Lines(i)%imol)) niso(Lines(i)%imol)=Lines(i)%iiso
 	enddo
 
-	nTZ=500
+	nTZ=2000
 	allocate(ZZ(nmol,maxiiso,nTZ))
 	allocate(TZ(nTZ))
 	ZZ=0d0

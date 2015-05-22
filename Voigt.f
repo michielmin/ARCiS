@@ -63,7 +63,7 @@
 ! formats statements
  78   format(1x,i6,1p6e14.6)
 
-	if(abs(v).gt.10d0) then
+	if(abs(v).gt.8d0) then
 		ans=a/(v**2+a**2)/sqrt(3.1415926536)
 		return
 	endif

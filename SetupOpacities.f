@@ -3,18 +3,20 @@
 	use Constants
 	IMPLICIT NONE
 	integer imol
-	real*8 kappa(ng),nu1,nu2,opac_tot(nlam,ng)
+	real*8 kappa(ng),nu1,nu2,opac_tot(nlam,ng),tanscale
 	real*8 x1,x2,rr,gasdev,random,dnu,cia_tot(nlam)
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
 	integer n_nu_line,iT
 	integer i,j,ir,inu1(nlam),inu2(nlam)
+	character*500 filename
 
 	n_voigt=1d6
 	allocate(a_therm(n_voigt))
 	allocate(a_press(n_voigt))
+	tanscale=atan(cutoff_lor)
 	do i=1,n_voigt
 		x1=gasdev(idum)/sqrt(2d0)
-		x2=tan((random(idum)-0.5d0)*pi)
+		x2=tan((random(idum)-0.5d0)*2d0*tanscale)
 		rr=random(idum)
 		if(rr.lt.0.25) then
 			x1=-x1
@@ -36,7 +38,7 @@
 		call output("T = " // trim(dbl2string(T(ir),'(f8.2)')) // " K")
 		call output("P = " // trim(dbl2string(P(ir),'(es8.2)')) // " Ba")
 		call LineStrengthWidth(ir,dnu,freq(nlam),freq(1))
-		dnu=dnu/4d0
+		dnu=dnu/3d0
 		n_nu_line=abs(freq(1)/freq(nlam))/dnu
 		nu1=freq(1)
 		n_nu_line=1
@@ -65,6 +67,8 @@
 			cia_tot(1:nlam)=cia_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
 		enddo
 		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line)
+c		call ComputeKline_exact(ir,nu_line,k_line,n_nu_line,dnu_line)
+		if(outputopacity) call WriteOpacity(ir,"line",nu_line,k_line,n_nu_line,1)
 		call tellertje(1,nlam-1)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -82,6 +86,7 @@
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
+		if(outputopacity) call WriteOpacity(ir,"aver",freq,opac(ir,1:nlam,1:ng),nlam,ng)
 		call tellertje(nlam,nlam)
 	
 	open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
@@ -128,10 +133,8 @@ c line strength
 		Lines(i)%S=Lines(i)%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 
 		if((Lines(i)%freq).gt.nu1.and.(Lines(i)%freq).lt.nu2) then
-			if(sqrt(Lines(i)%a_press**2+Lines(i)%a_therm**2)/Lines(i)%freq.lt.minw) then
-c			if(Lines(i)%a_therm/Lines(i)%freq.lt.minw) then
-				minw=sqrt(Lines(i)%a_press**2+Lines(i)%a_therm**2)/Lines(i)%freq
-c				minw=Lines(i)%a_therm/Lines(i)%freq
+			if(sqrt((Lines(i)%a_press*4d0)**2+Lines(i)%a_therm**2)/Lines(i)%freq.lt.minw) then
+				minw=sqrt((Lines(i)%a_press*4d0)**2+Lines(i)%a_therm**2)/Lines(i)%freq
 			endif
 		endif
 	enddo
@@ -168,16 +171,12 @@ c				minw=Lines(i)%a_therm/Lines(i)%freq
 	if(inu1.gt.nnu) inu1=nnu
 	if(inu2.gt.nnu) inu2=nnu
 
-	kmin=Ccont
+	kmin=1d200
 	kmax=Ccont
 	do inu=inu1+1,inu2-1
 		kap=kline(inu)+Ccont
-		if(kap.gt.kmax) then
-			if(kline(inu-1).gt.kline(inu)*exp(-0.25).and.kline(inu+1).gt.kline(inu)*exp(-0.25)) then
-				kmax=kap
-			endif
-		endif
-		if(kap.lt.kmin) kmin=kline(inu)+Ccont
+		if(kap.gt.kmax) kmax=kap
+		if(kap.lt.kmin) kmin=kap
 	enddo
 	if(kmax.eq.0d0) then
 		kappa=0d0
@@ -228,8 +227,7 @@ c				minw=Lines(i)%a_therm/Lines(i)%freq
 	real*8,target :: kline(nnu)
 	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
 	integer iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso,ir,NV0,iter,maxiter
-	integer i_therm,i_press,il
-	integer,allocatable :: inu(:)
+	integer i_therm,i_press,il,idnu,inu1,inu2,inu
 	real*8 f,a_t,a_p
 	
 	fact=50d0
@@ -243,8 +241,7 @@ c				minw=Lines(i)%a_therm/Lines(i)%freq
 
 	scale=real(nnu-1)/log(nu(nnu)/nu(1))
 
-	NV=real(nnu)*100d0/real(nl+1)+10d0
-	allocate(inu(NV))
+	NV=real(nnu)*100d0/real(nl+1)+25d0
 
 	il=0
 	call hunt(TZ,nTZ,T(ir),iT)
@@ -252,12 +249,12 @@ c				minw=Lines(i)%a_therm/Lines(i)%freq
 	call tellertje(1,nl)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,imol,iiso,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm)
-!$OMP& SHARED(fact,Lines,mixrat,scale,NV,kline,nnu,nu,nlines,a_therm,a_press,il,nl,n_voigt,P,ir)
+!$OMP& PRIVATE(i,imol,iiso,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2)
+!$OMP& SHARED(fact,Lines,mixrat,scale,NV,kline,nnu,nu,nlines,a_therm,a_press,il,nl,n_voigt,P,ir,cutoff_abs)
 !$OMP DO SCHEDULE(STATIC, 1)
 	do i=1,nlines
-		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
-		if((Lines(i)%freq+gamma).gt.nu(nnu).and.(Lines(i)%freq-gamma).lt.nu(1)) then
+		gamma=sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
+		if((Lines(i)%freq+fact*gamma).gt.nu(nnu).and.(Lines(i)%freq-fact*gamma).lt.nu(1)) then
 			il=il+1
 			call tellertje(il+1,nl+2)
 			imol=Lines(i)%imol
@@ -279,13 +276,122 @@ c	Random sampling of the Voigt profile
 				x1=x1*a_t
 				x2=a_press(i_press)
 				x2=x2*a_p
-				x=x1+x2+f
-				x=log(x/nu(1))*scale
-				inu(j)=int(x)+1
+				x=x1+x2
+				if(abs(x).lt.cutoff_abs) then
+					idnu=abs(x/gamma)
+					x=x+f
+					x=log(x/nu(1))*scale
+					inu=int(x)+1
+					inu1=inu-idnu
+					inu2=inu+idnu
+					if(inu1.le.nnu.and.inu2.ge.1) then
+						if(inu1.lt.1) inu1=1
+						if(inu2.gt.nnu) inu2=nnu
+						kline(inu1:inu2)=kline(inu1:inu2)+A/real(inu2-inu1+1)
+					endif
+				endif
 			enddo
+		endif
+	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+	call tellertje(nl,nl)
+
+	kline=kline/dnu
+
+	return
+	end
+
+
+
+
+
+
+	subroutine ComputeKline_exact(ir,nu,kline,nnu,dnu)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	integer nnu
+	real*8 w,gamma,fact
+	real*8 nu(nnu),dnu(nnu)
+	real*8,target :: kline(nnu)
+	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
+	integer iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso,ir,NV0,iter,maxiter
+	integer i_therm,i_press,il,inu
+	real*8 f,a_t,a_p,y
+	real*8,allocatable :: psi(:),x_psi(:)
+	integer n_psi
+	
+	n_psi=1d6
+	allocate(psi(n_psi))
+	allocate(x_psi(n_psi))
+	do i=1,n_psi
+		x_psi(i)=real(i-1)/100d0
+		psi(i)=1d0/(x_psi(i)**2+1d0)/sqrt(3.1415926536)
+	enddo
+	
+	fact=50d0
+	kline=0d0
+
+	nl=0
+	do i=1,nlines
+		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
+		if((Lines(i)%freq+gamma).gt.nu(nnu).and.(Lines(i)%freq-gamma).lt.nu(1)) nl=nl+1
+	enddo
+
+	scale=real(nnu-1)/log(nu(nnu)/nu(1))
+
+	NV=real(nnu)*100d0/real(nl+1)+10d0
+
+	il=0
+	call hunt(TZ,nTZ,T(ir),iT)
+
+	call tellertje(1,nl)
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,imol,iiso,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,y,j)
+!$OMP& SHARED(fact,Lines,mixrat,scale,NV,kline,nnu,nu,nlines,a_therm,a_press,il,nl,n_voigt,P,ir,n_psi,psi)
+!$OMP DO SCHEDULE(STATIC, 1)
+	do i=1,nlines
+		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
+		if((Lines(i)%freq+gamma).gt.nu(nnu).and.(Lines(i)%freq-gamma).lt.nu(1)) then
+			il=il+1
+			call tellertje(il+1,nl+2)
+			imol=Lines(i)%imol
+			iiso=Lines(i)%iiso
+			A=Lines(i)%S*mixrat(imol)
+			a_t=Lines(i)%a_therm
+			a_p=Lines(i)%a_press
+			f=Lines(i)%freq
+			y=a_p/a_t
+			do inu=1,nnu
+				x=abs(nu(inu)-f)
+				x=x/a_t
+				if(x.gt.8d0) then
+					j=x*100d0+1
+					if(j.lt.n_psi.and.j.gt.0) then
+						kline(inu)=kline(inu)+psi(j)*A/y
+					endif
+				endif
+			enddo
+			A=A/real(NV)
+			i_therm=random(idum)*real(n_voigt)
+			i_press=random(idum)*real(n_voigt)
 			do j=1,NV
-				if(inu(j).ge.1.and.inu(j).le.nnu) then
-					kline(inu(j))=kline(inu(j))+A
+				i_therm=i_therm+1
+				i_press=i_press+1
+				if(i_therm.gt.n_voigt) i_therm=1
+				if(i_press.gt.n_voigt) i_press=1
+				x1=a_therm(i_therm)
+				x1=x1*a_t
+				x2=a_press(i_press)
+				x2=x2*a_p
+				if(abs(x1+x2).lt.8d0*a_t) then
+					x=x1+x2+f
+					x=log(x/nu(1))*scale
+					inu=int(x)+1
+					if(inu.ge.1.and.inu.le.nnu) kline(inu)=kline(inu)+A
 				endif
 			enddo
 		endif

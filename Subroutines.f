@@ -194,7 +194,7 @@ c-----------------------------------------------------------------------
 	goto 100
 102	continue
 	do j=i,n
-		y(j)=y(i-1)*grid(i-1)/grid(j)
+		y(j)=y0*x0/grid(j)
 	enddo
 	close(unit=20)
 	do i=1,n
