@@ -3,12 +3,20 @@
 	use Constants
 	IMPLICIT NONE
 	integer imol
-	real*8 kappa(ng),nu1,nu2,opac_tot(nlam,ng),tanscale
-	real*8 x1,x2,rr,gasdev,random,dnu,cia_tot(nlam)
+	real*8 kappa(ng),nu1,nu2,tanscale
+	real*8 x1,x2,rr,gasdev,random,dnu
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
+	real*8,allocatable :: opac_tot(:,:),cia_tot(:),kaver(:)
 	integer n_nu_line,iT
-	integer i,j,ir,inu1(nlam),inu2(nlam)
+	integer i,j,ir
+	integer,allocatable :: inu1(:),inu2(:)
 	character*500 filename
+
+	allocate(cia_tot(nlam))
+	allocate(kaver(nlam))
+	allocate(opac_tot(nlam,ng))
+	allocate(inu1(nlam))
+	allocate(inu2(nlam))
 
 	n_voigt=1d6
 	allocate(a_therm(n_voigt))
@@ -66,9 +74,10 @@
 			endif
 			cia_tot(1:nlam)=cia_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
 		enddo
+		call output("Compute lines")
 		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line)
-c		call ComputeKline_exact(ir,nu_line,k_line,n_nu_line,dnu_line)
-		if(outputopacity) call WriteOpacity(ir,"line",nu_line,k_line,n_nu_line,1)
+c		if(outputopacity) call WriteOpacity(ir,"line",nu_line,k_line,n_nu_line,1)
+		call output("Compute k-tables")
 		call tellertje(1,nlam-1)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -86,7 +95,16 @@ c		call ComputeKline_exact(ir,nu_line,k_line,n_nu_line,dnu_line)
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
-		if(outputopacity) call WriteOpacity(ir,"aver",freq,opac(ir,1:nlam,1:ng),nlam,ng)
+		if(outputopacity) then
+c			call WriteOpacity(ir,"ktab",freq,opac(ir,1:nlam-1,1:ng),nlam-1,ng)
+			do i=1,nlam-1
+				kaver(i)=0d0
+				do j=1,ng
+					kaver(i)=kaver(i)+opac(ir,i,j)/real(ng)
+				enddo
+			enddo
+			call WriteOpacity(ir,"aver",freq,kaver(1:nlam-1),nlam-1,1)
+		endif
 		call tellertje(nlam,nlam)
 	
 	open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
@@ -303,107 +321,5 @@ c	Random sampling of the Voigt profile
 	return
 	end
 
-
-
-
-
-
-	subroutine ComputeKline_exact(ir,nu,kline,nnu,dnu)
-	use GlobalSetup
-	use Constants
-	IMPLICIT NONE
-	integer nnu
-	real*8 w,gamma,fact
-	real*8 nu(nnu),dnu(nnu)
-	real*8,target :: kline(nnu)
-	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
-	integer iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso,ir,NV0,iter,maxiter
-	integer i_therm,i_press,il,inu
-	real*8 f,a_t,a_p,y
-	real*8,allocatable :: psi(:),x_psi(:)
-	integer n_psi
-	
-	n_psi=1d6
-	allocate(psi(n_psi))
-	allocate(x_psi(n_psi))
-	do i=1,n_psi
-		x_psi(i)=real(i-1)/100d0
-		psi(i)=1d0/(x_psi(i)**2+1d0)/sqrt(3.1415926536)
-	enddo
-	
-	fact=50d0
-	kline=0d0
-
-	nl=0
-	do i=1,nlines
-		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
-		if((Lines(i)%freq+gamma).gt.nu(nnu).and.(Lines(i)%freq-gamma).lt.nu(1)) nl=nl+1
-	enddo
-
-	scale=real(nnu-1)/log(nu(nnu)/nu(1))
-
-	NV=real(nnu)*100d0/real(nl+1)+10d0
-
-	il=0
-	call hunt(TZ,nTZ,T(ir),iT)
-
-	call tellertje(1,nl)
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,imol,iiso,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,y,j)
-!$OMP& SHARED(fact,Lines,mixrat,scale,NV,kline,nnu,nu,nlines,a_therm,a_press,il,nl,n_voigt,P,ir,n_psi,psi)
-!$OMP DO SCHEDULE(STATIC, 1)
-	do i=1,nlines
-		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
-		if((Lines(i)%freq+gamma).gt.nu(nnu).and.(Lines(i)%freq-gamma).lt.nu(1)) then
-			il=il+1
-			call tellertje(il+1,nl+2)
-			imol=Lines(i)%imol
-			iiso=Lines(i)%iiso
-			A=Lines(i)%S*mixrat(imol)
-			a_t=Lines(i)%a_therm
-			a_p=Lines(i)%a_press
-			f=Lines(i)%freq
-			y=a_p/a_t
-			do inu=1,nnu
-				x=abs(nu(inu)-f)
-				x=x/a_t
-				if(x.gt.8d0) then
-					j=x*100d0+1
-					if(j.lt.n_psi.and.j.gt.0) then
-						kline(inu)=kline(inu)+psi(j)*A/y
-					endif
-				endif
-			enddo
-			A=A/real(NV)
-			i_therm=random(idum)*real(n_voigt)
-			i_press=random(idum)*real(n_voigt)
-			do j=1,NV
-				i_therm=i_therm+1
-				i_press=i_press+1
-				if(i_therm.gt.n_voigt) i_therm=1
-				if(i_press.gt.n_voigt) i_press=1
-				x1=a_therm(i_therm)
-				x1=x1*a_t
-				x2=a_press(i_press)
-				x2=x2*a_p
-				if(abs(x1+x2).lt.8d0*a_t) then
-					x=x1+x2+f
-					x=log(x/nu(1))*scale
-					inu=int(x)+1
-					if(inu.ge.1.and.inu.le.nnu) kline(inu)=kline(inu)+A
-				endif
-			enddo
-		endif
-	enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
-	call tellertje(nl,nl)
-
-	kline=kline/dnu
-
-	return
-	end
 
 

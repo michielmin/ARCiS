@@ -64,7 +64,7 @@ c	nmol=0
 		if(Lines(i)%iiso.gt.niso(Lines(i)%imol)) niso(Lines(i)%imol)=Lines(i)%iiso
 	enddo
 
-	nTZ=2000
+	nTZ=5000
 	allocate(ZZ(nmol,maxiiso,nTZ))
 	allocate(TZ(nTZ))
 	ZZ=0d0

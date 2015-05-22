@@ -45,7 +45,7 @@ c===============================================================================
 	character*500 outputdir,HITRANfile
 	integer idum
 !$OMP THREADPRIVATE(idum)
-	logical retrieval,outputopacity,do_cia
+	logical retrieval,outputopacity,do_cia,gridTPfile
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance
 	real*8 cutoff_abs,cutoff_lor
 	real*8,allocatable :: lam(:),freq(:)
@@ -386,23 +386,23 @@ c find H2-He cia file
 			endif
 		endif
 c find H2-CH4 cia file
-		h2ch4file=trim(homedir) // '/HITRAN/H2-CH4_eq_2011.cia'
-		inquire(file=h2ch4file,exist=existh2ch4)
-		if(existh2ch4) then
-			ncia0=ncia0+1
-		else
-			h2ch4file=trim(homedir) // '/HITRAN/CIA/H2-CH4_eq_2011.cia'
-			inquire(file=h2ch4file,exist=existh2ch4)
-			if(existh2ch4) then
-				ncia0=ncia0+1
-			else
-				h2ch4file=trim(homedir) // '/CIA/H2-CH4_eq_2011.cia'
-				inquire(file=h2ch4file,exist=existh2ch4)
-				if(existh2ch4) then
-					ncia0=ncia0+1
-				endif
-			endif
-		endif
+c		h2ch4file=trim(homedir) // '/HITRAN/H2-CH4_eq_2011.cia'
+c		inquire(file=h2ch4file,exist=existh2ch4)
+c		if(existh2ch4) then
+c			ncia0=ncia0+1
+c		else
+c			h2ch4file=trim(homedir) // '/HITRAN/CIA/H2-CH4_eq_2011.cia'
+c			inquire(file=h2ch4file,exist=existh2ch4)
+c			if(existh2ch4) then
+c				ncia0=ncia0+1
+c			else
+c				h2ch4file=trim(homedir) // '/CIA/H2-CH4_eq_2011.cia'
+c				inquire(file=h2ch4file,exist=existh2ch4)
+c				if(existh2ch4) then
+c					ncia0=ncia0+1
+c				endif
+c			endif
+c		endif
 	endif
 
 	allocate(CIA(max(ncia+ncia0,1)))

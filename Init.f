@@ -79,6 +79,8 @@ c allocate the arrays
 			read(key%value,*) specres
 		case("tpfile")
 			read(key%value,'(a)') TPfile
+		case("gridtpfile")
+			read(key%value,*) gridTPfile
 		case("ng")
 			read(key%value,*) ng
 		case("distance")
@@ -149,7 +151,7 @@ c allocate the arrays
 	use Constants
 	IMPLICIT NONE
 	integer i
-	real*8 g,dp,dz,P0(nr),T0(nr)
+	real*8 g,dp,dz,P0(nr),T0(nr),pp,tt
 	character*500 TPfile
 	
 	allocate(dens(nr))
@@ -158,15 +160,31 @@ c allocate the arrays
 	allocate(T(nr))
 	allocate(P(nr))
 	
-	do i=1,nr
-		P0(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nr-1))
-	enddo
-	if(TPfile.ne.' ') then
-		call regridlog(TPfile,P0,T0,nr)
+	if(gridTPfile) then
+		open(unit=20,file=TPfile)
+		i=1
+1		read(20,*,err=1,end=2) pp,tt
+		if(i.gt.nr) then
+			call output("Increase number of radial points for this file")
+			stop
+		endif
+		P0(i)=pp
+		T0(i)=tt
+		i=i+1
+		goto 1
+2		close(unit=20)
+		nr=i-1
 	else
 		do i=1,nr
-			T0(i)=exp(log(270d0)+log(10d0)*(real(i-1)/real(nr-1)))
+			P0(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nr-1))
 		enddo
+		if(TPfile.ne.' ') then
+			call regridlog(TPfile,P0,T0,nr)
+		else
+			do i=1,nr
+				T0(i)=exp(log(270d0)+log(10d0)*(real(i-1)/real(nr-1)))
+			enddo
+		endif
 	endif
 
 	do i=1,nr
@@ -216,6 +234,8 @@ c allocate the arrays
 	
 	cutoff_abs=1d200
 	cutoff_lor=1d200
+	
+	gridTPfile=.false.
 	
 	return
 	end
