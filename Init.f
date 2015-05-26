@@ -85,6 +85,8 @@ c allocate the arrays
 			read(key%value,*) ng
 		case("distance")
 			read(key%value,*) distance
+		case("hitemp")
+			read(key%value,*) HITEMP
 		case default
 			do i=1,48
 				if(key%key.eq.molname(i)) then
@@ -111,7 +113,7 @@ c allocate the arrays
 
 	call output("==================================================================")
 
-	call ReadHITRAN()
+	call ReadData()
 
 	call output("==================================================================")
 	
@@ -225,8 +227,11 @@ c allocate the arrays
 
 	call getenv('HOME',homedir) 
 
-	HITRANfile=trim(homedir) // '/HITRAN/HITRAN2012.par'
-	
+	HITRANdir=trim(homedir) // '/HITRAN/'
+	HITEMPdir=trim(homedir) // '/HITEMP/'
+
+	HITEMP=.false.
+
 	ng=100
 	epsCk=0.25d0
 	

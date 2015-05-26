@@ -42,7 +42,7 @@ c===============================================================================
 	real*8,allocatable :: opac(:,:,:)						! radius,wav,g
 	integer nT,np,nr,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines,ng,ncia
-	character*500 outputdir,HITRANfile
+	character*500 outputdir,HITRANdir,HITEMPdir
 	integer idum
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile
@@ -55,7 +55,7 @@ c===============================================================================
 	real*8 Mmol(48),mu
 	character*10 molname(48)
 	parameter(molname = (/'H2O   ','CO2   ','O3    ','N2O   ','CO    ','CH4   ',
-     &	'O2    ','CO2   ','SO2   ','NO2   ','NH3   ','HNO3  ','OH    ','HF    ',
+     &	'O2    ','NO    ','SO2   ','NO2   ','NH3   ','HNO3  ','OH    ','HF    ',
      &	'HCl   ','HBr   ','HI    ','ClO   ','OCS   ','H2CO  ','HOCl  ','N2    ',
      &	'HCN   ','CH3Cl ','H2O2  ','C2H2  ','C2H6  ','PH3   ','COF2  ','SF6   ',
      &	'H2S   ','HCOOH ','HO2   ','O     ','ClONO2','NO+   ','HOBr  ','C2H4  ',
@@ -70,6 +70,7 @@ c===============================================================================
      &	79.3792,   2.0000 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt
+	logical HITEMP
 
 
 	type Observation
@@ -83,9 +84,9 @@ c===============================================================================
 	type Line
 		integer imol,iiso
 		real*8 Aul,freq,Elow,lam,S0,S
-		real*8 gamma_air,gamma_self
-		real*8 a_therm,a_press,n
-		real*8 gu,gl,delta
+		real gamma_air,gamma_self
+		real a_therm,a_press,n
+		real gu,gl
 	end type Line
 
 	type(Line),allocatable,target :: Lines(:)

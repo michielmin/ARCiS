@@ -38,7 +38,7 @@ ifeq ($(gfort),true)
   FLAG_LINUX    = -cpp
   FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else
-  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(DEBUGGING) $(MULTICORE)
+  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(DEBUGGING) $(MULTICORE) -assume buffered_io
   FLAG_LINUX    = -xHOST -fpp
   FLAG_MAC      = -xHOST -opt-prefetch -static-intel -fpp
 endif
@@ -70,7 +70,7 @@ OBJS	= Modules.o \
 		WriteOutput.o \
 		Version.o \
 		AdjustParameters.o \
-		ReadHITRAN.o \
+		ReadData.o \
 		Subroutines.o \
 		Voigt.o \
 		TIPS_2011_v1p0_sub.o \

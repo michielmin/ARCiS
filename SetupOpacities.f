@@ -132,6 +132,11 @@ c			call WriteOpacity(ir,"ktab",freq,opac(ir,1:nlam-1,1:ng),nlam-1,ng)
 	minw=0.1d0
 	call hunt(TZ,nTZ,T(ir),iT)
 
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,imol,iiso,w,x1,x2,x3,x4)
+!$OMP& SHARED(nlines,Lines,nu1,nu2,minw,iT,Mmol,P,ir,ZZ,mixrat,T)
+!$OMP DO
 	do i=1,nlines
 		imol=Lines(i)%imol
 		iiso=Lines(i)%iiso
@@ -156,6 +161,9 @@ c line strength
 			endif
 		endif
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 	
 	return
 	end
@@ -267,16 +275,15 @@ c line strength
 	call tellertje(1,nl)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,imol,iiso,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2)
+!$OMP& PRIVATE(i,imol,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2)
 !$OMP& SHARED(fact,Lines,mixrat,scale,NV,kline,nnu,nu,nlines,a_therm,a_press,il,nl,n_voigt,P,ir,cutoff_abs)
-!$OMP DO SCHEDULE(STATIC, 1)
+!$OMP DO
 	do i=1,nlines
 		gamma=sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
 		if((Lines(i)%freq+fact*gamma).gt.nu(nnu).and.(Lines(i)%freq-fact*gamma).lt.nu(1)) then
 			il=il+1
 			call tellertje(il+1,nl+2)
 			imol=Lines(i)%imol
-			iiso=Lines(i)%iiso
 			A=Lines(i)%S*mixrat(imol)
 			a_t=Lines(i)%a_therm
 			a_p=Lines(i)%a_press
