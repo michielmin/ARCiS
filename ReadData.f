@@ -5,7 +5,7 @@
 	character*12 imol,iiso,nu,S,A,gamma_air,gamma_self,E,n,delta,gu,gl
 	character*100 dummy,homedir,file
 	logical exist,doneHITEMP(48)
-	integer i,j,k,maxiiso,it,ifile,nfile
+	integer i,j,k,maxiiso,it,ifile,nfile,nHITEMP,nHITRAN
 	type(Line),pointer :: L
 	real*8 scale,f_numin,f_numax
 c H2O, CO2, CO, NO, OH
@@ -62,11 +62,13 @@ c H2O, CO2, CO, NO, OH
 					endif
 					goto 1
 2					close(unit=30)
+					call output("number of lines so far: " // trim(int2string(nlines)))
 				endif
 			endif
 			endif
 		enddo
 	endif
+	nHITEMP=nlines
 
 	call output("Counting HITRAN database")
 	call output("file: " // trim(HITRANdir) // "HITRAN2012.par")
@@ -80,6 +82,8 @@ c H2O, CO2, CO, NO, OH
 	endif
 	goto 3
 4	close(unit=30)
+
+	nHITRAN=nlines-nHITEMP
 
 	allocate(Lines(nlines+1))
 
@@ -132,21 +136,23 @@ c done counting, now read it in!
 		enddo
 	endif
 
-	open(unit=30,file=trim(HITRANdir) // "HITRAN2012.par",RECL=500)
-7	read(30,'(i2,i1,f12.0,f10.0,f10.0,f5.0,f5.0,f10.0,f4.0,a87,f7.0,f7.0)',end=8) 
+	if(nHITRAN.gt.0) then
+		open(unit=30,file=trim(HITRANdir) // "HITRAN2012.par",RECL=500)
+7		read(30,'(i2,i1,f12.0,f10.0,f10.0,f5.0,f5.0,f10.0,f4.0,a87,f7.0,f7.0)',end=8) 
      &			L%imol,L%iiso,L%freq,L%S0,L%Aul,L%gamma_air,L%gamma_self,L%Elow,L%n,dummy,L%gu,L%gl
-	j=L%imol
-	if(j.le.nmol) then
-		if(mixrat(j).gt.0d0.and..not.doneHITEMP(j)) then
-			call tellertje(i,nlines)
-			if(L%imol.gt.nmol) nmol=L%imol
-			if(L%iiso.gt.maxiiso) maxiiso=L%iiso
-			i=i+1
-			L => Lines(i)
+		j=L%imol
+		if(j.le.nmol) then
+			if(mixrat(j).gt.0d0.and..not.doneHITEMP(j)) then
+				call tellertje(i,nlines)
+				if(L%imol.gt.nmol) nmol=L%imol
+				if(L%iiso.gt.maxiiso) maxiiso=L%iiso
+				i=i+1
+				L => Lines(i)
+			endif
 		endif
+		goto 7
+8		close(unit=30)
 	endif
-	goto 7
-8	close(unit=30)
 
 	allocate(niso(nmol))
 	niso=0

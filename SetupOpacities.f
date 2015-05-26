@@ -96,7 +96,7 @@ c		if(outputopacity) call WriteOpacity(ir,"line",nu_line,k_line,n_nu_line,1)
 !$OMP FLUSH
 !$OMP END PARALLEL
 		if(outputopacity) then
-c			call WriteOpacity(ir,"ktab",freq,opac(ir,1:nlam-1,1:ng),nlam-1,ng)
+			call WriteOpacity(ir,"ktab",freq,opac(ir,1:nlam-1,1:ng),nlam-1,ng)
 			do i=1,nlam-1
 				kaver(i)=0d0
 				do j=1,ng
