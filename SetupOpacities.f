@@ -76,31 +76,32 @@
 		enddo
 		call output("Compute lines")
 		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line)
-c		if(outputopacity) call WriteOpacity(ir,"line",nu_line,k_line,n_nu_line,1)
+		if(outputopacity) call WriteOpacity(ir,"line",nu_line,k_line,n_nu_line,1)
 		call output("Compute k-tables")
 		call tellertje(1,nlam-1)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,nu1,nu2,kappa)
-!$OMP& SHARED(nlam,freq,ir,nu_line,k_line,n_nu_line,cia_tot,opac,opac_tot,Ndens,R,ng)
+!$OMP& SHARED(nlam,freq,ir,nu_line,k_line,n_nu_line,cia_tot,Cabs,Csca,opac_tot,Ndens,R,ng)
 !$OMP DO SCHEDULE(STATIC, 1)
 		do i=1,nlam-1
 			call tellertje(i+1,nlam+1)
 			nu1=freq(i+1)
 			nu2=freq(i)
 			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cia_tot(i))
-			opac(ir,i,1:ng)=kappa(1:ng)
-			opac_tot(i,1:ng)=opac_tot(i,1:ng)+opac(ir,i,1:ng)*Ndens(ir)*(R(ir+1)-R(ir))
+			Cabs(ir,i,1:ng)=kappa(1:ng)
+			Csca(ir,i)=8.4909d-45*(nu1*nu2)**2
+			opac_tot(i,1:ng)=opac_tot(i,1:ng)+(Cabs(ir,i,1:ng)+Csca(ir,i))*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
 		if(outputopacity) then
-			call WriteOpacity(ir,"ktab",freq,opac(ir,1:nlam-1,1:ng),nlam-1,ng)
+			call WriteOpacity(ir,"ktab",freq,Cabs(ir,1:nlam-1,1:ng),nlam-1,ng)
 			do i=1,nlam-1
 				kaver(i)=0d0
 				do j=1,ng
-					kaver(i)=kaver(i)+opac(ir,i,j)/real(ng)
+					kaver(i)=kaver(i)+Cabs(ir,i,j)/real(ng)
 				enddo
 			enddo
 			call WriteOpacity(ir,"aver",freq,kaver(1:nlam-1),nlam-1,1)

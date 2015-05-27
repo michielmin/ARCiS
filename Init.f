@@ -109,7 +109,8 @@ c allocate the arrays
 	call InitDens(TPfile)
 	call InitObs()
 
-	allocate(opac(nr,nlam,ng))
+	allocate(Cabs(nr,nlam,ng))
+	allocate(Csca(nr,nlam))
 
 	call output("==================================================================")
 

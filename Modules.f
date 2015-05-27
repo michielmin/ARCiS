@@ -39,7 +39,7 @@ c===============================================================================
 	real*8,allocatable :: dust_dens(:,:)					! radius, component
 	real*8,allocatable :: R(:)								! radius
 	real*8,allocatable :: mixrat(:)							! component
-	real*8,allocatable :: opac(:,:,:)						! radius,wav,g
+	real*8,allocatable :: Cabs(:,:,:),Csca(:,:)				! radius,wav,g
 	integer nT,np,nr,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines,ng,ncia
 	character*500 outputdir,HITRANdir,HITEMPdir

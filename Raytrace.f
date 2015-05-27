@@ -3,7 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	integer iobs
-	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0
+	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a
 	real*8,allocatable :: rtrace(:)
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig
 	logical in
@@ -27,8 +27,8 @@
 	call tellertje(1,nlam)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau)
-!$OMP& SHARED(nlam,freq,obs,iobs,nrtrace,ng,rtrace,nr,R,Ndens,opac,T,lam)
+!$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a)
+!$OMP& SHARED(nlam,freq,obs,iobs,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam)
 !$OMP DO SCHEDULE(STATIC, 1)
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
@@ -68,9 +68,10 @@
 					goto 2
 				endif
 2				continue
-				tau=d*Ndens(ir)*opac(ir,ilam,ig)
+				tau_a=d*Ndens(ir)*Cabs(ir,ilam,ig)
+				tau=tau_a+d*Ndens(ir)*Csca(ir,ilam)
 				exp_tau=exp(-tau)
-				fluxg=fluxg+A*Planck(T(ir),freq0)*(1d0-exp_tau)*fact
+				fluxg=fluxg+A*Planck(T(ir),freq0)*(1d0-exp_tau)*fact*tau_a/tau
 				fact=fact*exp_tau
 				if(ir_next.gt.0.and.ir_next.le.nr) then
 					ir=ir_next
