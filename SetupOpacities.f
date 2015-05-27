@@ -4,11 +4,11 @@
 	IMPLICIT NONE
 	integer imol
 	real*8 kappa(ng),nu1,nu2,tanscale
-	real*8 x1,x2,rr,gasdev,random,dnu
+	real*8 x1,x2,rr,gasdev,random,dnu,Saver
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
 	real*8,allocatable :: opac_tot(:,:),cia_tot(:),kaver(:)
 	integer n_nu_line,iT
-	integer i,j,ir
+	integer i,j,ir,k
 	integer,allocatable :: inu1(:),inu2(:)
 	character*500 filename
 
@@ -45,8 +45,8 @@
      &		trim(int2string(ir,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
 		call output("T = " // trim(dbl2string(T(ir),'(f8.2)')) // " K")
 		call output("P = " // trim(dbl2string(P(ir),'(es8.2)')) // " Ba")
-		call LineStrengthWidth(ir,dnu,freq(nlam),freq(1))
-		dnu=dnu/3d0
+		call LineStrengthWidth(ir,dnu,Saver,freq(nlam),freq(1))
+		dnu=dnu/2d0
 		n_nu_line=abs(freq(1)/freq(nlam))/dnu
 		nu1=freq(1)
 		n_nu_line=1
@@ -75,7 +75,7 @@
 			cia_tot(1:nlam)=cia_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
 		enddo
 		call output("Compute lines")
-		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line)
+		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line,Saver)
 		if(outputopacity) call WriteOpacity(ir,"line",nu_line,k_line,n_nu_line,1)
 		call output("Compute k-tables")
 		call tellertje(1,nlam-1)
@@ -83,7 +83,7 @@
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,nu1,nu2,kappa)
 !$OMP& SHARED(nlam,freq,ir,nu_line,k_line,n_nu_line,cia_tot,Cabs,Csca,opac_tot,Ndens,R,ng)
-!$OMP DO SCHEDULE(STATIC, 1)
+!$OMP DO
 		do i=1,nlam-1
 			call tellertje(i+1,nlam+1)
 			nu1=freq(i+1)
@@ -123,20 +123,21 @@
 	return
 	end
 	
-	subroutine LineStrengthWidth(ir,minw,nu1,nu2)
+	subroutine LineStrengthWidth(ir,minw,Saver,nu1,nu2)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 w,x1,x2,x3,x4,minw,nu1,nu2
+	real*8 w,x1,x2,x3,x4,minw,nu1,nu2,Saver
 	integer imol,iT,i,ir,iiso
 
 	minw=0.1d0
 	call hunt(TZ,nTZ,T(ir),iT)
 
+	Saver=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,imol,iiso,w,x1,x2,x3,x4)
-!$OMP& SHARED(nlines,Lines,nu1,nu2,minw,iT,Mmol,P,ir,ZZ,mixrat,T)
+!$OMP& SHARED(nlines,Lines,nu1,nu2,minw,iT,Mmol,P,ir,ZZ,mixrat,T,Saver)
 !$OMP DO
 	do i=1,nlines
 		imol=Lines(i)%imol
@@ -161,10 +162,13 @@ c line strength
 				minw=sqrt((Lines(i)%a_press*4d0)**2+Lines(i)%a_therm**2)/Lines(i)%freq
 			endif
 		endif
+		Saver=Saver+Lines(i)%S*mixrat(imol)
 	enddo
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
+
+	Saver=Saver/real(nlines)
 	
 	return
 	end
@@ -244,7 +248,7 @@ c line strength
 
 
 
-	subroutine ComputeKline(ir,nu,kline,nnu,dnu)
+	subroutine ComputeKline(ir,nu,kline,nnu,dnu,Saver)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
@@ -252,7 +256,7 @@ c line strength
 	real*8 w,gamma,fact
 	real*8 nu(nnu),dnu(nnu)
 	real*8,target :: kline(nnu)
-	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
+	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl,Saver
 	integer iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso,ir,NV0,iter,maxiter
 	integer i_therm,i_press,il,idnu,inu1,inu2,inu
 	real*8 f,a_t,a_p
@@ -268,7 +272,7 @@ c line strength
 
 	scale=real(nnu-1)/log(nu(nnu)/nu(1))
 
-	NV=real(nnu)*100d0/real(nl+1)+25d0
+	NV0=real(nnu)*100d0/real(nl+1)+250d0
 
 	il=0
 	call hunt(TZ,nTZ,T(ir),iT)
@@ -276,8 +280,8 @@ c line strength
 	call tellertje(1,nl)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,imol,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2)
-!$OMP& SHARED(fact,Lines,mixrat,scale,NV,kline,nnu,nu,nlines,a_therm,a_press,il,nl,n_voigt,P,ir,cutoff_abs)
+!$OMP& PRIVATE(i,imol,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2,NV)
+!$OMP& SHARED(fact,Lines,mixrat,scale,NV0,kline,nnu,nu,nlines,a_therm,a_press,il,nl,n_voigt,P,ir,cutoff_abs,Saver)
 !$OMP DO
 	do i=1,nlines
 		gamma=sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
@@ -290,6 +294,10 @@ c line strength
 			a_p=Lines(i)%a_press
 			f=Lines(i)%freq
 c	Random sampling of the Voigt profile
+			NV=real(NV0)*A/Saver
+			if(NV.gt.100*NV0) NV=100*NV0
+			if(NV.lt.25) NV=25
+
 			A=A/real(NV)
 			i_therm=random(idum)*real(n_voigt)
 			i_press=random(idum)*real(n_voigt)

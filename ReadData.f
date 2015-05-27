@@ -62,7 +62,7 @@ c H2O, CO2, CO, NO, OH
 					endif
 					goto 1
 2					close(unit=30)
-					call output("number of lines so far: " // trim(int2string(nlines)))
+					call output("number of lines so far: " // trim(dbl2string(dble(nlines),'(es7.1)')))
 				endif
 			endif
 			endif
@@ -87,7 +87,7 @@ c H2O, CO2, CO, NO, OH
 
 	allocate(Lines(nlines+1))
 
-	call output("number of lines: " // trim(int2string(nlines)))
+	call output("number of lines: " // trim(dbl2string(dble(nlines),'(es7.1)')))
 
 c done counting, now read it in!
 
