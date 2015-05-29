@@ -275,19 +275,17 @@ c line strength
 
 	NV0=real(nnu)*100d0/real(nl+1)+250d0
 
-	il=0
 	call hunt(TZ,nTZ,T(ir),iT)
 
-	call tellertje(1,nl)
+	call tellertje(1,nlines)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,imol,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2,NV)
-!$OMP& SHARED(fact,Lines,mixrat_r,scale,NV0,kline,nnu,nu,nlines,a_therm,a_press,il,nl,n_voigt,P,ir,cutoff_abs,Saver)
+!$OMP& SHARED(fact,Lines,mixrat_r,scale,NV0,kline,nnu,nu,nlines,a_therm,a_press,n_voigt,P,ir,cutoff_abs,Saver)
 !$OMP DO
 	do i=1,nlines
+		call tellertje(i+1,nlines+2)
 		if(Lines(i)%do) then
-			il=il+1
-			call tellertje(il+1,nl+2)
 			imol=Lines(i)%imol
 			A=Lines(i)%S*mixrat_r(ir,imol)
 			a_t=Lines(i)%a_therm
@@ -331,7 +329,7 @@ c	Random sampling of the Voigt profile
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
-	call tellertje(nl,nl)
+	call tellertje(nlines,nlines)
 
 	kline=kline/dnu
 

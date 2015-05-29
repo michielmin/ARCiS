@@ -87,7 +87,7 @@ c H2O, CO2, CO, NO, OH
 
 	allocate(Lines(nlines+1))
 
-	call output("number of lines: " // trim(dbl2string(dble(nlines),'(es7.1)')))
+	call output("estimate number of lines: " // trim(dbl2string(dble(nlines),'(es7.1)')))
 
 c done counting, now read it in!
 
@@ -119,13 +119,15 @@ c done counting, now read it in!
 5					read(30,'(i2,i1,f12.0,f10.0,f10.0,f5.0,f5.0,f10.0,f4.0,a87,f7.0,f7.0)',end=6) 
      &					L%imol,L%iiso,L%freq,L%S0,L%Aul,L%gamma_air,L%gamma_self,L%Elow,L%n,dummy,L%gu,L%gl
 					j=L%imol
-					if(j.le.nmol) then
-						if(includemol(j)) then
-							call tellertje(i,nlines)
-							if(L%imol.gt.nmol) nmol=L%imol
-							if(L%iiso.gt.maxiiso) maxiiso=L%iiso
-							i=i+1
-							L => Lines(i)
+					if(freq(1).ge.L%freq.and.freq(nlam).le.L%freq) then
+						if(j.le.nmol) then
+							if(includemol(j)) then
+								call tellertje(i,nlines+1)
+								if(L%imol.gt.nmol) nmol=L%imol
+								if(L%iiso.gt.maxiiso) maxiiso=L%iiso
+								i=i+1
+								L => Lines(i)
+							endif
 						endif
 					endif
 					goto 5
@@ -141,18 +143,23 @@ c done counting, now read it in!
 7		read(30,'(i2,i1,f12.0,f10.0,f10.0,f5.0,f5.0,f10.0,f4.0,a87,f7.0,f7.0)',end=8) 
      &			L%imol,L%iiso,L%freq,L%S0,L%Aul,L%gamma_air,L%gamma_self,L%Elow,L%n,dummy,L%gu,L%gl
 		j=L%imol
-		if(j.le.nmol) then
-			if(includemol(j).and..not.doneHITEMP(j)) then
-				call tellertje(i,nlines)
-				if(L%imol.gt.nmol) nmol=L%imol
-				if(L%iiso.gt.maxiiso) maxiiso=L%iiso
-				i=i+1
-				L => Lines(i)
+		if(freq(1).ge.L%freq.and.freq(nlam).le.L%freq) then
+			if(j.le.nmol) then
+				if(includemol(j).and..not.doneHITEMP(j)) then
+					call tellertje(i,nlines+1)
+					if(L%imol.gt.nmol) nmol=L%imol
+					if(L%iiso.gt.maxiiso) maxiiso=L%iiso
+					i=i+1
+					L => Lines(i)
+				endif
 			endif
 		endif
 		goto 7
 8		close(unit=30)
 	endif
+	call tellertje(nlines,nlines)
+	nlines=i-1
+	call output("final number of lines: " // trim(dbl2string(dble(nlines),'(es7.1)')))
 
 	allocate(niso(nmol))
 	niso=0
