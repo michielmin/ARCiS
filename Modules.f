@@ -39,6 +39,7 @@ c===============================================================================
 	real*8,allocatable :: dust_dens(:,:)					! radius, component
 	real*8,allocatable :: R(:)								! radius
 	real*8,allocatable :: mixrat(:)							! component
+	real*8,allocatable :: mixrat_r(:,:)						! radius,component
 	real*8,allocatable :: Cabs(:,:,:),Csca(:,:)				! radius,wav,g
 	integer nT,np,nr,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines,ng,ncia
@@ -46,6 +47,7 @@ c===============================================================================
 	integer idum
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile
+	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance
 	real*8 cutoff_abs,cutoff_lor
 	real*8,allocatable :: lam(:),freq(:)
@@ -84,9 +86,10 @@ c===============================================================================
 	type Line
 		integer imol,iiso
 		real*8 Aul,freq,Elow,lam,S0,S
-		real gamma_air,gamma_self
-		real a_therm,a_press,n
-		real gu,gl
+		real*8 gamma_air,gamma_self
+		real*8 a_therm,a_press,n
+		real*8 gu,gl
+		logical do
 	end type Line
 
 	type(Line),allocatable,target :: Lines(:)
@@ -306,9 +309,10 @@ c===============================================================================
 	IMPLICIT NONE
 	type(SettingKey),target :: firstkey
 	type(SettingKey),pointer :: key
-	integer i,j,ncia0
-	character*500 homedir,h2h2file,h2hefile,h2ch4file
-	logical existh2h2,existh2he,existh2ch4
+	integer i,j,ncia0,n
+	character*500 homedir,h2h2file,h2hefile,h2ch4file,TPfile
+	character*10 names(48)
+	logical existh2h2,existh2he,existh2ch4,mixratfile
 
 	key => firstkey
 
@@ -330,6 +334,10 @@ c===============================================================================
 					if(key%nr2.eq.0) key%nr2=1
 					if(key%nr1.gt.ncia) ncia=key%nr1
 				endif
+			case("mixratfile")
+				read(key%value,*) mixratfile
+			case("tpfile")
+				read(key%value,'(a)') TPfile
 			case default
 				do i=1,48
 					if(key%key.eq.molname(i)) then
@@ -341,8 +349,22 @@ c===============================================================================
 		key=>key%next
 	enddo
 
+	if(mixratfile) then
+		open(unit=30,file=TPfile,RECL=6000)
+		read(30,*) n
+		read(30,*) names(1:n)
+		do j=1,n
+			do i=1,48
+				if(names(j).eq.molname(i)) then
+					if(i.gt.nmol) nmol=i
+				endif
+			enddo
+		enddo
+	endif
+
 	allocate(obs(nobs))
 	allocate(mixrat(nmol))
+	allocate(includemol(nmol))
 
 	ncia0=0
 	existh2h2=.false.

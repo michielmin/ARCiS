@@ -5,6 +5,7 @@
 	IMPLICIT NONE
 	type(SettingKey),pointer :: key,first
 	integer i,j,omp_get_max_threads,omp_get_thread_num
+	logical mixratfile
 	character*500 TPfile
 
 	TPfile=' '
@@ -79,6 +80,8 @@ c allocate the arrays
 			read(key%value,*) specres
 		case("tpfile")
 			read(key%value,'(a)') TPfile
+		case("mixratfile")
+			read(key%value,*) mixratfile
 		case("gridtpfile")
 			read(key%value,*) gridTPfile
 		case("ng")
@@ -91,6 +94,7 @@ c allocate the arrays
 			do i=1,48
 				if(key%key.eq.molname(i)) then
 					read(key%value,*) mixrat(i)
+					includemol(i)=.true.
 					goto 1
 				endif
 			enddo
@@ -106,7 +110,7 @@ c allocate the arrays
 	call ConvertUnits()
 
 	call InitFreq()
-	call InitDens(TPfile)
+	call InitDens(TPfile,mixratfile)
 	call InitObs()
 
 	allocate(Cabs(nr,nlam,ng))
@@ -133,9 +137,9 @@ c allocate the arrays
 	Mplanet=Mplanet*Mjup
 	lam1=lam1*micron
 	lam2=lam2*micron
-	
+
 	distance=distance*parsec
-	
+
 	tot=0d0
 	do i=1,nmol
 		if(mixrat(i).gt.0d0) tot=tot+mixrat(i)
@@ -144,29 +148,62 @@ c allocate the arrays
 		call output("Summed mixing ratio above 1. Renormalizing.")
 		mixrat=mixrat/tot
 	endif
-	
+
 	return
 	end
 
 
-	subroutine InitDens(TPfile)
+	subroutine InitDens(TPfile,mixratfile)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i
-	real*8 g,dp,dz,P0(nr),T0(nr),pp,tt
+	integer i,j,n
+	real*8 g,dp,dz,P0(nr),T0(nr),pp,tt,mr0(nr,nmol),mm(nmol)
 	character*500 TPfile
+	character*10 names(nmol)
+	integer imol(nmol)
+	logical mixratfile
 	
 	allocate(dens(nr))
 	allocate(Ndens(nr))
 	allocate(R(nr+1))
 	allocate(T(nr))
 	allocate(P(nr))
+	allocate(mixrat_r(nr,nmol))
+
+	do i=1,nr
+		mixrat_r(i,1:nmol)=mixrat(1:nmol)
+	enddo
 	
-	if(gridTPfile) then
+	if(mixratfile) then
+		open(unit=20,file=TPfile)
+		read(20,*) n
+		read(20,*) names(1:n)
+		do j=1,n
+			do i=1,48
+				if(names(j).eq.molname(i)) then
+					imol(j)=i
+					includemol(imol(j))=.true.
+				endif
+			enddo
+		enddo
+		i=1
+1		read(20,*,err=1,end=2) pp,tt,mm(1:n)
+		if(i.gt.nr) then
+			call output("Increase number of radial points for this file")
+			stop
+		endif
+		P0(i)=pp
+		T0(i)=tt
+		mr0(i,1:n)=mm(1:n)
+		i=i+1
+		goto 1
+2		close(unit=20)
+		nr=i-1
+	else if(gridTPfile) then
 		open(unit=20,file=TPfile)
 		i=1
-1		read(20,*,err=1,end=2) pp,tt
+3		read(20,*,err=3,end=4) pp,tt
 		if(i.gt.nr) then
 			call output("Increase number of radial points for this file")
 			stop
@@ -174,8 +211,8 @@ c allocate the arrays
 		P0(i)=pp
 		T0(i)=tt
 		i=i+1
-		goto 1
-2		close(unit=20)
+		goto 3
+4		close(unit=20)
 		nr=i-1
 	else
 		do i=1,nr
@@ -193,6 +230,11 @@ c allocate the arrays
 	do i=1,nr
 		T(i)=T0(nr+1-i)
 		P(i)=P0(nr+1-i)
+		if(mixratfile) then
+			do j=1,n
+				mixrat_r(i,imol(j))=mr0(nr+1-i,j)
+			enddo
+		endif
 	enddo
 
 	return
@@ -212,7 +254,8 @@ c allocate the arrays
 	lam2=15d0
 	specres=10d0
 
-	mixrat=-1d0
+	mixrat=0d0
+	includemol=.false.
 	
 	do i=1,nobs
 		obs(i)%type='EMIS'

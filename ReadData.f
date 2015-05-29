@@ -41,7 +41,7 @@ c H2O, CO2, CO, NO, OH
 			read(files(ifile)(1:2),*) j
 			doneHITEMP(j)=.true.
 			if(j.le.nmol) then
-			if(mixrat(j).gt.0d0) then
+			if(includemol(j)) then
 				ind1=index(file,'_')
 				ind2=index(file,'-')
 				ind3=index(file(ind1+1:len_trim(file)),'_')+ind1
@@ -58,7 +58,7 @@ c H2O, CO2, CO, NO, OH
 
 1					read(30,'(a2)',end=2) imol
 					if(j.le.nmol) then
-						if(mixrat(j).gt.0d0) nlines=nlines+1
+						if(includemol(j)) nlines=nlines+1
 					endif
 					goto 1
 2					close(unit=30)
@@ -78,7 +78,7 @@ c H2O, CO2, CO, NO, OH
 3	read(30,'(a2)',end=4) imol
 	read(imol,*) j
 	if(j.le.nmol) then
-		if(mixrat(j).gt.0d0.and..not.doneHITEMP(j)) nlines=nlines+1
+		if(includemol(j).and..not.doneHITEMP(j)) nlines=nlines+1
 	endif
 	goto 3
 4	close(unit=30)
@@ -102,7 +102,7 @@ c done counting, now read it in!
 			read(files(ifile)(1:2),*) j
 			doneHITEMP(j)=.true.
 			if(j.le.nmol) then
-			if(mixrat(j).gt.0d0) then
+			if(includemol(j)) then
 				ind1=index(file,'_')
 				ind2=index(file,'-')
 				ind3=index(file(ind1+1:len_trim(file)),'_')+ind1
@@ -120,7 +120,7 @@ c done counting, now read it in!
      &					L%imol,L%iiso,L%freq,L%S0,L%Aul,L%gamma_air,L%gamma_self,L%Elow,L%n,dummy,L%gu,L%gl
 					j=L%imol
 					if(j.le.nmol) then
-						if(mixrat(j).gt.0d0) then
+						if(includemol(j)) then
 							call tellertje(i,nlines)
 							if(L%imol.gt.nmol) nmol=L%imol
 							if(L%iiso.gt.maxiiso) maxiiso=L%iiso
@@ -142,7 +142,7 @@ c done counting, now read it in!
      &			L%imol,L%iiso,L%freq,L%S0,L%Aul,L%gamma_air,L%gamma_self,L%Elow,L%n,dummy,L%gu,L%gl
 		j=L%imol
 		if(j.le.nmol) then
-			if(mixrat(j).gt.0d0.and..not.doneHITEMP(j)) then
+			if(includemol(j).and..not.doneHITEMP(j)) then
 				call tellertje(i,nlines)
 				if(L%imol.gt.nmol) nmol=L%imol
 				if(L%iiso.gt.maxiiso) maxiiso=L%iiso

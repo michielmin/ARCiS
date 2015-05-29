@@ -8,7 +8,7 @@
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
 	real*8,allocatable :: opac_tot(:,:),cia_tot(:),kaver(:)
 	integer n_nu_line,iT
-	integer i,j,ir,k
+	integer i,j,ir,k,nl
 	integer,allocatable :: inu1(:),inu2(:)
 	character*500 filename
 
@@ -45,7 +45,7 @@
      &		trim(int2string(ir,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
 		call output("T = " // trim(dbl2string(T(ir),'(f8.2)')) // " K")
 		call output("P = " // trim(dbl2string(P(ir),'(es8.2)')) // " Ba")
-		call LineStrengthWidth(ir,dnu,Saver,freq(nlam),freq(1))
+		call LineStrengthWidth(ir,dnu,Saver,nl,freq(nlam),freq(1))
 		dnu=dnu/2d0
 		n_nu_line=abs(freq(1)/freq(nlam))/dnu
 		nu1=freq(1)
@@ -75,7 +75,7 @@
 			cia_tot(1:nlam)=cia_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
 		enddo
 		call output("Compute lines")
-		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line,Saver)
+		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line,Saver,nl)
 		if(outputopacity) call WriteOpacity(ir,"line",nu_line,k_line,n_nu_line,1)
 		call output("Compute k-tables")
 		call tellertje(1,nlam-1)
@@ -123,46 +123,53 @@
 	return
 	end
 	
-	subroutine LineStrengthWidth(ir,minw,Saver,nu1,nu2)
+	subroutine LineStrengthWidth(ir,minw,Saver,nl,nu1,nu2)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 w,x1,x2,x3,x4,minw,nu1,nu2,Saver
-	integer imol,iT,i,ir,iiso
+	real*8 w,x1,x2,x3,x4,minw,nu1,nu2,Saver,gamma
+	integer imol,iT,i,ir,iiso,nl
+	type(Line),pointer :: L
 
 	minw=0.1d0
 	call hunt(TZ,nTZ,T(ir),iT)
 
 	Saver=0d0
+	nl=0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,imol,iiso,w,x1,x2,x3,x4)
-!$OMP& SHARED(nlines,Lines,nu1,nu2,minw,iT,Mmol,P,ir,ZZ,mixrat,T,Saver)
+!$OMP& PRIVATE(i,imol,iiso,w,x1,x2,x3,x4,L,gamma)
+!$OMP& SHARED(nlines,Lines,nu1,nu2,minw,iT,Mmol,P,ir,ZZ,mixrat_r,T,Saver,nl)
 !$OMP DO
 	do i=1,nlines
-		imol=Lines(i)%imol
-		iiso=Lines(i)%iiso
+		L => Lines(i)
+		L%do=.false.
+		if((L%freq).gt.nu1.and.(L%freq).lt.nu2) then
+			L%do=.true.
+			nl=nl+1
+			imol=L%imol
+			iiso=L%iiso
 c thermal broadening
-		w=(sqrt(2d0*kb*T(ir)/(Mmol(imol)*mp)))
-		Lines(i)%a_therm=w*Lines(i)%freq/clight
+			w=(sqrt(2d0*kb*T(ir)/(Mmol(imol)*mp)))
+			L%a_therm=w*L%freq/clight
 c pressure broadening
-		Lines(i)%a_press=Lines(i)%gamma_air*P(ir)*(1d0-mixrat(imol))/atm
-		Lines(i)%a_press=Lines(i)%a_press+Lines(i)%gamma_self*P(ir)*mixrat(imol)/atm
-		Lines(i)%a_press=Lines(i)%a_press*(296d0/T(ir))**Lines(i)%n
+			L%a_press=L%gamma_air*P(ir)*(1d0-mixrat_r(ir,imol))/atm
+			L%a_press=L%a_press+L%gamma_self*P(ir)*mixrat_r(ir,imol)/atm
+			L%a_press=L%a_press*(296d0/T(ir))**L%n
 c line strength
-		x1=exp(-hplanck*clight*Lines(i)%Elow/(kb*T(ir)))
-		x2=exp(-hplanck*clight*Lines(i)%freq/(kb*T(ir)))
-		x3=exp(-hplanck*clight*Lines(i)%Elow/(kb*296d0))
-		x4=exp(-hplanck*clight*Lines(i)%freq/(kb*296d0))
+			x1=exp(-hplanck*clight*L%Elow/(kb*T(ir)))
+			x2=exp(-hplanck*clight*L%freq/(kb*T(ir)))
+			x3=exp(-hplanck*clight*L%Elow/(kb*296d0))
+			x4=exp(-hplanck*clight*L%freq/(kb*296d0))
 
-		Lines(i)%S=Lines(i)%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
+			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 
-		if((Lines(i)%freq).gt.nu1.and.(Lines(i)%freq).lt.nu2) then
-			if(sqrt((Lines(i)%a_press*4d0)**2+Lines(i)%a_therm**2)/Lines(i)%freq.lt.minw) then
-				minw=sqrt((Lines(i)%a_press*4d0)**2+Lines(i)%a_therm**2)/Lines(i)%freq
+			gamma=sqrt((L%a_press*4d0)**2+L%a_therm**2)/L%freq
+			if(gamma.lt.minw) then
+				minw=gamma
 			endif
+			Saver=Saver+L%S*mixrat_r(ir,imol)
 		endif
-		Saver=Saver+Lines(i)%S*mixrat(imol)
 	enddo
 !$OMP END DO
 !$OMP FLUSH
@@ -248,7 +255,7 @@ c line strength
 
 
 
-	subroutine ComputeKline(ir,nu,kline,nnu,dnu,Saver)
+	subroutine ComputeKline(ir,nu,kline,nnu,dnu,Saver,nl)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
@@ -264,12 +271,6 @@ c line strength
 	fact=50d0
 	kline=0d0
 
-	nl=0
-	do i=1,nlines
-		gamma=fact*sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
-		if((Lines(i)%freq+gamma).gt.nu(nnu).and.(Lines(i)%freq-gamma).lt.nu(1)) nl=nl+1
-	enddo
-
 	scale=real(nnu-1)/log(nu(nnu)/nu(1))
 
 	NV0=real(nnu)*100d0/real(nl+1)+250d0
@@ -281,17 +282,17 @@ c line strength
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,imol,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2,NV)
-!$OMP& SHARED(fact,Lines,mixrat,scale,NV0,kline,nnu,nu,nlines,a_therm,a_press,il,nl,n_voigt,P,ir,cutoff_abs,Saver)
+!$OMP& SHARED(fact,Lines,mixrat_r,scale,NV0,kline,nnu,nu,nlines,a_therm,a_press,il,nl,n_voigt,P,ir,cutoff_abs,Saver)
 !$OMP DO
 	do i=1,nlines
-		gamma=sqrt(Lines(i)%a_therm**2+Lines(i)%a_press**2)
-		if((Lines(i)%freq+fact*gamma).gt.nu(nnu).and.(Lines(i)%freq-fact*gamma).lt.nu(1)) then
+		if(Lines(i)%do) then
 			il=il+1
 			call tellertje(il+1,nl+2)
 			imol=Lines(i)%imol
-			A=Lines(i)%S*mixrat(imol)
+			A=Lines(i)%S*mixrat_r(ir,imol)
 			a_t=Lines(i)%a_therm
 			a_p=Lines(i)%a_press
+			gamma=sqrt(a_t**2+a_p**2)
 			f=Lines(i)%freq
 c	Random sampling of the Voigt profile
 			NV=real(NV0)*A/Saver
