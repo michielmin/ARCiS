@@ -4,7 +4,7 @@
 	IMPLICIT NONE
 	integer imol
 	real*8 kappa(ng),nu1,nu2,tanscale
-	real*8 x1,x2,rr,gasdev,random,dnu,Saver
+	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
 	real*8,allocatable :: opac_tot(:,:),cia_tot(:),kaver(:)
 	integer n_nu_line,iT
@@ -40,6 +40,7 @@
 
 	opac_tot=0d0
 
+	call cpu_time(starttime)
 	do ir=1,nr
 		call output("Opacities for layer: " // 
      &		trim(int2string(ir,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
@@ -108,16 +109,20 @@
 		endif
 		call tellertje(nlam,nlam)
 	
-	open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
-	write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
-	do i=1,nlam-1
-		write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
-	enddo
-	close(unit=30)
+		open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
+		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
+		do i=1,nlam-1
+			write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
+		enddo
+		close(unit=30)
 
 		deallocate(k_line)
 		deallocate(nu_line)
 		deallocate(dnu_line)
+		call cpu_time(stoptime)
+		call output("Time for this layer: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+		call output("==================================================================")
+		starttime=stoptime
 	enddo
 
 	return
@@ -282,7 +287,7 @@ c line strength
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,imol,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2,NV)
 !$OMP& SHARED(fact,Lines,mixrat_r,scale,NV0,kline,nnu,nu,nlines,a_therm,a_press,n_voigt,P,ir,cutoff_abs,Saver)
-!$OMP DO
+!$OMP DO SCHEDULE (STATIC,1000)
 	do i=1,nlines
 		call tellertje(i+1,nlines+2)
 		if(Lines(i)%do) then
