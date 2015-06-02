@@ -7,7 +7,7 @@
 	logical exist,doneHITEMP(48)
 	integer i,j,k,maxiiso,it,ifile,nfile,nHITEMP,nHITRAN
 	type(Line),pointer :: L
-	real*8 scale,f_numin,f_numax
+	real*8 scale,f_numin,f_numax,x3,x4
 c H2O, CO2, CO, NO, OH
 	parameter(nfile=34+20+1+1+1)
 	character*30 files(nfile)
@@ -167,9 +167,13 @@ c done counting, now read it in!
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i)
 !$OMP& SHARED(nlines,Lines,niso)
+!$OMP& PRIVATE(x3,x4)
 !$OMP DO
 	do i=1,nlines
 		if(Lines(i)%iiso.gt.niso(Lines(i)%imol)) niso(Lines(i)%imol)=Lines(i)%iiso
+		x3=exp(-hplanck*clight*Lines(i)%Elow/(kb*296d0))
+		x4=exp(-hplanck*clight*Lines(i)%freq/(kb*296d0))
+		Lines(i)%S0=Lines(i)%S0/(x3*(1d0-x4))
 	enddo
 !$OMP END DO
 !$OMP FLUSH

@@ -132,26 +132,29 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 w,x1,x2,x3,x4,minw,nu1,nu2,Saver,gamma
-	integer imol,iT,i,ir,iiso,nl
+	real*8 w,x1,x2,x3,x4,minw,nu1,nu2,Saver,gamma,Saver0
+	integer imol,iT,i,ir,iiso,nl,nl0
 	type(Line),pointer :: L
 
-	minw=0.1d0
+	call output("Line strengths and widths")
+	
+	minw=0.01d0
 	call hunt(TZ,nTZ,T(ir),iT)
 
 	Saver=0d0
 	nl=0
+	call tellertje(1,nlines)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,imol,iiso,w,x1,x2,x3,x4,L,gamma)
 !$OMP& SHARED(nlines,Lines,nu1,nu2,minw,iT,Mmol,P,ir,ZZ,mixrat_r,T,Saver,nl)
 !$OMP DO
 	do i=1,nlines
+		call tellertje(i+1,nlines+2)
 		L => Lines(i)
 		L%do=.false.
 		if((L%freq).gt.nu1.and.(L%freq).lt.nu2) then
 			L%do=.true.
-			nl=nl+1
 			imol=L%imol
 			iiso=L%iiso
 c thermal broadening
@@ -164,23 +167,49 @@ c pressure broadening
 c line strength
 			x1=exp(-hplanck*clight*L%Elow/(kb*T(ir)))
 			x2=exp(-hplanck*clight*L%freq/(kb*T(ir)))
-			x3=exp(-hplanck*clight*L%Elow/(kb*296d0))
-			x4=exp(-hplanck*clight*L%freq/(kb*296d0))
+c			x3=exp(-hplanck*clight*L%Elow/(kb*296d0))
+c			x4=exp(-hplanck*clight*L%freq/(kb*296d0))
 
-			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
+c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
+			L%S=L%S0*(x1*(1d0-x2))/ZZ(imol,iiso,iT)
 
-			gamma=sqrt((L%a_press*4d0)**2+L%a_therm**2)/L%freq
+			gamma=((L%a_press*4d0)**2+L%a_therm**2)/L%freq**2
 			if(gamma.lt.minw) then
 				minw=gamma
 			endif
-			Saver=Saver+L%S*mixrat_r(ir,imol)
 		endif
 	enddo
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
+	minw=sqrt(minw)
+	call tellertje(nlines,nlines)
 
-	Saver=Saver/real(nlines)
+	Saver=0d0
+	nl=nlines*2
+
+1	continue
+	nl0=nl
+	Saver0=Saver
+	Saver=0d0
+	nl=0
+	do i=1,nlines
+		L => Lines(i)
+		if(L%do) then
+			imol=L%imol
+			if(L%S*mixrat_r(ir,imol).gt.Saver0*eps_lines) then
+				nl=nl+1
+				Saver=Saver+L%S*mixrat_r(ir,imol)
+			else
+				L%do=.false.
+			endif
+		endif
+	enddo
+
+	Saver=Saver/real(nl)
+	if(real(nl0).gt.(real(nl)*1.1)) goto 1
+
+	call output("number of lines: " // trim(dbl2string(dble(nl),'(es7.1)')))
 	
 	return
 	end
@@ -287,7 +316,7 @@ c line strength
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,imol,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2,NV)
 !$OMP& SHARED(fact,Lines,mixrat_r,scale,NV0,kline,nnu,nu,nlines,a_therm,a_press,n_voigt,P,ir,cutoff_abs,Saver)
-!$OMP DO SCHEDULE (STATIC,1000)
+!$OMP DO SCHEDULE (STATIC,1)
 	do i=1,nlines
 		call tellertje(i+1,nlines+2)
 		if(Lines(i)%do) then
