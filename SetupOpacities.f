@@ -41,7 +41,7 @@
 	opac_tot=0d0
 
 	call cpu_time(starttime)
-	do ir=1,nr
+	do ir=nr,1,-1
 		call output("Opacities for layer: " // 
      &		trim(int2string(ir,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
 		call output("T = " // trim(dbl2string(T(ir),'(f8.2)')) // " K")
@@ -123,6 +123,16 @@
 		call output("Time for this layer: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 		call output("==================================================================")
 		starttime=stoptime
+		if(minval(opac_tot(1:nlam-1,1:ng)).gt.maxtau) then
+			call output("Maximum optical depth reached at all wavelengths")
+			if(ir.gt.1) then
+				do i=1,ir-1
+					Cabs(i,1:nlam-1,1:ng)=Cabs(ir,1:nlam,1:ng)
+					Csca(i,1:nlam-1)=Csca(ir,1:nlam)
+				enddo
+			endif
+			exit
+		endif
 	enddo
 
 	return
@@ -139,6 +149,7 @@
 	call output("Line strengths and widths")
 	
 	minw=0.01d0
+	minw=(1d0/specres)**2
 	call hunt(TZ,nTZ,T(ir),iT)
 
 	Saver=0d0

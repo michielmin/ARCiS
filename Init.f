@@ -78,6 +78,8 @@ c allocate the arrays
 			read(key%value,*) epsCk
 		case("epslines","eps_lines")
 			read(key%value,*) eps_lines
+		case("maxtau","max_tau")
+			read(key%value,*) maxtau
 		case("specres")
 			read(key%value,*) specres
 		case("tpfile")
@@ -282,6 +284,7 @@ c allocate the arrays
 	epsCk=0.25d0
 	
 	eps_lines=0d0
+	maxtau=200d0
 	
 	distance=10d0
 	

@@ -17,6 +17,18 @@
 	enddo
 	call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 	do i=1,nr
+		mu=1d0
+		do imol=1,nmol
+			if(mixrat_r(i,imol).gt.0d0) mu=mu-mixrat_r(i,imol)
+		enddo
+		mu=mu*2.0
+		do imol=1,nmol
+			if(mixrat_r(i,imol).gt.0d0) mu=mu+mixrat_r(i,imol)*Mmol(imol)
+		enddo
+c		call output("Layer: " // 
+c     &		trim(int2string(i,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
+c		call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
+
 		g=Ggrav*Mplanet/R(i)**2
 		
 		if(i.eq.nr) then

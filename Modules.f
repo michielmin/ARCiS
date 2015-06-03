@@ -49,7 +49,7 @@ c===============================================================================
 	logical retrieval,outputopacity,do_cia,gridTPfile
 	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance
-	real*8 cutoff_abs,cutoff_lor,eps_lines
+	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau
 	real*8,allocatable :: lam(:),freq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ
