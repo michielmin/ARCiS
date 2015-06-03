@@ -145,7 +145,6 @@
 	IMPLICIT NONE
 	real*8 w,x1,x2,x3,x4,minw,nu1,nu2,Saver,gamma,Saver0
 	integer imol,iT,i,ir,iiso,nl,nl0
-	type(Line),pointer :: L
 
 	call output("Line strengths and widths")
 	
@@ -158,35 +157,35 @@
 	call tellertje(1,nlines)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,imol,iiso,w,x1,x2,x3,x4,L,gamma)
-!$OMP& SHARED(nlines,Lines,nu1,nu2,minw,iT,Mmol,P,ir,ZZ,mixrat_r,T,Saver,nl)
+!$OMP& PRIVATE(i,imol,iiso,w,x1,x2,x3,x4,gamma)
+!$OMP& SHARED(nlines,nu1,nu2,minw,iT,Mmol,P,ir,ZZ,mixrat_r,T,Saver,nl,
+!$OMP&     L_do,L_S,L_S0,L_gamma_air,L_gamma_self,L_a_therm,L_a_press,L_freq,L_imol,L_iiso,L_Elow,L_n)
 !$OMP DO
 	do i=1,nlines
 		call tellertje(i+1,nlines+2)
-		L => Lines(i)
-		L%do=.false.
-		if((L%freq).gt.nu1.and.(L%freq).lt.nu2) then
-			L%do=.true.
-			imol=L%imol
-			iiso=L%iiso
+		L_do(i)=.false.
+		if((L_freq(i)).gt.nu1.and.(L_freq(i)).lt.nu2) then
+			L_do(i)=.true.
+			imol=L_imol(i)
+			iiso=L_iiso(i)
 c thermal broadening
 			w=(sqrt(2d0*kb*T(ir)/(Mmol(imol)*mp)))
-			L%a_therm=w*L%freq/clight
+			L_a_therm(i)=w*L_freq(i)/clight
 c pressure broadening
-			L%a_press=L%gamma_air*P(ir)*(1d0-mixrat_r(ir,imol))/atm
-			L%a_press=L%a_press+L%gamma_self*P(ir)*mixrat_r(ir,imol)/atm
-			L%a_press=L%a_press*(296d0/T(ir))**L%n
+			L_a_press(i)=L_gamma_air(i)*P(ir)*(1d0-mixrat_r(ir,imol))/atm
+			L_a_press(i)=L_a_press(i)+L_gamma_self(i)*P(ir)*mixrat_r(ir,imol)/atm
+			L_a_press(i)=L_a_press(i)*(296d0/T(ir))**L_n(i)
 c line strength
-			x1=exp(-hplanck*clight*L%Elow/(kb*T(ir)))
-			x2=exp(-hplanck*clight*L%freq/(kb*T(ir)))
+			x1=exp(-hplanck*clight*L_Elow(i)/(kb*T(ir)))
+			x2=exp(-hplanck*clight*L_freq(i)/(kb*T(ir)))
 c			x3=exp(-hplanck*clight*L%Elow/(kb*296d0))
 c			x4=exp(-hplanck*clight*L%freq/(kb*296d0))
 
 c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
-			L%S=L%S0*(x1*(1d0-x2))/ZZ(imol,iiso,iT)
-			L%S=L%S*mixrat_r(ir,imol)
+			L_S(i)=L_S0(i)*(x1*(1d0-x2))/ZZ(imol,iiso,iT)
+			L_S(i)=L_S(i)*mixrat_r(ir,imol)
 
-			gamma=((L%a_press*4d0)**2+L%a_therm**2)/L%freq**2
+			gamma=((L_a_press(i)*4d0)**2+L_a_therm(i)**2)/L_freq(i)**2
 			if(gamma.lt.minw) then
 				minw=gamma
 			endif
@@ -207,14 +206,13 @@ c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 	Saver=0d0
 	nl=0
 	do i=1,nlines
-		L => Lines(i)
-		if(L%do) then
-			imol=L%imol
-			if(L%S.gt.Saver0) then
+		if(L_do(i)) then
+			imol=L_imol(i)
+			if(L_S(i).gt.Saver0) then
 				nl=nl+1
-				Saver=Saver+L%S
+				Saver=Saver+L_S(i)
 			else
-				L%do=.false.
+				L_do(i)=.false.
 			endif
 		endif
 	enddo
@@ -328,17 +326,18 @@ c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,imol,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2,NV)
-!$OMP& SHARED(fact,Lines,mixrat_r,scale,NV0,kline,nnu,nu,nlines,a_therm,a_press,n_voigt,P,ir,cutoff_abs,Saver)
+!$OMP& SHARED(fact,mixrat_r,scale,NV0,kline,nnu,nu,nlines,a_therm,a_press,n_voigt,P,ir,cutoff_abs,Saver,
+!$OMP&     L_do,L_S,L_a_therm,L_a_press,L_freq,L_imol)
 !$OMP DO SCHEDULE (STATIC,1)
 	do i=1,nlines
 		call tellertje(i+1,nlines+2)
-		if(Lines(i)%do) then
-			imol=Lines(i)%imol
-			A=Lines(i)%S
-			a_t=Lines(i)%a_therm
-			a_p=Lines(i)%a_press
+		if(L_do(i)) then
+			imol=L_imol(i)
+			A=L_S(i)
+			a_t=L_a_therm(i)
+			a_p=L_a_press(i)
 			gamma=sqrt(a_t**2+a_p**2)
-			f=Lines(i)%freq
+			f=L_freq(i)
 c	Random sampling of the Voigt profile
 			NV=real(NV0)*A/Saver
 			if(NV.gt.100*NV0) NV=100*NV0

@@ -6,7 +6,6 @@
 	character*100 dummy,homedir,file
 	logical exist,doneHITEMP(48)
 	integer i,j,k,maxiiso,it,ifile,nfile,nHITEMP,nHITRAN
-	type(Line),pointer :: L
 	real*8 scale,f_numin,f_numax,x3,x4
 c H2O, CO2, CO, NO, OH
 	parameter(nfile=34+20+1+1+1)
@@ -85,7 +84,22 @@ c H2O, CO2, CO, NO, OH
 
 	nHITRAN=nlines-nHITEMP
 
-	allocate(Lines(nlines+1))
+	allocate(L_imol(nlines+1))
+	allocate(L_iiso(nlines+1))
+	allocate(L_Aul(nlines+1))
+	allocate(L_freq(nlines+1))
+	allocate(L_Elow(nlines+1))
+	allocate(L_lam(nlines+1))
+	allocate(L_S0(nlines+1))
+	allocate(L_S(nlines+1))
+	allocate(L_gamma_air(nlines+1))
+	allocate(L_gamma_self(nlines+1))
+	allocate(L_a_therm(nlines+1))
+	allocate(L_a_press(nlines+1))
+	allocate(L_n(nlines+1))
+	allocate(L_gu(nlines+1))
+	allocate(L_gl(nlines+1))
+	allocate(L_do(nlines+1))
 
 	call output("estimate number of lines: " // trim(dbl2string(dble(nlines),'(es7.1)')))
 
@@ -95,7 +109,6 @@ c done counting, now read it in!
 
 	i=1
 	maxiiso=0
-	L => Lines(1)
 	if(HITEMP) then
 		do ifile=1,nfile
 			file=trim(HITEMPdir) // trim(files(ifile))
@@ -117,16 +130,16 @@ c done counting, now read it in!
 					open(unit=30,file=file,RECL=500)
 
 5					read(30,'(i2,i1,f12.0,f10.0,f10.0,f5.0,f5.0,f10.0,f4.0,a87,f7.0,f7.0)',end=6) 
-     &					L%imol,L%iiso,L%freq,L%S0,L%Aul,L%gamma_air,L%gamma_self,L%Elow,L%n,dummy,L%gu,L%gl
-					j=L%imol
-					if(freq(1).ge.L%freq.and.freq(nlam).le.L%freq) then
+     &					L_imol(i),L_iiso(i),L_freq(i),L_S0(i),L_Aul(i),L_gamma_air(i),L_gamma_self(i),
+     &					L_Elow(i),L_n(i),dummy,L_gu(i),L_gl(i)
+					j=L_imol(i)
+					if(freq(1).ge.L_freq(i).and.freq(nlam).le.L_freq(i)) then
 						if(j.le.nmol) then
 							if(includemol(j)) then
 								call tellertje(i,nlines+1)
-								if(L%imol.gt.nmol) nmol=L%imol
-								if(L%iiso.gt.maxiiso) maxiiso=L%iiso
+								if(L_imol(i).gt.nmol) nmol=L_imol(i)
+								if(L_iiso(i).gt.maxiiso) maxiiso=L_iiso(i)
 								i=i+1
-								L => Lines(i)
 							endif
 						endif
 					endif
@@ -141,16 +154,16 @@ c done counting, now read it in!
 	if(nHITRAN.gt.0) then
 		open(unit=30,file=trim(HITRANdir) // "HITRAN2012.par",RECL=500)
 7		read(30,'(i2,i1,f12.0,f10.0,f10.0,f5.0,f5.0,f10.0,f4.0,a87,f7.0,f7.0)',end=8) 
-     &			L%imol,L%iiso,L%freq,L%S0,L%Aul,L%gamma_air,L%gamma_self,L%Elow,L%n,dummy,L%gu,L%gl
-		j=L%imol
-		if(freq(1).ge.L%freq.and.freq(nlam).le.L%freq) then
+     &			L_imol(i),L_iiso(i),L_freq(i),L_S0(i),L_Aul(i),L_gamma_air(i),L_gamma_self(i),
+     &			L_Elow(i),L_n(i),dummy,L_gu(i),L_gl(i)
+		j=L_imol(i)
+		if(freq(1).ge.L_freq(i).and.freq(nlam).le.L_freq(i)) then
 			if(j.le.nmol) then
 				if(includemol(j).and..not.doneHITEMP(j)) then
 					call tellertje(i,nlines+1)
-					if(L%imol.gt.nmol) nmol=L%imol
-					if(L%iiso.gt.maxiiso) maxiiso=L%iiso
+					if(L_imol(i).gt.nmol) nmol=L_imol(i)
+					if(L_iiso(i).gt.maxiiso) maxiiso=L_iiso(i)
 					i=i+1
-					L => Lines(i)
 				endif
 			endif
 		endif
@@ -166,14 +179,14 @@ c done counting, now read it in!
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i)
-!$OMP& SHARED(nlines,Lines,niso)
+!$OMP& SHARED(nlines,niso,L_iiso,L_imol,L_Elow,L_freq,L_S0)
 !$OMP& PRIVATE(x3,x4)
 !$OMP DO
 	do i=1,nlines
-		if(Lines(i)%iiso.gt.niso(Lines(i)%imol)) niso(Lines(i)%imol)=Lines(i)%iiso
-		x3=exp(-hplanck*clight*Lines(i)%Elow/(kb*296d0))
-		x4=exp(-hplanck*clight*Lines(i)%freq/(kb*296d0))
-		Lines(i)%S0=Lines(i)%S0/(x3*(1d0-x4))
+		if(L_iiso(i).gt.niso(L_imol(i))) niso(L_imol(i))=L_iiso(i)
+		x3=exp(-hplanck*clight*L_Elow(i)/(kb*296d0))
+		x4=exp(-hplanck*clight*L_freq(i)/(kb*296d0))
+		L_S0(i)=L_S0(i)/(x3*(1d0-x4))
 	enddo
 !$OMP END DO
 !$OMP FLUSH

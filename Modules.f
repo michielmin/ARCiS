@@ -83,16 +83,23 @@ c===============================================================================
 
 	type(Observation),allocatable :: obs(:)
 
-	type Line
-		integer imol,iiso
-		real*8 Aul,freq,Elow,lam,S0,S
-		real*8 gamma_air,gamma_self
-		real*8 a_therm,a_press,n
-		real*8 gu,gl
-		logical do
-	end type Line
+c	type Line
+c		integer imol,iiso
+c		real*8 Aul,freq,Elow,lam,S0,S
+c		real*8 gamma_air,gamma_self
+c		real*8 a_therm,a_press,n
+c		real*8 gu,gl
+c		logical do
+c	end type Line
 
-	type(Line),allocatable,target :: Lines(:)
+c	type(Line),allocatable,target :: Lines(:)
+
+	integer,allocatable,dimension(:) :: L_imol,L_iiso
+	real*8,allocatable,dimension(:) :: L_Aul,L_freq,L_Elow,L_lam,L_S0,L_S
+	real*8,allocatable,dimension(:) :: L_gamma_air,L_gamma_self
+	real*8,allocatable,dimension(:) :: L_a_therm,L_a_press,L_n
+	real*8,allocatable,dimension(:) :: L_gu,L_gl
+	logical,allocatable,dimension(:) :: L_do
 
 	type CIA_pair
 		character*20 name
