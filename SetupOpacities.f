@@ -125,6 +125,7 @@
 		starttime=stoptime
 		if(minval(opac_tot(1:nlam-1,1:ng)).gt.maxtau) then
 			call output("Maximum optical depth reached at all wavelengths")
+			call output("ignoring layers: 1 to " // trim(int2string(ir-1,'(i4)')))
 			if(ir.gt.1) then
 				do i=1,ir-1
 					Cabs(i,1:nlam-1,1:ng)=Cabs(ir,1:nlam,1:ng)
@@ -183,6 +184,7 @@ c			x4=exp(-hplanck*clight*L%freq/(kb*296d0))
 
 c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 			L%S=L%S0*(x1*(1d0-x2))/ZZ(imol,iiso,iT)
+			L%S=L%S*mixrat_r(ir,imol)
 
 			gamma=((L%a_press*4d0)**2+L%a_therm**2)/L%freq**2
 			if(gamma.lt.minw) then
@@ -201,16 +203,16 @@ c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 
 1	continue
 	nl0=nl
-	Saver0=Saver
+	Saver0=Saver*eps_lines
 	Saver=0d0
 	nl=0
 	do i=1,nlines
 		L => Lines(i)
 		if(L%do) then
 			imol=L%imol
-			if(L%S*mixrat_r(ir,imol).gt.Saver0*eps_lines) then
+			if(L%S.gt.Saver0) then
 				nl=nl+1
-				Saver=Saver+L%S*mixrat_r(ir,imol)
+				Saver=Saver+L%S
 			else
 				L%do=.false.
 			endif
@@ -332,7 +334,7 @@ c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 		call tellertje(i+1,nlines+2)
 		if(Lines(i)%do) then
 			imol=Lines(i)%imol
-			A=Lines(i)%S*mixrat_r(ir,imol)
+			A=Lines(i)%S
 			a_t=Lines(i)%a_therm
 			a_p=Lines(i)%a_press
 			gamma=sqrt(a_t**2+a_p**2)
