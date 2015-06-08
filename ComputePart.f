@@ -33,7 +33,7 @@
 	integer abun_in_name
 	parameter(abun_in_name=2)
 
-	write(tmp,'("mkdir -p ",a)') particledir(1:len_trim(particledir)-1)
+	write(tmp,'("mkdir -p ",a)') outputdir(1:len_trim(outputdir)-1)
 	call system(tmp)
 
 	write(meth,100)
@@ -155,7 +155,7 @@ c changed this to mass fractions (11-05-2010)
 	enddo
 	frac=frac/tot
 
-	partfile=trim(particledir) // "particle" 
+	partfile=trim(outputdir) // "particle" 
      &	// trim(int2string(ii,'(i0.4)')) // "_" // trim(int2string(isize,'(i0.4)')) 
 	if(abun_in_name.gt.0) then
 		do i=1,nm
@@ -183,11 +183,11 @@ c changed this to mass fractions (11-05-2010)
 		endif
 	endif
 	
-	call output("Computing particle:" // trim(int2string(ii,'(i0.4)')))
-	call output("Size: " // trim(dbl2string(amin,'(f10.3)')) // " - " // trim(dbl2string(amax,'(f10.3)')) // " micron")
+c	call output("Computing particle:" // trim(int2string(ii,'(i0.4)')))
+c	call output("Size: " // trim(dbl2string(amin,'(f10.3)')) // " - " // trim(dbl2string(amax,'(f10.3)')) // " micron")
 
 	do j=1,nm
-		write(lnkfile,'(a,a,i0.3,".lnk")') trim(particledir),trim(input),j
+		write(lnkfile,'(a,a,i0.3,".lnk")') trim(outputdir),trim(input),j
 		open(unit=30,file=lnkfile,RECL=200)
 		write(30,'("# ",a)') trim(filename(j))
 		do i=1,nlam
@@ -214,7 +214,7 @@ c changed this to mass fractions (11-05-2010)
 		enddo
 		rho(1)=rho_av
 		nm=1
-		write(lnkfile,'(a,a,".lnk")') trim(particledir),trim(input)
+		write(lnkfile,'(a,a,".lnk")') trim(outputdir),trim(input)
 		open(unit=30,file=lnkfile,RECL=200)
 		do i=1,nlam
 			write(30,*) lam(i)*1d4,e1(1,i),e2(1,i)
@@ -245,7 +245,7 @@ c changed this to mass fractions (11-05-2010)
 	endif
 
 	do ilam=1,nlam
-	call tellertje(ilam,nlam)
+c	call tellertje(ilam,nlam)
 	csca0=0d0
 	cabs0=0d0
 	cext0=0d0
@@ -641,7 +641,7 @@ c-----------------------------------------------------------------------
 	  logical simple,extend,truefalse
 	character*500 filename
 
-	filename=trim(particledir) // "particle" 
+	filename=trim(outputdir) // "particle" 
      &	// trim(int2string(ii,'(i0.4)')) // "_" // trim(int2string(isize,'(i0.4)')) 
 	if(abun_in_name.gt.0) then
 		do i=1,nm
@@ -663,7 +663,7 @@ c-----------------------------------------------------------------------
 
 	inquire(file=filename,exist=truefalse)
 	if(truefalse) then
-		call output("FITS file already exists, overwriting")
+c		call output("FITS file already exists, overwriting")
 		open(unit=90,file=filename)
 		close(unit=90,status='delete')
 	endif

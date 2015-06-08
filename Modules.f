@@ -48,7 +48,7 @@ c===============================================================================
 	real*8,allocatable :: Jscat(:,:)						! radius, angle
 	integer nT,np,nr,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines,ng,ncia,nclouds
-	character*500 outputdir,HITRANdir,HITEMPdir,particledir
+	character*500 outputdir,HITRANdir,HITEMPdir
 	integer idum
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile

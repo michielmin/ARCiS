@@ -56,7 +56,14 @@ c		call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 		write(50,'(es15.7,es15.4,es15.4,es13.4,f10.3,es10.3)') sqrt(R(i)*R(i+1)),sqrt(R(i)*R(i+1))-Rplanet
      &			,dens(i),Ndens(i),T(i),P(i)
 	enddo
-	close(unit=20)
+	close(unit=50)
+
+	open(unit=50,file=trim(outputdir) // 'density.dat',RECL=1000)
+	do i=1,nr
+		write(50,*) sqrt(R(i)*R(i+1)),sqrt(R(i)*R(i+1))-Rplanet
+     &			,dens(i),cloud_dens(i,1:nclouds)
+	enddo
+	close(unit=50)
 
 	return
 	end
@@ -73,7 +80,7 @@ c		call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 		if(Cloud(ii)%P.gt.0d0) then
 			h=findpressure(Cloud(ii)%P)
 			if(Cloud(ii)%dP.gt.0d0) then
-				dh=abs(findpressure(Cloud(ii)%P*(1d0+Cloud(ii)%dP))-h)
+				dh=abs(findpressure(Cloud(ii)%P*Cloud(ii)%dP)-h)
 			else if(Cloud(ii)%dH.gt.0d0) then
 				dh=Cloud(ii)%dH
 			else
@@ -135,106 +142,5 @@ c		call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 	end
 
 
-c-----------------------------------------------------------------------
-c-----------------------------------------------------------------------
-
-	subroutine SetupPartCloud(ii)
-	use GlobalSetup
-	use Constants
-	IMPLICIT NONE
-	integer ii,is,ilam,j
-	real*8 phi,thet,tot,tot2,fact
-	
-	allocate(Cloud(ii)%rv(Cloud(ii)%nsize))
-	allocate(Cloud(ii)%Kabs(Cloud(ii)%nsize,nlam))
-	allocate(Cloud(ii)%Ksca(Cloud(ii)%nsize,nlam))
-	allocate(Cloud(ii)%Kext(Cloud(ii)%nsize,nlam))
-	allocate(Cloud(ii)%F(Cloud(ii)%nsize,nlam))
-
-	select case(Cloud(ii)%ptype)
-		case("COMPUTE")
-			do is=1,Cloud(ii)%nsize
-				call ComputePart(Cloud(ii),ii,is)
-			enddo
-c		case("PARTFILE")
-c			call ReadParticle(Cloud(ii),ii)
-		case default
-			call output("I did not understand what I was trying to do. Sorry!")
-	end select
-	
-	if(nspike.gt.0.and.nspike.le.180) call output("making the first " // trim(int2string(nspike,'(i3)')) // " degrees isotropic")
-	do ilam=1,nlam
-		do is=1,Cloud(ii)%nsize
-			tot=0d0
-			tot2=0d0
-			do j=1,180
-				tot=tot+Cloud(ii)%F(is,ilam)%F11(j)*sin(pi*(real(j)-0.5)/180d0)
-				tot2=tot2+sin(pi*(real(j)-0.5)/180d0)
-			enddo
-			do j=1,180
-				Cloud(ii)%F(is,ilam)%F11(j)=tot2*Cloud(ii)%F(is,ilam)%F11(j)/tot
-				Cloud(ii)%F(is,ilam)%F12(j)=tot2*Cloud(ii)%F(is,ilam)%F12(j)/tot
-				Cloud(ii)%F(is,ilam)%F22(j)=tot2*Cloud(ii)%F(is,ilam)%F22(j)/tot
-				Cloud(ii)%F(is,ilam)%F33(j)=tot2*Cloud(ii)%F(is,ilam)%F33(j)/tot
-				Cloud(ii)%F(is,ilam)%F34(j)=tot2*Cloud(ii)%F(is,ilam)%F34(j)/tot
-				Cloud(ii)%F(is,ilam)%F44(j)=tot2*Cloud(ii)%F(is,ilam)%F44(j)/tot
-			enddo
-
-			if(nspike.gt.0.and.nspike.le.180) then
-c the nspike parameter removes the n degree spike in the forward direction.
-				do j=1,nspike
-					fact=Cloud(ii)%F(is,ilam)%F11(nspike+1)/Cloud(ii)%F(is,ilam)%F11(j)
-					Cloud(ii)%F(is,ilam)%F12(j)=Cloud(ii)%F(is,ilam)%F12(j)*fact
-					Cloud(ii)%F(is,ilam)%F22(j)=Cloud(ii)%F(is,ilam)%F22(j)*fact
-					Cloud(ii)%F(is,ilam)%F33(j)=Cloud(ii)%F(is,ilam)%F33(j)*fact
-					Cloud(ii)%F(is,ilam)%F34(j)=Cloud(ii)%F(is,ilam)%F34(j)*fact
-					Cloud(ii)%F(is,ilam)%F44(j)=Cloud(ii)%F(is,ilam)%F44(j)*fact
-					Cloud(ii)%F(is,ilam)%F11(j)=Cloud(ii)%F(is,ilam)%F11(nspike+1)
-				enddo
-
-				tot=0d0
-				tot2=0d0
-				do j=1,180
-					tot=tot+Cloud(ii)%F(is,ilam)%F11(j)*sin(pi*(real(j)-0.5)/180d0)
-					tot2=tot2+sin(pi*(real(j)-0.5)/180d0)
-				enddo
-				Cloud(ii)%Ksca(is,ilam)=Cloud(ii)%Ksca(is,ilam)*tot/tot2
-				Cloud(ii)%Kext(is,ilam)=Cloud(ii)%Kabs(is,ilam)+Cloud(ii)%Ksca(is,ilam)
-				do j=1,180
-					Cloud(ii)%F(is,ilam)%F11(j)=tot2*Cloud(ii)%F(is,ilam)%F11(j)/tot
-					Cloud(ii)%F(is,ilam)%F12(j)=tot2*Cloud(ii)%F(is,ilam)%F12(j)/tot
-					Cloud(ii)%F(is,ilam)%F22(j)=tot2*Cloud(ii)%F(is,ilam)%F22(j)/tot
-					Cloud(ii)%F(is,ilam)%F33(j)=tot2*Cloud(ii)%F(is,ilam)%F33(j)/tot
-					Cloud(ii)%F(is,ilam)%F34(j)=tot2*Cloud(ii)%F(is,ilam)%F34(j)/tot
-					Cloud(ii)%F(is,ilam)%F44(j)=tot2*Cloud(ii)%F(is,ilam)%F44(j)/tot
-				enddo
-			endif
-		enddo
-	enddo
-
-	do ilam=1,nlam
-		do is=1,Cloud(ii)%nsize
-			Cloud(ii)%F(is,ilam)%IF11=0d0
-			Cloud(ii)%F(is,ilam)%IF12=0d0
-			do j=1,180
-				thet=pi*(real(j)-0.5d0)/180d0
-				Cloud(ii)%F(is,ilam)%IF11=Cloud(ii)%F(is,ilam)%IF11+pi*sin(thet)
-     &			*Cloud(ii)%F(is,ilam)%F11(j)/180d0
-				Cloud(ii)%F(is,ilam)%IF12=Cloud(ii)%F(is,ilam)%IF12+pi*sin(thet)
-     &			*Cloud(ii)%F(is,ilam)%F12(j)/180d0
-			enddo
-		enddo
-	enddo
-c	do j=0,360
-c		phi=pi*real(j-1)/179.5d0
-c		cos2phi(j)=cos(2d0*phi)
-c		sin2phi(j)=sin(2d0*phi)
-c	enddo
-	
-	return
-	end
-	
-c-----------------------------------------------------------------------
-c-----------------------------------------------------------------------
 
 	
