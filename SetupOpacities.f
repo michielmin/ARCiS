@@ -6,13 +6,13 @@
 	real*8 kappa(ng),nu1,nu2,tanscale
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
-	real*8,allocatable :: opac_tot(:,:),cia_tot(:),kaver(:)
+	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:)
 	integer n_nu_line,iT
 	integer i,j,ir,k,nl
 	integer,allocatable :: inu1(:),inu2(:)
 	character*500 filename
 
-	allocate(cia_tot(nlam))
+	allocate(cont_tot(nlam))
 	allocate(kaver(nlam))
 	allocate(opac_tot(nlam,ng))
 	allocate(inu1(nlam))
@@ -62,7 +62,7 @@
 			nu_line(i)=exp(log(freq(1))+log(freq(nlam)/freq(1))*real(i-1)/real(n_nu_line-1))
 			dnu_line(i)=nu_line(i)*dnu
 		enddo
-		cia_tot=0d0
+		cont_tot=0d0
 		do i=1,ncia
 			if(T(ir).lt.CIA(i)%T(1)) then
 				iT=1
@@ -73,7 +73,7 @@
 					if(T(ir).ge.CIA(i)%T(iT).and.T(ir).le.CIA(i)%T(iT+1)) exit
 				enddo
 			endif
-			cia_tot(1:nlam)=cia_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
+			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
 		enddo
 		call output("Compute lines")
 		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line,Saver,nl)
@@ -82,14 +82,14 @@
 		call tellertje(1,nlam-1)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,nu1,nu2,kappa)
-!$OMP& SHARED(nlam,freq,ir,nu_line,k_line,n_nu_line,cia_tot,Cabs,Csca,opac_tot,Ndens,R,ng)
+!$OMP& PRIVATE(i,nu1,nu2,kappa,k)
+!$OMP& SHARED(nlam,freq,ir,nu_line,k_line,n_nu_line,cont_tot,Cabs,Csca,opac_tot,Ndens,R,ng,nclouds,cloud_dens,Cloud)
 !$OMP DO
 		do i=1,nlam-1
 			call tellertje(i+1,nlam+1)
 			nu1=freq(i+1)
 			nu2=freq(i)
-			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cia_tot(i))
+			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cont_tot(i))
 			Cabs(ir,i,1:ng)=kappa(1:ng)
 			Csca(ir,i)=8.4909d-45*(nu1*nu2)**2
 			opac_tot(i,1:ng)=opac_tot(i,1:ng)+(Cabs(ir,i,1:ng)+Csca(ir,i))*Ndens(ir)*(R(ir+1)-R(ir))

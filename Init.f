@@ -1,3 +1,331 @@
+c==============================================================================	
+c Module for reading keywords
+c==============================================================================	
+	module ReadKeywords
+	IMPLICIT NONE
+
+	type SettingKey
+		character*100 key1,key2,value,key
+		integer nr1,nr2
+		logical last
+		type(SettingKey),pointer :: next
+	end type SettingKey
+
+	contains
+	
+	subroutine GetKeywords(firstkey)
+	use GlobalSetup
+	IMPLICIT NONE
+	type(SettingKey),target :: firstkey
+	type(SettingKey),pointer :: key
+	integer ncla	! number of command line arguments
+	character*1000 readline,inputfile,command
+	logical readfile
+
+	call getarg(1,inputfile)
+	if(inputfile.eq.' ') inputfile='input.dat'
+
+	open(unit=20,file=inputfile,RECL=1000)
+
+	call output("input file: " // trim(inputfile))
+
+	call system("cp " // trim(inputfile) // " " // trim(outputdir) // "input.dat")
+	open(unit=21,file=trim(outputdir) // "input.dat",RECL=1000,access='APPEND')
+	write(21,'("*** command line keywords ***")')
+	
+	ncla=0
+
+	key => firstkey
+
+	readfile=.true.
+	
+	goto 10
+20	readfile=.false.
+	close(unit=20)
+10	continue
+	if(readfile) then
+		call ignorestar(20)
+		read(20,'(a1000)',end=20,err=20) readline
+	else
+		call getarg(2+ncla,readline)
+		if(readline(1:2).eq.'-s') then
+			ncla=ncla+1
+			call getarg(2+ncla,readline)
+			call output("Command line argument: " // trim(readline))
+			write(21,'(a)') trim(readline)
+			ncla=ncla+1
+		else if(readline(1:2).eq.'-o') then
+			ncla=ncla+2
+			goto 10
+		else
+			if(readline.ne.' ') then
+c				try to read another command line argument
+				open(unit=20,file=readline,RECL=1000)
+				readfile=.true.
+				ncla=ncla+1
+				goto 10
+			else
+c				all arguments are read
+				goto 30
+			endif
+		endif
+	endif
+
+	if(readline.eq.' ') goto 10
+
+	allocate(key%next)
+	key => key%next
+	key%last=.false.
+	call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2)
+
+c read another command, so go back
+	goto 10
+
+30	continue
+	close(unit=21)
+	allocate(key%next)
+	key => key%next
+	key%last=.true.
+
+	return
+	end subroutine GetKeywords
+	
+
+c=========================================================================================
+c This subroutine just seperates the key and value component of a string given
+c key=value syntax. Key is transformed to lowercase.
+c=========================================================================================
+	subroutine get_key_value(line,key,key1,key2,value,nr1,nr2)
+	IMPLICIT NONE
+	character*1000 line
+	character*100 key,key1,key2,value
+	integer i,nr1,nr2,ikey1,ikey2
+	
+	ikey1=index(line,'=')
+	ikey2=index(line,':')
+	if(ikey1.eq.0) ikey1=len_trim(line)+1
+
+	nr1=1
+	nr2=1
+	if(ikey2.gt.0) then
+		key1=line(1:ikey2-1)
+		key=key1
+		key2=line(ikey2+1:ikey1-1)
+		call checknr(key1,nr1)
+		call checknr(key2,nr2)
+	else
+		key1=line(1:ikey1-1)
+		key=key1
+		key2=' '
+		call checknr(key1,nr1)
+	endif
+
+	value=line(index(line,'=')+1:len_trim(line))
+	if(value(1:1).eq.'"'.or.value(1:1).eq."'") then
+		value=value(2:len_trim(value)-1)
+	endif
+
+	do i=1,len_trim(key1)
+		if(iachar(key1(i:i)).ge.65.and.iachar(key1(i:i)).le.90) then
+			key1(i:i)=achar(iachar(key1(i:i))+32)
+		endif
+	enddo
+	do i=1,len_trim(key2)
+		if(iachar(key2(i:i)).ge.65.and.iachar(key2(i:i)).le.90) then
+			key2(i:i)=achar(iachar(key2(i:i))+32)
+		endif
+	enddo
+
+	return
+	end subroutine get_key_value
+	
+	
+	subroutine checknr(key,nr)
+	IMPLICIT NONE
+	character*100 key
+	integer nr,i,n
+	
+	n=len_trim(key)
+	i=n
+1	read(key(i:n),*,err=2) nr
+	i=i-1
+	if(i.eq.0) goto 2
+	goto 1
+2	continue
+	if(i.eq.n) then
+		nr=0
+	else
+		read(key(i+1:n),*,err=3) nr	
+	endif
+3	continue
+	key=key(1:i)
+	return
+	end subroutine checknr
+	
+
+
+
+	subroutine CountStuff(firstkey)
+	use GlobalSetup
+	IMPLICIT NONE
+	type(SettingKey),target :: firstkey
+	type(SettingKey),pointer :: key
+	integer i,j,ncia0,n
+	character*500 homedir,h2h2file,h2hefile,h2ch4file,TPfile
+	character*10 names(48)
+	logical existh2h2,existh2he,existh2ch4,mixratfile
+
+	key => firstkey
+
+	nmol=1
+	nobs=1
+	ncia=0
+	nclouds=0
+	j=0
+	mixratfile=.false.
+	do while(.not.key%last)
+		select case(key%key1)
+			case("obs")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr2.eq.0) key%nr2=1
+				if(key%nr1.gt.nobs) nobs=key%nr1
+			case("cia")
+				if(key%key2.eq.' ') then
+					read(key%value,*) do_cia
+				else
+					if(key%nr1.eq.0) key%nr1=1
+					if(key%nr2.eq.0) key%nr2=1
+					if(key%nr1.gt.ncia) ncia=key%nr1
+				endif
+			case("mixratfile")
+				read(key%value,*) mixratfile
+			case("tpfile")
+				read(key%value,'(a)') TPfile
+			case("cloud")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr2.eq.0) key%nr2=1
+				if(key%nr1.gt.nclouds) nclouds=key%nr1
+			case default
+				do i=1,48
+					if(key%key.eq.molname(i)) then
+						if(i.gt.nmol) nmol=i
+						j=j+1
+					endif
+				enddo
+		end select
+		key=>key%next
+	enddo
+
+	if(mixratfile) then
+		open(unit=30,file=TPfile,RECL=6000)
+		read(30,*) n
+		read(30,*) names(1:n)
+		do j=1,n
+			do i=1,48
+				if(names(j).eq.molname(i)) then
+					if(i.gt.nmol) nmol=i
+				endif
+			enddo
+		enddo
+	endif
+
+	allocate(obs(nobs))
+	allocate(mixrat(nmol))
+	allocate(includemol(nmol))
+	allocate(Cloud(max(nclouds,1)))
+
+	ncia0=0
+	existh2h2=.false.
+	existh2he=.false.
+	existh2ch4=.false.
+	if(do_cia) then
+		call getenv('HOME',homedir)
+c find H2-H2 cia file
+		h2h2file=trim(homedir) // '/HITRAN/H2-H2_2011.cia'
+		inquire(file=h2h2file,exist=existh2h2)
+		if(existh2h2) then
+			ncia0=ncia0+1
+		else
+			h2h2file=trim(homedir) // '/HITRAN/CIA/H2-H2_2011.cia'
+			inquire(file=h2h2file,exist=existh2h2)
+			if(existh2h2) then
+				ncia0=ncia0+1
+			else
+				h2h2file=trim(homedir) // '/CIA/H2-H2_2011.cia'
+				inquire(file=h2h2file,exist=existh2h2)
+				if(existh2h2) then
+					ncia0=ncia0+1
+				endif
+			endif
+		endif
+c find H2-He cia file
+		h2hefile=trim(homedir) // '/HITRAN/H2-He_2011.cia'
+		inquire(file=h2hefile,exist=existh2he)
+		if(existh2he) then
+			ncia0=ncia0+1
+		else
+			h2hefile=trim(homedir) // '/HITRAN/CIA/H2-He_2011.cia'
+			inquire(file=h2hefile,exist=existh2he)
+			if(existh2he) then
+				ncia0=ncia0+1
+			else
+				h2hefile=trim(homedir) // '/CIA/H2-He_2011.cia'
+				inquire(file=h2hefile,exist=existh2he)
+				if(existh2he) then
+					ncia0=ncia0+1
+				endif
+			endif
+		endif
+c find H2-CH4 cia file
+c		h2ch4file=trim(homedir) // '/HITRAN/H2-CH4_eq_2011.cia'
+c		inquire(file=h2ch4file,exist=existh2ch4)
+c		if(existh2ch4) then
+c			ncia0=ncia0+1
+c		else
+c			h2ch4file=trim(homedir) // '/HITRAN/CIA/H2-CH4_eq_2011.cia'
+c			inquire(file=h2ch4file,exist=existh2ch4)
+c			if(existh2ch4) then
+c				ncia0=ncia0+1
+c			else
+c				h2ch4file=trim(homedir) // '/CIA/H2-CH4_eq_2011.cia'
+c				inquire(file=h2ch4file,exist=existh2ch4)
+c				if(existh2ch4) then
+c					ncia0=ncia0+1
+c				endif
+c			endif
+c		endif
+	endif
+
+	allocate(CIA(max(ncia+ncia0,1)))
+
+	if(existh2h2) then
+		ncia=ncia+1
+		CIA(ncia)%filename=h2h2file
+	endif
+	if(existh2he) then
+		ncia=ncia+1
+		CIA(ncia)%filename=h2hefile
+	endif
+	if(existh2ch4) then
+		ncia=ncia+1
+		CIA(ncia)%filename=h2ch4file
+	endif
+
+	call output('Number of molecules:       ' // int2string(j,'(i4)'))
+	call output('Number of clouds:          ' // int2string(nclouds,'(i4)'))
+	call output('Number of collision pairs: ' // int2string(ncia,'(i4)'))
+	call output('Number of observations:    ' // int2string(nobs,'(i4)'))
+	
+
+	return
+	end subroutine CountStuff
+	
+	end module ReadKeywords
+	
+c==============================================================================	
+c==============================================================================	
+
+
 	subroutine Init()
 	use GlobalSetup
 	use Constants
@@ -9,6 +337,7 @@
 	character*500 TPfile
 
 	TPfile=' '
+	mixratfile=.false.
 
 	idum=-42
 #ifdef USE_OPENMP
@@ -43,8 +372,6 @@ c allocate the arrays
 	do while(.not.key%last)
 
 	select case(key%key1)
-		case("part")
-
 		case("nr")
 			read(key%value,*) nr
 		case("mp")
@@ -94,6 +421,8 @@ c allocate the arrays
 			read(key%value,*) distance
 		case("hitemp")
 			read(key%value,*) HITEMP
+		case("cloud")
+			call ReadCloud(key)
 		case default
 			do i=1,48
 				if(key%key.eq.molname(i)) then
@@ -139,6 +468,7 @@ c allocate the arrays
 	
 	Rplanet=Rplanet*Rjup
 	Mplanet=Mplanet*Mjup
+	Rstar=Rstar*Rsun
 	lam1=lam1*micron
 	lam2=lam2*micron
 
@@ -174,6 +504,7 @@ c allocate the arrays
 	allocate(T(nr))
 	allocate(P(nr))
 	allocate(mixrat_r(nr,nmol))
+	allocate(cloud_dens(nr,max(nclouds,1)))
 
 	do i=1,nr
 		mixrat_r(i,1:nmol)=mixrat(1:nmol)
@@ -241,6 +572,13 @@ c allocate the arrays
 		endif
 	enddo
 
+	do i=1,nclouds
+		call output("==================================================================")
+		call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
+		call SetupPartCloud(i)
+		allocate(Cloud(i)%w(Cloud(i)%nsize))
+	enddo
+
 	return
 	end	
 
@@ -254,6 +592,9 @@ c allocate the arrays
 	Mplanet=1d0
 	Rplanet=1d0
 	
+	Tstar=5777d0
+	Rstar=1d0
+	
 	lam1=1d0
 	lam2=15d0
 	specres=10d0
@@ -265,6 +606,31 @@ c allocate the arrays
 		obs(i)%type='EMIS'
 		obs(i)%filename=' '
 	enddo
+	
+	do i=1,nclouds
+		Cloud(i)%P=-1d0
+		Cloud(i)%H=-1d0
+		Cloud(i)%dP=-1d0
+		Cloud(i)%dH=-1d0
+		Cloud(i)%column=0d0
+		Cloud(i)%file=' '
+		Cloud(i)%standard='ASTROSIL'
+		Cloud(i)%nsize=50
+		Cloud(i)%nsubgrains=1
+		Cloud(i)%amin=0.1
+		Cloud(i)%amax=100d0
+		Cloud(i)%fmax=0d0
+		Cloud(i)%porosity=0d0
+		Cloud(i)%fcarbon=0d0
+		Cloud(i)%blend=.true.
+		Cloud(i)%reff=1d0
+		Cloud(i)%veff=0.1
+		Cloud(i)%coverage=1.0
+		Cloud(i)%ptype='COMPUTE'
+	enddo
+	nspike=0
+	
+	particledir='Particles/'
 
 	retrieval=.false.
 	outputopacity=.false.
@@ -306,6 +672,7 @@ c allocate the arrays
 	do iobs=1,nobs
 		allocate(obs(iobs)%lam(nlam))
 		allocate(obs(iobs)%flux(nlam))
+		allocate(obs(iobs)%A(nlam))
 	enddo
 	
 	return
@@ -418,3 +785,58 @@ c allocate the arrays
 	return
 	end
 
+
+	subroutine ReadCloud(key)
+	use GlobalSetup
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer j
+
+	Cloud(key%nr1)%ptype="COMPUTE"
+
+	select case(key%key2)
+		case("file")
+			Cloud(key%nr1)%file=trim(key%value)
+		case("ngrains","nsize")
+			read(key%value,*) Cloud(key%nr1)%nsize
+		case("nsubgrains")
+			read(key%value,*) Cloud(key%nr1)%nsubgrains
+		case("amin")
+			read(key%value,*) Cloud(key%nr1)%amin
+		case("amax")
+			read(key%value,*) Cloud(key%nr1)%amax
+		case("fmax")
+			read(key%value,*) Cloud(key%nr1)%fmax
+		case("blend")
+			read(key%value,*) Cloud(key%nr1)%blend
+		case("porosity")
+			read(key%value,*) Cloud(key%nr1)%porosity
+		case("standard")
+			Cloud(key%nr1)%standard=trim(key%value)
+		case("fcarbon")
+			read(key%value,*) Cloud(key%nr1)%fcarbon
+		case("pressure","p")
+			read(key%value,*) Cloud(key%nr1)%P
+		case("dp")
+			read(key%value,*) Cloud(key%nr1)%dP
+		case("height","h")
+			read(key%value,*) Cloud(key%nr1)%H
+		case("dh")
+			read(key%value,*) Cloud(key%nr1)%dH
+		case("column")
+			read(key%value,*) Cloud(key%nr1)%column
+		case("reff")
+			read(key%value,*) Cloud(key%nr1)%reff
+		case("veff")
+			read(key%value,*) Cloud(key%nr1)%veff
+		case("coverage")
+			read(key%value,*) Cloud(key%nr1)%coverage
+		case default
+			call output("Unknown cloud keyword: " // trim(key%key2))
+			stop
+	end select
+
+	return
+	end
+	

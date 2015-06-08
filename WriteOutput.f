@@ -10,9 +10,10 @@
 		filename=trim(outputdir) // "obs" // trim(int2string(iobs,'(i0.2)'))
 		call output("Writing spectrum to: " // trim(filename))
 		open(unit=30,file=filename,RECL=1000)
-		write(30,'("#",a13,a19)') "lambda [mu]","flux [Jy]"
+		write(30,'("#",a13,a19,a19)') "lambda [mu]","flux [Jy]","R^2/Rp^2"
 		do i=1,nlam-1
-			write(30,'(f12.6,es19.7)') sqrt(lam(i)*lam(i+1))/micron,obs(iobs)%flux(i)
+			write(30,'(f12.6,es19.7,f19.9)') sqrt(lam(i)*lam(i+1))/micron,obs(iobs)%flux(i),
+     &										obs(iobs)%A(i)/(pi*Rstar**2)
 		enddo
 		close(unit=30)
 	enddo

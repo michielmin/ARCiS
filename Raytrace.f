@@ -3,85 +3,141 @@
 	use Constants
 	IMPLICIT NONE
 	integer iobs
-	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot
+	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot,Ag
+	real*8 Ca,Cs
+	integer icloud,isize
 	real*8,allocatable :: rtrace(:)
-	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig
+	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig,nsub,j,k
 	logical in
+	logical,allocatable :: docloud(:,:)
+	real*8,allocatable :: cloudfrac(:)
+	integer icc,ncc
 	
-
 	call output("==================================================================")
 	call output("Raytracing over the planet disk")
 
+c number of cloud/nocloud combinations
+	ncc=2**nclouds
+	allocate(docloud(ncc,nclouds))
+	allocate(cloudfrac(ncc))
+	docloud=.false.
+	do icc=2,ncc
+		docloud(icc,1:nclouds)=docloud(icc-1,1:nclouds)
+		i=0
+10		i=i+1
+		docloud(icc,i)=.not.docloud(icc,i)
+		if(.not.docloud(icc,i)) goto 10
+	enddo
+	do icc=1,ncc
+		cloudfrac(icc)=1d0
+		do i=1,nclouds
+			if(docloud(icc,i)) then
+				cloudfrac(icc)=cloudfrac(icc)*Cloud(i)%coverage
+			else
+				cloudfrac(icc)=cloudfrac(icc)*(1d0-Cloud(i)%coverage)
+			endif
+		enddo
+	enddo
+
 	ndisk=10
+	nsub=5
 	
-	nrtrace=nr+ndisk-1
+	nrtrace=nr*nsub+ndisk
 	allocate(rtrace(nrtrace))
-	
+
+	k=0
 	do i=1,ndisk
-		rtrace(i)=Rplanet*real(i-1)/real(ndisk-1)
+		k=k+1
+		rtrace(k)=Rplanet*real(i-1)/real(ndisk-1)
 	enddo
 	do i=1,nr
-		rtrace(i+ndisk-1)=R(i+1)
+		do j=1,nsub
+			k=k+1
+			rtrace(k)=R(i)+(R(i+1)-R(i))*real(j)/real(nsub)
+		enddo
 	enddo
 
 	call tellertje(1,nlam)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot)
-!$OMP& SHARED(nlam,freq,obs,iobs,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau)
+!$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,
+!$OMP&         Ca,Cs,icloud,isize)
+!$OMP& SHARED(nlam,freq,obs,iobs,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
+!$OMP&			cloudfrac,docloud,cloud_dens,ncc)
 !$OMP DO SCHEDULE(STATIC, 1)
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
 		freq0=sqrt(freq(ilam)*freq(ilam+1))
 		obs(iobs)%lam(ilam)=sqrt(lam(ilam)*lam(ilam+1))
 		obs(iobs)%flux(ilam)=0d0
+		obs(iobs)%A(ilam)=0d0
 		do ig=1,ng
-			fluxg=0d0
-			do i=1,nrtrace-1
-				fact=1d0
-				tautot=0d0
-				A=pi*(rtrace(i+1)**2-rtrace(i)**2)
-				rr=sqrt(rtrace(i)*rtrace(i+1))
-				ir=nr
-				si=-1d0
-				xx1=si*sqrt(R(ir+1)**2-rr**2)
-				in=.true.
-1				continue
-				if(in) then
-					xx2=(R(ir)**2-rr**2)
-					if(xx2.gt.0d0) then
-						xx2=si*sqrt(xx2)
-						d=abs(xx1-xx2)
-						ir_next=ir-1
-						goto 2
+			do icc=1,ncc
+			if(cloudfrac(icc).gt.0d0) then
+				fluxg=0d0
+				Ag=0d0
+				do i=1,nrtrace-1
+					fact=1d0
+					tautot=0d0
+					A=pi*(rtrace(i+1)**2-rtrace(i)**2)
+					rr=sqrt(rtrace(i)*rtrace(i+1))
+					ir=nr
+					si=-1d0
+					xx1=si*sqrt(R(ir+1)**2-rr**2)
+					in=.true.
+1					continue
+					if(in) then
+						xx2=(R(ir)**2-rr**2)
+						if(xx2.gt.0d0) then
+							xx2=si*sqrt(xx2)
+							d=abs(xx1-xx2)
+							ir_next=ir-1
+							goto 2
+						else
+							si=-si
+							xx2=si*sqrt(R(ir+1)**2-rr**2)
+							d=abs(xx1-xx2)
+							ir_next=ir+1
+							in=.false.
+							goto 2
+						endif
 					else
-						si=-si
 						xx2=si*sqrt(R(ir+1)**2-rr**2)
 						d=abs(xx1-xx2)
 						ir_next=ir+1
-						in=.false.
 						goto 2
 					endif
-				else
-					xx2=si*sqrt(R(ir+1)**2-rr**2)
-					d=abs(xx1-xx2)
-					ir_next=ir+1
-					goto 2
-				endif
-2				continue
-				tau_a=d*Ndens(ir)*Cabs(ir,ilam,ig)
-				tau=tau_a+d*Ndens(ir)*Csca(ir,ilam)
-				exp_tau=exp(-tau)
-				tautot=tautot+tau
-				fluxg=fluxg+A*Planck(T(ir),freq0)*(1d0-exp_tau)*fact*tau_a/tau
-				fact=fact*exp_tau
-				if(ir_next.gt.0.and.ir_next.le.nr.and.tautot.lt.maxtau) then
-					ir=ir_next
-					xx1=xx2
-					goto 1
-				endif
+2					continue
+					Ca=Cabs(ir,ilam,ig)*Ndens(ir)
+					Cs=Csca(ir,ilam)*Ndens(ir)
+					do icloud=1,nclouds
+						if(docloud(icc,icloud)) then
+							do isize=1,Cloud(icloud)%nsize
+								Ca=Ca+
+     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+								Cs=Cs+
+     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+							enddo
+						endif
+					enddo
+					tau_a=d*Ca
+					tau=tau_a+d*Cs
+					exp_tau=exp(-tau)
+					tautot=tautot+tau
+					fluxg=fluxg+A*Planck(T(ir),freq0)*(1d0-exp_tau)*fact*tau_a/tau
+					fact=fact*exp_tau
+					if(ir_next.gt.0.and.ir_next.le.nr.and.tautot.lt.maxtau) then
+						ir=ir_next
+						xx1=xx2
+						goto 1
+					endif
+					if(ir_next.le.0.or.tautot.ge.maxtau) fact=0d0
+					Ag=Ag+A*(1d0-fact)
+				enddo
+				obs(iobs)%flux(ilam)=obs(iobs)%flux(ilam)+cloudfrac(icc)*fluxg/real(ng)
+				obs(iobs)%A(ilam)=obs(iobs)%A(ilam)+cloudfrac(icc)*Ag/real(ng)
+			endif
 			enddo
-			obs(iobs)%flux(ilam)=obs(iobs)%flux(ilam)+fluxg/real(ng)
 		enddo
 	enddo
 !$OMP END DO

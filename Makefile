@@ -43,10 +43,7 @@ else
   FLAG_MAC      = -xHOST -opt-prefetch -static-intel -fpp
 endif
 
-ifeq ($(fitsio),true)
-  FLAG_FITS		= -DUSE_FITSIO
-  LIBS_FITS		= -lcfitsio
-endif
+LIBS_FITS		= -lcfitsio
 
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -diag-disable vec
@@ -74,7 +71,10 @@ OBJS	= Modules.o \
 		Subroutines.o \
 		Voigt.o \
 		TIPS_2011_v1p0_sub.o \
-		CIA.o
+		CIA.o \
+		ComputePart.o \
+		ReadParticleFits.o \
+		RefIndData.o
 
 # program name and install location
 PROGRAM       = SPARC
