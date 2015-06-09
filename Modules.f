@@ -78,7 +78,7 @@ c===============================================================================
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt
 	logical HITEMP
-
+	real*8 sintheta(180),costheta(180)
 
 	type Observation
 		character*500 filename
@@ -110,6 +110,8 @@ c===============================================================================
 		real*8 F33(180),F44(180),F34(180)
 		real*8 IF11,IF12
 	end type Mueller
+	
+	type(Mueller) Rayleigh
 
 	type CloudType
 		real*8 P,H,dH,dP,column

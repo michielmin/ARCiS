@@ -16,7 +16,7 @@
 
 	type(CloudType) C,p0,p1
 	integer i,j,ia,iT,iread,nl_read,isize
-	logical truefalse,Rayleigh
+	logical truefalse
 	real*8 l0,l1,tot,tot2,theta,asym,HG,asym2,wasym2
 	real rho_av,a2
 

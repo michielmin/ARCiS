@@ -335,6 +335,7 @@ c==============================================================================
 	integer i,j,omp_get_max_threads,omp_get_thread_num
 	logical mixratfile
 	character*500 TPfile
+	real*8 tot,tot2,theta
 
 	TPfile=' '
 	mixratfile=.false.
@@ -448,6 +449,23 @@ c allocate the arrays
 
 	allocate(Cabs(nr,nlam,ng))
 	allocate(Csca(nr,nlam))
+	do i=1,180
+		theta=(real(i)-0.5d0)*pi/180d0
+		sintheta(i)=sin(theta)
+		costheta(i)=cos(theta)
+		Rayleigh%F11(i)=(1d0+costheta(i)**2)/2d0
+	enddo
+	tot=0d0
+	tot2=0d0
+	do i=1,180
+		tot=tot+Rayleigh%F11(i)*sintheta(i)
+		tot2=tot2+sintheta(i)
+	enddo
+	Rayleigh%F11=Rayleigh%F11*tot2/tot
+	Rayleigh%IF11=0d0
+	do j=1,180
+		Rayleigh%IF11=Rayleigh%IF11+pi*sintheta(i)*Rayleigh%F11(j)/180d0
+	enddo
 
 	call output("==================================================================")
 
