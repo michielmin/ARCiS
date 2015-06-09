@@ -74,7 +74,8 @@ OBJS	= Modules.o \
 		CIA.o \
 		ComputePart.o \
 		ReadParticleFits.o \
-		RefIndData.o
+		RefIndData.o \
+		MCRad.o
 
 # program name and install location
 PROGRAM       = SPARC

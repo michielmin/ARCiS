@@ -13,8 +13,6 @@
 	real*8,allocatable :: cloudfrac(:)
 	integer icc,ncc
 	
-	call output("==================================================================")
-	call output("Raytracing over the planet disk")
 
 c number of cloud/nocloud combinations
 	ncc=2**nclouds
@@ -39,8 +37,35 @@ c number of cloud/nocloud combinations
 		enddo
 	enddo
 
+	obs(iobs)%flux=0d0
+
+	call output("==================================================================")
+
+	call output("Scattered light contributions")
+
+	call tellertje(1,nlam)
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ilam,fluxg,icc)
+!$OMP& SHARED(nlam,nclouds,ncc,cloudfrac,obs,iobs,docloud)
+!$OMP DO
+	do ilam=1,nlam-1
+		call tellertje(ilam+1,nlam+1)
+		obs(iobs)%flux(ilam)=0d0
+		do icc=1,ncc
+			call MCRad(ilam,fluxg,docloud(icc,1:nclouds))
+			obs(iobs)%flux(ilam)=obs(iobs)%flux(ilam)+cloudfrac(icc)*fluxg
+		enddo
+	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+	call tellertje(nlam,nlam)
+
+	call output("Raytracing over the planet disk")
+
 	ndisk=10
-	nsub=5
+	nsub=3
 	
 	nrtrace=nr*nsub+ndisk
 	allocate(rtrace(nrtrace))
@@ -64,12 +89,11 @@ c number of cloud/nocloud combinations
 !$OMP&         Ca,Cs,icloud,isize)
 !$OMP& SHARED(nlam,freq,obs,iobs,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
 !$OMP&			cloudfrac,docloud,cloud_dens,ncc)
-!$OMP DO SCHEDULE(STATIC, 1)
+!$OMP DO SCHEDULE(STATIC,1)
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
 		freq0=sqrt(freq(ilam)*freq(ilam+1))
 		obs(iobs)%lam(ilam)=sqrt(lam(ilam)*lam(ilam+1))
-		obs(iobs)%flux(ilam)=0d0
 		obs(iobs)%A(ilam)=0d0
 		do ig=1,ng
 			do icc=1,ncc
