@@ -662,7 +662,7 @@ c allocate the arrays
 
 	HITEMP=.false.
 
-	ng=100
+	ng=25
 	epsCk=0.25d0
 	
 	eps_lines=0d0
