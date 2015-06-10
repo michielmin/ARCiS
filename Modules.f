@@ -114,7 +114,7 @@ c===============================================================================
 	type(Mueller) Rayleigh
 
 	type CloudType
-		real*8 P,H,dH,dP,column
+		real*8 P,dP,s,column
 		real*8 coverage
 		real*8,allocatable :: rv(:),w(:)							! dimension nsize
 		real*8 rho,amin,amax,fmax,porosity,fcarbon,reff,veff

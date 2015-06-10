@@ -626,10 +626,9 @@ c allocate the arrays
 	enddo
 	
 	do i=1,nclouds
-		Cloud(i)%P=-1d0
-		Cloud(i)%H=-1d0
-		Cloud(i)%dP=-1d0
-		Cloud(i)%dH=-1d0
+		Cloud(i)%P=1d-4
+		Cloud(i)%dP=10d0
+		Cloud(i)%s=2d0
 		Cloud(i)%column=0d0
 		Cloud(i)%file=' '
 		Cloud(i)%standard='ASTROSIL'
@@ -836,10 +835,8 @@ c allocate the arrays
 			read(key%value,*) Cloud(key%nr1)%P
 		case("dp")
 			read(key%value,*) Cloud(key%nr1)%dP
-		case("height","h")
-			read(key%value,*) Cloud(key%nr1)%H
-		case("dh")
-			read(key%value,*) Cloud(key%nr1)%dH
+		case("s","sharpness")
+			read(key%value,*) Cloud(key%nr1)%s
 		case("column")
 			read(key%value,*) Cloud(key%nr1)%column
 		case("reff")

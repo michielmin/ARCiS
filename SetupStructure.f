@@ -73,35 +73,15 @@ c		call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 h,dh,findpressure,column,rr,tot
+	real*8 pp,tot,column
 	integer ii,i,j,nsubr
-	
-	if(Cloud(ii)%H.lt.0d0) then
-		if(Cloud(ii)%P.gt.0d0) then
-			h=findpressure(Cloud(ii)%P)
-			if(Cloud(ii)%dP.gt.0d0) then
-				dh=abs(findpressure(Cloud(ii)%P*Cloud(ii)%dP)-h)
-			else if(Cloud(ii)%dH.gt.0d0) then
-				dh=Cloud(ii)%dH
-			else
-				call output("Cloud thickness not set.")
-				stop
-			endif
-		else
-			call output("Cloud height not set.")
-			stop
-		endif
-	else
-		h=Cloud(ii)%H
-		dh=Cloud(ii)%dH
-	endif
 	
 	column=0d0
 	nsubr=100
 	do i=1,nr
 		do j=1,nsubr
-			rr=10d0**(log10(R(i))+log10(R(i+1)/R(i))*real(j)/real(nsubr+1))
-			cloud_dens(i,ii)=exp(-((rr-h)/dh)**2/2d0)/real(nsubr)
+			pp=(log10(P(i))+log10(P(i+1)/P(i))*real(j)/real(nsubr+1))
+			cloud_dens(i,ii)=exp(-(abs(pp-log10(Cloud(ii)%P))/log10(Cloud(ii)%dP))**Cloud(ii)%s/2d0)
 			column=column+cloud_dens(i,ii)*(R(i+1)-R(i))
 		enddo
 	enddo
