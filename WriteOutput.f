@@ -3,19 +3,46 @@
 	use Constants
 	IMPLICIT NONE
 	integer iobs,i
-	character*500 filename
-	
+	character*500 filename,form
+	logical,allocatable :: docloud(:,:)
+
 	do iobs=1,nobs
-		call output("==================================================================")
-		filename=trim(outputdir) // "obs" // trim(int2string(iobs,'(i0.2)'))
-		call output("Writing spectrum to: " // trim(filename))
-		open(unit=30,file=filename,RECL=1000)
-		write(30,'("#",a13,a19,a19)') "lambda [mu]","flux [Jy]","R^2/Rp^2"
-		do i=1,nlam-1
-			write(30,'(f12.6,es19.7,f19.9)') sqrt(lam(i)*lam(i+1))/micron,obs(iobs)%flux(i),
-     &										obs(iobs)%A(i)/(pi*Rstar**2)
+		allocate(docloud(nclouds,obs(iobs)%ncc))
+		do i=1,nclouds
+			docloud(i,:)=obs(iobs)%docloud(:,i)
 		enddo
-		close(unit=30)
+		call output("==================================================================")
+		select case(obs(iobs)%type)
+			case("EMIS","emis","emission","EMISSION")
+				filename=trim(outputdir) // "emis" // trim(int2string(iobs,'(i0.2)'))
+				call output("Writing spectrum to: " // trim(filename))
+				open(unit=30,file=filename,RECL=1000)
+				form='("#",a13,a19,' // trim(int2string(obs(iobs)%ncc,'(i3)')) // 
+     &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
+     &				trim(int2string(nclouds,'(i3)')) // 'l1))'
+				write(30,form) "lambda [mu]","flux [Jy]",docloud(1:nclouds,1:obs(iobs)%ncc)
+				form='(f14.6,' // int2string(obs(iobs)%ncc+1,'(i3)') // 'es19.7)'
+				do i=1,nlam-1
+					write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+     &					obs(iobs)%flux(0:obs(iobs)%ncc,i)
+				enddo
+				close(unit=30)
+			case("TRANS","trans","transit","TRANSIT")
+				filename=trim(outputdir) // "trans" // trim(int2string(iobs,'(i0.2)'))
+				call output("Writing spectrum to: " // trim(filename))
+				open(unit=30,file=filename,RECL=1000)
+				form='("#",a13,a19,' // trim(int2string(obs(iobs)%ncc,'(i3)')) // 
+     &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
+     &				trim(int2string(nclouds,'(i3)')) // 'l1))'
+				write(30,form) "lambda [mu]","Rp^2/Rstar^2",docloud(1:nclouds,1:obs(iobs)%ncc)
+				form='(f14.6,' // int2string(obs(iobs)%ncc+1,'(i3)') // 'es19.7)'
+				do i=1,nlam-1
+					write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+     &					obs(iobs)%A(0:obs(iobs)%ncc,i)/(pi*Rstar**2)
+				enddo
+				close(unit=30)
+		end select
+		deallocate(docloud)
 	enddo
 	
 	return

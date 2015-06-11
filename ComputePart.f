@@ -30,6 +30,8 @@
 	real*8,allocatable :: Mief33(:),Mief34(:),Mief44(:)
 	logical truefalse,checkparticlefile,lnkloglog
 	external Carbon_BE_Zubko1996,Mg07Fe03SiO3_Dorschner1995,AstroSilicate
+	external Enstatite_X,Enstatite_Y,Enstatite_Z
+	external Brookite_X,Brookite_Y,Brookite_Z
 	integer abun_in_name
 	parameter(abun_in_name=2)
 
@@ -123,6 +125,72 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(Carbon_BE_Zubko1996,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(2,1:nlam)=e1d(1:nlam)
 		e2(2,1:nlam)=e2d(1:nlam)
+		deallocate(e1d)
+		deallocate(e2d)
+	else if(C%standard.eq.'ENSTATITE') then
+		input='ENSTATITE'
+		ns=C%nsubgrains
+		C%blend=.false.
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		allocate(r0(ns))
+		allocate(nr0(MAXMAT,ns))
+		allocate(f(nf))
+		allocate(wf(nf))
+		nm=3
+		rho(1)=2.80
+		rho(2)=2.80
+		rho(3)=2.80
+		frac(1)=1d0/3d0
+		frac(2)=1d0/3d0
+		frac(3)=1d0/3d0
+		allocate(e1d(nlam))
+		allocate(e2d(nlam))
+		filename(1)='Enstatite_X'
+		call RegridDataLNK(Enstatite_X,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(1,1:nlam)=e1d(1:nlam)
+		e2(1,1:nlam)=e2d(1:nlam)
+		filename(2)='Enstatite_Y'
+		call RegridDataLNK(Enstatite_Y,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(2,1:nlam)=e1d(1:nlam)
+		e2(2,1:nlam)=e2d(1:nlam)
+		filename(3)='Enstatite_Z'
+		call RegridDataLNK(Enstatite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(3,1:nlam)=e1d(1:nlam)
+		e2(3,1:nlam)=e2d(1:nlam)
+		deallocate(e1d)
+		deallocate(e2d)
+	else if(C%standard.eq.'BROOKITE'.or.C%standard.eq.'TiO2') then
+		input='BROOKITE'
+		ns=C%nsubgrains
+		C%blend=.false.
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		allocate(r0(ns))
+		allocate(nr0(MAXMAT,ns))
+		allocate(f(nf))
+		allocate(wf(nf))
+		nm=3
+		rho(1)=2.80
+		rho(2)=2.80
+		rho(3)=2.80
+		frac(1)=1d0/3d0
+		frac(2)=1d0/3d0
+		frac(3)=1d0/3d0
+		allocate(e1d(nlam))
+		allocate(e2d(nlam))
+		filename(1)='Brookite_X'
+		call RegridDataLNK(Brookite_X,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(1,1:nlam)=e1d(1:nlam)
+		e2(1,1:nlam)=e2d(1:nlam)
+		filename(2)='Brookite_Y'
+		call RegridDataLNK(Brookite_Y,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(2,1:nlam)=e1d(1:nlam)
+		e2(2,1:nlam)=e2d(1:nlam)
+		filename(3)='Brookite_Z'
+		call RegridDataLNK(Brookite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(3,1:nlam)=e1d(1:nlam)
+		e2(3,1:nlam)=e2d(1:nlam)
 		deallocate(e1d)
 		deallocate(e2d)
 	else if(C%standard.eq.'ASTROSIL') then
@@ -420,6 +488,7 @@ c changed this to mass fractions (11-05-2010)
 	else if(C%standard.eq.'DIANA') then
 		ns=1
 		nf=20
+		if(maxf.eq.0e0) nf=1
 		nm=2
 		rho(1)=3.01
 		rho(2)=1.80
@@ -435,6 +504,50 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(Carbon_BE_Zubko1996,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(2,1:nlam)=e1d(1:nlam)
 		e2(2,1:nlam)=e2d(1:nlam)
+		deallocate(e1d)
+		deallocate(e2d)
+	else if(C%standard.eq.'ENSTATITE') then
+		input='ENSTATITE'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		nm=3
+		rho(1)=2.80
+		rho(2)=2.80
+		rho(3)=2.80
+		frac(1)=1d0/3d0
+		frac(2)=1d0/3d0
+		frac(3)=1d0/3d0
+		allocate(e1d(nlam))
+		allocate(e2d(nlam))
+		filename(1)='Enstatite_X'
+		call RegridDataLNK(Enstatite_X,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(1,1:nlam)=e1d(1:nlam)
+		e2(1,1:nlam)=e2d(1:nlam)
+		filename(2)='Enstatite_Y'
+		call RegridDataLNK(Enstatite_Y,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(2,1:nlam)=e1d(1:nlam)
+		e2(2,1:nlam)=e2d(1:nlam)
+		filename(2)='Enstatite_Z'
+		call RegridDataLNK(Enstatite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(3,1:nlam)=e1d(1:nlam)
+		e2(3,1:nlam)=e2d(1:nlam)
+		deallocate(e1d)
+		deallocate(e2d)
+	else if(C%standard.eq.'ASTROSIL') then
+		input='ASTROSIL'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		nm=1
+		rho(1)=3.0
+		frac(1)=1d0/rho(1)
+		allocate(e1d(nlam))
+		allocate(e2d(nlam))
+		filename(1)='AstroSilicate'
+		call RegridDataLNK(AstroSilicate,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(1,1:nlam)=e1d(1:nlam)
+		e2(1,1:nlam)=e2d(1:nlam)
 		deallocate(e1d)
 		deallocate(e2d)
 	endif

@@ -83,7 +83,10 @@ c===============================================================================
 	type Observation
 		character*500 filename
 		character*10 type
-		real*8,allocatable :: lam(:),flux(:),A(:)
+		real*8,allocatable :: lam(:),flux(:,:),A(:,:)
+		integer ncc
+		logical,allocatable :: docloud(:,:)
+		real*8,allocatable :: cloudfrac(:)
 	end type Observation
 
 	type(Observation),allocatable :: obs(:)

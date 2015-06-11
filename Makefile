@@ -75,6 +75,8 @@ OBJS	= Modules.o \
 		ComputePart.o \
 		ReadParticleFits.o \
 		RefIndData.o \
+		EnstatiteData.o \
+		BrookiteData.o \
 		MCRad.o
 
 # program name and install location

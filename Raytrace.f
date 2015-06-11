@@ -9,30 +9,23 @@
 	real*8,allocatable :: rtrace(:)
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig,nsub,j,k
 	logical in
-	logical,allocatable :: docloud(:,:)
-	real*8,allocatable :: cloudfrac(:)
-	integer icc,ncc
-	
+	integer icc
 
-c number of cloud/nocloud combinations
-	ncc=2**nclouds
-	allocate(docloud(ncc,nclouds))
-	allocate(cloudfrac(ncc))
-	docloud=.false.
-	do icc=2,ncc
-		docloud(icc,1:nclouds)=docloud(icc-1,1:nclouds)
+	obs(iobs)%docloud=.false.
+	do icc=2,obs(iobs)%ncc
+		obs(iobs)%docloud(icc,1:nclouds)=obs(iobs)%docloud(icc-1,1:nclouds)
 		i=0
 10		i=i+1
-		docloud(icc,i)=.not.docloud(icc,i)
-		if(.not.docloud(icc,i)) goto 10
+		obs(iobs)%docloud(icc,i)=.not.obs(iobs)%docloud(icc,i)
+		if(.not.obs(iobs)%docloud(icc,i)) goto 10
 	enddo
-	do icc=1,ncc
-		cloudfrac(icc)=1d0
+	do icc=1,obs(iobs)%ncc
+		obs(iobs)%cloudfrac(icc)=1d0
 		do i=1,nclouds
-			if(docloud(icc,i)) then
-				cloudfrac(icc)=cloudfrac(icc)*Cloud(i)%coverage
+			if(obs(iobs)%docloud(icc,i)) then
+				obs(iobs)%cloudfrac(icc)=obs(iobs)%cloudfrac(icc)*Cloud(i)%coverage
 			else
-				cloudfrac(icc)=cloudfrac(icc)*(1d0-Cloud(i)%coverage)
+				obs(iobs)%cloudfrac(icc)=obs(iobs)%cloudfrac(icc)*(1d0-Cloud(i)%coverage)
 			endif
 		enddo
 	enddo
@@ -47,14 +40,15 @@ c number of cloud/nocloud combinations
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,fluxg,icc)
-!$OMP& SHARED(nlam,nclouds,ncc,cloudfrac,obs,iobs,docloud)
+!$OMP& SHARED(nlam,nclouds,obs,iobs)
 !$OMP DO
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
-		obs(iobs)%flux(ilam)=0d0
-		do icc=1,ncc
-			call MCRad(ilam,fluxg,docloud(icc,1:nclouds))
-			obs(iobs)%flux(ilam)=obs(iobs)%flux(ilam)+cloudfrac(icc)*fluxg
+		obs(iobs)%flux(:,ilam)=0d0
+		do icc=1,obs(iobs)%ncc
+			call MCRad(ilam,fluxg,obs(iobs)%docloud(icc,1:nclouds))
+			obs(iobs)%flux(0,ilam)=obs(iobs)%flux(0,ilam)+obs(iobs)%cloudfrac(icc)*fluxg
+			obs(iobs)%flux(icc,ilam)=obs(iobs)%flux(icc,ilam)+fluxg
 		enddo
 	enddo
 !$OMP END DO
@@ -88,19 +82,19 @@ c number of cloud/nocloud combinations
 !$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,
 !$OMP&         Ca,Cs,icloud,isize,BB)
 !$OMP& SHARED(nlam,freq,obs,iobs,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
-!$OMP&			cloudfrac,docloud,cloud_dens,ncc)
+!$OMP&			cloud_dens)
 !$OMP DO SCHEDULE(STATIC,1)
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
 		freq0=sqrt(freq(ilam)*freq(ilam+1))
 		obs(iobs)%lam(ilam)=sqrt(lam(ilam)*lam(ilam+1))
-		obs(iobs)%A(ilam)=0d0
+		obs(iobs)%A(:,ilam)=0d0
 		do ir=1,nr
 			BB(ir)=Planck(T(ir),freq0)
 		enddo
 		do ig=1,ng
-			do icc=1,ncc
-			if(cloudfrac(icc).gt.0d0) then
+			do icc=1,obs(iobs)%ncc
+			if(obs(iobs)%cloudfrac(icc).gt.0d0) then
 				fluxg=0d0
 				Ag=0d0
 				do i=1,nrtrace-1
@@ -138,7 +132,7 @@ c number of cloud/nocloud combinations
 					Ca=Cabs(ir,ilam,ig)*Ndens(ir)
 					Cs=Csca(ir,ilam)*Ndens(ir)
 					do icloud=1,nclouds
-						if(docloud(icc,icloud)) then
+						if(obs(iobs)%docloud(icc,icloud)) then
 							do isize=1,Cloud(icloud)%nsize
 								Ca=Ca+
      &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
@@ -161,8 +155,10 @@ c number of cloud/nocloud combinations
 					if(ir_next.le.0.or.tautot.ge.maxtau) fact=0d0
 					Ag=Ag+A*(1d0-fact)
 				enddo
-				obs(iobs)%flux(ilam)=obs(iobs)%flux(ilam)+cloudfrac(icc)*fluxg/real(ng)
-				obs(iobs)%A(ilam)=obs(iobs)%A(ilam)+cloudfrac(icc)*Ag/real(ng)
+				obs(iobs)%flux(0,ilam)=obs(iobs)%flux(0,ilam)+obs(iobs)%cloudfrac(icc)*fluxg/real(ng)
+				obs(iobs)%A(0,ilam)=obs(iobs)%A(0,ilam)+obs(iobs)%cloudfrac(icc)*Ag/real(ng)
+				obs(iobs)%flux(icc,ilam)=obs(iobs)%flux(icc,ilam)+fluxg/real(ng)
+				obs(iobs)%A(icc,ilam)=obs(iobs)%A(icc,ilam)+Ag/real(ng)
 			endif
 			enddo
 		enddo

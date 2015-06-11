@@ -683,13 +683,18 @@ c allocate the arrays
 	use Constants
 	IMPLICIT NONE
 	integer iobs
-	
+
 	do iobs=1,nobs
+c number of cloud/nocloud combinations
+		obs(iobs)%ncc=2**nclouds
+		allocate(obs(iobs)%docloud(obs(iobs)%ncc,nclouds))
+		allocate(obs(iobs)%cloudfrac(obs(iobs)%ncc))
 		allocate(obs(iobs)%lam(nlam))
-		allocate(obs(iobs)%flux(nlam))
-		allocate(obs(iobs)%A(nlam))
+		allocate(obs(iobs)%flux(0:obs(iobs)%ncc,nlam))
+		allocate(obs(iobs)%A(0:obs(iobs)%ncc,nlam))
 	enddo
-	
+
+
 	return
 	end
 	
