@@ -78,7 +78,7 @@ c===============================================================================
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt
 	logical HITEMP
-	real*8 sintheta(180),costheta(180)
+	real*8 sintheta(360),costheta(360)
 
 	type Observation
 		character*500 filename

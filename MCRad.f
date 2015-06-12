@@ -2,9 +2,10 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,d,flux,dx,dy
-	integer iphot,ir,jr,Nphot,ilam,ig,nscat
-	logical docloud(nclouds)
+	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,v,flux,dx,dy
+	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y
+	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext
+	logical docloud(nclouds),goingup,hitR,onedge,hitR1,hitR2
 	type(Mueller) M(nr)
 	
 	Nphot=50
@@ -28,33 +29,64 @@
 		E=4d0*pi*(R(ir+1)**3-R(ir)**3)*Planck(T(ir),freq(ilam))*Ca(ir)/3d0
 		E=E/real(Nphot)
 		do iphot=1,Nphot
+			x=0d0
+			y=0d0
 			z=R(ir)+(R(ir+1)-R(ir))*random(idum)
 			call randomdirection(dx,dy,dz)
 			jr=ir
 			nscat=0
+			onedge=.false.
+			goingup=(dz.gt.0d0)
 1			continue
 			tau=-log(random(idum))
-2			d=dz*tau/(Ce(jr))
-			if(d.lt.0d0) then
-				if((z+d).lt.R(jr)) then
-					tau=tau-abs(z-R(jr))*Ce(jr)/dz
-					z=R(jr)
-					jr=jr-1
-					if(jr.eq.0) goto 3
-					goto 2
+2			continue
+			rr=x**2+y**2+z**2
+			R1=R(jr)**2
+			R2=R(jr+1)**2
+			b=2d0*(x*dx+y*dy+z*dz)
+			if(onedge) then
+				if(goingup) then
+					hitR1=.false.
+					vR1=1d200
+					hitR2=hitR(R2,rr,b,vR2)
+				else
+					hitR1=hitR(R1,rr,b,vR1)
+					hitR2=.true.
+					vR2=-b
 				endif
 			else
-				if((z+d).gt.R(jr+1)) then
-					tau=tau-abs(z-R(jr+1))*Ce(jr)/dz
-					z=R(jr+1)
-					jr=jr+1
-					if(jr.gt.nr) goto 3
-					goto 2
-				endif
+				hitR1=hitR(R1,rr,b,vR1)
+				hitR2=hitR(R2,rr,b,vR2)
 			endif
-			z=z+d
-			call scattering(M(jr),dz)
+			v=1d200
+			if(hitR1) then
+				v=vR1
+				goingup=.false.
+				jrnext=jr-1
+			endif
+			if(hitR2.and.vR2.lt.v) then
+				v=vR2
+				goingup=.true.
+				jrnext=jr+1
+			endif
+			tau_v=v*Ce(jr)
+			if(tau_v.lt.tau) then
+				x=x+v*dx
+				y=y+v*dy
+				z=z+v*dz
+				tau=tau-tau_v
+				jr=jrnext
+				if(jr.gt.nr.or.jr.lt.1) goto 3
+				onedge=.true.
+				goto 2
+			endif
+			v=tau/Ce(jr)
+			x=x+v*dx
+			y=y+v*dy
+			z=z+v*dz
+			call scattering(M(jr),dx,dy,dz)
 			nscat=nscat+1
+			onedge=.false.
 			if(random(idum).lt.(Cs(jr)/Ce(jr))) goto 1
 3			continue
 			if(jr.gt.nr.and.nscat.gt.0) flux=flux+E/real(ng)
@@ -116,12 +148,12 @@
 
 
 
-	subroutine scattering(M,dz)
+	subroutine scattering(M,dx,dy,dz)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
 	integer i,it
-	real*8 dz,theta,Fr,Fi,random,dx,dy,x,y,z
+	real*8 dz,theta,Fr,Fi,random,dx,dy,x,y,z,rr,u,v,w
 	type(Mueller) M
 	
 	Fr=180d0*random(idum)*M%IF11/pi
@@ -135,15 +167,21 @@
 	enddo
 1	continue
 
-	dx=sqrt(1d0-dz**2)
-	dy=0d0
 	x=dx
 	y=dy
 	z=dz
 
-	call rotateY(dx,dy,dz,costheta(it),sintheta(it))
-	theta=2d0*pi*random(idum)
-	call rotate(dx,dy,dz,x,y,z,theta)
+	u=0d0
+	v=-dz
+	w=dy
+	rr=sqrt(u*u+v*v+w*w)
+	u=u/rr
+	v=v/rr
+	w=w/rr
+
+	call rotate(dx,dy,dz,u,v,w,costheta(it),sintheta(it))
+	it=random(idum)*360d0+1
+	call rotate(dx,dy,dz,x,y,z,costheta(it),sintheta(it))
 
 	return
 	end
@@ -153,12 +191,12 @@
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 
-	subroutine rotate(x,y,z,u,v,w,theta)
+	subroutine rotate(x,y,z,u,v,w,cost,sint)
 	IMPLICIT NONE
 	real*8 x,y,z,u,v,w,yy(3),theta,inp
 	real*8 cost,sint,u2,v2,w2
-	cost=cos(theta)
-	sint=sin(theta)
+c	cost=cos(theta)
+c	sint=sin(theta)
 	u2=u*u
 	v2=v*v
 	w2=w*w
@@ -217,4 +255,36 @@ c-----------------------------------------------------------------------
 	
 	return
 	end
+
+
+	logical function hitR(Rad,r,b,v)
+	IMPLICIT NONE
+	real*8 Rad,r,b,cc,discr,vr1,vr2,v,q
+	
+	hitR=.false.
+	v=1d200
+
+	cc=r-Rad
+	discr=(b**2-4d0*cc)
+	if(discr.ge.0d0) then
+		discr=sqrt(discr)
+		if(b.gt.0d0) then
+			q=-0.5d0*(b+discr)
+		else
+			q=-0.5d0*(b-discr)
+		endif
+		vr1=q
+		vr2=cc/q
+		if(vr1.gt.0d0) then
+			v=vr1
+			hitR=.true.
+		endif
+		if(vr2.gt.0d0.and.vr2.lt.v) then
+			v=vr2
+			hitR=.true.
+		endif
+	endif
+	return
+	end
+
 

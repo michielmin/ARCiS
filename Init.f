@@ -449,10 +449,12 @@ c allocate the arrays
 
 	allocate(Cabs(nr,nlam,ng))
 	allocate(Csca(nr,nlam))
-	do i=1,180
+	do i=1,360
 		theta=(real(i)-0.5d0)*pi/180d0
 		sintheta(i)=sin(theta)
 		costheta(i)=cos(theta)
+	enddo
+	do i=1,180
 		Rayleigh%F11(i)=(1d0+costheta(i)**2)/2d0
 	enddo
 	tot=0d0
