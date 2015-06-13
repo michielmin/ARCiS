@@ -44,7 +44,7 @@
 			Nphot=NphotPlanet
 		else
 c			E0=pi*Rstar**2*Planck(Tstar,freq(ilam))*R(nr+1)**2/(4d0*Dplanet**2)
-			E0=Fstar(ilam)*R(nr+1)**2/(4d0*Dplanet**2)
+			E0=Fstar(ilam)*R(nr+1)**2/Dplanet**2
 			Nphot=NphotStar
 		endif
 		E0=E0/real(Nphot)
