@@ -335,7 +335,7 @@ c==============================================================================
 	integer i,j,omp_get_max_threads,omp_get_thread_num
 	logical mixratfile
 	character*500 TPfile
-	real*8 tot,tot2,theta
+	real*8 tot,tot2,theta,Planck
 
 	TPfile=' '
 	mixratfile=.false.
@@ -379,6 +379,12 @@ c allocate the arrays
 			read(key%value,*) Mplanet
 		case("rp")
 			read(key%value,*) Rplanet
+		case("lstar")
+			read(key%value,*) Lstar
+		case("tstar")
+			read(key%value,*) Tstar
+		case("dp","dplanet")
+			read(key%value,*) Dplanet
 		case("retrieval")
 			read(key%value,*) retrieval
 		case("outputopacity","writeopacity")
@@ -466,7 +472,12 @@ c allocate the arrays
 	Rayleigh%F11=Rayleigh%F11*tot2/tot
 	Rayleigh%IF11=0d0
 	do j=1,180
-		Rayleigh%IF11=Rayleigh%IF11+pi*sintheta(i)*Rayleigh%F11(j)/180d0
+		Rayleigh%IF11=Rayleigh%IF11+pi*sintheta(j)*Rayleigh%F11(j)/180d0
+	enddo
+
+	allocate(Fstar(nlam))
+	do i=1,nlam
+		Fstar(i)=pi*Rstar**2*Planck(Tstar,freq(i))
 	enddo
 
 	call output("==================================================================")
@@ -488,7 +499,12 @@ c allocate the arrays
 	
 	Rplanet=Rplanet*Rjup
 	Mplanet=Mplanet*Mjup
+
+	Rstar=sqrt(Lstar*(5777d0/Tstar)**4)
 	Rstar=Rstar*Rsun
+	Lstar=Lstar*Lsun
+	Dplanet=Dplanet*AU
+	
 	lam1=lam1*micron
 	lam2=lam2*micron
 
@@ -614,6 +630,8 @@ c allocate the arrays
 	
 	Tstar=5777d0
 	Rstar=1d0
+	Lstar=1d0
+	Dplanet=1d0
 	
 	lam1=1d0
 	lam2=15d0
@@ -625,6 +643,7 @@ c allocate the arrays
 	do i=1,nobs
 		obs(i)%type='EMIS'
 		obs(i)%filename=' '
+		obs(i)%nphase=90
 	enddo
 	
 	do i=1,nclouds
@@ -694,6 +713,7 @@ c number of cloud/nocloud combinations
 		allocate(obs(iobs)%lam(nlam))
 		allocate(obs(iobs)%flux(0:obs(iobs)%ncc,nlam))
 		allocate(obs(iobs)%A(0:obs(iobs)%ncc,nlam))
+		allocate(obs(iobs)%phase(obs(iobs)%nphase,0:obs(iobs)%ncc,nlam))
 	enddo
 
 
@@ -713,6 +733,8 @@ c number of cloud/nocloud combinations
 	select case(key%key2)
 		case("type")
 			read(key%value,'(a)') obs(i)%type
+		case("nphase")
+			read(key%value,'(a)') obs(i)%nphase
 		case("file")
 			read(key%value,'(a)') obs(i)%filename
 		case default

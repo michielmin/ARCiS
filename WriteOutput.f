@@ -3,11 +3,17 @@
 	use Constants
 	IMPLICIT NONE
 	integer iobs,i
-	character*500 filename,form
+	character*500 filename
+	character*6000 form
+	real*8,allocatable :: theta(:)
 	logical,allocatable :: docloud(:,:)
 
 	do iobs=1,nobs
 		allocate(docloud(nclouds,obs(iobs)%ncc))
+		allocate(theta(obs(iobs)%nphase))
+		do i=1,obs(iobs)%nphase
+			theta(i)=180d0*(real(i)-0.5)/real(obs(iobs)%nphase)
+		enddo
 		do i=1,nclouds
 			docloud(i,:)=obs(iobs)%docloud(:,i)
 		enddo
@@ -39,6 +45,19 @@
 				do i=1,nlam-1
 					write(30,form) sqrt(lam(i)*lam(i+1))/micron,
      &					obs(iobs)%A(0:obs(iobs)%ncc,i)/(pi*Rstar**2)
+				enddo
+				close(unit=30)
+			case("REFL","refl","phase","PHASE")
+				filename=trim(outputdir) // "phase" // trim(int2string(iobs,'(i0.2)'))
+				call output("Writing spectrum to: " // trim(filename))
+				open(unit=30,file=filename,RECL=6000)
+				form='("#",a13,' // trim(int2string(obs(iobs)%nphase,'(i3)')) // 
+     &				 '("   flux(",f5.1,") [Jy]"))'
+				write(30,form) "lambda [mu]",theta(1:obs(iobs)%nphase)
+				form='(f14.6,' // int2string(obs(iobs)%nphase,'(i3)') // 'es19.7)'
+				do i=1,nlam-1
+					write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+     &					obs(iobs)%phase(1:obs(iobs)%nphase,0,i)
 				enddo
 				close(unit=30)
 		end select

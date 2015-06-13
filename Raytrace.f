@@ -6,10 +6,12 @@
 	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot,Ag
 	real*8 Ca,Cs,BB(nr)
 	integer icloud,isize
-	real*8,allocatable :: rtrace(:)
+	real*8,allocatable :: rtrace(:),phase(:)
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig,nsub,j,k
 	logical in
 	integer icc
+
+	allocate(phase(obs(iobs)%nphase))
 
 	obs(iobs)%docloud=.false.
 	do icc=2,obs(iobs)%ncc
@@ -39,16 +41,21 @@
 	call tellertje(1,nlam)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,fluxg,icc)
+!$OMP& PRIVATE(ilam,fluxg,icc,phase)
 !$OMP& SHARED(nlam,nclouds,obs,iobs)
 !$OMP DO
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
 		obs(iobs)%flux(:,ilam)=0d0
+		obs(iobs)%phase(:,:,ilam)=0d0
 		do icc=1,obs(iobs)%ncc
-			call MCRad(ilam,fluxg,obs(iobs)%docloud(icc,1:nclouds))
+			call MCRad(ilam,fluxg,phase,obs(iobs)%nphase,obs(iobs)%docloud(icc,1:nclouds))
 			obs(iobs)%flux(0,ilam)=obs(iobs)%flux(0,ilam)+obs(iobs)%cloudfrac(icc)*fluxg
 			obs(iobs)%flux(icc,ilam)=obs(iobs)%flux(icc,ilam)+fluxg
+			obs(iobs)%phase(1:obs(iobs)%nphase,icc,ilam)=obs(iobs)%phase(1:obs(iobs)%nphase,icc,ilam)+
+     &				phase(1:obs(iobs)%nphase)+fluxg
+			obs(iobs)%phase(1:obs(iobs)%nphase,0,ilam)=obs(iobs)%phase(1:obs(iobs)%nphase,0,ilam)+
+     &				obs(iobs)%cloudfrac(icc)*(phase(1:obs(iobs)%nphase)+fluxg)
 		enddo
 	enddo
 !$OMP END DO
@@ -169,7 +176,8 @@
 	call tellertje(nlam,nlam)
 	
 	obs(iobs)%flux=obs(iobs)%flux*1d23/distance**2
-	
+	obs(iobs)%phase=obs(iobs)%phase*1d23/distance**2
+
 	deallocate(rtrace)
 	
 	return

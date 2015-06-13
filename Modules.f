@@ -35,7 +35,7 @@ c===============================================================================
 	module GlobalSetup
 	IMPLICIT NONE
 	real*8 Mplanet,Rplanet									! mass and radius of the planet
-	real*8 Tstar,Rstar										! temperature and radius of the star
+	real*8 Tstar,Rstar,Lstar,Dplanet
 	real*8,allocatable :: dens(:),T(:),P(:),Ndens(:)		! radius
 	real*8,allocatable :: dust_dens(:,:)					! radius, component
 	real*8,allocatable :: R(:)								! radius
@@ -43,6 +43,7 @@ c===============================================================================
 	real*8,allocatable :: mixrat_r(:,:)						! radius,component
 	real*8,allocatable :: Cabs(:,:,:),Csca(:,:)				! radius,wav,g
 	real*8,allocatable :: cloud_dens(:,:)					! radius, cloud
+	real*8,allocatable :: Fstar(:)							! wavelength
 	integer nangle_Jscat
 	parameter(nangle_Jscat=60)
 	real*8,allocatable :: Jscat(:,:)						! radius, angle
@@ -83,8 +84,8 @@ c===============================================================================
 	type Observation
 		character*500 filename
 		character*10 type
-		real*8,allocatable :: lam(:),flux(:,:),A(:,:)
-		integer ncc
+		real*8,allocatable :: lam(:),flux(:,:),A(:,:),phase(:,:,:)
+		integer ncc,nphase
 		logical,allocatable :: docloud(:,:)
 		real*8,allocatable :: cloudfrac(:)
 	end type Observation
