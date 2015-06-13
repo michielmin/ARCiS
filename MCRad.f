@@ -3,8 +3,8 @@
 	use Constants
 	IMPLICIT NONE
 	integer nphase,iphase
-	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,v,flux,dx,dy
-	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase(nphase),theta,E0,fstop,albedo
+	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,v,flux,dx,dy,wphase(nphase)
+	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase(nphase),theta,E0,fstop,albedo,tot,t1,t2
 	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet
 	logical docloud(nclouds),goingup,hitR,onedge,hitR1,hitR2
 	type(Mueller) M(nr)
@@ -13,6 +13,14 @@
 	NphotStar=10000
 	flux=0d0
 	phase=0d0
+	tot=0d0
+	do iphase=1,nphase
+		t1=real(iphase-1)*pi/real(nphase)
+		t2=real(iphase)*pi/real(nphase)
+		wphase(iphase)=abs(cos(t1)-cos(t2))
+		tot=tot+wphase(iphase)
+	enddo
+	wphase=wphase/tot
 	
 	do ir=1,nr
 		call GetMatrix(ir,ilam,M(ir),docloud)
@@ -124,7 +132,7 @@ c			E0=pi*Rstar**2*Planck(Tstar,freq(ilam))*R(nr+1)**2/(4d0*Dplanet**2)
 					iphase=real(nphase)*theta/pi+1
 					if(iphase.lt.1) iphase=1
 					if(iphase.gt.nphase) iphase=nphase
-					phase(iphase)=phase(iphase)+real(nphase)*E/real(ng)
+					phase(iphase)=phase(iphase)+wphase(iphase)*real(nphase)*E/real(ng)
 				endif
 			endif
 		enddo
