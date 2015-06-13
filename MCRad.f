@@ -20,8 +20,8 @@
 		wphase(iphase)=abs(cos(t1)-cos(t2))
 		tot=tot+wphase(iphase)
 	enddo
-	wphase=wphase/tot
-	
+	wphase=real(nphase)*wphase/tot
+
 	do ir=1,nr
 		call GetMatrix(ir,ilam,M(ir),docloud)
 	enddo
