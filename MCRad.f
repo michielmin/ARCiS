@@ -4,63 +4,74 @@
 	IMPLICIT NONE
 	integer nphase,iphase
 	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,v,flux,dx,dy,wphase(nphase)
-	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase(nphase),theta,E0,fstop,albedo,tot,t1,t2
+	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase(nphase),theta,fstop,albedo,t1,t2,E0
 	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet
 	logical docloud(nclouds),goingup,hitR,onedge,hitR1,hitR2
 	type(Mueller) M(nr)
 	
 	NphotPlanet=50
-	NphotStar=10000
+	NphotStar=100
+
 	flux=0d0
 	phase=0d0
-	tot=0d0
 	do iphase=1,nphase
 		t1=real(iphase-1)*pi/real(nphase)
 		t2=real(iphase)*pi/real(nphase)
-		wphase(iphase)=abs(cos(t1)-cos(t2))
-		tot=tot+wphase(iphase)
+		wphase(iphase)=2d0/abs(cos(t1)-cos(t2))
 	enddo
-	wphase=real(nphase)*wphase/tot
 
 	do ir=1,nr
 		call GetMatrix(ir,ilam,M(ir),docloud)
 	enddo
+	
 	do ig=1,ng
 		do ir=1,nr
 			call Crossections(ir,ilam,ig,Ca(ir),Cs(ir),docloud)
 			Ce(ir)=Ca(ir)+Cs(ir)
 		enddo
 
-		do ir=0,nr
-		tau=0d0
-		if(ir.ne.0) then
+		do ir=1,nr
+			tau=0d0
 			do jr=ir+1,nr
 				tau=tau+Ca(jr)*(R(jr+1)-R(jr))
 			enddo
-		endif
-		if(tau.lt.maxtau) then
-		if(ir.ne.0) then
+			if(tau.lt.maxtau) then
 			E0=4d0*pi*(R(ir+1)**3-R(ir)**3)*Planck(T(ir),freq(ilam))*Ca(ir)/3d0
 			Nphot=NphotPlanet
-		else
-c			E0=pi*Rstar**2*Planck(Tstar,freq(ilam))*R(nr+1)**2/(4d0*Dplanet**2)
-			E0=Fstar(ilam)*R(nr+1)**2/Dplanet**2
-			Nphot=NphotStar
-		endif
-		E0=E0/real(Nphot)
-		do iphot=1,Nphot
-			if(ir.ne.0) then
-				x=0d0
-				y=0d0
-				z=R(ir)+(R(ir+1)-R(ir))*random(idum)
+			E0=E0/real(Nphot)
+			do iphot=1,Nphot
+				call randomdirection(x,y,z)
+				rr=R(ir)+(R(ir+1)-R(ir))*random(idum)
+				x=x*rr
+				y=y*rr
+				z=z*rr
 				call randomdirection(dx,dy,dz)
 				jr=ir
 				onedge=.false.
-				goingup=(dz.gt.0d0)
+				goingup=((x*dx+y*dy+z*dz).gt.0d0)
+				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,M,0.25d0)
+				if(jr.gt.nr.and.nscat.gt.0) then
+					flux=flux+E*E0/real(ng)
+				endif
+			enddo
+			endif
+		enddo
+
+		if(scattstar) then
+		do ir=0,nr
+			if(ir.ne.0) then
+				E0=Fstar(ilam)*(R(ir+1)**2-R(ir)**2)/Dplanet**2
 			else
-				call randomdisk(x,y)
-				x=x*R(nr+1)
-				y=y*R(nr+1)
+				E0=Fstar(ilam)*R(1)**2/Dplanet**2
+			endif
+			Nphot=NphotStar
+			E0=E0/real(Nphot)
+			do iphot=1,Nphot
+				if(ir.eq.0) then
+					call randomdisk(x,y,0d0,R(ir))
+				else
+					call randomdisk(x,y,R(ir),R(ir+1))
+				endif
 				z=sqrt(R(nr+1)**2-x**2-y**2)
 				dz=-1d0
 				dx=0d0
@@ -68,80 +79,92 @@ c			E0=pi*Rstar**2*Planck(Tstar,freq(ilam))*R(nr+1)**2/(4d0*Dplanet**2)
 				goingup=.false.
 				onedge=.true.
 				jr=nr
-			endif
-			nscat=0
-			E=E0
-1			continue
-			tau=-log(random(idum))
-2			continue
-			rr=x**2+y**2+z**2
-			R1=R(jr)**2
-			R2=R(jr+1)**2
-			b=2d0*(x*dx+y*dy+z*dz)
-			if(onedge) then
-				if(goingup) then
-					hitR1=.false.
-					vR1=1d200
-					hitR2=hitR(R2,rr,b,vR2)
-				else
-					hitR1=hitR(R1,rr,b,vR1)
-					hitR2=.true.
-					vR2=-b
-				endif
-			else
-				hitR1=hitR(R1,rr,b,vR1)
-				hitR2=hitR(R2,rr,b,vR2)
-			endif
-			v=vR2
-			goingup=.true.
-			jrnext=jr+1
-			if(hitR1.and.vR1.lt.v.and.vR1.gt.0d0) then
-				v=vR1
-				goingup=.false.
-				jrnext=jr-1
-			endif
-			tau_v=v*Ce(jr)
-			if(tau_v.lt.tau) then
-				x=x+v*dx
-				y=y+v*dy
-				z=z+v*dz
-				tau=tau-tau_v
-				jr=jrnext
-				if(jr.gt.nr.or.jr.lt.1) goto 3
-				onedge=.true.
-				goto 2
-			endif
-			v=tau/Ce(jr)
-			x=x+v*dx
-			y=y+v*dy
-			z=z+v*dz
-			call scattering(M(jr),dx,dy,dz)
-			nscat=nscat+1
-			onedge=.false.
-			albedo=(Cs(jr)/Ce(jr))
-			fstop=1d0-albedo**0.25
-			if(random(idum).lt.fstop) goto 3
-			E=E*albedo/(1d0-fstop)
-			goto 1
-3			continue
-			if(jr.gt.nr.and.nscat.gt.0) then
-				if(ir.ne.0) then
-					flux=flux+E/real(ng)
-				else
+				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,M,0.1d0)
+				if(jr.gt.nr.and.nscat.gt.0) then
 					theta=acos(dz)
 					iphase=real(nphase)*theta/pi+1
 					if(iphase.lt.1) iphase=1
 					if(iphase.gt.nphase) iphase=nphase
-					phase(iphase)=phase(iphase)+wphase(iphase)*real(nphase)*E/real(ng)
+					phase(iphase)=phase(iphase)+wphase(iphase)*E*E0/real(ng)
 				endif
-			endif
-		enddo
-		endif
+			enddo
 		enddo		
+		endif
 	enddo
 	
 	return
 	end
+	
+	
+	subroutine travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,M,pfstop)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 x,y,z,dx,dy,dz,E,Ce(nr),Ca(nr),Cs(nr),pfstop
+	integer jr,nscat,jrnext
+	logical onedge,goingup,hitR1,hitR2,hitR
+	real*8 tau,R1,R2,b,vR1,vR2,rr,v,tau_v,albedo,fstop,random
+	type(Mueller) M(nr)
+
+	E=1d0
+	nscat=0
+
+1	continue
+	tau=-log(random(idum))
+2	continue
+	rr=x**2+y**2+z**2
+	R1=R(jr)**2
+	R2=R(jr+1)**2
+	b=2d0*(x*dx+y*dy+z*dz)
+	if(onedge) then
+		if(goingup) then
+			hitR1=.false.
+			vR1=1d200
+			hitR2=hitR(R2,rr,b,vR2)
+		else
+			hitR1=hitR(R1,rr,b,vR1)
+			hitR2=.true.
+			vR2=-b
+		endif
+	else
+		hitR1=hitR(R1,rr,b,vR1)
+		hitR2=hitR(R2,rr,b,vR2)
+	endif
+	v=vR2
+	goingup=.true.
+	jrnext=jr+1
+	if(hitR1.and.vR1.lt.v.and.vR1.gt.0d0) then
+		v=vR1
+		goingup=.false.
+		jrnext=jr-1
+	endif
+	tau_v=v*Ce(jr)
+	if(tau_v.lt.tau) then
+		x=x+v*dx
+		y=y+v*dy
+		z=z+v*dz
+		tau=tau-tau_v
+		jr=jrnext
+		if(jr.gt.nr.or.jr.lt.1) return
+		onedge=.true.
+		goto 2
+	endif
+	v=tau/Ce(jr)
+	x=x+v*dx
+	y=y+v*dy
+	z=z+v*dz
+	call scattangle(M(jr),dx,dy,dz)
+	nscat=nscat+1
+	onedge=.false.
+	albedo=(Cs(jr)/Ce(jr))
+	fstop=1d0-albedo**pfstop
+	if(random(idum).lt.fstop) return
+	E=E*albedo/(1d0-fstop)
+	goto 1
+
+	return
+	end
+	
 	
 	subroutine Crossections(ir,ilam,ig,Ca,Cs,docloud)
 	use GlobalSetup
@@ -175,8 +198,8 @@ c			E0=pi*Rstar**2*Planck(Tstar,freq(ilam))*R(nr+1)**2/(4d0*Dplanet**2)
 	type(Mueller) M
 	logical docloud(nclouds)
 	
-	M%F11=Rayleigh%F11*Csca(ir,ilam)*Ndens(ir)
-	M%IF11=Rayleigh%IF11*Csca(ir,ilam)*Ndens(ir)
+	M%F11=0d0!Rayleigh%F11*Csca(ir,ilam)*Ndens(ir)
+	M%IF11=0d0!Rayleigh%IF11*Csca(ir,ilam)*Ndens(ir)
 	do icloud=1,nclouds
 		if(docloud(icloud)) then
 			do isize=1,Cloud(icloud)%nsize
@@ -193,7 +216,7 @@ c			E0=pi*Rstar**2*Planck(Tstar,freq(ilam))*R(nr+1)**2/(4d0*Dplanet**2)
 
 
 
-	subroutine scattering(M,dx,dy,dz)
+	subroutine scattangle(M,dx,dy,dz)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
@@ -203,6 +226,7 @@ c			E0=pi*Rstar**2*Planck(Tstar,freq(ilam))*R(nr+1)**2/(4d0*Dplanet**2)
 	
 	Fr=180d0*random(idum)*M%IF11/pi
 	Fi=0d0
+	it=180
 	do i=1,180
 		Fi=Fi+sintheta(i)*M%F11(i)
 		if(Fi.gt.Fr) then
@@ -229,7 +253,8 @@ c			E0=pi*Rstar**2*Planck(Tstar,freq(ilam))*R(nr+1)**2/(4d0*Dplanet**2)
 	dx=dx/rr
 	dy=dy/rr
 	dz=dz/rr
-	it=random(idum)*360d0+1
+	it=random(idum)*360d0
+	it=it+1
 	call rotate(dx,dy,dz,x,y,z,costheta(it),sintheta(it))
 	rr=sqrt(dx*dx+dy*dy+dz*dz)
 	dx=dx/rr
@@ -313,17 +338,21 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 	
 
-	subroutine randomdisk(x,y)
+	subroutine randomdisk(x,y,r1,r2)
 	use GlobalSetup
+	use Constants
 	IMPLICIT NONE
-	real*8 x,y,s,random
+	real*8 x,y,s,random,r1,r2,theta,sr1,sr2
 	
-1	continue
-	x=2d0*random(idum)-1d0
-	y=2d0*random(idum)-1d0
-	s=x**2+y**2
-	if(s.gt.1d0) goto 1
+	sr1=sqrt(r1)
+	sr2=sqrt(r2)
+	s=sr1+(sr2-sr1)*random(idum)
+	theta=random(idum)*2d0*pi
+	s=s*s
 	
+	x=s*cos(theta)
+	y=s*sin(theta)
+
 	return
 	end
 

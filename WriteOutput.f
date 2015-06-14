@@ -18,8 +18,8 @@
 			docloud(i,:)=obs(iobs)%docloud(:,i)
 		enddo
 		call output("==================================================================")
-		select case(obs(iobs)%type)
-			case("EMIS","emis","emission","EMISSION")
+c		select case(obs(iobs)%type)
+c			case("EMIS","emis","emission","EMISSION")
 				filename=trim(outputdir) // "emis" // trim(int2string(iobs,'(i0.2)'))
 				call output("Writing spectrum to: " // trim(filename))
 				open(unit=30,file=filename,RECL=1000)
@@ -33,7 +33,7 @@
      &					obs(iobs)%flux(0:obs(iobs)%ncc,i)
 				enddo
 				close(unit=30)
-			case("TRANS","trans","transit","TRANSIT")
+c			case("TRANS","trans","transit","TRANSIT")
 				filename=trim(outputdir) // "trans" // trim(int2string(iobs,'(i0.2)'))
 				call output("Writing spectrum to: " // trim(filename))
 				open(unit=30,file=filename,RECL=1000)
@@ -47,7 +47,7 @@
      &					obs(iobs)%A(0:obs(iobs)%ncc,i)/(pi*Rstar**2)
 				enddo
 				close(unit=30)
-			case("REFL","refl","phase","PHASE")
+c			case("REFL","refl","phase","PHASE")
 				filename=trim(outputdir) // "phase" // trim(int2string(iobs,'(i0.2)'))
 				call output("Writing spectrum to: " // trim(filename))
 				open(unit=30,file=filename,RECL=6000)
@@ -57,10 +57,10 @@
 				form='(f14.6,' // int2string(obs(iobs)%nphase,'(i3)') // 'es19.7)'
 				do i=1,nlam-1
 					write(30,form) sqrt(lam(i)*lam(i+1))/micron,
-     &					obs(iobs)%phase(1:obs(iobs)%nphase,0,i)
+     &					obs(iobs)%phase(1:obs(iobs)%nphase,0,i)+obs(iobs)%flux(0,i)
 				enddo
 				close(unit=30)
-		end select
+c		end select
 		deallocate(docloud)
 	enddo
 	

@@ -52,7 +52,7 @@ c===============================================================================
 	character*500 outputdir,HITRANdir,HITEMPdir
 	integer idum
 !$OMP THREADPRIVATE(idum)
-	logical retrieval,outputopacity,do_cia,gridTPfile
+	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar
 	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau

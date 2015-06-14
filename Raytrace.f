@@ -36,6 +36,7 @@
 
 	call output("==================================================================")
 
+	if(scattering) then
 	call output("Scattered light contributions")
 
 	call tellertje(1,nlam)
@@ -53,15 +54,16 @@
 			obs(iobs)%flux(0,ilam)=obs(iobs)%flux(0,ilam)+obs(iobs)%cloudfrac(icc)*fluxg
 			obs(iobs)%flux(icc,ilam)=obs(iobs)%flux(icc,ilam)+fluxg
 			obs(iobs)%phase(1:obs(iobs)%nphase,icc,ilam)=obs(iobs)%phase(1:obs(iobs)%nphase,icc,ilam)+
-     &				phase(1:obs(iobs)%nphase)+fluxg
+     &				phase(1:obs(iobs)%nphase)
 			obs(iobs)%phase(1:obs(iobs)%nphase,0,ilam)=obs(iobs)%phase(1:obs(iobs)%nphase,0,ilam)+
-     &				obs(iobs)%cloudfrac(icc)*(phase(1:obs(iobs)%nphase)+fluxg)
+     &				obs(iobs)%cloudfrac(icc)*phase(1:obs(iobs)%nphase)
 		enddo
 	enddo
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
 	call tellertje(nlam,nlam)
+	endif
 
 	call output("Raytracing over the planet disk")
 
@@ -175,6 +177,13 @@
 !$OMP END PARALLEL
 	call tellertje(nlam,nlam)
 	
+	do ilam=1,nlam
+		do icc=0,obs(iobs)%ncc
+			obs(iobs)%A(icc,ilam)=obs(iobs)%A(icc,ilam)-
+     &			obs(iobs)%phase(obs(iobs)%nphase,icc,ilam)/(Fstar(ilam)/(pi*Rstar**2))
+		enddo
+	enddo
+
 	obs(iobs)%flux=obs(iobs)%flux*1d23/distance**2
 	obs(iobs)%phase=obs(iobs)%phase*1d23/distance**2
 

@@ -430,6 +430,10 @@ c allocate the arrays
 			read(key%value,*) HITEMP
 		case("cloud")
 			call ReadCloud(key)
+		case("scattering")
+			read(key%value,*) scattering
+		case("scattstar")
+			read(key%value,*) scattstar
 		case default
 			do i=1,48
 				if(key%key.eq.molname(i)) then
@@ -694,6 +698,9 @@ c allocate the arrays
 	cutoff_lor=1d200
 	
 	gridTPfile=.false.
+	
+	scattering=.true.
+	scattstar=.false.
 	
 	return
 	end
