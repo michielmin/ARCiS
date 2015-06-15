@@ -4,20 +4,20 @@
 	IMPLICIT NONE
 	integer nphase,iphase
 	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,v,flux,dx,dy,wphase(nphase)
-	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase(nphase),theta,fstop,albedo,t1,t2,E0
+	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase(nphase),theta,fstop,albedo,ct1,ct2,E0
 	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet
 	logical docloud(nclouds),goingup,hitR,onedge,hitR1,hitR2
 	type(Mueller) M(nr)
 	
 	NphotPlanet=50
-	NphotStar=100
+	NphotStar=1000
 
 	flux=0d0
 	phase=0d0
 	do iphase=1,nphase
-		t1=real(iphase-1)*pi/real(nphase)
-		t2=real(iphase)*pi/real(nphase)
-		wphase(iphase)=2d0/abs(cos(t1)-cos(t2))
+		ct1=1d0-2d0*real(iphase-1)/real(nphase)
+		ct2=1d0-2d0*real(iphase)/real(nphase)
+		wphase(iphase)=2d0/abs(ct1-ct2)
 	enddo
 
 	do ir=1,nr
@@ -68,7 +68,7 @@
 			E0=E0/real(Nphot)
 			do iphot=1,Nphot
 				if(ir.eq.0) then
-					call randomdisk(x,y,0d0,R(ir))
+					call randomdisk(x,y,0d0,R(1))
 				else
 					call randomdisk(x,y,R(ir),R(ir+1))
 				endif
@@ -81,8 +81,7 @@
 				jr=nr
 				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,M,0.1d0)
 				if(jr.gt.nr.and.nscat.gt.0) then
-					theta=acos(dz)
-					iphase=real(nphase)*theta/pi+1
+					iphase=real(nphase)*(1d0-dz)/2d0+1
 					if(iphase.lt.1) iphase=1
 					if(iphase.gt.nphase) iphase=nphase
 					phase(iphase)=phase(iphase)+wphase(iphase)*E*E0/real(ng)
@@ -91,7 +90,7 @@
 		enddo		
 		endif
 	enddo
-	
+
 	return
 	end
 	
@@ -145,10 +144,19 @@
 		z=z+v*dz
 		tau=tau-tau_v
 		jr=jrnext
-		if(jr.gt.nr.or.jr.lt.1) return
+		if(jr.gt.nr) return
+		if(jr.lt.1) then
+			jr=1
+			call reflectsurface(x,y,z,dx,dy,dz)
+			goingup=.true.
+			nscat=nscat+1
+		endif
 		onedge=.true.
 		goto 2
 	endif
+	albedo=(Cs(jr)/Ce(jr))
+	fstop=1d0-albedo**pfstop
+	if(random(idum).lt.fstop) return
 	v=tau/Ce(jr)
 	x=x+v*dx
 	y=y+v*dy
@@ -156,9 +164,6 @@
 	call scattangle(M(jr),dx,dy,dz)
 	nscat=nscat+1
 	onedge=.false.
-	albedo=(Cs(jr)/Ce(jr))
-	fstop=1d0-albedo**pfstop
-	if(random(idum).lt.fstop) return
 	E=E*albedo/(1d0-fstop)
 	goto 1
 
@@ -198,8 +203,8 @@
 	type(Mueller) M
 	logical docloud(nclouds)
 	
-	M%F11=0d0!Rayleigh%F11*Csca(ir,ilam)*Ndens(ir)
-	M%IF11=0d0!Rayleigh%IF11*Csca(ir,ilam)*Ndens(ir)
+	M%F11=Rayleigh%F11*Csca(ir,ilam)*Ndens(ir)
+	M%IF11=Rayleigh%IF11*Csca(ir,ilam)*Ndens(ir)
 	do icloud=1,nclouds
 		if(docloud(icloud)) then
 			do isize=1,Cloud(icloud)%nsize
@@ -265,6 +270,18 @@
 	end
 
 
+	subroutine reflectsurface(x,y,z,dx,dy,dz)
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 x,y,z,dx,dy,dz
+c for no Lambert surface with albedo 1
+	
+1	continue
+	call randomdirection(dx,dy,dz)
+	if((x*dx+y*dy+z*dz).lt.0d0) goto 1
+	
+	return
+	end
 
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------

@@ -422,6 +422,10 @@ c allocate the arrays
 			read(key%value,*) mixratfile
 		case("gridtpfile")
 			read(key%value,*) gridTPfile
+		case("tp")
+			read(key%value,*) TP0
+		case("dtp")
+			read(key%value,*) dTP
 		case("ng")
 			read(key%value,*) ng
 		case("distance")
@@ -597,7 +601,7 @@ c allocate the arrays
 			call regridlog(TPfile,P0,T0,nr)
 		else
 			do i=1,nr
-				T0(i)=exp(log(270d0)+log(10d0)*(real(i-1)/real(nr-1)))
+				T0(i)=TP0+dTP*log10(P0(i))
 			enddo
 		endif
 	endif
@@ -647,7 +651,7 @@ c allocate the arrays
 	do i=1,nobs
 		obs(i)%type='EMIS'
 		obs(i)%filename=' '
-		obs(i)%nphase=90
+		obs(i)%nphase=45
 	enddo
 	
 	do i=1,nclouds

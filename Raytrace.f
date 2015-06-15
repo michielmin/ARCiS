@@ -177,12 +177,13 @@
 !$OMP END PARALLEL
 	call tellertje(nlam,nlam)
 	
-	do ilam=1,nlam
-		do icc=0,obs(iobs)%ncc
-			obs(iobs)%A(icc,ilam)=obs(iobs)%A(icc,ilam)-
-     &			obs(iobs)%phase(obs(iobs)%nphase,icc,ilam)/(Fstar(ilam)/(pi*Rstar**2))
-		enddo
-	enddo
+c forward scattering in surface area of the planet
+c	do ilam=1,nlam
+c		do icc=0,obs(iobs)%ncc
+c			obs(iobs)%A(icc,ilam)=obs(iobs)%A(icc,ilam)-
+c     &			obs(iobs)%phase(obs(iobs)%nphase,icc,ilam)/(Fstar(ilam)/(pi*Rstar**2))
+c		enddo
+c	enddo
 
 	obs(iobs)%flux=obs(iobs)%flux*1d23/distance**2
 	obs(iobs)%phase=obs(iobs)%phase*1d23/distance**2
