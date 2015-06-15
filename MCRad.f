@@ -10,7 +10,7 @@
 	type(Mueller) M(nr)
 	
 	NphotPlanet=50
-	NphotStar=1000
+	NphotStar=100
 
 	flux=0d0
 	phase=0d0
@@ -49,7 +49,7 @@
 				jr=ir
 				onedge=.false.
 				goingup=((x*dx+y*dy+z*dz).gt.0d0)
-				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,M,0.25d0)
+				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,M)
 				if(jr.gt.nr.and.nscat.gt.0) then
 					flux=flux+E*E0/real(ng)
 				endif
@@ -79,7 +79,7 @@
 				goingup=.false.
 				onedge=.true.
 				jr=nr
-				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,M,0.1d0)
+				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,M)
 				if(jr.gt.nr.and.nscat.gt.0) then
 					iphase=real(nphase)*(1d0-dz)/2d0+1
 					if(iphase.lt.1) iphase=1
@@ -95,11 +95,11 @@
 	end
 	
 	
-	subroutine travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,M,pfstop)
+	subroutine travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,M)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 x,y,z,dx,dy,dz,E,Ce(nr),Ca(nr),Cs(nr),pfstop
+	real*8 x,y,z,dx,dy,dz,E,Ce(nr),Ca(nr),Cs(nr)
 	integer jr,nscat,jrnext
 	logical onedge,goingup,hitR1,hitR2,hitR
 	real*8 tau,R1,R2,b,vR1,vR2,rr,v,tau_v,albedo,fstop,random
@@ -129,6 +129,7 @@
 		hitR1=hitR(R1,rr,b,vR1)
 		hitR2=hitR(R2,rr,b,vR2)
 	endif
+
 	v=vR2
 	goingup=.true.
 	jrnext=jr+1
@@ -155,7 +156,7 @@
 		goto 2
 	endif
 	albedo=(Cs(jr)/Ce(jr))
-	fstop=1d0-albedo**pfstop
+	fstop=1d0-albedo**0.5d0
 	if(random(idum).lt.fstop) return
 	v=tau/Ce(jr)
 	x=x+v*dx
@@ -274,7 +275,7 @@
 	use GlobalSetup
 	IMPLICIT NONE
 	real*8 x,y,z,dx,dy,dz
-c for no Lambert surface with albedo 1
+c for now Lambert surface with albedo 1
 	
 1	continue
 	call randomdirection(dx,dy,dz)

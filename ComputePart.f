@@ -31,7 +31,7 @@
 	logical truefalse,checkparticlefile,lnkloglog
 	external Carbon_BE_Zubko1996,Mg07Fe03SiO3_Dorschner1995,AstroSilicate
 	external Enstatite_X,Enstatite_Y,Enstatite_Z
-	external Brookite_X,Brookite_Y,Brookite_Z
+	external Brookite_X,Brookite_Y,Brookite_Z,Water
 	integer abun_in_name
 	parameter(abun_in_name=2)
 
@@ -191,6 +191,26 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(Brookite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(3,1:nlam)=e1d(1:nlam)
 		e2(3,1:nlam)=e2d(1:nlam)
+		deallocate(e1d)
+		deallocate(e2d)
+	else if(C%standard.eq.'WATER') then
+		input='WATER'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		allocate(r0(ns))
+		allocate(nr0(MAXMAT,ns))
+		allocate(f(nf))
+		allocate(wf(nf))
+		nm=1
+		rho(1)=3.0
+		frac(1)=1d0/rho(1)
+		allocate(e1d(nlam))
+		allocate(e2d(nlam))
+		filename(1)='Water'
+		call RegridDataLNK(Water,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(1,1:nlam)=e1d(1:nlam)
+		e2(1,1:nlam)=e2d(1:nlam)
 		deallocate(e1d)
 		deallocate(e2d)
 	else if(C%standard.eq.'ASTROSIL') then

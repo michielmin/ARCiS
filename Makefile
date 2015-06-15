@@ -77,6 +77,8 @@ OBJS	= Modules.o \
 		RefIndData.o \
 		EnstatiteData.o \
 		BrookiteData.o \
+		WaterData.o \
+		KuruczData.o \
 		MCRad.o
 
 # program name and install location

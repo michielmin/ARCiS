@@ -128,8 +128,8 @@
 			call output("ignoring layers: 1 to " // trim(int2string(ir-1,'(i4)')))
 			if(ir.gt.1) then
 				do i=1,ir-1
-					Cabs(i,1:nlam-1,1:ng)=Cabs(ir,1:nlam,1:ng)
-					Csca(i,1:nlam-1)=Csca(ir,1:nlam)
+					Cabs(i,1:nlam-1,1:ng)=Cabs(ir,1:nlam-1,1:ng)
+					Csca(i,1:nlam-1)=Csca(ir,1:nlam-1)
 				enddo
 			endif
 			exit

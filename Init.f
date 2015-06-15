@@ -383,6 +383,8 @@ c allocate the arrays
 			read(key%value,*) Lstar
 		case("tstar")
 			read(key%value,*) Tstar
+		case("logg")
+			read(key%value,*) logg
 		case("dp","dplanet")
 			read(key%value,*) Dplanet
 		case("retrieval")
@@ -484,9 +486,11 @@ c allocate the arrays
 	enddo
 
 	allocate(Fstar(nlam))
-	do i=1,nlam
-		Fstar(i)=pi*Rstar**2*Planck(Tstar,freq(i))
-	enddo
+	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam)
+	Fstar=Fstar*pi*Rstar**2/clight/pi
+c	do i=1,nlam
+c		Fstar(i)=pi*Rstar**2*Planck(Tstar,freq(i))
+c	enddo
 
 	call output("==================================================================")
 
@@ -640,6 +644,7 @@ c allocate the arrays
 	Rstar=1d0
 	Lstar=1d0
 	Dplanet=1d0
+	logg=4.5d0
 	
 	lam1=1d0
 	lam2=15d0
