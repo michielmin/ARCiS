@@ -5,12 +5,13 @@
 	integer nphase,iphase
 	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,v,flux,dx,dy,wphase(nphase)
 	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase(nphase),theta,fstop,albedo,ct1,ct2,E0
-	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet
-	logical docloud(nclouds),goingup,hitR,onedge,hitR1,hitR2
+	real*8 tot,g(nr)
+	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,irdark
+	logical docloud(nclouds),goingup,hitR,onedge,hitR1,hitR2,dorw(nr)
 	type(Mueller) M(nr)
 	
-	NphotPlanet=50
-	NphotStar=100
+	NphotPlanet=250/real(ng)+10
+	NphotStar=25000/real(nr*ng)+10
 
 	flux=0d0
 	phase=0d0
@@ -22,38 +23,54 @@
 
 	do ir=1,nr
 		call GetMatrix(ir,ilam,M(ir),docloud)
+		g(ir)=0d0
+		tot=0d0
+		do iphase=1,180
+			g(ir)=g(ir)+M(ir)%F11(iphase)*costheta(iphase)*sintheta(iphase)
+			tot=tot+M(ir)%F11(iphase)*sintheta(iphase)
+		enddo
+		g(ir)=g(ir)/tot
 	enddo
 	
 	do ig=1,ng
 		do ir=1,nr
 			call Crossections(ir,ilam,ig,Ca(ir),Cs(ir),docloud)
 			Ce(ir)=Ca(ir)+Cs(ir)
+			dorw(ir)=.false.
+			if((R(ir+1)-R(ir))*(Ca(ir)+Cs(ir)*(1d0-g(ir))).gt.factRW) dorw(ir)=.true.
 		enddo
 
-		do ir=1,nr
+		do ir=nr,1,-1
 			tau=0d0
 			do jr=ir+1,nr
 				tau=tau+Ca(jr)*(R(jr+1)-R(jr))
 			enddo
-			if(tau.lt.maxtau) then
+			if(tau.gt.maxtau) then
+				irdark=ir
+				exit
+			endif
+		enddo
+
+		do ir=irdark+1,nr
 			E0=4d0*pi*(R(ir+1)**3-R(ir)**3)*Planck(T(ir),freq(ilam))*Ca(ir)/3d0
-			Nphot=NphotPlanet
-			E0=E0/real(Nphot)
-			do iphot=1,Nphot
-				call randomdirection(x,y,z)
-				rr=R(ir)+(R(ir+1)-R(ir))*random(idum)
-				x=x*rr
-				y=y*rr
-				z=z*rr
-				call randomdirection(dx,dy,dz)
-				jr=ir
-				onedge=.false.
-				goingup=((x*dx+y*dy+z*dz).gt.0d0)
-				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,M)
-				if(jr.gt.nr.and.nscat.gt.0) then
-					flux=flux+E*E0/real(ng)
-				endif
-			enddo
+			if(E0.gt.0d0) then
+				Nphot=NphotPlanet
+				E0=E0/real(Nphot)
+				do iphot=1,Nphot
+					call randomdirection(x,y,z)
+					rr=R(ir)+(R(ir+1)-R(ir))*random(idum)
+					x=x*rr
+					y=y*rr
+					z=z*rr
+					call randomdirection(dx,dy,dz)
+					jr=ir
+					onedge=.false.
+					goingup=((x*dx+y*dy+z*dz).gt.0d0)
+					call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,g,M,dorw)
+					if(jr.gt.nr.and.nscat.gt.0) then
+						flux=flux+E*E0/real(ng)
+					endif
+				enddo
 			endif
 		enddo
 
@@ -79,7 +96,7 @@
 				goingup=.false.
 				onedge=.true.
 				jr=nr
-				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,M)
+				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,g,M,dorw)
 				if(jr.gt.nr.and.nscat.gt.0) then
 					iphase=real(nphase)*(1d0-dz)/2d0+1
 					if(iphase.lt.1) iphase=1
@@ -95,23 +112,30 @@
 	end
 	
 	
-	subroutine travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,M)
+	subroutine travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,g,M,dorw)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 x,y,z,dx,dy,dz,E,Ce(nr),Ca(nr),Cs(nr)
-	integer jr,nscat,jrnext
-	logical onedge,goingup,hitR1,hitR2,hitR
-	real*8 tau,R1,R2,b,vR1,vR2,rr,v,tau_v,albedo,fstop,random
+	real*8 x,y,z,dx,dy,dz,E,Ce(nr),Ca(nr),Cs(nr),g(nr)
+	integer jr,nscat,jrnext,nscat0
+	logical onedge,goingup,hitR1,hitR2,hitR,RandomWalk,absorbed,dorw(nr)
+	real*8 tau,R1,R2,b,vR1,vR2,rr,v,tau_v,albedo,fstop,random,rho
 	type(Mueller) M(nr)
 
 	E=1d0
 	nscat=0
+	nscat0=0
+	absorbed=.false.
 
 1	continue
 	tau=-log(random(idum))
 2	continue
+	if(absorbed) return
 	rr=x**2+y**2+z**2
+	rho=sqrt(rr)
+	if(dorw(jr)) then
+		if(RandomWalk(x,y,z,dx,dy,dz,rho,E,Ce(jr),Ca(jr),Cs(jr),g(jr),jr,nscat,absorbed)) goto 2
+	endif
 	R1=R(jr)**2
 	R2=R(jr+1)**2
 	b=2d0*(x*dx+y*dy+z*dz)
@@ -230,17 +254,11 @@
 	real*8 dz,theta,Fr,Fi,random,dx,dy,x,y,z,rr,u,v,w
 	type(Mueller) M
 	
-	Fr=180d0*random(idum)*M%IF11/pi
-	Fi=0d0
-	it=180
-	do i=1,180
-		Fi=Fi+sintheta(i)*M%F11(i)
-		if(Fi.gt.Fr) then
-			it=i
-			goto 1
-		endif
-	enddo
-1	continue
+	Fr=random(idum)*M%IF11(180)
+	it=0
+	call hunt(M%IF11,180,Fr,it)
+	if(it.lt.1) it=1
+	if(it.gt.180) it=180
 
 	x=dx
 	y=dy
@@ -404,5 +422,92 @@ c-----------------------------------------------------------------------
 	endif
 	return
 	end
+
+
+	module RandomWalkModule
+	IMPLICIT NONE
+	integer NY
+	parameter(NY=1000)
+	real*8 phi(NY),yy(NY)
+	end module RandomWalkModule
+
+	
+	logical function RandomWalk(x,y,z,dx,dy,dz,rr,E,Ce,Ca,Cs,g,jr,nscat,absorbed)
+	use GlobalSetup
+	use Constants
+	use RandomWalkModule
+	IMPLICIT NONE
+	real*8 dmin,v,ry,random,lr,x,y,z,dx,dy,dz,E,Ce,Ca,Cs,Kappa,g
+	real*8 rr,albedo,d1,d2,fstop
+	integer i,jr,nscat,iy
+	logical absorbed
+
+	RandomWalk=.false.
+
+	Kappa=Ca+Cs*(1d0-g)
+
+	lr=1d0/Kappa
+
+	d1=abs(rr-R(jr))
+	d2=abs(rr-R(jr+1))
+	dmin=d1
+	if(d2.lt.dmin) dmin=d2
+
+	if(dmin.le.factRW*lr) return
+
+	RandomWalk=.true.
+
+	ry=random(idum)
+	iy=1
+	call hunt(phi,NY,ry,iy)
+
+	v=-3d0*log(yy(iy))*dmin**2/(lr*pi**2)
+
+	call randomdirection(dx,dy,dz)
+	x=x+dmin*dx
+	y=y+dmin*dy
+	z=z+dmin*dz
+
+	albedo=Cs/Ce
+	fstop=1d0-albedo**0.5d0
+	fstop=fstop**v
+	absorbed=.false.
+	if(random(idum).gt.fstop) then
+		absorbed=.true.
+		return
+	endif
+	
+	v=v/lr
+		
+	E=E*albedo**v/(1d0-fstop**v)
+
+	nscat=nscat+v
+
+	return
+	end
+	
+
+
+
+	subroutine InitRandomWalk()
+	use RandomWalkModule
+	IMPLICIT NONE
+	integer i,n,nmax
+	nmax=1000
+
+	yy(1)=1d0
+	phi(1)=1d0
+	do i=2,NY
+		yy(i)=real(NY-i+1)/real(NY-1)*0.75d0
+		phi(i)=0d0
+		do n=1,nmax
+			phi(i)=phi(i)+(-1d0)**(n+1)*yy(i)**(n**2)
+		enddo
+		phi(i)=phi(i)*2d0
+	enddo
+
+	return
+	end
+	
 
 

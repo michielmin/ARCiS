@@ -55,7 +55,7 @@ c===============================================================================
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar
 	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP
-	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau
+	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW
 	real*8,allocatable :: lam(:),freq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ,nspike
@@ -112,7 +112,7 @@ c===============================================================================
 	type Mueller
 		real*8 F11(180),F12(180),F22(180)
 		real*8 F33(180),F44(180),F34(180)
-		real*8 IF11,IF12
+		real*8 IF11(180),IF12(180)
 	end type Mueller
 	
 	type(Mueller) Rayleigh

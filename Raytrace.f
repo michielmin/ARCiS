@@ -37,6 +37,7 @@
 	call output("==================================================================")
 
 	if(scattering) then
+	call InitRandomWalk()
 	call output("Scattered light contributions")
 
 	call tellertje(1,nlam)
@@ -44,7 +45,7 @@
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,fluxg,icc,phase)
 !$OMP& SHARED(nlam,nclouds,obs,iobs)
-!$OMP DO
+!$OMP DO SCHEDULE(STATIC,1)
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
 		obs(iobs)%flux(:,ilam)=0d0

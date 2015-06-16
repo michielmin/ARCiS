@@ -184,6 +184,7 @@ c done counting, now read it in!
 !$OMP DO
 	do i=1,nlines
 		if(L_iiso(i).gt.niso(L_imol(i))) niso(L_imol(i))=L_iiso(i)
+		if(L_iiso(i).lt.1) L_iiso(i)=1
 		x3=exp(-hplanck*clight*L_Elow(i)/(kb*296d0))
 		x4=exp(-hplanck*clight*L_freq(i)/(kb*296d0))
 		L_S0(i)=L_S0(i)/(x3*(1d0-x4))

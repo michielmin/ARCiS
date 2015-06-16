@@ -92,6 +92,9 @@
 			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cont_tot(i))
 			Cabs(ir,i,1:ng)=kappa(1:ng)
 			Csca(ir,i)=8.4909d-45*(nu1*nu2)**2
+			do j=1,ng
+				if(Cabs(ir,i,j).lt.Csca(ir,i)*1d-4) Cabs(ir,i,j)=Csca(ir,i)*1d-4 
+			enddo
 			opac_tot(i,1:ng)=opac_tot(i,1:ng)+(Cabs(ir,i,1:ng)+Csca(ir,i))*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
 !$OMP END DO
@@ -151,6 +154,8 @@
 	minw=0.01d0
 	minw=(1d0/specres)**2
 	call hunt(TZ,nTZ,T(ir),iT)
+	if(iT.lt.1) iT=1
+	if(iT.gt.nTZ) iT=nTZ
 
 	Saver=0d0
 	nl=0
@@ -319,7 +324,7 @@ c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 	scale=real(nnu-1)/log(nu(nnu)/nu(1))
 
 	NV0=real(nnu)*100d0/real(nl+1)+250d0
-
+	
 	call hunt(TZ,nTZ,T(ir),iT)
 
 	call tellertje(1,nlines)

@@ -414,6 +414,8 @@ c allocate the arrays
 			read(key%value,*) epsCk
 		case("epslines","eps_lines")
 			read(key%value,*) eps_lines
+		case("factrw")
+			read(key%value,*) factRW
 		case("maxtau","max_tau")
 			read(key%value,*) maxtau
 		case("specres")
@@ -481,8 +483,8 @@ c allocate the arrays
 	enddo
 	Rayleigh%F11=Rayleigh%F11*tot2/tot
 	Rayleigh%IF11=0d0
-	do j=1,180
-		Rayleigh%IF11=Rayleigh%IF11+pi*sintheta(j)*Rayleigh%F11(j)/180d0
+	do j=2,180
+		Rayleigh%IF11(j)=Rayleigh%IF11(j-1)+sintheta(j)*Rayleigh%F11(j)
 	enddo
 
 	allocate(Fstar(nlam))
@@ -699,7 +701,8 @@ c	enddo
 	epsCk=0.25d0
 	
 	eps_lines=0d0
-	maxtau=200d0
+	maxtau=50d0
+	factRW=10d0
 	
 	distance=10d0
 	
@@ -981,21 +984,13 @@ c the nspike parameter removes the n degree spike in the forward direction.
 	do ilam=1,nlam
 		do is=1,Cloud(ii)%nsize
 			Cloud(ii)%F(is,ilam)%IF11=0d0
-			Cloud(ii)%F(is,ilam)%IF12=0d0
-			do j=1,180
+			do j=2,180
 				thet=pi*(real(j)-0.5d0)/180d0
-				Cloud(ii)%F(is,ilam)%IF11=Cloud(ii)%F(is,ilam)%IF11+pi*sin(thet)
-     &			*Cloud(ii)%F(is,ilam)%F11(j)/180d0
-				Cloud(ii)%F(is,ilam)%IF12=Cloud(ii)%F(is,ilam)%IF12+pi*sin(thet)
-     &			*Cloud(ii)%F(is,ilam)%F12(j)/180d0
+				Cloud(ii)%F(is,ilam)%IF11(j)=Cloud(ii)%F(is,ilam)%IF11(j-1)+sin(thet)
+     &			*Cloud(ii)%F(is,ilam)%F11(j)
 			enddo
 		enddo
 	enddo
-c	do j=0,360
-c		phi=pi*real(j-1)/179.5d0
-c		cos2phi(j)=cos(2d0*phi)
-c		sin2phi(j)=sin(2d0*phi)
-c	enddo
 	
 	return
 	end
