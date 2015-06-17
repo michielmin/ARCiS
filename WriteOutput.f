@@ -66,7 +66,7 @@ c			case("REFL","refl","phase","PHASE")
 				do i=1,nlam-1
 					write(30,form) sqrt(lam(i)*lam(i+1))/micron,
      &					obs(iobs)%phase(1:obs(iobs)%nphase,0,i)+obs(iobs)%flux(0,i),
-     &					Fstar(i)*4d23/distance**2
+     &					Fstar(i)*1d23/distance**2
 				enddo
 				close(unit=30)
 c		end select

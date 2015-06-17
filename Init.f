@@ -379,8 +379,8 @@ c allocate the arrays
 			read(key%value,*) Mplanet
 		case("rp")
 			read(key%value,*) Rplanet
-		case("lstar")
-			read(key%value,*) Lstar
+		case("rstar")
+			read(key%value,*) Rstar
 		case("tstar")
 			read(key%value,*) Tstar
 		case("logg")
@@ -489,10 +489,7 @@ c allocate the arrays
 
 	allocate(Fstar(nlam))
 	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam)
-	Fstar=Fstar*pi*Rstar**2/clight/pi
-c	do i=1,nlam
-c		Fstar(i)=pi*Rstar**2*Planck(Tstar,freq(i))
-c	enddo
+	Fstar=Fstar*pi*Rstar**2*pi/3.336e11
 
 	call output("==================================================================")
 
@@ -514,9 +511,7 @@ c	enddo
 	Rplanet=Rplanet*Rjup
 	Mplanet=Mplanet*Mjup
 
-	Rstar=sqrt(Lstar*(5777d0/Tstar)**4)
 	Rstar=Rstar*Rsun
-	Lstar=Lstar*Lsun
 	Dplanet=Dplanet*AU
 	
 	lam1=lam1*micron
@@ -644,7 +639,6 @@ c	enddo
 	
 	Tstar=5777d0
 	Rstar=1d0
-	Lstar=1d0
 	Dplanet=1d0
 	logg=4.5d0
 	

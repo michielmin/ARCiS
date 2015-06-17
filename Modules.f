@@ -35,7 +35,7 @@ c===============================================================================
 	module GlobalSetup
 	IMPLICIT NONE
 	real*8 Mplanet,Rplanet									! mass and radius of the planet
-	real*8 Tstar,Rstar,Lstar,logg,Dplanet
+	real*8 Tstar,Rstar,logg,Dplanet
 	real*8,allocatable :: dens(:),T(:),P(:),Ndens(:)		! radius
 	real*8,allocatable :: dust_dens(:,:)					! radius, component
 	real*8,allocatable :: R(:)								! radius
