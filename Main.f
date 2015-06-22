@@ -39,6 +39,8 @@ c terms of use
 	do while(.not.converged)
 		call SetupStructure()
 		call SetupOpacities()
+		call cpu_time(stoptime)
+		call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 		do i=1,nobs
 			call Raytrace(i)
 		enddo
@@ -48,7 +50,7 @@ c terms of use
 			converged=.true.
 		endif
 		call cpu_time(stoptime)
-		call output("Model runtime:   " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+		call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 		starttime=stoptime
 	enddo
 
