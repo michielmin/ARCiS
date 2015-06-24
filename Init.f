@@ -410,6 +410,10 @@ c allocate the arrays
 			read(key%value,*) pmin
 		case("pmax")
 			read(key%value,*) pmax
+		case("tmin")
+			read(key%value,*) Tmin
+		case("tmax")
+			read(key%value,*) Tmax
 		case("eps","epsck")
 			read(key%value,*) epsCk
 		case("epslines","eps_lines")
@@ -442,6 +446,14 @@ c allocate the arrays
 			read(key%value,*) scattering
 		case("scattstar")
 			read(key%value,*) scattstar
+		case("opacitymode")
+			read(key%value,*) opacitymode
+		case("np")
+			read(key%value,*) nPom
+		case("nt")
+			read(key%value,*) nTom
+		case("opacitydir")
+			opacitydir=trim(key%value)			
 		case default
 			do i=1,48
 				if(key%key.eq.molname(i)) then
@@ -462,8 +474,13 @@ c allocate the arrays
 	call ConvertUnits()
 
 	call InitFreq()
-	call InitDens(TPfile,mixratfile)
-	call InitObs()
+
+	if(opacitymode) then
+		call InitOpacityMode()
+	else
+		call InitDens(TPfile,mixratfile)
+		call InitObs()
+	endif
 
 	allocate(Cabs(nr,nlam,ng))
 	allocate(Csca(nr,nlam))
@@ -627,6 +644,46 @@ c allocate the arrays
 	return
 	end	
 
+
+	subroutine InitOpacityMode()
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	integer i,j,n
+	real*8 g,dp,dz,P0(nr),T0(nr),pp,tt,mr0(nr,nmol),mm(nmol)
+	character*10 names(nmol)
+	integer imol(nmol)
+
+	nclouds=0
+	ncia=0
+	nr=nPom*nTom
+	maxtau=-1d0
+	
+	allocate(dens(nr))
+	allocate(Ndens(nr))
+	allocate(R(nr+1))
+	allocate(T(nr))
+	allocate(P(nr))
+	allocate(mixrat_r(nr,nmol))
+	allocate(cloud_dens(nr,max(nclouds,1)))
+
+	do i=1,nr
+		mixrat_r(i,1:nmol)=mixrat(1:nmol)
+	enddo
+
+	n=0
+	do i=1,nPom
+		do j=1,nTom	
+			n=n+1
+			P(n)=10d0**(log10(Pmin)+log10(Pmax/Pmin)*real(i-1)/real(nPom-1))
+			T(n)=10d0**(log10(Tmin)+log10(Tmax/Tmin)*real(j-1)/real(nTom-1))
+		enddo
+	enddo
+
+	return
+	end	
+
+
 	subroutine SetDefaults()
 	use GlobalSetup
 	use Constants
@@ -681,8 +738,8 @@ c allocate the arrays
 	outputopacity=.false.
 	nr=20
 	
-	Pmin=1d-5
-	Pmax=10d0
+	Pmin=1d-6
+	Pmax=1d+3
 
 	call getenv('HOME',homedir) 
 
@@ -707,6 +764,14 @@ c allocate the arrays
 	
 	scattering=.true.
 	scattstar=.false.
+	
+	opacitymode=.false.
+	opacitydir='Opacities'
+
+	nTom=100
+	nPom=50
+	Tmin=71d0
+	Tmax=2900d0
 	
 	return
 	end
@@ -745,11 +810,11 @@ c number of cloud/nocloud combinations
 	
 	select case(key%key2)
 		case("type")
-			read(key%value,'(a)') obs(i)%type
+			read(key%value,*) obs(i)%type
 		case("nphase")
-			read(key%value,'(a)') obs(i)%nphase
+			read(key%value,*) obs(i)%nphase
 		case("file")
-			read(key%value,'(a)') obs(i)%filename
+			read(key%value,*) obs(i)%filename
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

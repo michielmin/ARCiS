@@ -78,7 +78,10 @@ c===============================================================================
      &	79.3792,   2.0000 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt
-	logical HITEMP
+	logical HITEMP,opacitymode
+	integer nPom,nTom
+	character*500 opacitydir
+	real*8 Tmin,Tmax
 	real*8 sintheta(360),costheta(360)
 
 	type Observation

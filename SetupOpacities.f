@@ -126,7 +126,7 @@
 		call output("Time for this layer: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 		call output("==================================================================")
 		starttime=stoptime
-		if(minval(opac_tot(1:nlam-1,1:ng)).gt.maxtau) then
+		if(minval(opac_tot(1:nlam-1,1:ng)).gt.maxtau.and.maxtau.gt.0d0) then
 			call output("Maximum optical depth reached at all wavelengths")
 			call output("ignoring layers: 1 to " // trim(int2string(ir-1,'(i4)')))
 			if(ir.gt.1) then

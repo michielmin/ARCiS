@@ -35,26 +35,30 @@ c terms of use
 	call output("==================================================================")
 	starttime=stoptime
 
-	converged=.false.
-	do while(.not.converged)
-		call SetupStructure()
+	if(opacitymode) then
 		call SetupOpacities()
-		call cpu_time(stoptime)
-		call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
-		do i=1,nobs
-			call Raytrace(i)
+c		call WriteKtables()
+	else
+		converged=.false.
+		do while(.not.converged)
+			call SetupStructure()
+			call SetupOpacities()
+			call cpu_time(stoptime)
+			call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+			do i=1,nobs
+				call Raytrace(i)
+			enddo
+			if(retrieval) then
+				call AdjustParameters(converged)
+			else
+				converged=.true.
+			endif
+			call cpu_time(stoptime)
+			call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+			starttime=stoptime
 		enddo
-		if(retrieval) then
-			call AdjustParameters(converged)
-		else
-			converged=.true.
-		endif
-		call cpu_time(stoptime)
-		call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
-		starttime=stoptime
-	enddo
-
-	call WriteOutput()
+		call WriteOutput()
+	endif
 
 	call cpu_time(stoptime)
 	call output("==================================================================")
