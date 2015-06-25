@@ -446,6 +446,8 @@ c allocate the arrays
 			read(key%value,*) scattering
 		case("scattstar")
 			read(key%value,*) scattstar
+		case("compute","compute_opac","computeopac")
+			read(key%value,*) compute_opac
 		case("opacitymode")
 			read(key%value,*) opacitymode
 		case("np")
@@ -453,7 +455,7 @@ c allocate the arrays
 		case("nt")
 			read(key%value,*) nTom
 		case("opacitydir")
-			opacitydir=trim(key%value)			
+			opacitydir=trim(key%value)
 		case default
 			do i=1,48
 				if(key%key.eq.molname(i)) then
@@ -475,6 +477,9 @@ c allocate the arrays
 
 	call InitFreq()
 
+	if(opacitydir(len_trim(opacitydir)-1:len_trim(opacitydir)).ne.'/') then
+		opacitydir=trim(opacitydir) // '/'
+	endif
 	if(opacitymode) then
 		call InitOpacityMode()
 	else
@@ -510,7 +515,8 @@ c allocate the arrays
 
 	call output("==================================================================")
 
-	call ReadData()
+	if(compute_opac) call ReadData()
+	call ReadDataCIA()
 
 	call output("==================================================================")
 	
@@ -658,6 +664,8 @@ c allocate the arrays
 	ncia=0
 	nr=nPom*nTom
 	maxtau=-1d0
+
+	compute_opac=.true.
 	
 	allocate(dens(nr))
 	allocate(Ndens(nr))
@@ -764,6 +772,8 @@ c allocate the arrays
 	
 	scattering=.true.
 	scattstar=.false.
+	
+	compute_opac=.true.
 	
 	opacitymode=.false.
 	opacitydir='Opacities'

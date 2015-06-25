@@ -36,8 +36,14 @@ c terms of use
 	starttime=stoptime
 
 	if(opacitymode) then
-		call SetupOpacities()
-c		call WriteKtables()
+		do i=1,nmol
+			if(mixrat(i).gt.0d0) then
+				mixrat_r=0d0
+				mixrat_r(:,i)=1d0
+				call SetupOpacities()
+				call WriteOpacityFITS()
+			endif
+		enddo
 	else
 		converged=.false.
 		do while(.not.converged)

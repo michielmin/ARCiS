@@ -79,7 +79,8 @@ OBJS	= Modules.o \
 		BrookiteData.o \
 		WaterData.o \
 		KuruczData.o \
-		MCRad.o
+		MCRad.o \
+		OpacityFITS.o
 
 # program name and install location
 PROGRAM       = SPARC

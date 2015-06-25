@@ -2,6 +2,149 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
+
+	if(compute_opac) then
+		call ComputeOpacities()
+	else
+		call ReadOpacities()
+	endif
+
+	return
+	end
+
+
+	subroutine ReadOpacities()
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	integer imol
+	real*8 kappa(ng),nu1,nu2,tanscale
+	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime
+	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
+	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
+	integer n_nu_line,iT
+	integer i,j,ir,k,nl,ig
+	integer,allocatable :: inu1(:),inu2(:)
+	character*500 filename
+
+	allocate(cont_tot(nlam))
+	allocate(kaver(nlam))
+	allocate(opac_tot(nlam,ng))
+	allocate(kappa_mol(nmol,nlam,ng))
+
+	n_nu_line=ng*nmol*100
+	allocate(nu_line(n_nu_line))
+	
+
+	opac_tot=0d0
+
+	call cpu_time(starttime)
+	do ir=nr,1,-1
+		call output("Opacities for layer: " // 
+     &		trim(int2string(ir,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
+		call output("T = " // trim(dbl2string(T(ir),'(f8.2)')) // " K")
+		call output("P = " // trim(dbl2string(P(ir),'(es8.2)')) // " Ba")
+		cont_tot=0d0
+		do i=1,ncia
+			if(T(ir).lt.CIA(i)%T(1)) then
+				iT=1
+			else if(T(iR).gt.CIA(i)%T(CIA(i)%nT)) then
+				iT=CIA(i)%nT
+			else
+				do iT=1,CIA(i)%nT-1
+					if(T(ir).ge.CIA(i)%T(iT).and.T(ir).le.CIA(i)%T(iT+1)) exit
+				enddo
+			endif
+			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
+		enddo
+		do imol=1,nmol
+			if(mixrat_r(ir,imol).gt.0d0) call ReadOpacityFITS(kappa_mol,imol,ir)
+		enddo
+		call output("Compute k-tables")
+		call tellertje(1,nlam-1)
+		nu1=0d0
+		nu2=1d0
+		do i=1,n_nu_line
+			nu_line(i)=1d0-real(i-1)/real(n_nu_line-1)
+		enddo
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,nu1,nu2,kappa,k,k_line,ig,j)
+!$OMP& SHARED(nlam,freq,ir,nu_line,n_nu_line,cont_tot,Cabs,Csca,opac_tot,Ndens,R,ng,nclouds,cloud_dens,Cloud,
+!$OMP&			kappa_mol,nmol,mixrat_r)
+		allocate(k_line(n_nu_line))
+!$OMP DO
+		do i=1,nlam-1
+			call tellertje(i+1,nlam+1)
+			nu1=-1d0
+			nu2=2d0
+			do j=1,n_nu_line
+				k_line(j)=0d0
+				do imol=1,nmol
+					if(mixrat_r(ir,imol).gt.0d0) then
+						ig=random(idum)*real(ng)+1
+						k_line(j)=k_line(j)+kappa_mol(imol,i,ig)*mixrat_r(ir,imol)
+					endif
+				enddo
+			enddo
+			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cont_tot(i))
+			Cabs(ir,i,1:ng)=kappa(1:ng)
+			Csca(ir,i)=8.4909d-45*(freq(i+1)*freq(i))**2
+			do j=1,ng
+				if(Cabs(ir,i,j).lt.Csca(ir,i)*1d-4) Cabs(ir,i,j)=Csca(ir,i)*1d-4 
+			enddo
+			opac_tot(i,1:ng)=opac_tot(i,1:ng)+(Cabs(ir,i,1:ng)+Csca(ir,i))*Ndens(ir)*(R(ir+1)-R(ir))
+		enddo
+!$OMP END DO
+!$OMP FLUSH
+		deallocate(k_line)
+!$OMP END PARALLEL
+		if(outputopacity) then
+			call WriteOpacity(ir,"ktab",freq,Cabs(ir,1:nlam-1,1:ng),nlam-1,ng)
+			do i=1,nlam-1
+				kaver(i)=0d0
+				do j=1,ng
+					kaver(i)=kaver(i)+Cabs(ir,i,j)/real(ng)
+				enddo
+			enddo
+			call WriteOpacity(ir,"aver",freq,kaver(1:nlam-1),nlam-1,1)
+		endif
+		call tellertje(nlam,nlam)
+	
+		open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
+		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
+		do i=1,nlam-1
+			write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
+		enddo
+		close(unit=30)
+
+		call cpu_time(stoptime)
+		call output("Time for this layer: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+		call output("==================================================================")
+		starttime=stoptime
+		if(minval(opac_tot(1:nlam-1,1:ng)).gt.maxtau.and.maxtau.gt.0d0) then
+			call output("Maximum optical depth reached at all wavelengths")
+			call output("ignoring layers: 1 to " // trim(int2string(ir-1,'(i4)')))
+			if(ir.gt.1) then
+				do i=1,ir-1
+					Cabs(i,1:nlam-1,1:ng)=Cabs(ir,1:nlam-1,1:ng)
+					Csca(i,1:nlam-1)=Csca(ir,1:nlam-1)
+				enddo
+			endif
+			exit
+		endif
+	enddo
+
+	return
+	end
+
+
+
+
+	subroutine ComputeOpacities()
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
 	integer imol
 	real*8 kappa(ng),nu1,nu2,tanscale
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime
@@ -139,6 +282,9 @@
 		endif
 	enddo
 
+	deallocate(a_therm)
+	deallocate(a_press)
+
 	return
 	end
 	
@@ -258,10 +404,12 @@ c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 	inu1=inu1+1
 	if(inu1.gt.nnu) inu1=nnu
 	if(inu2.gt.nnu) inu2=nnu
+	if(inu1.lt.2) inu1=2
+	if(inu2.lt.2) inu2=2
 
 	kmin=1d200
 	kmax=Ccont
-	do inu=inu1+1,inu2-1
+	do inu=inu1,inu2
 		kap=kline(inu)+Ccont
 		if(kap.gt.kmax) kmax=kap
 		if(kap.lt.kmin) kmin=kap

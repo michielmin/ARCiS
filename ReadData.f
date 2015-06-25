@@ -212,6 +212,16 @@ c done counting, now read it in!
 		enddo
 	enddo
 
+	return
+	end
+	
+	
+	
+	subroutine ReadDataCIA()
+	use GlobalSetup
+	IMPLICIT NONE
+	integer i
+		
 	if(ncia.gt.0) call output("Reading CIA opacities")
 	do i=1,ncia
 		call InitCIA(i)
@@ -229,4 +239,4 @@ c set default for H2 to 1.0
 	
 	return
 	end
-	
+

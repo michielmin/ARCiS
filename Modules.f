@@ -78,7 +78,7 @@ c===============================================================================
      &	79.3792,   2.0000 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt
-	logical HITEMP,opacitymode
+	logical HITEMP,opacitymode,compute_opac
 	integer nPom,nTom
 	character*500 opacitydir
 	real*8 Tmin,Tmax
