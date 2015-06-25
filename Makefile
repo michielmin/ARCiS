@@ -48,7 +48,7 @@ LIBS_FITS		= -lcfitsio
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -diag-disable vec
   LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS)
-  LIBS     = -lm $(LIBS_FITS)
+  LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS)
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
   LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
