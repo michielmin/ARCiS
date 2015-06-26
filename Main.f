@@ -51,9 +51,7 @@ c terms of use
 			call SetupOpacities()
 			call cpu_time(stoptime)
 			call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
-			do i=1,nobs
-				call Raytrace(i)
-			enddo
+			call Raytrace()
 			if(retrieval) then
 				call AdjustParameters(converged)
 			else

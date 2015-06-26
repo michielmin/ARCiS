@@ -1,8 +1,7 @@
-	subroutine Raytrace(iobs)
+	subroutine Raytrace()
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer iobs
 	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot,Ag
 	real*8 Ca,Cs,BB(nr)
 	integer icloud,isize
@@ -11,28 +10,28 @@
 	logical in
 	integer icc
 
-	allocate(phase(obs(iobs)%nphase))
+	allocate(phase(obs%nphase))
 
-	obs(iobs)%docloud=.false.
-	do icc=2,obs(iobs)%ncc
-		obs(iobs)%docloud(icc,1:nclouds)=obs(iobs)%docloud(icc-1,1:nclouds)
+	obs%docloud=.false.
+	do icc=2,obs%ncc
+		obs%docloud(icc,1:nclouds)=obs%docloud(icc-1,1:nclouds)
 		i=0
 10		i=i+1
-		obs(iobs)%docloud(icc,i)=.not.obs(iobs)%docloud(icc,i)
-		if(.not.obs(iobs)%docloud(icc,i)) goto 10
+		obs%docloud(icc,i)=.not.obs%docloud(icc,i)
+		if(.not.obs%docloud(icc,i)) goto 10
 	enddo
-	do icc=1,obs(iobs)%ncc
-		obs(iobs)%cloudfrac(icc)=1d0
+	do icc=1,obs%ncc
+		obs%cloudfrac(icc)=1d0
 		do i=1,nclouds
-			if(obs(iobs)%docloud(icc,i)) then
-				obs(iobs)%cloudfrac(icc)=obs(iobs)%cloudfrac(icc)*Cloud(i)%coverage
+			if(obs%docloud(icc,i)) then
+				obs%cloudfrac(icc)=obs%cloudfrac(icc)*Cloud(i)%coverage
 			else
-				obs(iobs)%cloudfrac(icc)=obs(iobs)%cloudfrac(icc)*(1d0-Cloud(i)%coverage)
+				obs%cloudfrac(icc)=obs%cloudfrac(icc)*(1d0-Cloud(i)%coverage)
 			endif
 		enddo
 	enddo
 
-	obs(iobs)%flux=0d0
+	obs%flux=0d0
 
 	call output("==================================================================")
 
@@ -44,20 +43,20 @@
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,fluxg,icc,phase)
-!$OMP& SHARED(nlam,nclouds,obs,iobs)
+!$OMP& SHARED(nlam,nclouds,obs)
 !$OMP DO SCHEDULE(STATIC,1)
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
-		obs(iobs)%flux(:,ilam)=0d0
-		obs(iobs)%phase(:,:,ilam)=0d0
-		do icc=1,obs(iobs)%ncc
-			call MCRad(ilam,fluxg,phase,obs(iobs)%nphase,obs(iobs)%docloud(icc,1:nclouds))
-			obs(iobs)%flux(0,ilam)=obs(iobs)%flux(0,ilam)+obs(iobs)%cloudfrac(icc)*fluxg
-			obs(iobs)%flux(icc,ilam)=obs(iobs)%flux(icc,ilam)+fluxg
-			obs(iobs)%phase(1:obs(iobs)%nphase,icc,ilam)=obs(iobs)%phase(1:obs(iobs)%nphase,icc,ilam)+
-     &				phase(1:obs(iobs)%nphase)
-			obs(iobs)%phase(1:obs(iobs)%nphase,0,ilam)=obs(iobs)%phase(1:obs(iobs)%nphase,0,ilam)+
-     &				obs(iobs)%cloudfrac(icc)*phase(1:obs(iobs)%nphase)
+		obs%flux(:,ilam)=0d0
+		obs%phase(:,:,ilam)=0d0
+		do icc=1,obs%ncc
+			call MCRad(ilam,fluxg,phase,obs%nphase,obs%docloud(icc,1:nclouds))
+			obs%flux(0,ilam)=obs%flux(0,ilam)+obs%cloudfrac(icc)*fluxg
+			obs%flux(icc,ilam)=obs%flux(icc,ilam)+fluxg
+			obs%phase(1:obs%nphase,icc,ilam)=obs%phase(1:obs%nphase,icc,ilam)+
+     &				phase(1:obs%nphase)
+			obs%phase(1:obs%nphase,0,ilam)=obs%phase(1:obs%nphase,0,ilam)+
+     &				obs%cloudfrac(icc)*phase(1:obs%nphase)
 		enddo
 	enddo
 !$OMP END DO
@@ -91,20 +90,20 @@
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,
 !$OMP&         Ca,Cs,icloud,isize,BB)
-!$OMP& SHARED(nlam,freq,obs,iobs,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
+!$OMP& SHARED(nlam,freq,obs,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
 !$OMP&			cloud_dens)
 !$OMP DO SCHEDULE(STATIC,1)
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
 		freq0=sqrt(freq(ilam)*freq(ilam+1))
-		obs(iobs)%lam(ilam)=sqrt(lam(ilam)*lam(ilam+1))
-		obs(iobs)%A(:,ilam)=0d0
+		obs%lam(ilam)=sqrt(lam(ilam)*lam(ilam+1))
+		obs%A(:,ilam)=0d0
 		do ir=1,nr
 			BB(ir)=Planck(T(ir),freq0)
 		enddo
 		do ig=1,ng
-			do icc=1,obs(iobs)%ncc
-			if(obs(iobs)%cloudfrac(icc).gt.0d0) then
+			do icc=1,obs%ncc
+			if(obs%cloudfrac(icc).gt.0d0) then
 				fluxg=0d0
 				Ag=0d0
 				do i=1,nrtrace-1
@@ -142,7 +141,7 @@
 					Ca=Cabs(ir,ilam,ig)*Ndens(ir)
 					Cs=Csca(ir,ilam)*Ndens(ir)
 					do icloud=1,nclouds
-						if(obs(iobs)%docloud(icc,icloud)) then
+						if(obs%docloud(icc,icloud)) then
 							do isize=1,Cloud(icloud)%nsize
 								Ca=Ca+
      &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
@@ -165,10 +164,10 @@
 					if(ir_next.le.0.or.tautot.ge.maxtau) fact=0d0
 					Ag=Ag+A*(1d0-fact)
 				enddo
-				obs(iobs)%flux(0,ilam)=obs(iobs)%flux(0,ilam)+obs(iobs)%cloudfrac(icc)*fluxg/real(ng)
-				obs(iobs)%A(0,ilam)=obs(iobs)%A(0,ilam)+obs(iobs)%cloudfrac(icc)*Ag/real(ng)
-				obs(iobs)%flux(icc,ilam)=obs(iobs)%flux(icc,ilam)+fluxg/real(ng)
-				obs(iobs)%A(icc,ilam)=obs(iobs)%A(icc,ilam)+Ag/real(ng)
+				obs%flux(0,ilam)=obs%flux(0,ilam)+obs%cloudfrac(icc)*fluxg/real(ng)
+				obs%A(0,ilam)=obs%A(0,ilam)+obs%cloudfrac(icc)*Ag/real(ng)
+				obs%flux(icc,ilam)=obs%flux(icc,ilam)+fluxg/real(ng)
+				obs%A(icc,ilam)=obs%A(icc,ilam)+Ag/real(ng)
 			endif
 			enddo
 		enddo
@@ -180,14 +179,14 @@
 	
 c forward scattering in surface area of the planet
 c	do ilam=1,nlam
-c		do icc=0,obs(iobs)%ncc
-c			obs(iobs)%A(icc,ilam)=obs(iobs)%A(icc,ilam)-
-c     &			obs(iobs)%phase(obs(iobs)%nphase,icc,ilam)/(Fstar(ilam)/(pi*Rstar**2))
+c		do icc=0,obs%ncc
+c			obs%A(icc,ilam)=obs%A(icc,ilam)-
+c     &			obs%phase(obs%nphase,icc,ilam)/(Fstar(ilam)/(pi*Rstar**2))
 c		enddo
 c	enddo
 
-	obs(iobs)%flux=obs(iobs)%flux*1d23/distance**2
-	obs(iobs)%phase=obs(iobs)%phase*1d23/distance**2
+	obs%flux=obs%flux*1d23/distance**2
+	obs%phase=obs%phase*1d23/distance**2
 
 	deallocate(rtrace)
 	

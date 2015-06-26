@@ -178,9 +178,10 @@ c===============================================================================
 	key => firstkey
 
 	nmol=1
-	nobs=1
+	nobs=0
 	ncia=0
 	nclouds=0
+	nretr=0
 	j=0
 	mixratfile=.false.
 	do while(.not.key%last)
@@ -205,6 +206,10 @@ c===============================================================================
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nclouds) nclouds=key%nr1
+			case("retrieval")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr2.eq.0) key%nr2=1
+				if(key%nr1.gt.nretr) nretr=key%nr1
 			case default
 				do i=1,48
 					if(key%key.eq.molname(i)) then
@@ -229,7 +234,6 @@ c===============================================================================
 		enddo
 	endif
 
-	allocate(obs(nobs))
 	allocate(mixrat(nmol))
 	allocate(includemol(nmol))
 	allocate(Cloud(max(nclouds,1)))
@@ -515,7 +519,14 @@ c allocate the arrays
 
 	call output("==================================================================")
 
-	if(compute_opac) call ReadData()
+	if(compute_opac) then
+		call ReadData()
+	else
+		do i=1,nmol
+			if(mixrat(i).gt.0d0) call InitReadOpacityFITS(i)
+		enddo
+	endif
+
 	call ReadDataCIA()
 
 	call output("==================================================================")
@@ -714,12 +725,8 @@ c allocate the arrays
 	mixrat=0d0
 	includemol=.false.
 	
-	do i=1,nobs
-		obs(i)%type='EMIS'
-		obs(i)%filename=' '
-		obs(i)%nphase=45
-	enddo
-	
+	obs%nphase=45
+
 	do i=1,nclouds
 		Cloud(i)%P=1d-4
 		Cloud(i)%dP=10d0
@@ -791,19 +798,19 @@ c allocate the arrays
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer iobs
 
-	do iobs=1,nobs
 c number of cloud/nocloud combinations
-		obs(iobs)%ncc=2**nclouds
-		allocate(obs(iobs)%docloud(obs(iobs)%ncc,nclouds))
-		allocate(obs(iobs)%cloudfrac(obs(iobs)%ncc))
-		allocate(obs(iobs)%lam(nlam))
-		allocate(obs(iobs)%flux(0:obs(iobs)%ncc,nlam))
-		allocate(obs(iobs)%A(0:obs(iobs)%ncc,nlam))
-		allocate(obs(iobs)%phase(obs(iobs)%nphase,0:obs(iobs)%ncc,nlam))
-	enddo
-
+	obs%ncc=2**nclouds
+	allocate(obs%docloud(obs%ncc,nclouds))
+	allocate(obs%cloudfrac(obs%ncc))
+	allocate(obs%lam(nlam))
+	allocate(obs%flux(0:obs%ncc,nlam))
+	allocate(obs%A(0:obs%ncc,nlam))
+	allocate(obs%phase(obs%nphase,0:obs%ncc,nlam))
+	allocate(obs%dflux(nretr,nlam))
+	allocate(obs%retr_par(nretr))
+	allocate(obs%retr_dpar(nretr))
+	allocate(obs%retr_ir(nretr))
 
 	return
 	end
@@ -815,16 +822,10 @@ c number of cloud/nocloud combinations
 	use ReadKeywords
 	IMPLICIT NONE
 	type(SettingKey) key
-	integer i
-	i=key%nr1
 	
 	select case(key%key2)
-		case("type")
-			read(key%value,*) obs(i)%type
 		case("nphase")
-			read(key%value,*) obs(i)%nphase
-		case("file")
-			read(key%value,*) obs(i)%filename
+			read(key%value,*) obs%nphase
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

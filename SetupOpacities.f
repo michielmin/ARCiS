@@ -35,10 +35,6 @@
 	n_nu_line=ng*nmol*100
 	allocate(nu_line(n_nu_line))
 	
-	do imol=1,nmol
-		if(mixrat(imol).gt.0d0) call InitReadOpacityFITS(imol)
-	enddo
-	
 	opac_tot=0d0
 
 	call cpu_time(starttime)
