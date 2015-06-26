@@ -187,23 +187,36 @@ C	 create the new empty FITS file
 	end
 
 
+	module OpacityFITSdata
+	IMPLICIT NONE
+	
+	type databaseKtable
+		real*8,allocatable :: ktable(:,:,:,:)
+		integer nlam,nP,nT,ng
+		real*8 lam1,lam2,P1,P2,T1,T2
+	end type databaseKtable
+
+	type(databaseKtable),allocatable :: Ktable(:)
+	
+	end module OpacityFITSdata
 
 
-	subroutine ReadOpacityFITS(kappa_mol,imol,ir)
+	subroutine InitReadOpacityFITS(imol)
 	use GlobalSetup
+	use OpacityFITSdata
 	implicit none
 	character*80 comment,errmessage
 	character*30 errtext
 	integer status,stat2,stat3,readwrite,unit,blocksize,nfound,group
-	integer firstpix(4),nbuffer,npixels,ir
+	integer firstpix,nbuffer,npixels
 	integer istat,stat4,tmp_int,stat5,stat6
 	real*8  nullval
 	logical anynull
 	integer naxes(4)
-	real*8,allocatable :: array(:,:,:,:)
 	character*500 filename
-	integer ig,ilam,iT,iP,imol,nlamF,i,j,ngF
-	real*8 l1F,l2F,kappa_mol(nmol,nlam,ng)
+	integer ig,ilam,iT,iP,imol,i,j
+
+	if(.not.allocated(Ktable)) allocate(Ktable(nmol))
 
 	! Get an unused Logical Unit Number to use to open the FITS file.
 	status=0
@@ -223,29 +236,19 @@ C	 create the new empty FITS file
 	group=1
 	nullval=-999
 
-	call ftgkyd(unit,'Pmin',Pmin,comment,status)
-	call ftgkyd(unit,'Pmax',Pmax,comment,status)
-	call ftgkyd(unit,'Tmin',Tmin,comment,status)
-	call ftgkyd(unit,'Tmax',Tmax,comment,status)
-	call ftgkyd(unit,'l_min',l1F,comment,status)
-	call ftgkyd(unit,'l_max',l2F,comment,status)
+	call ftgkyd(unit,'Pmin',Ktable(imol)%P1,comment,status)
+	call ftgkyd(unit,'Pmax',Ktable(imol)%P2,comment,status)
+	call ftgkyd(unit,'Tmin',Ktable(imol)%T1,comment,status)
+	call ftgkyd(unit,'Tmax',Ktable(imol)%T2,comment,status)
+	call ftgkyd(unit,'l_min',Ktable(imol)%lam1,comment,status)
+	call ftgkyd(unit,'l_max',Ktable(imol)%lam2,comment,status)
 
-	call ftgkyj(unit,'nP',nPom,comment,stat4)
-	call ftgkyj(unit,'nT',nTom,comment,stat4)
-	call ftgkyj(unit,'nlam',nlamF,comment,stat4)
-	call ftgkyj(unit,'ng',ngF,comment,stat4)
+	call ftgkyj(unit,'nP',Ktable(imol)%nP,comment,status)
+	call ftgkyj(unit,'nT',Ktable(imol)%nT,comment,status)
+	call ftgkyj(unit,'nlam',Ktable(imol)%nlam,comment,status)
+	call ftgkyj(unit,'ng',Ktable(imol)%ng,comment,status)
 
-	iP=(log10(P(ir)/Pmin)/log10(Pmax/Pmin))*real(nPom-1)+1.5d0
-	if(iP.lt.1) iP=1
-	if(iP.gt.nPom) ip=nPom
-	iT=(log10(T(ir)/Tmin)/log10(Tmax/Tmin))*real(nTom-1)+1.5d0
-	if(iT.lt.1) iT=1
-	if(iT.gt.nTom) iT=nTom
-
-	firstpix(1)=1
-	firstpix(2)=1
-	firstpix(3)=iT
-	firstpix(4)=iP
+	call output("Reading in correlated k-tables for " // trim(molname(imol)))
 
 	firstpix=1
 
@@ -257,30 +260,15 @@ C	 create the new empty FITS file
 
 	! read_image
 
-	naxes(1)=nlamF
-	naxes(2)=ngF
-	naxes(3)=nTom
-	naxes(4)=nPom
+	naxes(1)=Ktable(imol)%nlam
+	naxes(2)=Ktable(imol)%ng
+	naxes(3)=Ktable(imol)%nT
+	naxes(4)=Ktable(imol)%nP
 	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-	allocate(array(naxes(1),naxes(2),naxes(3),naxes(4)))
+	if(.not.allocated(Ktable(imol)%ktable)) allocate(Ktable(imol)%ktable(naxes(1),naxes(2),naxes(3),naxes(4)))
 
-	call ftgpvd(unit,group,firstpix,npixels,nullval,array,anynull,status)
-   
-	do ilam=1,nlam
-		i=(log10(lam(ilam)/l1F)/log10(l2F/l1F))*real(nlamF-1)+0.5d0
-		if(i.gt.0.and.i.le.nlamF) then
-			do ig=1,ng
-				j=1+real(ngF-1)*real(ig-1)/real(ng-1)
-				kappa_mol(imol,ilam,ig)=array(i,j,iT,iP)
-			enddo
-		else
-			kappa_mol(imol,ilam,1:ng)=0d0
-		endif
-	enddo
-
-	deallocate(array)
-
-				 
+	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktable(imol)%ktable,anynull,status)
+   				 
 	!  Close the file and free the unit number.
 	call ftclos(unit, status)
 	call ftfiou(unit, status)
@@ -302,6 +290,40 @@ C	 create the new empty FITS file
 
 	return
 
+	end
+
+
+
+	subroutine ReadOpacityFITS(kappa_mol,imol,ir)
+	use GlobalSetup
+	use OpacityFITSdata
+	implicit none
+	character*80 comment,errmessage
+	character*30 errtext
+	integer ig,ilam,iT,iP,imol,i,j,ir
+	real*8 kappa_mol(nmol,nlam,ng)
+
+	iP=(log10(P(ir)/Ktable(imol)%P1)/log10(Ktable(imol)%P2/Ktable(imol)%P1))*real(Ktable(imol)%nP-1)+1.5d0
+	if(iP.lt.1) iP=1
+	if(iP.gt.Ktable(imol)%nP) iP=Ktable(imol)%nP
+	iT=(log10(T(ir)/Ktable(imol)%T1)/log10(Ktable(imol)%T2/Ktable(imol)%T1))*real(Ktable(imol)%nT-1)+1.5d0
+	if(iT.lt.1) iT=1
+	if(iT.gt.Ktable(imol)%nT) iT=Ktable(imol)%nT
+ 
+	do ilam=1,nlam
+		i=(log10(lam(ilam)/Ktable(imol)%lam1)/log10(Ktable(imol)%lam2/Ktable(imol)%lam1))
+     &				*real(Ktable(imol)%nlam-1)+0.5d0
+		if(i.gt.0.and.i.le.Ktable(imol)%nlam) then
+			do ig=1,ng
+				j=1+real(Ktable(imol)%ng-1)*real(ig-1)/real(ng-1)
+				kappa_mol(imol,ilam,ig)=Ktable(imol)%ktable(i,j,iT,iP)
+			enddo
+		else
+			kappa_mol(imol,ilam,1:ng)=0d0
+		endif
+	enddo
+
+	return
 	end
 
 
