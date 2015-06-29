@@ -501,8 +501,8 @@ c	if(NV0.gt.25000) NV0=25000
 			gamma=sqrt(a_t**2+a_p**2)
 			f=L_freq(i)
 c	Random sampling of the Voigt profile
-			NV0=real(nnu)*100d0/real(nlam*L_nclose(i)+1)+250d0
-			if(NV0.gt.25000) NV0=25000
+			NV0=real(nnu)*50d0/real(nlam*L_nclose(i)+1)+100d0
+			if(NV0.gt.20000) NV0=20000
 			NV=real(NV0)*A/L_Saver(i)
 			if(NV.gt.100*NV0) NV=100*NV0
 			if(NV.lt.25) NV=25
