@@ -32,7 +32,7 @@
 	allocate(opac_tot(nlam,ng))
 	allocate(kappa_mol(nmol,nlam,ng))
 
-	n_nu_line=ng*nmol*100
+	n_nu_line=ng*nmol*10
 	allocate(nu_line(n_nu_line))
 	
 	opac_tot=0d0

@@ -300,8 +300,17 @@ C	 create the new empty FITS file
 	implicit none
 	character*80 comment,errmessage
 	character*30 errtext
-	integer ig,ilam,iT,iP,imol,i,j,ir
+	integer ig,ilam,iT,iP,imol,i,j,ir,ngF,i1,i2
 	real*8 kappa_mol(nmol,nlam,ng)
+	real*8,allocatable :: temp(:),lamF(:)
+
+	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam))
+	allocate(lamF(Ktable(imol)%nlam))
+
+	do ilam=1,Ktable(imol)%nlam
+		lamF(ilam)=10d0**(log10(Ktable(imol)%lam1)+
+     &			log10(Ktable(imol)%lam2/Ktable(imol)%lam1)*real(ilam-1)/real(Ktable(imol)%nlam-1))
+	enddo
 
 	iP=(log10(P(ir)/Ktable(imol)%P1)/log10(Ktable(imol)%P2/Ktable(imol)%P1))*real(Ktable(imol)%nP-1)+1.5d0
 	if(iP.lt.1) iP=1
@@ -310,13 +319,26 @@ C	 create the new empty FITS file
 	if(iT.lt.1) iT=1
 	if(iT.gt.Ktable(imol)%nT) iT=Ktable(imol)%nT
  
-	do ilam=1,nlam
-		i=(log10(lam(ilam)/Ktable(imol)%lam1)/log10(Ktable(imol)%lam2/Ktable(imol)%lam1))
-     &				*real(Ktable(imol)%nlam-1)+0.5d0
-		if(i.gt.0.and.i.le.Ktable(imol)%nlam) then
+	do ilam=1,nlam-1
+		i1=0
+		i2=0
+		do i=2,Ktable(imol)%nlam-1
+			if(lam(ilam).le.lamF(i).and.lam(ilam).gt.lamF(i-1)) i1=i
+			if(lam(ilam+1).ge.lamF(i).and.lam(ilam+1).lt.lamF(i+1)) i2=i
+		enddo
+		if(i1.eq.i2) i2=i1+1
+		if(i1.gt.0) then
+			ngF=0
+			do i=i1,i2-1
+				do ig=1,Ktable(imol)%ng
+					ngF=ngF+1
+					temp(ngF)=Ktable(imol)%ktable(i,ig,iT,iP)
+				enddo
+			enddo
+			call sort(temp(j),ngF)
 			do ig=1,ng
-				j=1+real(Ktable(imol)%ng-1)*real(ig-1)/real(ng-1)
-				kappa_mol(imol,ilam,ig)=Ktable(imol)%ktable(i,j,iT,iP)
+				j=1+real(ngF-1)*real(ig-1)/real(ng-1)
+				kappa_mol(imol,ilam,ig)=temp(j)
 			enddo
 		else
 			kappa_mol(imol,ilam,1:ng)=0d0
