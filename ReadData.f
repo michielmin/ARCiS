@@ -100,6 +100,9 @@ c H2O, CO2, CO, NO, OH
 	allocate(L_gu(nlines+1))
 	allocate(L_gl(nlines+1))
 	allocate(L_do(nlines+1))
+	allocate(L_nclose(nlines+1))
+	allocate(L_Saver(nlines+1))
+	allocate(L_ilam(nlines+1))
 
 	call output("estimate number of lines: " // trim(dbl2string(dble(nlines),'(es7.1)')))
 
@@ -179,7 +182,7 @@ c done counting, now read it in!
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i)
-!$OMP& SHARED(nlines,niso,L_iiso,L_imol,L_Elow,L_freq,L_S0)
+!$OMP& SHARED(nlines,niso,L_iiso,L_imol,L_Elow,L_freq,L_S0,L_lam,L_ilam,lam1,lam2,nlam)
 !$OMP& PRIVATE(x3,x4)
 !$OMP DO
 	do i=1,nlines
@@ -188,6 +191,10 @@ c done counting, now read it in!
 		x3=exp(-hplanck*clight*L_Elow(i)/(kb*296d0))
 		x4=exp(-hplanck*clight*L_freq(i)/(kb*296d0))
 		L_S0(i)=L_S0(i)/(x3*(1d0-x4))
+		L_lam(i)=1d0/L_freq(i)
+		L_ilam(i)=(log10(L_lam(i)/lam1)/log10(lam2/lam1))*real(nlam-1)+0.5d0
+		if(L_ilam(i).lt.1) L_ilam(i)=1
+		if(L_ilam(i).gt.nlam) L_ilam(i)=nlam
 	enddo
 !$OMP END DO
 !$OMP FLUSH

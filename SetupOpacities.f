@@ -188,7 +188,7 @@
      &		trim(int2string(ir,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
 		call output("T = " // trim(dbl2string(T(ir),'(f8.2)')) // " K")
 		call output("P = " // trim(dbl2string(P(ir),'(es8.2)')) // " Ba")
-		call LineStrengthWidth(ir,dnu,Saver,nl,freq(nlam),freq(1))
+		call LineStrengthWidth(ir,dnu,freq(nlam),freq(1))
 		dnu=dnu/2d0
 		n_nu_line=abs(freq(1)/freq(nlam))/dnu
 		nu1=freq(1)
@@ -218,7 +218,7 @@
 			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
 		enddo
 		call output("Compute lines")
-		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line,Saver,nl)
+		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line)
 		if(outputopacity) call WriteOpacity(ir,"line",nu_line,k_line,n_nu_line,1)
 		call output("Compute k-tables")
 		call tellertje(1,nlam-1)
@@ -287,12 +287,12 @@
 	return
 	end
 	
-	subroutine LineStrengthWidth(ir,minw,Saver,nl,nu1,nu2)
+	subroutine LineStrengthWidth(ir,minw,nu1,nu2)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 w,x1,x2,x3,x4,minw,nu1,nu2,Saver,gamma,Saver0
-	integer imol,iT,i,ir,iiso,nl,nl0
+	real*8 w,x1,x2,x3,x4,minw,nu1,nu2,Saver(nlam),gamma,Saver0(nlam)
+	integer imol,iT,i,ir,iiso,nl,nl0,ilam,nlines_lam(nlam)
 
 	call output("Line strengths and widths")
 	
@@ -355,20 +355,29 @@ c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 	Saver0=Saver*eps_lines
 	Saver=0d0
 	nl=0
+	nlines_lam=0
 	do i=1,nlines
 		if(L_do(i)) then
 			imol=L_imol(i)
-			if(L_S(i).gt.Saver0) then
+			if(L_S(i).gt.Saver0(L_ilam(i))) then
 				nl=nl+1
-				Saver=Saver+L_S(i)
+				Saver(L_ilam(i))=Saver(L_ilam(i))+L_S(i)
+				nlines_lam(L_ilam(i))=nlines_lam(L_ilam(i))+1
 			else
 				L_do(i)=.false.
 			endif
 		endif
 	enddo
 
-	Saver=Saver/real(nl)
+	Saver=Saver/real(nlines_lam)
 	if(real(nl0).gt.(real(nl)*1.1)) goto 1
+
+	do i=1,nlines
+		if(L_do(i)) then
+			L_nclose(i)=nlines_lam(L_ilam(i))
+			L_Saver(i)=Saver(L_ilam(i))
+		endif
+	enddo
 
 	call output("number of lines: " // trim(dbl2string(dble(nl),'(es7.1)')))
 	
@@ -452,7 +461,7 @@ c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 
 
 
-	subroutine ComputeKline(ir,nu,kline,nnu,dnu,Saver,nl)
+	subroutine ComputeKline(ir,nu,kline,nnu,dnu)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
@@ -460,8 +469,8 @@ c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 	real*8 w,gamma,fact
 	real*8 nu(nnu),dnu(nnu)
 	real*8,target :: kline(nnu)
-	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl,Saver
-	integer iT,imol,i,ju,jl,j,nkdis,NV,nl,k,iiso,ir,NV0,iter,maxiter
+	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
+	integer iT,imol,i,ju,jl,j,nkdis,NV,k,iiso,ir,NV0,iter,maxiter
 	integer i_therm,i_press,il,idnu,inu1,inu2,inu
 	real*8 f,a_t,a_p
 	
@@ -470,16 +479,17 @@ c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 
 	scale=real(nnu-1)/log(nu(nnu)/nu(1))
 
-	NV0=real(nnu)*100d0/real(nl+1)+250d0
-	
+c	NV0=real(nnu)*100d0/real(nl+1)+250d0
+c	if(NV0.gt.25000) NV0=25000
+
 	call hunt(TZ,nTZ,T(ir),iT)
 
 	call tellertje(1,nlines)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,imol,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2,NV)
-!$OMP& SHARED(fact,mixrat_r,scale,NV0,kline,nnu,nu,nlines,a_therm,a_press,n_voigt,P,ir,cutoff_abs,Saver,
-!$OMP&     L_do,L_S,L_a_therm,L_a_press,L_freq,L_imol)
+!$OMP& PRIVATE(i,imol,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2,NV,NV0)
+!$OMP& SHARED(fact,mixrat_r,scale,kline,nnu,nu,nlines,a_therm,a_press,n_voigt,P,ir,cutoff_abs,
+!$OMP&     L_do,L_S,L_a_therm,L_a_press,L_freq,L_imol,L_nclose,nlam,L_Saver)
 !$OMP DO SCHEDULE (STATIC,1)
 	do i=1,nlines
 		call tellertje(i+1,nlines+2)
@@ -491,7 +501,9 @@ c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 			gamma=sqrt(a_t**2+a_p**2)
 			f=L_freq(i)
 c	Random sampling of the Voigt profile
-			NV=real(NV0)*A/Saver
+			NV0=real(nnu)*100d0/real(nlam*L_nclose(i)+1)+250d0
+			if(NV0.gt.25000) NV0=25000
+			NV=real(NV0)*A/L_Saver(i)
 			if(NV.gt.100*NV0) NV=100*NV0
 			if(NV.lt.25) NV=25
 

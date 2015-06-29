@@ -99,11 +99,11 @@ c===============================================================================
 
 	type(Observation) obs
 
-	integer,allocatable,dimension(:) :: L_imol,L_iiso
+	integer,allocatable,dimension(:) :: L_imol,L_iiso,L_nclose,L_ilam
 	real*8,allocatable,dimension(:) :: L_Aul,L_freq,L_Elow,L_lam,L_S0,L_S
 	real*8,allocatable,dimension(:) :: L_gamma_air,L_gamma_self
 	real*8,allocatable,dimension(:) :: L_a_therm,L_a_press,L_n
-	real*8,allocatable,dimension(:) :: L_gu,L_gl
+	real*8,allocatable,dimension(:) :: L_gu,L_gl,L_Saver
 	logical,allocatable,dimension(:) :: L_do
 
 	type CIA_pair

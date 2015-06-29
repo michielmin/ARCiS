@@ -194,6 +194,7 @@ C	 create the new empty FITS file
 		real*8,allocatable :: ktable(:,:,:,:)
 		integer nlam,nP,nT,ng
 		real*8 lam1,lam2,P1,P2,T1,T2
+		logical available
 	end type databaseKtable
 
 	type(databaseKtable),allocatable :: Ktable(:)
@@ -229,10 +230,12 @@ C	 create the new empty FITS file
 	filename=trim(filename) // ".fits.gz"
 	call ftopen(unit,filename,readwrite,blocksize,status)
 	if (status /= 0) then
-		call output("Error reading opacity file: " // trim(filename))
-		call output("==================================================================")
-		stop
+		call output("Opacity file not available: " // trim(filename))
+		call output("setting opacities to 0")
+		Ktable(imol)%available=.false.
+		return
 	endif
+	Ktable(imol)%available=.true.
 	group=1
 	nullval=-999
 
@@ -304,6 +307,11 @@ C	 create the new empty FITS file
 	real*8 kappa_mol(nmol,nlam,ng)
 	real*8,allocatable :: temp(:),lamF(:)
 
+	if(.not.Ktable(imol)%available) then
+		kappa_mol(imol,1:nlam,1:ng)=0d0
+		return
+	endif
+
 	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam))
 	allocate(lamF(Ktable(imol)%nlam))
 
@@ -335,7 +343,7 @@ C	 create the new empty FITS file
 					temp(ngF)=Ktable(imol)%ktable(i,ig,iT,iP)
 				enddo
 			enddo
-			call sort(temp(j),ngF)
+			call sort(temp,ngF)
 			do ig=1,ng
 				j=1+real(ngF-1)*real(ig-1)/real(ng-1)
 				kappa_mol(imol,ilam,ig)=temp(j)
