@@ -523,7 +523,7 @@ c allocate the arrays
 		call ReadData()
 	else
 		do i=1,nmol
-			if(mixrat(i).gt.0d0) call InitReadOpacityFITS(i)
+			if(includemol(i)) call InitReadOpacityFITS(i)
 		enddo
 	endif
 
