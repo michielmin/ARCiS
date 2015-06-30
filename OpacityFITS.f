@@ -353,6 +353,10 @@ C	 create the new empty FITS file
 		endif
 	enddo
 
+	deallocate(temp)
+	deallocate(lamF)
+
+
 	return
 	end
 

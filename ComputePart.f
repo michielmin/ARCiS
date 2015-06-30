@@ -265,7 +265,8 @@ c changed this to mass fractions (11-05-2010)
 
 	inquire(file=partfile,exist=truefalse)
 	if(truefalse) then
-		if(checkparticlefile(partfile,amin,amax,dble(pow),ns,C%fmax,C%blend,C%porosity,frac,rho,nm,filename,(abun_in_name.le.0))) then
+		if(checkparticlefile(partfile,amin,amax,dble(pow),ns,C%fmax,C%blend,C%porosity,frac,rho,nm,
+     &					filename,(abun_in_name.le.0))) then
 			call ReadParticleFits(partfile,C,isize)
 			return
 		endif
@@ -999,9 +1000,9 @@ c use loglog extrapolation
 			m0=dcmplx(e1(i-2),e2(i-2))
 			m1=dcmplx(e1(i-1),e2(i-1))
 			do j=i,n
-				m=10d0**(log10(m0)+log10(m1/m0)*log10(grid(i-2)/grid(j))/log10(grid(i-2)/grid(i-1)))
-				e1(j)=real(m)
-				e2(j)=dimag(m)
+c				m=10d0**(log10(m0)+log10(m1/m0)*log10(grid(i-2)/grid(j))/log10(grid(i-2)/grid(i-1)))
+c				e1(j)=real(m)
+c				e2(j)=dimag(m)
 				e1(j)=10d0**(log10(e1(i-2))+log10(e1(i-1)/e1(i-2))*log10(grid(i-2)/grid(j))/log10(grid(i-2)/grid(i-1)))
 				e2(j)=10d0**(log10(e2(i-2))+log10(e2(i-1)/e2(i-2))*log10(grid(i-2)/grid(j))/log10(grid(i-2)/grid(i-1)))
 			enddo
