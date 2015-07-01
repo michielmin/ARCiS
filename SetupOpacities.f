@@ -318,8 +318,7 @@ c line strength
 			x1=exp(-hplanck*clight*L_Elow(i)/(kb*T(ir)))
 			x2=exp(-hplanck*clight*L_freq(i)/(kb*T(ir)))
 
-			L_S(i)=L_S0(i)*(x1*(1d0-x2))/ZZ(imol,iiso,iT)
-			L_S(i)=L_S(i)*mixrat_r(ir,imol)
+			L_S(i)=L_S0(i)*(x1*(1d0-x2))*mixrat_r(ir,imol)/ZZ(imol,iiso,iT)
 		endif
 	enddo
 !$OMP END DO
@@ -337,11 +336,14 @@ c line strength
 	Saver=0d0
 	nl=0
 	nlines_lam=0
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i)
+!$OMP& SHARED(L_do,nlines,L_ilam,L_S,Saver0,Saver,nlines_lam)
+!$OMP DO
 	do i=1,nlines
 		if(L_do(i)) then
-			imol=L_imol(i)
 			if(L_S(i).gt.Saver0(L_ilam(i))) then
-				nl=nl+1
 				Saver(L_ilam(i))=Saver(L_ilam(i))+L_S(i)
 				nlines_lam(L_ilam(i))=nlines_lam(L_ilam(i))+1
 			else
@@ -349,6 +351,11 @@ c line strength
 			endif
 		endif
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+
+	nl=sum(nlines_lam(1:nlam))
 
 	Saver=Saver/real(nlines_lam)
 	if(real(nl0).gt.(real(nl)*1.1)) goto 1
@@ -357,7 +364,7 @@ c line strength
 	minw=(1d0/specres)**2
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,imol,w,gamma)
+!$OMP& PRIVATE(i,imol,w,gamma,x1,x2)
 !$OMP& SHARED(nlines,minw,iT,Mmol,P,ir,T,Saver,L_Saver,L_ilam,nlines_lam,L_nclose,mixrat_r,
 !$OMP&     L_do,L_gamma_air,L_gamma_self,L_a_therm,L_a_press,L_freq,L_imol,L_n)
 !$OMP DO
@@ -368,9 +375,9 @@ c thermal broadening
 			w=(sqrt(2d0*kb*T(ir)/(Mmol(imol)*mp)))
 			L_a_therm(i)=w*L_freq(i)/clight
 c pressure broadening
-			L_a_press(i)=L_gamma_air(i)*P(ir)*(1d0-mixrat_r(ir,imol))/atm
-			L_a_press(i)=L_a_press(i)+L_gamma_self(i)*P(ir)*mixrat_r(ir,imol)/atm
-			L_a_press(i)=L_a_press(i)*(296d0/T(ir))**L_n(i)
+			x1=L_gamma_air(i)*(1d0-mixrat_r(ir,imol))
+			x2=L_gamma_self(i)*mixrat_r(ir,imol)
+			L_a_press(i)=((x1+x2)*P(ir)/atm)*(296d0/T(ir))**L_n(i)
 
 			gamma=((L_a_press(i)*4d0)**2+L_a_therm(i)**2)/L_freq(i)**2
 			if(gamma.lt.minw) then
