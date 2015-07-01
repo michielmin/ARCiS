@@ -291,25 +291,21 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 w,x1,x2,x3,x4,minw,nu1,nu2,Saver(nlam),gamma,Saver0(nlam)
+	real*8 w,x1,x2,minw,nu1,nu2,Saver(nlam),gamma,Saver0(nlam)
 	integer imol,iT,i,ir,iiso,nl,nl0,ilam,nlines_lam(nlam)
 
 	call output("Line strengths and widths")
 	
-	minw=0.01d0
-	minw=(1d0/specres)**2
 	call hunt(TZ,nTZ,T(ir),iT)
 	if(iT.lt.1) iT=1
 	if(iT.gt.nTZ) iT=nTZ
 
-	Saver=0d0
-	nl=0
 	call tellertje(1,nlines)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,imol,iiso,w,x1,x2,x3,x4,gamma)
-!$OMP& SHARED(nlines,nu1,nu2,minw,iT,Mmol,P,ir,ZZ,mixrat_r,T,Saver,nl,
-!$OMP&     L_do,L_S,L_S0,L_gamma_air,L_gamma_self,L_a_therm,L_a_press,L_freq,L_imol,L_iiso,L_Elow,L_n)
+!$OMP& PRIVATE(i,imol,iiso,x1,x2)
+!$OMP& SHARED(nlines,nu1,nu2,minw,iT,Mmol,P,ir,ZZ,mixrat_r,T,
+!$OMP&     L_do,L_S,L_S0,L_freq,L_imol,L_iiso,L_Elow)
 !$OMP DO
 	do i=1,nlines
 		call tellertje(i+1,nlines+2)
@@ -318,27 +314,12 @@
 			L_do(i)=.true.
 			imol=L_imol(i)
 			iiso=L_iiso(i)
-c thermal broadening
-			w=(sqrt(2d0*kb*T(ir)/(Mmol(imol)*mp)))
-			L_a_therm(i)=w*L_freq(i)/clight
-c pressure broadening
-			L_a_press(i)=L_gamma_air(i)*P(ir)*(1d0-mixrat_r(ir,imol))/atm
-			L_a_press(i)=L_a_press(i)+L_gamma_self(i)*P(ir)*mixrat_r(ir,imol)/atm
-			L_a_press(i)=L_a_press(i)*(296d0/T(ir))**L_n(i)
 c line strength
 			x1=exp(-hplanck*clight*L_Elow(i)/(kb*T(ir)))
 			x2=exp(-hplanck*clight*L_freq(i)/(kb*T(ir)))
-c			x3=exp(-hplanck*clight*L%Elow/(kb*296d0))
-c			x4=exp(-hplanck*clight*L%freq/(kb*296d0))
 
-c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 			L_S(i)=L_S0(i)*(x1*(1d0-x2))/ZZ(imol,iiso,iT)
 			L_S(i)=L_S(i)*mixrat_r(ir,imol)
-
-			gamma=((L_a_press(i)*4d0)**2+L_a_therm(i)**2)/L_freq(i)**2
-			if(gamma.lt.minw) then
-				minw=gamma
-			endif
 		endif
 	enddo
 !$OMP END DO
@@ -372,12 +353,37 @@ c			L%S=L%S0*(x1*(1d0-x2))/(x3*ZZ(imol,iiso,iT)*(1d0-x4))
 	Saver=Saver/real(nlines_lam)
 	if(real(nl0).gt.(real(nl)*1.1)) goto 1
 
+	minw=0.01d0
+	minw=(1d0/specres)**2
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,imol,w,gamma)
+!$OMP& SHARED(nlines,minw,iT,Mmol,P,ir,T,Saver,L_Saver,L_ilam,nlines_lam,L_nclose,mixrat_r,
+!$OMP&     L_do,L_gamma_air,L_gamma_self,L_a_therm,L_a_press,L_freq,L_imol,L_n)
+!$OMP DO
 	do i=1,nlines
 		if(L_do(i)) then
+			imol=L_imol(i)
+c thermal broadening
+			w=(sqrt(2d0*kb*T(ir)/(Mmol(imol)*mp)))
+			L_a_therm(i)=w*L_freq(i)/clight
+c pressure broadening
+			L_a_press(i)=L_gamma_air(i)*P(ir)*(1d0-mixrat_r(ir,imol))/atm
+			L_a_press(i)=L_a_press(i)+L_gamma_self(i)*P(ir)*mixrat_r(ir,imol)/atm
+			L_a_press(i)=L_a_press(i)*(296d0/T(ir))**L_n(i)
+
+			gamma=((L_a_press(i)*4d0)**2+L_a_therm(i)**2)/L_freq(i)**2
+			if(gamma.lt.minw) then
+				minw=gamma
+			endif
 			L_nclose(i)=nlines_lam(L_ilam(i))
 			L_Saver(i)=Saver(L_ilam(i))
 		endif
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+	minw=sqrt(minw)
 
 	call output("number of lines: " // trim(dbl2string(dble(nl),'(es7.1)')))
 	
