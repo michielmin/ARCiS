@@ -474,7 +474,7 @@ c pressure broadening
 	integer nnu
 	real*8 w,gamma,fact
 	real*8 nu(nnu),dnu(nnu)
-	real*8,target :: kline(nnu)
+	real*8 kline(nnu)
 	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
 	integer iT,imol,i,ju,jl,j,nkdis,NV,k,iiso,ir,NV0,iter,maxiter
 	integer i_therm,i_press,il,idnu,inu1,inu2,inu

@@ -91,7 +91,7 @@ c		call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 	tot=0d0
 	do i=1,Cloud(ii)%nsize
 		Cloud(ii)%w(i)=(1q4*Cloud(ii)%rv(i))**(1q0+(1q0-3q0*Cloud(ii)%veff)/Cloud(ii)%veff)*
-     &					qexp(-1q4*Cloud(ii)%rv(i)/(Cloud(ii)%reff*Cloud(ii)%veff))
+     &					exp(-1q4*Cloud(ii)%rv(i)/(Cloud(ii)%reff*Cloud(ii)%veff))
 		Cloud(ii)%w(i)=Cloud(ii)%w(i)*Cloud(ii)%rv(i)**3
 		tot=tot+Cloud(ii)%w(i)
 	enddo

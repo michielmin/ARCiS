@@ -332,9 +332,9 @@ C	 create the new empty FITS file
 		i2=0
 		do i=2,Ktable(imol)%nlam-1
 			if(lam(ilam).le.lamF(i).and.lam(ilam).gt.lamF(i-1)) i1=i
-			if(lam(ilam+1).ge.lamF(i).and.lam(ilam+1).lt.lamF(i+1)) i2=i
+			if(lam(ilam+1).gt.lamF(i).and.lam(ilam+1).le.lamF(i+1)) i2=i
 		enddo
-		if(i1.eq.i2) i2=i1+1
+		if(i1.ge.i2) i2=i1+1
 		if(i1.gt.0) then
 			ngF=0
 			do i=i1,i2-1
@@ -352,6 +352,10 @@ C	 create the new empty FITS file
 			kappa_mol(imol,ilam,1:ng)=0d0
 		endif
 	enddo
+
+	deallocate(temp)
+	deallocate(lamF)
+
 
 	return
 	end
