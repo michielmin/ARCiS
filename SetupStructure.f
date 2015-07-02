@@ -2,9 +2,11 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 g,dp,dz,dlogp,RgasBar,sh
+	real*8 g,dp,dz,dlogp,RgasBar,sh,mix(nr,nmol)
 	parameter(RgasBar=82.05736*1.01325)
-	integer i,imol
+	integer i,imol,nmix
+	character*1000 form
+	character*10 namemix(nmol)
 
 	R(1)=Rplanet
 	mu=1d0
@@ -62,6 +64,24 @@ c		call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 	do i=1,nr
 		write(50,*) sqrt(R(i)*R(i+1)),sqrt(R(i)*R(i+1))-Rplanet
      &			,dens(i),cloud_dens(i,1:nclouds)
+	enddo
+	close(unit=50)
+
+	nmix=0
+	do imol=1,nmol
+		if(includemol(imol)) then
+			nmix=nmix+1
+			mix(1:nr,nmix)=mixrat_r(1:nr,imol)
+			namemix(nmix)=molname(imol)
+		endif
+	enddo
+
+	open(unit=50,file=trim(outputdir) // 'mixingratios.dat',RECL=1000)
+	form='("#",a9,a10,' // trim(int2string(nmix,'(i2)')) // 'a15)'
+	write(50,form) "T [K]","P [Ba]",namemix(1:nmix)
+	form='(f10.3,es10.3,' // trim(int2string(nmix,'(i2)')) // 'es15.4)'
+	do i=1,nr
+		write(50,form) T(i),P(i),mix(i,1:nmix)
 	enddo
 	close(unit=50)
 
