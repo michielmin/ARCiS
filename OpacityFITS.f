@@ -227,13 +227,19 @@ C	 create the new empty FITS file
 	readwrite=0
 	filename=trim(opacitydir) // "opacity"
 	filename=trim(filename) // "_" // trim(molname(imol))
-	filename=trim(filename) // ".fits.gz"
+	filename=trim(filename) // ".fits"
 	call ftopen(unit,filename,readwrite,blocksize,status)
 	if (status /= 0) then
-		call output("Opacity file not available: " // trim(filename))
-		call output("setting opacities to 0")
-		Ktable(imol)%available=.false.
-		return
+		filename=trim(opacitydir) // "opacity"
+		filename=trim(filename) // "_" // trim(molname(imol))
+		filename=trim(filename) // ".fits.gz"
+		call ftopen(unit,filename,readwrite,blocksize,status)
+		if (status /= 0) then
+			call output("Opacity file not available: " // trim(filename))
+			call output("setting opacities to 0")
+			Ktable(imol)%available=.false.
+			return
+		endif
 	endif
 	Ktable(imol)%available=.true.
 	group=1
