@@ -100,7 +100,11 @@ c		call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 	nsubr=100
 	do i=1,nr
 		do j=1,nsubr
-			pp=(log10(P(i))+log10(P(i+1)/P(i))*real(j)/real(nsubr+1))
+			if(i.ne.nr) then
+				pp=(log10(P(i))+log10(P(i+1)/P(i))*real(j)/real(nsubr+1))
+			else
+				pp=P(i)
+			endif				
 			cloud_dens(i,ii)=exp(-(abs(pp-log10(Cloud(ii)%P))/log10(Cloud(ii)%dP))**Cloud(ii)%s/2d0)
 			column=column+cloud_dens(i,ii)*(R(i+1)-R(i))
 		enddo
