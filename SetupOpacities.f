@@ -37,7 +37,7 @@
 	
 	opac_tot=0d0
 
-	call cpu_time(starttime)
+c	call cpu_time(starttime)
 	do ir=nr,1,-1
 		call tellertje(nr-ir+1,nr)
 c		call output("Opacities for layer: " // 
@@ -100,16 +100,14 @@ c		call output("Compute k-tables")
 			call WriteOpacity(ir,"aver",freq,kaver(1:nlam-1),nlam-1,1)
 		endif
 	
-		call cpu_time(stoptime)
+c		call cpu_time(stoptime)
 
-		open(unit=30,file=trim(outputdir) // "opticaldepth" // trim(int2string(ir,'(i0.3)')) // ".dat",RECL=6000)
-		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
-		do i=1,nlam-1
-			write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
-		enddo
-		close(unit=30)
-
-
+c		open(unit=30,file=trim(outputdir) // "opticaldepth" // trim(int2string(ir,'(i0.3)')) // ".dat",RECL=6000)
+c		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
+c		do i=1,nlam-1
+c			write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
+c		enddo
+c		close(unit=30)
 	enddo
 
 	open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
