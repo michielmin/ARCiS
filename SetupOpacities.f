@@ -100,20 +100,15 @@ c		call output("Compute k-tables")
 		endif
 	
 		call cpu_time(stoptime)
-c		call output("Time for this layer: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
-c		call output("==================================================================")
-c		starttime=stoptime
-		if(minval(opac_tot(1:nlam-1,1:ng)).gt.maxtau.and.maxtau.gt.0d0) then
-			call output("Maximum optical depth reached at all wavelengths")
-			call output("ignoring layers: 1 to " // trim(int2string(ir-1,'(i4)')))
-			if(ir.gt.1) then
-				do i=1,ir-1
-					Cabs(i,1:nlam-1,1:ng)=Cabs(ir,1:nlam-1,1:ng)
-					Csca(i,1:nlam-1)=Csca(ir,1:nlam-1)
-				enddo
-			endif
-			exit
-		endif
+
+		open(unit=30,file=trim(outputdir) // "opticaldepth" // trim(int2string(ir,'(i0.3)')) // ".dat",RECL=6000)
+		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
+		do i=1,nlam-1
+			write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
+		enddo
+		close(unit=30)
+
+
 	enddo
 
 	open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
