@@ -58,6 +58,7 @@ c		call output("P = " // trim(dbl2string(P(ir),'(es8.2)')) // " Ba")
 			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
 		enddo
 		do imol=1,nmol
+			kappa_mol(imol,1:nlam,1:ng)=0d0
 			if(mixrat_r(ir,imol).gt.0d0) call ReadOpacityFITS(kappa_mol,imol,ir)
 		enddo
 c		call output("Compute k-tables")
