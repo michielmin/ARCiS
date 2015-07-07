@@ -55,7 +55,7 @@
 		enddo
 102		continue
 		do j=i,1,-1
-			CIA(icia)%Cabs(iT,i)=CIA(icia)%Cabs(iT,i-1)*freq(i-1)/freq(j)
+			CIA(icia)%Cabs(iT,j)=CIA(icia)%Cabs(iT,i+1)*freq(i+1)/freq(j)
 		enddo
 	enddo
 	close(unit=20)
