@@ -39,10 +39,11 @@
 
 	call cpu_time(starttime)
 	do ir=nr,1,-1
-		call output("Opacities for layer: " // 
-     &		trim(int2string(ir,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
-		call output("T = " // trim(dbl2string(T(ir),'(f8.2)')) // " K")
-		call output("P = " // trim(dbl2string(P(ir),'(es8.2)')) // " Ba")
+		call tellertje(nr-ir+1,nr)
+c		call output("Opacities for layer: " // 
+c     &		trim(int2string(ir,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
+c		call output("T = " // trim(dbl2string(T(ir),'(f8.2)')) // " K")
+c		call output("P = " // trim(dbl2string(P(ir),'(es8.2)')) // " Ba")
 		cont_tot=0d0
 		do i=1,ncia
 			if(T(ir).lt.CIA(i)%T(1)) then
@@ -59,22 +60,14 @@
 		do imol=1,nmol
 			if(mixrat_r(ir,imol).gt.0d0) call ReadOpacityFITS(kappa_mol,imol,ir)
 		enddo
-		call output("Compute k-tables")
-		call tellertje(1,nlam-1)
+c		call output("Compute k-tables")
 		nu1=0d0
 		nu2=1d0
 		do i=1,n_nu_line
 			nu_line(i)=1d0-real(i-1)/real(n_nu_line-1)
 		enddo
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,nu1,nu2,kappa,k,k_line,ig,j)
-!$OMP& SHARED(nlam,freq,ir,nu_line,n_nu_line,cont_tot,Cabs,Csca,opac_tot,Ndens,R,ng,nclouds,cloud_dens,Cloud,
-!$OMP&			kappa_mol,nmol,mixrat_r)
 		allocate(k_line(n_nu_line))
-!$OMP DO
 		do i=1,nlam-1
-			call tellertje(i+1,nlam+1)
 			nu1=-1d0
 			nu2=2d0
 			do j=1,n_nu_line
@@ -94,10 +87,7 @@
 			enddo
 			opac_tot(i,1:ng)=opac_tot(i,1:ng)+(Cabs(ir,i,1:ng)+Csca(ir,i))*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
-!$OMP END DO
-!$OMP FLUSH
 		deallocate(k_line)
-!$OMP END PARALLEL
 		if(outputopacity) then
 			call WriteOpacity(ir,"ktab",freq,Cabs(ir,1:nlam-1,1:ng),nlam-1,ng)
 			do i=1,nlam-1
@@ -108,19 +98,11 @@
 			enddo
 			call WriteOpacity(ir,"aver",freq,kaver(1:nlam-1),nlam-1,1)
 		endif
-		call tellertje(nlam,nlam)
 	
-		open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
-		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
-		do i=1,nlam-1
-			write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
-		enddo
-		close(unit=30)
-
 		call cpu_time(stoptime)
-		call output("Time for this layer: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
-		call output("==================================================================")
-		starttime=stoptime
+c		call output("Time for this layer: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+c		call output("==================================================================")
+c		starttime=stoptime
 		if(minval(opac_tot(1:nlam-1,1:ng)).gt.maxtau.and.maxtau.gt.0d0) then
 			call output("Maximum optical depth reached at all wavelengths")
 			call output("ignoring layers: 1 to " // trim(int2string(ir-1,'(i4)')))
@@ -133,6 +115,13 @@
 			exit
 		endif
 	enddo
+
+	open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
+	write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
+	do i=1,nlam-1
+		write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
+	enddo
+	close(unit=30)
 
 	return
 	end
