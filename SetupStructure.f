@@ -8,6 +8,9 @@
 	character*1000 form
 	character*10 namemix(nmol)
 
+	g=Ggrav*Mplanet/Rplanet**2
+	call output("log(g) [cgs]: " // dbl2string(log10(g),'(f8.3)'))
+
 	R(1)=Rplanet
 	mu=1d0
 	do imol=1,nmol
