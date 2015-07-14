@@ -50,17 +50,20 @@ c===============================================================================
 	integer nT,np,nr,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines,ng,ncia,nclouds
 	character*500 outputdir,HITRANdir,HITEMPdir
-	integer idum
+	integer idum,maxiter
 !$OMP THREADPRIVATE(idum)
-	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar
+	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT
 	logical,allocatable :: includemol(:)
-	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP
+	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW
 	real*8,allocatable :: lam(:),freq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ,nspike
 	integer,allocatable :: niso(:)
 	real*8 Mmol(48),mu
+	integer nBB
+	parameter(nBB=2900)
+	real*8,allocatable :: BB(:,:)						! nBB,nlam
 	character*10 molname(48)
 	parameter(molname = (/'H2O   ','CO2   ','O3    ','N2O   ','CO    ','CH4   ',
      &	'O2    ','NO    ','SO2   ','NO2   ','NH3   ','HNO3  ','OH    ','HF    ',

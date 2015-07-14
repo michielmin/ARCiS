@@ -18,7 +18,7 @@ ifeq ($(debug),true)
   ifeq ($(gfort),true)
     DEBUGGING = -fbounds-check -fbacktrace -fcheck=all
   else	
-    DEBUGGING = -check all -traceback -check bounds -O0 -g -check -fpe0
+    DEBUGGING = -check all -traceback -check bounds -O0 -g
   endif
 endif
 
@@ -80,7 +80,8 @@ OBJS	= Modules.o \
 		WaterData.o \
 		KuruczData.o \
 		MCRad.o \
-		OpacityFITS.o
+		OpacityFITS.o \
+		ComputeT.o
 
 # program name and install location
 PROGRAM       = SPARC

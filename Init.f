@@ -460,6 +460,12 @@ c allocate the arrays
 			read(key%value,*) nTom
 		case("opacitydir")
 			opacitydir=trim(key%value)
+		case("computet")
+			read(key%value,*) computeT
+		case("teffp","tplanet")
+			read(key%value,*) TeffP
+		case("maxiter")
+			read(key%value,*) maxiter
 		case default
 			do i=1,48
 				if(key%key.eq.molname(i)) then
@@ -750,6 +756,8 @@ c allocate the arrays
 	nspike=0
 
 	retrieval=.false.
+	computeT=.false.
+	TeffP=600d0
 	outputopacity=.false.
 	nr=20
 	
@@ -789,6 +797,8 @@ c allocate the arrays
 	nPom=50
 	Tmin=71d0
 	Tmax=2900d0
+	
+	maxiter=6
 	
 	return
 	end
@@ -890,8 +900,8 @@ c number of cloud/nocloud combinations
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 lam0
-	integer i
+	real*8 lam0,T0,Planck
+	integer i,j
 	
 	lam0=lam1
 	nlam=1
@@ -913,6 +923,15 @@ c number of cloud/nocloud combinations
 	
 	do i=1,nlam
 		freq(i)=1d0/lam(i)
+	enddo
+
+	allocate(BB(nBB,nlam))
+
+	do j=1,nBB
+		T0=real(j)
+		do i=1,nlam-1
+			BB(j,i)=Planck(T0,freq(i))
+		enddo
 	enddo
 
 	return

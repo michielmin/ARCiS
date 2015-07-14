@@ -391,7 +391,7 @@ c pressure broadening
 	real*8 nu(nnu),kline(nnu),Ccont,kap
 	real*8 kdis(nkdis),dis(nkdis),gb(ng+1)
 	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
-	integer inu,iT,imol,i,ju,jl,j,NV,nl,k,iiso,ir,NV0,iter,maxiter
+	integer inu,iT,imol,i,ju,jl,j,NV,nl,k,iiso,ir,NV0,iter
 	integer i_therm,i_press,inu1,inu2,ig(ng+1)
 	logical converged
 	real*8 f,a_t,a_p
@@ -466,7 +466,7 @@ c pressure broadening
 	real*8 nu(nnu),dnu(nnu)
 	real*8 kline(nnu)
 	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
-	integer iT,imol,i,ju,jl,j,nkdis,NV,k,iiso,ir,NV0,iter,maxiter
+	integer iT,imol,i,ju,jl,j,nkdis,NV,k,iiso,ir,NV0,iter
 	integer i_therm,i_press,il,idnu,inu1,inu2,inu
 	real*8 f,a_t,a_p
 	

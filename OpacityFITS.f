@@ -364,7 +364,7 @@ C	 create the new empty FITS file
 			if(lam(ilam).le.lamF(i).and.lam(ilam).gt.lamF(i-1)) i1=i
 			if(lam(ilam+1).ge.lamF(i).and.lam(ilam+1).lt.lamF(i+1)) i2=i
 		enddo
-		if(i1.eq.i2) i2=i1+1
+		if(i1.ge.i2) i2=i1+1
 		if(i1.gt.0) then
 			ngF=0
 			do i=i1,i2-1
@@ -379,6 +379,8 @@ C	 create the new empty FITS file
 			call sort(temp,ngF)
 			do ig=1,ng
 				j=1+real(ngF-1)*real(ig-1)/real(ng-1)
+				if(j.lt.1) j=1
+				if(j.gt.ngF) j=ngF
 				kappa_mol(imol,ilam,ig)=temp(j)
 			enddo
 		else

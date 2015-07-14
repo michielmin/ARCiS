@@ -5,13 +5,15 @@
 	integer nphase,iphase
 	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,v,flux,dx,dy,wphase(nphase)
 	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase(nphase),theta,fstop,albedo,ct1,ct2,E0
-	real*8 tot,g(nr)
+	real*8 tot,g(nr),Eabs,EJv(nr),Crw(nr)
 	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,irdark
 	logical docloud(nclouds),goingup,hitR,onedge,hitR1,hitR2,dorw(nr)
 	type(Mueller) M(nr)
 	
 	NphotPlanet=250/real(ng)+10
 	NphotStar=25000/real(nr*ng)+10
+
+	EJv=0d0
 
 	flux=0d0
 	phase=0d0
@@ -37,7 +39,8 @@
 			call Crossections(ir,ilam,ig,Ca(ir),Cs(ir),docloud)
 			Ce(ir)=Ca(ir)+Cs(ir)
 			dorw(ir)=.false.
-			if((R(ir+1)-R(ir))*(Ca(ir)+Cs(ir)*(1d0-g(ir))).gt.factRW) dorw(ir)=.true.
+			Crw(ir)=Ca(ir)+Cs(ir)*(1d0-g(ir))
+			if((R(ir+1)-R(ir))*Crw(ir).gt.factRW) dorw(ir)=.true.
 		enddo
 
 		do ir=nr,1,-1
@@ -66,7 +69,7 @@
 					jr=ir
 					onedge=.false.
 					goingup=((x*dx+y*dy+z*dz).gt.0d0)
-					call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,g,M,dorw)
+					call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,0.5d0,Eabs,EJv)
 					if(jr.gt.nr.and.nscat.gt.0) then
 						flux=flux+E*E0/real(ng)
 					endif
@@ -96,7 +99,7 @@
 				goingup=.false.
 				onedge=.true.
 				jr=nr
-				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,g,M,dorw)
+				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,0.5d0,Eabs,EJv)
 				if(jr.gt.nr.and.nscat.gt.0) then
 					iphase=real(nphase)*(1d0-dz)/2d0+1
 					if(iphase.lt.1) iphase=1
@@ -112,16 +115,17 @@
 	end
 	
 	
-	subroutine travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,g,M,dorw)
+	subroutine travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,powstop,Eabs,EJv)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 x,y,z,dx,dy,dz,E,Ce(nr),Ca(nr),Cs(nr),g(nr)
+	real*8 x,y,z,dx,dy,dz,E,Ce(nr),Ca(nr),Cs(nr),g(nr),powstop,EJv(nr),Eabs,Crw(nr)
 	integer jr,nscat,jrnext,nscat0
 	logical onedge,goingup,hitR1,hitR2,hitR,RandomWalk,absorbed,dorw(nr)
 	real*8 tau,R1,R2,b,vR1,vR2,rr,v,tau_v,albedo,fstop,random,rho
 	type(Mueller) M(nr)
 
+	Eabs=1d0
 	E=1d0
 	nscat=0
 	nscat0=0
@@ -134,7 +138,7 @@
 	rr=x**2+y**2+z**2
 	rho=sqrt(rr)
 	if(dorw(jr)) then
-		if(RandomWalk(x,y,z,dx,dy,dz,rho,E,Ce(jr),Ca(jr),Cs(jr),g(jr),jr,nscat,absorbed)) goto 2
+		if(RandomWalk(x,y,z,dx,dy,dz,rho,E,Cs(jr),Ce(jr),Crw(jr),g(jr),jr,nscat,absorbed,0.5d0,Eabs,EJv(jr))) goto 2
 	endif
 	R1=R(jr)**2
 	R2=R(jr+1)**2
@@ -163,11 +167,13 @@
 		jrnext=jr-1
 	endif
 	tau_v=v*Ce(jr)
+	albedo=(Cs(jr)/Ce(jr))
 	if(tau_v.lt.tau) then
 		x=x+v*dx
 		y=y+v*dy
 		z=z+v*dz
 		tau=tau-tau_v
+		EJv(jr)=EJv(jr)+tau_v*(1d0-albedo)
 		jr=jrnext
 		if(jr.gt.nr) return
 		if(jr.lt.1) then
@@ -177,15 +183,17 @@
 			nscat=nscat+1
 		endif
 		onedge=.true.
-		goto 2
+		goto 1
 	endif
-	albedo=(Cs(jr)/Ce(jr))
-	fstop=1d0-albedo**0.5d0
-	if(random(idum).lt.fstop) return
 	v=tau/Ce(jr)
 	x=x+v*dx
 	y=y+v*dy
 	z=z+v*dz
+	EJv(jr)=EJv(jr)+tau*(1d0-albedo)
+
+	fstop=1d0-albedo**powstop
+	if(random(idum).lt.fstop) return
+
 	call scattangle(M(jr),dx,dy,dz)
 	nscat=nscat+1
 	onedge=.false.
@@ -432,21 +440,19 @@ c-----------------------------------------------------------------------
 	end module RandomWalkModule
 
 	
-	logical function RandomWalk(x,y,z,dx,dy,dz,rr,E,Ce,Ca,Cs,g,jr,nscat,absorbed)
+	logical function RandomWalk(x,y,z,dx,dy,dz,rr,E,Cs,Ce,Crw,g,jr,nscat,absorbed,powstop,Eabs,EJv)
 	use GlobalSetup
 	use Constants
 	use RandomWalkModule
 	IMPLICIT NONE
-	real*8 dmin,v,ry,random,lr,x,y,z,dx,dy,dz,E,Ce,Ca,Cs,Kappa,g
-	real*8 rr,albedo,d1,d2,fstop
+	real*8 dmin,v,ry,random,lr,x,y,z,dx,dy,dz,E,Crw,Kappa,g,Cs,Ce
+	real*8 rr,albedo,d1,d2,fstop,powstop,EJv,Eabs
 	integer i,jr,nscat,iy
 	logical absorbed
 
 	RandomWalk=.false.
 
-	Kappa=Ca+Cs*(1d0-g)
-
-	lr=1d0/Kappa
+	lr=1d0/Crw
 
 	d1=abs(rr-R(jr))
 	d2=abs(rr-R(jr+1))
@@ -461,7 +467,7 @@ c-----------------------------------------------------------------------
 	iy=1
 	call hunt(phi,NY,ry,iy)
 
-	v=-3d0*log(yy(iy))*dmin**2/(lr*pi**2)
+	v=-3d0*log(yy(iy))*dmin**2/(lr**2*pi**2)
 
 	call randomdirection(dx,dy,dz)
 	x=x+dmin*dx
@@ -469,19 +475,18 @@ c-----------------------------------------------------------------------
 	z=z+dmin*dz
 
 	albedo=Cs/Ce
-	fstop=1d0-albedo**0.5d0
+	fstop=1d0-albedo**powstop
 	fstop=fstop**v
 	absorbed=.false.
-	if(random(idum).gt.fstop) then
-		absorbed=.true.
-		return
-	endif
-	
-	v=v/lr
-		
-	E=E*albedo**v/(1d0-fstop**v)
+
+	E=E*(albedo/(1d0-fstop))**v
+
+	EJv=EJv+v*(1d0-albedo)
+	Eabs=Eabs+v*(1d0-albedo)
 
 	nscat=nscat+v
+
+	if(random(idum).gt.fstop) absorbed=.true.
 
 	return
 	end

@@ -2,8 +2,8 @@
 	use GlobalSetup
 	IMPLICIT NONE
 	character*500 VersionGIT
-	logical converged
-	integer i
+	logical converged,Tconverged
+	integer i,nTiter
 	real*8 starttime,starttime0,stoptime
 
 	call cpu_time(starttime)
@@ -47,8 +47,18 @@ c terms of use
 	else
 		converged=.false.
 		do while(.not.converged)
+			Tconverged=.false.
 			call SetupStructure()
 			call SetupOpacities()
+			if(computeT) then
+				nTiter=0
+				do while(.not.Tconverged.and.nTiter.lt.maxiter)
+					call DoComputeT(Tconverged)
+					call SetupStructure()
+					call SetupOpacities()
+					nTiter=nTiter+1
+				enddo
+			endif
 			call cpu_time(stoptime)
 			call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 			call Raytrace()

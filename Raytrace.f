@@ -3,7 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot,Ag
-	real*8 Ca,Cs,BB(nr)
+	real*8 Ca,Cs,BBr(nr)
 	integer icloud,isize
 	real*8,allocatable :: rtrace(:),phase(:)
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig,nsub,j,k
@@ -89,7 +89,7 @@
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,
-!$OMP&         Ca,Cs,icloud,isize,BB)
+!$OMP&         Ca,Cs,icloud,isize,BBr)
 !$OMP& SHARED(nlam,freq,obs,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
 !$OMP&			cloud_dens)
 !$OMP DO SCHEDULE(STATIC,1)
@@ -99,7 +99,7 @@
 		obs%lam(ilam)=sqrt(lam(ilam)*lam(ilam+1))
 		obs%A(:,ilam)=0d0
 		do ir=1,nr
-			BB(ir)=Planck(T(ir),freq0)
+			BBr(ir)=Planck(T(ir),freq0)
 		enddo
 		do ig=1,ng
 			do icc=1,obs%ncc
@@ -154,7 +154,7 @@
 					tau=tau_a+d*Cs
 					exp_tau=exp(-tau)
 					tautot=tautot+tau
-					fluxg=fluxg+A*BB(ir)*(1d0-exp_tau)*fact*tau_a/tau
+					fluxg=fluxg+A*BBr(ir)*(1d0-exp_tau)*fact*tau_a/tau
 					fact=fact*exp_tau
 					if(ir_next.gt.0.and.ir_next.le.nr.and.tautot.lt.maxtau) then
 						ir=ir_next
