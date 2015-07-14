@@ -912,6 +912,7 @@ c number of cloud/nocloud combinations
 	
 	allocate(lam(nlam))
 	allocate(freq(nlam))
+	allocate(dfreq(nlam))
 	
 	i=1
 	lam(i)=lam1
@@ -923,6 +924,10 @@ c number of cloud/nocloud combinations
 	
 	do i=1,nlam
 		freq(i)=1d0/lam(i)
+	enddo
+
+	do i=1,nlam-1
+		dfreq(i)=abs(freq(i+1)-freq(i))
 	enddo
 
 	allocate(BB(nBB,nlam))
