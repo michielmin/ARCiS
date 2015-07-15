@@ -2,7 +2,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 g,dp,dz,dlogp,RgasBar,sh,mix(nr,nmol)
+	real*8 g,dp,dz,dlogp,RgasBar,mix(nr,nmol)
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix
 	character*1000 form
@@ -45,9 +45,9 @@ c		call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 		endif
 		Ndens(i)=P(i)*Avogadro/(RgasBar*T(i))
 		dens(i)=Ndens(i)*mp*mu
-		sh=(T(i)*kb)/(g*mp*mu)
+		Hp(i)=(T(i)*kb)/(g*mp*mu)
 		dz=dp/(dens(i)*g)
-		dz=dlogp*sh
+		dz=dlogp*Hp(i)
 		R(i+1)=R(i)+dz
 	enddo
 

@@ -38,7 +38,7 @@ c===============================================================================
 	real*8 Tstar,Rstar,logg,Dplanet
 	real*8,allocatable :: dens(:),T(:),P(:),Ndens(:)		! radius
 	real*8,allocatable :: dust_dens(:,:)					! radius, component
-	real*8,allocatable :: R(:)								! radius
+	real*8,allocatable :: R(:),Hp(:)						! radius
 	real*8,allocatable :: mixrat(:)							! component
 	real*8,allocatable :: mixrat_r(:,:)						! radius,component
 	real*8,allocatable :: Cabs(:,:,:),Csca(:,:)				! radius,wav,g

@@ -7,7 +7,7 @@
 	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:),spec(:,:)
 	real*8,allocatable :: specsource(:,:),Eplanck(:,:)
 	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,theta,ct1,ct2,Tc(nr),Ec(nr),EJv(nr),EJvTot(nr)
-	real*8 tot,Lum,tot2
+	real*8 tot,Lum,tot2,mu0,gamma,Cplanck(nr)
 	real*8 CabsL(nlam),Ca0,Cs0,T0,E0,Eabs,chi2,CabsLG(nlam,ng),Crw(nr),nabla,rho
 	integer iphot,ir,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,jr,ir0,jr0
 	integer iT1,iT2,iT,i
@@ -28,7 +28,7 @@
 	call output("Temperature computation (in beta phase!!)")
 
 	NphotPlanet=100
-	NphotStar=1000
+	NphotStar=100
 
 	call InitRandomWalk()
 
@@ -79,18 +79,44 @@
 		if((R(ir+1)-R(ir))*Crw(ir).gt.factRW) dorw(ir)=.true.
 	enddo
 
+	do ir=1,nr
+		iT=T(ir)+1
+		if(iT.gt.nBB-1) iT=nBB-1
+		CPlanck(ir)=0d0
+		tot2=0d0
+		do ilam=1,nlam-1
+			do ig=1,ng
+				CPlanck(ir)=CPlanck(ir)+dfreq(ilam)*BB(iT,ilam)*(Ca(ir,ilam,ig)+Cs(ir,ilam)*(1d0-g(ir,ilam)))
+				tot2=tot2+dfreq(ilam)*BB(iT,ilam)
+			enddo
+		enddo
+		CPlanck(ir)=CPlanck(ir)/tot2
+	enddo
+
 	Tc=2.7d0
 	Ec=0d0
 	EJvTot=0d0
 
 	jr0=0
 
-c	tau=0d0
-c	do ir=nr,1,-1
-c		tau=tau+Crw(ir)*(R(ir+1)-R(ir))
-c		T(ir)=TeffP*((3d0/4d0)*(tau+2d0/3d0))**0.25d0
-c	enddo
-c	return
+	tau=0d0
+	do ir=nr,1,-1
+		tau=tau+Crw(ir)*(R(ir+1)-R(ir))
+		Tc(ir)=TeffP*((3d0/4d0)*(tau+2d0/3d0))**0.25d0
+		T0=Tstar*sqrt(Rstar/Dplanet)
+		gamma=0.5
+		mu0=0.5
+		Tc(ir)=(Tc(ir)**4+mu0*T0**4*(-3d0*mu0*exp(-gamma*tau/mu0)/(4d0*gamma)
+     &		+3d0/2d0*(2d0/3d0+(mu0/gamma)**2-(mu0/gamma)**3*log(1d0+gamma/mu0))))**0.25
+		if(Tc(ir).gt.2900d0) Tc(ir)=2900d0
+		chi2=chi2+((T(ir)-Tc(ir))/((Tc(ir)+T(ir))*0.1))**2
+		T(ir)=Tc(ir)
+	enddo
+	chi2=chi2/real(nr)
+	converged=.false.
+	if(chi2.lt.3d0) converged=.true.
+	call output("Chi2: " // trim(dbl2string(chi2,'(f7.2)')))
+	return
 
 	docloud=.false.
 	do i=1,nclouds
@@ -222,13 +248,6 @@ c	return
 			enddo
 		enddo
 		call increaseT(T(ir),T0,EJvTot(ir),0d0,CabsL,ir,Eplanck)
-c		if(ir.lt.nr) then
-c			nabla=log(T(ir+1)/T0)/log(P(ir+1)/P(ir))
-c			if(nabla.gt.(2d0/7d0)) then
-c				nabla=2d0/7d0
-c				T0=T(ir+1)/exp(nabla*log(P(ir+1)/P(ir)))
-c			endif
-c		endif
 		chi2=chi2+((T(ir)-T0)/((T0+T(ir))*0.1))**2
 		T(ir)=sqrt(T(ir)*T0)
 	enddo
@@ -248,6 +267,29 @@ c		endif
 	
 	return
 	end
+
+	subroutine ConvectionTransport(x,y,z,ir)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 lr,x,y,z,rho1,rho2,random
+	integer ir
+
+	rho1=sqrt(x**2+y**2+z**2)
+	lr=-log(random(idum))*Hp(ir)
+	lr=random(idum)*Hp(ir)
+	lr=lr/rho1
+	x=x*(1d0+lr)
+	y=y*(1d0+lr)
+	z=z*(1d0+lr)
+	rho2=sqrt(x**2+y**2+z**2)
+	do ir=1,nr
+		if(rho2.lt.R(ir+1).and.rho2.gt.R(ir)) exit
+	enddo
+	
+	return
+	end	
+
 
 	subroutine increaseT(T1,T2,E,Eabs,CabsL,ir,Eplanck)
 	use GlobalSetup

@@ -588,6 +588,7 @@ c allocate the arrays
 	allocate(R(nr+1))
 	allocate(T(nr))
 	allocate(P(nr))
+	allocate(Hp(nr))
 	allocate(mixrat_r(nr,nmol))
 	allocate(cloud_dens(nr,max(nclouds,1)))
 
