@@ -7,7 +7,7 @@
 	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:),spec(:,:)
 	real*8,allocatable :: specsource(:,:),Eplanck(:,:)
 	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,theta,ct1,ct2,Tc(nr),Ec(nr),EJv(nr),EJvTot(nr)
-	real*8 tot,Lum,tot2,mu0,gamma,Cplanck(nr)
+	real*8 tot,Lum,tot2,mu0,gamma,Cplanck(nr),Cstar(nr)
 	real*8 CabsL(nlam),Ca0,Cs0,T0,E0,Eabs,chi2,CabsLG(nlam,ng),Crw(nr),nabla,rho
 	integer iphot,ir,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,jr,ir0,jr0
 	integer iT1,iT2,iT,i
@@ -30,12 +30,16 @@
 	NphotPlanet=100
 	NphotStar=100
 
+	docloud=.false.
+	do i=1,nclouds
+		if(Cloud(i)%coverage.gt.0.5) docloud(i)=.true.
+	enddo
+
 	call InitRandomWalk()
 
 	ir0=nr
 	do ilam=1,nlam
 		do ig=1,ng
-			tau=0d0
 			do ir=1,nr
 				call Crossections(ir,ilam,ig,Ca(ir,ilam,ig),Cs(ir,ilam),docloud)
 				Ce(ir,ilam,ig)=Ca(ir,ilam,ig)+Cs(ir,ilam)
@@ -53,7 +57,6 @@
 		enddo
 	enddo
 	ir0=1
-
 	do ir=1,nr
 		iT=T(ir)+1
 		if(iT.gt.nBB-1) iT=nBB-1
@@ -91,6 +94,16 @@
 			enddo
 		enddo
 		CPlanck(ir)=CPlanck(ir)/tot2
+
+		Cstar(ir)=0d0
+		tot2=0d0
+		do ilam=1,nlam-1
+			do ig=1,ng
+				Cstar(ir)=Cstar(ir)+dfreq(ilam)*Fstar(ilam)*(Ca(ir,ilam,ig)+Cs(ir,ilam)*(1d0-g(ir,ilam)))
+				tot2=tot2+dfreq(ilam)*Fstar(ilam)
+			enddo
+		enddo
+		Cstar(ir)=Cstar(ir)/tot2
 	enddo
 
 	Tc=2.7d0
@@ -100,11 +113,13 @@
 	jr0=0
 
 	tau=0d0
+	tot=0d0
 	do ir=nr,1,-1
 		tau=tau+Crw(ir)*(R(ir+1)-R(ir))
+		tot=tot+Cstar(ir)*(R(ir+1)-R(ir))
 		Tc(ir)=TeffP*((3d0/4d0)*(tau+2d0/3d0))**0.25d0
 		T0=Tstar*sqrt(Rstar/Dplanet)
-		gamma=0.5
+		gamma=Cstar(ir)/CPlanck(ir)
 		mu0=0.5
 		Tc(ir)=(Tc(ir)**4+mu0*T0**4*(-3d0*mu0*exp(-gamma*tau/mu0)/(4d0*gamma)
      &		+3d0/2d0*(2d0/3d0+(mu0/gamma)**2-(mu0/gamma)**3*log(1d0+gamma/mu0))))**0.25
@@ -117,11 +132,6 @@
 	if(chi2.lt.3d0) converged=.true.
 	call output("Chi2: " // trim(dbl2string(chi2,'(f7.2)')))
 	return
-
-	docloud=.false.
-	do i=1,nclouds
-		if(Cloud(i)%coverage.gt.0.5) docloud(i)=.true.
-	enddo
 
 	if(TeffP.gt.0d0) then
 	call output("Internal heating")
