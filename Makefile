@@ -81,7 +81,8 @@ OBJS	= Modules.o \
 		KuruczData.o \
 		MCRad.o \
 		OpacityFITS.o \
-		ComputeT.o
+		ComputeT.o \
+		polyPartition.o
 
 # program name and install location
 PROGRAM       = SPARC

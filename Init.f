@@ -172,7 +172,7 @@ c===============================================================================
 	type(SettingKey),pointer :: key
 	integer i,j,ncia0,n
 	character*500 homedir,h2h2file,h2hefile,h2ch4file,TPfile
-	character*10 names(48)
+	character*10 names(59)
 	logical existh2h2,existh2he,existh2ch4,mixratfile
 
 	key => firstkey
@@ -211,7 +211,7 @@ c===============================================================================
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nretr) nretr=key%nr1
 			case default
-				do i=1,48
+				do i=1,59
 					if(key%key.eq.molname(i)) then
 						if(i.gt.nmol) nmol=i
 						j=j+1
@@ -226,7 +226,7 @@ c===============================================================================
 		read(30,*) n
 		read(30,*) names(1:n)
 		do j=1,n
-			do i=1,48
+			do i=1,59
 				if(names(j).eq.molname(i)) then
 					if(i.gt.nmol) nmol=i
 				endif
@@ -467,7 +467,7 @@ c allocate the arrays
 		case("maxiter")
 			read(key%value,*) maxiter
 		case default
-			do i=1,48
+			do i=1,59
 				if(key%key.eq.molname(i)) then
 					read(key%value,*) mixrat(i)
 					includemol(i)=.true.
@@ -601,7 +601,7 @@ c allocate the arrays
 		read(20,*) n
 		read(20,*) names(1:n)
 		do j=1,n
-			do i=1,48
+			do i=1,59
 				if(names(j).eq.molname(i)) then
 					imol(j)=i
 					includemol(imol(j))=.true.

@@ -4,11 +4,11 @@
 	IMPLICIT NONE
 	character*12 imol,iiso,nu,S,A,gamma_air,gamma_self,E,n,delta,gu,gl
 	character*100 dummy,homedir,file
-	logical exist,doneHITEMP(48)
+	logical exist,doneHITEMP(59)
 	integer i,j,k,maxiiso,it,ifile,nfile,nHITEMP,nHITRAN
 	real*8 scale,f_numin,f_numax,x3,x4
-c H2O, CO2, CO, NO, OH
-	parameter(nfile=34+20+1+1+1)
+c H2O, CO2, CO, NO, OH, (Na,K,TiO,VO)
+	parameter(nfile=34+20+1+1+1+4)
 	character*30 files(nfile)
 	parameter(files = (/
      &	'01_0-50_HITEMP2010.par        ','01_1000-1150_HITEMP2010.par   ','01_11000-30000_HITEMP2010.par ',
@@ -29,7 +29,9 @@ c H2O, CO2, CO, NO, OH
      &	'02_4000-4500_HITEMP2010.par   ','02_4500-5000_HITEMP2010.par   ','02_500-625_HITEMP2010.par     ',
      &	'02_5000-5500_HITEMP2010.par   ','02_5500-6000_HITEMP2010.par   ','02_6000-6500_HITEMP2010.par   ',
      &	'02_625-750_HITEMP2010.par     ','02_6500-12785_HITEMP2010.par  ','02_750-1000_HITEMP2010.par    ',
-     &	'05_HITEMP2010new.par          ','08_HITEMP2010.par             ','13_HITEMP2010.par             ' /))
+     &	'05_HITEMP2010new.par          ','08_HITEMP2010.par             ','13_HITEMP2010.par             ',
+     &  '56_RemcoNa.par                ','57_RemcoK.par                 ','58_RemcoTiO.par               ',
+     &  '59_RemcoVO.par                ' /))
 	integer ind1,ind2,ind3
 
 	doneHITEMP=.false.
@@ -133,7 +135,7 @@ c done counting, now read it in!
 				if(freq(1).ge.f_numin.and.freq(nlam).le.f_numax) then
 					open(unit=30,file=file,RECL=500)
 
-5					read(30,'(i2,i1,f12.0,f10.0,f10.0,f5.0,f5.0,f10.0,f4.0,a87,f7.0,f7.0)',end=6) 
+5					read(30,'(i2,i1,f12.0,f10.0,f10.0,f5.0,f5.0,f10.0,f4.0,a87,f7.0,f7.0)',end=6,err=5) 
      &					L_imol(i),L_iiso(i),L_freq(i),L_S0(i),L_Aul(i),L_gamma_air(i),L_gamma_self(i),
      &					L_Elow(i),L_n(i),dummy,L_gu(i),L_gl(i)
 					j=L_imol(i)
@@ -157,7 +159,7 @@ c done counting, now read it in!
 
 	if(nHITRAN.gt.0) then
 		open(unit=30,file=trim(HITRANdir) // "HITRAN2012.par",RECL=500)
-7		read(30,'(i2,i1,f12.0,f10.0,f10.0,f5.0,f5.0,f10.0,f4.0,a87,f7.0,f7.0)',end=8) 
+7		read(30,'(i2,i1,f12.0,f10.0,f10.0,f5.0,f5.0,f10.0,f4.0,a87,f7.0,f7.0)',end=8,err=7) 
      &			L_imol(i),L_iiso(i),L_freq(i),L_S0(i),L_Aul(i),L_gamma_air(i),L_gamma_self(i),
      &			L_Elow(i),L_n(i),dummy,L_gu(i),L_gl(i)
 		j=L_imol(i)

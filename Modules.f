@@ -60,25 +60,27 @@ c===============================================================================
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ,nspike
 	integer,allocatable :: niso(:)
-	real*8 Mmol(48),mu
+	real*8 Mmol(59),mu
 	integer nBB
 	parameter(nBB=2900)
 	real*8,allocatable :: BB(:,:)						! nBB,nlam
-	character*10 molname(48)
+	character*10 molname(59)
 	parameter(molname = (/'H2O   ','CO2   ','O3    ','N2O   ','CO    ','CH4   ',
      &	'O2    ','NO    ','SO2   ','NO2   ','NH3   ','HNO3  ','OH    ','HF    ',
      &	'HCl   ','HBr   ','HI    ','ClO   ','OCS   ','H2CO  ','HOCl  ','N2    ',
      &	'HCN   ','CH3Cl ','H2O2  ','C2H2  ','C2H6  ','PH3   ','COF2  ','SF6   ',
      &	'H2S   ','HCOOH ','HO2   ','O     ','ClONO2','NO+   ','HOBr  ','C2H4  ',
      &	'CH3OH ','CH3Br ','CH3CN ','CF4   ','C4H2  ','HC3N  ','H2    ','CS    ',
-     &	'SO3   ','He    ' /))
+     &	'SO3   ','He    ','X     ','X     ','X     ','X     ','X     ','X     ',
+     &  'X     ','Na    ','K     ','TiO   ','VO    ' /))
 	parameter(Mmol = (/     17.8851,  43.6918,  47.6511,  43.6947,  27.8081,  15.9272,  
      &	31.7674,  29.7889,  63.5840,  45.6607,  16.9072,  62.5442,  16.8841,  19.8619,  
-     &	36.1973,  80.3271, 126.9884,  51.0760,  59.6379,  29.8088,  52.0765,  27.8112,  
+     &	36.1973,  80.3271,   1.0070,  51.0760,  59.6379,  29.8088,  52.0765,  27.8112,  
      &	26.8304,  50.1116,  33.7598,  25.8499,  29.8518,  33.7516,  65.5261, 144.9081,  
      &	33.8332,  45.6731,  32.7593,  15.8794,  96.7366,  29.7813,  96.2063,  27.8507,  
      &	31.7949,  94.2413,  40.7302,  87.3580,  49.6543,  50.6424,   2.0014,  43.7539,  
-     &	79.3792,   2.0000 /))
+     &	79.3792,   4.0030,   0.0000,   0.0000,   0.0000,   0.0000,   0.0000,   0.0000,
+     &   0.0000,  22.9900,  39.0980,  63.8660,  66.9410 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt
 	logical HITEMP,opacitymode,compute_opac
@@ -117,7 +119,7 @@ c===============================================================================
 	end type CIA_pair
 	
 	type(CIA_pair),allocatable :: CIA(:)
-	real*8 cia_mixrat(50)
+	real*8 cia_mixrat(59)
 
 	type Mueller
 		real*8 F11(180),F12(180),F22(180)

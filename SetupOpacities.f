@@ -143,7 +143,7 @@ c		close(unit=30)
 	allocate(inu1(nlam))
 	allocate(inu2(nlam))
 
-	n_voigt=1d6
+	n_voigt=1d8
 	allocate(a_therm(n_voigt))
 	allocate(a_press(n_voigt))
 	tanscale=atan(cutoff_lor)
@@ -171,7 +171,7 @@ c		close(unit=30)
      &		trim(int2string(ir,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
 		call output("T = " // trim(dbl2string(T(ir),'(f8.2)')) // " K")
 		call output("P = " // trim(dbl2string(P(ir),'(es8.2)')) // " Ba")
-		call LineStrengthWidth(ir,dnu,freq(nlam),freq(1))
+		call LineStrengthWidth(ir,dnu,freq(nlam),freq(1),Saver)
 		dnu=dnu/2d0
 		n_nu_line=abs(freq(1)/freq(nlam))/dnu
 		nu1=freq(1)
@@ -201,7 +201,7 @@ c		close(unit=30)
 			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
 		enddo
 		call output("Compute lines")
-		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line)
+		call ComputeKline(ir,nu_line,k_line,n_nu_line,dnu_line,Saver)
 		if(outputopacity) call WriteOpacity(ir,"line",nu_line,k_line,n_nu_line,1)
 		call output("Compute k-tables")
 		call tellertje(1,nlam-1)
@@ -270,12 +270,12 @@ c		close(unit=30)
 	return
 	end
 	
-	subroutine LineStrengthWidth(ir,minw,nu1,nu2)
+	subroutine LineStrengthWidth(ir,minw,nu1,nu2,SaverTot)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 w,x1,x2,minw,nu1,nu2,Saver(nlam),gamma,Saver0(nlam)
-	integer imol,iT,i,ir,iiso,nl,nl0,ilam,nlines_lam(nlam)
+	real*8 w,x1,x2,minw,nu1,nu2,Saver(nlam),gamma,Saver0(nlam),SaverTot
+	integer imol,iT,i,ir,iiso,nl,nl0,ilam,nlines_lam(nlam),j
 
 	call output("Line strengths and widths")
 	
@@ -310,10 +310,12 @@ c line strength
 	minw=sqrt(minw)
 	call tellertje(nlines,nlines)
 
+
 	Saver=0d0
 	nl=nlines*2
 
 1	continue
+
 	nl0=nl
 	Saver0=Saver*eps_lines
 	Saver=0d0
@@ -339,7 +341,7 @@ c line strength
 !$OMP END PARALLEL
 
 	nl=sum(nlines_lam(1:nlam))
-
+	SaverTot=sum(Saver(1:nlam))/real(nl)
 	Saver=Saver/real(nlines_lam)
 	if(real(nl0).gt.(real(nl)*1.1)) goto 1
 
@@ -376,7 +378,7 @@ c pressure broadening
 	minw=sqrt(minw)
 
 	call output("number of lines: " // trim(dbl2string(dble(nl),'(es7.1)')))
-	
+
 	return
 	end
 	
@@ -457,18 +459,20 @@ c pressure broadening
 
 
 
-	subroutine ComputeKline(ir,nu,kline,nnu,dnu)
+	subroutine ComputeKline(ir,nu,kline,nnu,dnu,Saver)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
 	integer nnu
-	real*8 w,gamma,fact
+	real*8 w,gamma,fact,Saver
 	real*8 nu(nnu),dnu(nnu)
 	real*8 kline(nnu)
 	real*8 Eu,El,A,x,kmax,kmin,V,scale,x1,x2,gasdev,random,rr,gu,gl
 	integer iT,imol,i,ju,jl,j,nkdis,NV,k,iiso,ir,NV0,iter
 	integer i_therm,i_press,il,idnu,inu1,inu2,inu
 	real*8 f,a_t,a_p
+	integer ithread,nthreads,omp_get_max_threads,omp_get_thread_num
+	real*8,allocatable :: kline_omp(:)
 	
 	fact=50d0
 	kline=0d0
@@ -483,9 +487,12 @@ c	if(NV0.gt.25000) NV0=25000
 	call tellertje(1,nlines)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,imol,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2,NV,NV0)
+!$OMP& PRIVATE(i,imol,gamma,A,a_t,a_p,f,x1,x2,rr,x,inu,i_press,i_therm,idnu,inu1,inu2,NV,NV0,
+!$OMP&     ithread,kline_omp)
 !$OMP& SHARED(fact,mixrat_r,scale,kline,nnu,nu,nlines,a_therm,a_press,n_voigt,P,ir,cutoff_abs,
-!$OMP&     L_do,L_S,L_a_therm,L_a_press,L_freq,L_imol,L_nclose,nlam,L_Saver)
+!$OMP&     L_do,L_S,L_a_therm,L_a_press,L_freq,L_imol,L_nclose,nlam,L_Saver,Saver)
+	allocate(kline_omp(nnu))
+	kline_omp=0d0
 !$OMP DO SCHEDULE (STATIC,1)
 	do i=1,nlines
 		call tellertje(i+1,nlines+2)
@@ -497,10 +504,10 @@ c	if(NV0.gt.25000) NV0=25000
 			gamma=sqrt(a_t**2+a_p**2)
 			f=L_freq(i)
 c	Random sampling of the Voigt profile
-			NV0=real(nnu)*50d0/real(nlam*L_nclose(i)+1)+100d0
+			NV0=real(nnu)*100d0/real(nlam*L_nclose(i)+1)+100d0
 			if(NV0.gt.20000) NV0=20000
-			NV=real(NV0)*A/L_Saver(i)
-			if(NV.gt.100*NV0) NV=100*NV0
+			NV=real(NV0)*A*A/(Saver*L_Saver(i))
+			if(NV.gt.250*NV0) NV=250*NV0
 			if(NV.lt.25) NV=25
 
 			A=A/real(NV)
@@ -526,13 +533,16 @@ c	Random sampling of the Voigt profile
 					if(inu1.le.nnu.and.inu2.ge.1) then
 						if(inu1.lt.1) inu1=1
 						if(inu2.gt.nnu) inu2=nnu
-						kline(inu1:inu2)=kline(inu1:inu2)+A/real(inu2-inu1+1)
+						kline_omp(inu1:inu2)=kline_omp(inu1:inu2)+A/real(inu2-inu1+1)
 					endif
 				endif
 			enddo
 		endif
 	enddo
 !$OMP END DO
+!$OMP CRITICAL
+	kline(1:nnu)=kline(1:nnu)+kline_omp(1:nnu)
+!$OMP END CRITICAL
 !$OMP FLUSH
 !$OMP END PARALLEL
 	call tellertje(nlines,nlines)

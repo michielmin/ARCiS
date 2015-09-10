@@ -1,5 +1,5 @@
 C***********************
-      subroutine TIPS_2011(mol,iso,Temp,QT)
+      subroutine TIPS_2011(mol,iso_in,Temp,QT)
 C*********************** 
 C    Program TIPS_2011 written by R.R. Gamache
 C 
@@ -102,11 +102,15 @@ C
          return
        END IF
 C
-       IF (MOL.GT.NMOL .OR. MOL.LT.1) THEN
+       IF (MOL.LT.1) THEN
           WRITE (*,'(25X,A)')
      +    'Incorrect molecule assignment, try again'
           return
+       ELSE IF (MOL.GT.NMOL) THEN
+		  call polyPartition(mol,Temp,QT)
+          return
        END IF
+	iso=iso_in
 c
 C
 c       CALL ISO_82_TO_85 (MOL,NSO82,ISO)
@@ -2713,7 +2717,8 @@ c...        --       146
      + 0.20585E+11, 0.22140E+11, 0.23802E+11, 0.25576E+11, 0.27469E+11,
      + 0.29489E+11, 0.31642E+11, 0.33937E+11, 0.36382E+11, 0.38985E+11,
      + 0.41757E+11/
-  
+
+	if(iso.gt.1) iso=1  
       eps=0.01
 c
       gsi = xgj(iso)
@@ -2888,6 +2893,7 @@ c...        --        19
      + 0.46779E+03, 0.47332E+03, 0.47888E+03, 0.48448E+03, 0.49011E+03,
      + 0.49578E+03/
   
+	if(iso.gt.1) iso=1  
       eps=0.01
 c
       gsi = xgj(iso)
@@ -2975,6 +2981,7 @@ c...        --        17
      + 0.20948E+04, 0.21222E+04, 0.21498E+04, 0.21775E+04, 0.22055E+04,
      + 0.22337E+04/
   
+	if(iso.gt.2) iso=2  
       eps=0.01
 c
       gsi = xgj(iso)
@@ -3062,6 +3069,7 @@ c...        --        11
      + 0.27793E+04, 0.28169E+04, 0.28549E+04, 0.28931E+04, 0.29316E+04,
      + 0.29703E+04/
   
+	if(iso.gt.2) iso=2  
       eps=0.01
 c
       gsi = xgj(iso)
@@ -3123,6 +3131,7 @@ c...        --        17
      + 0.58555E+04, 0.59380E+04, 0.60212E+04, 0.61050E+04, 0.61895E+04,
      + 0.62746E+04/
   
+	if(iso.gt.1) iso=1  
       eps=0.01
 c
       gsi = xgj(iso)
@@ -3636,6 +3645,7 @@ c...        --        44
      + 0.67261E+04, 0.68168E+04, 0.69081E+04, 0.70001E+04, 0.70927E+04,
      + 0.71859E+04/
   
+	if(iso.gt.1) iso=1  
       eps=0.01
 c
       gsi = xgj(iso)
@@ -4010,6 +4020,7 @@ c...        --      1222
      + 0.82447E+07, 0.86797E+07, 0.91348E+07, 0.96108E+07, 0.10108E+08,
      + 0.10629E+08/
   
+	if(iso.gt.3) iso=3  
       eps=0.01
 c
       gsi = xgj(iso)
@@ -4097,6 +4108,7 @@ c...        --      1231
      + 0.17160E+12, 0.19204E+12, 0.21480E+12, 0.24010E+12, 0.26824E+12,
      + 0.29950E+12/
   
+	if(iso.gt.2) iso=2  
       eps=0.01
 c
       gsi = xgj(iso)
@@ -4219,6 +4231,7 @@ c...        --       269
      + 0.82703E+09, 0.87240E+09, 0.91992E+09, 0.96967E+09, 0.10218E+10,
      + 0.10763E+10/
   
+	if(iso.gt.1) iso=1  
       eps=0.01
 c
       gsi = xgj(iso)
