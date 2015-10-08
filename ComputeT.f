@@ -7,7 +7,7 @@
 	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:),spec(:,:)
 	real*8,allocatable :: specsource(:,:),Eplanck(:,:)
 	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,theta,ct1,ct2,Tc(nr),Ec(nr),EJv(nr),EJvTot(nr)
-	real*8 tot,Lum,tot2,mu0,gamma,Cplanck(nr),Cstar(nr)
+	real*8 tot,Lum,tot2,mu0,gamma,Cplanck(nr),Cstar(nr),dTdP_ad,dTdP
 	real*8 CabsL(nlam),Ca0,Cs0,T0,E0,Eabs,chi2,CabsLG(nlam,ng),Crw(nr),nabla,rho
 	integer iphot,ir,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,jr,ir0,jr0
 	integer iT1,iT2,iT,i
@@ -123,6 +123,14 @@
 		mu0=0.5
 		Tc(ir)=(Tc(ir)**4+mu0*T0**4*(-3d0*mu0*exp(-gamma*tau/mu0)/(4d0*gamma)
      &		+3d0/2d0*(2d0/3d0+(mu0/gamma)**2-(mu0/gamma)**3*log(1d0+gamma/mu0))))**0.25
+		dTdP_ad=2d0/7d0
+		if(ir.lt.nr) then
+			dTdP=log(Tc(ir)/T(ir+1))/log(P(ir)/P(ir+1))
+			if(dTdP.gt.dTdP_ad) then
+				Tc(ir)=T(ir+1)*exp(dTdP_ad*log(P(ir)/P(ir+1)))
+				dTdP=log(Tc(ir)/T(ir+1))/log(P(ir)/P(ir+1))
+			endif
+		endif
 		if(Tc(ir).gt.2900d0) Tc(ir)=2900d0
 		chi2=chi2+((T(ir)-Tc(ir))/((Tc(ir)+T(ir))*0.1))**2
 		T(ir)=Tc(ir)
