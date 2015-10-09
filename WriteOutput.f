@@ -35,6 +35,24 @@
 	enddo
 	close(unit=30)
 
+	filename=trim(outputdir) // "emisR"
+	call output("Writing spectrum to: " // trim(filename))
+	open(unit=30,file=filename,RECL=1000)
+	if(nclouds.gt.0) then
+		form='("#",a13,a19,' // trim(int2string(obs%ncc,'(i3)')) // 
+     &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
+     &				trim(int2string(nclouds,'(i3)')) // 'l1))'
+		write(30,form) "lambda [mu]","flux [Jy]",docloud(1:nclouds,1:obs%ncc)
+	else
+		write(30,'("#",a13,a19)') "lambda [mu]","flux [Jy]"
+	endif
+	form='(f14.6,' // int2string(obs%ncc+1,'(i3)') // 'es19.7)'
+	do i=1,nlam-1
+		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+     &					obs%flux(0:obs%ncc,i)/(Fstar(i)*1d23/distance**2)
+	enddo
+	close(unit=30)
+
 
 	filename=trim(outputdir) // "trans"
 	call output("Writing spectrum to: " // trim(filename))
