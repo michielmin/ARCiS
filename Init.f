@@ -466,6 +466,10 @@ c allocate the arrays
 			read(key%value,*) TeffP
 		case("maxiter")
 			read(key%value,*) maxiter
+		case("chemistry")
+			read(key%value,*) dochemistry
+		case("metallicity")
+			read(key%value,*) metallicity
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -656,6 +660,11 @@ c allocate the arrays
 				mixrat_r(i,imol(j))=mr0(nr+1-i,j)
 			enddo
 		endif
+		if(dochemistry) then
+			do j=1,nmol
+				call MorleyChemistry(mixrat_r(i,j),T(i),P(i),molname(j),metallicity)
+			enddo
+		endif
 	enddo
 
 	do i=1,nclouds
@@ -733,6 +742,9 @@ c allocate the arrays
 	includemol=.false.
 	
 	obs%nphase=45
+
+	dochemistry=.false.
+	metallicity=1d0
 
 	do i=1,nclouds
 		Cloud(i)%P=1d-4

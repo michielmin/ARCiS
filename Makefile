@@ -82,7 +82,8 @@ OBJS	= Modules.o \
 		MCRad.o \
 		OpacityFITS.o \
 		ComputeT.o \
-		polyPartition.o
+		polyPartition.o \
+		ChemistryMorley.o
 
 # program name and install location
 PROGRAM       = SPARC

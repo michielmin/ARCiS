@@ -53,8 +53,9 @@ c===============================================================================
 	integer idum,maxiter
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT
+	logical dochemistry
 	logical,allocatable :: includemol(:)
-	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
+	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,metallicity
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
