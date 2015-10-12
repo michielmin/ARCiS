@@ -37154,8 +37154,24 @@
 
 	wT1=abs(T0-T(iT2))/(T(iT2)-T(iT1))
 	wT2=1d0-wT1
+	if(T0.lt.T(1)) then
+		wT1=1d0
+		wT2=0d0
+	endif
+	if(T0.gt.T(nT)) then
+		wT1=0d0
+		wT2=1d0
+	endif
 	wP1=log(P(iP2)/P0)/log(P(iP2)/P(iP1))
 	wP2=1d0-wP1
+	if(P0.lt.P(1)) then
+		wP1=1d0
+		wP2=0d0
+	endif
+	if(P0.gt.P(nP)) then
+		wP1=0d0
+		wP2=1d0
+	endif
 
 	abun_tot00=wT1*(wP1*abun00(iT1,iP1,iM)+wP2*abun00(iT1,iP2,iM))+wT2*(wP1*abun00(iT2,iP1,iM)+wP2*abun00(iT2,iP2,iM))
 	abun_tot03=wT1*(wP1*abun03(iT1,iP1,iM)+wP2*abun03(iT1,iP2,iM))+wT2*(wP1*abun03(iT2,iP1,iM)+wP2*abun03(iT2,iP2,iM))
