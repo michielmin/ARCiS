@@ -55,7 +55,8 @@ c===============================================================================
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT
 	logical dochemistry
 	logical,allocatable :: includemol(:)
-	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,metallicity
+	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
+	real*8 metallicity,PQ
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
@@ -144,6 +145,10 @@ c===============================================================================
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 
+
+cPoints for the temperature structure
+	real*8,allocatable :: P_point(:),T_point(:)
+	integer n_points
 
 c========================================================
 c Interfaces for input/output subroutines

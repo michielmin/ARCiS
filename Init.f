@@ -182,6 +182,7 @@ c===============================================================================
 	ncia=0
 	nclouds=0
 	nretr=0
+	n_points=0
 	j=0
 	mixratfile=.false.
 	do while(.not.key%last)
@@ -210,6 +211,10 @@ c===============================================================================
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nretr) nretr=key%nr1
+			case("point")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr2.eq.0) key%nr2=1
+				if(key%nr1.gt.n_points) n_points=key%nr1
 			case default
 				do i=1,59
 					if(key%key.eq.molname(i)) then
@@ -237,6 +242,8 @@ c===============================================================================
 	allocate(mixrat(nmol))
 	allocate(includemol(nmol))
 	allocate(Cloud(max(nclouds,1)))
+	allocate(P_point(max(n_points,1)))
+	allocate(T_point(max(n_points,1)))
 
 	ncia0=0
 	existh2h2=.false.
@@ -470,6 +477,8 @@ c allocate the arrays
 			read(key%value,*) dochemistry
 		case("metallicity")
 			read(key%value,*) metallicity
+		case("point")
+			call ReadPoint(key)
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -581,7 +590,8 @@ c allocate the arrays
 	use Constants
 	IMPLICIT NONE
 	integer i,j,n
-	real*8 g,dp,dz,P0(nr),T0(nr),pp,tt,mr0(nr,nmol),mm(nmol)
+	real*8 g,dp,dz,P0(nr),T0(nr),pp,tt,mr0(nr,nmol),mm(nmol),yp1,ypn
+	real*8,allocatable :: y2(:)
 	character*500 TPfile
 	character*10 names(nmol)
 	integer imol(nmol)
@@ -645,6 +655,20 @@ c allocate the arrays
 		enddo
 		if(TPfile.ne.' ') then
 			call regridlog(TPfile,P0,T0,nr)
+		else if(n_points.gt.1) then
+			P_point=log10(P_point)
+			T_point=log10(T_point)
+			allocate(y2(n_points))
+			yp1=0d0
+			ypn=0d0
+			call spline(P_point,T_point,n_points,yp1,ypn,y2)
+			do i=1,nr
+				call splint(P_point,T_point,y2,n_points,log10(P0(i)),T0(i))
+				T0(i)=10d0**T0(i)
+			enddo
+			deallocate(y2)
+			P_point=10d0**P_point
+			T_point=10d0**T_point
 		else
 			do i=1,nr
 				T0(i)=10d0**(log10(TP0)+dTP*log10(P0(i)))
@@ -849,6 +873,28 @@ c number of cloud/nocloud combinations
 	select case(key%key2)
 		case("nphase")
 			read(key%value,*) obs%nphase
+		case default
+			call output("Keyword not recognised: " // trim(key%key2))
+	end select
+	
+	return
+	end
+
+	
+	subroutine ReadPoint(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i
+	i=key%nr1
+	
+	select case(key%key2)
+		case("p")
+			read(key%value,*) P_point(i)
+		case("t")
+			read(key%value,*) T_point(i)
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
