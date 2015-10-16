@@ -68,9 +68,9 @@
 	form='(f14.6,' // int2string(obs%ncc+1,'(i3)') // 'es19.7)'
 	do i=1,nlam-1
 		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
-     &		((Fstar(i)*1d23/distance**2)*obs%A(0,i)/(pi*Rstar**2)-obs%flux(0,i)-obs%phase(1,0,i))/
-     &		(Fstar(i)*1d23/distance**2),
-     &					obs%A(0,i)/(pi*Rstar**2)
+     &					obs%A(0:obs%ncc,i)/(pi*Rstar**2)
+c     &		((Fstar(i)*1d23/distance**2)*obs%A(0,i)/(pi*Rstar**2)-obs%flux(0,i)-obs%phase(1,0,i))/
+c     &		(Fstar(i)*1d23/distance**2)
 	enddo
 	close(unit=30)
 
