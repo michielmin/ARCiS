@@ -183,6 +183,7 @@ c===============================================================================
 	nclouds=0
 	nretr=0
 	n_points=0
+	n_ret=0
 	j=0
 	mixratfile=.false.
 	do while(.not.key%last)
@@ -215,6 +216,10 @@ c===============================================================================
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.n_points) n_points=key%nr1
+			case("retpar","fitpar")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr2.eq.0) key%nr2=1
+				if(key%nr1.gt.n_ret) n_ret=key%nr1
 			case default
 				do i=1,59
 					if(key%key.eq.molname(i)) then
@@ -244,6 +249,7 @@ c===============================================================================
 	allocate(Cloud(max(nclouds,1)))
 	allocate(P_point(max(n_points,1)))
 	allocate(T_point(max(n_points,1)))
+	allocate(RetPar(max(n_ret,1)))
 
 	ncia0=0
 	existh2h2=.false.
@@ -479,6 +485,8 @@ c allocate the arrays
 			read(key%value,*) metallicity
 		case("point")
 			call ReadPoint(key)
+		case("retpar","fitpar")
+			call ReadRetrieval(key)
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -508,6 +516,12 @@ c allocate the arrays
 	else
 		call InitDens(TPfile,mixratfile)
 		call InitObs()
+		do i=1,nclouds
+			call output("==================================================================")
+			call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
+			call SetupPartCloud(i)
+			allocate(Cloud(i)%w(Cloud(i)%nsize))
+		enddo
 	endif
 
 	allocate(Cabs(nr,nlam,ng))
@@ -691,13 +705,6 @@ c allocate the arrays
 		endif
 	enddo
 
-	do i=1,nclouds
-		call output("==================================================================")
-		call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
-		call SetupPartCloud(i)
-		allocate(Cloud(i)%w(Cloud(i)%nsize))
-	enddo
-
 	return
 	end	
 
@@ -793,11 +800,17 @@ c allocate the arrays
 	nspike=0
 
 	retrieval=.false.
+	do i=1,n_ret
+		RetPar(i)%x0=0.5
+		RetPar(i)%dx=-1d0
+		RetPar(i)%logscale=.false.
+	enddo
+
 	computeT=.false.
 	TeffP=600d0
 	outputopacity=.false.
 	nr=20
-	
+
 	Pmin=1d-6
 	Pmax=1d+3
 
@@ -895,6 +908,35 @@ c number of cloud/nocloud combinations
 			read(key%value,*) P_point(i)
 		case("t")
 			read(key%value,*) T_point(i)
+		case default
+			call output("Keyword not recognised: " // trim(key%key2))
+	end select
+	
+	return
+	end
+
+	subroutine ReadRetrieval(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i
+	i=key%nr1
+	
+	select case(key%key2)
+		case("keyword","parameter")
+			read(key%value,*) RetPar(i)%keyword
+		case("min","xmin")
+			read(key%value,*) RetPar(i)%xmin
+		case("max","xmax")
+			read(key%value,*) RetPar(i)%xmax
+		case("init","x")
+			read(key%value,*) RetPar(i)%x0
+		case("spread","width","dx")
+			read(key%value,*) RetPar(i)%dx
+		case("log","logscale")
+			read(key%value,*) RetPar(i)%logscale
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

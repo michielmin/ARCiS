@@ -258,6 +258,8 @@ C	 create the new empty FITS file
 	call ftgkyj(unit,'ng',Ktable(imol)%ng,comment,status)
 
 	call output("Reading in correlated k-tables for " // trim(molname(imol)))
+	call output("   wavelength range: " // trim(dbl2string(Ktable(imol)%lam1*1d4,'(es8.2)')) // " - " 
+     &		// trim(dbl2string(Ktable(imol)%lam2*1d4,'(es8.2)')) // " micron")
 
 	firstpix=1
 

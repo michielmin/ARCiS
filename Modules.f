@@ -150,6 +150,15 @@ cPoints for the temperature structure
 	real*8,allocatable :: P_point(:),T_point(:)
 	integer n_points
 
+	type RetrievalPar
+		character*50 keyword
+		real*8 xmin,xmax,x0,dx
+		logical logscale
+	end type RetrievalPar
+
+	type(RetrievalPar),allocatable :: RetPar(:)
+	integer n_ret
+
 c========================================================
 c Interfaces for input/output subroutines
 c========================================================
