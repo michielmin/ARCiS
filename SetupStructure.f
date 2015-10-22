@@ -2,11 +2,9 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 g,dp,dz,dlogp,RgasBar,mix(nr,nmol)
+	real*8 g,dp,dz,dlogp,RgasBar
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix
-	character*1000 form
-	character*10 namemix(nmol)
 
 	g=Ggrav*Mplanet/Rplanet**2
 	call output("log(g) [cgs]: " // dbl2string(log10(g),'(f8.3)'))
@@ -55,6 +53,18 @@ c		call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 		call SetupCloud(i)
 	enddo
 
+	return
+	end
+
+	subroutine WriteStructure()
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 mix(nr,nmol)
+	integer i,imol,nmix
+	character*1000 form
+	character*10 namemix(nmol)
+	
 	open(unit=50,file=trim(outputdir) // 'densityprofile.dat',RECL=100)
 	write(50,'("#",a14,a15,a15,a13,a10,a10)') "radius [cm]","height [cm]","dens [g/cm^3]","N [1/cm^3]","T [K]","P [Ba]"
 	do i=1,nr
@@ -90,6 +100,7 @@ c		call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 
 	return
 	end
+	
 	
 
 	subroutine SetupCloud(ii)

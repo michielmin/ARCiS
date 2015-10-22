@@ -47,7 +47,7 @@ c===============================================================================
 	integer nangle_Jscat
 	parameter(nangle_Jscat=60)
 	real*8,allocatable :: Jscat(:,:)						! radius, angle
-	integer nT,np,nr,nmol,nlam,nobs		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
+	integer nT,np,nr,nmol,nlam		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines,ng,ncia,nclouds
 	character*500 outputdir,HITRANdir,HITEMPdir
 	integer idum,maxiter
@@ -56,6 +56,8 @@ c===============================================================================
 	logical dochemistry
 	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
+	logical mixratfile
+	character*500 TPfile
 	real*8 metallicity,PQ
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)
@@ -143,12 +145,23 @@ cPoints for the temperature structure
 
 	type RetrievalPar
 		character*50 keyword
-		real*8 xmin,xmax,x0,dx
+		real*8 xmin,xmax,x0,dx,value
 		logical logscale
 	end type RetrievalPar
 
 	type(RetrievalPar),allocatable :: RetPar(:)
 	integer n_ret
+	
+	type ObservedSpec
+		character*500 file
+		character*10 type
+		real*8,allocatable :: lam(:),y(:),dy(:)
+		integer nlam
+	end type ObservedSpec
+	type(ObservedSpec),allocatable :: ObsSpec(:)
+
+	integer npop,ngen,nobs
+	logical gene_cross
 	
 
 c========================================================

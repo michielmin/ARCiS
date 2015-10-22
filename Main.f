@@ -2,12 +2,10 @@
 	use GlobalSetup
 	IMPLICIT NONE
 	character*500 VersionGIT
-	logical converged,Tconverged
-	integer i,nTiter
-	real*8 starttime,starttime0,stoptime
+	integer i
+	real*8 starttime,stoptime
 
 	call cpu_time(starttime)
-	starttime0=starttime
 
 	call GetOutputDir
 	open(unit=9,file=trim(outputdir) // "log.dat",RECL=6000)
@@ -28,12 +26,11 @@ c terms of use
 
 	call Init()
 
-c	if(retrieval) call ReadObs()
+	if(retrieval) call ReadObs()
 
 	call cpu_time(stoptime)
 	call output("Initialisation time: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 	call output("==================================================================")
-	starttime=stoptime
 
 	if(opacitymode) then
 		do i=1,nmol
@@ -44,41 +41,48 @@ c	if(retrieval) call ReadObs()
 				call WriteOpacityFITS()
 			endif
 		enddo
+	else if(retrieval) then
+		call GeneticRetrieval()
 	else
-		converged=.false.
-		do while(.not.converged)
-			Tconverged=.false.
-			call SetupStructure()
-			call SetupOpacities()
-			if(computeT) then
-				nTiter=0
-				do while(.not.Tconverged.and.nTiter.lt.maxiter)
-					call DoComputeT(Tconverged)
-					call SetupStructure()
-					call SetupOpacities()
-					nTiter=nTiter+1
-				enddo
-			endif
-			call cpu_time(stoptime)
-			call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
-			call Raytrace()
-			if(retrieval) then
-				call AdjustParameters(converged)
-			else
-				converged=.true.
-			endif
-			call cpu_time(stoptime)
-			call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
-			starttime=stoptime
-		enddo
+		call WriteStructure()
+		call ComputeModel()
 		call WriteOutput()
 	endif
 
 	call cpu_time(stoptime)
 	call output("==================================================================")
-	call output("Total runtime:       " // trim(dbl2string((stoptime-starttime0),'(f10.2)')) // " s")
+	call output("Total runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 	call output("All done!")
 	call output("==================================================================")
 
 	end
 	
+
+	subroutine ComputeModel
+	use GlobalSetup
+	IMPLICIT NONE
+	logical Tconverged
+	integer nTiter
+	real*8 starttime,stoptime
+
+	call cpu_time(starttime)
+	Tconverged=.false.
+	call SetupStructure()
+	call SetupOpacities()
+	if(computeT) then
+		nTiter=0
+		do while(.not.Tconverged.and.nTiter.lt.maxiter)
+			call DoComputeT(Tconverged)
+			call SetupStructure()
+			call SetupOpacities()
+			nTiter=nTiter+1
+		enddo
+	endif
+	call cpu_time(stoptime)
+	call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+	call Raytrace()
+	call cpu_time(stoptime)
+	call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+
+	return
+	end

@@ -83,7 +83,9 @@ OBJS	= Modules.o \
 		OpacityFITS.o \
 		ComputeT.o \
 		polyPartition.o \
-		ChemistryMorley.o
+		ChemistryMorley.o \
+		Retrieval.o \
+		Genetic.o
 
 # program name and install location
 PROGRAM       = SPARC

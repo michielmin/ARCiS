@@ -171,9 +171,9 @@ c===============================================================================
 	type(SettingKey),target :: firstkey
 	type(SettingKey),pointer :: key
 	integer i,j,ncia0,n
-	character*500 homedir,h2h2file,h2hefile,h2ch4file,TPfile
+	character*500 homedir,h2h2file,h2hefile,h2ch4file
 	character*10 names(59)
-	logical existh2h2,existh2he,existh2ch4,mixratfile
+	logical existh2h2,existh2he,existh2ch4
 
 	key => firstkey
 
@@ -250,6 +250,7 @@ c===============================================================================
 	allocate(P_point(max(n_points,1)))
 	allocate(T_point(max(n_points,1)))
 	allocate(RetPar(max(n_ret,1)))
+	allocate(ObsSpec(max(nobs,1)))
 
 	ncia0=0
 	existh2h2=.false.
@@ -350,12 +351,7 @@ c==============================================================================
 	IMPLICIT NONE
 	type(SettingKey),pointer :: key,first
 	integer i,j,omp_get_max_threads,omp_get_thread_num
-	logical mixratfile
-	character*500 TPfile
 	real*8 tot,tot2,theta,Planck
-
-	TPfile=' '
-	mixratfile=.false.
 
 	idum=-42
 #ifdef USE_OPENMP
@@ -388,6 +384,91 @@ c allocate the arrays
 	key => first%next
 
 	do while(.not.key%last)
+
+		call ReadAndSetKey(key)
+
+		key => key%next
+	
+	enddo
+
+	call ConvertUnits()
+
+	call InitFreq()
+
+	if(opacitydir(len_trim(opacitydir)-1:len_trim(opacitydir)).ne.'/') then
+		opacitydir=trim(opacitydir) // '/'
+	endif
+	if(opacitymode) then
+		call InitOpacityMode()
+	else
+		allocate(dens(nr))
+		allocate(Ndens(nr))
+		allocate(R(nr+1))
+		allocate(T(nr))
+		allocate(P(nr))
+		allocate(Hp(nr))
+		allocate(mixrat_r(nr,nmol))
+		allocate(cloud_dens(nr,max(nclouds,1)))
+		call InitDens()
+		call InitObs()
+		do i=1,nclouds
+			call output("==================================================================")
+			call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
+			call SetupPartCloud(i)
+			allocate(Cloud(i)%w(Cloud(i)%nsize))
+		enddo
+	endif
+
+	allocate(Cabs(nr,nlam,ng))
+	allocate(Csca(nr,nlam))
+	do i=1,360
+		theta=(real(i)-0.5d0)*pi/180d0
+		sintheta(i)=sin(theta)
+		costheta(i)=cos(theta)
+	enddo
+	do i=1,180
+		Rayleigh%F11(i)=(1d0+costheta(i)**2)/2d0
+	enddo
+	tot=0d0
+	tot2=0d0
+	do i=1,180
+		tot=tot+Rayleigh%F11(i)*sintheta(i)
+		tot2=tot2+sintheta(i)
+	enddo
+	Rayleigh%F11=Rayleigh%F11*tot2/tot
+	Rayleigh%IF11=0d0
+	do j=2,180
+		Rayleigh%IF11(j)=Rayleigh%IF11(j-1)+sintheta(j)*Rayleigh%F11(j)
+	enddo
+
+	allocate(Fstar(nlam))
+	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam)
+	Fstar=Fstar*pi*Rstar**2*pi/3.336e11
+
+	call output("==================================================================")
+
+	if(compute_opac) then
+		call ReadData()
+	else
+		do i=1,nmol
+			if(includemol(i)) call InitReadOpacityFITS(i)
+		enddo
+	endif
+
+	call ReadDataCIA()
+
+	call output("==================================================================")
+	
+	return
+	end
+
+
+	subroutine ReadAndSetKey(key)
+	use GlobalSetup
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i
 
 	select case(key%key1)
 		case("nr")
@@ -487,6 +568,14 @@ c allocate the arrays
 			call ReadPoint(key)
 		case("retpar","fitpar")
 			call ReadRetrieval(key)
+		case("obs")
+			call ReadObsSpec(key)
+		case("npop")
+			read(key%value,*) npop
+		case("ngen")
+			read(key%value,*) ngen
+		case("gene_cross")
+			read(key%value,*) gene_cross
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -500,73 +589,8 @@ c allocate the arrays
 1			continue
 	end select
 
-	key => key%next
-	
-	enddo
-
-	call ConvertUnits()
-
-	call InitFreq()
-
-	if(opacitydir(len_trim(opacitydir)-1:len_trim(opacitydir)).ne.'/') then
-		opacitydir=trim(opacitydir) // '/'
-	endif
-	if(opacitymode) then
-		call InitOpacityMode()
-	else
-		call InitDens(TPfile,mixratfile)
-		call InitObs()
-		do i=1,nclouds
-			call output("==================================================================")
-			call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
-			call SetupPartCloud(i)
-			allocate(Cloud(i)%w(Cloud(i)%nsize))
-		enddo
-	endif
-
-	allocate(Cabs(nr,nlam,ng))
-	allocate(Csca(nr,nlam))
-	do i=1,360
-		theta=(real(i)-0.5d0)*pi/180d0
-		sintheta(i)=sin(theta)
-		costheta(i)=cos(theta)
-	enddo
-	do i=1,180
-		Rayleigh%F11(i)=(1d0+costheta(i)**2)/2d0
-	enddo
-	tot=0d0
-	tot2=0d0
-	do i=1,180
-		tot=tot+Rayleigh%F11(i)*sintheta(i)
-		tot2=tot2+sintheta(i)
-	enddo
-	Rayleigh%F11=Rayleigh%F11*tot2/tot
-	Rayleigh%IF11=0d0
-	do j=2,180
-		Rayleigh%IF11(j)=Rayleigh%IF11(j-1)+sintheta(j)*Rayleigh%F11(j)
-	enddo
-
-	allocate(Fstar(nlam))
-	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam)
-	Fstar=Fstar*pi*Rstar**2*pi/3.336e11
-
-	call output("==================================================================")
-
-	if(compute_opac) then
-		call ReadData()
-	else
-		do i=1,nmol
-			if(includemol(i)) call InitReadOpacityFITS(i)
-		enddo
-	endif
-
-	call ReadDataCIA()
-
-	call output("==================================================================")
-	
 	return
 	end
-
 
 	subroutine ConvertUnits()
 	use GlobalSetup
@@ -599,27 +623,16 @@ c allocate the arrays
 	end
 
 
-	subroutine InitDens(TPfile,mixratfile)
+	subroutine InitDens()
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
 	integer i,j,n
 	real*8 g,dp,dz,P0(nr),T0(nr),pp,tt,mr0(nr,nmol),mm(nmol),yp1,ypn
 	real*8,allocatable :: y2(:)
-	character*500 TPfile
 	character*10 names(nmol)
 	integer imol(nmol)
-	logical mixratfile
 	
-	allocate(dens(nr))
-	allocate(Ndens(nr))
-	allocate(R(nr+1))
-	allocate(T(nr))
-	allocate(P(nr))
-	allocate(Hp(nr))
-	allocate(mixrat_r(nr,nmol))
-	allocate(cloud_dens(nr,max(nclouds,1)))
-
 	do i=1,nr
 		mixrat_r(i,1:nmol)=mixrat(1:nmol)
 	enddo
@@ -777,6 +790,9 @@ c allocate the arrays
 	dochemistry=.false.
 	metallicity=1d0
 
+	TPfile=' '
+	mixratfile=.false.
+
 	do i=1,nclouds
 		Cloud(i)%P=1d-4
 		Cloud(i)%dP=10d0
@@ -805,6 +821,10 @@ c allocate the arrays
 		RetPar(i)%dx=-1d0
 		RetPar(i)%logscale=.false.
 	enddo
+	npop=30
+	ngen=200
+	gene_cross=.false.
+
 
 	computeT=.false.
 	TeffP=600d0
@@ -915,6 +935,27 @@ c number of cloud/nocloud combinations
 			read(key%value,*) RetPar(i)%dx
 		case("log","logscale")
 			read(key%value,*) RetPar(i)%logscale
+		case default
+			call output("Keyword not recognised: " // trim(key%key2))
+	end select
+	
+	return
+	end
+
+	subroutine ReadObsSpec(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i
+	i=key%nr1
+	
+	select case(key%key2)
+		case("type")
+			read(key%value,*) ObsSpec(i)%type
+		case("file")
+			read(key%value,*) ObsSpec(i)%file
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
