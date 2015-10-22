@@ -1,13 +1,13 @@
-	subroutine MCRad(ilam,flux,phase,nphase,docloud)
+	subroutine MCRad(ilam,fluxg,phase0,docloud0)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer nphase,iphase
-	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,v,flux,dx,dy,wphase(nphase)
-	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase(nphase),theta,fstop,albedo,ct1,ct2,E0
+	integer iphase
+	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,v,fluxg,dx,dy,wphase(nphase)
+	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase0(nphase),theta,fstop,albedo,ct1,ct2,E0
 	real*8 tot,g(nr),Eabs,EJv(nr),Crw(nr)
 	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,irdark
-	logical docloud(nclouds),goingup,hitR,onedge,hitR1,hitR2,dorw(nr)
+	logical docloud0(nclouds),goingup,hitR,onedge,hitR1,hitR2,dorw(nr)
 	type(Mueller) M(nr)
 	
 	NphotPlanet=250/real(ng)+10
@@ -15,8 +15,8 @@
 
 	EJv=0d0
 
-	flux=0d0
-	phase=0d0
+	fluxg=0d0
+	phase0=0d0
 	do iphase=1,nphase
 		ct1=1d0-2d0*real(iphase-1)/real(nphase)
 		ct2=1d0-2d0*real(iphase)/real(nphase)
@@ -24,7 +24,7 @@
 	enddo
 
 	do ir=1,nr
-		call GetMatrix(ir,ilam,M(ir),docloud)
+		call GetMatrix(ir,ilam,M(ir),docloud0)
 		g(ir)=0d0
 		tot=0d0
 		do iphase=1,180
@@ -36,7 +36,7 @@
 	
 	do ig=1,ng
 		do ir=1,nr
-			call Crossections(ir,ilam,ig,Ca(ir),Cs(ir),docloud)
+			call Crossections(ir,ilam,ig,Ca(ir),Cs(ir),docloud0)
 			Ce(ir)=Ca(ir)+Cs(ir)
 			dorw(ir)=.false.
 			Crw(ir)=Ca(ir)+Cs(ir)*(1d0-g(ir))
@@ -71,7 +71,7 @@
 					goingup=((x*dx+y*dy+z*dz).gt.0d0)
 					call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,0.5d0,Eabs,EJv)
 					if(jr.gt.nr.and.nscat.gt.0) then
-						flux=flux+E*E0/real(ng)
+						fluxg=fluxg+E*E0/real(ng)
 					endif
 				enddo
 			endif
@@ -104,7 +104,7 @@
 					iphase=real(nphase)*(1d0-dz)/2d0+1
 					if(iphase.lt.1) iphase=1
 					if(iphase.gt.nphase) iphase=nphase
-					phase(iphase)=phase(iphase)+wphase(iphase)*E*E0/real(ng)
+					phase0(iphase)=phase0(iphase)+wphase(iphase)*E*E0/real(ng)
 				endif
 			enddo
 		enddo		
@@ -204,17 +204,17 @@
 	end
 	
 	
-	subroutine Crossections(ir,ilam,ig,Ca,Cs,docloud)
+	subroutine Crossections(ir,ilam,ig,Ca,Cs,docloud0)
 	use GlobalSetup
 	IMPLICIT NONE
 	integer ir,ilam,ig,icloud,isize
 	real*8 Ca,Cs
-	logical docloud(nclouds)
+	logical docloud0(nclouds)
 
 	Ca=Cabs(ir,ilam,ig)*Ndens(ir)
 	Cs=Csca(ir,ilam)*Ndens(ir)
 	do icloud=1,nclouds
-		if(docloud(icloud)) then
+		if(docloud0(icloud)) then
 			do isize=1,Cloud(icloud)%nsize
 				Ca=Ca+
      &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
@@ -228,18 +228,18 @@
 	end
 	
 	
-	subroutine GetMatrix(ir,ilam,M,docloud)
+	subroutine GetMatrix(ir,ilam,M,docloud0)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
 	integer ir,i,ilam,icloud,isize
 	type(Mueller) M
-	logical docloud(nclouds)
+	logical docloud0(nclouds)
 	
 	M%F11=Rayleigh%F11*Csca(ir,ilam)*Ndens(ir)
 	M%IF11=Rayleigh%IF11*Csca(ir,ilam)*Ndens(ir)
 	do icloud=1,nclouds
-		if(docloud(icloud)) then
+		if(docloud0(icloud)) then
 			do isize=1,Cloud(icloud)%nsize
 				M%F11=M%F11+Cloud(icloud)%F(isize,ilam)%F11*
      &				Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)

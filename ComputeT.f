@@ -2,7 +2,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer nphase,iphase
+	integer iphase
 	real*8 z,dz,E,tau,Planck,random,v,dx,dy
 	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:),spec(:,:)
 	real*8,allocatable :: specsource(:,:),Eplanck(:,:)
@@ -11,7 +11,7 @@
 	real*8 CabsL(nlam),Ca0,Cs0,T0,E0,Eabs,chi2,CabsLG(nlam,ng),Crw(nr),nabla,rho
 	integer iphot,ir,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,jr,ir0,jr0
 	integer iT1,iT2,iT,i
-	logical docloud(nclouds),goingup,onedge,dorw(nr),converged
+	logical docloud0(nclouds),goingup,onedge,dorw(nr),converged
 	type(Mueller),allocatable :: M(:,:)
 	
 	allocate(specsource(nlam,1))
@@ -30,9 +30,9 @@
 	NphotPlanet=100
 	NphotStar=100
 
-	docloud=.false.
+	docloud0=.false.
 	do i=1,nclouds
-		if(Cloud(i)%coverage.gt.0.5) docloud(i)=.true.
+		if(Cloud(i)%coverage.gt.0.5) docloud0(i)=.true.
 	enddo
 
 	call InitRandomWalk()
@@ -41,7 +41,7 @@
 	do ilam=1,nlam
 		do ig=1,ng
 			do ir=1,nr
-				call Crossections(ir,ilam,ig,Ca(ir,ilam,ig),Cs(ir,ilam),docloud)
+				call Crossections(ir,ilam,ig,Ca(ir,ilam,ig),Cs(ir,ilam),docloud0)
 				Ce(ir,ilam,ig)=Ca(ir,ilam,ig)+Cs(ir,ilam)
 			enddo
 		enddo
@@ -63,7 +63,7 @@
 		Crw(ir)=0d0
 		tot2=0d0
 		do ilam=1,nlam-1
-			call GetMatrix(ir,ilam,M(ir,ilam),docloud)
+			call GetMatrix(ir,ilam,M(ir,ilam),docloud0)
 			g(ir,ilam)=0d0
 			tot=0d0
 			do iphase=1,180

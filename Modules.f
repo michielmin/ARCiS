@@ -92,19 +92,10 @@ c===============================================================================
 	real*8 sintheta(360),costheta(360)
 	logical,allocatable :: do_dB(:)
 
-	type Observation
-		real*8,allocatable :: lam(:),flux(:,:),A(:,:),phase(:,:,:)
-		real*8,allocatable :: dflux(:,:)
-		integer ncc,nphase
-		logical,allocatable :: docloud(:,:)
-		real*8,allocatable :: cloudfrac(:)
-		
-		character*10,allocatable :: retr_par(:)
-		real*8,allocatable :: retr_dpar(:)
-		integer,allocatable :: retr_ir(:)
-	end type Observation
-
-	type(Observation) obs
+	real*8,allocatable :: flux(:,:),obsA(:,:),phase(:,:,:)
+	integer ncc,nphase
+	logical,allocatable :: docloud(:,:)
+	real*8,allocatable :: cloudfrac(:)
 
 	integer,allocatable,dimension(:) :: L_imol,L_iiso,L_nclose,L_ilam
 	real*8,allocatable,dimension(:) :: L_Aul,L_freq,L_Elow,L_lam,L_S0,L_S
@@ -158,6 +149,7 @@ cPoints for the temperature structure
 
 	type(RetrievalPar),allocatable :: RetPar(:)
 	integer n_ret
+	
 
 c========================================================
 c Interfaces for input/output subroutines

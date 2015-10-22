@@ -408,8 +408,8 @@ c allocate the arrays
 			read(key%value,*) retrieval
 		case("outputopacity","writeopacity")
 			read(key%value,*) outputopacity
-		case("obs")
-			call ReadObs(key)
+		case("nphase")
+			read(key%value,*) nphase
 		case("cia")
 			call ReadCIA(key)
 		case("cutoff","cutoff_lor")
@@ -772,7 +772,7 @@ c allocate the arrays
 	mixrat=0d0
 	includemol=.false.
 	
-	obs%nphase=45
+	nphase=45
 
 	dochemistry=.false.
 	metallicity=1d0
@@ -860,39 +860,17 @@ c allocate the arrays
 	IMPLICIT NONE
 
 c number of cloud/nocloud combinations
-	obs%ncc=2**nclouds
-	allocate(obs%docloud(obs%ncc,nclouds))
-	allocate(obs%cloudfrac(obs%ncc))
-	allocate(obs%lam(nlam))
-	allocate(obs%flux(0:obs%ncc,nlam))
-	allocate(obs%A(0:obs%ncc,nlam))
-	allocate(obs%phase(obs%nphase,0:obs%ncc,nlam))
-	allocate(obs%dflux(nretr,nlam))
-	allocate(obs%retr_par(nretr))
-	allocate(obs%retr_dpar(nretr))
-	allocate(obs%retr_ir(nretr))
+	ncc=2**nclouds
+	allocate(docloud(ncc,nclouds))
+	allocate(cloudfrac(ncc))
+	allocate(flux(0:ncc,nlam))
+	allocate(obsA(0:ncc,nlam))
+	allocate(phase(nphase,0:ncc,nlam))
 
 	return
 	end
 	
 	
-	subroutine ReadObs(key)
-	use GlobalSetup
-	use Constants
-	use ReadKeywords
-	IMPLICIT NONE
-	type(SettingKey) key
-	
-	select case(key%key2)
-		case("nphase")
-			read(key%value,*) obs%nphase
-		case default
-			call output("Keyword not recognised: " // trim(key%key2))
-	end select
-	
-	return
-	end
-
 	
 	subroutine ReadPoint(key)
 	use GlobalSetup
