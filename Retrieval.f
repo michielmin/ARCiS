@@ -17,6 +17,7 @@
 		allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
 		do j=1,ObsSpec(i)%nlam
 3			read(20,*,err=3) ObsSpec(i)%lam(j),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
+			ObsSpec(i)%lam(j)=ObsSpec(i)%lam(j)*1d-4
 		enddo
 	enddo
 	
@@ -94,6 +95,11 @@
 		enddo
 		chi2obs(i)=chi2obs(i)/real(ObsSpec(i)%nlam)
 		ComputeChi2=ComputeChi2+chi2obs(i)
+		open(unit=40,file='file' // trim(int2string(i,'(i1)')))
+		do j=1,ObsSpec(i)%nlam
+			write(40,*) ObsSpec(i)%lam(j),spec(j),ObsSpec(i)%y(j)
+		enddo
+		close(unit=40)
 		deallocate(spec)
 	enddo
 
