@@ -88,11 +88,7 @@
 		end select
 		chi2obs(i)=0d0
 		do j=1,ObsSpec(i)%nlam
-			if(ObsSpec(i)%y(j).gt.(3d0*ObsSpec(i)%dy(j))) then
-				chi2obs(i)=chi2obs(i)+((spec(j)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
-			else
-				chi2obs(i)=chi2obs(i)+(spec(j)/(3d0*ObsSpec(i)%dy(j)))**2
-			endif
+			chi2obs(i)=chi2obs(i)+((spec(j)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
 		enddo
 		chi2obs(i)=chi2obs(i)/real(ObsSpec(i)%nlam)
 		ComputeChi2=ComputeChi2+chi2obs(i)
