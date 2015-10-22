@@ -89,7 +89,7 @@
 		chi2obs(i)=0d0
 		do j=1,ObsSpec(i)%nlam
 			if(ObsSpec(i)%y(j).gt.(3d0*ObsSpec(i)%dy(j))) then
-				chi2obs(i)=chi2obs(i)+(log(spec(j)/ObsSpec(i)%y(j))/(ObsSpec(i)%dy(j)/ObsSpec(i)%y(j)))**2
+				chi2obs(i)=chi2obs(i)+((spec(j)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
 			else
 				chi2obs(i)=chi2obs(i)+(spec(j)/(3d0*ObsSpec(i)%dy(j)))**2
 			endif
