@@ -71,6 +71,8 @@
 	call ConvertUnits()
 	
 	call InitDens()
+	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam)
+	Fstar=Fstar*pi*Rstar**2*pi/3.336e11
 	call ComputeModel()
 	
 	do i=1,nlam-1
