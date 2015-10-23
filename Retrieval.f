@@ -26,23 +26,173 @@
 
 
 
-	subroutine GeneticRetrieval()
+	subroutine DoRetrieval()
 	use GlobalSetup
 	IMPLICIT NONE
 	external ComputeChi2
-	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2
+	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret)
+	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:)
+	real*8 chi2obs(nobs),var(n_ret),chi2,chi2max,gasdev
+	real*8,allocatable :: W(:,:),WS(:)
+	integer imodel,ny,i,j,iter,iy
+	integer MDW,ME,MA,MG,MODE
+	integer,allocatable :: IP(:)
+	real*8 PRGOPT(1),RNORME,RNORML
 	
 	var0=0.5d0
 	dvar0=10d0
 	open(unit=31,file=trim(outputdir) // "Wolk.dat",RECL=6000)
 
-	call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross)	
+	if(ngen.gt.0) then
+c first genetic algoritm to make the first estimate
+		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross)
+	endif
+
+	imodel=npop*ngen
+	ny=0
+	do i=1,nobs
+		ny=ny+ObsSpec(i)%nlam
+	enddo
+	allocate(y(ny))
+	allocate(y1(ny))
+	allocate(y2(ny))
+	allocate(dy(n_ret,ny))
+	allocate(yobs(ny))
+	allocate(dyobs(ny))
+	MDW=ny+2*n_ret
+	ME=0
+	MA=ny
+	MG=n_ret*2
+	allocate(W(MDW,n_ret+1))
+	allocate(IP(10*(MG+2*n_ret+2)))
+	allocate(WS((2*(ME+n_ret)+max(MA+MG,n_ret)+(MG+2)*(n_ret+7))*10))
+	iy=1
+	do i=1,nobs
+		yobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%y(1:ObsSpec(i)%nlam)
+		dyobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%dy(1:ObsSpec(i)%nlam)
+		iy=iy+ObsSpec(i)%nlam
+	enddo
+	dvar=0.1d0
+	var=var0
+	chi2max=ComputeChi2(imodel,n_ret,var,nobs,chi2obs)
+	do iter=1,100
+		j=0
+1		continue
+		j=j+1
+		imodel=imodel+1
+		chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs)
+		if(chi2.gt.chi2max) then
+			var0=var
+			chi2max=chi2
+			call output("Updating best fit")
+			call WriteStructure()
+			call WriteOutput()
+			call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
+		else if(j.gt.3) then
+			var0=var
+		else
+			dvar=dvar/2d0
+			var=var0+dvar
+			goto 1
+		endif
+		iy=1
+		do i=1,nobs
+	 		call RemapObs(i,y(iy:iy+ObsSpec(i)%nlam-1))
+			iy=iy+ObsSpec(i)%nlam
+		enddo
+     	dvar=dvar/2d0
+		do i=1,n_ret
+			if(dvar(i).lt.1d-2) dvar(i)=1d-2
+			var=var0
+			var(i)=var(i)+dvar(i)
+			if(var(i).gt.1d0) var(i)=1d0
+			if(var(i).lt.0d0) var(i)=0d0
+			imodel=imodel+1
+			chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs)
+			if(chi2.gt.chi2max) then
+				chi2max=chi2
+				call output("Updating best fit")
+				call WriteStructure()
+				call WriteOutput()
+				call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
+			endif
+			iy=1
+			do j=1,nobs
+		 		call RemapObs(j,y1(iy:iy+ObsSpec(j)%nlam-1))
+				iy=iy+ObsSpec(j)%nlam
+			enddo
+			var=var0
+			var(i)=var(i)-dvar(i)
+			if(var(i).gt.1d0) var(i)=1d0
+			if(var(i).lt.0d0) var(i)=0d0
+			imodel=imodel+1
+			chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs)
+			if(chi2.gt.chi2max) then
+				chi2max=chi2
+				call output("Updating best fit")
+				call WriteStructure()
+				call WriteOutput()
+				call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
+			endif
+			iy=1
+			do j=1,nobs
+		 		call RemapObs(j,y2(iy:iy+ObsSpec(j)%nlam-1))
+				iy=iy+ObsSpec(j)%nlam
+			enddo
+			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/dvar(i)
+		enddo
+		iy=0
+		do i=1,n_ret
+			W(1:ny,i)=dy(i,1:ny)/dyobs(1:ny)
+			iy=iy+1
+			W(ny+iy,1:n_ret)=0d0
+			W(ny+iy,i)=-1d0
+			W(ny+iy,n_ret+1)=var0(i)-1d0
+			iy=iy+1
+			W(ny+iy,1:n_ret)=0d0
+			W(ny+iy,i)=1d0
+			W(ny+iy,n_ret+1)=-var0(i)
+		enddo
+		W(1:ny,n_ret+1)=(yobs(1:ny)-y(1:ny))/dyobs(1:ny)		
+
+		IP(1)=(2*(ME+n_ret)+max(MA+MG,n_ret)+(MG+2)*(n_ret+7))*10
+		IP(2)=(MG+2*n_ret+2)*10
+		PRGOPT(1)=1
+		MODE=0
+		call DLSEI (W, MDW, ME, MA, MG, n_ret, PRGOPT, dvar, RNORME,
+     +   RNORML, MODE, WS, IP)
+		var=var0+dvar
+	enddo
 
 	close(unit=31)
 	
 	return
 	end
-	
+
+	subroutine RemapObs(i,spec)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	integer i,j
+	real*8 spec(*)
+	real*8 lamobs(nlam-1)
+
+	do j=1,nlam-1
+		lamobs(j)=sqrt(lam(j)*lam(j+1))
+	enddo
+	select case(ObsSpec(i)%type)
+		case("trans","transmission")
+			call regridarray(lamobs,obsA(0,1:nlam-1)/(pi*Rstar**2),nlam-1,
+     &					ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
+		case("emis","emission")
+			call regridarray(lamobs,flux(0,1:nlam-1)/(Fstar(1:nlam-1)*1d23/distance**2),
+     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
+	end select
+
+
+	return
+	end
+		
 	
 	real*8 function ComputeChi2(imodel,nvars,var,nobs0,chi2obs)
 	use GlobalSetup
@@ -53,7 +203,6 @@
 	character*1000 readline
 	integer nvars,nobs0,i,j,imodel
 	real*8 var(nvars),chi2obs(nobs0)
-	real*8 lamobs(nlam-1)
 	real*8,allocatable :: spec(:)
 	
 	Rplanet=Rplanet/Rjup
@@ -76,19 +225,10 @@
 	Fstar=Fstar*pi*Rstar**2*pi/3.336e11
 	call ComputeModel()
 	
-	do i=1,nlam-1
-		lamobs(i)=sqrt(lam(i)*lam(i+1))
-	enddo
 	ComputeChi2=0d0
 	do i=1,nobs
 		allocate(spec(ObsSpec(i)%nlam))
-		select case(ObsSpec(i)%type)
-			case("trans","transmission")
-				call regridarray(lamobs,obsA(0,1:nlam-1)/(pi*Rstar**2),nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
-			case("emis","emission")
-				call regridarray(lamobs,flux(0,1:nlam-1)/(Fstar(1:nlam-1)*1d23/distance**2),
-     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
-		end select
+		call RemapObs(i,spec)
 		chi2obs(i)=0d0
 		do j=1,ObsSpec(i)%nlam
 			chi2obs(i)=chi2obs(i)+((spec(j)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2

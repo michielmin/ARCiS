@@ -85,7 +85,9 @@ OBJS	= Modules.o \
 		polyPartition.o \
 		ChemistryMorley.o \
 		Retrieval.o \
-		Genetic.o
+		Genetic.o \
+		dlsei.o \
+		Lapack.o
 
 # program name and install location
 PROGRAM       = SPARC

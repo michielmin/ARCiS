@@ -42,7 +42,7 @@ c terms of use
 			endif
 		enddo
 	else if(retrieval) then
-		call GeneticRetrieval()
+		call DoRetrieval()
 	else
 		call WriteStructure()
 		call ComputeModel()
