@@ -822,7 +822,7 @@ c allocate the arrays
 		RetPar(i)%logscale=.false.
 	enddo
 	npop=30
-	ngen=200
+	ngen=0
 	gene_cross=.false.
 
 
