@@ -37,13 +37,13 @@
 	
 	opac_tot=0d0
 
-c	call cpu_time(starttime)
+	nu1=0d0
+	nu2=1d0
+	do i=1,n_nu_line
+		nu_line(i)=1d0-real(i-1)/real(n_nu_line-1)
+	enddo
 	do ir=nr,1,-1
 		call tellertje(nr-ir+1,nr)
-c		call output("Opacities for layer: " // 
-c     &		trim(int2string(ir,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
-c		call output("T = " // trim(dbl2string(T(ir),'(f8.2)')) // " K")
-c		call output("P = " // trim(dbl2string(P(ir),'(es8.2)')) // " Ba")
 		cont_tot=0d0
 		do i=1,ncia
 			if(T(ir).lt.CIA(i)%T(1)) then
@@ -61,13 +61,12 @@ c		call output("P = " // trim(dbl2string(P(ir),'(es8.2)')) // " Ba")
 			kappa_mol(imol,1:nlam,1:ng)=0d0
 			if(mixrat_r(ir,imol).gt.0d0) call ReadOpacityFITS(kappa_mol,imol,ir)
 		enddo
-c		call output("Compute k-tables")
-		nu1=0d0
-		nu2=1d0
-		do i=1,n_nu_line
-			nu_line(i)=1d0-real(i-1)/real(n_nu_line-1)
-		enddo
+!$OMP PARALLEL IF(nlam.gt.200)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,j,nu1,nu2,k_line,imol,ig,kappa)
+!$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_r,ng,ir,kappa_mol,nu_line,cont_tot,freq,Cabs,Csca,opac_tot,Ndens,R)
 		allocate(k_line(n_nu_line))
+!$OMP DO
 		do i=1,nlam-1
 			nu1=-1d0
 			nu2=2d0
@@ -88,7 +87,10 @@ c		call output("Compute k-tables")
 			enddo
 			opac_tot(i,1:ng)=opac_tot(i,1:ng)+(Cabs(ir,i,1:ng)+Csca(ir,i))*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
+!$OMP END DO
 		deallocate(k_line)
+!$OMP FLUSH
+!$OMP END PARALLEL
 		if(outputopacity) then
 			call WriteOpacity(ir,"ktab",freq,Cabs(ir,1:nlam-1,1:ng),nlam-1,ng)
 			do i=1,nlam-1
@@ -99,15 +101,6 @@ c		call output("Compute k-tables")
 			enddo
 			call WriteOpacity(ir,"aver",freq,kaver(1:nlam-1),nlam-1,1)
 		endif
-	
-c		call cpu_time(stoptime)
-
-c		open(unit=30,file=trim(outputdir) // "opticaldepth" // trim(int2string(ir,'(i0.3)')) // ".dat",RECL=6000)
-c		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
-c		do i=1,nlam-1
-c			write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
-c		enddo
-c		close(unit=30)
 	enddo
 
 	open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)

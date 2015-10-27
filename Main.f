@@ -5,6 +5,8 @@
 	integer i
 	real*8 starttime,stoptime
 
+	call SetOutputMode(.true.)
+	
 	call cpu_time(starttime)
 
 	call GetOutputDir
@@ -63,9 +65,12 @@ c terms of use
 	IMPLICIT NONE
 	logical Tconverged
 	integer nTiter
-	real*8 starttime,stoptime
+	real*8 starttime,stoptime,starttime_w,stoptime_w,omp_get_wtime
 
 	call cpu_time(starttime)
+#if USE_OPENMP
+	starttime_w=omp_get_wtime()
+#ENDIF
 	Tconverged=.false.
 	call SetupStructure()
 	call SetupOpacities()
@@ -80,6 +85,10 @@ c terms of use
 	endif
 	call cpu_time(stoptime)
 	call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+#if USE_OPENMP
+	stoptime_w=omp_get_wtime()
+	call output("Walltime:            " // trim(dbl2string((stoptime_w-starttime_w),'(f10.2)')) // " s")
+#ENDIF
 	call Raytrace()
 	call cpu_time(stoptime)
 	call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")

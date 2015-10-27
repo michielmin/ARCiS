@@ -1,23 +1,32 @@
 	subroutine ReadObs()
 	use GlobalSetup
 	IMPLICIT NONE
-	integer i,j
+	integer i,j,ilam,nj
 	real*8 x,y,dy
 	
 	do i=1,nobs
 		open(unit=20,file=ObsSpec(i)%file,RECL=1000)
 		j=1
+		ilam=1
 1		read(20,*,end=2,err=1) x,y,dy
+		if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) ilam=ilam+1
 		j=j+1
 		goto 1
-2		ObsSpec(i)%nlam=j-1
+2		ObsSpec(i)%nlam=ilam-1
+		nj=j-1
 		rewind(20)
 		allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
 		allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
 		allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
-		do j=1,ObsSpec(i)%nlam
-3			read(20,*,err=3) ObsSpec(i)%lam(j),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
-			ObsSpec(i)%lam(j)=ObsSpec(i)%lam(j)*1d-4
+		ilam=1
+		do j=1,nj
+3			read(20,*,err=3) x,y,dy
+			if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) then
+				ObsSpec(i)%lam(ilam)=x*1d-4
+				ObsSpec(i)%y(ilam)=y
+				ObsSpec(i)%dy(ilam)=dy
+				ilam=ilam+1
+			endif
 		enddo
 	enddo
 	
@@ -32,12 +41,13 @@
 	external ComputeChi2
 	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret)
 	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:)
-	real*8 chi2obs(nobs),var(n_ret),chi2,chi2max,gasdev
+	real*8 chi2obs(nobs),var(n_ret),chi2,chi2max,gasdev,maxd
 	real*8,allocatable :: W(:,:),WS(:)
+	real*8 chi2_0,chi2_1,chi2_2
 	integer imodel,ny,i,j,iter,iy
 	integer MDW,ME,MA,MG,MODE
 	integer,allocatable :: IP(:)
-	real*8 PRGOPT(1),RNORME,RNORML
+	real*8 PRGOPT(10),RNORME,RNORML
 	
 	var0=0.5d0
 	dvar0=10d0
@@ -74,27 +84,37 @@ c first genetic algoritm to make the first estimate
 	enddo
 	dvar=0.1d0
 	var=var0
-	chi2max=ComputeChi2(imodel,n_ret,var,nobs,chi2obs)
+	imodel=imodel+1
+	chi2_0=1d200
+	chi2_1=1d200
+	chi2_2=1d200
+	chi2max=0d0
 	do iter=1,100
+		call output("Iteration number" // trim(int2string(iter,'(i4)')))
 		j=0
 1		continue
 		j=j+1
 		imodel=imodel+1
 		chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs)
-		if(chi2.gt.chi2max) then
+		if(chi2.ge.chi2max) then
 			var0=var
 			chi2max=chi2
 			call output("Updating best fit")
 			call WriteStructure()
 			call WriteOutput()
 			call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
-		else if(j.gt.3) then
+		else if(j.gt.3.or.iter.eq.1) then
 			var0=var
 		else
 			dvar=dvar/2d0
 			var=var0+dvar
 			goto 1
 		endif
+		chi2_2=1d0/chi2
+		print*,chi2_0,chi2_1,chi2_2
+		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
+		chi2_0=chi2_1
+		chi2_1=chi2_2
 		iy=1
 		do i=1,nobs
 	 		call RemapObs(i,y(iy:iy+ObsSpec(i)%nlam-1))
@@ -157,11 +177,21 @@ c first genetic algoritm to make the first estimate
 
 		IP(1)=(2*(ME+n_ret)+max(MA+MG,n_ret)+(MG+2)*(n_ret+7))*10
 		IP(2)=(MG+2*n_ret+2)*10
-		PRGOPT(1)=1
+		PRGOPT(1)=2
+		PRGOPT(2)=1
+		PRGOPT(3)=1
+		PRGOPT(4)=1
 		MODE=0
 		call DLSEI (W, MDW, ME, MA, MG, n_ret, PRGOPT, dvar, RNORME,
      +   RNORML, MODE, WS, IP)
 		var=var0+dvar
+		do i=1,n_ret
+			maxd=0d0
+			do j=1,n_ret
+				if(W(i,j).gt.maxd) maxd=W(i,j)
+			enddo
+			print*,i,maxd
+		enddo
 	enddo
 
 	close(unit=31)
@@ -184,8 +214,11 @@ c first genetic algoritm to make the first estimate
 		case("trans","transmission")
 			call regridarray(lamobs,obsA(0,1:nlam-1)/(pi*Rstar**2),nlam-1,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
-		case("emis","emission")
+		case("emisr","emisR")
 			call regridarray(lamobs,flux(0,1:nlam-1)/(Fstar(1:nlam-1)*1d23/distance**2),
+     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
+		case("emisa","emis","emission")
+			call regridarray(lamobs,flux(0,1:nlam-1),
      &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
 	end select
 
@@ -223,7 +256,9 @@ c first genetic algoritm to make the first estimate
 	call InitDens()
 	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam)
 	Fstar=Fstar*pi*Rstar**2*pi/3.336e11
+	call SetOutputMode(.false.)
 	call ComputeModel()
+	call SetOutputMode(.true.)
 	
 	ComputeChi2=0d0
 	do i=1,nobs

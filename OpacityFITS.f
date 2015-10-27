@@ -320,7 +320,6 @@ C	 create the new empty FITS file
 		return
 	endif
 
-	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam))
 	allocate(lamF(Ktable(imol)%nlam))
 
 	do ilam=1,Ktable(imol)%nlam
@@ -359,6 +358,12 @@ C	 create the new empty FITS file
 		wT2=1d0-wT1
 	endif
  
+!$OMP PARALLEL IF(nlam.gt.200)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j)
+!$OMP& SHARED(nlam,Ktable,lam,lamF,wT1,wT2,wP1,wP2,kappa_mol,imol,iT,iP,ng)
+	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam))
+!$OMP DO
 	do ilam=1,nlam-1
 		i1=0
 		i2=0
@@ -389,6 +394,9 @@ C	 create the new empty FITS file
 			kappa_mol(imol,ilam,1:ng)=0d0
 		endif
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 
 	return
 	end

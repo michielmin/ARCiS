@@ -29,9 +29,25 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 
+	module OutputModeModule
+	IMPLICIT NONE
+	logical do_output
+	end module OutputModeModule
+
+	subroutine SetOutputMode(doit)
+	use OutputModeModule
+	IMPLICIT NONE
+	logical doit
+	do_output=doit
+	return
+	end
+
 	subroutine output(string)
+	use OutputModeModule
 	IMPLICIT NONE
 	character string*(*)
+
+	if(.not.do_output) return
 
 	write(*,'(a)') trim(string)
 	write(9,'(a)') trim(string)
@@ -43,8 +59,10 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 
 	subroutine output_erase(string)
+	use OutputModeModule
 	IMPLICIT NONE
 	character string*(*)
+	if(.not.do_output) return
 
 	write(*,'(1a1,a,$)') char(13),trim(string)
 	write(9,'(1a1,a,$)') char(13),trim(string)
@@ -111,9 +129,12 @@ c-----------------------------------------------------------------------
 
 	subroutine tellertje(i,n)
 	use GlobalSetup
+	use OutputModeModule
 	IMPLICIT NONE
 	integer i,n,f
-	
+
+	if(.not.do_output) return
+
 	if(i.eq.1) call output("....................")
 
 	f=int(20d0*dble(i)/dble(n))

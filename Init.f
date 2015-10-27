@@ -523,7 +523,7 @@ c allocate the arrays
 		case("specres")
 			read(key%value,*) specres
 		case("tpfile")
-			read(key%value,'(a)') TPfile
+			TPfile=key%value
 		case("mixratfile")
 			read(key%value,*) mixratfile
 		case("gridtpfile")
@@ -955,7 +955,7 @@ c number of cloud/nocloud combinations
 		case("type")
 			read(key%value,*) ObsSpec(i)%type
 		case("file")
-			read(key%value,*) ObsSpec(i)%file
+			ObsSpec(i)%file=key%value
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
@@ -977,7 +977,7 @@ c number of cloud/nocloud combinations
 	else
 		select case(key%key2)
 			case("file")
-				read(key%value,'(a)') CIA(i)%filename
+				CIA(i)%filename=key%value
 			case default
 				call output("Keyword not recognised: " // trim(key%key2))
 		end select
