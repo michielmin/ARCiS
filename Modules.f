@@ -146,7 +146,7 @@ cPoints for the temperature structure
 	type RetrievalPar
 		character*50 keyword
 		real*8 xmin,xmax,x0,dx,value
-		logical logscale
+		logical logscale,squarescale
 	end type RetrievalPar
 
 	type(RetrievalPar),allocatable :: RetPar(:)

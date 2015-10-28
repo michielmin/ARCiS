@@ -820,6 +820,7 @@ c allocate the arrays
 		RetPar(i)%x0=0.5
 		RetPar(i)%dx=-1d0
 		RetPar(i)%logscale=.false.
+		RetPar(i)%squarescale=.false.
 	enddo
 	npop=30
 	ngen=0
@@ -935,6 +936,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) RetPar(i)%dx
 		case("log","logscale")
 			read(key%value,*) RetPar(i)%logscale
+		case("square","squarescale")
+			read(key%value,*) RetPar(i)%squarescale
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

@@ -43,7 +43,7 @@
 	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:)
 	real*8 chi2obs(nobs),var(n_ret),chi2,chi2max,gasdev,maxd
 	real*8,allocatable :: W(:,:),WS(:)
-	real*8 chi2_0,chi2_1,chi2_2
+	real*8 chi2_0,chi2_1,chi2_2,x1,x2
 	integer imodel,ny,i,j,iter,iy
 	integer MDW,ME,MA,MG,MODE
 	integer,allocatable :: IP(:)
@@ -84,7 +84,6 @@ c first genetic algoritm to make the first estimate
 	enddo
 	dvar=0.1d0
 	var=var0
-	imodel=imodel+1
 	chi2_0=1d200
 	chi2_1=1d200
 	chi2_2=1d200
@@ -111,7 +110,6 @@ c first genetic algoritm to make the first estimate
 			goto 1
 		endif
 		chi2_2=1d0/chi2
-		print*,chi2_0,chi2_1,chi2_2
 		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 		chi2_0=chi2_1
 		chi2_1=chi2_2
@@ -127,6 +125,7 @@ c first genetic algoritm to make the first estimate
 			var(i)=var(i)+dvar(i)
 			if(var(i).gt.1d0) var(i)=1d0
 			if(var(i).lt.0d0) var(i)=0d0
+			x1=var(i)
 			imodel=imodel+1
 			chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs)
 			if(chi2.gt.chi2max) then
@@ -145,6 +144,7 @@ c first genetic algoritm to make the first estimate
 			var(i)=var(i)-dvar(i)
 			if(var(i).gt.1d0) var(i)=1d0
 			if(var(i).lt.0d0) var(i)=0d0
+			x2=var(i)
 			imodel=imodel+1
 			chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs)
 			if(chi2.gt.chi2max) then
@@ -159,7 +159,7 @@ c first genetic algoritm to make the first estimate
 		 		call RemapObs(j,y2(iy:iy+ObsSpec(j)%nlam-1))
 				iy=iy+ObsSpec(j)%nlam
 			enddo
-			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/dvar(i)
+			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/abs(x1-x2)
 		enddo
 		iy=0
 		do i=1,n_ret
@@ -185,13 +185,6 @@ c first genetic algoritm to make the first estimate
 		call DLSEI (W, MDW, ME, MA, MG, n_ret, PRGOPT, dvar, RNORME,
      +   RNORML, MODE, WS, IP)
 		var=var0+dvar
-		do i=1,n_ret
-			maxd=0d0
-			do j=1,n_ret
-				if(W(i,j).gt.maxd) maxd=W(i,j)
-			enddo
-			print*,i,maxd
-		enddo
 	enddo
 
 	close(unit=31)
@@ -298,6 +291,9 @@ c first genetic algoritm to make the first estimate
 		if(RetPar(i)%logscale) then
 c	log
 			RetPar(i)%value=10d0**(log10(RetPar(i)%xmin)+log10(RetPar(i)%xmax/RetPar(i)%xmin)*var(i))
+		else if(RetPar(i)%squarescale) then
+c	square
+			RetPar(i)%value=sqrt(RetPar(i)%xmin**2+(RetPar(i)%xmax**2-RetPar(i)%xmin**2)*var(i))
 		else
 c	linear
 			RetPar(i)%value=RetPar(i)%xmin+(RetPar(i)%xmax-RetPar(i)%xmin)*var(i)
