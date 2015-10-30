@@ -95,6 +95,11 @@ c first genetic algoritm to make the first estimate
 		j=j+1
 		imodel=imodel+1
 		chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs,error)
+		iy=1
+		do i=1,nobs
+	 		call RemapObs(i,y(iy:iy+ObsSpec(i)%nlam-1))
+			iy=iy+ObsSpec(i)%nlam
+		enddo
 		if(chi2.ge.chi2max) then
 			var0=var
 			chi2max=chi2
@@ -114,11 +119,6 @@ c first genetic algoritm to make the first estimate
 c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 		chi2_0=chi2_1
 		chi2_1=chi2_2
-		iy=1
-		do i=1,nobs
-	 		call RemapObs(i,y(iy:iy+ObsSpec(i)%nlam-1))
-			iy=iy+ObsSpec(i)%nlam
-		enddo
      	dvar=dvar/2d0
 		do i=1,n_ret
 			if(dvar(i).lt.1d-2) dvar(i)=1d-2
@@ -129,6 +129,11 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 			x1=var(i)
 			imodel=imodel+1
 			chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs,error)
+			iy=1
+			do j=1,nobs
+		 		call RemapObs(j,y1(iy:iy+ObsSpec(j)%nlam-1))
+				iy=iy+ObsSpec(j)%nlam
+			enddo
 			if(chi2.gt.chi2max) then
 				chi2max=chi2
 				call output("Updating best fit")
@@ -137,11 +142,6 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 				call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
 				call WritePTlimits(var,W0)
 			endif
-			iy=1
-			do j=1,nobs
-		 		call RemapObs(j,y1(iy:iy+ObsSpec(j)%nlam-1))
-				iy=iy+ObsSpec(j)%nlam
-			enddo
 			var=var0
 			var(i)=var(i)-dvar(i)
 			if(var(i).gt.1d0) var(i)=1d0
@@ -149,6 +149,11 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 			x2=var(i)
 			imodel=imodel+1
 			chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs,error)
+			iy=1
+			do j=1,nobs
+		 		call RemapObs(j,y2(iy:iy+ObsSpec(j)%nlam-1))
+				iy=iy+ObsSpec(j)%nlam
+			enddo
 			if(chi2.gt.chi2max) then
 				chi2max=chi2
 				call output("Updating best fit")
@@ -157,11 +162,6 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 				call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
 				call WritePTlimits(var,W0)
 			endif
-			iy=1
-			do j=1,nobs
-		 		call RemapObs(j,y2(iy:iy+ObsSpec(j)%nlam-1))
-				iy=iy+ObsSpec(j)%nlam
-			enddo
 			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/abs(x1-x2)
 		enddo
 		iy=0
