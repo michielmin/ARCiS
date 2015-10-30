@@ -228,10 +228,15 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 			if(tot.gt.1d0) goto 2
 		enddo
 		do i=1,n_ret
-			var(i)=var0(i)
+			var(i)=0d0
 			do j=1,n_ret
-				var(i)=var(i)+sqrt(abs(W(i,j)))*error(j)
+				var(i)=var(i)+W(i,j)*error(j)
 			enddo
+			if(ran1(idum).gt.0.5d0) then
+				var(i)=var0(i)+sqrt(abs(var(i)))
+			else
+				var(i)=var0(i)-sqrt(abs(var(i)))
+			endif
 			if(var(i).lt.0d0) var(i)=0d0
 			if(var(i).gt.1d0) var(i)=1d0
 		enddo
