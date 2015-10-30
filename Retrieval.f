@@ -41,10 +41,10 @@
 	external ComputeChi2
 	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret)
 	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:)
-	real*8 chi2obs(nobs),var(n_ret),chi2,chi2max,gasdev,maxd
+	real*8 chi2obs(nobs),var(n_ret),chi2,chi2max,gasdev,maxd,error(n_ret)
 	real*8,allocatable :: W(:,:),WS(:)
-	real*8 chi2_0,chi2_1,chi2_2,x1,x2
-	integer imodel,ny,i,j,iter,iy
+	real*8 chi2_0,chi2_1,chi2_2,x1,x2,minT(nr),maxT(nr),ran1,tot,W0(n_ret,n_ret)
+	integer imodel,ny,i,j,iter,iy,k
 	integer MDW,ME,MA,MG,MODE
 	integer,allocatable :: IP(:)
 	real*8 PRGOPT(10),RNORME,RNORML
@@ -94,7 +94,7 @@ c first genetic algoritm to make the first estimate
 1		continue
 		j=j+1
 		imodel=imodel+1
-		chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs)
+		chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs,error)
 		if(chi2.ge.chi2max) then
 			var0=var
 			chi2max=chi2
@@ -102,6 +102,7 @@ c first genetic algoritm to make the first estimate
 			call WriteStructure()
 			call WriteOutput()
 			call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
+			call WritePTlimits(var0,W0)
 		else if(j.gt.3.or.iter.eq.1) then
 			var0=var
 		else
@@ -110,7 +111,7 @@ c first genetic algoritm to make the first estimate
 			goto 1
 		endif
 		chi2_2=1d0/chi2
-		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
+c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 		chi2_0=chi2_1
 		chi2_1=chi2_2
 		iy=1
@@ -127,13 +128,14 @@ c first genetic algoritm to make the first estimate
 			if(var(i).lt.0d0) var(i)=0d0
 			x1=var(i)
 			imodel=imodel+1
-			chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs)
+			chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs,error)
 			if(chi2.gt.chi2max) then
 				chi2max=chi2
 				call output("Updating best fit")
 				call WriteStructure()
 				call WriteOutput()
 				call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
+				call WritePTlimits(var,W0)
 			endif
 			iy=1
 			do j=1,nobs
@@ -146,13 +148,14 @@ c first genetic algoritm to make the first estimate
 			if(var(i).lt.0d0) var(i)=0d0
 			x2=var(i)
 			imodel=imodel+1
-			chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs)
+			chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs,error)
 			if(chi2.gt.chi2max) then
 				chi2max=chi2
 				call output("Updating best fit")
 				call WriteStructure()
 				call WriteOutput()
 				call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
+				call WritePTlimits(var,W0)
 			endif
 			iy=1
 			do j=1,nobs
@@ -185,12 +188,73 @@ c first genetic algoritm to make the first estimate
 		call DLSEI (W, MDW, ME, MA, MG, n_ret, PRGOPT, dvar, RNORME,
      +   RNORML, MODE, WS, IP)
 		var=var0+dvar
+
+		W0(1:n_ret,1:n_ret)=W(1:n_ret,1:n_ret)
+		do i=1,n_ret
+			if(var(i).lt.0d0) var(i)=0d0
+			if(var(i).gt.1d0) var(i)=1d0
+			error(i)=sqrt(W(i,i))
+			do j=1,n_ret
+				if(error(i).lt.sqrt(abs(W(i,j)))) then
+					error(i)=sqrt(abs(W(i,j)))
+				endif
+			enddo
+		enddo
 	enddo
 
 	close(unit=31)
 	
 	return
 	end
+
+
+
+	subroutine WritePTlimits(var0,W)
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 minT(nr),maxT(nr),var(n_ret),error(n_ret),tot,W(n_ret,n_ret)
+	real*8 var0(n_ret),ran1
+	integer i,j,k
+
+	maxT=0d0
+	minT=1d200
+	call SetOutputMode(.false.)
+	do k=1,1000
+2		continue
+		tot=0d0
+		do j=1,n_ret
+			error(j)=2d0*(ran1(idum)-0.5d0)
+			tot=tot+error(j)**2
+			if(tot.gt.1d0) goto 2
+		enddo
+		do i=1,n_ret
+			var(i)=var0(i)
+			do j=1,n_ret
+				var(i)=var(i)+sqrt(abs(W(i,j)))*error(j)
+			enddo
+			if(var(i).lt.0d0) var(i)=0d0
+			if(var(i).gt.1d0) var(i)=1d0
+		enddo
+		error=0d0
+		call MapRetrieval(var,error)
+		call InitDens()
+		call SetupStructure()
+		do i=1,nr
+			if(T(i).gt.maxT(i)) maxT(i)=T(i)
+			if(T(i).lt.minT(i)) minT(i)=T(i)
+		enddo				
+	enddo
+	call SetOutputMode(.true.)
+	open(unit=45,file=trim(outputdir) // "limits.dat")
+	do i=1,nr
+		write(45,*) P(i),minT(i),maxT(i)
+	enddo
+	close(unit=45)
+
+	return
+	end
+
+
 
 	subroutine RemapObs(i,spec)
 	use GlobalSetup
@@ -220,31 +284,18 @@ c first genetic algoritm to make the first estimate
 	end
 		
 	
-	real*8 function ComputeChi2(imodel,nvars,var,nobs0,chi2obs)
+	real*8 function ComputeChi2(imodel,nvars,var,nobs0,chi2obs,error0)
 	use GlobalSetup
-	use ReadKeywords
 	use Constants
 	IMPLICIT NONE
-	type(SettingKey) key
-	character*1000 readline
 	integer nvars,nobs0,i,j,imodel
-	real*8 var(nvars),chi2obs(nobs0)
+	real*8 var(nvars),chi2obs(nobs0),error(n_ret)
 	real*8,allocatable :: spec(:)
+	real*8,intent(in),optional :: error0(n_ret)
+	error=0d0
+	if(present(error0)) error=error0
 	
-	Rplanet=Rplanet/Rjup
-	Mplanet=Mplanet/Mjup
-	Rstar=Rstar/Rsun
-	Dplanet=Dplanet/AU
-	lam1=lam1/micron
-	lam2=lam2/micron
-	distance=distance/parsec
-	do i=1,n_ret
-		call MapRetrieval(var)
-		readline=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
-		call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2)
-		call ReadAndSetKey(key)
-	enddo
-	call ConvertUnits()
+	call MapRetrieval(var,error)
 	
 	call InitDens()
 	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam)
@@ -281,24 +332,54 @@ c first genetic algoritm to make the first estimate
 	end
 	
 	
-	subroutine MapRetrieval(var)
+	subroutine MapRetrieval(var,dvar)
 	use GlobalSetup
+	use ReadKeywords
+	use Constants
 	IMPLICIT NONE
+	type(SettingKey) key
+	character*1000 readline
 	integer i
-	real*8 var(n_ret)
+	real*8 var(n_ret),dvar(n_ret),x
 
 	do i=1,n_ret
 		if(RetPar(i)%logscale) then
 c	log
-			RetPar(i)%value=10d0**(log10(RetPar(i)%xmin)+log10(RetPar(i)%xmax/RetPar(i)%xmin)*var(i))
+			x=var(i)
+			RetPar(i)%value=10d0**(log10(RetPar(i)%xmin)+log10(RetPar(i)%xmax/RetPar(i)%xmin)*x)
+			x=var(i)+dvar(i)
+			RetPar(i)%error=10d0**(log10(RetPar(i)%xmin)+log10(RetPar(i)%xmax/RetPar(i)%xmin)*x)
+			RetPar(i)%error=RetPar(i)%error/RetPar(i)%value
 		else if(RetPar(i)%squarescale) then
 c	square
-			RetPar(i)%value=sqrt(RetPar(i)%xmin**2+(RetPar(i)%xmax**2-RetPar(i)%xmin**2)*var(i))
+			x=var(i)
+			RetPar(i)%value=sqrt(RetPar(i)%xmin**2+(RetPar(i)%xmax**2-RetPar(i)%xmin**2)*x)
+			x=var(i)+dvar(i)
+			RetPar(i)%error=sqrt(RetPar(i)%xmin**2+(RetPar(i)%xmax**2-RetPar(i)%xmin**2)*x)
+			RetPar(i)%error=RetPar(i)%error-RetPar(i)%value
 		else
 c	linear
-			RetPar(i)%value=RetPar(i)%xmin+(RetPar(i)%xmax-RetPar(i)%xmin)*var(i)
+			x=var(i)
+			RetPar(i)%value=RetPar(i)%xmin+(RetPar(i)%xmax-RetPar(i)%xmin)*x
+			x=var(i)+dvar(i)
+			RetPar(i)%error=RetPar(i)%xmin+(RetPar(i)%xmax-RetPar(i)%xmin)*x
+			RetPar(i)%error=RetPar(i)%error-RetPar(i)%value
 		endif
 	enddo
+
+	Rplanet=Rplanet/Rjup
+	Mplanet=Mplanet/Mjup
+	Rstar=Rstar/Rsun
+	Dplanet=Dplanet/AU
+	lam1=lam1/micron
+	lam2=lam2/micron
+	distance=distance/parsec
+	do i=1,n_ret
+		readline=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
+		call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2)
+		call ReadAndSetKey(key)
+	enddo
+	call ConvertUnits()
 
 	return
 	end
@@ -336,7 +417,13 @@ c	linear
 	write(20,'("Model ",i)') imodel
 	write(20,'("chi2=",f14.6)') chi2
 	do i=1,n_ret
-		write(20,*) trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
+		if(RetPar(i)%logscale) then
+c	log
+			write(20,'(a15," = ",es14.7," x/: ",es11.4)') trim(RetPar(i)%keyword),RetPar(i)%value,RetPar(i)%error
+ 		else
+c	linear/squared
+			write(20,'(a15," = ",es14.7," +/- ",es11.4)') trim(RetPar(i)%keyword),RetPar(i)%value,RetPar(i)%error
+		endif
 	enddo
 	close(unit=20)
 		
