@@ -222,7 +222,7 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 		error=sqrt(error/real(nb+1))
 		W0=0d0
 		do i=1,n_ret
-			W0(i,i)=error(i)
+			W0(i,i)=error(i)**2
 		enddo
 
 c		W0(1:n_ret,1:n_ret)=W(1:n_ret,1:n_ret)
