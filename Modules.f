@@ -105,6 +105,8 @@ c===============================================================================
 	real*8,allocatable,dimension(:) :: L_a_therm,L_a_press,L_n
 	real*8,allocatable,dimension(:) :: L_gu,L_gl,L_Saver
 	logical,allocatable,dimension(:) :: L_do
+	
+	integer,allocatable :: ig_comp(:,:,:)
 
 	type CIA_pair
 		character*20 name

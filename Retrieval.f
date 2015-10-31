@@ -88,6 +88,11 @@ c first genetic algoritm to make the first estimate
 	chi2_1=1d200
 	chi2_2=1d200
 	chi2max=0d0
+	error=0.1d0
+	W0=0d0
+	do i=1,n_ret
+		W0(i,i)=error(i)**2
+	enddo
 	do iter=1,100
 		call output("Iteration number" // trim(int2string(iter,'(i4)')))
 		j=0
@@ -120,8 +125,10 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 		chi2_0=chi2_1
 		chi2_1=chi2_2
      	dvar=dvar/2d0
+		dvar=error/2d0
 		do i=1,n_ret
-			if(dvar(i).lt.1d-2) dvar(i)=1d-2
+			if(dvar(i).lt.1d-3) dvar(i)=1d-3
+			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 			var=var0
 			var(i)=var(i)+dvar(i)
 			if(var(i).gt.1d0) var(i)=1d0
@@ -164,6 +171,7 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 			endif
 			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/abs(x1-x2)
 		enddo
+	
 		iy=0
 		do i=1,n_ret
 			W(1:ny,i)=dy(i,1:ny)/dyobs(1:ny)
@@ -180,11 +188,12 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 
 		IP(1)=(2*(ME+n_ret)+max(MA+MG,n_ret)+(MG+2)*(n_ret+7))*10
 		IP(2)=(MG+2*n_ret+2)*10
-		PRGOPT(1)=2
+		PRGOPT(1)=4
 		PRGOPT(2)=1
 		PRGOPT(3)=1
 		PRGOPT(4)=1
 		MODE=0
+		dvar=0d0
 		call DLSEI (W, MDW, ME, MA, MG, n_ret, PRGOPT, dvar, RNORME,
      +   RNORML, MODE, WS, IP)
 		var=var0+dvar
