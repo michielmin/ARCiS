@@ -112,7 +112,7 @@ c first genetic algoritm to make the first estimate
 			call WriteStructure()
 			call WriteOutput()
 			call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
-			call WritePTlimits(var0,W0)
+			call WritePTlimits(var0,W0,error)
 		else if(j.gt.3.or.iter.eq.1) then
 			var0=var
 		else
@@ -147,7 +147,7 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 				call WriteStructure()
 				call WriteOutput()
 				call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
-				call WritePTlimits(var,W0)
+				call WritePTlimits(var,W0,error)
 			endif
 			var=var0
 			var(i)=var(i)-dvar(i)
@@ -167,7 +167,7 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 				call WriteStructure()
 				call WriteOutput()
 				call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
-				call WritePTlimits(var,W0)
+				call WritePTlimits(var,W0,error)
 			endif
 			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/abs(x1-x2)
 		enddo
@@ -208,6 +208,7 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 					error(i)=sqrt(abs(W(i,j)))
 				endif
 			enddo
+			if(error(i).gt.1d0) error(i)=1d0
 		enddo
 	enddo
 
@@ -218,11 +219,11 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 
 
 
-	subroutine WritePTlimits(var0,W)
+	subroutine WritePTlimits(var0,W,error)
 	use GlobalSetup
 	IMPLICIT NONE
 	real*8 minT(nr),maxT(nr),var(n_ret),error(n_ret),tot,W(n_ret,n_ret)
-	real*8 var0(n_ret),ran1
+	real*8 var0(n_ret),ran1,vec(n_ret)
 	integer i,j,k
 
 	maxT=0d0
@@ -232,14 +233,14 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 2		continue
 		tot=0d0
 		do j=1,n_ret
-			error(j)=2d0*(ran1(idum)-0.5d0)
-			tot=tot+error(j)**2
+			vec(j)=2d0*(ran1(idum)-0.5d0)
+			tot=tot+vec(j)**2
 			if(tot.gt.1d0) goto 2
 		enddo
 		do i=1,n_ret
 			var(i)=0d0
 			do j=1,n_ret
-				var(i)=var(i)+W(i,j)*error(j)
+				var(i)=var(i)+W(i,j)*vec(j)
 			enddo
 			if(ran1(idum).gt.0.5d0) then
 				var(i)=var0(i)+sqrt(abs(var(i)))
@@ -249,7 +250,6 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 			if(var(i).lt.0d0) var(i)=0d0
 			if(var(i).gt.1d0) var(i)=1d0
 		enddo
-		error=0d0
 		call MapRetrieval(var,error)
 		call InitDens()
 		call SetupStructure()
