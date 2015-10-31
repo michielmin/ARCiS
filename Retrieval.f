@@ -44,11 +44,12 @@
 	real*8 chi2obs(nobs),var(n_ret),chi2,chi2max,gasdev,maxd,error(n_ret)
 	real*8,allocatable :: W(:,:),WS(:)
 	real*8 chi2_0,chi2_1,chi2_2,x1,x2,minT(nr),maxT(nr),ran1,tot,W0(n_ret,n_ret)
-	integer imodel,ny,i,j,iter,iy,k
+	integer imodel,ny,i,j,iter,iy,k,ib,nb
 	integer MDW,ME,MA,MG,MODE
 	integer,allocatable :: IP(:)
-	real*8 PRGOPT(10),RNORME,RNORML
+	real*8 PRGOPT(10),RNORME,RNORML,random,dvar_av(n_ret)
 	
+	nb=1000
 	var0=0.5d0
 	dvar0=10d0
 	open(unit=31,file=trim(outputdir) // "Wolk.dat",RECL=6000)
@@ -125,7 +126,6 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 		chi2_0=chi2_1
 		chi2_1=chi2_2
      	dvar=dvar/2d0
-		dvar=error/2d0
 		do i=1,n_ret
 			if(dvar(i).lt.1d-3) dvar(i)=1d-3
 			if(dvar(i).gt.1d-1) dvar(i)=1d-1
@@ -172,9 +172,23 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/abs(x1-x2)
 		enddo
 	
+		error=0d0
+		do ib=0,nb+1
+
+		do i=1,n_ret
+			do j=1,ny
+				if(ib.eq.nb+1.or.ib.eq.0) then
+					iy=j
+				else
+					iy=random(idum)*real(ny)+1
+				endif
+				W(j,i)=dy(i,iy)/dyobs(iy)
+				W(j,n_ret+1)=(yobs(iy)-y(iy))/dyobs(iy)
+			enddo
+		enddo
+
 		iy=0
 		do i=1,n_ret
-			W(1:ny,i)=dy(i,1:ny)/dyobs(1:ny)
 			iy=iy+1
 			W(ny+iy,1:n_ret)=0d0
 			W(ny+iy,i)=-1d0
@@ -184,11 +198,10 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 			W(ny+iy,i)=1d0
 			W(ny+iy,n_ret+1)=-var0(i)
 		enddo
-		W(1:ny,n_ret+1)=(yobs(1:ny)-y(1:ny))/dyobs(1:ny)		
 
 		IP(1)=(2*(ME+n_ret)+max(MA+MG,n_ret)+(MG+2)*(n_ret+7))*10
 		IP(2)=(MG+2*n_ret+2)*10
-		PRGOPT(1)=4
+		PRGOPT(1)=1	!4
 		PRGOPT(2)=1
 		PRGOPT(3)=1
 		PRGOPT(4)=1
@@ -198,18 +211,32 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
      +   RNORML, MODE, WS, IP)
 		var=var0+dvar
 
-		W0(1:n_ret,1:n_ret)=W(1:n_ret,1:n_ret)
-		do i=1,n_ret
-			if(var(i).lt.0d0) var(i)=0d0
-			if(var(i).gt.1d0) var(i)=1d0
-			error(i)=sqrt(W(i,i))
-			do j=1,n_ret
-				if(error(i).lt.sqrt(abs(W(i,j)))) then
-					error(i)=sqrt(abs(W(i,j)))
-				endif
-			enddo
-			if(error(i).gt.1d0) error(i)=1d0
+		if(ib.eq.0) then
+			dvar_av=dvar
+		else
+			error=error+(dvar-dvar_av)**2
+		endif
+		
 		enddo
+		
+		error=sqrt(error/real(nb+1))
+		W0=0d0
+		do i=1,n_ret
+			W0(i,i)=error(i)
+		enddo
+
+c		W0(1:n_ret,1:n_ret)=W(1:n_ret,1:n_ret)
+c		do i=1,n_ret
+c			if(var(i).lt.0d0) var(i)=0d0
+c			if(var(i).gt.1d0) var(i)=1d0
+c			error(i)=sqrt(W(i,i))
+c			do j=1,n_ret
+c				if(error(i).lt.sqrt(abs(W(i,j)))) then
+c					error(i)=sqrt(abs(W(i,j)))
+c				endif
+c			enddo
+c			if(error(i).gt.1d0) error(i)=1d0
+c		enddo
 	enddo
 
 	close(unit=31)

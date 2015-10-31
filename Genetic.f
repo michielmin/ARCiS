@@ -7,7 +7,7 @@
 	real*8 ran1,r,var0(nvars),dvar0(2,nvars)
 	real*8 av,dav1,dav2,tot,max,mutate,mut_min,mut_max,dCor,gasdev
 	real*8 geneticfun,dfit,dfit2
-	real*8 r1(nvars),r2(nvars)
+	real*8 r1(nvars),r2(nvars),error(nvars)
 	external geneticfun
 	character*8,allocatable :: gene(:,:,:)
 	character*1 v
@@ -35,6 +35,7 @@
 	allocate(same_pop(npop))
 	allocate(finished(npop+1))
 
+	error=0d0
 	mut_min=0.0005
 	mut_max=0.1
 	mutate=mut_min
@@ -82,7 +83,7 @@
 		finished=.false.
 
 		do j=1,npop
-			fit(i,j)=geneticfun(j+(i-1)*npop,nvars,var(i,j,1:nvars),nobs,fitobs(i,j,1:nobs))
+			fit(i,j)=geneticfun(j+(i-1)*npop,nvars,var(i,j,1:nvars),nobs,fitobs(i,j,1:nobs),error)
 			ncomp=ncomp+1
 			finished(j)=.true.
 			if(same(j)) then
