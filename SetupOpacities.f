@@ -36,13 +36,15 @@
 	allocate(nu_line(n_nu_line))
 
 	if(.not.allocated(ig_comp)) then
-		allocate(ig_comp(nlam,n_nu_line,nmol))
+		allocate(ig_comp(nlam,n_nu_line,nmol,nr))
+		do ir=1,nr
 		do i=1,nlam
 			do j=1,n_nu_line
 				do imol=1,nmol
-					ig_comp(i,j,imol)=random(idum)*real(ng)+1
+					ig_comp(i,j,imol,ir)=random(idum)*real(ng)+1
 				enddo
 			enddo
+		enddo
 		enddo
 	endif
 
@@ -86,7 +88,7 @@
 				k_line(j)=0d0
 				do imol=1,nmol
 					if(mixrat_r(ir,imol).gt.0d0) then
-						ig=ig_comp(i,j,imol)
+						ig=ig_comp(i,j,imol,ir)
 						k_line(j)=k_line(j)+kappa_mol(imol,i,ig)*mixrat_r(ir,imol)
 					endif
 				enddo
