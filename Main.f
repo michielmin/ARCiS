@@ -60,12 +60,20 @@ c terms of use
 	end
 	
 
-	subroutine ComputeModel
+	subroutine ComputeModel(recomputeopacities)
 	use GlobalSetup
 	IMPLICIT NONE
 	logical Tconverged
 	integer nTiter
 	real*8 starttime,stoptime,starttime_w,stoptime_w,omp_get_wtime
+	logical,intent(in),optional :: recomputeopacities
+	logical computeopac
+	
+	if(present(recomputeopacities)) then
+		computeopac=recomputeopacities
+	else
+		computeopac=.true.
+	endif
 
 	call cpu_time(starttime)
 #if USE_OPENMP
@@ -73,7 +81,7 @@ c terms of use
 #ENDIF
 	Tconverged=.false.
 	call SetupStructure()
-	call SetupOpacities()
+	if(computeopac) call SetupOpacities()
 	if(computeT) then
 		nTiter=0
 		do while(.not.Tconverged.and.nTiter.lt.maxiter)

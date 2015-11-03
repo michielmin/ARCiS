@@ -106,7 +106,7 @@ c===============================================================================
 	real*8,allocatable,dimension(:) :: L_gu,L_gl,L_Saver
 	logical,allocatable,dimension(:) :: L_do
 	
-	integer,allocatable :: ig_comp(:,:,:,:)
+	integer,allocatable :: ig_comp(:,:,:)
 
 	type CIA_pair
 		character*20 name
@@ -147,8 +147,8 @@ cPoints for the temperature structure
 
 	type RetrievalPar
 		character*50 keyword
-		real*8 xmin,xmax,x0,dx,value,error
-		logical logscale,squarescale
+		real*8 xmin,xmax,x0,dx,value,error1,error2
+		logical logscale,squarescale,opacitycomp
 	end type RetrievalPar
 
 	type(RetrievalPar),allocatable :: RetPar(:)

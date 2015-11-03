@@ -35,19 +35,16 @@
 	n_nu_line=ng*nmol
 	allocate(nu_line(n_nu_line))
 
-	if(.not.allocated(ig_comp)) then
-		allocate(ig_comp(nlam,n_nu_line,nmol,nr))
-		do ir=1,nr
+	if(.not.allocated(ig_comp).and.retrieval) then
+		allocate(ig_comp(nlam,n_nu_line,nmol))
 		do i=1,nlam
 			do j=1,n_nu_line
 				do imol=1,nmol
-					ig_comp(i,j,imol,ir)=random(idum)*real(ng)+1
+					ig_comp(i,j,imol)=random(idum)*real(ng)+1
 				enddo
 			enddo
 		enddo
-		enddo
 	endif
-
 	
 	opac_tot=0d0
 
@@ -78,7 +75,7 @@
 !$OMP PARALLEL IF(nlam.gt.200)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,j,nu1,nu2,k_line,imol,ig,kappa)
-!$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_r,ng,ir,kappa_mol,nu_line,cont_tot,freq,Cabs,Csca,opac_tot,Ndens,R,ig_comp)
+!$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_r,ng,ir,kappa_mol,nu_line,cont_tot,freq,Cabs,Csca,opac_tot,Ndens,R,ig_comp,retrieval)
 		allocate(k_line(n_nu_line))
 !$OMP DO
 		do i=1,nlam-1
@@ -88,7 +85,11 @@
 				k_line(j)=0d0
 				do imol=1,nmol
 					if(mixrat_r(ir,imol).gt.0d0) then
-						ig=ig_comp(i,j,imol,ir)
+						if(retrieval) then
+							ig=ig_comp(i,j,imol)
+						else
+							ig=random(idum)*real(ng)+1
+						endif
 						k_line(j)=k_line(j)+kappa_mol(imol,i,ig)*mixrat_r(ir,imol)
 					endif
 				enddo

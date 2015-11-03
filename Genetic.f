@@ -83,7 +83,7 @@
 		finished=.false.
 
 		do j=1,npop
-			fit(i,j)=geneticfun(j+(i-1)*npop,nvars,var(i,j,1:nvars),nobs,fitobs(i,j,1:nobs),error)
+			fit(i,j)=geneticfun(j+(i-1)*npop,nvars,var(i,j,1:nvars),nobs,fitobs(i,j,1:nobs),.true.,error)
 			ncomp=ncomp+1
 			finished(j)=.true.
 			if(same(j)) then

@@ -40,23 +40,28 @@
 	IMPLICIT NONE
 	external ComputeChi2
 	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret)
-	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:)
-	real*8 chi2obs(nobs),var(n_ret),chi2,chi2max,gasdev,maxd,error(n_ret)
+	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:),ybest(:)
+	real*8 chi2obs(nobs),var(n_ret),chi2,chi2min,gasdev,maxd,error(2,n_ret),var_best(n_ret)
 	real*8,allocatable :: W(:,:),WS(:)
-	real*8 chi2_0,chi2_1,chi2_2,x1,x2,minT(nr),maxT(nr),ran1,tot,W0(n_ret,n_ret)
-	integer imodel,ny,i,j,iter,iy,k,ib,nb
+	real*8 x1,x2,minT(nr),maxT(nr),ran1,tot,lambda,chi2_1,chi2_2,dchi2(n_ret)
+	integer imodel,ny,i,j,iter1,iter2,iy,k
 	integer MDW,ME,MA,MG,MODE
 	integer,allocatable :: IP(:)
-	real*8 PRGOPT(10),RNORME,RNORML,random,dvar_av(n_ret)
+	real*8 PRGOPT(10),RNORME,RNORML,random,chi2prev
 	
+	real*8 dvar_av(n_ret),W0(n_ret,n_ret)
+	integer ib,nb,nib(2,n_ret),na
+	logical succes,lm
 	nb=1000
+	lm=.true.
+	
 	var0=0.5d0
 	dvar0=10d0
 	open(unit=31,file=trim(outputdir) // "Wolk.dat",RECL=6000)
 
 	if(ngen.gt.0) then
 c first genetic algoritm to make the first estimate
-		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross)
+		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.true.)
 	endif
 
 	imodel=npop*ngen
@@ -65,15 +70,16 @@ c first genetic algoritm to make the first estimate
 		ny=ny+ObsSpec(i)%nlam
 	enddo
 	allocate(y(ny))
+	allocate(ybest(ny))
 	allocate(y1(ny))
 	allocate(y2(ny))
 	allocate(dy(n_ret,ny))
 	allocate(yobs(ny))
 	allocate(dyobs(ny))
-	MDW=ny+2*n_ret
 	ME=0
-	MA=ny
+	MA=max(n_ret,ny)
 	MG=n_ret*2
+	MDW=ME+MA+MG
 	allocate(W(MDW,n_ret+1))
 	allocate(IP(10*(MG+2*n_ret+2)))
 	allocate(WS((2*(ME+n_ret)+max(MA+MG,n_ret)+(MG+2)*(n_ret+7))*10))
@@ -85,47 +91,61 @@ c first genetic algoritm to make the first estimate
 	enddo
 	dvar=0.1d0
 	var=var0
-	chi2_0=1d200
-	chi2_1=1d200
-	chi2_2=1d200
-	chi2max=0d0
+	var_best=var0
+	chi2min=1d200
+	chi2prev=1d200
 	error=0.1d0
-	W0=0d0
-	do i=1,n_ret
-		W0(i,i)=error(i)**2
-	enddo
-	do iter=1,100
-		call output("Iteration number" // trim(int2string(iter,'(i4)')))
+	lambda=0.1
+	
+
+	do iter1=1,10
+	lm=.not.lm
+	lm=.true.
+	lambda=0.1
+	var=var_best
+	var0=var
+	do iter2=1,10
 		j=0
-1		continue
-		j=j+1
+2		continue
 		imodel=imodel+1
-		chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs,error)
+		call output("Model number" // trim(int2string(imodel,'(i4)')))
+		chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,.true.,error)
 		iy=1
 		do i=1,nobs
 	 		call RemapObs(i,y(iy:iy+ObsSpec(i)%nlam-1))
 			iy=iy+ObsSpec(i)%nlam
 		enddo
-		if(chi2.ge.chi2max) then
+		if(chi2.le.chi2prev) then
+			lambda=lambda/2d0
 			var0=var
-			chi2max=chi2
-			call output("Updating best fit")
-			call WriteStructure()
-			call WriteOutput()
-			call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
-			call WritePTlimits(var0,W0,error)
-		else if(j.gt.3.or.iter.eq.1) then
-			var0=var
-		else
+			if(chi2.le.chi2min) then
+				var_best=var
+				ybest=y
+				chi2min=chi2
+				call output("Updating best fit")
+				call SetOutputMode(.false.)
+				call WriteStructure()
+				call WriteOutput()
+				call WriteRetrieval(imodel,chi2,var(1:n_ret))
+				call WritePTlimits(var0,W0,error)
+				call SetOutputMode(.true.)
+			endif
+		else if(lm) then
+			lambda=lambda*2d0
+			var=var0
+			goto 1
+		else if(j.lt.3.and.iter1.ne.1.and.iter2.ne.1) then
 			dvar=dvar/2d0
 			var=var0+dvar
-			goto 1
+			j=j+1
+			goto 2
+		else
+			var0=var
 		endif
-		chi2_2=1d0/chi2
-c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
-		chi2_0=chi2_1
-		chi2_1=chi2_2
-     	dvar=dvar/2d0
+		do i=1,n_ret
+			dvar(i)=max(error(1,i),error(2,i))/2d0
+     	enddo
+		chi2prev=chi2
 		do i=1,n_ret
 			if(dvar(i).lt.1d-3) dvar(i)=1d-3
 			if(dvar(i).gt.1d-1) dvar(i)=1d-1
@@ -135,19 +155,24 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 			if(var(i).lt.0d0) var(i)=0d0
 			x1=var(i)
 			imodel=imodel+1
-			chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs,error)
+			chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,RetPar(i)%opacitycomp,error)
 			iy=1
 			do j=1,nobs
 		 		call RemapObs(j,y1(iy:iy+ObsSpec(j)%nlam-1))
 				iy=iy+ObsSpec(j)%nlam
 			enddo
-			if(chi2.gt.chi2max) then
-				chi2max=chi2
+			chi2_1=chi2
+			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp) then
+				chi2min=chi2
+				var_best=var
+				ybest=y
 				call output("Updating best fit")
+				call SetOutputMode(.false.)
 				call WriteStructure()
 				call WriteOutput()
-				call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
+				call WriteRetrieval(imodel,chi2,var(1:n_ret))
 				call WritePTlimits(var,W0,error)
+				call SetOutputMode(.true.)
 			endif
 			var=var0
 			var(i)=var(i)-dvar(i)
@@ -155,48 +180,87 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 			if(var(i).lt.0d0) var(i)=0d0
 			x2=var(i)
 			imodel=imodel+1
-			chi2=ComputeChi2(imodel,n_ret,var,nobs,chi2obs,error)
+			chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,RetPar(i)%opacitycomp,error)
 			iy=1
 			do j=1,nobs
 		 		call RemapObs(j,y2(iy:iy+ObsSpec(j)%nlam-1))
 				iy=iy+ObsSpec(j)%nlam
 			enddo
-			if(chi2.gt.chi2max) then
-				chi2max=chi2
+			chi2_2=chi2
+			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp) then
+				chi2min=chi2
+				var_best=var
+				ybest=y
 				call output("Updating best fit")
+				call SetOutputMode(.false.)
 				call WriteStructure()
 				call WriteOutput()
-				call WriteRetrieval(imodel,1d0/chi2,var(1:n_ret))
+				call WriteRetrieval(imodel,chi2,var(1:n_ret))
 				call WritePTlimits(var,W0,error)
+				call SetOutputMode(.true.)
 			endif
 			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/abs(x1-x2)
+			dchi2(i)=(chi2_1-chi2_2)/abs(x1-x2)
 		enddo
-	
-		error=0d0
+
+
+1		continue
+
+		if(iter1.eq.1.and.iter2.eq.1) then
+			error=0d0
+			nib=0
+		else
+			nib=1
+			error=error**2*real(nib)
+		endif
+		
 		do ib=0,nb+1
 
-		do i=1,n_ret
-			do j=1,ny
+		W=0d0
+		if(lm) then
+			do k=1,ny
 				if(ib.eq.nb+1.or.ib.eq.0) then
-					iy=j
+					iy=k
 				else
 					iy=random(idum)*real(ny)+1
 				endif
-				W(j,i)=dy(i,iy)/dyobs(iy)
-				W(j,n_ret+1)=(yobs(iy)-y(iy))/dyobs(iy)
+				do i=1,n_ret
+					do j=1,n_ret
+						W(i,j)=W(i,j)+dy(i,iy)*dy(j,iy)/dyobs(iy)**2
+					enddo
+					W(i,n_ret+1)=W(i,n_ret+1)+(yobs(iy)-y(iy))*dy(i,iy)/dyobs(iy)**2
+				enddo
 			enddo
-		enddo
+			if(ib.eq.nb+1.or.ib.eq.0) then
+				do i=1,n_ret
+					W(i,i)=W(i,i)*(1d0+lambda)
+				enddo
+			endif
+			na=n_ret
+		else
+			do i=1,n_ret
+				do j=1,ny
+					if(ib.eq.nb+1.or.ib.eq.0) then
+						iy=j
+					else
+						iy=random(idum)*real(ny)+1
+					endif
+					W(j,i)=2d0*dy(i,iy)/dyobs(iy)
+					W(j,n_ret+1)=(yobs(iy)-y(iy))/dyobs(iy)
+				enddo
+			enddo
+			na=ny
+		endif
+
 
 		iy=0
 		do i=1,n_ret
 			iy=iy+1
-			W(ny+iy,1:n_ret)=0d0
-			W(ny+iy,i)=-1d0
-			W(ny+iy,n_ret+1)=var0(i)-1d0
+			W(na+iy,i)=-1d0
+			W(na+iy,n_ret+1)=var0(i)-1d0
 			iy=iy+1
-			W(ny+iy,1:n_ret)=0d0
-			W(ny+iy,i)=1d0
-			W(ny+iy,n_ret+1)=-var0(i)
+			W(na+iy,i)=1d0
+			W(na+iy,n_ret+1)=-var0(i)
 		enddo
 
 		IP(1)=(2*(ME+n_ret)+max(MA+MG,n_ret)+(MG+2)*(n_ret+7))*10
@@ -207,36 +271,46 @@ c		if(abs((chi2_0-chi2_2)/(chi2_0+chi2_2)).lt.1d-4) exit
 		PRGOPT(4)=1
 		MODE=0
 		dvar=0d0
-		call DLSEI (W, MDW, ME, MA, MG, n_ret, PRGOPT, dvar, RNORME,
+		call DLSEI (W, MDW, ME, na, MG, n_ret, PRGOPT, dvar, RNORME,
      +   RNORML, MODE, WS, IP)
+
+		succes=.true.
+		do i=1,n_ret
+			if(dvar(i).gt.(1d0-var0(i))) succes=.false.
+			if(dvar(i).lt.(-var0(i))) succes=.false.
+		enddo
 		var=var0+dvar
 
 		if(ib.eq.0) then
 			dvar_av=dvar
-		else
-			error=error+(dvar-dvar_av)**2
+		else if(ib.ne.nb+1.and.succes) then
+			do i=1,n_ret
+				if(dvar(i).lt.dvar_av(i)) then
+					error(1,i)=error(1,i)+(dvar(i)-dvar_av(i))**2
+					nib(1,i)=nib(1,i)+1
+				else
+					error(2,i)=error(2,i)+(dvar(i)-dvar_av(i))**2
+					nib(2,i)=nib(2,i)+1
+				endif
+			enddo
 		endif
 		
 		enddo
 		
-		error=sqrt(error/real(nb+1))
+		do i=1,n_ret
+			do j=1,2
+				if(nib(j,i).gt.0) then
+					error(j,i)=sqrt(error(j,i)/real(nib(j,i)))
+				else
+					error(j,i)=0d0
+				endif
+			enddo
+		enddo
 		W0=0d0
 		do i=1,n_ret
-			W0(i,i)=error(i)**2
+			W0(i,i)=max(error(1,i),error(2,i))**2
 		enddo
-
-c		W0(1:n_ret,1:n_ret)=W(1:n_ret,1:n_ret)
-c		do i=1,n_ret
-c			if(var(i).lt.0d0) var(i)=0d0
-c			if(var(i).gt.1d0) var(i)=1d0
-c			error(i)=sqrt(W(i,i))
-c			do j=1,n_ret
-c				if(error(i).lt.sqrt(abs(W(i,j)))) then
-c					error(i)=sqrt(abs(W(i,j)))
-c				endif
-c			enddo
-c			if(error(i).gt.1d0) error(i)=1d0
-c		enddo
+	enddo
 	enddo
 
 	close(unit=31)
@@ -249,7 +323,7 @@ c		enddo
 	subroutine WritePTlimits(var0,W,error)
 	use GlobalSetup
 	IMPLICIT NONE
-	real*8 minT(nr),maxT(nr),var(n_ret),error(n_ret),tot,W(n_ret,n_ret)
+	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,W(n_ret,n_ret)
 	real*8 var0(n_ret),ran1,vec(n_ret)
 	integer i,j,k
 
@@ -271,8 +345,10 @@ c		enddo
 			enddo
 			if(ran1(idum).gt.0.5d0) then
 				var(i)=var0(i)+sqrt(abs(var(i)))
+				var(i)=var0(i)-error(1,i)*vec(i)
 			else
 				var(i)=var0(i)-sqrt(abs(var(i)))
+				var(i)=var0(i)+error(2,i)*vec(i)
 			endif
 			if(var(i).lt.0d0) var(i)=0d0
 			if(var(i).gt.1d0) var(i)=1d0
@@ -325,24 +401,25 @@ c		enddo
 	end
 		
 	
-	real*8 function ComputeChi2(imodel,nvars,var,nobs0,chi2obs,error0)
+	real*8 function ComputeChi2(imodel,nvars,var,nobs0,chi2obs,recomputeopac,error0)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
 	integer nvars,nobs0,i,j,imodel
-	real*8 var(nvars),chi2obs(nobs0),error(n_ret)
+	real*8 var(nvars),chi2obs(nobs0),error(2,n_ret)
 	real*8,allocatable :: spec(:)
-	real*8,intent(in),optional :: error0(n_ret)
+	real*8,intent(in),optional :: error0(2,n_ret)
+	logical recomputeopac
 	error=0d0
 	if(present(error0)) error=error0
-	
+
 	call MapRetrieval(var,error)
 	
 	call InitDens()
 	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam)
 	Fstar=Fstar*pi*Rstar**2*pi/3.336e11
 	call SetOutputMode(.false.)
-	call ComputeModel()
+	call ComputeModel(recomputeopac)
 	call SetOutputMode(.true.)
 	
 	ComputeChi2=0d0
@@ -381,30 +458,39 @@ c		enddo
 	type(SettingKey) key
 	character*1000 readline
 	integer i
-	real*8 var(n_ret),dvar(n_ret),x
+	real*8 var(n_ret),dvar(2,n_ret),x
 
 	do i=1,n_ret
 		if(RetPar(i)%logscale) then
 c	log
 			x=var(i)
 			RetPar(i)%value=10d0**(log10(RetPar(i)%xmin)+log10(RetPar(i)%xmax/RetPar(i)%xmin)*x)
-			x=var(i)+dvar(i)
-			RetPar(i)%error=10d0**(log10(RetPar(i)%xmin)+log10(RetPar(i)%xmax/RetPar(i)%xmin)*x)
-			RetPar(i)%error=RetPar(i)%error/RetPar(i)%value
+			x=var(i)+dvar(1,i)
+			RetPar(i)%error1=10d0**(log10(RetPar(i)%xmin)+log10(RetPar(i)%xmax/RetPar(i)%xmin)*x)
+			RetPar(i)%error1=RetPar(i)%error1/RetPar(i)%value
+			x=var(i)+dvar(2,i)
+			RetPar(i)%error2=10d0**(log10(RetPar(i)%xmin)+log10(RetPar(i)%xmax/RetPar(i)%xmin)*x)
+			RetPar(i)%error2=RetPar(i)%error2/RetPar(i)%value
 		else if(RetPar(i)%squarescale) then
 c	square
 			x=var(i)
 			RetPar(i)%value=sqrt(RetPar(i)%xmin**2+(RetPar(i)%xmax**2-RetPar(i)%xmin**2)*x)
-			x=var(i)+dvar(i)
-			RetPar(i)%error=sqrt(RetPar(i)%xmin**2+(RetPar(i)%xmax**2-RetPar(i)%xmin**2)*x)
-			RetPar(i)%error=RetPar(i)%error-RetPar(i)%value
+			x=var(i)+dvar(1,i)
+			RetPar(i)%error1=sqrt(RetPar(i)%xmin**2+(RetPar(i)%xmax**2-RetPar(i)%xmin**2)*x)
+			RetPar(i)%error1=RetPar(i)%error1-RetPar(i)%value
+			x=var(i)+dvar(2,i)
+			RetPar(i)%error2=sqrt(RetPar(i)%xmin**2+(RetPar(i)%xmax**2-RetPar(i)%xmin**2)*x)
+			RetPar(i)%error2=RetPar(i)%error2-RetPar(i)%value
 		else
 c	linear
 			x=var(i)
 			RetPar(i)%value=RetPar(i)%xmin+(RetPar(i)%xmax-RetPar(i)%xmin)*x
-			x=var(i)+dvar(i)
-			RetPar(i)%error=RetPar(i)%xmin+(RetPar(i)%xmax-RetPar(i)%xmin)*x
-			RetPar(i)%error=RetPar(i)%error-RetPar(i)%value
+			x=var(i)+dvar(1,i)
+			RetPar(i)%error1=RetPar(i)%xmin+(RetPar(i)%xmax-RetPar(i)%xmin)*x
+			RetPar(i)%error1=RetPar(i)%error1-RetPar(i)%value
+			x=var(i)+dvar(2,i)
+			RetPar(i)%error2=RetPar(i)%xmin+(RetPar(i)%xmax-RetPar(i)%xmin)*x
+			RetPar(i)%error2=RetPar(i)%error2-RetPar(i)%value
 		endif
 	enddo
 
@@ -460,10 +546,12 @@ c	linear
 	do i=1,n_ret
 		if(RetPar(i)%logscale) then
 c	log
-			write(20,'(a15," = ",es14.7," x/: ",es11.4)') trim(RetPar(i)%keyword),RetPar(i)%value,RetPar(i)%error
+			write(20,'(a15," = ",es14.7," x/: ",es11.4,es11.4)') trim(RetPar(i)%keyword),RetPar(i)%value,
+     &					RetPar(i)%error2,RetPar(i)%error1
  		else
 c	linear/squared
-			write(20,'(a15," = ",es14.7," +/- ",es11.4)') trim(RetPar(i)%keyword),RetPar(i)%value,RetPar(i)%error
+			write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') trim(RetPar(i)%keyword),RetPar(i)%value,
+     &					RetPar(i)%error2,RetPar(i)%error1
 		endif
 	enddo
 	close(unit=20)
