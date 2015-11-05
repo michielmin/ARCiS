@@ -42,18 +42,12 @@
 	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret)
 	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:),ybest(:)
 	real*8 chi2obs(nobs),var(n_ret),chi2,chi2min,gasdev,maxd,error(2,n_ret),var_best(n_ret)
-	real*8,allocatable :: W(:,:),WS(:)
-	real*8 x1,x2,minT(nr),maxT(nr),ran1,tot,lambda,chi2_1,chi2_2,dchi2(n_ret)
+	real*8 x1,x2,minT(nr),maxT(nr),ran1,tot,lambda,chi2_1,chi2_2,dchi2(n_ret),chi2prev
 	integer imodel,ny,i,j,iter1,iter2,iy,k
-	integer MDW,ME,MA,MG,MODE
-	integer,allocatable :: IP(:)
-	real*8 PRGOPT(10),RNORME,RNORML,random,chi2prev
 	
-	real*8 dvar_av(n_ret),W0(n_ret,n_ret)
-	integer ib,nb,nib(2,n_ret),na
-	logical succes,lm
-	nb=1000
-	lm=.true.
+	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret),W(n_ret,n_ret),Winv(n_ret,n_ret),dmax
+	integer na,map(n_ret),info
+	logical dofit(n_ret),initfit
 	
 	var0=0.5d0
 	dvar0=10d0
@@ -76,13 +70,6 @@ c first genetic algoritm to make the first estimate
 	allocate(dy(n_ret,ny))
 	allocate(yobs(ny))
 	allocate(dyobs(ny))
-	ME=0
-	MA=max(n_ret,ny)
-	MG=n_ret*2
-	MDW=ME+MA+MG
-	allocate(W(MDW,n_ret+1))
-	allocate(IP(10*(MG+2*n_ret+2)))
-	allocate(WS((2*(ME+n_ret)+max(MA+MG,n_ret)+(MG+2)*(n_ret+7))*10))
 	iy=1
 	do i=1,nobs
 		yobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%y(1:ObsSpec(i)%nlam)
@@ -99,14 +86,11 @@ c first genetic algoritm to make the first estimate
 	
 
 	do iter1=1,10
-	lm=.not.lm
-	lm=.true.
-	lambda=0.1
-	var=var_best
-	var0=var
+c	lambda=0.1
+c	var=var_best
+c	var0=var
 	do iter2=1,10
 		j=0
-2		continue
 		imodel=imodel+1
 		call output("Model number" // trim(int2string(imodel,'(i4)')))
 		chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,.true.,error)
@@ -127,20 +111,13 @@ c first genetic algoritm to make the first estimate
 				call WriteStructure()
 				call WriteOutput()
 				call WriteRetrieval(imodel,chi2,var(1:n_ret))
-				call WritePTlimits(var0,W0,error)
+				call WritePTlimits(var0,Cov,error)
 				call SetOutputMode(.true.)
 			endif
-		else if(lm) then
+		else
 			lambda=lambda*2d0
 			var=var0
 			goto 1
-		else if(j.lt.3.and.iter1.ne.1.and.iter2.ne.1) then
-			dvar=dvar/2d0
-			var=var0+dvar
-			j=j+1
-			goto 2
-		else
-			var0=var
 		endif
 		do i=1,n_ret
 			dvar(i)=max(error(1,i),error(2,i))/2d0
@@ -171,7 +148,7 @@ c first genetic algoritm to make the first estimate
 				call WriteStructure()
 				call WriteOutput()
 				call WriteRetrieval(imodel,chi2,var(1:n_ret))
-				call WritePTlimits(var,W0,error)
+				call WritePTlimits(var,Cov,error)
 				call SetOutputMode(.true.)
 			endif
 			var=var0
@@ -196,7 +173,7 @@ c first genetic algoritm to make the first estimate
 				call WriteStructure()
 				call WriteOutput()
 				call WriteRetrieval(imodel,chi2,var(1:n_ret))
-				call WritePTlimits(var,W0,error)
+				call WritePTlimits(var,Cov,error)
 				call SetOutputMode(.true.)
 			endif
 			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/abs(x1-x2)
@@ -206,110 +183,91 @@ c first genetic algoritm to make the first estimate
 
 1		continue
 
-		if(iter1.eq.1.and.iter2.eq.1) then
-			error=0d0
-			nib=0
-		else
-			nib=1
-			error=error**2*real(nib)
-		endif
-		
-		do ib=0,nb+1
+		dofit=.true.
+		initfit=.true.
 
-		W=0d0
-		if(lm) then
-			do k=1,ny
-				if(ib.eq.nb+1.or.ib.eq.0) then
-					iy=k
-				else
-					iy=random(idum)*real(ny)+1
-				endif
-				do i=1,n_ret
-					do j=1,n_ret
-						W(i,j)=W(i,j)+dy(i,iy)*dy(j,iy)/dyobs(iy)**2
-					enddo
-					W(i,n_ret+1)=W(i,n_ret+1)+(yobs(iy)-y(iy))*dy(i,iy)/dyobs(iy)**2
-				enddo
-			enddo
-			if(ib.eq.nb+1.or.ib.eq.0) then
-				do i=1,n_ret
-					W(i,i)=W(i,i)*(1d0+lambda)
-				enddo
+2		continue
+		na=0
+		do i=1,n_ret
+			if(dofit(i)) then
+				na=na+1
+				map(na)=i
 			endif
-			na=n_ret
-		else
+		enddo
+		if(na.gt.1) then
+		
+		W=0d0
+		b=0d0
+		do k=1,ny
+			do i=1,na
+				do j=1,na
+					W(i,j)=W(i,j)+dy(map(i),k)*dy(map(j),k)/dyobs(k)**2
+				enddo
+				b(i)=b(i)+(yobs(k)-y(k))*dy(map(i),k)/dyobs(k)**2
+			enddo
+		enddo
+
+		call MatrixInvert(W(1:na,1:na),Winv(1:na,1:na),na,info)
+		if(INFO.ne.0) then
+			call output('Error in matrix inversion.')
+			call output('Retrieving parameters with no influence on the observations?')
+			stop
+		endif
+		if(initfit) then
+			Cov=Winv
 			do i=1,n_ret
-				do j=1,ny
-					if(ib.eq.nb+1.or.ib.eq.0) then
-						iy=j
-					else
-						iy=random(idum)*real(ny)+1
-					endif
-					W(j,i)=2d0*dy(i,iy)/dyobs(iy)
-					W(j,n_ret+1)=(yobs(iy)-y(iy))/dyobs(iy)
+				do j=1,2
+					error(j,i)=sqrt(Winv(i,i))
 				enddo
 			enddo
-			na=ny
 		endif
 
-
-		iy=0
-		do i=1,n_ret
-			iy=iy+1
-			W(na+iy,i)=-1d0
-			W(na+iy,n_ret+1)=var0(i)-1d0
-			iy=iy+1
-			W(na+iy,i)=1d0
-			W(na+iy,n_ret+1)=-var0(i)
+		do i=1,na
+			W(i,i)=W(i,i)*(1d0+lambda)
 		enddo
+		call MatrixInvert(W(1:na,1:na),Winv(1:na,1:na),na,info)
+	
 
-		IP(1)=(2*(ME+n_ret)+max(MA+MG,n_ret)+(MG+2)*(n_ret+7))*10
-		IP(2)=(MG+2*n_ret+2)*10
-		PRGOPT(1)=1	!4
-		PRGOPT(2)=1
-		PRGOPT(3)=1
-		PRGOPT(4)=1
-		MODE=0
 		dvar=0d0
-		call DLSEI (W, MDW, ME, na, MG, n_ret, PRGOPT, dvar, RNORME,
-     +   RNORML, MODE, WS, IP)
-
-		succes=.true.
-		do i=1,n_ret
-			if(dvar(i).gt.(1d0-var0(i))) succes=.false.
-			if(dvar(i).lt.(-var0(i))) succes=.false.
-		enddo
-		var=var0+dvar
-
-		if(ib.eq.0) then
-			dvar_av=dvar
-		else if(ib.ne.nb+1.and.succes) then
-			do i=1,n_ret
-				if(dvar(i).lt.dvar_av(i)) then
-					error(1,i)=error(1,i)+(dvar(i)-dvar_av(i))**2
-					nib(1,i)=nib(1,i)+1
-				else
-					error(2,i)=error(2,i)+(dvar(i)-dvar_av(i))**2
-					nib(2,i)=nib(2,i)+1
-				endif
+		do i=1,na
+			do j=1,na
+				dvar(map(i))=dvar(map(i))+b(j)*Winv(i,j)
 			enddo
+			var(map(i))=var0(map(i))+dvar(map(i))
+		enddo
+
+		dmax=0d0
+		j=0
+		do i=1,n_ret
+			if(dofit(i)) then
+			if(var(i).gt.1d0) then
+				if(abs((var(i)-1d0)/error(2,i)).gt.dmax) then
+					dmax=abs((var(i)-1d0)/error(2,i))
+					j=i
+				endif
+			endif
+			if(var(i).lt.0d0) then
+				if(abs(var(i)/error(1,i)).gt.dmax) then
+					dmax=abs(var(i)/error(1,i))
+					j=i
+				endif
+			endif
+			endif
+		enddo
+		if(j.ne.0) then
+			dofit(j)=.false.
+			if(var(j).gt.1d0) then
+				y(1:ny)=y(1:ny)+(1d0-var0(j))*dy(j,1:ny)
+				var(j)=1d0
+			endif
+			if(var(j).lt.0d0) then
+				y(1:ny)=y(1:ny)-var0(j)*dy(j,1:ny)
+				var(j)=0d0
+			endif
+			initfit=.false.
+			goto 2
 		endif
-		
-		enddo
-		
-		do i=1,n_ret
-			do j=1,2
-				if(nib(j,i).gt.0) then
-					error(j,i)=sqrt(error(j,i)/real(nib(j,i)))
-				else
-					error(j,i)=0d0
-				endif
-			enddo
-		enddo
-		W0=0d0
-		do i=1,n_ret
-			W0(i,i)=max(error(1,i),error(2,i))**2
-		enddo
+		endif
 	enddo
 	enddo
 
@@ -560,3 +518,48 @@ c	linear/squared
 	return
 	end
 
+
+	subroutine MatrixInvert(A,Ainv,N,INFO)
+	IMPLICIT NONE
+	integer n,ierr
+	real*8 A(n,n),Ainv(n,n)
+      DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:) :: WORK
+      INTEGER :: i,j, LWORK
+
+      INTEGER	     INFO, LDA,	M
+      INTEGER, ALLOCATABLE, DIMENSION(:) :: IPIV
+
+      INTEGER DeAllocateStatus
+
+      external DGETRF
+      external DGETRI
+
+	INFO=0
+      LDA = N
+      LWORK = N*N
+      ALLOCATE (WORK(LWORK))
+      ALLOCATE (IPIV(N))
+C
+C     DGETRF computes an LU factorization of a general M-by-N matrix A
+C     using partial pivoting with row interchanges.
+
+      M=N
+      LDA=N
+
+C  Store A in Ainv to prevent it from being overwritten by LAPACK
+
+      Ainv = A
+
+      CALL DGETRF( M, N, Ainv, LDA, IPIV, INFO )
+
+C  DGETRI computes the inverse of a matrix using the LU factorization
+C  computed by DGETRF.
+
+      CALL DGETRI(N, Ainv, N, IPIV, WORK, LWORK, INFO)
+
+      DEALLOCATE (IPIV, STAT = DeAllocateStatus)
+      DEALLOCATE (WORK, STAT = DeAllocateStatus)
+
+	return
+	end
+	
