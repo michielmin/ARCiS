@@ -12,6 +12,7 @@
 			allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
 			ObsSpec(i)%y=0d0
 			ObsSpec(i)%dy=1d0
+			ObsSpec(i)%spec=.false.
 		else
 			open(unit=20,file=ObsSpec(i)%file,RECL=1000)
 			j=1
@@ -55,10 +56,15 @@
 	integer imodel,ny,i,j,iter1,iter2,iy,k
 	
 	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret),W(n_ret,n_ret),Winv(n_ret,n_ret),dmax,scale
+	real*8 chi2_spec,chi2_prof
 	integer na,map(n_ret),info
 	logical dofit(n_ret),initfit
 	
-	var0=0.5d0
+	do i=1,n_ret
+10		var0(i)=gasdev(idum)*0.1+0.5
+		if(var0(i).gt.1d0) goto 10
+		if(var0(i).lt.0d0) goto 10
+	enddo
 	dvar0=10d0
 	open(unit=31,file=trim(outputdir) // "Wolk.dat",RECL=6000)
 
@@ -94,9 +100,9 @@ c first genetic algoritm to make the first estimate
 	lambda=0.1
 
 	do iter1=1,10
-c	lambda=0.1
-c	var=var_best
-c	var0=var
+	lambda=0.1
+	var=var_best
+	var0=var
 	do iter2=1,10
 		j=0
 		imodel=imodel+1
@@ -113,6 +119,15 @@ c	var0=var
 			if(chi2.le.chi2min) then
 				var_best=var
 				ybest=y
+				chi2_spec=0d0
+				chi2_prof=0d0
+				do j=1,nobs
+					if(ObsSpec(j)%spec) then
+						chi2_spec=chi2_spec+1d0/chi2obs(j)
+					else
+						chi2_prof=chi2_prof+1d0/chi2obs(j)
+					endif
+				enddo
 				chi2min=chi2
 				call output("Updating best fit")
 				call SetOutputMode(.false.)
@@ -122,6 +137,8 @@ c	var0=var
 				call WritePTlimits(var0,Cov,error)
 				call SetOutputMode(.true.)
 			endif
+		else if(iter2.eq.1) then
+			var0=var
 		else
 			lambda=lambda*2d0
 			var=var0
@@ -151,6 +168,15 @@ c	var0=var
 				chi2min=chi2
 				var_best=var
 				ybest=y
+				chi2_spec=0d0
+				chi2_prof=0d0
+				do j=1,nobs
+					if(ObsSpec(j)%spec) then
+						chi2_spec=chi2_spec+1d0/chi2obs(j)
+					else
+						chi2_prof=chi2_prof+1d0/chi2obs(j)
+					endif
+				enddo
 				call output("Updating best fit")
 				call SetOutputMode(.false.)
 				call WriteStructure()
@@ -176,6 +202,15 @@ c	var0=var
 				chi2min=chi2
 				var_best=var
 				ybest=y
+				chi2_spec=0d0
+				chi2_prof=0d0
+				do j=1,nobs
+					if(ObsSpec(j)%spec) then
+						chi2_spec=chi2_spec+1d0/chi2obs(j)
+					else
+						chi2_prof=chi2_prof+1d0/chi2obs(j)
+					endif
+				enddo
 				call output("Updating best fit")
 				call SetOutputMode(.false.)
 				call WriteStructure()
@@ -276,6 +311,15 @@ c	var0=var
 		endif
 		endif
 	enddo
+		do i=1,nobs
+			if(.not.ObsSpec(i)%spec) then
+				print*,chi2_spec,chi2_prof,chi2min
+				ObsSpec(i)%beta=10d0**((log10(ObsSpec(i)%beta)+
+     &					log10(ObsSpec(i)%scale*ObsSpec(i)%beta*chi2_spec/chi2_prof))/2d0)
+				call output("Adjusting beta to " // trim(dbl2string(ObsSpec(i)%beta,'(e10.4)')))
+				chi2min=1d200
+			endif
+		enddo
 	enddo
 
 	close(unit=31)

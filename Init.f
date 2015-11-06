@@ -846,6 +846,8 @@ c allocate the arrays
 
 	do i=1,nobs
 		ObsSpec(i)%beta=1d0
+		ObsSpec(i)%scale=1d-1
+		ObsSpec(i)%spec=.true.
 	enddo
 
 	computeT=.false.
@@ -1021,6 +1023,8 @@ c number of cloud/nocloud combinations
 			ObsSpec(i)%file=key%value
 		case("beta","weight")
 			read(key%value,*) ObsSpec(i)%beta
+		case("scale")
+			read(key%value,*) ObsSpec(i)%scale
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

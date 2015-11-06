@@ -159,8 +159,9 @@ cPoints for the temperature structure
 		character*500 file
 		character*10 type
 		real*8,allocatable :: lam(:),y(:),dy(:)
-		real*8 beta
+		real*8 beta,scale
 		integer nlam
+		logical spec
 	end type ObservedSpec
 	type(ObservedSpec),allocatable :: ObsSpec(:)
 
