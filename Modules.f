@@ -36,7 +36,7 @@ c===============================================================================
 	IMPLICIT NONE
 	real*8 Mplanet,Rplanet									! mass and radius of the planet
 	real*8 Tstar,Rstar,logg,Dplanet
-	real*8,allocatable :: dens(:),T(:),P(:),Ndens(:)		! radius
+	real*8,allocatable :: dens(:),T(:),P(:),Ndens(:),Tin(:)	! radius
 	real*8,allocatable :: dust_dens(:,:)					! radius, component
 	real*8,allocatable :: R(:),Hp(:)						! radius
 	real*8,allocatable :: mixrat(:)							! component
@@ -88,7 +88,7 @@ c===============================================================================
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt
 	logical HITEMP,opacitymode,compute_opac
-	integer nPom,nTom,nretr
+	integer nPom,nTom
 	character*500 opacitydir
 	real*8 Tmin,Tmax
 	real*8 sintheta(360),costheta(360)
@@ -149,6 +149,7 @@ cPoints for the temperature structure
 		character*50 keyword
 		real*8 xmin,xmax,x0,dx,value,error1,error2
 		logical logscale,squarescale,opacitycomp
+		integer n
 	end type RetrievalPar
 
 	type(RetrievalPar),allocatable :: RetPar(:)

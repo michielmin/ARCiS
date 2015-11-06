@@ -175,17 +175,27 @@ c===============================================================================
 	character*10 names(59)
 	logical existh2h2,existh2he,existh2ch4
 
-	key => firstkey
 
 	nmol=1
 	nobs=0
 	ncia=0
 	nclouds=0
-	nretr=0
 	n_points=0
 	n_ret=0
 	j=0
 	mixratfile=.false.
+
+	nr=20
+	key => firstkey
+	do while(.not.key%last)
+		select case(key%key1)
+			case("nr")
+				read(key%value,*) nr
+		end select
+		key=>key%next
+	enddo
+
+	key => firstkey
 	do while(.not.key%last)
 		select case(key%key1)
 			case("obs")
@@ -208,18 +218,18 @@ c===============================================================================
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nclouds) nclouds=key%nr1
-			case("retrieval")
-				if(key%nr1.eq.0) key%nr1=1
-				if(key%nr2.eq.0) key%nr2=1
-				if(key%nr1.gt.nretr) nretr=key%nr1
 			case("point")
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.n_points) n_points=key%nr1
 			case("retpar","fitpar")
-				if(key%nr1.eq.0) key%nr1=1
-				if(key%nr2.eq.0) key%nr2=1
-				if(key%nr1.gt.n_ret) n_ret=key%nr1
+				if(key%key2.eq.'keyword') then
+					if(key%value.eq.'tprofile') then
+						n_ret=n_ret+nr
+					else
+						n_ret=n_ret+1
+					endif
+				endif
 			case default
 				do i=1,59
 					if(key%key.eq.molname(i)) then
@@ -251,6 +261,7 @@ c===============================================================================
 	allocate(T_point(max(n_points,1)))
 	allocate(RetPar(max(n_ret,1)))
 	allocate(ObsSpec(max(nobs,1)))
+	allocate(Tin(nr))
 
 	ncia0=0
 	existh2h2=.false.
@@ -380,6 +391,8 @@ c allocate the arrays
 	call CountStuff(key)
 
 	call SetDefaults
+
+	n_ret=0
 
 	key => first%next
 
@@ -576,6 +589,8 @@ c allocate the arrays
 			read(key%value,*) ngen
 		case("gene_cross")
 			read(key%value,*) gene_cross
+		case("tvalue")
+			read(key%value,*) Tin(key%nr1)
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -706,6 +721,7 @@ c allocate the arrays
 	do i=1,nr
 		T(i)=T0(nr+1-i)
 		P(i)=P0(nr+1-i)
+		if(Tin(i).ge.0d0) T(i)=Tin(i)
 		if(mixratfile) then
 			do j=1,n
 				mixrat_r(i,imol(j))=mr0(nr+1-i,j)
@@ -792,6 +808,7 @@ c allocate the arrays
 
 	TPfile=' '
 	mixratfile=.false.
+	Tin=-1d0
 
 	do i=1,nclouds
 		Cloud(i)%P=1d-4
@@ -924,26 +941,63 @@ c number of cloud/nocloud combinations
 	use ReadKeywords
 	IMPLICIT NONE
 	type(SettingKey) key
-	integer i
-	i=key%nr1
+	integer i,j
+	i=n_ret
 	
 	select case(key%key2)
 		case("keyword","parameter")
+			if(i.eq.0) then
+				n_ret=n_ret+1
+			else
+				n_ret=n_ret+RetPar(i)%n
+			endif
+			i=n_ret
 			read(key%value,*) RetPar(i)%keyword
+			if(RetPar(i)%keyword.eq.'tprofile') then
+				RetPar(i)%n=nr
+			else
+				RetPar(i)%n=1
+			endif
+			if(RetPar(i)%keyword.eq.'tprofile') then
+				do j=1,RetPar(i)%n
+					RetPar(i+j-1)%keyword='tvalue' // trim(int2string(j,'(i0.3)'))
+				enddo
+			endif
 		case("min","xmin")
 			read(key%value,*) RetPar(i)%xmin
+			do j=1,RetPar(i)%n
+				RetPar(i+j-1)%xmin=RetPar(i)%xmin
+			enddo
 		case("max","xmax")
 			read(key%value,*) RetPar(i)%xmax
+			do j=1,RetPar(i)%n
+				RetPar(i+j-1)%xmax=RetPar(i)%xmax
+			enddo
 		case("init","x")
 			read(key%value,*) RetPar(i)%x0
+			do j=1,RetPar(i)%n
+				RetPar(i+j-1)%x0=RetPar(i)%x0
+			enddo
 		case("spread","width","dx")
 			read(key%value,*) RetPar(i)%dx
+			do j=1,RetPar(i)%n
+				RetPar(i+j-1)%dx=RetPar(i)%dx
+			enddo
 		case("log","logscale")
 			read(key%value,*) RetPar(i)%logscale
+			do j=1,RetPar(i)%n
+				RetPar(i+j-1)%logscale=RetPar(i)%logscale
+			enddo
 		case("square","squarescale")
 			read(key%value,*) RetPar(i)%squarescale
+			do j=1,RetPar(i)%n
+				RetPar(i+j-1)%squarescale=RetPar(i)%squarescale
+			enddo
 		case("opacity","opacitycomp")
 			read(key%value,*) RetPar(i)%opacitycomp
+			do j=1,RetPar(i)%n
+				RetPar(i+j-1)%opacitycomp=RetPar(i)%opacitycomp
+			enddo
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

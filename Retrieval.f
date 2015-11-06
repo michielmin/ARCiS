@@ -296,25 +296,20 @@ c	var0=var
 	minT=1d200
 	call SetOutputMode(.false.)
 	do k=1,1000
-2		continue
-		tot=0d0
-		do j=1,n_ret
-			vec(j)=2d0*(ran1(idum)-0.5d0)
-			tot=tot+vec(j)**2
-			if(tot.gt.1d0) goto 2
-		enddo
 		do i=1,n_ret
-			var(i)=0d0
-			do j=1,n_ret
-				var(i)=var(i)+W(i,j)*vec(j)
-			enddo
-			if(ran1(idum).gt.0.5d0) then
-				var(i)=var0(i)+sqrt(abs(var(i)))
-				var(i)=var0(i)-error(1,i)*vec(i)
-			else
-				var(i)=var0(i)-sqrt(abs(var(i)))
-				var(i)=var0(i)+error(2,i)*vec(i)
-			endif
+			var(i)=var0(i)-error(1,i)
+			if(var(i).lt.0d0) var(i)=0d0
+			if(var(i).gt.1d0) var(i)=1d0
+		enddo
+		call MapRetrieval(var,error)
+		call InitDens()
+		call SetupStructure()
+		do i=1,nr
+			if(T(i).gt.maxT(i)) maxT(i)=T(i)
+			if(T(i).lt.minT(i)) minT(i)=T(i)
+		enddo				
+		do i=1,n_ret
+			var(i)=var0(i)+error(2,i)
 			if(var(i).lt.0d0) var(i)=0d0
 			if(var(i).gt.1d0) var(i)=1d0
 		enddo
