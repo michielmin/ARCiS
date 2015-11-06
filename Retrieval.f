@@ -5,29 +5,38 @@
 	real*8 x,y,dy
 	
 	do i=1,nobs
-		open(unit=20,file=ObsSpec(i)%file,RECL=1000)
-		j=1
-		ilam=1
-1		read(20,*,end=2,err=1) x,y,dy
-		if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) ilam=ilam+1
-		j=j+1
-		goto 1
-2		ObsSpec(i)%nlam=ilam-1
-		nj=j-1
-		rewind(20)
-		allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
-		allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
-		allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
-		ilam=1
-		do j=1,nj
-3			read(20,*,err=3) x,y,dy
-			if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) then
-				ObsSpec(i)%lam(ilam)=x*1d-4
-				ObsSpec(i)%y(ilam)=y
-				ObsSpec(i)%dy(ilam)=dy
-				ilam=ilam+1
-			endif
-		enddo
+		if(ObsSpec(i)%type.eq.'tprofile') then
+			ObsSpec(i)%nlam=nr-2
+			allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
+			allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
+			allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
+			ObsSpec(i)%y=0d0
+			ObsSpec(i)%dy=1d0
+		else
+			open(unit=20,file=ObsSpec(i)%file,RECL=1000)
+			j=1
+			ilam=1
+1			read(20,*,end=2,err=1) x,y,dy
+			if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) ilam=ilam+1
+			j=j+1
+			goto 1
+2			ObsSpec(i)%nlam=ilam-1
+			nj=j-1
+			rewind(20)
+			allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
+			allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
+			allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
+			ilam=1
+			do j=1,nj
+3				read(20,*,err=3) x,y,dy
+				if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) then
+					ObsSpec(i)%lam(ilam)=x*1d-4
+					ObsSpec(i)%y(ilam)=y
+					ObsSpec(i)%dy(ilam)=dy
+					ilam=ilam+1
+				endif
+			enddo
+		endif
 	enddo
 	
 	return
@@ -39,13 +48,13 @@
 	use GlobalSetup
 	IMPLICIT NONE
 	external ComputeChi2
-	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret)
+	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret),chi2min
 	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:),ybest(:)
-	real*8 chi2obs(nobs),var(n_ret),chi2,chi2min,gasdev,maxd,error(2,n_ret),var_best(n_ret)
+	real*8 chi2obs(nobs),var(n_ret),chi2,gasdev,maxd,error(2,n_ret),var_best(n_ret)
 	real*8 x1,x2,minT(nr),maxT(nr),ran1,tot,lambda,chi2_1,chi2_2,dchi2(n_ret),chi2prev
 	integer imodel,ny,i,j,iter1,iter2,iy,k
 	
-	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret),W(n_ret,n_ret),Winv(n_ret,n_ret),dmax
+	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret),W(n_ret,n_ret),Winv(n_ret,n_ret),dmax,scale
 	integer na,map(n_ret),info
 	logical dofit(n_ret),initfit
 	
@@ -83,7 +92,6 @@ c first genetic algoritm to make the first estimate
 	chi2prev=1d200
 	error=0.1d0
 	lambda=0.1
-	
 
 	do iter1=1,10
 c	lambda=0.1
@@ -226,7 +234,6 @@ c	var0=var
 			W(i,i)=W(i,i)*(1d0+lambda)
 		enddo
 		call MatrixInvert(W(1:na,1:na),Winv(1:na,1:na),na,info)
-	
 
 		dvar=0d0
 		do i=1,na
@@ -336,7 +343,7 @@ c	var0=var
 	use Constants
 	IMPLICIT NONE
 	integer i,j
-	real*8 spec(*)
+	real*8 spec(*),tot
 	real*8 lamobs(nlam-1)
 
 	do j=1,nlam-1
@@ -352,8 +359,13 @@ c	var0=var
 		case("emisa","emis","emission")
 			call regridarray(lamobs,flux(0,1:nlam-1),
      &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
+		case("tprofile")
+			do j=2,nr-1
+				spec(j-1)=(log10(T(j-1)/T(j))/log10(P(j-1)/P(j)))-(log10(T(j)/T(j+1))/log10(P(j)/P(j+1)))
+			enddo
+			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)/real(nr-2)
 	end select
-
+	spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta
 
 	return
 	end

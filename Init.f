@@ -827,6 +827,9 @@ c allocate the arrays
 	ngen=0
 	gene_cross=.false.
 
+	do i=1,nobs
+		ObsSpec(i)%beta=1d0
+	enddo
 
 	computeT=.false.
 	TeffP=600d0
@@ -962,6 +965,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) ObsSpec(i)%type
 		case("file")
 			ObsSpec(i)%file=key%value
+		case("beta","weight")
+			read(key%value,*) ObsSpec(i)%beta
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
