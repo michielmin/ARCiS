@@ -316,7 +316,7 @@ c first genetic algoritm to make the first estimate
 				print*,chi2_spec,chi2_prof,chi2min
 				ObsSpec(i)%beta=10d0**((log10(ObsSpec(i)%beta)+
      &					log10(ObsSpec(i)%scale*ObsSpec(i)%beta*chi2_spec/chi2_prof))/2d0)
-				call output("Adjusting beta to " // trim(dbl2string(ObsSpec(i)%beta,'(e10.4)')))
+				call output("Adjusting beta to " // trim(dbl2string(ObsSpec(i)%beta,'(es10.4)')))
 				chi2min=1d200
 			endif
 		enddo
