@@ -6,7 +6,7 @@
 	
 	do i=1,nobs
 		if(ObsSpec(i)%type.eq.'tprofile') then
-			ObsSpec(i)%nlam=nr-2
+			ObsSpec(i)%nlam=nr
 			allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
 			allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
 			allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
@@ -106,7 +106,8 @@ c first genetic algoritm to make the first estimate
 	do iter2=1,10
 		j=0
 		imodel=imodel+1
-		call output("Model number" // trim(int2string(imodel,'(i4)')))
+		call output("Iteration " // trim(int2string(iter2+10*(iter1-1),'(i4)')) // 
+     &				" - model" // trim(int2string(imodel,'(i5)')))
 		chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,.true.,error)
 		iy=1
 		do i=1,nobs
@@ -133,7 +134,7 @@ c first genetic algoritm to make the first estimate
 				call SetOutputMode(.false.)
 				call WriteStructure()
 				call WriteOutput()
-				call WriteRetrieval(imodel,chi2,var(1:n_ret))
+				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
 				call WritePTlimits(var0,Cov,error)
 				call SetOutputMode(.true.)
 			endif
@@ -151,7 +152,7 @@ c first genetic algoritm to make the first estimate
 		do i=1,n_ret
 			if(dvar(i).lt.1d-3) dvar(i)=1d-3
 			if(dvar(i).gt.1d-1) dvar(i)=1d-1
-			var=var0
+20			var=var0
 			var(i)=var(i)+dvar(i)
 			if(var(i).gt.1d0) var(i)=1d0
 			if(var(i).lt.0d0) var(i)=0d0
@@ -181,7 +182,7 @@ c first genetic algoritm to make the first estimate
 				call SetOutputMode(.false.)
 				call WriteStructure()
 				call WriteOutput()
-				call WriteRetrieval(imodel,chi2,var(1:n_ret))
+				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
 				call WritePTlimits(var,Cov,error)
 				call SetOutputMode(.true.)
 			endif
@@ -215,12 +216,21 @@ c first genetic algoritm to make the first estimate
 				call SetOutputMode(.false.)
 				call WriteStructure()
 				call WriteOutput()
-				call WriteRetrieval(imodel,chi2,var(1:n_ret))
+				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
 				call WritePTlimits(var,Cov,error)
 				call SetOutputMode(.true.)
 			endif
 			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/abs(x1-x2)
 			dchi2(i)=(chi2_1-chi2_2)/abs(x1-x2)
+			if(abs(chi2_1-chi2_2)/(chi2_1+chi2_2).lt.1d-4) then
+				if(dvar(i).lt.0.99d0) then
+					dvar(i)=dvar(i)*5d0
+					goto 20
+				else if(dvar(i).lt.0.999d0) then
+					dvar(i)=1d0
+					goto 20
+				endif
+			endif
 		enddo
 
 
@@ -260,7 +270,7 @@ c first genetic algoritm to make the first estimate
 			Cov=Winv
 			do i=1,n_ret
 				do j=1,2
-					error(j,i)=sqrt(Winv(i,i))
+					error(j,i)=sqrt(abs(Winv(i,i)))
 				enddo
 			enddo
 		endif
@@ -269,6 +279,11 @@ c first genetic algoritm to make the first estimate
 			W(i,i)=W(i,i)*(1d0+lambda)
 		enddo
 		call MatrixInvert(W(1:na,1:na),Winv(1:na,1:na),na,info)
+		if(INFO.ne.0) then
+			call output('Error in matrix inversion.')
+			call output('Retrieving parameters with no influence on the observations?')
+			stop
+		endif
 
 		dvar=0d0
 		do i=1,na
@@ -282,15 +297,13 @@ c first genetic algoritm to make the first estimate
 		j=0
 		do i=1,n_ret
 			if(dofit(i)) then
-			if(var(i).gt.1d0) then
-				if(abs((var(i)-1d0)/error(2,i)).gt.dmax) then
-					dmax=abs((var(i)-1d0)/error(2,i))
+			if(var(i).gt.1d0.or.var(i).lt.0d0) then
+				if(abs(dvar(i)/error(2,i)).gt.dmax) then
+					dmax=abs(dvar(i)/error(2,i))
 					j=i
 				endif
-			endif
-			if(var(i).lt.0d0) then
-				if(abs(var(i)/error(1,i)).gt.dmax) then
-					dmax=abs(var(i)/error(1,i))
+				if(abs(dvar(i)/error(1,i)).gt.dmax) then
+					dmax=abs(dvar(i)/error(1,i))
 					j=i
 				endif
 			endif
@@ -299,27 +312,25 @@ c first genetic algoritm to make the first estimate
 		if(j.ne.0) then
 			dofit(j)=.false.
 			if(var(j).gt.1d0) then
-				y(1:ny)=y(1:ny)+(1d0-var0(j))*dy(j,1:ny)
-				var(j)=1d0
+				var(j)=var0(j)
 			endif
 			if(var(j).lt.0d0) then
-				y(1:ny)=y(1:ny)-var0(j)*dy(j,1:ny)
-				var(j)=0d0
+				var(j)=var0(j)
 			endif
 			initfit=.false.
 			goto 2
 		endif
 		endif
 	enddo
-		do i=1,nobs
-			if(.not.ObsSpec(i)%spec) then
-				print*,chi2_spec,chi2_prof,chi2min
-				ObsSpec(i)%beta=10d0**((log10(ObsSpec(i)%beta)+
-     &					log10(ObsSpec(i)%scale*ObsSpec(i)%beta*chi2_spec/chi2_prof))/2d0)
-				call output("Adjusting beta to " // trim(dbl2string(ObsSpec(i)%beta,'(es10.4)')))
-				chi2min=1d200
-			endif
-		enddo
+	do i=1,nobs
+		if(.not.ObsSpec(i)%spec.and.ObsSpec(i)%scale.gt.0d0) then
+			print*,chi2_spec,chi2_prof,chi2min
+			ObsSpec(i)%beta=log10(ObsSpec(i)%scale*ObsSpec(i)%beta*chi2_spec/chi2_prof)+log10(ObsSpec(i)%beta)
+			ObsSpec(i)%beta=10d0**(ObsSpec(i)%beta/2d0)
+			call output("Adjusting beta to " // trim(dbl2string(ObsSpec(i)%beta,'(es10.4)')))
+			chi2min=1d200
+		endif
+	enddo
 	enddo
 
 	close(unit=31)
@@ -381,8 +392,8 @@ c first genetic algoritm to make the first estimate
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j
-	real*8 spec(*),tot
+	integer i,j,k
+	real*8 spec(*),x
 	real*8 lamobs(nlam-1)
 
 	do j=1,nlam-1
@@ -399,10 +410,12 @@ c first genetic algoritm to make the first estimate
 			call regridarray(lamobs,flux(0,1:nlam-1),
      &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
 		case("tprofile")
+			spec(1)=(log10(T(1)/T(2))/log10(P(1)/P(2)))
 			do j=2,nr-1
-				spec(j-1)=(log10(T(j-1)/T(j))/log10(P(j-1)/P(j)))-(log10(T(j)/T(j+1))/log10(P(j)/P(j+1)))
+				spec(j)=(log10(T(j-1)/T(j))/log10(P(j-1)/P(j)))-(log10(T(j)/T(j+1))/log10(P(j)/P(j+1)))
 			enddo
-			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)/real(nr-2)
+			spec(nr)=(log10(T(nr-1)/T(nr))/log10(P(nr-1)/P(nr)))
+			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)/real(nr)
 	end select
 	spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta
 

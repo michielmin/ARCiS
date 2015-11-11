@@ -167,7 +167,7 @@
 		jrnext=jr-1
 	endif
 	tau_v=v*Ce(jr)
-	albedo=(Cs(jr)/Ce(jr))
+	albedo=Cs(jr)/(Ca(jr)+Cs(jr))
 	if(tau_v.lt.tau) then
 		x=x+v*dx
 		y=y+v*dy

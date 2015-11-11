@@ -66,7 +66,7 @@ c===============================================================================
 	integer,allocatable :: niso(:)
 	real*8 Mmol(59),mu
 	integer nBB
-	parameter(nBB=2900)
+	parameter(nBB=10000)
 	real*8,allocatable :: BB(:,:)						! nBB,nlam
 	character*10 molname(59)
 	parameter(molname = (/'H2O   ','CO2   ','O3    ','N2O   ','CO    ','CH4   ',

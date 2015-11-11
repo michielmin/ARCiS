@@ -8,7 +8,7 @@
 	real*8,allocatable :: specsource(:,:),Eplanck(:,:)
 	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,theta,ct1,ct2,Tc(nr),Ec(nr),EJv(nr),EJvTot(nr)
 	real*8 tot,Lum,tot2,mu0,gamma,Cplanck(nr),Cstar(nr),dTdP_ad,dTdP
-	real*8 CabsL(nlam),Ca0,Cs0,T0,E0,Eabs,chi2,CabsLG(nlam,ng),Crw(nr),nabla,rho
+	real*8 CabsL(nlam),Ca0,Cs0,T0,E0,Eabs,chi2,CabsLG(nlam,ng),Crw(nr),nabla,rho,scale
 	integer iphot,ir,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,jr,ir0,jr0
 	integer iT1,iT2,iT,i
 	logical docloud0(nclouds),goingup,onedge,dorw(nr),converged
@@ -28,7 +28,7 @@
 	call output("Temperature computation (in beta phase!!)")
 
 	NphotPlanet=100
-	NphotStar=100
+	NphotStar=10000
 
 	docloud0=.false.
 	do i=1,nclouds
@@ -78,8 +78,6 @@
 			enddo
 		enddo
 		Crw(ir)=tot2/Crw(ir)
-		dorw(ir)=.false.
-		if((R(ir+1)-R(ir))*Crw(ir).gt.factRW) dorw(ir)=.true.
 	enddo
 
 	do ir=1,nr
@@ -94,6 +92,16 @@
 			enddo
 		enddo
 		CPlanck(ir)=CPlanck(ir)/tot2
+		if(CPlanck(ir).gt.(1d0/Hp(ir))) then
+			scale=1d0/(CPlanck(ir)*Hp(ir))
+			Ce(ir,1:nlam,1:ng)=Ce(ir,1:nlam,1:ng)*scale
+			Ca(ir,1:nlam,1:ng)=Ca(ir,1:nlam,1:ng)*scale
+			Cs(ir,1:nlam)=Cs(ir,1:nlam)*scale
+			Crw(ir)=Crw(ir)*scale
+			CPlanck(ir)=CPlanck(ir)*scale
+		endif
+		dorw(ir)=.false.
+c		if((R(ir+1)-R(ir))*Crw(ir).gt.factRW) dorw(ir)=.true.		
 
 		Cstar(ir)=0d0
 		tot2=0d0
@@ -112,34 +120,35 @@
 
 	jr0=0
 
-	tau=0d0
-	tot=0d0
-	do ir=nr,1,-1
-		tau=tau+Crw(ir)*(R(ir+1)-R(ir))
-		tot=tot+Cstar(ir)*(R(ir+1)-R(ir))
-		Tc(ir)=TeffP*((3d0/4d0)*(tau+2d0/3d0))**0.25d0
-		T0=Tstar*sqrt(Rstar/Dplanet)
-		gamma=Cstar(ir)/CPlanck(ir)
-		mu0=0.5
-		Tc(ir)=(Tc(ir)**4+mu0*T0**4*(-3d0*mu0*exp(-gamma*tau/mu0)/(4d0*gamma)
-     &		+3d0/2d0*(2d0/3d0+(mu0/gamma)**2-(mu0/gamma)**3*log(1d0+gamma/mu0))))**0.25
-		dTdP_ad=2d0/7d0
-		if(ir.lt.nr) then
-			dTdP=log(Tc(ir)/T(ir+1))/log(P(ir)/P(ir+1))
-			if(dTdP.gt.dTdP_ad) then
-				Tc(ir)=T(ir+1)*exp(dTdP_ad*log(P(ir)/P(ir+1)))
-				dTdP=log(Tc(ir)/T(ir+1))/log(P(ir)/P(ir+1))
-			endif
-		endif
-		if(Tc(ir).gt.2900d0) Tc(ir)=2900d0
-		chi2=chi2+((T(ir)-Tc(ir))/((Tc(ir)+T(ir))*0.1))**2
-		T(ir)=Tc(ir)
-	enddo
-	chi2=chi2/real(nr)
-	converged=.false.
-	if(chi2.lt.3d0) converged=.true.
-	call output("Chi2: " // trim(dbl2string(chi2,'(f7.2)')))
-	return
+C	tau=0d0
+C	tot=0d0
+C	do ir=nr,1,-1
+C		tau=tau+Crw(ir)*(R(ir+1)-R(ir))
+C		tot=tot+Cstar(ir)*(R(ir+1)-R(ir))
+C		Tc(ir)=TeffP*((3d0/4d0)*(tau+2d0/3d0))**0.25d0
+C		T0=Tstar*sqrt(Rstar/Dplanet)
+C		gamma=Cstar(ir)/CPlanck(ir)
+C		mu0=0.5
+C		Tc(ir)=(Tc(ir)**4+mu0*T0**4*(-3d0*mu0*exp(-gamma*tau/mu0)/(4d0*gamma)
+C    &		+3d0/2d0*(2d0/3d0+(mu0/gamma)**2-(mu0/gamma)**3*log(1d0+gamma/mu0))))**0.25
+C		dTdP_ad=2d0/7d0
+C		if(ir.lt.nr) then
+C			dTdP=log(Tc(ir)/T(ir+1))/log(P(ir)/P(ir+1))
+C			if(dTdP.gt.dTdP_ad) then
+C				Tc(ir)=T(ir+1)*exp(dTdP_ad*log(P(ir)/P(ir+1)))
+C				dTdP=log(Tc(ir)/T(ir+1))/log(P(ir)/P(ir+1))
+C			endif
+C		endif
+C		if(Tc(ir).gt.2900d0) Tc(ir)=2900d0
+C		chi2=chi2+((T(ir)-Tc(ir))/((Tc(ir)+T(ir))*0.1))**2
+C		T(ir)=Tc(ir)
+C	enddo
+C	chi2=chi2/real(nr)
+C	converged=.false.
+C	if(chi2.lt.3d0) converged=.true.
+C	call output("Chi2: " // trim(dbl2string(chi2,'(f7.2)')))
+C	call WriteStructure
+C	return
 
 	if(TeffP.gt.0d0) then
 	call output("Internal heating")
@@ -194,6 +203,7 @@
 			goingup=((x*dx+y*dy+z*dz).gt.0d0)
 			onedge=.false.
 			Tc(jr)=T0
+
 			endif
 		enddo
 	enddo
@@ -256,7 +266,6 @@
 	EJvTot=EJvTot+EJv*E0
 
 
-
 	chi2=0d0
 	do ir=nr,1,-1
 		CabsL=0d0
@@ -266,8 +275,8 @@
 			enddo
 		enddo
 		call increaseT(T(ir),T0,EJvTot(ir),0d0,CabsL,ir,Eplanck)
-		chi2=chi2+((T(ir)-T0)/((T0+T(ir))*0.1))**2
-		T(ir)=sqrt(T(ir)*T0)
+		chi2=chi2+((T(ir)-min(T0,2900d0))/((min(T0,2900d0)+T(ir))*0.1))**2
+		T(ir)=T0!sqrt(T(ir)*T0)
 	enddo
 	chi2=chi2/real(nr)
 	converged=.false.
@@ -282,6 +291,20 @@
 	deallocate(g)
 	deallocate(M)
 	deallocate(Eplanck)
+
+	do ir=1,nr
+		if(dochemistry) then
+			do i=1,nmol
+				call MorleyChemistry(mixrat_r(ir,i),T(ir),P(ir),molname(i),metallicity)
+			enddo
+		endif
+	enddo
+
+	call WriteStructure
+
+	do ir=1,nr
+		if(T(ir).gt.2900d0) T(ir)=2900d0
+	enddo
 	
 	return
 	end
