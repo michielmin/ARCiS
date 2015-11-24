@@ -27,7 +27,7 @@
 	
 	call output("Temperature computation (in beta phase!!)")
 
-	NphotPlanet=100
+	NphotPlanet=5000
 	NphotStar=10000
 
 	docloud0=.false.
@@ -92,8 +92,8 @@
 			enddo
 		enddo
 		CPlanck(ir)=CPlanck(ir)/tot2
-		if(CPlanck(ir).gt.(1d0/Hp(ir))) then
-			scale=1d0/(CPlanck(ir)*Hp(ir))
+		if(CPlanck(ir).gt.(3.5d0/Hp(ir))) then
+			scale=3.5d0/(CPlanck(ir)*Hp(ir))
 			Ce(ir,1:nlam,1:ng)=Ce(ir,1:nlam,1:ng)*scale
 			Ca(ir,1:nlam,1:ng)=Ca(ir,1:nlam,1:ng)*scale
 			Cs(ir,1:nlam)=Cs(ir,1:nlam)*scale

@@ -46,8 +46,8 @@ c terms of use
 	else if(retrieval) then
 		call DoRetrieval()
 	else
-		call WriteStructure()
 		call ComputeModel()
+		call WriteStructure()
 		call WriteOutput()
 	endif
 

@@ -4,7 +4,13 @@
 	IMPLICIT NONE
 	real*8 g,dp,dz,dlogp,RgasBar
 	parameter(RgasBar=82.05736*1.01325)
-	integer i,imol,nmix
+	integer i,imol,nmix,j,niter
+	real*8 tau,Tirr,eta,expint
+
+	niter=1
+	if(par_tprofile) niter=3
+	
+	do j=1,niter
 
 	g=Ggrav*Mplanet/Rplanet**2
 	call output("log(g) [cgs]: " // dbl2string(log10(g),'(f8.3)'))
@@ -28,9 +34,6 @@
 		do imol=1,nmol
 			if(mixrat_r(i,imol).gt.0d0) mu=mu+mixrat_r(i,imol)*Mmol(imol)
 		enddo
-c		call output("Layer: " // 
-c     &		trim(int2string(i,'(i4)')) // " of " // trim(int2string(nr,'(i4)')))
-c		call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 
 		g=Ggrav*Mplanet/R(i)**2
 		
@@ -48,6 +51,29 @@ c		call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 		dz=dlogp*Hp(i)
 		R(i+1)=R(i)+dz
 	enddo
+
+	if(par_tprofile) then
+		tau=0d0
+		Tirr=betaT*sqrt(Rstar/(2d0*Dplanet))*Tstar
+		do i=nr,1,-1
+			eta=2d0/3d0+(2d0/(3d0*gammaT))*(1d0+(gammaT*tau/2d0-1)*exp(-gammaT*tau))
+     &					+(2d0*gammaT/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT*tau)
+			T(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)+(3d0*Tirr**4/4d0)*eta
+			T(i)=T(i)**0.25d0
+			if(T(i).gt.10000d0) T(i)=10000d0
+			tau=tau+kappaT*dens(i)*(R(i+1)-R(i))
+		enddo
+	endif
+
+	enddo
+
+	if(dochemistry) then
+		do i=1,nr
+			do j=1,nmol
+				call MorleyChemistry(mixrat_r(i,j),T(i),P(i),molname(j),metallicity)
+			enddo
+		enddo
+	endif
 
 	do i=1,nclouds
 		call SetupCloud(i)

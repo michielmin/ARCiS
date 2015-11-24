@@ -5,7 +5,7 @@
 	real*8 x,y,dy
 	
 	do i=1,nobs
-		if(ObsSpec(i)%type.eq.'tprofile') then
+		if(ObsSpec(i)%type.eq.'tprofile'.or.ObsSpec(i)%type.eq.'logtp') then
 			ObsSpec(i)%nlam=nr
 			allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
 			allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
@@ -65,6 +65,8 @@
 		if(var0(i).gt.1d0) goto 10
 		if(var0(i).lt.0d0) goto 10
 	enddo
+	call MapTprofile(var0)
+
 	dvar0=10d0
 	open(unit=31,file=trim(outputdir) // "Wolk.dat",RECL=6000)
 
@@ -130,7 +132,7 @@ c first genetic algoritm to make the first estimate
 					endif
 				enddo
 				chi2min=chi2
-				call output("Updating best fit")
+				call output("Iteration improved" // trim(dbl2string(chi2,'(f8.3)')))
 				call SetOutputMode(.false.)
 				call WriteStructure()
 				call WriteOutput()
@@ -178,7 +180,7 @@ c first genetic algoritm to make the first estimate
 						chi2_prof=chi2_prof+1d0/chi2obs(j)
 					endif
 				enddo
-				call output("Updating best fit")
+				call output("Updating best fit " // trim(dbl2string(chi2,'(f8.3)')))
 				call SetOutputMode(.false.)
 				call WriteStructure()
 				call WriteOutput()
@@ -212,7 +214,7 @@ c first genetic algoritm to make the first estimate
 						chi2_prof=chi2_prof+1d0/chi2obs(j)
 					endif
 				enddo
-				call output("Updating best fit")
+				call output("Updating best fit " // trim(dbl2string(chi2,'(f8.3)')))
 				call SetOutputMode(.false.)
 				call WriteStructure()
 				call WriteOutput()
@@ -344,15 +346,26 @@ c first genetic algoritm to make the first estimate
 	use GlobalSetup
 	IMPLICIT NONE
 	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,W(n_ret,n_ret)
-	real*8 var0(n_ret),ran1,vec(n_ret)
-	integer i,j,k
+	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev
+	integer i,j,k,minC(nr),maxC(nr)
 
 	maxT=0d0
-	minT=1d200
+	minT=0d0
+	maxC=0
+	minC=0
 	call SetOutputMode(.false.)
+	var=var0
+	call MapRetrieval(var,error)
+	call InitDens()
+	call SetupStructure()
+	Tbest=T
 	do k=1,1000
 		do i=1,n_ret
-			var(i)=var0(i)-error(1,i)
+			if(random(idum).gt.0.5d0) then
+				var(i)=var0(i)-abs(gasdev(idum))*error(1,i)
+			else
+				var(i)=var0(i)+abs(gasdev(idum))*error(2,i)
+			endif
 			if(var(i).lt.0d0) var(i)=0d0
 			if(var(i).gt.1d0) var(i)=1d0
 		enddo
@@ -360,26 +373,22 @@ c first genetic algoritm to make the first estimate
 		call InitDens()
 		call SetupStructure()
 		do i=1,nr
-			if(T(i).gt.maxT(i)) maxT(i)=T(i)
-			if(T(i).lt.minT(i)) minT(i)=T(i)
-		enddo				
-		do i=1,n_ret
-			var(i)=var0(i)+error(2,i)
-			if(var(i).lt.0d0) var(i)=0d0
-			if(var(i).gt.1d0) var(i)=1d0
-		enddo
-		call MapRetrieval(var,error)
-		call InitDens()
-		call SetupStructure()
-		do i=1,nr
-			if(T(i).gt.maxT(i)) maxT(i)=T(i)
-			if(T(i).lt.minT(i)) minT(i)=T(i)
+			if(T(i).gt.Tbest(i)) then
+				maxT(i)=maxT(i)+(T(i)-Tbest(i))**2
+				maxC(i)=maxC(i)+1
+			else
+				minT(i)=minT(i)+(T(i)-Tbest(i))**2
+				minC(i)=minC(i)+1
+			endif
 		enddo				
 	enddo
+	maxT=sqrt(maxT/real(maxC))
+	minT=sqrt(minT/real(minC))
+
 	call SetOutputMode(.true.)
 	open(unit=45,file=trim(outputdir) // "limits.dat")
 	do i=1,nr
-		write(45,*) P(i),minT(i),maxT(i)
+		write(45,*) P(i),Tbest(i)-minT(i),Tbest(i)+maxT(i)
 	enddo
 	close(unit=45)
 
@@ -395,6 +404,7 @@ c first genetic algoritm to make the first estimate
 	integer i,j,k
 	real*8 spec(*),x
 	real*8 lamobs(nlam-1)
+	real*8 eta,Tirr,tau,expint
 
 	do j=1,nlam-1
 		lamobs(j)=sqrt(lam(j)*lam(j+1))
@@ -410,14 +420,27 @@ c first genetic algoritm to make the first estimate
 			call regridarray(lamobs,flux(0,1:nlam-1),
      &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
 		case("tprofile")
+			tau=0d0
+			Tirr=betaT*sqrt(Rstar/(2d0*Dplanet))*Tstar
+			do j=nr,1,-1
+				eta=2d0/3d0+(2d0/(3d0*gammaT))*(1d0+(gammaT*tau/2d0-1)*exp(-gammaT*tau))
+     &					+(2d0*gammaT/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT*tau)
+				spec(j)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)+(3d0*Tirr**4/4d0)*eta
+				spec(j)=spec(j)**0.25d0
+				spec(j)=(spec(j)-T(j))/spec(j)
+				tau=tau+kappaT*dens(j)*(R(j+1)-R(j))
+			enddo
+			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta
+		case("logtp")
 			spec(1)=(log10(T(1)/T(2))/log10(P(1)/P(2)))
 			do j=2,nr-1
 				spec(j)=(log10(T(j-1)/T(j))/log10(P(j-1)/P(j)))-(log10(T(j)/T(j+1))/log10(P(j)/P(j+1)))
+				spec(j)=spec(j)+log10(T(j-1)/T(j+1))/log10(P(j-1)/P(j+1))
 			enddo
 			spec(nr)=(log10(T(nr-1)/T(nr))/log10(P(nr-1)/P(nr)))
 			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)/real(nr)
+			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta
 	end select
-	spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta
 
 	return
 	end
@@ -454,11 +477,6 @@ c first genetic algoritm to make the first estimate
 		enddo
 		chi2obs(i)=chi2obs(i)/real(ObsSpec(i)%nlam)
 		ComputeChi2=ComputeChi2+chi2obs(i)
-		open(unit=40,file='file' // trim(int2string(i,'(i1)')))
-		do j=1,ObsSpec(i)%nlam
-			write(40,*) ObsSpec(i)%lam(j),spec(j),ObsSpec(i)%y(j)
-		enddo
-		close(unit=40)
 		deallocate(spec)
 	enddo
 
@@ -533,6 +551,49 @@ c	linear
 	return
 	end
 	
+
+	subroutine MapTprofile(var)
+	use GlobalSetup
+	use ReadKeywords
+	use Constants
+	IMPLICIT NONE
+	integer i,j
+	real*8 var(n_ret),x,Tmap(nr),tau,eta,Tirr,expint
+
+	call InitDens()
+	call SetupStructure()
+
+	tau=0d0
+	do i=nr,1,-1
+		Tirr=betaT*sqrt(Rstar/(2d0*Dplanet))*Tstar
+		eta=2d0/3d0+(2d0/(3d0*gammaT))*(1d0+(gammaT*tau/2d0-1)*exp(-gammaT*tau))
+     &					+(2d0*gammaT/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT*tau)
+		Tmap(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)+(3d0*Tirr**4/4d0)*eta
+		Tmap(i)=Tmap(i)**0.25d0
+		tau=tau+kappaT*dens(i)*(R(i+1)-R(i))
+	enddo
+	do i=1,n_ret
+		if(RetPar(i)%keyword(1:6).eq.'tvalue') then
+			read(RetPar(i)%keyword(7:len_trim(RetPar(i)%keyword)),*) j
+			if(RetPar(i)%logscale) then
+c	log
+				var(i)=(log10(Tmap(j))-log10(RetPar(i)%xmin))/log10(RetPar(i)%xmax/RetPar(i)%xmin)
+			else if(RetPar(i)%squarescale) then
+c	square
+				var(i)=(Tmap(j)**2-RetPar(i)%xmin**2)/(RetPar(i)%xmax**2-RetPar(i)%xmin**2)
+			else
+c	linear
+				var(i)=(Tmap(j)-RetPar(i)%xmin)/(RetPar(i)%xmax-RetPar(i)%xmin)
+			endif
+			if(var(i).gt.1d0) var(i)=1d0
+			if(var(i).lt.0d0) var(i)=0d0
+		endif
+	enddo
+
+	return
+	end
+	
+
 	
 	subroutine regridarray(x0,y0,n0,x1,y1,n1)
 	IMPLICIT NONE

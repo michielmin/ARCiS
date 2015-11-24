@@ -43,6 +43,7 @@
 			if((R(ir+1)-R(ir))*Crw(ir).gt.factRW) dorw(ir)=.true.
 		enddo
 
+		irdark=0
 		do ir=nr,1,-1
 			tau=0d0
 			do jr=ir+1,nr
@@ -93,6 +94,7 @@
 					call randomdisk(x,y,R(ir),R(ir+1))
 				endif
 				z=sqrt(R(nr+1)**2-x**2-y**2)
+
 				dz=-1d0
 				dx=0d0
 				dy=0d0
@@ -261,7 +263,7 @@
 	integer i,it
 	real*8 dz,theta,Fr,Fi,random,dx,dy,x,y,z,rr,u,v,w
 	type(Mueller) M
-	
+
 	Fr=random(idum)*M%IF11(180)
 	it=0
 	call hunt(M%IF11,180,Fr,it)
@@ -303,9 +305,12 @@
 	real*8 x,y,z,dx,dy,dz
 c for now Lambert surface with albedo 1
 	
-1	continue
 	call randomdirection(dx,dy,dz)
-	if((x*dx+y*dy+z*dz).lt.0d0) goto 1
+	if((x*dx+y*dy+z*dz).lt.0d0) then
+		dx=-dx
+		dy=-dy
+		dz=-dz
+	endif
 	
 	return
 	end

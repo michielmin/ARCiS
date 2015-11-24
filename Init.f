@@ -545,6 +545,12 @@ c allocate the arrays
 			read(key%value,*) TP0
 		case("dtp")
 			read(key%value,*) dTP
+		case("gamma","gammat")
+			read(key%value,*) gammaT
+		case("kappa","kappat")
+			read(key%value,*) kappaT
+		case("partprofile","par_tprofile")
+			read(key%value,*) par_tprofile
 		case("ng")
 			read(key%value,*) ng
 		case("distance")
@@ -727,11 +733,6 @@ c allocate the arrays
 				mixrat_r(i,imol(j))=mr0(nr+1-i,j)
 			enddo
 		endif
-		if(dochemistry) then
-			do j=1,nmol
-				call MorleyChemistry(mixrat_r(i,j),T(i),P(i),molname(j),metallicity)
-			enddo
-		endif
 	enddo
 
 	return
@@ -800,6 +801,7 @@ c allocate the arrays
 
 	mixrat=0d0
 	includemol=.false.
+	par_tprofile=.false.
 	
 	nphase=45
 
@@ -891,6 +893,13 @@ c allocate the arrays
 	nPom=50
 	Tmin=71d0
 	Tmax=2900d0
+	
+	TP0=600d0
+	dTP=0.1
+	
+	gammaT=1.58e-1
+	kappaT=3d-2
+	betaT=1d0
 	
 	maxiter=6
 	
