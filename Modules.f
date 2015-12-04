@@ -56,7 +56,7 @@ c===============================================================================
 	logical dochemistry
 	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
-	real*8 gammaT,kappaT,betaT
+	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT
 	logical mixratfile,par_tprofile
 	character*500 TPfile
 	real*8 metallicity,PQ

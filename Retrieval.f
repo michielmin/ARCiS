@@ -5,39 +5,55 @@
 	real*8 x,y,dy
 	
 	do i=1,nobs
-		if(ObsSpec(i)%type.eq.'tprofile'.or.ObsSpec(i)%type.eq.'logtp') then
-			ObsSpec(i)%nlam=nr
-			allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
-			allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
-			allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
-			ObsSpec(i)%y=0d0
-			ObsSpec(i)%dy=1d0
-			ObsSpec(i)%spec=.false.
-		else
-			open(unit=20,file=ObsSpec(i)%file,RECL=1000)
-			j=1
-			ilam=1
-1			read(20,*,end=2,err=1) x,y,dy
-			if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) ilam=ilam+1
-			j=j+1
-			goto 1
-2			ObsSpec(i)%nlam=ilam-1
-			nj=j-1
-			rewind(20)
-			allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
-			allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
-			allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
-			ilam=1
-			do j=1,nj
-3				read(20,*,err=3) x,y,dy
-				if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) then
-					ObsSpec(i)%lam(ilam)=x*1d-4
-					ObsSpec(i)%y(ilam)=y
-					ObsSpec(i)%dy(ilam)=dy
-					ilam=ilam+1
-				endif
-			enddo
-		endif
+		select case(ObsSpec(i)%type)
+			case('tprofile','logtp')
+				ObsSpec(i)%nlam=nr
+				allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
+				allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
+				allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
+				ObsSpec(i)%y=0d0
+				ObsSpec(i)%dy=1d0
+				ObsSpec(i)%spec=.false.
+			case('priors','prior')
+				ObsSpec(i)%nlam=n_ret
+				allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
+				allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
+				allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
+				do j=1,n_ret
+					if(RetPar(j)%logscale) then
+						ObsSpec(i)%y(j)=log10(RetPar(j)%x0)
+						ObsSpec(i)%dy(j)=log10(RetPar(j)%dx)
+					else
+						ObsSpec(i)%y(j)=RetPar(j)%x0
+						ObsSpec(i)%dy(j)=RetPar(j)%dx/ObsSpec(i)%beta
+					endif
+				enddo
+				ObsSpec(i)%spec=.false.
+			case default
+				open(unit=20,file=ObsSpec(i)%file,RECL=1000)
+				j=1
+				ilam=1
+1				read(20,*,end=2,err=1) x,y,dy
+				if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) ilam=ilam+1
+				j=j+1
+				goto 1
+2				ObsSpec(i)%nlam=ilam-1
+				nj=j-1
+				rewind(20)
+				allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
+				allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
+				allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
+				ilam=1
+				do j=1,nj
+3					read(20,*,err=3) x,y,dy
+					if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) then
+						ObsSpec(i)%lam(ilam)=x*1d-4
+						ObsSpec(i)%y(ilam)=y
+						ObsSpec(i)%dy(ilam)=dy/ObsSpec(i)%beta
+						ilam=ilam+1
+					endif
+				enddo
+		end select
 	enddo
 	
 	return
@@ -100,6 +116,7 @@ c first genetic algoritm to make the first estimate
 	chi2prev=1d200
 	error=0.1d0
 	lambda=0.1
+	Cov=0d0
 
 	do iter1=1,10
 	lambda=0.1
@@ -359,6 +376,8 @@ c first genetic algoritm to make the first estimate
 	call InitDens()
 	call SetupStructure()
 	Tbest=T
+c	maxT=0d0
+c	minT=1d200
 	do k=1,1000
 		do i=1,n_ret
 			if(random(idum).gt.0.5d0) then
@@ -369,6 +388,27 @@ c first genetic algoritm to make the first estimate
 			if(var(i).lt.0d0) var(i)=0d0
 			if(var(i).gt.1d0) var(i)=1d0
 		enddo
+c1		tot=0d0
+c		do i=1,n_ret
+c			vec(i)=2d0*(random(idum)-0.5d0)
+c			tot=tot+vec(i)**2
+c			if(tot.gt.1d0) goto 1
+c		enddo
+c		var=0d0
+c		do i=1,n_ret
+c			do j=1,n_ret
+c				var(i)=var(i)+W(i,j)*vec(j)
+c			enddo
+c		enddo
+c		do i=1,n_ret
+c			if(random(idum).gt.0.5d0) then
+c				var(i)=var0(i)+sqrt(abs(var(i)))
+c			else
+c				var(i)=var0(i)-sqrt(abs(var(i)))
+c			endif
+c			if(var(i).lt.0d0) var(i)=0d0
+c			if(var(i).gt.1d0) var(i)=1d0
+c		enddo
 		call MapRetrieval(var,error)
 		call InitDens()
 		call SetupStructure()
@@ -380,6 +420,8 @@ c first genetic algoritm to make the first estimate
 				minT(i)=minT(i)+(T(i)-Tbest(i))**2
 				minC(i)=minC(i)+1
 			endif
+c			if(T(i).gt.maxT(i)) maxT(i)=T(i)
+c			if(T(i).lt.minT(i)) minT(i)=T(i)
 		enddo				
 	enddo
 	maxT=sqrt(maxT/real(maxC))
@@ -389,6 +431,7 @@ c first genetic algoritm to make the first estimate
 	open(unit=45,file=trim(outputdir) // "limits.dat")
 	do i=1,nr
 		write(45,*) P(i),Tbest(i)-minT(i),Tbest(i)+maxT(i)
+c		write(45,*) P(i),minT(i),maxT(i)
 	enddo
 	close(unit=45)
 
@@ -420,16 +463,7 @@ c first genetic algoritm to make the first estimate
 			call regridarray(lamobs,flux(0,1:nlam-1),
      &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
 		case("tprofile")
-			tau=0d0
-			Tirr=betaT*sqrt(Rstar/(2d0*Dplanet))*Tstar
-			do j=nr,1,-1
-				eta=2d0/3d0+(2d0/(3d0*gammaT))*(1d0+(gammaT*tau/2d0-1)*exp(-gammaT*tau))
-     &					+(2d0*gammaT/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT*tau)
-				spec(j)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)+(3d0*Tirr**4/4d0)*eta
-				spec(j)=spec(j)**0.25d0
-				spec(j)=(spec(j)-T(j))/spec(j)
-				tau=tau+kappaT*dens(j)*(R(j+1)-R(j))
-			enddo
+			call ComputeParamT(spec(1:nr))
 			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta
 		case("logtp")
 			spec(1)=(log10(T(1)/T(2))/log10(P(1)/P(2)))
@@ -440,6 +474,14 @@ c first genetic algoritm to make the first estimate
 			spec(nr)=(log10(T(nr-1)/T(nr))/log10(P(nr-1)/P(nr)))
 			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)/real(nr)
 			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta
+		case("prior","priors")
+			do j=1,n_ret
+				if(RetPar(j)%logscale) then
+					spec(j)=log10(RetPar(j)%value)
+				else
+					spec(j)=RetPar(j)%value
+				endif
+			enddo
 	end select
 
 	return
@@ -558,20 +600,12 @@ c	linear
 	use Constants
 	IMPLICIT NONE
 	integer i,j
-	real*8 var(n_ret),x,Tmap(nr),tau,eta,Tirr,expint
+	real*8 var(n_ret),x,Tmap(nr)
 
 	call InitDens()
 	call SetupStructure()
 
-	tau=0d0
-	do i=nr,1,-1
-		Tirr=betaT*sqrt(Rstar/(2d0*Dplanet))*Tstar
-		eta=2d0/3d0+(2d0/(3d0*gammaT))*(1d0+(gammaT*tau/2d0-1)*exp(-gammaT*tau))
-     &					+(2d0*gammaT/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT*tau)
-		Tmap(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)+(3d0*Tirr**4/4d0)*eta
-		Tmap(i)=Tmap(i)**0.25d0
-		tau=tau+kappaT*dens(i)*(R(i+1)-R(i))
-	enddo
+	call ComputeParamT(Tmap)
 	do i=1,n_ret
 		if(RetPar(i)%keyword(1:6).eq.'tvalue') then
 			read(RetPar(i)%keyword(7:len_trim(RetPar(i)%keyword)),*) j

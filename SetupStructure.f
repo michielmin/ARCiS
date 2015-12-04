@@ -5,7 +5,6 @@
 	real*8 g,dp,dz,dlogp,RgasBar
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix,j,niter
-	real*8 tau,Tirr,eta,expint
 
 	niter=1
 	if(par_tprofile) niter=3
@@ -52,18 +51,7 @@
 		R(i+1)=R(i)+dz
 	enddo
 
-	if(par_tprofile) then
-		tau=0d0
-		Tirr=betaT*sqrt(Rstar/(2d0*Dplanet))*Tstar
-		do i=nr,1,-1
-			eta=2d0/3d0+(2d0/(3d0*gammaT))*(1d0+(gammaT*tau/2d0-1)*exp(-gammaT*tau))
-     &					+(2d0*gammaT/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT*tau)
-			T(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)+(3d0*Tirr**4/4d0)*eta
-			T(i)=T(i)**0.25d0
-			if(T(i).gt.10000d0) T(i)=10000d0
-			tau=tau+kappaT*dens(i)*(R(i+1)-R(i))
-		enddo
-	endif
+	if(par_tprofile) call ComputeParamT(T)
 
 	enddo
 
@@ -77,6 +65,30 @@
 
 	do i=1,nclouds
 		call SetupCloud(i)
+	enddo
+
+	return
+	end
+
+	subroutine ComputeParamT(x)
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 x(nr),tau,Tirr,eta,expint
+	integer i
+
+	tau=0d0
+	Tirr=betaT*sqrt(Rstar/(2d0*Dplanet))*Tstar
+	do i=nr,1,-1
+		x(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)
+		eta=2d0/3d0+(2d0/(3d0*gammaT1))*(1d0+(gammaT1*tau/2d0-1)*exp(-gammaT1*tau))
+     &					+(2d0*gammaT1/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT1*tau)
+		x(i)=x(i)+(3d0*Tirr**4/4d0)*(1d0-alphaT)*eta
+		eta=2d0/3d0+(2d0/(3d0*gammaT2))*(1d0+(gammaT2*tau/2d0-1)*exp(-gammaT2*tau))
+     &					+(2d0*gammaT2/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT2*tau)
+		x(i)=x(i)+(3d0*Tirr**4/4d0)*alphaT*eta
+		x(i)=x(i)**0.25d0
+		if(x(i).gt.10000d0) x(i)=10000d0
+		tau=tau+kappaT*dens(i)*(R(i+1)-R(i))
 	enddo
 
 	return

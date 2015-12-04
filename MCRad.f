@@ -10,8 +10,8 @@
 	logical docloud0(nclouds),goingup,hitR,onedge,hitR1,hitR2,dorw(nr)
 	type(Mueller) M(nr)
 	
-	NphotPlanet=250/real(ng)+10
-	NphotStar=25000/real(nr*ng)+10
+	NphotPlanet=1000/real(ng)+10
+	NphotStar=100000/real(ng)+10
 
 	EJv=0d0
 
@@ -82,10 +82,11 @@
 		do ir=0,nr
 			if(ir.ne.0) then
 				E0=Fstar(ilam)*(R(ir+1)**2-R(ir)**2)/Dplanet**2
+				Nphot=NphotStar/real(nr)
 			else
 				E0=Fstar(ilam)*R(1)**2/Dplanet**2
+				Nphot=NphotStar
 			endif
-			Nphot=NphotStar
 			E0=E0/real(Nphot)
 			do iphot=1,Nphot
 				if(ir.eq.0) then

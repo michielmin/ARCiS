@@ -408,6 +408,8 @@ c allocate the arrays
 
 	call InitFreq()
 
+	if(gammaT2.lt.0d0) gammaT2=gammaT1
+
 	if(opacitydir(len_trim(opacitydir)-1:len_trim(opacitydir)).ne.'/') then
 		opacitydir=trim(opacitydir) // '/'
 	endif
@@ -546,9 +548,14 @@ c allocate the arrays
 		case("dtp")
 			read(key%value,*) dTP
 		case("gamma","gammat")
-			read(key%value,*) gammaT
+			if(key%nr1.eq.1) read(key%value,*) gammaT1
+			if(key%nr1.eq.2) read(key%value,*) gammaT2			
 		case("kappa","kappat")
 			read(key%value,*) kappaT
+		case("alpha","alphat")
+			read(key%value,*) alphaT
+		case("beta","betat")
+			read(key%value,*) betaT
 		case("partprofile","par_tprofile")
 			read(key%value,*) par_tprofile
 		case("ng")
@@ -836,7 +843,7 @@ c allocate the arrays
 
 	retrieval=.false.
 	do i=1,n_ret
-		RetPar(i)%x0=0.5
+		RetPar(i)%x0=-1d0
 		RetPar(i)%dx=-1d0
 		RetPar(i)%logscale=.false.
 		RetPar(i)%squarescale=.false.
@@ -897,9 +904,11 @@ c allocate the arrays
 	TP0=600d0
 	dTP=0.1
 	
-	gammaT=1.58e-1
+	gammaT1=1.58e-1
+	gammaT2=-1.58e-1
 	kappaT=3d-2
 	betaT=1d0
+	alphaT=1d0
 	
 	maxiter=6
 	
