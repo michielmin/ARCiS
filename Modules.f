@@ -59,7 +59,7 @@ c===============================================================================
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT
 	logical mixratfile,par_tprofile
 	character*500 TPfile
-	real*8 metallicity,COratio,PQ
+	real*8 metallicity,COratio,PQ,mixP
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function

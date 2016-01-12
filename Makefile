@@ -98,7 +98,7 @@ DEST	      = ${HOME}/bin
 # make actions 
 all:		$(PROGRAM)
 version:;	echo "#define gitversion \"$(shell git rev-parse HEAD)\"" > gitversion.h
-clean:;		rm -f $(OBJS) $(PROGRAM) *.mod *.i
+clean:;		rm -f $(OBJS) $(PROGRAM) *.mod *.i *.i90
 install:	$(PROGRAM)
 		mv $(PROGRAM) $(DEST)
 

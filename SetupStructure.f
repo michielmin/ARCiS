@@ -71,7 +71,11 @@
 c			do j=1,nmol
 c				call MorleyChemistry(mixrat_r(i,j),T(i),P(i),molname(j),metallicity)
 c			enddo
-			call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini)
+			if(P(i).ge.mixP.or.i.eq.1) then
+				call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini)
+			else
+				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
+			endif
 		enddo
 		call output("==================================================================")
 		mixrat_old_r=mixrat_r

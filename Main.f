@@ -46,7 +46,7 @@ c terms of use
 	else if(retrieval) then
 		call DoRetrieval()
 	else
-		call ComputeModel()
+		call ComputeModel(.true.)
 		call WriteStructure()
 		call WriteOutput()
 	endif

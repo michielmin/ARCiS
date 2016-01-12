@@ -593,6 +593,8 @@ c allocate the arrays
 			read(key%value,*) metallicity
 		case("coratio")
 			read(key%value,*) COratio
+		case("mixp")
+			read(key%value,*) mixP
 		case("point")
 			call ReadPoint(key)
 		case("retpar","fitpar")
@@ -827,6 +829,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	dochemistry=.false.
 	metallicity=1d0
 	COratio=0.55
+	mixP=0d0
 
 	TPfile=' '
 	mixratfile=.false.

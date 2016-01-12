@@ -397,7 +397,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
              matrix(1:N_atoms+1,1:N_atoms+1),vector(1:N_atoms+1), &
              solution_vector(1:N_atoms+1))
         call ec_CHANGE_ABUNDS_short(N_atoms,N_gas,solution_vector(1:N_atoms+1),n_spec,pi_atom,n,converged,&
-             (/1,1,1,1,1/),5,mu_gas,a_gas,temp,names_atoms,molfracs_atoms)
+             (/1,1,1,1,1/),5,mu_gas,a_gas,temp,names_atoms,molfracs_atoms,N_reactants)
      ELSE
         call ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_gas,&
              press,temp,C_P_0,H_0,S_0,n,n_spec,pi_atom, &
@@ -407,7 +407,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
              matrix(1:N_gas+N_atoms+1,1:N_gas+N_atoms+1),vector(1:N_gas+N_atoms+1), &
              solution_vector(1:N_gas+N_atoms+1))
         call ec_CHANGE_ABUNDS_long(N_atoms,N_gas,solution_vector(1:N_gas+N_atoms+1), &
-             n_spec,pi_atom,n,converged,(/1,1,1,1,1/),5,names_atoms,molfracs_atoms)
+             n_spec,pi_atom,n,converged,(/1,1,1,1,1/),5,names_atoms,molfracs_atoms,N_reactants)
      END IF
      
      IF (verbose) THEN
@@ -502,7 +502,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
                       solution_vector(1:N_atoms+1+N_spec_eff-N_gas))
                  call ec_CHANGE_ABUNDS_short(N_atoms,N_spec_eff,solution_vector(1:N_atoms+1+N_spec_eff-N_gas), &
                       n_spec,pi_atom,n,converged,&
-                      solid_indices,N_spec_eff-N_gas,mu_gas,a_gas,temp,names_atoms,molfracs_atoms)
+                      solid_indices,N_spec_eff-N_gas,mu_gas,a_gas,temp,names_atoms,molfracs_atoms,N_reactants)
               ELSE
                  call ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_spec_eff,&
                       press,temp,C_P_0,H_0,S_0,n,n_spec,pi_atom, &
@@ -513,7 +513,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
                       solution_vector(1:N_spec_eff+N_atoms+1))
                  call ec_CHANGE_ABUNDS_long(N_atoms,N_spec_eff,solution_vector(1:N_spec_eff+N_atoms+1), &
                       n_spec,pi_atom,n,converged,&
-                      solid_indices,N_spec_eff-N_gas,names_atoms,molfracs_atoms)
+                      solid_indices,N_spec_eff-N_gas,names_atoms,molfracs_atoms,N_reactants)
               END IF
               IF (verbose) THEN
                  write(*,*)
@@ -676,7 +676,7 @@ subroutine ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_reactants,pr
   DOUBLE PRECISION             :: molfracs_atoms(N_atoms), press, temp
   DOUBLE PRECISION             :: C_P_0(N_reactants2), H_0(N_reactants2), S_0(N_reactants2)
   DOUBLE PRECISION             :: n ! Moles of gas particles per total mass of mixture in kg
-  DOUBLE PRECISION             :: n_spec(N_reactants) ! Moles of species per total mass of mixture in kg
+  DOUBLE PRECISION             :: n_spec(N_reactants2) ! Moles of species per total mass of mixture in kg
   DOUBLE PRECISION             :: pi_atom(N_atoms) ! Lagrangian multipliers for the atomic species divided
                                                    ! by (R*T)
   DOUBLE PRECISION             :: matrix(N_reactants+N_atoms+1,N_reactants+N_atoms+1)
@@ -690,6 +690,8 @@ subroutine ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_reactants,pr
   INTEGER                      :: i_atom, i_reac, i_ratom
   CHARACTER*40                 :: upper_atom_name
   CHARACTER*2                  :: upper_ratom_name
+
+!!$  write(*,*) N_reactants
 
   ! Set up b0
   b_0_norm = 0d0
@@ -861,9 +863,9 @@ subroutine ec_MAKE_MATRIX_short(N_atoms,names_atoms,molfracs_atoms,N_reactants,p
   INTEGER                      :: solid_indices(N_solids)
   CHARACTER*40                 :: names_atoms(N_atoms), names_reactants(N_reactants2)
   DOUBLE PRECISION             :: molfracs_atoms(N_atoms), press, temp
-  DOUBLE PRECISION             :: C_P_0(N_reactants), H_0(N_reactants), S_0(N_reactants)
+  DOUBLE PRECISION             :: C_P_0(N_reactants2), H_0(N_reactants2), S_0(N_reactants2)
   DOUBLE PRECISION             :: n ! Moles of gas particles per total mass of mixture in kg
-  DOUBLE PRECISION             :: n_spec(N_reactants) ! Moles of species per total mass of mixture in kg
+  DOUBLE PRECISION             :: n_spec(N_reactants2) ! Moles of species per total mass of mixture in kg
   DOUBLE PRECISION             :: pi_atom(N_atoms) ! Lagrangian multipliers for the atomic species divided
                                                    ! by (R*T)
   DOUBLE PRECISION             :: matrix(N_atoms+1+(N_reactants-N_gas),N_atoms+1+(N_reactants-N_gas))
@@ -1191,16 +1193,16 @@ end subroutine ec_INV_MATRIX_short
 !#####################################################
 
 subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_atom,n,converged,&
-     solid_indices,N_solids,names_atoms,molfracs_atoms)
+     solid_indices,N_solids,names_atoms,molfracs_atoms,N_reactants2)
 
   use thermo_data_block       
   implicit none
   !! I/O:
-  INTEGER                      :: N_atoms, N_reactants,N_solids
+  INTEGER                      :: N_atoms, N_reactants,N_solids,N_reactants2
   INTEGER                      :: solid_indices(N_solids)
   DOUBLE PRECISION             :: solution_vector(N_reactants+N_atoms+1)
   DOUBLE PRECISION             :: n ! Moles of gas particles per total mass of mixture in kg
-  DOUBLE PRECISION             :: n_spec(N_reactants) ! Moles of species per total mass of mixture in kg
+  DOUBLE PRECISION             :: n_spec(N_reactants2) ! Moles of species per total mass of mixture in kg
   DOUBLE PRECISION             :: pi_atom(N_atoms) ! Lagrangian multipliers for the atomic species divided
                                                    ! by (R*T)
   LOGICAL                      :: converged
@@ -1336,7 +1338,7 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
 
   mval_mass_good = MAXVAL(b_0)*1d-2
   DO i_atom = 1, N_atoms
-     IF ((abs(b_0(i_atom)-sum(a(1:N_reactants,i_atom)*n_spec)) > mval_mass_good) .AND. (b_0(i_atom) > 1d-6)) THEN
+     IF ((abs(b_0(i_atom)-sum(a(1:N_reactants,i_atom)*n_spec(1:N_reactants))) > mval_mass_good) .AND. (b_0(i_atom) > 1d-6)) THEN
         mass_good = .FALSE.
      END IF
   END DO
@@ -1418,16 +1420,16 @@ end subroutine ec_CHANGE_ABUNDS_long
 !#####################################################
 
 subroutine ec_CHANGE_ABUNDS_short(N_atoms,N_reactants,solution_vector,n_spec,pi_atom,n,converged,&
-     solid_indices,N_solids,mu_gas,a_gas,temp,names_atoms,molfracs_atoms)
+     solid_indices,N_solids,mu_gas,a_gas,temp,names_atoms,molfracs_atoms,N_reactants2)
 
   use thermo_data_block       
   implicit none
   !! I/O:
-  INTEGER                      :: N_atoms, N_reactants,N_solids
+  INTEGER                      :: N_atoms, N_reactants,N_solids, N_reactants2
   INTEGER                      :: solid_indices(N_solids)
   DOUBLE PRECISION             :: solution_vector(N_atoms+1+(N_reactants-N_gas))
   DOUBLE PRECISION             :: n ! Moles of gas particles per total mass of mixture in kg
-  DOUBLE PRECISION             :: n_spec(N_reactants) ! Moles of species per total mass of mixture in kg
+  DOUBLE PRECISION             :: n_spec(N_reactants2) ! Moles of species per total mass of mixture in kg
   DOUBLE PRECISION             :: pi_atom(N_atoms) ! Lagrangian multipliers for the atomic species divided
                                                    ! by (R*T)
   LOGICAL                      :: converged
@@ -1574,7 +1576,7 @@ subroutine ec_CHANGE_ABUNDS_short(N_atoms,N_reactants,solution_vector,n_spec,pi_
 
   mval_mass_good = MAXVAL(b_0)*1d-2
   DO i_atom = 1, N_atoms
-     IF ((abs(b_0(i_atom)-sum(a(1:N_reactants,i_atom)*n_spec)) > mval_mass_good) .AND. (b_0(i_atom) > 1d-6)) THEN
+     IF ((abs(b_0(i_atom)-sum(a(1:N_reactants,i_atom)*n_spec(1:N_reactants))) > mval_mass_good) .AND. (b_0(i_atom) > 1d-6)) THEN
         mass_good = .FALSE.
      END IF
   END DO
