@@ -81,7 +81,7 @@
 		if(var0(i).gt.1d0) goto 10
 		if(var0(i).lt.0d0) goto 10
 	enddo
-	call MapTprofile(var0)
+c	call MapTprofile(var0)
 
 	dvar0=10d0
 	open(unit=31,file=trim(outputdir) // "Wolk.dat",RECL=6000)
@@ -150,6 +150,7 @@ c first genetic algoritm to make the first estimate
 				enddo
 				chi2min=chi2
 				call output("Iteration improved" // trim(dbl2string(chi2,'(f8.3)')))
+				call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
 				call SetOutputMode(.false.)
 				call WriteStructure()
 				call WriteOutput()
@@ -198,6 +199,7 @@ c first genetic algoritm to make the first estimate
 					endif
 				enddo
 				call output("Updating best fit " // trim(dbl2string(chi2,'(f8.3)')))
+				call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
 				call SetOutputMode(.false.)
 				call WriteStructure()
 				call WriteOutput()
@@ -232,6 +234,7 @@ c first genetic algoritm to make the first estimate
 					endif
 				enddo
 				call output("Updating best fit " // trim(dbl2string(chi2,'(f8.3)')))
+				call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
 				call SetOutputMode(.false.)
 				call WriteStructure()
 				call WriteOutput()
@@ -374,7 +377,7 @@ c first genetic algoritm to make the first estimate
 	var=var0
 	call MapRetrieval(var,error)
 	call InitDens()
-	call SetupStructure()
+	call SetupStructure(.false.)
 	Tbest=T
 c	maxT=0d0
 c	minT=1d200
@@ -411,7 +414,7 @@ c			if(var(i).gt.1d0) var(i)=1d0
 c		enddo
 		call MapRetrieval(var,error)
 		call InitDens()
-		call SetupStructure()
+		call SetupStructure(.false.)
 		do i=1,nr
 			if(T(i).gt.Tbest(i)) then
 				maxT(i)=maxT(i)+(T(i)-Tbest(i))**2
@@ -603,7 +606,7 @@ c	linear
 	real*8 var(n_ret),x,Tmap(nr)
 
 	call InitDens()
-	call SetupStructure()
+	call SetupStructure(.false.)
 
 	call ComputeParamT(Tmap)
 	do i=1,n_ret

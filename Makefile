@@ -87,7 +87,9 @@ OBJS	= Modules.o \
 		Retrieval.o \
 		Genetic.o \
 		dlsei.o \
-		Lapack.o
+		Lapack.o \
+		easy_chem_extra.o \
+		easy_chem.o
 
 # program name and install location
 PROGRAM       = SPARC

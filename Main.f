@@ -80,7 +80,7 @@ c terms of use
 	starttime_w=omp_get_wtime()
 #ENDIF
 	Tconverged=.false.
-	call SetupStructure()
+	call SetupStructure(computeopac)
 	if(computeopac) call SetupOpacities()
 	if(computeT) then
 		nTiter=0

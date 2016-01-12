@@ -40,7 +40,7 @@ c===============================================================================
 	real*8,allocatable :: dust_dens(:,:)					! radius, component
 	real*8,allocatable :: R(:),Hp(:)						! radius
 	real*8,allocatable :: mixrat(:)							! component
-	real*8,allocatable :: mixrat_r(:,:)						! radius,component
+	real*8,allocatable :: mixrat_r(:,:),mixrat_old_r(:,:)	! radius,component
 	real*8,allocatable :: Cabs(:,:,:),Csca(:,:)				! radius,wav,g
 	real*8,allocatable :: cloud_dens(:,:)					! radius, cloud
 	real*8,allocatable :: Fstar(:)							! wavelength
@@ -53,13 +53,13 @@ c===============================================================================
 	integer idum,maxiter
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT
-	logical dochemistry
+	logical dochemistry,retrieve_profile
 	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT
 	logical mixratfile,par_tprofile
 	character*500 TPfile
-	real*8 metallicity,PQ
+	real*8 metallicity,COratio,PQ
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
@@ -91,7 +91,7 @@ c===============================================================================
 	logical HITEMP,opacitymode,compute_opac
 	integer nPom,nTom
 	character*500 opacitydir
-	real*8 Tmin,Tmax
+	real*8 Tmin,Tmax,minTprofile,maxTprofile
 	real*8 sintheta(360),costheta(360)
 	logical,allocatable :: do_dB(:)
 

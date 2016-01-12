@@ -1,10 +1,11 @@
-	subroutine SetupStructure()
+	subroutine SetupStructure(compute_mixrat)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
 	real*8 g,dp,dz,dlogp,RgasBar
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix,j,niter
+	logical ini,compute_mixrat
 
 	niter=1
 	if(par_tprofile) niter=3
@@ -52,15 +53,31 @@
 	enddo
 
 	if(par_tprofile) call ComputeParamT(T)
+	do i=1,nr
+		if(T(i).gt.3000d0) T(i)=3000d0
+		if(T(i).lt.100d0) T(i)=100d0
+	enddo
 
 	enddo
 
 	if(dochemistry) then
+	if(compute_mixrat) then
+		ini = .TRUE.
+		call easy_chem_set_molfracs_atoms(COratio,metallicity)
+		call output("==================================================================")
+		call output("Computing chemistry using easy_chem by Paul Molliere")
 		do i=1,nr
-			do j=1,nmol
-				call MorleyChemistry(mixrat_r(i,j),T(i),P(i),molname(j),metallicity)
-			enddo
+			call tellertje(i,nr)
+c			do j=1,nmol
+c				call MorleyChemistry(mixrat_r(i,j),T(i),P(i),molname(j),metallicity)
+c			enddo
+			call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini)
 		enddo
+		call output("==================================================================")
+		mixrat_old_r=mixrat_r
+	else
+		mixrat_r=mixrat_old_r
+	endif
 	endif
 
 	do i=1,nclouds
@@ -80,11 +97,19 @@
 	Tirr=betaT*sqrt(Rstar/(2d0*Dplanet))*Tstar
 	do i=nr,1,-1
 		x(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)
-		eta=2d0/3d0+(2d0/(3d0*gammaT1))*(1d0+(gammaT1*tau/2d0-1)*exp(-gammaT1*tau))
+		if(tau.lt.100d0) then
+			eta=2d0/3d0+(2d0/(3d0*gammaT1))*(1d0+(gammaT1*tau/2d0-1)*exp(-gammaT1*tau))
      &					+(2d0*gammaT1/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT1*tau)
+		else
+			eta=2d0/3d0+(2d0/(3d0*gammaT1))
+		endif
 		x(i)=x(i)+(3d0*Tirr**4/4d0)*(1d0-alphaT)*eta
-		eta=2d0/3d0+(2d0/(3d0*gammaT2))*(1d0+(gammaT2*tau/2d0-1)*exp(-gammaT2*tau))
+		if(tau.lt.100d0) then
+			eta=2d0/3d0+(2d0/(3d0*gammaT2))*(1d0+(gammaT2*tau/2d0-1)*exp(-gammaT2*tau))
      &					+(2d0*gammaT2/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT2*tau)
+		else
+			eta=2d0/3d0+(2d0/(3d0*gammaT2))
+		endif
 		x(i)=x(i)+(3d0*Tirr**4/4d0)*alphaT*eta
 		x(i)=x(i)**0.25d0
 		if(x(i).gt.10000d0) x(i)=10000d0

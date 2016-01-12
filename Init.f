@@ -423,6 +423,7 @@ c allocate the arrays
 		allocate(P(nr))
 		allocate(Hp(nr))
 		allocate(mixrat_r(nr,nmol))
+		allocate(mixrat_old_r(nr,nmol))
 		allocate(cloud_dens(nr,max(nclouds,1)))
 		call InitDens()
 		call InitObs()
@@ -590,6 +591,8 @@ c allocate the arrays
 			read(key%value,*) dochemistry
 		case("metallicity")
 			read(key%value,*) metallicity
+		case("coratio")
+			read(key%value,*) COratio
 		case("point")
 			call ReadPoint(key)
 		case("retpar","fitpar")
@@ -604,6 +607,8 @@ c allocate the arrays
 			read(key%value,*) gene_cross
 		case("tvalue")
 			read(key%value,*) Tin(key%nr1)
+		case("retrieve_profile")
+			read(key%value,*) retrieve_profile
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -734,7 +739,14 @@ c allocate the arrays
 	do i=1,nr
 		T(i)=T0(nr+1-i)
 		P(i)=P0(nr+1-i)
-		if(Tin(i).ge.0d0) T(i)=Tin(i)
+	enddo
+c	if(par_tprofile) call ComputeParamT(T)
+	do i=1,nr
+		if(retrieve_profile) then
+			T(i)=T(i)+Tin(i)
+			if(T(i).gt.maxTprofile) T(i)=maxTprofile
+			if(T(i).lt.minTprofile) T(i)=minTprofile
+		endif
 		if(mixratfile) then
 			do j=1,n
 				mixrat_r(i,imol(j))=mr0(nr+1-i,j)
@@ -814,6 +826,7 @@ c allocate the arrays
 
 	dochemistry=.false.
 	metallicity=1d0
+	COratio=0.55
 
 	TPfile=' '
 	mixratfile=.false.
@@ -910,6 +923,8 @@ c allocate the arrays
 	betaT=1d0
 	alphaT=1d0
 	
+	retrieve_profile=.false.
+	
 	maxiter=6
 	
 	return
@@ -974,40 +989,66 @@ c number of cloud/nocloud combinations
 			i=n_ret
 			read(key%value,*) RetPar(i)%keyword
 			if(RetPar(i)%keyword.eq.'tprofile') then
-				RetPar(i)%n=nr
+				RetPar(i)%n=nr+2
+				retrieve_profile=.true.
 			else
 				RetPar(i)%n=1
 			endif
 			if(RetPar(i)%keyword.eq.'tprofile') then
-				do j=1,RetPar(i)%n
+				do j=1,nr
 					RetPar(i+j-1)%keyword='tvalue' // trim(int2string(j,'(i0.3)'))
 				enddo
+				RetPar(i+nr)%keyword='tp'
+				RetPar(i+nr+1)%keyword='dtp'
 			endif
 		case("min","xmin")
 			read(key%value,*) RetPar(i)%xmin
 			do j=1,RetPar(i)%n
 				RetPar(i+j-1)%xmin=RetPar(i)%xmin
 			enddo
+			if(RetPar(i)%keyword.eq.'tvalue001') then
+				minTprofile=RetPar(i)%xmin
+				RetPar(i+RetPar(i)%n-1)%xmin=-0.2
+			endif
 		case("max","xmax")
 			read(key%value,*) RetPar(i)%xmax
 			do j=1,RetPar(i)%n
 				RetPar(i+j-1)%xmax=RetPar(i)%xmax
 			enddo
+			if(RetPar(i)%keyword.eq.'tvalue001') then
+				do j=1,nr
+					RetPar(i+j-1)%xmin=-RetPar(i)%xmax
+				enddo
+				maxTprofile=RetPar(i)%xmax
+				RetPar(i+RetPar(i)%n-1)%xmax=0.2
+			endif
 		case("init","x")
 			read(key%value,*) RetPar(i)%x0
 			do j=1,RetPar(i)%n
 				RetPar(i+j-1)%x0=RetPar(i)%x0
 			enddo
+			if(RetPar(i)%keyword.eq.'tvalue001') then
+				RetPar(i+RetPar(i)%n-1)%x0=0d0
+			endif
 		case("spread","width","dx")
 			read(key%value,*) RetPar(i)%dx
 			do j=1,RetPar(i)%n
 				RetPar(i+j-1)%dx=RetPar(i)%dx
 			enddo
+			if(RetPar(i)%keyword.eq.'tvalue001') then
+				RetPar(i+RetPar(i)%n-1)%dx=1d0
+			endif
 		case("log","logscale")
 			read(key%value,*) RetPar(i)%logscale
 			do j=1,RetPar(i)%n
 				RetPar(i+j-1)%logscale=RetPar(i)%logscale
 			enddo
+			if(RetPar(i)%keyword.eq.'tvalue001') then
+				do j=1,RetPar(i)%n
+					RetPar(i+j-1)%logscale=.false.
+				enddo
+				read(key%value,*) RetPar(i+RetPar(i)%n-2)%logscale
+			endif
 		case("square","squarescale")
 			read(key%value,*) RetPar(i)%squarescale
 			do j=1,RetPar(i)%n
