@@ -7,4 +7,6 @@ _*
 gitversion.h
 .DS_Store
 ELMO
+*.i90
+easy_chem_public/*
 
