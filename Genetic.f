@@ -45,7 +45,8 @@
 
 	same=.false.
 	
-	do j=1,npop
+	var(1,1,1:nvars)=var0(1:nvars)
+	do j=2,npop
 		do k=1,nvars
 			var(1,j,k)=-1d0
 			do while(var(1,j,k).lt.0d0.or.var(1,j,k).gt.1d0)

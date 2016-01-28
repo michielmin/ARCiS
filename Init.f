@@ -225,7 +225,7 @@ c===============================================================================
 			case("retpar","fitpar")
 				if(key%key2.eq.'keyword') then
 					if(key%value.eq.'tprofile') then
-						n_ret=n_ret+nr
+						n_ret=n_ret+nr+2
 					else
 						n_ret=n_ret+1
 					endif
@@ -488,7 +488,8 @@ c allocate the arrays
 
 	select case(key%key1)
 		case("nr")
-			read(key%value,*) nr
+c is already set in CountStuff
+c			read(key%value,*) nr
 		case("mp")
 			read(key%value,*) Mplanet
 		case("rp")
@@ -878,7 +879,6 @@ c	if(par_tprofile) call ComputeParamT(T)
 	computeT=.false.
 	TeffP=600d0
 	outputopacity=.false.
-	nr=20
 
 	Pmin=1d-6
 	Pmax=1d+3

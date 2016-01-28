@@ -2,7 +2,8 @@
 	use GlobalSetup
 	IMPLICIT NONE
 	integer i,j,ilam,nj
-	real*8 x,y,dy
+	real*8 x,y,dy,specres_obs,expspecres_obs
+	character*1000 line
 	
 	do i=1,nobs
 		select case(ObsSpec(i)%type)
@@ -43,13 +44,21 @@
 				allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
 				allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
 				allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
+				allocate(ObsSpec(i)%R(ObsSpec(i)%nlam))
+				allocate(ObsSpec(i)%Rexp(ObsSpec(i)%nlam))
+				allocate(ObsSpec(i)%model(ObsSpec(i)%nlam))
 				ilam=1
 				do j=1,nj
-3					read(20,*,err=3) x,y,dy
-					if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) then
+3					read(20,'(a1000)',err=3) line
+					specres_obs=specres
+					expspecres_obs=2d0
+					read(line,*,err=3,end=4) x,y,dy,specres_obs,expspecres_obs
+4					if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) then
 						ObsSpec(i)%lam(ilam)=x*1d-4
 						ObsSpec(i)%y(ilam)=y
 						ObsSpec(i)%dy(ilam)=dy/ObsSpec(i)%beta
+						ObsSpec(i)%R(ilam)=specres_obs
+						ObsSpec(i)%Rexp(ilam)=expspecres_obs
 						ilam=ilam+1
 					endif
 				enddo
@@ -65,16 +74,16 @@
 	use GlobalSetup
 	IMPLICIT NONE
 	external ComputeChi2
-	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret),chi2min
-	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:),ybest(:)
+	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret),chi2min,random
+	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:),ybest(:),y0(:)
 	real*8 chi2obs(nobs),var(n_ret),chi2,gasdev,maxd,error(2,n_ret),var_best(n_ret)
 	real*8 x1,x2,minT(nr),maxT(nr),ran1,tot,lambda,chi2_1,chi2_2,dchi2(n_ret),chi2prev
 	integer imodel,ny,i,j,iter1,iter2,iy,k
 	
 	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret),W(n_ret,n_ret),Winv(n_ret,n_ret),dmax,scale
-	real*8 chi2_spec,chi2_prof
+	real*8 chi2_spec,chi2_prof,maxsig
 	integer na,map(n_ret),info
-	logical dofit(n_ret),initfit
+	logical dofit(n_ret),dofit_prev(n_ret),initfit
 	
 	do i=1,n_ret
 10		var0(i)=gasdev(idum)*0.1+0.5
@@ -88,7 +97,7 @@ c	call MapTprofile(var0)
 
 	if(ngen.gt.0) then
 c first genetic algoritm to make the first estimate
-		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.true.)
+c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.true.)
 	endif
 
 	imodel=npop*ngen
@@ -97,6 +106,7 @@ c first genetic algoritm to make the first estimate
 		ny=ny+ObsSpec(i)%nlam
 	enddo
 	allocate(y(ny))
+	allocate(y0(ny))
 	allocate(ybest(ny))
 	allocate(y1(ny))
 	allocate(y2(ny))
@@ -118,14 +128,25 @@ c first genetic algoritm to make the first estimate
 	lambda=0.1
 	Cov=0d0
 
-	do iter1=1,10
-	lambda=0.1
-	var=var_best
-	var0=var
-	do iter2=1,10
+	do iter1=1,5
+
+	if(ngen.gt.0) then
+		lambda=0.1
+		var=var_best
+		var0=var
+		dvar0=0.1d0
+		if(iter1.eq.1) dvar0=10d0
+		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.true.)
+		chi2prev=1d200
+		imodel=npop*ngen
+	endif
+	var=var0
+	ngen=0
+
+	do iter2=1,20
 		j=0
 		imodel=imodel+1
-		call output("Iteration " // trim(int2string(iter2+10*(iter1-1),'(i4)')) // 
+		call output("Iteration " // trim(int2string(iter2+20*(iter1-1),'(i4)')) // 
      &				" - model" // trim(int2string(imodel,'(i5)')))
 		chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,.true.,error)
 		iy=1
@@ -134,8 +155,9 @@ c first genetic algoritm to make the first estimate
 			iy=iy+ObsSpec(i)%nlam
 		enddo
 		if(chi2.le.chi2prev) then
-			lambda=lambda/2d0
+			lambda=lambda/5d0
 			var0=var
+			call output("Iteration improved" // trim(dbl2string(chi2,'(f8.3)')))
 			if(chi2.le.chi2min) then
 				var_best=var
 				ybest=y
@@ -148,27 +170,33 @@ c first genetic algoritm to make the first estimate
 						chi2_prof=chi2_prof+1d0/chi2obs(j)
 					endif
 				enddo
-				chi2min=chi2
-				call output("Iteration improved" // trim(dbl2string(chi2,'(f8.3)')))
 				call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
+				chi2min=chi2
 				call SetOutputMode(.false.)
 				call WriteStructure()
 				call WriteOutput()
 				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
 				call WritePTlimits(var0,Cov,error)
 				call SetOutputMode(.true.)
+			else
+				var=var_best
+				var0=var
+				y=ybest
 			endif
-		else if(iter2.eq.1) then
-			var0=var
 		else
-			lambda=lambda*2d0
+			lambda=lambda*5d0
 			var=var0
+			y=y0
+			dofit=dofit_prev
 			goto 1
 		endif
 		do i=1,n_ret
 			dvar(i)=max(error(1,i),error(2,i))/2d0
      	enddo
 		chi2prev=chi2
+		y0=y
+		dofit=.true.
+		dofit_prev=.true.
 		do i=1,n_ret
 			if(dvar(i).lt.1d-3) dvar(i)=1d-3
 			if(dvar(i).gt.1d-1) dvar(i)=1d-1
@@ -252,13 +280,17 @@ c first genetic algoritm to make the first estimate
 					dvar(i)=1d0
 					goto 20
 				endif
+				dofit(i)=.false.
+				var(i)=var0(i)
+				dvar(i)=1d0
+				call output("derivative too small")
+				call output("removing " // trim(RetPar(i)%keyword))
 			endif
 		enddo
 
-
+		dofit_prev=dofit
 1		continue
 
-		dofit=.true.
 		initfit=.true.
 
 2		continue
@@ -279,6 +311,7 @@ c first genetic algoritm to make the first estimate
 					W(i,j)=W(i,j)+dy(map(i),k)*dy(map(j),k)/dyobs(k)**2
 				enddo
 				b(i)=b(i)+(yobs(k)-y(k))*dy(map(i),k)/dyobs(k)**2
+c				print*,i,k,dyobs(k),dy(map(i),k)
 			enddo
 		enddo
 
@@ -288,14 +321,18 @@ c first genetic algoritm to make the first estimate
 			call output('Retrieving parameters with no influence on the observations?')
 			stop
 		endif
-		if(initfit) then
+c		if(initfit) then
 			Cov=Winv
-			do i=1,n_ret
+			do i=1,na
+				maxsig=0d0
+				do j=1,na
+					if(sqrt(abs(Winv(i,j))).gt.maxsig) maxsig=sqrt(abs(Winv(i,j)))
+				enddo
 				do j=1,2
-					error(j,i)=sqrt(abs(Winv(i,i)))
+					error(j,map(i))=sqrt(abs(Winv(i,i)))/maxsig
 				enddo
 			enddo
-		endif
+c		endif
 
 		do i=1,na
 			W(i,i)=W(i,i)*(1d0+lambda)
@@ -320,11 +357,11 @@ c first genetic algoritm to make the first estimate
 		do i=1,n_ret
 			if(dofit(i)) then
 			if(var(i).gt.1d0.or.var(i).lt.0d0) then
-				if(abs(dvar(i)/error(2,i)).gt.dmax) then
+				if(abs(dvar(i)/error(2,i)).gt.dmax.and.error(2,i).gt.1d0) then
 					dmax=abs(dvar(i)/error(2,i))
 					j=i
 				endif
-				if(abs(dvar(i)/error(1,i)).gt.dmax) then
+				if(abs(dvar(i)/error(1,i)).gt.dmax.and.error(1,i).gt.1d0) then
 					dmax=abs(dvar(i)/error(1,i))
 					j=i
 				endif
@@ -333,15 +370,26 @@ c first genetic algoritm to make the first estimate
 		enddo
 		if(j.ne.0) then
 			dofit(j)=.false.
+			call output('removing ' // trim(RetPar(j)%keyword))
 			if(var(j).gt.1d0) then
 				var(j)=var0(j)
+c				var(j)=1d0
+c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 			endif
 			if(var(j).lt.0d0) then
 				var(j)=var0(j)
+c				var(j)=0d0
+c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 			endif
 			initfit=.false.
 			goto 2
 		endif
+		do i=1,n_ret
+			if(var(i).gt.1d0) var(i)=1d0
+			if(var(i).lt.0d0) var(i)=0d0
+			if(.not.dofit(i)) var(i)=random(idum)
+			dvar(i)=sqrt(error(1,i)**2+error(2,i)**2)*3d0
+		enddo
 		endif
 	enddo
 	do i=1,nobs
@@ -457,24 +505,34 @@ c		write(45,*) P(i),minT(i),maxT(i)
 	enddo
 	select case(ObsSpec(i)%type)
 		case("trans","transmission")
-			call regridarray(lamobs,obsA(0,1:nlam-1)/(pi*Rstar**2),nlam-1,
-     &					ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
+c			call regridarray(lamobs,obsA(0,1:nlam-1)/(pi*Rstar**2),nlam-1,
+c     &					ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
+			call regridspecres(lamobs,obsA(0,1:nlam-1)/(pi*Rstar**2),nlam-1,
+     &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
+     		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
 		case("emisr","emisR")
-			call regridarray(lamobs,flux(0,1:nlam-1)/(Fstar(1:nlam-1)*1d23/distance**2),
-     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
+c			call regridarray(lamobs,flux(0,1:nlam-1)/(Fstar(1:nlam-1)*1d23/distance**2),
+c     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
+			call regridspecres(lamobs,flux(0,1:nlam-1)/(Fstar(1:nlam-1)*1d23/distance**2),
+     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
+     		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
 		case("emisa","emis","emission")
-			call regridarray(lamobs,flux(0,1:nlam-1),
-     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
+c			call regridarray(lamobs,flux(0,1:nlam-1),
+c     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
+			call regridspecres(lamobs,flux(0,1:nlam-1),
+     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
+     		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
 		case("tprofile")
 			call ComputeParamT(spec(1:nr))
 			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta
 		case("logtp")
-			spec(1)=(log10(T(1)/T(2))/log10(P(1)/P(2)))
+			spec(1)=(log10(abs(T(1)/T(2))/log10(P(1)/P(2))))
 			do j=2,nr-1
-				spec(j)=(log10(T(j-1)/T(j))/log10(P(j-1)/P(j)))-(log10(T(j)/T(j+1))/log10(P(j)/P(j+1)))
-				spec(j)=spec(j)+log10(T(j-1)/T(j+1))/log10(P(j-1)/P(j+1))
+				spec(j)=(log10(abs(T(j-1)/T(j)))/log10(P(j-1)/P(j)))-(log10(abs(T(j)/T(j+1)))/log10(P(j)/P(j+1)))
+				spec(j)=spec(j)+log10(abs(T(j-1)/T(j+1)))/log10(P(j-1)/P(j+1))
+c	print*,j,T(j-1),T(j),T(j+1)
 			enddo
-			spec(nr)=(log10(T(nr-1)/T(nr))/log10(P(nr-1)/P(nr)))
+			spec(nr)=(log10(abs(T(nr-1)/T(nr)))/log10(P(nr-1)/P(nr)))
 			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)/real(nr)
 			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta
 		case("prior","priors")
@@ -504,7 +562,9 @@ c		write(45,*) P(i),minT(i),maxT(i)
 	if(present(error0)) error=error0
 
 	call MapRetrieval(var,error)
-	
+
+c	print*,imodel,(trim(dbl2string(RetPar(i)%value,'(es18.7)')),i=1,n_ret)
+
 	call InitDens()
 	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam)
 	Fstar=Fstar*pi*Rstar**2*pi/3.336e11
@@ -654,11 +714,45 @@ c	linear
 	return
 	end
 	
+
+	subroutine regridspecres(x0,y0,n0,x1,y1,R1,expR1,n1)
+	IMPLICIT NONE
+	integer i1,i0,n0,n1
+	real*8 x0(n0),y0(n0),x1(n1),y1(n1),R1(n1),expR1(n1),w,tot
+
+	do i1=1,n1
+		if(x1(i1).lt.x0(1)) then
+			y1(i1)=y0(1)
+		else if(x1(i1).gt.x0(n0)) then
+			y1(i1)=y0(n0)
+		else
+			y1(i1)=0d0
+			tot=0d0
+			do i0=1,n0
+				w=exp(-abs((x0(i0)-x1(i1))*R1(i1)*2d0/x1(i1))**expR1(i1))
+				if(i0.eq.1) then
+					w=w*abs(x0(2)-x0(1))/2d0
+				else if(i0.eq.n0) then
+					w=w*abs(x0(n0)-x0(n0-1))/2d0
+				else
+					w=w*abs(x0(i0-1)-x0(i0+1))/2d0
+				endif
+				tot=tot+w
+				y1(i1)=y1(i1)+w*y0(i0)
+			enddo
+			y1(i1)=y1(i1)/tot
+		endif
+	enddo
+
+	return
+	end
+	
+
 	subroutine WriteRetrieval(imodel,chi2,var)
 	use GlobalSetup
 	IMPLICIT NONE
 	real*8 var(n_ret),chi2
-	integer i,imodel
+	integer i,imodel,j
 
 	open(unit=20,file=trim(outputdir) // "retrieval",RECL=1000)
 	write(20,'("Model ",i)') imodel
@@ -675,7 +769,16 @@ c	linear/squared
 		endif
 	enddo
 	close(unit=20)
-		
+	
+	do i=1,nobs
+		select case(ObsSpec(i)%type)
+			case("trans","transmission","emisr","emisR","emisa","emis","emission")
+				open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),RECL=1000)
+				do j=1,ObsSpec(i)%nlam
+					write(20,*) ObsSpec(i)%lam(j),ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy
+				enddo
+		end select
+	enddo
 		
 	return
 	end
