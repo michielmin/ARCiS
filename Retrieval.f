@@ -81,8 +81,8 @@
 	integer imodel,ny,i,j,iter1,iter2,iy,k
 	
 	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret),W(n_ret,n_ret),Winv(n_ret,n_ret),dmax,scale
-	real*8 chi2_spec,chi2_prof,maxsig
-	integer na,map(n_ret),info
+	real*8 chi2_spec,chi2_prof,maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret)
+	integer na,map(n_ret),info,iboot,nboot
 	logical dofit(n_ret),dofit_prev(n_ret),initfit
 	
 	do i=1,n_ret
@@ -139,6 +139,8 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.true.)
 		chi2prev=1d200
 		imodel=npop*ngen
+	else
+		dvar=dvar*10d0
 	endif
 	var=var0
 	ngen=0
@@ -176,13 +178,16 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 				call WriteStructure()
 				call WriteOutput()
 				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
-				call WritePTlimits(var0,Cov,error)
+				call WritePTlimits(var0,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
 				call SetOutputMode(.true.)
 			else
 				var=var_best
 				var0=var
 				y=ybest
 			endif
+		else if(iter2.eq.1) then
+			dofit=.true.
+			var=var0
 		else
 			lambda=lambda*5d0
 			var=var0
@@ -232,7 +237,7 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 				call WriteStructure()
 				call WriteOutput()
 				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
-				call WritePTlimits(var,Cov,error)
+				call WritePTlimits(var,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
 				call SetOutputMode(.true.)
 			endif
 			var=var0
@@ -267,7 +272,7 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 				call WriteStructure()
 				call WriteOutput()
 				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
-				call WritePTlimits(var,Cov,error)
+				call WritePTlimits(var,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
 				call SetOutputMode(.true.)
 			endif
 			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/abs(x1-x2)
@@ -311,33 +316,28 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 					W(i,j)=W(i,j)+dy(map(i),k)*dy(map(j),k)/dyobs(k)**2
 				enddo
 				b(i)=b(i)+(yobs(k)-y(k))*dy(map(i),k)/dyobs(k)**2
-c				print*,i,k,dyobs(k),dy(map(i),k)
 			enddo
 		enddo
 
-		call MatrixInvert(W(1:na,1:na),Winv(1:na,1:na),na,info)
+		call MatrixInvert(W(1:na,1:na),Winv(1:na,1:na),WLU(1:na,1:na),na,info)
 		if(INFO.ne.0) then
 			call output('Error in matrix inversion.')
 			call output('Retrieving parameters with no influence on the observations?')
 			stop
 		endif
-c		if(initfit) then
-			Cov=Winv
+		if(initfit) then
 			do i=1,na
-				maxsig=0d0
 				do j=1,na
-					if(sqrt(abs(Winv(i,j))).gt.maxsig) maxsig=sqrt(abs(Winv(i,j)))
-				enddo
-				do j=1,2
-					error(j,map(i))=sqrt(abs(Winv(i,i)))/maxsig
+					Cov(map(i),map(j))=Winv(i,j)
+					ErrVec(map(i),map(j))=WLU(i,j)
 				enddo
 			enddo
-c		endif
+		endif
 
 		do i=1,na
 			W(i,i)=W(i,i)*(1d0+lambda)
 		enddo
-		call MatrixInvert(W(1:na,1:na),Winv(1:na,1:na),na,info)
+		call MatrixInvert(W(1:na,1:na),Winv(1:na,1:na),WLU(1:na,1:na),na,info)
 		if(INFO.ne.0) then
 			call output('Error in matrix inversion.')
 			call output('Retrieving parameters with no influence on the observations?')
@@ -410,79 +410,77 @@ c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 
 
 
-	subroutine WritePTlimits(var0,W,error)
+	subroutine WritePTlimits(var0,Cov,ErrVec,error,chi2)
 	use GlobalSetup
 	IMPLICIT NONE
-	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,W(n_ret,n_ret)
-	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev
-	integer i,j,k,minC(nr),maxC(nr)
+	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,W(n_ret,n_ret),chi2,ErrVec(n_ret,n_ret)
+	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret),CLU(n_ret,n_ret)
+	integer i,j,k,info,nk
 
-	maxT=0d0
-	minT=0d0
-	maxC=0
-	minC=0
+	call MatrixInvert(Cov(1:n_ret,1:n_ret),W(1:n_ret,1:n_ret),CLU(1:n_ret,1:n_ret),n_ret,info)
+
 	call SetOutputMode(.false.)
 	var=var0
 	call MapRetrieval(var,error)
 	call InitDens()
 	call SetupStructure(.false.)
 	Tbest=T
-c	maxT=0d0
-c	minT=1d200
-	do k=1,1000
-		do i=1,n_ret
-			if(random(idum).gt.0.5d0) then
-				var(i)=var0(i)-abs(gasdev(idum))*error(1,i)
+	maxT=0d0
+	minT=1d200
+	do i=1,n_ret
+		error(1:2,i)=var0(i)
+	enddo
+	nk=n_ret*100
+	do k=1,nk
+		vec(i)=0d0
+		if(k.gt.n_ret*2) then
+			do i=1,n_ret
+				vec(1:n_ret)=vec(1:n_ret)+2d0*(random(idum)-0.5d0)*ErrVec(i,1:n_ret)
+			enddo
+		else
+			i=(k+1)/2
+			if(i*2.eq.k) then
+				vec(1:n_ret)=ErrVec(i,1:n_ret)
 			else
-				var(i)=var0(i)+abs(gasdev(idum))*error(2,i)
+				vec(1:n_ret)=-ErrVec(i,1:n_ret)
 			endif
+		endif
+		var=0d0
+		do i=1,n_ret
+			do j=1,n_ret
+				var(i)=var(i)+W(i,j)*vec(j)
+			enddo
+		enddo
+		do i=1,n_ret
 			if(var(i).lt.0d0) var(i)=0d0
 			if(var(i).gt.1d0) var(i)=1d0
 		enddo
-c1		tot=0d0
-c		do i=1,n_ret
-c			vec(i)=2d0*(random(idum)-0.5d0)
-c			tot=tot+vec(i)**2
-c			if(tot.gt.1d0) goto 1
-c		enddo
-c		var=0d0
-c		do i=1,n_ret
-c			do j=1,n_ret
-c				var(i)=var(i)+W(i,j)*vec(j)
-c			enddo
-c		enddo
-c		do i=1,n_ret
-c			if(random(idum).gt.0.5d0) then
-c				var(i)=var0(i)+sqrt(abs(var(i)))
-c			else
-c				var(i)=var0(i)-sqrt(abs(var(i)))
-c			endif
-c			if(var(i).lt.0d0) var(i)=0d0
-c			if(var(i).gt.1d0) var(i)=1d0
-c		enddo
+		tot=0d0
+		do i=1,n_ret
+			tot=tot+var(i)*vec(i)
+		enddo
+		vec=random(idum)*vec*sqrt(chi2/tot)
+		var=var0+vec
+
 		call MapRetrieval(var,error)
 		call InitDens()
 		call SetupStructure(.false.)
 		do i=1,nr
-			if(T(i).gt.Tbest(i)) then
-				maxT(i)=maxT(i)+(T(i)-Tbest(i))**2
-				maxC(i)=maxC(i)+1
-			else
-				minT(i)=minT(i)+(T(i)-Tbest(i))**2
-				minC(i)=minC(i)+1
-			endif
-c			if(T(i).gt.maxT(i)) maxT(i)=T(i)
-c			if(T(i).lt.minT(i)) minT(i)=T(i)
-		enddo				
+			if(T(i).gt.maxT(i)) maxT(i)=T(i)
+			if(T(i).lt.minT(i)) minT(i)=T(i)
+		enddo
+		do i=1,n_ret
+			if(var(i).lt.error(1,i)) error(1,i)=var(i)
+			if(var(i).gt.error(2,i)) error(2,i)=var(i)
+		enddo
 	enddo
-	maxT=sqrt(maxT/real(maxC))
-	minT=sqrt(minT/real(minC))
+	error(1,1:n_ret)=abs(error(1,1:n_ret)-var0(1:n_ret))
+	error(2,1:n_ret)=abs(error(2,1:n_ret)-var0(1:n_ret))
 
 	call SetOutputMode(.true.)
 	open(unit=45,file=trim(outputdir) // "limits.dat")
 	do i=1,nr
-		write(45,*) P(i),Tbest(i)-minT(i),Tbest(i)+maxT(i)
-c		write(45,*) P(i),minT(i),maxT(i)
+		write(45,*) P(i),minT(i),maxT(i)
 	enddo
 	close(unit=45)
 
@@ -775,8 +773,9 @@ c	linear/squared
 			case("trans","transmission","emisr","emisR","emisa","emis","emission")
 				open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),RECL=1000)
 				do j=1,ObsSpec(i)%nlam
-					write(20,*) ObsSpec(i)%lam(j),ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy
+					write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy
 				enddo
+				close(unit=20)
 		end select
 	enddo
 		
@@ -784,10 +783,10 @@ c	linear/squared
 	end
 
 
-	subroutine MatrixInvert(A,Ainv,N,INFO)
+	subroutine MatrixInvert(A,Ainv,ALU,N,INFO)
 	IMPLICIT NONE
 	integer n,ierr
-	real*8 A(n,n),Ainv(n,n)
+	real*8 A(n,n),Ainv(n,n),ALU(n,n)
       DOUBLE PRECISION, ALLOCATABLE, DIMENSION(:) :: WORK
       INTEGER :: i,j, LWORK
 
@@ -816,6 +815,7 @@ C  Store A in Ainv to prevent it from being overwritten by LAPACK
       Ainv = A
 
       CALL DGETRF( M, N, Ainv, LDA, IPIV, INFO )
+      ALU=Ainv
 
 C  DGETRI computes the inverse of a matrix using the LU factorization
 C  computed by DGETRF.
