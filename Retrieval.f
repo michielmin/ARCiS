@@ -82,8 +82,9 @@
 	
 	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret),W(n_ret,n_ret),Winv(n_ret,n_ret),dmax,scale
 	real*8 chi2_spec,chi2_prof,maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret)
-	integer na,map(n_ret),info,iboot,nboot
-	logical dofit(n_ret),dofit_prev(n_ret),initfit
+	integer na,map(n_ret),info,iboot,nboot,niter1,niter2
+	logical dofit(n_ret),dofit_prev(n_ret)
+	logical,allocatable :: specornot(:)
 	
 	do i=1,n_ret
 10		var0(i)=gasdev(idum)*0.1+0.5
@@ -113,11 +114,13 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 	allocate(dy(n_ret,ny))
 	allocate(yobs(ny))
 	allocate(dyobs(ny))
+	allocate(specornot(ny))
 	iy=1
 	do i=1,nobs
 		yobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%y(1:ObsSpec(i)%nlam)
 		dyobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%dy(1:ObsSpec(i)%nlam)
-		iy=iy+ObsSpec(i)%nlam
+		specornot(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%spec
+		iy=iy+ObsSpec(i)%nlam		
 	enddo
 	dvar=0.1d0
 	var=var0
@@ -128,7 +131,9 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 	lambda=0.1
 	Cov=0d0
 
-	do iter1=1,5
+	niter1=7
+	niter2=15
+	do iter1=1,niter1
 
 	if(ngen.gt.0) then
 		lambda=0.1
@@ -140,12 +145,14 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 		chi2prev=1d200
 		imodel=npop*ngen
 	else
+		var=var_best
+		var0=var
 		dvar=dvar*10d0
 	endif
 	var=var0
-	ngen=0
+c	ngen=0
 
-	do iter2=1,20
+	do iter2=1,niter2
 		j=0
 		imodel=imodel+1
 		call output("Iteration " // trim(int2string(iter2+20*(iter1-1),'(i4)')) // 
@@ -221,7 +228,7 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp) then
 				chi2min=chi2
 				var_best=var
-				ybest=y
+				ybest=y1
 				chi2_spec=0d0
 				chi2_prof=0d0
 				do j=1,nobs
@@ -256,7 +263,7 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp) then
 				chi2min=chi2
 				var_best=var
-				ybest=y
+				ybest=y2
 				chi2_spec=0d0
 				chi2_prof=0d0
 				do j=1,nobs
@@ -296,7 +303,33 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 		dofit_prev=dofit
 1		continue
 
-		initfit=.true.
+		W=0d0
+		do k=1,ny
+			if(specornot(k)) then
+				do i=1,n_ret
+					do j=1,n_ret
+						W(i,j)=W(i,j)+dy(i,k)*dy(j,k)/dyobs(k)**2
+					enddo
+				enddo
+			else
+				do i=1,n_ret
+					do j=1,n_ret
+						W(i,j)=W(i,j)+1d-2*dy(i,k)*dy(j,k)/dyobs(k)**2
+					enddo
+				enddo
+			endif
+		enddo
+		call MatrixInvert(W(1:n_ret,1:n_ret),Winv(1:n_ret,1:n_ret),WLU(1:n_ret,1:n_ret),n_ret,info)
+		if(INFO.ne.0) then
+			call output('Error in matrix inversion.')
+			call output('Retrieving parameters with no influence on the observations?')
+		endif
+		do i=1,n_ret
+			do j=1,n_ret
+				Cov(i,j)=Winv(i,j)
+				ErrVec(i,j)=WLU(i,j)
+			enddo
+		enddo
 
 2		continue
 		na=0
@@ -318,22 +351,6 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 				b(i)=b(i)+(yobs(k)-y(k))*dy(map(i),k)/dyobs(k)**2
 			enddo
 		enddo
-
-		call MatrixInvert(W(1:na,1:na),Winv(1:na,1:na),WLU(1:na,1:na),na,info)
-		if(INFO.ne.0) then
-			call output('Error in matrix inversion.')
-			call output('Retrieving parameters with no influence on the observations?')
-			stop
-		endif
-		if(initfit) then
-			do i=1,na
-				do j=1,na
-					Cov(map(i),map(j))=Winv(i,j)
-					ErrVec(map(i),map(j))=WLU(i,j)
-				enddo
-			enddo
-		endif
-
 		do i=1,na
 			W(i,i)=W(i,i)*(1d0+lambda)
 		enddo
@@ -381,7 +398,6 @@ c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 c				var(j)=0d0
 c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 			endif
-			initfit=.false.
 			goto 2
 		endif
 		do i=1,n_ret
@@ -395,7 +411,7 @@ c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 	do i=1,nobs
 		if(.not.ObsSpec(i)%spec.and.ObsSpec(i)%scale.gt.0d0) then
 			print*,chi2_spec,chi2_prof,chi2min
-			ObsSpec(i)%beta=log10(ObsSpec(i)%scale*ObsSpec(i)%beta*chi2_spec/chi2_prof)+log10(ObsSpec(i)%beta)
+			ObsSpec(i)%beta=log10(ObsSpec(i)%scale*ObsSpec(i)%beta*sqrt(chi2_spec/chi2_prof))+log10(ObsSpec(i)%beta)
 			ObsSpec(i)%beta=10d0**(ObsSpec(i)%beta/2d0)
 			call output("Adjusting beta to " // trim(dbl2string(ObsSpec(i)%beta,'(es10.4)')))
 			chi2min=1d200
@@ -415,7 +431,7 @@ c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 	IMPLICIT NONE
 	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,W(n_ret,n_ret),chi2,ErrVec(n_ret,n_ret)
 	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret),CLU(n_ret,n_ret)
-	integer i,j,k,info,nk
+	integer i,j,k,info,nk,ierr
 
 	call MatrixInvert(Cov(1:n_ret,1:n_ret),W(1:n_ret,1:n_ret),CLU(1:n_ret,1:n_ret),n_ret,info)
 
@@ -437,12 +453,13 @@ c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 			do i=1,n_ret
 				vec(1:n_ret)=vec(1:n_ret)+2d0*(random(idum)-0.5d0)*ErrVec(i,1:n_ret)
 			enddo
+			ierr=0
 		else
-			i=(k+1)/2
+			ierr=(k+1)/2
 			if(i*2.eq.k) then
-				vec(1:n_ret)=ErrVec(i,1:n_ret)
+				vec(1:n_ret)=ErrVec(ierr,1:n_ret)
 			else
-				vec(1:n_ret)=-ErrVec(i,1:n_ret)
+				vec(1:n_ret)=-ErrVec(ierr,1:n_ret)
 			endif
 		endif
 		var=0d0
@@ -451,16 +468,21 @@ c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 				var(i)=var(i)+W(i,j)*vec(j)
 			enddo
 		enddo
-		do i=1,n_ret
-			if(var(i).lt.0d0) var(i)=0d0
-			if(var(i).gt.1d0) var(i)=1d0
-		enddo
 		tot=0d0
 		do i=1,n_ret
 			tot=tot+var(i)*vec(i)
 		enddo
-		vec=random(idum)*vec*sqrt(chi2/tot)
+		if(ierr.ne.0) then
+			ErrVec(ierr,1:n_ret)=ErrVec(ierr,1:n_ret)*sqrt(chi2/tot)
+			vec=vec*sqrt(chi2/tot)
+		else
+			vec=random(idum)*vec*sqrt(chi2/tot)
+		endif
 		var=var0+vec
+		do i=1,n_ret
+			if(var(i).lt.0d0) var(i)=0d0
+			if(var(i).gt.1d0) var(i)=1d0
+		enddo
 
 		call MapRetrieval(var,error)
 		call InitDens()
@@ -527,7 +549,7 @@ c     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
 			spec(1)=(log10(abs(T(1)/T(2))/log10(P(1)/P(2))))
 			do j=2,nr-1
 				spec(j)=(log10(abs(T(j-1)/T(j)))/log10(P(j-1)/P(j)))-(log10(abs(T(j)/T(j+1)))/log10(P(j)/P(j+1)))
-				spec(j)=spec(j)+log10(abs(T(j-1)/T(j+1)))/log10(P(j-1)/P(j+1))
+c				spec(j)=spec(j)+log10(abs(T(j-1)/T(j+1)))/log10(P(j-1)/P(j+1))
 c	print*,j,T(j-1),T(j),T(j+1)
 			enddo
 			spec(nr)=(log10(abs(T(nr-1)/T(nr)))/log10(P(nr-1)/P(nr)))

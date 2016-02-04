@@ -1233,7 +1233,7 @@ END MODULE nrutil
 !===================================================================================
 
 
-subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini)
+subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates)
 	use AtomsModule
   implicit none
 
@@ -1247,7 +1247,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini)
        massfracs_reactants(N_reactants)
   DOUBLE PRECISION             :: temp, press, nabla_ad,gamma2,MMW,rho
   DOUBLE PRECISION             :: thermo_quants
-  LOGICAL                      :: ini
+  LOGICAL                      :: ini,condensates
   INTEGER                      :: i_t, i_p, i_reac, N_reactants2
 
   names_reactants(1) = 'H'
@@ -1346,6 +1346,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini)
   names_reactants(94) = 'Fe2SiO4(c)'
 
 	N_reactants2=70
+	if(condensates) N_reactants2=94
 
       temp=Tin
       press=Pin

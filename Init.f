@@ -594,6 +594,8 @@ c			read(key%value,*) nr
 			read(key%value,*) metallicity
 		case("coratio")
 			read(key%value,*) COratio
+		case("condensates")
+			read(key%value,*) condensates
 		case("mixp")
 			read(key%value,*) mixP
 		case("point")
@@ -828,7 +830,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	nphase=45
 
 	dochemistry=.false.
-	metallicity=1d0
+	metallicity=0d0
+	condensates=.true.
 	COratio=0.55
 	mixP=0d0
 

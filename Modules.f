@@ -53,7 +53,7 @@ c===============================================================================
 	integer idum,maxiter
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT
-	logical dochemistry,retrieve_profile
+	logical dochemistry,retrieve_profile,condensates
 	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT
