@@ -6,6 +6,7 @@
 	character*500 filename
 	character*6000 form
 	real*8,allocatable :: theta(:)
+	real*8 Fp1,Fp2,ApAs
 	logical,allocatable :: docloud0(:,:)
 
 	allocate(docloud0(nclouds,ncc))
@@ -77,7 +78,7 @@
 	filename=trim(outputdir) // "phase"
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=6000)
-	form='("#",a13,' // trim(int2string(nphase,'(i3)')) // 
+	form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         fstar [Jy]")'
 	write(30,form) "lambda [mu]",theta(1:nphase)
 	form='(f14.6,' // int2string(nphase+1,'(i3)') // 'es19.7)'
@@ -87,7 +88,66 @@
      &					Fstar(i)*1d23/distance**2
 	enddo
 	close(unit=30)
+
+
+	filename=trim(outputdir) // "transC"
+	call output("Writing spectrum to: " // trim(filename))
+	open(unit=30,file=filename,RECL=1000)
+	write(30,'("#",a13,a19,a26)') "lambda [mu]","Rp^2/Rstar^2","Rp^2/Rstar^2 using eclipse"
+	form='(f14.6,es19.7,es19.7)'
+	do i=1,nlam-1
+		Fp1=(phase(nphase-1,0,i)+flux(0,i))/(Fstar(i)*1d23/distance**2)
+		Fp2=(phase(nphase,0,i)+flux(0,i))/(Fstar(i)*1d23/distance**2)
+		ApAs=obsA(0,i)/(pi*Rstar**2)
+		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+     &					(Fp1-Fp2+ApAs)/(Fp1+1d0),ApAs-Fp2
+	enddo
+	close(unit=30)
+
+
+
+	filename=trim(outputdir) // "tau1depth"
+	call output("Writing tau1depth to: " // trim(filename))
+	open(unit=30,file=filename,RECL=1000)
+	if(nclouds.gt.0) then
+		form='("#",a13,' // trim(int2string(ncc,'(i3)')) // 
+     &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
+     &				trim(int2string(nclouds,'(i3)')) // 'l1))'
+		write(30,form) "lambda [mu]",docloud0(1:nclouds,1:ncc)
+	else
+		write(30,'("#",a13,a19)') "lambda [mu]","P [Ba]"
+	endif
+	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7)'
+	do i=1,nlam-1
+		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+     &					tau1depth(1:ncc,i)
+	enddo
+	close(unit=30)
+
+
+	filename=trim(outputdir) // "cloudtau"
+	call output("Writing cloud optical depth to: " // trim(filename))
+	open(unit=30,file=filename,RECL=1000)
+	if(nclouds.gt.0) then
+		form='("#",a13,' // trim(int2string(ncc,'(i3)')) // 
+     &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
+     &				trim(int2string(nclouds,'(i3)')) // 'l1))'
+		write(30,form) "lambda [mu]",docloud0(1:nclouds,1:ncc)
+	else
+		write(30,'("#",a13,a19)') "lambda [mu]","optical depth"
+	endif
+	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7)'
+	do i=1,nlam-1
+		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+     &					cloudtau(1:ncc,i)
+	enddo
+	close(unit=30)
+
+
+
 	deallocate(docloud0)
+	call output("==================================================================")
+	
 	
 	return
 	end

@@ -409,6 +409,12 @@ c allocate the arrays
 	call InitFreq()
 
 	if(gammaT2.lt.0d0) gammaT2=gammaT1
+	
+	if(nphase.le.0) nphase=2d0*pi/asin(Rstar/Dplanet)
+	if(nphase.gt.90) then
+		call output("Adjusting number of phase angles to 90")
+		nphase=90
+	endif
 
 	if(opacitydir(len_trim(opacitydir)-1:len_trim(opacitydir)).ne.'/') then
 		opacitydir=trim(opacitydir) // '/'
@@ -757,6 +763,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 				mixrat_r(i,imol(j))=mr0(nr+1-i,j)
 			enddo
 		endif
+		if(IsNaN(T(i))) T(i)=sqrt(minTprofile*maxTprofile)
 	enddo
 
 	return
@@ -827,7 +834,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	includemol=.false.
 	par_tprofile=.false.
 	
-	nphase=45
+	nphase=0
 
 	dochemistry=.false.
 	metallicity=0d0
@@ -948,6 +955,8 @@ c number of cloud/nocloud combinations
 	allocate(cloudfrac(ncc))
 	allocate(flux(0:ncc,nlam))
 	allocate(obsA(0:ncc,nlam))
+	allocate(tau1depth(ncc,nlam))
+	allocate(cloudtau(ncc,nlam))
 	allocate(phase(nphase,0:ncc,nlam))
 
 	return

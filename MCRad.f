@@ -11,7 +11,7 @@
 	type(Mueller) M(nr)
 	
 	NphotPlanet=1000/real(ng)+10
-	NphotStar=100000/real(ng)+10
+	NphotStar=nphase*5000/real(ng)+10
 
 	EJv=0d0
 

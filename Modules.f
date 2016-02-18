@@ -44,6 +44,7 @@ c===============================================================================
 	real*8,allocatable :: Cabs(:,:,:),Csca(:,:)				! radius,wav,g
 	real*8,allocatable :: cloud_dens(:,:)					! radius, cloud
 	real*8,allocatable :: Fstar(:)							! wavelength
+	real*8,allocatable :: tau1depth(:,:),cloudtau(:,:)		! ncc,wavelength
 	integer nangle_Jscat
 	parameter(nangle_Jscat=60)
 	real*8,allocatable :: Jscat(:,:)						! radius, angle

@@ -31,6 +31,56 @@
 		enddo
 	enddo
 
+	do icc=1,ncc
+		do ilam=1,nlam
+		tau=0d0
+		do ir=nr,2,-1
+			Ca=sum(Cabs(ir,ilam,1:ng))*Ndens(ir)/real(ng)
+			Cs=Csca(ir,ilam)*Ndens(ir)
+			do icloud=1,nclouds
+				if(docloud(icc,icloud)) then
+					do isize=1,Cloud(icloud)%nsize
+						Ca=Ca+
+     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+						Cs=Cs+
+     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+					enddo
+				endif
+			enddo
+			tau_a=(R(ir)-R(ir-1))*(Ca+Cs)
+			if((tau+tau_a).gt.1d0) then
+				d=(1d0-tau)/tau_a
+				tau1depth(icc,ilam)=10d0**(log10(P(ir))+log10(P(ir-1)/P(ir))*d)
+				goto 3
+			endif
+			tau=tau+tau_a
+		enddo
+		tau1depth(icc,ilam)=P(1)
+3		continue
+		enddo
+
+		do ilam=1,nlam
+		tau=0d0
+		do ir=nr,2,-1
+			Ca=0d0
+			Cs=0d0
+			do icloud=1,nclouds
+				if(docloud(icc,icloud)) then
+					do isize=1,Cloud(icloud)%nsize
+						Ca=Ca+
+     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+						Cs=Cs+
+     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+					enddo
+				endif
+			enddo
+			tau=tau+(R(ir)-R(ir-1))*(Ca+Cs)
+		enddo
+		cloudtau(icc,ilam)=tau
+		enddo
+	enddo
+		
+
 	flux=0d0
 
 	call output("==================================================================")

@@ -88,6 +88,7 @@
 	
 	do i=1,n_ret
 10		var0(i)=gasdev(idum)*0.1+0.5
+		var0(i)=0.5d0
 		if(var0(i).gt.1d0) goto 10
 		if(var0(i).lt.0d0) goto 10
 	enddo
@@ -122,7 +123,7 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 		specornot(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%spec
 		iy=iy+ObsSpec(i)%nlam		
 	enddo
-	dvar=0.1d0
+	dvar=0.4d0
 	var=var0
 	var_best=var0
 	chi2min=1d200
@@ -211,7 +212,7 @@ c	ngen=0
 		dofit_prev=.true.
 		do i=1,n_ret
 			if(dvar(i).lt.1d-3) dvar(i)=1d-3
-			if(dvar(i).gt.1d-1) dvar(i)=1d-1
+c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 20			var=var0
 			var(i)=var(i)+dvar(i)
 			if(var(i).gt.1d0) var(i)=1d0
@@ -298,6 +299,7 @@ c	ngen=0
 				call output("derivative too small")
 				call output("removing " // trim(RetPar(i)%keyword))
 			endif
+			call tellertje(i,n_ret)
 		enddo
 
 		dofit_prev=dofit
@@ -795,7 +797,7 @@ c	linear/squared
 			case("trans","transmission","emisr","emisR","emisa","emis","emission")
 				open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),RECL=1000)
 				do j=1,ObsSpec(i)%nlam
-					write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy
+					write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
 				enddo
 				close(unit=20)
 		end select

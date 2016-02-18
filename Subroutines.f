@@ -363,7 +363,8 @@ c-----------------------------------------------------------------------
             return
           endif
 11      continue
-        stop 'continued fraction failed in expint'
+c        stop 'continued fraction failed in expint'
+c        print*,'continued fraction failed in expint'
       else
         if(nm1.ne.0)then
           expint=1./nm1
@@ -385,7 +386,8 @@ c-----------------------------------------------------------------------
           expint=expint+del
           if(abs(del).lt.abs(expint)*EPS) return
 13      continue
-        stop 'series failed in expint'
+c        stop 'series failed in expint'
+c        print*,'series failed in expint'
       endif
       return
       END
