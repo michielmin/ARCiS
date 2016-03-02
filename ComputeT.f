@@ -11,7 +11,7 @@
 	real*8 CabsL(nlam),Ca0,Cs0,T0,E0,Eabs,chi2,CabsLG(nlam,ng),Crw(nr),nabla,rho,scale
 	integer iphot,ir,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,jr,ir0,jr0
 	integer iT1,iT2,iT,i
-	logical docloud0(nclouds),goingup,onedge,dorw(nr),converged
+	logical docloud0(max(nclouds,1)),goingup,onedge,dorw(nr),converged
 	type(Mueller),allocatable :: M(:,:)
 	
 	allocate(specsource(nlam,1))

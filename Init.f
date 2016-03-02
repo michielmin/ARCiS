@@ -654,14 +654,14 @@ c			read(key%value,*) nr
 
 	distance=distance*parsec
 
-	tot=0d0
-	do i=1,nmol
-		if(mixrat(i).gt.0d0) tot=tot+mixrat(i)
-	enddo
-	if(tot.gt.1d0) then
-		call output("Summed mixing ratio above 1. Renormalizing.")
-		mixrat=mixrat/tot
-	endif
+c	tot=0d0
+c	do i=1,nmol
+c		if(mixrat(i).gt.0d0) tot=tot+mixrat(i)
+c	enddo
+c	if(tot.gt.1d0) then
+c		call output("Summed mixing ratio above 1. Renormalizing.")
+c		mixrat=mixrat/tot
+c	endif
 
 	return
 	end
@@ -841,6 +841,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	condensates=.true.
 	COratio=0.55
 	mixP=0d0
+	
+	PRplanet=10d0
 
 	TPfile=' '
 	mixratfile=.false.

@@ -126,12 +126,12 @@
 	k=0
 	do i=1,ndisk
 		k=k+1
-		rtrace(k)=Rplanet*real(i-1)/real(ndisk-1)
+		rtrace(k)=Rplanet*real(i-1)/real(ndisk)
 	enddo
 	do i=1,nr
 		do j=1,nsub
 			k=k+1
-			rtrace(k)=R(i)+(R(i+1)-R(i))*real(j)/real(nsub)
+			rtrace(k)=R(i)+(R(i+1)-R(i))*real(j-1)/real(nsub)
 		enddo
 	enddo
 

@@ -802,7 +802,16 @@ c	linear/squared
 				close(unit=20)
 		end select
 	enddo
-		
+
+	call system("cp " // trim(outputdir) // "input.dat " // trim(outputdir) // "bestfit.dat")
+	open(unit=21,file=trim(outputdir) // "bestfit.dat",RECL=1000,access='APPEND')
+	write(21,'("*** retrieval keywords ***")')
+	write(21,'("retrieval=.false.")')
+	do i=1,n_ret
+		write(21,'(a," = ",es14.7)') trim(RetPar(i)%keyword),RetPar(i)%value
+	enddo
+	close(unit=21)	
+
 	return
 	end
 

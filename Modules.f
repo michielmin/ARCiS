@@ -14,17 +14,18 @@ c===============================================================================
 	parameter(Lsun=3.827d33)
 	parameter(kb=1.3806503d-16)
 	parameter(sigma=5.6704d-5)
-	parameter(mp=1.67262178d-24)	!proton mass
-	parameter(Ggrav=6.67300d-8) ! in cm^3/g/s^2
+c	parameter(mp=1.67262178d-24)	!proton mass
+	parameter(mp=1.660540210d-24)	!atomic mass unit
+	parameter(Ggrav=6.6725985d-8) ! in cm^3/g/s^2
 	parameter(hplanck=6.626068d-27) ! cm^2 g/s
 	parameter(Mearth=5.97219d27)
-	parameter(Mjup=1.89813d30)
+	parameter(Mjup=1.898d30)
 	parameter(Rearth=6.3781d8)
-	parameter(Rjup=7.1492d9)
+	parameter(Rjup=6.9911e9)		!7.1492d9)
 	parameter(year=24d0*60d0*60d0*265.25d0)
 	parameter(micron=1d-4)
 	parameter(Rgas=8.3144621e7)
-	parameter(Avogadro=6.02214129e23)
+	parameter(Avogadro=6.022136736e23)
 	parameter(atm=1.01325)	! bar
 	
 	end module Constants
@@ -60,7 +61,7 @@ c===============================================================================
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT
 	logical mixratfile,par_tprofile
 	character*500 TPfile
-	real*8 metallicity,COratio,PQ,mixP
+	real*8 metallicity,COratio,PQ,mixP,PRplanet
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function

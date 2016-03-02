@@ -2,54 +2,57 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 g,dp,dz,dlogp,RgasBar
+	real*8 g,dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix,j,niter
 	logical ini,compute_mixrat
 
 	niter=1
 	if(par_tprofile) niter=3
-	
+
+	Pb(1)=P(1)
+	do i=2,nr
+		Pb(i)=sqrt(P(i-1)*P(i))
+	enddo
+	Pb(nr+1)=P(nr)
+
 	do j=1,niter
 
-	g=Ggrav*Mplanet/Rplanet**2
+	do i=1,nr
+		tot=0d0
+		do imol=1,nmol
+			if(mixrat_r(i,imol).gt.0d0) tot=tot+mixrat_r(i,imol)
+		enddo
+		mixrat_r(i,1:nmol)=mixrat_r(i,1:nmol)/tot
+	enddo
+
+	Mtot=Mplanet
+	g=Ggrav*Mtot/(Rplanet)**2
 	call output("log(g) [cgs]: " // dbl2string(log10(g),'(f8.3)'))
 
 	R(1)=Rplanet
-	mu=1d0
-	do imol=1,nmol
-		if(mixrat(imol).gt.0d0) mu=mu-mixrat(imol)
-	enddo
-	mu=mu*2.0
+	mu=0d0
 	do imol=1,nmol
 		if(mixrat(imol).gt.0d0) mu=mu+mixrat(imol)*Mmol(imol)
 	enddo
 	call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 	do i=1,nr
-		mu=1d0
-		do imol=1,nmol
-			if(mixrat_r(i,imol).gt.0d0) mu=mu-mixrat_r(i,imol)
-		enddo
-		mu=mu*2.0
+		mu=0d0
 		do imol=1,nmol
 			if(mixrat_r(i,imol).gt.0d0) mu=mu+mixrat_r(i,imol)*Mmol(imol)
 		enddo
 
-		g=Ggrav*Mplanet/R(i)**2
+		g=Ggrav*Mtot/R(i)**2
 		
-		if(i.eq.nr) then
-			dp=P(nr-1)-P(nr)
-			dlogp=log(P(nr-1)/P(nr))
-		else
-			dp=(P(i)-P(i+1))
-			dlogp=log(P(i)/P(i+1))
-		endif
+		dp=Pb(i)-Pb(i+1)
+		dlogp=log(Pb(i)/Pb(i+1))
+
 		Ndens(i)=P(i)*Avogadro/(RgasBar*T(i))
-		dens(i)=Ndens(i)*mp*mu
 		Hp(i)=(T(i)*kb)/(g*mp*mu)
-		dz=dp/(dens(i)*g)
 		dz=dlogp*Hp(i)
+		dens(i)=Ndens(i)*mp*mu
 		R(i+1)=R(i)+dz
+		Mtot=Mtot+dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
 	enddo
 
 	if(par_tprofile) call ComputeParamT(T)

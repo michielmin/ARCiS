@@ -11,7 +11,7 @@
 	type(Mueller) M(nr)
 	
 	NphotPlanet=1000/real(ng)+10
-	NphotStar=nphase*5000/real(ng)+10
+	NphotStar=nphase*1000/real(ng)+10
 
 	EJv=0d0
 
@@ -140,12 +140,14 @@
 	if(absorbed) return
 	rr=x**2+y**2+z**2
 	rho=sqrt(rr)
-	if(dorw(jr)) then
-		if(RandomWalk(x,y,z,dx,dy,dz,rho,E,Cs(jr),Ce(jr),Crw(jr),g(jr),jr,nscat,absorbed,0.5d0,Eabs,EJv(jr))) goto 2
-	endif
+c	if(dorw(jr)) then
+c		if(RandomWalk(x,y,z,dx,dy,dz,rho,E,Cs(jr),Ce(jr),Crw(jr),g(jr),jr,nscat,absorbed,0.5d0,Eabs,EJv(jr))) goto 1
+c	endif
 	R1=R(jr)**2
 	R2=R(jr+1)**2
 	b=2d0*(x*dx+y*dy+z*dz)
+
+	goingup=((x*dx+y*dy+z*dz).gt.0d0)
 	if(onedge) then
 		if(goingup) then
 			hitR1=.false.
@@ -157,8 +159,14 @@
 			vR2=-b
 		endif
 	else
-		hitR1=hitR(R1,rr,b,vR1)
-		hitR2=hitR(R2,rr,b,vR2)
+		if(goingup) then
+			hitR1=.false.
+			vR1=1d200
+			hitR2=hitR(R2,rr,b,vR2)
+		else
+			hitR1=hitR(R1,rr,b,vR1)
+			hitR2=hitR(R2,rr,b,vR2)
+		endif
 	endif
 
 	v=vR2
@@ -170,7 +178,7 @@
 		jrnext=jr-1
 	endif
 	tau_v=v*Ce(jr)
-	albedo=Cs(jr)/(Ca(jr)+Cs(jr))
+	albedo=Cs(jr)/Ce(jr)
 	if(tau_v.lt.tau) then
 		x=x+v*dx
 		y=y+v*dy
@@ -186,7 +194,7 @@
 			nscat=nscat+1
 		endif
 		onedge=.true.
-		goto 1
+		goto 2
 	endif
 	v=tau/Ce(jr)
 	x=x+v*dx
@@ -322,22 +330,26 @@ c-----------------------------------------------------------------------
 	subroutine rotate(x,y,z,u,v,w,cost,sint)
 	IMPLICIT NONE
 	real*8 x,y,z,u,v,w,yy(3),theta,inp
-	real*8 cost,sint,u2,v2,w2
+	real*8 cost,sint,u2,v2,w2,ux,vy,wz
 c	cost=cos(theta)
 c	sint=sin(theta)
 	u2=u*u
 	v2=v*v
 	w2=w*w
 
-	inp=x*u+y*v+z*w
+	ux=u*x
+	vy=v*y
+	wz=w*z
+
+	inp=ux+vy+wz
 	yy(1)=u*inp
-     & +(x*(v2+w2)-u*(v*y+w*z))*cost
+     & +(x*(v2+w2)-u*(vy+wz))*cost
      & +(v*z-w*y)*sint
 	yy(2)=v*inp
-     & +(y*(u2+w2)-v*(u*x+w*z))*cost
+     & +(y*(u2+w2)-v*(ux+wz))*cost
      & +(w*x-u*z)*sint
 	yy(3)=w*inp
-     & +(z*(u2+v2)-w*(u*x+v*y))*cost
+     & +(z*(u2+v2)-w*(ux+vy))*cost
      & +(u*y-v*x)*sint
 	x=yy(1)
 	y=yy(2)

@@ -40,7 +40,7 @@ ifeq ($(gfort),true)
 else
   FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(DEBUGGING) $(MULTICORE) -assume buffered_io
   FLAG_LINUX    = -xHOST -fpp
-  FLAG_MAC      = -xHOST -opt-prefetch -static-intel -fpp
+  FLAG_MAC      = -xHOST -opt-prefetch -static-intel -fpp 
 endif
 
 LIBS_FITS		= -lcfitsio

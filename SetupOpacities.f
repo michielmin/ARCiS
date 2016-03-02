@@ -18,7 +18,7 @@
 	use Constants
 	IMPLICIT NONE
 	integer imol
-	real*8 kappa(ng),nu1,nu2,tanscale
+	real*8 kappa(ng),nu1,nu2,tanscale,ll
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
 	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
@@ -30,17 +30,17 @@
 	allocate(cont_tot(nlam))
 	allocate(kaver(nlam))
 	allocate(opac_tot(nlam,ng))
-	allocate(kappa_mol(nmol,nlam,ng))
+	allocate(kappa_mol(nlam,ng,nmol))
 
-	n_nu_line=ng*nmol
+	n_nu_line=ng*min(nmol,4)
 	allocate(nu_line(n_nu_line))
 
 	if(.not.allocated(ig_comp).and.retrieval) then
-		allocate(ig_comp(nlam,n_nu_line,nmol))
+		allocate(ig_comp(nmol,n_nu_line,nlam))
 		do i=1,nlam
 			do j=1,n_nu_line
 				do imol=1,nmol
-					ig_comp(i,j,imol)=random(idum)*real(ng)+1
+					ig_comp(imol,j,i)=random(idum)*real(ng)+1
 				enddo
 			enddo
 		enddo
@@ -60,16 +60,16 @@
 			if(T(ir).lt.CIA(i)%T(1)) then
 				iT=1
 			else if(T(iR).gt.CIA(i)%T(CIA(i)%nT)) then
-				iT=CIA(i)%nT
+				iT=CIA(i)%nT-1
 			else
 				do iT=1,CIA(i)%nT-1
 					if(T(ir).ge.CIA(i)%T(iT).and.T(ir).le.CIA(i)%T(iT+1)) exit
 				enddo
 			endif
-			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*cia_mixrat(CIA(i)%imol1)*cia_mixrat(CIA(i)%imol2)
+			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*mixrat_r(ir,CIA(i)%imol1)*mixrat_r(ir,CIA(i)%imol2)
 		enddo
 		do imol=1,nmol
-			kappa_mol(imol,1:nlam,1:ng)=0d0
+			kappa_mol(1:nlam,1:ng,imol)=0d0
 			if(mixrat_r(ir,imol).gt.0d0) call ReadOpacityFITS(kappa_mol,imol,ir)
 		enddo
 !$OMP PARALLEL IF(nlam.gt.200)
@@ -86,17 +86,20 @@
 				do imol=1,nmol
 					if(mixrat_r(ir,imol).gt.0d0) then
 						if(retrieval) then
-							ig=ig_comp(i,j,imol)
+							ig=ig_comp(imol,j,i)
 						else
 							ig=random(idum)*real(ng)+1
 						endif
-						k_line(j)=k_line(j)+kappa_mol(imol,i,ig)*mixrat_r(ir,imol)
+						k_line(j)=k_line(j)+kappa_mol(i,ig,imol)*mixrat_r(ir,imol)
 					endif
 				enddo
 			enddo
 			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cont_tot(i))
 			Cabs(ir,i,1:ng)=kappa(1:ng)
-			Csca(ir,i)=8.4909d-45*(freq(i+1)*freq(i))**2
+c			Csca(ir,i)=8.4909d-45*mixrat_r(ir,45)*(freq(i+1)*freq(i))**2
+			ll=1d0/(lam(i+1)*lam(i))
+c Rayleigh cross sections from Dalgarno & Williams (1962)
+			Csca(ir,i)=mixrat_r(ir,45)*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4)
 			do j=1,ng
 				if(Cabs(ir,i,j).lt.Csca(ir,i)*1d-4) Cabs(ir,i,j)=Csca(ir,i)*1d-4 
 			enddo
@@ -224,7 +227,7 @@
 			nu2=freq(i)
 			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cont_tot(i))
 			Cabs(ir,i,1:ng)=kappa(1:ng)
-			Csca(ir,i)=8.4909d-45*(nu1*nu2)**2
+			Csca(ir,i)=8.4909d-45*mixrat_r(ir,45)*(nu1*nu2)**2
 			do j=1,ng
 				if(Cabs(ir,i,j).lt.Csca(ir,i)*1d-4) Cabs(ir,i,j)=Csca(ir,i)*1d-4 
 			enddo

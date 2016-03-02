@@ -9,7 +9,7 @@
 	real*8 Fp1,Fp2,ApAs
 	logical,allocatable :: docloud0(:,:)
 
-	allocate(docloud0(nclouds,ncc))
+	allocate(docloud0(max(nclouds,1),ncc))
 	allocate(theta(nphase))
 	do i=1,nphase
 		theta(i)=acos(1d0-2d0*(real(i)-0.5d0)/real(nphase))*180d0/pi

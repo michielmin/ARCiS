@@ -1241,7 +1241,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates)
 	real*8 COratio,Zmetal,Tin,Pin,mol_abun(nmol)
 	character*10 mol_names(nmol)
 
-  INTEGER,parameter            :: N_reactants = 94
+  INTEGER,parameter            :: N_reactants = 100
   CHARACTER*40                 :: names_reactants(N_reactants)
   DOUBLE PRECISION             :: molfracs_reactants(N_reactants), &
        massfracs_reactants(N_reactants)
@@ -1320,33 +1320,40 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates)
   names_reactants(68) = 'H-'
   names_reactants(69) = 'Na+'
   names_reactants(70) = 'K+'
-  names_reactants(71) = 'VO(c)'
-  names_reactants(72) = 'VO(L)'
-  names_reactants(73) = 'MgSiO3(c)'
-  names_reactants(74) = 'Mg2SiO4(c)'
-  names_reactants(75) = 'SiC(c)'
-  names_reactants(76) = 'Fe(c)'
-  names_reactants(77) = 'AL2O3(c)'
-  names_reactants(78) = 'Na2S(c)'
-  names_reactants(79) = 'KCL(c)'
-  names_reactants(80) = 'Fe(L)'
-  names_reactants(81) = 'Mg2SiO4(L)'
-  names_reactants(82) = 'SiC(L)'
-  names_reactants(83) = 'MgSiO3(L)'
-  names_reactants(84) = 'H2O(L)'
-  names_reactants(85) = 'H2O(c)'
-  names_reactants(86) = 'TiO(c)'
-  names_reactants(87) = 'TiO(L)'
-  names_reactants(88) = 'NaAlSi3O8(c)'
-  names_reactants(89) = 'KAlSi3O8(c)'
-  names_reactants(90) = 'MgAl2O4(c)'
-  names_reactants(91) = 'FeO(c)'
-  names_reactants(92) = 'Fe2O3(c)'
-  names_reactants(93) = 'Fe3O4(c)'
-  names_reactants(94) = 'Fe2SiO4(c)'
+  names_reactants(71) = 'PH2'
+  names_reactants(72) = 'P2'
+  names_reactants(73) = 'PS'
+  names_reactants(74) = 'PO'
+  names_reactants(75) = 'P4O6'
+  names_reactants(76) = 'PH'
 
-	N_reactants2=70
-	if(condensates) N_reactants2=94
+  names_reactants(77) = 'VO(c)'
+  names_reactants(78) = 'VO(L)'
+  names_reactants(79) = 'MgSiO3(c)'
+  names_reactants(80) = 'Mg2SiO4(c)'
+  names_reactants(81) = 'SiC(c)'
+  names_reactants(82) = 'Fe(c)'
+  names_reactants(83) = 'AL2O3(c)'
+  names_reactants(84) = 'Na2S(c)'
+  names_reactants(85) = 'KCL(c)'
+  names_reactants(86) = 'Fe(L)'
+  names_reactants(87) = 'Mg2SiO4(L)'
+  names_reactants(88) = 'SiC(L)'
+  names_reactants(89) = 'MgSiO3(L)'
+  names_reactants(90) = 'H2O(L)'
+  names_reactants(91) = 'H2O(c)'
+  names_reactants(92) = 'TiO(c)'
+  names_reactants(93) = 'TiO(L)'
+  names_reactants(94) = 'NaAlSi3O8(c)'
+  names_reactants(95) = 'KAlSi3O8(c)'
+  names_reactants(96) = 'MgAl2O4(c)'
+  names_reactants(97) = 'FeO(c)'
+  names_reactants(98) = 'Fe2O3(c)'
+  names_reactants(99) = 'Fe3O4(c)'
+  names_reactants(100) = 'Fe2SiO4(c)'
+
+	N_reactants2=76
+	if(condensates) N_reactants2=100
 
       temp=Tin
       press=Pin
@@ -1417,7 +1424,7 @@ subroutine easy_chem_set_molfracs_atoms(CO,Z)
 
 	molfracs_atoms(1)=molfracs_atoms(1)/(10d0**Z)
 	molfracs_atoms(2)=molfracs_atoms(2)/(10d0**Z)
-	molfracs_atoms(3)=molfracs_atoms(5)*CO
+	molfracs_atoms(5)=molfracs_atoms(3)/CO
 
 	tot=sum(molfracs_atoms(1:N_atoms))
 	molfracs_atoms=molfracs_atoms/tot
