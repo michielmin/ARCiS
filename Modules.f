@@ -99,8 +99,9 @@ c===============================================================================
 
 	real*8,allocatable :: flux(:,:),obsA(:,:),phase(:,:,:)
 	integer ncc,nphase
+	logical cloudcompute
 	logical,allocatable :: docloud(:,:)
-	real*8,allocatable :: cloudfrac(:)
+	real*8,allocatable :: cloudfrac(:),XCloud(:,:),XeqCloud(:,:)
 
 	integer,allocatable,dimension(:) :: L_imol,L_iiso,L_nclose,L_ilam
 	real*8,allocatable,dimension(:) :: L_Aul,L_freq,L_Elow,L_lam,L_S0,L_S
@@ -131,7 +132,7 @@ c===============================================================================
 
 	type CloudType
 		real*8 P,dP,s,column
-		real*8 coverage
+		real*8 coverage,frain
 		real*8,allocatable :: rv(:),w(:)							! dimension nsize
 		real*8 rho,amin,amax,fmax,porosity,fcarbon,reff,veff
 		logical blend
@@ -139,6 +140,7 @@ c===============================================================================
 		type(Mueller),allocatable :: F(:,:)							! dimension nsize,nlam
 		character*500 file
 		character*20 standard,ptype
+		character*40 species
 		integer nsize,nsubgrains
 	end type CloudType
 

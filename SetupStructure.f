@@ -6,8 +6,16 @@
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix,j,niter
 	logical ini,compute_mixrat
+	character*40 cloudspecies(max(nclouds,1))
+	
+	do i=1,nclouds
+		cloudspecies(i)=Cloud(i)%species
+	enddo
+
+	ini = .TRUE.
 
 	niter=1
+	if(dochemistry) niter=2
 	if(par_tprofile) niter=3
 
 	Pb(1)=P(1)
@@ -33,7 +41,7 @@
 	R(1)=Rplanet
 	mu=0d0
 	do imol=1,nmol
-		if(mixrat(imol).gt.0d0) mu=mu+mixrat(imol)*Mmol(imol)
+		if(mixrat_r(1,imol).gt.0d0) mu=mu+mixrat_r(1,imol)*Mmol(imol)
 	enddo
 	call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
 	do i=1,nr
@@ -61,11 +69,31 @@
 		if(T(i).lt.100d0) T(i)=100d0
 	enddo
 
+	if(dochemistry.and.j.ne.niter) then
+	if(compute_mixrat) then
+		if(ini) call easy_chem_set_molfracs_atoms(COratio,metallicity)
+		call output("==================================================================")
+		call output("Computing chemistry using easy_chem by Paul Molliere")
+		do i=1,nr
+			call tellertje(i,nr)
+			if(P(i).ge.mixP.or.i.eq.1) then
+				call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,XeqCloud(i,1:nclouds),nclouds)
+			else
+				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
+			endif
+		enddo
+		call output("==================================================================")
+		mixrat_old_r=mixrat_r
+	else
+		mixrat_r=mixrat_old_r
+	endif
+	endif
+
 	enddo
 
 	if(dochemistry) then
 	if(compute_mixrat) then
-		ini = .TRUE.
+		ini=.true.
 		call easy_chem_set_molfracs_atoms(COratio,metallicity)
 		call output("==================================================================")
 		call output("Computing chemistry using easy_chem by Paul Molliere")
@@ -75,8 +103,9 @@ c			do j=1,nmol
 c				call MorleyChemistry(mixrat_r(i,j),T(i),P(i),molname(j),metallicity)
 c			enddo
 			if(P(i).ge.mixP.or.i.eq.1) then
-				call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates)
+				call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,XeqCloud(i,1:nclouds),nclouds)
 			else
+				if(cloudcompute) call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,XeqCloud(i,1:nclouds),nclouds)
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
 			endif
 		enddo
@@ -179,22 +208,37 @@ c			enddo
 	IMPLICIT NONE
 	real*8 pp,tot,column
 	integer ii,i,j,nsubr
+	real*8 Xc,Xc1,lambdaC
 	
-	column=0d0
-	nsubr=100
-	do i=1,nr
-		do j=1,nsubr
-			if(i.ne.nr) then
-				pp=(log10(P(i))+log10(P(i+1)/P(i))*real(j)/real(nsubr+1))
-			else
-				pp=log10(P(i))
-			endif				
-			cloud_dens(i,ii)=exp(-(abs(pp-log10(Cloud(ii)%P))/log10(Cloud(ii)%dP))**Cloud(ii)%s/2d0)
+	if(.not.cloudcompute) then
+		column=0d0
+		nsubr=100
+		do i=1,nr
+			do j=1,nsubr
+				if(i.ne.nr) then
+					pp=(log10(P(i))+log10(P(i+1)/P(i))*real(j)/real(nsubr+1))
+				else
+					pp=log10(P(i))
+				endif
+				cloud_dens(i,ii)=cloud_dens(i,ii)+exp(-(abs(pp-log10(Cloud(ii)%P))/log10(Cloud(ii)%dP))**Cloud(ii)%s/2d0)
+			enddo
 			column=column+cloud_dens(i,ii)*(R(i+1)-R(i))
 		enddo
-	enddo
-
-	cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%column/column
+		cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%column/column
+	else
+c use Ackerman & Marley 2001 cloud computation
+		column=0d0
+		nsubr=100
+		Xc1=0d0
+		cloud_dens(nr,ii)=Xc1*dens(nr)
+		do i=nr-1,1,-1
+			lambdaC=0.1d0
+			Xc=Xc1+(XeqCloud(i,ii)-XeqCloud(i+1,ii))+Cloud(ii)%frain*Xc1*(P(i)-P(i+1))/(lambdaC*P(i))
+			Xc=max(min(Xc,XeqCloud(i,ii)),0d0)
+			cloud_dens(i,ii)=Xc*dens(i)
+			Xc1=Xc
+		enddo
+	endif
 
 	tot=0d0
 	do i=1,Cloud(ii)%nsize

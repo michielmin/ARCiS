@@ -1233,13 +1233,16 @@ END MODULE nrutil
 !===================================================================================
 
 
-subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates)
+subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,cloudspecies,Xcloud,Ncloud)
 	use AtomsModule
   implicit none
 
 	integer nmol,i
 	real*8 COratio,Zmetal,Tin,Pin,mol_abun(nmol)
 	character*10 mol_names(nmol)
+	integer Ncloud
+	real*8 Xcloud(max(Ncloud,1))
+	character*40 cloudspecies(max(Ncloud,1))
 
   INTEGER,parameter            :: N_reactants = 100
   CHARACTER*40                 :: names_reactants(N_reactants)
@@ -1372,7 +1375,18 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates)
 			endif
 		enddo
 	enddo
-	
+
+	if(condensates) then
+		do i=1,Ncloud
+			Xcloud(i)=0d0
+			do i_reac=1,N_reactants2
+				if(trim(names_reactants(i_reac)).eq.trim(cloudspecies(i))) then
+					Xcloud(i)=massfracs_reactants(i_reac)
+				endif
+			enddo
+		enddo
+	endif
+		
 	return
 	end
 

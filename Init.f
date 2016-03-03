@@ -257,6 +257,8 @@ c===============================================================================
 	allocate(mixrat(nmol))
 	allocate(includemol(nmol))
 	allocate(Cloud(max(nclouds,1)))
+	allocate(XeqCloud(nr,max(nclouds,1)))
+	allocate(XCloud(nr,max(nclouds,1)))
 	allocate(P_point(max(n_points,1)))
 	allocate(T_point(max(n_points,1)))
 	allocate(RetPar(max(n_ret,1)))
@@ -406,6 +408,8 @@ c allocate the arrays
 
 	call ConvertUnits()
 
+	condensates=(condensates.or.cloudcompute)
+
 	call InitFreq()
 
 	if(gammaT2.lt.0d0) gammaT2=gammaT1
@@ -438,6 +442,7 @@ c allocate the arrays
 			call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
 			call SetupPartCloud(i)
 			allocate(Cloud(i)%w(Cloud(i)%nsize))
+			if(Cloud(i)%species.eq.' ') call NameCloudSpecies(Cloud(i)%standard,Cloud(i)%species)
 		enddo
 	endif
 
@@ -602,8 +607,12 @@ c			read(key%value,*) nr
 			read(key%value,*) COratio
 		case("condensates")
 			read(key%value,*) condensates
+		case("cloudcompute")
+			read(key%value,*) cloudcompute
 		case("mixp")
 			read(key%value,*) mixP
+		case("nspike")
+			read(key%value,*) nspike
 		case("point")
 			call ReadPoint(key)
 		case("retpar","fitpar")
@@ -867,7 +876,10 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%veff=0.1
 		Cloud(i)%coverage=1.0
 		Cloud(i)%ptype='COMPUTE'
+		Cloud(i)%frain=1d0
+		Cloud(i)%species=''
 	enddo
+	cloudcompute=.false.
 	nspike=0
 
 	retrieval=.false.
@@ -1236,6 +1248,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(key%nr1)%porosity
 		case("standard")
 			Cloud(key%nr1)%standard=trim(key%value)
+		case("species")
+			Cloud(key%nr1)%species=trim(key%value)
 		case("fcarbon")
 			read(key%value,*) Cloud(key%nr1)%fcarbon
 		case("pressure","p")
@@ -1252,6 +1266,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(key%nr1)%veff
 		case("coverage")
 			read(key%value,*) Cloud(key%nr1)%coverage
+		case("frain")
+			read(key%value,*) Cloud(key%nr1)%frain
 		case default
 			call output("Unknown cloud keyword: " // trim(key%key2))
 			stop
@@ -1356,3 +1372,36 @@ c the nspike parameter removes the n degree spike in the forward direction.
 	
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
+
+
+
+	subroutine NameCloudSpecies(standard,species)
+	IMPLICIT NONE
+	character*20 standard
+	character*40 species
+	
+	select case(standard)
+		case("ENSTATITE","DIANA")
+			species='MgSiO3(c)'
+		case("ASTROSIL","FORSTERITE")
+			species='Mg2SiO4(c)'
+		case("VO")
+			species='VO(c)'
+		case("SiC")
+			species='SiC(c)'
+		case("Al2O3","CORRUNDUM")
+			species='Al2O3(c)'
+		case("Fe","IRON")
+			species='Fe(c)'
+		case("WATER")
+			species='H2O(L)'
+		case("BROOKITE","TiO2")	
+c not entirely correct...
+			species='TiO(c)'
+		case("ICE")
+			species='H2O(c)'
+	end select
+
+	return
+	end
+	
