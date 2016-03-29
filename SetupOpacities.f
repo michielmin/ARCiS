@@ -96,10 +96,7 @@
 			enddo
 			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cont_tot(i))
 			Cabs(ir,i,1:ng)=kappa(1:ng)
-c			Csca(ir,i)=8.4909d-45*mixrat_r(ir,45)*(freq(i+1)*freq(i))**2
-			ll=1d0/(lam(i+1)*lam(i))
-c Rayleigh cross sections from Dalgarno & Williams (1962)
-			Csca(ir,i)=mixrat_r(ir,45)*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4)
+			call RayleighScattering(Csca(ir,i),ir,i)
 			do j=1,ng
 				if(Cabs(ir,i,j).lt.Csca(ir,i)*1d-4) Cabs(ir,i,j)=Csca(ir,i)*1d-4 
 			enddo
@@ -227,7 +224,7 @@ c Rayleigh cross sections from Dalgarno & Williams (1962)
 			nu2=freq(i)
 			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cont_tot(i))
 			Cabs(ir,i,1:ng)=kappa(1:ng)
-			Csca(ir,i)=8.4909d-45*mixrat_r(ir,45)*(nu1*nu2)**2
+			call RayleighScattering(Csca(ir,i),ir,i)
 			do j=1,ng
 				if(Cabs(ir,i,j).lt.Csca(ir,i)*1d-4) Cabs(ir,i,j)=Csca(ir,i)*1d-4 
 			enddo
@@ -564,4 +561,38 @@ c	Random sampling of the Voigt profile
 	end
 
 
+	subroutine RayleighScattering(Cs,ir,i)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 ll,Cs
+	integer ir,i,j
 
+	ll=1d0/(lam(i+1)*lam(i))
+c Rayleigh cross sections from Dalgarno & Williams (1962)
+c For other than H2 from Sneep & Ubachs (2005)
+	Cs=0d0
+	do j=1,nmol
+		if(mixrat_r(ir,j).gt.0d0) then
+			select case(j)
+				case(2) !CO2
+					Cs=Cs+12.4*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+				case(4) !N2O
+					Cs=Cs+15.9*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+				case(5) !CO
+					Cs=Cs+6.19*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+				case(6) !CH4
+					Cs=Cs+12.47*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+				case(22) !N2
+					Cs=Cs+5.1*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+				case(30) !SF6
+					Cs=Cs+32.3*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+				case default ! H2
+					Cs=Cs+mixrat_r(ir,j)*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4)
+			end select
+		endif
+	enddo
+
+	return
+	end
+	

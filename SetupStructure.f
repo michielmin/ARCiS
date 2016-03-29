@@ -16,7 +16,7 @@
 
 	niter=1
 	if(dochemistry) niter=2
-	if(par_tprofile) niter=3
+	if(par_tprofile) niter=2
 
 	Pb(1)=P(1)
 	do i=2,nr
