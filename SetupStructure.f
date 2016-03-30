@@ -228,15 +228,18 @@ c			enddo
 	else
 c use Ackerman & Marley 2001 cloud computation
 		column=0d0
-		nsubr=100
+		nsubr=1
 		Xc1=0d0
-		cloud_dens(nr,ii)=Xc1*dens(nr)
-		do i=nr-1,1,-1
+		cloud_dens(1,ii)=Xc1*dens(1)
+		do i=2,nr
 			lambdaC=0.1d0
-			Xc=Xc1+(XeqCloud(i,ii)-XeqCloud(i+1,ii))+Cloud(ii)%frain*Xc1*(P(i)-P(i+1))/(lambdaC*P(i))
-			Xc=max(min(Xc,XeqCloud(i,ii)),0d0)
+			do j=1,nsubr
+				Xc=(Xc1+(XeqCloud(i,ii)-XeqCloud(i-1,ii))/real(nsubr))/(1d0-Cloud(ii)%frain*((P(i)-P(i-1))/real(nsubr))/(lambdaC*P(i)))
+				Xc=max(Xc,0d0)
+				Xc1=Xc
+			enddo
 			cloud_dens(i,ii)=Xc*dens(i)
-			Xc1=Xc
+			write(90,*) P(i),Xc,cloud_dens(i,ii)
 		enddo
 	endif
 
