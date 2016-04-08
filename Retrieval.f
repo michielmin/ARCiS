@@ -128,7 +128,7 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 	var_best=var0
 	chi2min=1d200
 	chi2prev=1d200
-	error=0.1d0
+	error=1d0
 	lambda=0.1
 	Cov=0d0
 
@@ -206,6 +206,7 @@ c	ngen=0
 		do i=1,n_ret
 			dvar(i)=max(error(1,i),error(2,i))/2d0
      	enddo
+		if(iter1*iter2.eq.1) dvar=1d0
 		chi2prev=chi2
 		y0=y
 		dofit=.true.

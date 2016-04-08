@@ -209,6 +209,7 @@ c			enddo
 	real*8 pp,tot,column
 	integer ii,i,j,nsubr
 	real*8 Xc,Xc1,lambdaC
+	character*1000 form
 	
 	if(.not.cloudcompute) then
 		column=0d0
@@ -239,8 +240,15 @@ c use Ackerman & Marley 2001 cloud computation
 				Xc1=Xc
 			enddo
 			cloud_dens(i,ii)=Xc*dens(i)
-			write(90,*) P(i),Xc,cloud_dens(i,ii)
 		enddo
+		open(unit=50,file=trim(outputdir) // 'clouddens' // trim(int2string(ii,'(i0.2)')) // '.dat',RECL=1000)
+		form='("#",a9,a15,a15,a15)'
+		write(50,form) "P [Ba]","dens [g/cm^3]","Eq. dens","gas dens"
+		form='(es10.3,es15.3,es15.3,es15.3)'
+		do i=1,nr
+			write(50,form) P(i),cloud_dens(i,ii),dens(i)*XeqCloud(i,ii),dens(i)
+		enddo
+		close(unit=50)
 	endif
 
 	tot=0d0
