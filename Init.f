@@ -5,7 +5,7 @@ c==============================================================================
 	IMPLICIT NONE
 
 	type SettingKey
-		character*100 key1,key2,value,key
+		character*500 key1,key2,value,key
 		integer nr1,nr2
 		logical last
 		type(SettingKey),pointer :: next
@@ -98,7 +98,7 @@ c===============================================================================
 	subroutine get_key_value(line,key,key1,key2,value,nr1,nr2)
 	IMPLICIT NONE
 	character*1000 line
-	character*100 key,key1,key2,value
+	character*500 key,key1,key2,value
 	integer i,nr1,nr2,ikey1,ikey2
 	
 	ikey1=index(line,'=')
@@ -142,7 +142,7 @@ c===============================================================================
 	
 	subroutine checknr(key,nr)
 	IMPLICIT NONE
-	character*100 key
+	character*500 key
 	integer nr,i,n
 	
 	n=len_trim(key)
@@ -258,6 +258,7 @@ c===============================================================================
 	allocate(includemol(nmol))
 	allocate(Cloud(max(nclouds,1)))
 	allocate(XeqCloud(nr,max(nclouds,1)))
+	allocate(XeqCloud_old(nr,max(nclouds,1)))
 	allocate(XCloud(nr,max(nclouds,1)))
 	allocate(P_point(max(n_points,1)))
 	allocate(T_point(max(n_points,1)))
@@ -613,6 +614,8 @@ c			read(key%value,*) nr
 			read(key%value,*) mixP
 		case("nspike")
 			read(key%value,*) nspike
+		case("nphot")
+			read(key%value,*) Nphot0
 		case("point")
 			call ReadPoint(key)
 		case("retpar","fitpar")
@@ -844,6 +847,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	par_tprofile=.false.
 	
 	nphase=0
+	Nphot0=100
 
 	dochemistry=.false.
 	metallicity=0d0
@@ -1378,7 +1382,7 @@ c-----------------------------------------------------------------------
 	subroutine NameCloudSpecies(standard,species)
 	IMPLICIT NONE
 	character*20 standard
-	character*40 species
+	character*500 species
 	
 	select case(standard)
 		case("ENSTATITE","DIANA")

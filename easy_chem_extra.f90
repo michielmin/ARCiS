@@ -1242,7 +1242,8 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,clouds
 	character*10 mol_names(nmol)
 	integer Ncloud
 	real*8 Xcloud(max(Ncloud,1))
-	character*40 cloudspecies(max(Ncloud,1))
+	character*500 cloudspecies(max(Ncloud,1)),namecloud
+	integer j1,j2
 
   INTEGER,parameter            :: N_reactants = 100
   CHARACTER*40                 :: names_reactants(N_reactants)
@@ -1252,6 +1253,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,clouds
   DOUBLE PRECISION             :: thermo_quants
   LOGICAL                      :: ini,condensates
   INTEGER                      :: i_t, i_p, i_reac, N_reactants2
+	logical con(N_reactants)
 
   names_reactants(1) = 'H'
   names_reactants(2) = 'H2'
@@ -1377,14 +1379,29 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,clouds
 	enddo
 
 	if(condensates) then
+		con=.false.
 		do i=1,Ncloud
 			Xcloud(i)=0d0
-			do i_reac=1,N_reactants2
-				if(trim(names_reactants(i_reac)).eq.trim(cloudspecies(i))) then
-					Xcloud(i)=massfracs_reactants(i_reac)
-				endif
+			j1=1
+			j2=1
+			do while(j2.lt.len_trim(cloudspecies(i)))
+				j2=j1+index(cloudspecies(i)(j1:len_trim(cloudspecies(i))),',')-1
+				if(j2.lt.j1) j2=len_trim(cloudspecies(i))+1
+				namecloud=cloudspecies(i)(j1:j2-1)
+				do i_reac=1,N_reactants2
+					if(trim(names_reactants(i_reac)).eq.trim(namecloud)) then
+						Xcloud(i)=Xcloud(i)+massfracs_reactants(i_reac)
+					endif
+					if(i_reac.ge.77.and.massfracs_reactants(i_reac).gt.0d0) con(i_reac)=.true.
+				enddo
+				j1=j2+1
 			enddo
 		enddo
+! 		do i=1,N_reactants2
+! 			if(con(i)) then
+! 				print*,'can condense: ',trim(names_reactants(i))
+! 			endif
+! 		enddo
 	endif
 		
 	return

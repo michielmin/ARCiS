@@ -85,6 +85,9 @@
 	integer na,map(n_ret),info,iboot,nboot,niter1,niter2
 	logical dofit(n_ret),dofit_prev(n_ret)
 	logical,allocatable :: specornot(:)
+
+	real*8 XeqCloud_best(nr,max(nclouds,1)),mixrat_best_r(nr,nmol)
+
 	
 	do i=1,n_ret
 10		var0(i)=gasdev(idum)*0.1+0.5
@@ -123,12 +126,12 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 		specornot(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%spec
 		iy=iy+ObsSpec(i)%nlam		
 	enddo
-	dvar=0.4d0
+	dvar=0.1d0
 	var=var0
 	var_best=var0
 	chi2min=1d200
 	chi2prev=1d200
-	error=1d0
+	error=0.1d0
 	lambda=0.1
 	Cov=0d0
 
@@ -159,18 +162,22 @@ c	ngen=0
 		call output("Iteration " // trim(int2string(iter2+20*(iter1-1),'(i4)')) // 
      &				" - model" // trim(int2string(imodel,'(i5)')))
 		chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,.true.,error)
+		mixrat_old_r=mixrat_r
+		XeqCloud_old=XeqCloud
 		iy=1
 		do i=1,nobs
 	 		call RemapObs(i,y(iy:iy+ObsSpec(i)%nlam-1))
 			iy=iy+ObsSpec(i)%nlam
 		enddo
 		if(chi2.le.chi2prev) then
-			lambda=lambda/5d0
 			var0=var
 			call output("Iteration improved" // trim(dbl2string(chi2,'(f8.3)')))
 			if(chi2.le.chi2min) then
+				lambda=lambda/5d0
 				var_best=var
 				ybest=y
+				mixrat_best_r=mixrat_r
+				XeqCloud_best=XeqCloud
 				chi2_spec=0d0
 				chi2_prof=0d0
 				do j=1,nobs
@@ -192,6 +199,8 @@ c	ngen=0
 				var=var_best
 				var0=var
 				y=ybest
+				mixrat_old_r=mixrat_best_r
+				XeqCloud_old=XeqCloud_best
 			endif
 		else if(iter2.eq.1) then
 			dofit=.true.
@@ -205,6 +214,7 @@ c	ngen=0
 		endif
 		do i=1,n_ret
 			dvar(i)=max(error(1,i),error(2,i))/2d0
+			if(dvar(i).eq.0d0) dvar(i)=0.1d0
      	enddo
 		if(iter1*iter2.eq.1) dvar=1d0
 		chi2prev=chi2
@@ -231,6 +241,8 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 				chi2min=chi2
 				var_best=var
 				ybest=y1
+				mixrat_best_r=mixrat_r
+				XeqCloud_best=XeqCloud
 				chi2_spec=0d0
 				chi2_prof=0d0
 				do j=1,nobs
@@ -266,6 +278,8 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 				chi2min=chi2
 				var_best=var
 				ybest=y2
+				mixrat_best_r=mixrat_r
+				XeqCloud_best=XeqCloud
 				chi2_spec=0d0
 				chi2_prof=0d0
 				do j=1,nobs

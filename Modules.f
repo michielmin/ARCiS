@@ -52,7 +52,7 @@ c===============================================================================
 	integer nT,np,nr,nmol,nlam		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines,ng,ncia,nclouds
 	character*500 outputdir,HITRANdir,HITEMPdir
-	integer idum,maxiter
+	integer idum,maxiter,Nphot0
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT
 	logical dochemistry,retrieve_profile,condensates
@@ -101,7 +101,7 @@ c===============================================================================
 	integer ncc,nphase
 	logical cloudcompute
 	logical,allocatable :: docloud(:,:)
-	real*8,allocatable :: cloudfrac(:),XCloud(:,:),XeqCloud(:,:)
+	real*8,allocatable :: cloudfrac(:),XCloud(:,:),XeqCloud(:,:),XeqCloud_old(:,:)
 
 	integer,allocatable,dimension(:) :: L_imol,L_iiso,L_nclose,L_ilam
 	real*8,allocatable,dimension(:) :: L_Aul,L_freq,L_Elow,L_lam,L_S0,L_S
@@ -140,7 +140,7 @@ c===============================================================================
 		type(Mueller),allocatable :: F(:,:)							! dimension nsize,nlam
 		character*500 file
 		character*20 standard,ptype
-		character*40 species
+		character*500 species
 		integer nsize,nsubgrains
 	end type CloudType
 
@@ -151,7 +151,7 @@ cPoints for the temperature structure
 	integer n_points
 
 	type RetrievalPar
-		character*50 keyword
+		character*500 keyword
 		real*8 xmin,xmax,x0,dx,value,error1,error2
 		logical logscale,squarescale,opacitycomp
 		integer n

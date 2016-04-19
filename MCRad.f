@@ -9,9 +9,10 @@
 	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,irdark
 	logical docloud0(nclouds),goingup,hitR,onedge,hitR1,hitR2,dorw(nr)
 	type(Mueller) M(nr)
+	real*8 starttime,stoptime
 	
-	NphotPlanet=1000/real(ng)+10
-	NphotStar=nphase*1000/real(ng)+10
+	NphotPlanet=Nphot0/real(ng)+5
+	NphotStar=nphase*Nphot0/real(ng)+5
 
 	EJv=0d0
 
@@ -112,6 +113,7 @@
 			enddo
 		enddo		
 		endif
+
 	enddo
 
 	return
@@ -140,9 +142,9 @@
 	if(absorbed) return
 	rr=x**2+y**2+z**2
 	rho=sqrt(rr)
-c	if(dorw(jr)) then
-c		if(RandomWalk(x,y,z,dx,dy,dz,rho,E,Cs(jr),Ce(jr),Crw(jr),g(jr),jr,nscat,absorbed,0.5d0,Eabs,EJv(jr))) goto 1
-c	endif
+	if(dorw(jr)) then
+		if(RandomWalk(x,y,z,dx,dy,dz,rho,E,Cs(jr),Ce(jr),Crw(jr),g(jr),jr,nscat,absorbed,0.5d0,Eabs,EJv(jr))) goto 1
+	endif
 	R1=R(jr)**2
 	R2=R(jr+1)**2
 	b=2d0*(x*dx+y*dy+z*dz)
@@ -487,6 +489,11 @@ c-----------------------------------------------------------------------
 
 	v=-3d0*log(yy(iy))*dmin**2/(lr**2*pi**2)
 
+	if(random(idum).gt.fstop) then
+		absorbed=.true.
+		return
+	endif
+
 	call randomdirection(dx,dy,dz)
 	x=x+dmin*dx
 	y=y+dmin*dy
@@ -504,7 +511,6 @@ c-----------------------------------------------------------------------
 
 	nscat=nscat+v
 
-	if(random(idum).gt.fstop) absorbed=.true.
 
 	return
 	end
