@@ -215,13 +215,15 @@ c	ngen=0
 		do i=1,n_ret
 			dvar(i)=max(error(1,i),error(2,i))/2d0
 			if(dvar(i).eq.0d0) dvar(i)=0.1d0
+			if(dvar(i).gt.1d-1) dvar(i)=1d-1
      	enddo
-		if(iter1*iter2.eq.1) dvar=1d0
+c		if(iter1*iter2.eq.1) dvar=1d0
 		chi2prev=chi2
 		y0=y
 		dofit=.true.
 		dofit_prev=.true.
 		do i=1,n_ret
+			call output("varying " // trim(RetPar(i)%keyword))
 			if(dvar(i).lt.1d-3) dvar(i)=1d-3
 c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 20			var=var0
@@ -298,8 +300,8 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 				call WritePTlimits(var,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
 				call SetOutputMode(.true.)
 			endif
-			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/abs(x1-x2)
-			dchi2(i)=(chi2_1-chi2_2)/abs(x1-x2)
+			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/(x1-x2)
+			dchi2(i)=(chi2_1-chi2_2)/(x1-x2)
 			if(abs(chi2_1-chi2_2)/(chi2_1+chi2_2).lt.1d-4) then
 				if(dvar(i).lt.0.99d0) then
 					dvar(i)=dvar(i)*5d0
@@ -314,37 +316,50 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 				call output("derivative too small")
 				call output("removing " // trim(RetPar(i)%keyword))
 			endif
-			call tellertje(i,n_ret)
 		enddo
 
 		dofit_prev=dofit
 1		continue
 
-		W=0d0
-		do k=1,ny
-			if(specornot(k)) then
-				do i=1,n_ret
-					do j=1,n_ret
-						W(i,j)=W(i,j)+dy(i,k)*dy(j,k)/dyobs(k)**2
-					enddo
-				enddo
-			else
-				do i=1,n_ret
-					do j=1,n_ret
-						W(i,j)=W(i,j)+1d-2*dy(i,k)*dy(j,k)/dyobs(k)**2
-					enddo
-				enddo
+		na=0
+		do i=1,n_ret
+			if(dofit(i)) then
+				na=na+1
+				map(na)=i
 			endif
 		enddo
-		call MatrixInvert(W(1:n_ret,1:n_ret),Winv(1:n_ret,1:n_ret),WLU(1:n_ret,1:n_ret),n_ret,info)
+
+		W=0d0
+		do k=1,ny
+c			if(specornot(k)) then
+				do i=1,na
+					do j=1,na
+						W(i,j)=W(i,j)+dy(map(i),k)*dy(map(j),k)/dyobs(k)**2
+					enddo
+				enddo
+c			else
+c				do i=1,na
+c					do j=1,na
+c						W(i,j)=W(i,j)+1d-2*dy(map(i),k)*dy(map(j),k)/dyobs(k)**2
+c					enddo
+c				enddo
+c			endif
+		enddo
+		call MatrixInvert(W(1:na,1:na),Winv(1:na,1:na),WLU(1:na,1:na),na,info)
 		if(INFO.ne.0) then
 			call output('Error in matrix inversion.')
 			call output('Retrieving parameters with no influence on the observations?')
 		endif
+		Cov=0d0
+		ErrVec=0d0
 		do i=1,n_ret
-			do j=1,n_ret
-				Cov(i,j)=Winv(i,j)
-				ErrVec(i,j)=WLU(i,j)
+			Cov(i,i)=1d0
+			ErrVec(i,i)=1d0
+		enddo
+		do i=1,na
+			do j=1,na
+				Cov(map(i),map(j))=Winv(i,j)
+				ErrVec(map(i),map(j))=WLU(i,j)
 			enddo
 		enddo
 
@@ -407,13 +422,9 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 			call output('removing ' // trim(RetPar(j)%keyword))
 			if(var(j).gt.1d0) then
 				var(j)=var0(j)
-c				var(j)=1d0
-c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 			endif
 			if(var(j).lt.0d0) then
 				var(j)=var0(j)
-c				var(j)=0d0
-c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 			endif
 			goto 2
 		endif
@@ -450,8 +461,6 @@ c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret),CLU(n_ret,n_ret)
 	integer i,j,k,info,nk,ierr
 
-	call MatrixInvert(Cov(1:n_ret,1:n_ret),W(1:n_ret,1:n_ret),CLU(1:n_ret,1:n_ret),n_ret,info)
-
 	call SetOutputMode(.false.)
 	var=var0
 	call MapRetrieval(var,error)
@@ -465,41 +474,27 @@ c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 	enddo
 	nk=n_ret*100
 	do k=1,nk
-		vec(i)=0d0
-		if(k.gt.n_ret*2) then
-			do i=1,n_ret
-				vec(1:n_ret)=vec(1:n_ret)+2d0*(random(idum)-0.5d0)*ErrVec(i,1:n_ret)
-			enddo
-			ierr=0
-		else
-			ierr=(k+1)/2
-			if(i*2.eq.k) then
-				vec(1:n_ret)=ErrVec(ierr,1:n_ret)
-			else
-				vec(1:n_ret)=-ErrVec(ierr,1:n_ret)
-			endif
-		endif
-		var=0d0
-		do i=1,n_ret
-			do j=1,n_ret
-				var(i)=var(i)+W(i,j)*vec(j)
-			enddo
-		enddo
+		vec=0d0
 		tot=0d0
 		do i=1,n_ret
-			tot=tot+var(i)*vec(i)
+			vec(i)=2d0*(random(idum)-0.5d0)
+			tot=tot+vec(i)**2
 		enddo
-		if(ierr.ne.0) then
-			ErrVec(ierr,1:n_ret)=ErrVec(ierr,1:n_ret)*sqrt(chi2/tot)
-			vec=vec*sqrt(chi2/tot)
-		else
-			vec=random(idum)*vec*sqrt(chi2/tot)
-		endif
-		var=var0+vec
+		vec=vec*random(idum)/sqrt(tot)
+		vec=vec*sqrt(chi2)
 		do i=1,n_ret
-			if(var(i).lt.0d0) var(i)=0d0
+			var(i)=var0(i)
+			do j=1,n_ret
+				if(Cov(j,i).lt.0d0) then
+					var(i)=var(i)-vec(j)*sqrt(abs(Cov(j,i)))
+				else
+					var(i)=var(i)+vec(j)*sqrt(abs(Cov(j,i)))
+				endif
+			enddo
 			if(var(i).gt.1d0) var(i)=1d0
+			if(var(i).lt.0d0) var(i)=0d0
 		enddo
+		
 
 		call MapRetrieval(var,error)
 		call InitDens()
@@ -515,6 +510,8 @@ c				y(1:ny)=y(1:ny)+(var(j)-var0(j))*dy(j,1:ny)
 	enddo
 	error(1,1:n_ret)=abs(error(1,1:n_ret)-var0(1:n_ret))
 	error(2,1:n_ret)=abs(error(2,1:n_ret)-var0(1:n_ret))
+
+	call MapRetrieval(var0,error)
 
 	call SetOutputMode(.true.)
 	open(unit=45,file=trim(outputdir) // "limits.dat")

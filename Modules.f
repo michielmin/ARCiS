@@ -61,7 +61,7 @@ c===============================================================================
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT
 	logical mixratfile,par_tprofile
 	character*500 TPfile
-	real*8 metallicity,COratio,PQ,mixP,PRplanet
+	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
@@ -92,7 +92,7 @@ c===============================================================================
 	integer n_voigt
 	logical HITEMP,opacitymode,compute_opac
 	integer nPom,nTom
-	character*500 opacitydir
+	character*500 opacitydir,specresfile
 	real*8 Tmin,Tmax,minTprofile,maxTprofile
 	real*8 sintheta(360),costheta(360)
 	logical,allocatable :: do_dB(:)

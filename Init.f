@@ -254,6 +254,8 @@ c===============================================================================
 		enddo
 	endif
 
+	if(do_cia) nmol=max(nmol,48)
+
 	allocate(mixrat(nmol))
 	allocate(includemol(nmol))
 	allocate(Cloud(max(nclouds,1)))
@@ -551,6 +553,8 @@ c			read(key%value,*) nr
 			read(key%value,*) maxtau
 		case("specres")
 			read(key%value,*) specres
+		case("specresfile")
+			read(key%value,*) specresfile
 		case("tpfile")
 			TPfile=key%value
 		case("mixratfile")
@@ -580,6 +584,8 @@ c			read(key%value,*) nr
 			read(key%value,*) HITEMP
 		case("cloud")
 			call ReadCloud(key)
+		case("mixrathaze","haze")
+			read(key%value,*) mixratHaze
 		case("scattering")
 			read(key%value,*) scattering
 		case("scattstar")
@@ -854,12 +860,15 @@ c	if(par_tprofile) call ComputeParamT(T)
 	condensates=.true.
 	COratio=0.55
 	mixP=0d0
+	mixratHaze=0d0
 	
 	PRplanet=10d0
 
 	TPfile=' '
 	mixratfile=.false.
 	Tin=-1d0
+	
+	specresfile=' '
 
 	do i=1,nclouds
 		Cloud(i)%P=1d-4

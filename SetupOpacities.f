@@ -587,11 +587,14 @@ c For other than H2 from Sneep & Ubachs (2005)
 					Cs=Cs+5.1*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 				case(30) !SF6
 					Cs=Cs+32.3*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+				case(45) ! H2
+					Cs=Cs+mixrat_r(ir,j)*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4)
 				case default ! H2
 					Cs=Cs+mixrat_r(ir,j)*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4)
 			end select
 		endif
 	enddo
+	Cs=Cs+mixratHaze*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4)
 
 	return
 	end
