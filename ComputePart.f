@@ -125,8 +125,6 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(Carbon_BE_Zubko1996,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(2,1:nlam)=e1d(1:nlam)
 		e2(2,1:nlam)=e2d(1:nlam)
-		deallocate(e1d)
-		deallocate(e2d)
 	else if(C%standard.eq.'ENSTATITE') then
 		input='ENSTATITE'
 		ns=C%nsubgrains
@@ -158,8 +156,6 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(Enstatite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(3,1:nlam)=e1d(1:nlam)
 		e2(3,1:nlam)=e2d(1:nlam)
-		deallocate(e1d)
-		deallocate(e2d)
 	else if(C%standard.eq.'BROOKITE'.or.C%standard.eq.'TiO2') then
 		input='BROOKITE'
 		ns=C%nsubgrains
@@ -191,8 +187,6 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(Brookite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(3,1:nlam)=e1d(1:nlam)
 		e2(3,1:nlam)=e2d(1:nlam)
-		deallocate(e1d)
-		deallocate(e2d)
 	else if(C%standard.eq.'WATER') then
 		input='WATER'
 		ns=C%nsubgrains
@@ -211,8 +205,6 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(Water,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(1,1:nlam)=e1d(1:nlam)
 		e2(1,1:nlam)=e2d(1:nlam)
-		deallocate(e1d)
-		deallocate(e2d)
 	else if(C%standard.eq.'ASTROSIL') then
 		input='ASTROSIL'
 		ns=C%nsubgrains
@@ -231,8 +223,6 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(AstroSilicate,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(1,1:nlam)=e1d(1:nlam)
 		e2(1,1:nlam)=e2d(1:nlam)
-		deallocate(e1d)
-		deallocate(e2d)
 	endif
 		
 	min=dcmplx(1d0,0d0)
@@ -515,8 +505,6 @@ c changed this to mass fractions (11-05-2010)
 		rho(2)=1.80
 		frac(1)=(1d0-C%fcarbon)/rho(1)
 		frac(2)=C%fcarbon/rho(2)
-		allocate(e1d(nlam))
-		allocate(e2d(nlam))
 		filename(1)='Mg07Fe03SiO3_Dorschner1995'
 		call RegridDataLNK(Mg07Fe03SiO3_Dorschner1995,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(1,1:nlam)=e1d(1:nlam)
@@ -525,8 +513,6 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(Carbon_BE_Zubko1996,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(2,1:nlam)=e1d(1:nlam)
 		e2(2,1:nlam)=e2d(1:nlam)
-		deallocate(e1d)
-		deallocate(e2d)
 	else if(C%standard.eq.'ENSTATITE') then
 		input='ENSTATITE'
 		ns=C%nsubgrains
@@ -539,8 +525,6 @@ c changed this to mass fractions (11-05-2010)
 		frac(1)=1d0/3d0
 		frac(2)=1d0/3d0
 		frac(3)=1d0/3d0
-		allocate(e1d(nlam))
-		allocate(e2d(nlam))
 		filename(1)='Enstatite_X'
 		call RegridDataLNK(Enstatite_X,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(1,1:nlam)=e1d(1:nlam)
@@ -553,8 +537,43 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(Enstatite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(3,1:nlam)=e1d(1:nlam)
 		e2(3,1:nlam)=e2d(1:nlam)
-		deallocate(e1d)
-		deallocate(e2d)
+	else if(C%standard.eq.'BROOKITE'.or.C%standard.eq.'TiO2') then
+		input='BROOKITE'
+		ns=C%nsubgrains
+		C%blend=.false.
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		nm=3
+		rho(1)=2.80
+		rho(2)=2.80
+		rho(3)=2.80
+		frac(1)=1d0/3d0
+		frac(2)=1d0/3d0
+		frac(3)=1d0/3d0
+		filename(1)='Brookite_X'
+		call RegridDataLNK(Brookite_X,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(1,1:nlam)=e1d(1:nlam)
+		e2(1,1:nlam)=e2d(1:nlam)
+		filename(2)='Brookite_Y'
+		call RegridDataLNK(Brookite_Y,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(2,1:nlam)=e1d(1:nlam)
+		e2(2,1:nlam)=e2d(1:nlam)
+		filename(3)='Brookite_Z'
+		call RegridDataLNK(Brookite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(3,1:nlam)=e1d(1:nlam)
+		e2(3,1:nlam)=e2d(1:nlam)
+	else if(C%standard.eq.'WATER') then
+		input='WATER'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		nm=1
+		rho(1)=3.0
+		frac(1)=1d0/rho(1)
+		filename(1)='Water'
+		call RegridDataLNK(Water,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(1,1:nlam)=e1d(1:nlam)
+		e2(1,1:nlam)=e2d(1:nlam)
 	else if(C%standard.eq.'ASTROSIL') then
 		input='ASTROSIL'
 		ns=C%nsubgrains
@@ -563,14 +582,10 @@ c changed this to mass fractions (11-05-2010)
 		nm=1
 		rho(1)=3.0
 		frac(1)=1d0/rho(1)
-		allocate(e1d(nlam))
-		allocate(e2d(nlam))
 		filename(1)='AstroSilicate'
 		call RegridDataLNK(AstroSilicate,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(1,1:nlam)=e1d(1:nlam)
 		e2(1,1:nlam)=e2d(1:nlam)
-		deallocate(e1d)
-		deallocate(e2d)
 	endif
 
 
@@ -584,6 +599,8 @@ c changed this to mass fractions (11-05-2010)
 	
 	deallocate(e1)
 	deallocate(e2)
+	deallocate(e1d)
+	deallocate(e2d)
 	
 	deallocate(Mief11)
 	deallocate(Mief12)

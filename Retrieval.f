@@ -63,6 +63,7 @@
 					endif
 				enddo
 		end select
+		if(ObsSpec(i)%beta.lt.0d0) ObsSpec(i)%beta=ObsSpec(i)%nlam
 	enddo
 	
 	return
@@ -215,7 +216,7 @@ c	ngen=0
 		do i=1,n_ret
 			dvar(i)=max(error(1,i),error(2,i))/2d0
 			if(dvar(i).eq.0d0) dvar(i)=0.1d0
-			if(dvar(i).gt.1d-1) dvar(i)=1d-1
+			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
      	enddo
 c		if(iter1*iter2.eq.1) dvar=1d0
 		chi2prev=chi2
@@ -239,7 +240,7 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 				iy=iy+ObsSpec(j)%nlam
 			enddo
 			chi2_1=chi2
-			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp) then
+			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp.and..false.) then
 				chi2min=chi2
 				var_best=var
 				ybest=y1
@@ -276,7 +277,7 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 				iy=iy+ObsSpec(j)%nlam
 			enddo
 			chi2_2=chi2
-			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp) then
+			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp.and..false.) then
 				chi2min=chi2
 				var_best=var
 				ybest=y2
@@ -331,19 +332,11 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 
 		W=0d0
 		do k=1,ny
-c			if(specornot(k)) then
-				do i=1,na
-					do j=1,na
-						W(i,j)=W(i,j)+dy(map(i),k)*dy(map(j),k)/dyobs(k)**2
-					enddo
+			do i=1,na
+				do j=1,na
+					W(i,j)=W(i,j)+dy(map(i),k)*dy(map(j),k)/dyobs(k)**2
 				enddo
-c			else
-c				do i=1,na
-c					do j=1,na
-c						W(i,j)=W(i,j)+1d-2*dy(map(i),k)*dy(map(j),k)/dyobs(k)**2
-c					enddo
-c				enddo
-c			endif
+			enddo
 		enddo
 		call MatrixInvert(W(1:na,1:na),Winv(1:na,1:na),WLU(1:na,1:na),na,info)
 		if(INFO.ne.0) then
@@ -435,6 +428,7 @@ c			endif
 			dvar(i)=sqrt(error(1,i)**2+error(2,i)**2)*3d0
 		enddo
 		endif
+		call WritePTlimits(var,Cov,ErrVec,error,chi2min)
 	enddo
 	do i=1,nobs
 		if(.not.ObsSpec(i)%spec.and.ObsSpec(i)%scale.gt.0d0) then
@@ -457,9 +451,13 @@ c			endif
 	subroutine WritePTlimits(var0,Cov,ErrVec,error,chi2)
 	use GlobalSetup
 	IMPLICIT NONE
-	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,W(n_ret,n_ret),chi2,ErrVec(n_ret,n_ret)
-	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret),CLU(n_ret,n_ret)
+	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,w(n_ret),chi2,ErrVec(n_ret,n_ret)
+	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret)
+	real*8 dvar(n_ret)
 	integer i,j,k,info,nk,ierr
+	character*6000 form
+
+	call Eigenvalues(Cov,ErrVec,w,n_ret,INFO)
 
 	call SetOutputMode(.false.)
 	var=var0
@@ -472,7 +470,13 @@ c			endif
 	do i=1,n_ret
 		error(1:2,i)=var0(i)
 	enddo
+
 	nk=n_ret*100
+	open(unit=35,file=trim(outputdir) // "error_cloud.dat",RECL=6000)
+	form='("#"' // trim(int2string(n_ret,'(i4)')) // 'a19)'
+	write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
+	form='(' // int2string(n_ret,'(i4)') // 'es19.7)'
+	
 	do k=1,nk
 		vec=0d0
 		tot=0d0
@@ -480,23 +484,22 @@ c			endif
 			vec(i)=2d0*(random(idum)-0.5d0)
 			tot=tot+vec(i)**2
 		enddo
-		vec=vec*random(idum)/sqrt(tot)
+		vec=vec*(random(idum)**(1d0/real(n_ret)))
+		vec=vec/sqrt(tot)
 		vec=vec*sqrt(chi2)
+		vec=vec*sqrt(w)
 		do i=1,n_ret
-			var(i)=var0(i)
+			dvar(i)=0d0
 			do j=1,n_ret
-				if(Cov(j,i).lt.0d0) then
-					var(i)=var(i)-vec(j)*sqrt(abs(Cov(j,i)))
-				else
-					var(i)=var(i)+vec(j)*sqrt(abs(Cov(j,i)))
-				endif
+				dvar(i)=dvar(i)+vec(j)*ErrVec(i,j)
 			enddo
+			var(i)=var0(i)+dvar(i)
 			if(var(i).gt.1d0) var(i)=1d0
 			if(var(i).lt.0d0) var(i)=0d0
-		enddo
-		
+		enddo	
 
 		call MapRetrieval(var,error)
+		write(35,form) (RetPar(i)%value,i=1,n_ret)
 		call InitDens()
 		call SetupStructure(.false.)
 		do i=1,nr
@@ -508,6 +511,7 @@ c			endif
 			if(var(i).gt.error(2,i)) error(2,i)=var(i)
 		enddo
 	enddo
+	close(unit=35)
 	error(1,1:n_ret)=abs(error(1,1:n_ret)-var0(1:n_ret))
 	error(2,1:n_ret)=abs(error(2,1:n_ret)-var0(1:n_ret))
 
@@ -872,4 +876,27 @@ C  computed by DGETRF.
 
 	return
 	end
+	
+	
+	
+	subroutine Eigenvalues(A,E,v,N,INFO)
+	IMPLICIT NONE
+	integer N,INFO
+	real*8 A(N,N),E(N,N),v(N),w(1000)
+	real*8, ALLOCATABLE :: WORK(:)
+	integer LWORK
+
+	LWORK=-1
+	call DSYEV ('V', 'U', N, E, N, v, w, LWORK, INFO)
+	LWORK=max(1d0,w(1))
+	allocate(WORK(LWORK))
+	E=A
+	call DSYEV ('V', 'U', N, E, N, v, WORK, LWORK, INFO)
+	deallocate(WORK)
+	
+	return
+	end
+
+	
+	
 	

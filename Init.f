@@ -409,6 +409,8 @@ c allocate the arrays
 	
 	enddo
 
+	if(n_ret.gt.0) n_ret=n_ret+RetPar(n_ret)%n-1
+
 	call ConvertUnits()
 
 	condensates=(condensates.or.cloudcompute)
@@ -908,7 +910,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	gene_cross=.false.
 
 	do i=1,nobs
-		ObsSpec(i)%beta=1d0
+		ObsSpec(i)%beta=-1d0
 		ObsSpec(i)%scale=-1d-1
 		ObsSpec(i)%spec=.true.
 	enddo
