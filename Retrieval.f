@@ -84,7 +84,7 @@
 	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret),W(n_ret,n_ret),Winv(n_ret,n_ret),dmax,scale
 	real*8 chi2_spec,chi2_prof,maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret)
 	integer na,map(n_ret),info,iboot,nboot,niter1,niter2,n_not_improved
-	logical dofit(n_ret),dofit_prev(n_ret)
+	logical dofit(n_ret),dofit_prev(n_ret),new_best
 	logical,allocatable :: specornot(:)
 
 	real*8 XeqCloud_best(nr,max(nclouds,1)),mixrat_best_r(nr,nmol)
@@ -139,6 +139,7 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 	niter1=7
 	niter2=15
 	n_not_improved=0
+	new_best=.false.
 
 	do iter1=1,niter1
 
@@ -176,40 +177,45 @@ c	ngen=0
 			var0=var
 			n_not_improved=0
 			call output("Iteration improved" // trim(dbl2string(chi2,'(f8.3)')))
+			lambda=lambda/5d0
+			chi2_spec=0d0
+			chi2_prof=0d0
+			do j=1,nobs
+				if(ObsSpec(j)%spec) then
+					chi2_spec=chi2_spec+1d0/chi2obs(j)
+				else
+					chi2_prof=chi2_prof+1d0/chi2obs(j)
+				endif
+			enddo
+			call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
+			call SetOutputMode(.false.)
+			call WriteStructure()
+			call WriteOutput()
+			call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
+			call WritePTlimits(var0,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
+			call SetOutputMode(.true.)
+			chi2prev=chi2
 			if(chi2.le.chi2min) then
-				lambda=lambda/5d0
+				new_best=.false.
 				var_best=var
 				ybest=y
 				mixrat_best_r=mixrat_r
 				XeqCloud_best=XeqCloud
-				chi2_spec=0d0
-				chi2_prof=0d0
-				do j=1,nobs
-					if(ObsSpec(j)%spec) then
-						chi2_spec=chi2_spec+1d0/chi2obs(j)
-					else
-						chi2_prof=chi2_prof+1d0/chi2obs(j)
-					endif
-				enddo
-				call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
 				chi2min=chi2
-				call SetOutputMode(.false.)
-				call WriteStructure()
-				call WriteOutput()
-				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
-				call WritePTlimits(var0,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
-				call SetOutputMode(.true.)
 			else
+				new_best=.false.
 				var=var_best
-				var0=var
+				var0=var_best
 				y=ybest
-				mixrat_old_r=mixrat_best_r
-				XeqCloud_old=XeqCloud_best
+				mixrat_r=mixrat_best_r
+				XeqCloud=XeqCloud_best
+				chi2=chi2min
+				n_not_improved=0
 			endif
 		else if(iter2.eq.1) then
 			dofit=.true.
 			var=var0
-		else if(n_not_improved.lt.2) then
+		else if(n_not_improved.lt.2.or..not.new_best) then
 			n_not_improved=n_not_improved+1
 			lambda=lambda*5d0
 			var=var0
@@ -217,9 +223,13 @@ c	ngen=0
 			dofit=dofit_prev
 			goto 1
 		else
+			new_best=.false.
 			var=var_best
+			var0=var_best
 			y=ybest
-			chi2=chi2min
+			mixrat_r=mixrat_best_r
+			XeqCloud=XeqCloud_best
+			chi2=chi2prev
 			n_not_improved=0
 		endif
 		do i=1,n_ret
@@ -228,7 +238,7 @@ c	ngen=0
 			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
      	enddo
 c		if(iter1*iter2.eq.1) dvar=1d0
-		chi2prev=chi2
+c		chi2prev=chi2
 		y0=y
 		dofit=.true.
 		dofit_prev=.true.
@@ -250,6 +260,7 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 			enddo
 			chi2_1=chi2
 			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp) then
+				new_best=.true.
 				chi2min=chi2
 				var_best=var
 				ybest=y1
@@ -287,6 +298,7 @@ c				call SetOutputMode(.true.)
 			enddo
 			chi2_2=chi2
 			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp) then
+				new_best=.true.
 				chi2min=chi2
 				var_best=var
 				ybest=y2
