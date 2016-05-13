@@ -81,23 +81,14 @@
 	real*8 x1,x2,minT(nr),maxT(nr),ran1,tot,lambda,chi2_1,chi2_2,dchi2(n_ret),chi2prev
 	integer imodel,ny,i,j,iter1,iter2,iy,k
 	
-	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret*3),W(n_ret*3,n_ret+1),Winv(n_ret,n_ret),dmax,scale
+	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret),W(n_ret,n_ret),Winv(n_ret,n_ret),dmax,scale
 	real*8 chi2_spec,chi2_prof,maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret)
 	integer na,map(n_ret),info,iboot,nboot,niter1,niter2,n_not_improved
 	logical dofit(n_ret),dofit_prev(n_ret),new_best
 	logical,allocatable :: specornot(:)
 
-	integer ME,MA,MG,MODE,MDW,ii
-	integer,allocatable :: IP(:)
-	real*8 PRGOPT(10),RNORME,RNORML
-	real*8,allocatable :: WS(:)
-
 	real*8 XeqCloud_best(nr,max(nclouds,1)),mixrat_best_r(nr,nmol)
 
-	allocate(WS(2*(n_ret)+n_ret*3+(n_ret*2+2)*(n_ret+7)))
-	allocate(IP(n_ret*4+2))
-	IP(1)=2*(n_ret)+n_ret*3+(n_ret*2+2)*(n_ret+7)
-	IP(2)=n_ret*4+2
 	
 	do i=1,n_ret
 10		var0(i)=gasdev(idum)*0.1+0.5
@@ -352,83 +343,113 @@ c				call SetOutputMode(.true.)
 		dofit_prev=dofit
 1		continue
 
-		do ii=1,n_ret
-			W=0d0
-			b=0d0
-			do k=1,ny
-				do i=1,n_ret
-					do j=1,n_ret
-						W(i,j)=W(i,j)+dy(i,k)*dy(j,k)/dyobs(k)**2
-					enddo
+		na=0
+		do i=1,n_ret
+			if(dofit(i)) then
+				na=na+1
+				map(na)=i
+			endif
+		enddo
+
+		W=0d0
+		do k=1,ny
+			do i=1,na
+				do j=1,na
+					W(i,j)=W(i,j)+dy(map(i),k)*dy(map(j),k)/dyobs(k)**2
 				enddo
 			enddo
-
-			ME=0
-			MA=n_ret
-			MG=0
-			MDW=n_ret*3
-
-			PRGOPT(1)=1
-
-			IP(1)=2*(n_ret)+n_ret*3+(n_ret*2+2)*(n_ret+7)
-			IP(2)=n_ret*4+2
-
-			W(1:n_ret,n_ret+1)=0d0
-			W(ii,n_ret+1)=1d0
-			call dlsei(w, MDW, ME, MA, MG, n_ret, PRGOPT, b, RNORME,
-     +   RNORML, MODE, WS, IP)
-   
-			do j=1,n_ret
-				Cov(ii,j)=b(j)
+		enddo
+		call MatrixInvert(W(1:na,1:na),Winv(1:na,1:na),WLU(1:na,1:na),na,info)
+		if(INFO.ne.0) then
+			call output('Error in matrix inversion.')
+			call output('Retrieving parameters with no influence on the observations?')
+		endif
+		Cov=0d0
+		ErrVec=0d0
+		do i=1,n_ret
+			Cov(i,i)=1d0
+			ErrVec(i,i)=1d0
+		enddo
+		do i=1,na
+			do j=1,na
+				Cov(map(i),map(j))=Winv(i,j)
+				ErrVec(map(i),map(j))=WLU(i,j)
 			enddo
 		enddo
-		Winv=Cov
 
+2		continue
+		na=0
+		do i=1,n_ret
+			if(dofit(i)) then
+				na=na+1
+				map(na)=i
+			endif
+		enddo
+		if(na.gt.1) then
+		
 		W=0d0
 		b=0d0
 		do k=1,ny
-			do i=1,n_ret
-				do j=1,n_ret
-					W(i,j)=W(i,j)+dy(i,k)*dy(j,k)/dyobs(k)**2
+			do i=1,na
+				do j=1,na
+					W(i,j)=W(i,j)+dy(map(i),k)*dy(map(j),k)/dyobs(k)**2
 				enddo
-				b(i)=b(i)+(yobs(k)-y(k))*dy(i,k)/dyobs(k)**2
+				b(i)=b(i)+(yobs(k)-y(k))*dy(map(i),k)/dyobs(k)**2
 			enddo
 		enddo
-		do i=1,n_ret
+		do i=1,na
 			W(i,i)=W(i,i)*(1d0+lambda)
 		enddo
-		do j=1,n_ret
-			W(j+n_ret,1:n_ret)=0d0
-			b(j+n_ret)=-var0(j)
-			W(j+n_ret,j)=1d0
+		call MatrixInvert(W(1:na,1:na),Winv(1:na,1:na),WLU(1:na,1:na),na,info)
+		if(INFO.ne.0) then
+			call output('Error in matrix inversion.')
+			call output('Retrieving parameters with no influence on the observations?')
+			stop
+		endif
 
-			W(j+n_ret*2,1:n_ret)=0d0
-			b(j+n_ret*2)=var0(j)-1d0
-			W(j+n_ret*2,j)=-1d0
+		dvar=0d0
+		do i=1,na
+			do j=1,na
+				dvar(map(i))=dvar(map(i))+b(j)*Winv(i,j)
+			enddo
+			var(map(i))=var0(map(i))+dvar(map(i))
 		enddo
 
-		ME=0
-		MA=n_ret
-		MG=n_ret*2
-		MDW=n_ret*3
-
-		PRGOPT(1)=1
-
-		IP(1)=2*(n_ret)+n_ret*3+(n_ret*2+2)*(n_ret+7)
-		IP(2)=n_ret*4+2
-
-		W(1:MDW,n_ret+1)=b(1:MDW)
-		call dlsei(w, MDW, ME, MA, MG, n_ret, PRGOPT, b, RNORME,
-     +   RNORML, MODE, WS, IP)
-
-		dvar=b
-		var=var0+dvar
-		call WritePTlimits(var,Cov,ErrVec,error,chi2min)
+		dmax=0d0
+		j=0
+		do i=1,n_ret
+			if(dofit(i)) then
+			if(var(i).gt.1d0.or.var(i).lt.0d0) then
+				if(abs(dvar(i)/error(2,i)).gt.dmax.and.error(2,i).gt.1d0) then
+					dmax=abs(dvar(i)/error(2,i))
+					j=i
+				endif
+				if(abs(dvar(i)/error(1,i)).gt.dmax.and.error(1,i).gt.1d0) then
+					dmax=abs(dvar(i)/error(1,i))
+					j=i
+				endif
+			endif
+			endif
+		enddo
+		if(j.ne.0) then
+			dofit(j)=.false.
+			call output('removing ' // trim(RetPar(j)%keyword))
+			if(var(j).gt.1d0) then
+				var(j)=var0(j)
+			endif
+			if(var(j).lt.0d0) then
+				var(j)=var0(j)
+			endif
+			goto 2
+		endif
 		do i=1,n_ret
 			if(var(i).gt.1d0) var(i)=1d0
 			if(var(i).lt.0d0) var(i)=0d0
+			if(.not.dofit(i)) var(i)=random(idum)
 			dvar(i)=sqrt(error(1,i)**2+error(2,i)**2)*3d0
 		enddo
+		endif
+		call WritePTlimits(var,Cov,ErrVec,error,chi2min)
 	enddo
 	do i=1,nobs
 		if(.not.ObsSpec(i)%spec.and.ObsSpec(i)%scale.gt.0d0) then
