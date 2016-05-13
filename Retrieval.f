@@ -83,7 +83,7 @@
 	
 	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret),W(n_ret,n_ret),Winv(n_ret,n_ret),dmax,scale
 	real*8 chi2_spec,chi2_prof,maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret)
-	integer na,map(n_ret),info,iboot,nboot,niter1,niter2
+	integer na,map(n_ret),info,iboot,nboot,niter1,niter2,n_not_improved
 	logical dofit(n_ret),dofit_prev(n_ret)
 	logical,allocatable :: specornot(:)
 
@@ -138,6 +138,8 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 
 	niter1=7
 	niter2=15
+	n_not_improved=0
+
 	do iter1=1,niter1
 
 	if(ngen.gt.0) then
@@ -172,6 +174,7 @@ c	ngen=0
 		enddo
 		if(chi2.le.chi2prev) then
 			var0=var
+			n_not_improved=0
 			call output("Iteration improved" // trim(dbl2string(chi2,'(f8.3)')))
 			if(chi2.le.chi2min) then
 				lambda=lambda/5d0
@@ -206,12 +209,18 @@ c	ngen=0
 		else if(iter2.eq.1) then
 			dofit=.true.
 			var=var0
-		else
+		else if(n_not_improved.lt.2) then
+			n_not_improved=n_not_improved+1
 			lambda=lambda*5d0
 			var=var0
 			y=y0
 			dofit=dofit_prev
 			goto 1
+		else
+			var=var_best
+			y=ybest
+			chi2=chi2min
+			n_not_improved=0
 		endif
 		do i=1,n_ret
 			dvar(i)=max(error(1,i),error(2,i))/2d0
@@ -240,7 +249,7 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 				iy=iy+ObsSpec(j)%nlam
 			enddo
 			chi2_1=chi2
-			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp.and..false.) then
+			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp) then
 				chi2min=chi2
 				var_best=var
 				ybest=y1
@@ -257,12 +266,12 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 				enddo
 				call output("Updating best fit " // trim(dbl2string(chi2,'(f8.3)')))
 				call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
-				call SetOutputMode(.false.)
-				call WriteStructure()
-				call WriteOutput()
-				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
-				call WritePTlimits(var,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
-				call SetOutputMode(.true.)
+c				call SetOutputMode(.false.)
+c				call WriteStructure()
+c				call WriteOutput()
+c				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
+c				call WritePTlimits(var,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
+c				call SetOutputMode(.true.)
 			endif
 			var=var0
 			var(i)=var(i)-dvar(i)
@@ -277,7 +286,7 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 				iy=iy+ObsSpec(j)%nlam
 			enddo
 			chi2_2=chi2
-			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp.and..false.) then
+			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp) then
 				chi2min=chi2
 				var_best=var
 				ybest=y2
@@ -294,12 +303,12 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 				enddo
 				call output("Updating best fit " // trim(dbl2string(chi2,'(f8.3)')))
 				call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
-				call SetOutputMode(.false.)
-				call WriteStructure()
-				call WriteOutput()
-				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
-				call WritePTlimits(var,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
-				call SetOutputMode(.true.)
+c				call SetOutputMode(.false.)
+c				call WriteStructure()
+c				call WriteOutput()
+c				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
+c				call WritePTlimits(var,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
+c				call SetOutputMode(.true.)
 			endif
 			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/(x1-x2)
 			dchi2(i)=(chi2_1-chi2_2)/(x1-x2)
