@@ -224,7 +224,7 @@ c	ngen=0
 		else if(iter2.eq.1) then
 			dofit=.true.
 			var=var0
-		else if(n_not_improved.lt.2.or..not.new_best) then
+		else if(n_not_improved.lt.10.or..not.new_best) then
 			n_not_improved=n_not_improved+1
 			lambda=lambda*5d0
 			var=var0
