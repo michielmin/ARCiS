@@ -83,6 +83,7 @@
 	
 	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret*3),W(n_ret*3,n_ret+1),Winv(n_ret,n_ret),dmax,scale
 	real*8 chi2_spec,chi2_prof,maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret)
+	real*8 backup_beta(nobs)
 	integer na,map(n_ret),info,iboot,nboot,niter1,niter2,n_not_improved
 	logical dofit(n_ret),dofit_prev(n_ret),new_best
 	logical,allocatable :: specornot(:)
@@ -150,29 +151,29 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 	n_not_improved=0
 	new_best=.false.
 
-	do iter1=1,niter1
-
 	if(ngen.gt.0) then
-		lambda=0.1
-		var=var_best
+		do i=1,nobs
+			backup_beta(i)=ObsSpec(i)%beta
+			if(.not.ObsSpec(i)%spec) then
+				ObsSpec(i)%beta=0d0
+			endif
+		enddo
 		var0=var
-		dvar0=0.1d0
-		if(iter1.eq.1) dvar0=10d0
+		dvar0=10d0
 		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.true.)
 		chi2prev=1d200
 		imodel=npop*ngen
-	else
-		var=var_best
-		var0=var
-		dvar=dvar*10d0
+		do i=1,nobs
+			ObsSpec(i)%beta=backup_beta(i)
+		enddo
 	endif
-	var=var0
-c	ngen=0
+
+	do iter1=1,niter1
 
 	do iter2=1,niter2
 		j=0
 		imodel=imodel+1
-		call output("Iteration " // trim(int2string(iter2+20*(iter1-1),'(i4)')) // 
+		call output("Iteration " // trim(int2string(iter2+niter2*(iter1-1),'(i4)')) // 
      &				" - model" // trim(int2string(imodel,'(i5)')))
 		chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,.true.,error)
 		mixrat_old_r=mixrat_r
@@ -203,7 +204,6 @@ c	ngen=0
 			call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
 			call WritePTlimits(var0,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
 			call SetOutputMode(.true.)
-			chi2prev=chi2
 			if(chi2.le.chi2min) then
 				new_best=.false.
 				var_best=var
@@ -221,6 +221,7 @@ c	ngen=0
 				chi2=chi2min
 				n_not_improved=0
 			endif
+			chi2prev=chi2
 		else if(iter2.eq.1) then
 			dofit=.true.
 			var=var0
@@ -268,7 +269,7 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 				iy=iy+ObsSpec(j)%nlam
 			enddo
 			chi2_1=chi2
-			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp) then
+			if(chi2.lt.chi2min) then	!.and.RetPar(i)%opacitycomp) then
 				new_best=.true.
 				chi2min=chi2
 				var_best=var
@@ -306,7 +307,7 @@ c				call SetOutputMode(.true.)
 				iy=iy+ObsSpec(j)%nlam
 			enddo
 			chi2_2=chi2
-			if(chi2.lt.chi2min.and.RetPar(i)%opacitycomp) then
+			if(chi2.lt.chi2min) then	!.and.RetPar(i)%opacitycomp) then
 				new_best=.true.
 				chi2min=chi2
 				var_best=var
@@ -341,11 +342,11 @@ c				call SetOutputMode(.true.)
 					dvar(i)=1d0
 					goto 20
 				endif
-				dofit(i)=.false.
-				var(i)=var0(i)
-				dvar(i)=1d0
-				call output("derivative too small")
-				call output("removing " // trim(RetPar(i)%keyword))
+c				dofit(i)=.false.
+c				var(i)=var0(i)
+c				dvar(i)=1d0
+c				call output("derivative too small")
+c				call output("removing " // trim(RetPar(i)%keyword))
 			endif
 		enddo
 
@@ -551,13 +552,15 @@ c     &					ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
 		case("emisr","emisR")
 c			call regridarray(lamobs,flux(0,1:nlam-1)/(Fstar(1:nlam-1)*1d23/distance**2),
 c     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
-			call regridspecres(lamobs,flux(0,1:nlam-1)/(Fstar(1:nlam-1)*1d23/distance**2),
+c			call regridspecres(lamobs,flux(0,1:nlam-1)/(Fstar(1:nlam-1)*1d23/distance**2),
+c     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
+			call regridspecres(lamobs,(phase(1,0,1:nlam-1)+flux(0,1:nlam-1))/(Fstar(1:nlam-1)*1d23/distance**2),
      &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
      		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
 		case("emisa","emis","emission")
 c			call regridarray(lamobs,flux(0,1:nlam-1),
 c     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
-			call regridspecres(lamobs,flux(0,1:nlam-1),
+			call regridspecres(lamobs,phase(1,0,1:nlam-1)+flux(0,1:nlam-1),
      &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
      		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
 		case("tprofile")

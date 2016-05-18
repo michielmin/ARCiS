@@ -893,6 +893,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%ptype='COMPUTE'
 		Cloud(i)%frain=1d0
 		Cloud(i)%species=''
+		Cloud(i)%haze=.false.
 	enddo
 	cloudcompute=.false.
 	nspike=0
@@ -1283,6 +1284,12 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(key%nr1)%coverage
 		case("frain")
 			read(key%value,*) Cloud(key%nr1)%frain
+		case("haze")
+			read(key%value,*) Cloud(key%nr1)%haze
+		case("mixrat")
+			read(key%value,*) Cloud(key%nr1)%mixrat
+		case("fcond")
+			read(key%value,*) Cloud(key%nr1)%fcond
 		case default
 			call output("Unknown cloud keyword: " // trim(key%key2))
 			stop

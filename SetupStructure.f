@@ -222,30 +222,48 @@ c			enddo
 	real*8 Xc,Xc1,lambdaC
 	
 	if(.not.cloudcompute) then
-		column=0d0
-		nsubr=100
-		do i=1,nr
-			do j=1,nsubr
-				if(i.ne.nr) then
-					pp=(log10(P(i))+log10(P(i+1)/P(i))*real(j)/real(nsubr+1))
-				else
-					pp=log10(P(i))
-				endif
-				cloud_dens(i,ii)=cloud_dens(i,ii)+exp(-(abs(pp-log10(Cloud(ii)%P))/log10(Cloud(ii)%dP))**Cloud(ii)%s/2d0)
+		if(Cloud(ii)%haze) then
+			column=0d0
+			do i=1,nr
+				cloud_dens(i,ii)=Cloud(ii)%mixrat*dens(i)
+				column=column+cloud_dens(i,ii)*(R(i+1)-R(i))
 			enddo
-			column=column+cloud_dens(i,ii)*(R(i+1)-R(i))
-		enddo
-		cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%column/column
+			Cloud(ii)%column=column
+		else
+			column=0d0
+			nsubr=100
+			do i=1,nr
+				do j=1,nsubr
+					if(i.ne.nr) then
+						pp=(log10(P(i))+log10(P(i+1)/P(i))*real(j)/real(nsubr+1))
+					else
+						pp=log10(P(i))
+					endif
+					cloud_dens(i,ii)=cloud_dens(i,ii)+exp(-(abs(pp-log10(Cloud(ii)%P))/log10(Cloud(ii)%dP))**Cloud(ii)%s/2d0)
+				enddo
+				column=column+cloud_dens(i,ii)*(R(i+1)-R(i))
+			enddo
+			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%column/column
+		endif
 	else
 c use Ackerman & Marley 2001 cloud computation
 		column=0d0
 		nsubr=1
-		Xc1=0d0
-		cloud_dens(1,ii)=Xc1*dens(1)
+		if(Cloud(ii)%haze) then
+			Xc=Cloud(ii)%fcond*XeqCloud(1,ii)
+		else
+			Xc=0d0
+		endif
+		Xc1=Xc
+		cloud_dens(1,ii)=Xc*dens(1)
 		do i=2,nr
 			lambdaC=0.1d0
 			do j=1,nsubr
-				Xc=(Xc1+(XeqCloud(i,ii)-XeqCloud(i-1,ii))/real(nsubr))/(1d0-Cloud(ii)%frain*((P(i)-P(i-1))/real(nsubr))/(lambdaC*P(i)))
+				if(Cloud(ii)%haze) then
+					Xc=Cloud(ii)%fcond*XeqCloud(i,ii)
+				else
+					Xc=(Xc1+(XeqCloud(i,ii)-XeqCloud(i-1,ii))/real(nsubr))/(1d0-Cloud(ii)%frain*((P(i)-P(i-1))/real(nsubr))/(lambdaC*P(i)))
+				endif
 				Xc=max(Xc,0d0)
 				Xc1=Xc
 			enddo
@@ -253,13 +271,18 @@ c use Ackerman & Marley 2001 cloud computation
 		enddo
 	endif
 
-	tot=0d0
+1	tot=0d0
 	do i=1,Cloud(ii)%nsize
 		Cloud(ii)%w(i)=(1q4*Cloud(ii)%rv(i))**(1q0+(1q0-3q0*Cloud(ii)%veff)/Cloud(ii)%veff)*
      &					exp(-1q4*Cloud(ii)%rv(i)/(Cloud(ii)%reff*Cloud(ii)%veff))
 		Cloud(ii)%w(i)=Cloud(ii)%w(i)*Cloud(ii)%rv(i)**3
 		tot=tot+Cloud(ii)%w(i)
 	enddo
+	if(.not.tot.gt.0d0) then
+		Cloud(ii)%veff=Cloud(ii)%veff*2d0
+		call output("increasing veff")
+		goto 1
+	endif
 	Cloud(ii)%w=Cloud(ii)%w/tot
 
 	return

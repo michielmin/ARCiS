@@ -135,7 +135,8 @@ c===============================================================================
 		real*8 coverage,frain
 		real*8,allocatable :: rv(:),w(:)							! dimension nsize
 		real*8 rho,amin,amax,fmax,porosity,fcarbon,reff,veff
-		logical blend
+		logical blend,haze
+		real*8 fcond,mixrat
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
 		type(Mueller),allocatable :: F(:,:)							! dimension nsize,nlam
 		character*500 file

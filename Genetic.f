@@ -344,7 +344,11 @@ c				creep mutation
 
 	rank=1
 	do i=1,npop
+		rank(i)=i
+	enddo
+	do i=1,npop
 		max=-1d100
+		k=i
 		do j=1,npop
 			if(mate(j).ge.max) then
 				max=mate(j)
