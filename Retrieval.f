@@ -166,6 +166,7 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 		do i=1,nobs
 			ObsSpec(i)%beta=backup_beta(i)
 		enddo
+		var=var0
 	endif
 
 	do iter1=1,niter1
@@ -243,7 +244,7 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 			n_not_improved=0
 		endif
 		do i=1,n_ret
-			dvar(i)=max(error(1,i),error(2,i))/2d0
+			dvar(i)=max(error(1,i),error(2,i))
 			if(dvar(i).eq.0d0) dvar(i)=0.1d0
 			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
      	enddo
