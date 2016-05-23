@@ -83,7 +83,10 @@
 	
 	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret*3),W(n_ret*3,n_ret+1),Winv(n_ret,n_ret),dmax,scale
 	real*8 chi2_spec,chi2_prof,maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret)
-	real*8 backup_beta(nobs)
+	real*8 backup_xmin(n_ret),backup_xmax(n_ret)
+	real*8 obsA1(nlam),obsA2(nlam),dobsA(n_ret,nlam)
+	real*8 emis1(nlam),emis2(nlam),demis(n_ret,nlam)
+	real*8 emisR1(nlam),emisR2(nlam),demisR(n_ret,nlam)
 	integer na,map(n_ret),info,iboot,nboot,niter1,niter2,n_not_improved
 	logical dofit(n_ret),dofit_prev(n_ret),new_best
 	logical,allocatable :: specornot(:)
@@ -152,10 +155,12 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 	new_best=.false.
 
 	if(ngen.gt.0) then
-		do i=1,nobs
-			backup_beta(i)=ObsSpec(i)%beta
-			if(.not.ObsSpec(i)%spec) then
-				ObsSpec(i)%beta=0d0
+		do i=1,n_ret
+			if(RetPar(i)%keyword(1:6).eq."tvalue") then
+				backup_xmin(i)=RetPar(i)%xmin
+				backup_xmax(i)=RetPar(i)%xmax
+				RetPar(i)%xmin=-1d0
+				RetPar(i)%xmax=1d0
 			endif
 		enddo
 		var0=var
@@ -163,8 +168,13 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.true.)
 		chi2prev=1d200
 		imodel=npop*ngen
-		do i=1,nobs
-			ObsSpec(i)%beta=backup_beta(i)
+		do i=1,n_ret
+			if(RetPar(i)%keyword(1:6).eq."tvalue") then
+				RetPar(i)%xmin=backup_xmin(i)
+				RetPar(i)%xmax=backup_xmax(i)
+				var0(i)=-RetPar(i)%xmin/(RetPar(i)%xmax-RetPar(i)%xmin)
+				if(var0(i).lt.0d0) var0(i)=0d0
+			endif
 		enddo
 		var=var0
 	endif
@@ -203,7 +213,8 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 			call WriteStructure()
 			call WriteOutput()
 			call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
-			call WritePTlimits(var0,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
+			call WritePTlimits(var0,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)),
+     &			dobsA,demis,demisR,.true.)
 			call SetOutputMode(.true.)
 			if(chi2.le.chi2min) then
 				new_best=.false.
@@ -246,17 +257,14 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 		do i=1,n_ret
 			dvar(i)=max(error(1,i),error(2,i))
 			if(dvar(i).eq.0d0) dvar(i)=0.1d0
-			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
+c			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
      	enddo
-c		if(iter1*iter2.eq.1) dvar=1d0
-c		chi2prev=chi2
 		y0=y
 		dofit=.true.
 		dofit_prev=.true.
 		do i=1,n_ret
 			call output("varying " // trim(RetPar(i)%keyword))
 			if(dvar(i).lt.1d-3) dvar(i)=1d-3
-c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 20			var=var0
 			var(i)=var(i)+dvar(i)
 			if(var(i).gt.1d0) var(i)=1d0
@@ -270,6 +278,9 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 				iy=iy+ObsSpec(j)%nlam
 			enddo
 			chi2_1=chi2
+			obsA1(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+			emis1(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
+			emisR1(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
 			if(chi2.lt.chi2min) then	!.and.RetPar(i)%opacitycomp) then
 				new_best=.true.
 				chi2min=chi2
@@ -288,12 +299,6 @@ c			if(dvar(i).gt.1d-1) dvar(i)=1d-1
 				enddo
 				call output("Updating best fit " // trim(dbl2string(chi2,'(f8.3)')))
 				call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
-c				call SetOutputMode(.false.)
-c				call WriteStructure()
-c				call WriteOutput()
-c				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
-c				call WritePTlimits(var,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
-c				call SetOutputMode(.true.)
 			endif
 			var=var0
 			var(i)=var(i)-dvar(i)
@@ -308,6 +313,9 @@ c				call SetOutputMode(.true.)
 				iy=iy+ObsSpec(j)%nlam
 			enddo
 			chi2_2=chi2
+			obsA2(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+			emis2(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
+			emisR2(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
 			if(chi2.lt.chi2min) then	!.and.RetPar(i)%opacitycomp) then
 				new_best=.true.
 				chi2min=chi2
@@ -326,15 +334,12 @@ c				call SetOutputMode(.true.)
 				enddo
 				call output("Updating best fit " // trim(dbl2string(chi2,'(f8.3)')))
 				call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
-c				call SetOutputMode(.false.)
-c				call WriteStructure()
-c				call WriteOutput()
-c				call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
-c				call WritePTlimits(var,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)))
-c				call SetOutputMode(.true.)
 			endif
 			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/(x1-x2)
 			dchi2(i)=(chi2_1-chi2_2)/(x1-x2)
+			dobsA(i,1:nlam)=(obsA1(1:nlam)-obsA2(1:nlam))/(x1-x2)
+			demis(i,1:nlam)=(emis1(1:nlam)-emis2(1:nlam))/(x1-x2)
+			demisR(i,1:nlam)=(emisR1(1:nlam)-emisR2(1:nlam))/(x1-x2)
 			if(abs(chi2_1-chi2_2)/(chi2_1+chi2_2).lt.1d-4) then
 				if(dvar(i).lt.0.99d0) then
 					dvar(i)=dvar(i)*5d0
@@ -343,48 +348,72 @@ c				call SetOutputMode(.true.)
 					dvar(i)=1d0
 					goto 20
 				endif
-c				dofit(i)=.false.
-c				var(i)=var0(i)
-c				dvar(i)=1d0
-c				call output("derivative too small")
-c				call output("removing " // trim(RetPar(i)%keyword))
 			endif
 		enddo
 
 		dofit_prev=dofit
 1		continue
 
-		do ii=1,n_ret
-			W=0d0
-			b=0d0
-			do k=1,ny
-				do i=1,n_ret
-					do j=1,n_ret
-						W(i,j)=W(i,j)+dy(i,k)*dy(j,k)/dyobs(k)**2
-					enddo
+c================================================
+		W=0d0
+		b=0d0
+		do k=1,ny
+			do i=1,n_ret
+				do j=1,n_ret
+					W(i,j)=W(i,j)+dy(i,k)*dy(j,k)/dyobs(k)**2
 				enddo
 			enddo
+		enddo
+		call MatrixInvert(W(1:n_ret,1:n_ret),Winv(1:n_ret,1:n_ret),WLU(1:n_ret,1:n_ret),n_ret,info)
+		if(INFO.eq.0) then
+			Cov=0d0
+			ErrVec=0d0
+			do i=1,n_ret
+				Cov(i,i)=1d0
+				ErrVec(i,i)=1d0
+			enddo
+			do i=1,n_ret
+				do j=1,n_ret
+					Cov(i,j)=Winv(i,j)
+					ErrVec(i,j)=WLU(i,j)
+				enddo
+			enddo
+c================================================
+		else
+			call output('Error in matrix inversion.')
+			call output('Retrieving parameters with no influence on the observations?')
+			do ii=1,n_ret
+				W=0d0
+				b=0d0
+				do k=1,ny
+					do i=1,n_ret
+						do j=1,n_ret
+							W(i,j)=W(i,j)+dy(i,k)*dy(j,k)/dyobs(k)**2
+						enddo
+					enddo
+				enddo
 
-			ME=0
-			MA=n_ret
-			MG=0
-			MDW=n_ret*3
+				ME=0
+				MA=n_ret
+				MG=0
+				MDW=n_ret*3
 
-			PRGOPT(1)=1
+				PRGOPT(1)=1
 
-			IP(1)=2*(n_ret)+n_ret*3+(n_ret*2+2)*(n_ret+7)
-			IP(2)=n_ret*4+2
+				IP(1)=2*(n_ret)+n_ret*3+(n_ret*2+2)*(n_ret+7)
+				IP(2)=n_ret*4+2
 
-			W(1:n_ret,n_ret+1)=0d0
-			W(ii,n_ret+1)=1d0
-			call dlsei(w, MDW, ME, MA, MG, n_ret, PRGOPT, b, RNORME,
+				W(1:n_ret,n_ret+1)=0d0
+				W(ii,n_ret+1)=1d0
+				call dlsei(w, MDW, ME, MA, MG, n_ret, PRGOPT, b, RNORME,
      +   RNORML, MODE, WS, IP)
    
-			do j=1,n_ret
-				Cov(ii,j)=b(j)
+				do j=1,n_ret
+					Cov(ii,j)=b(j)
+				enddo
 			enddo
-		enddo
-		Winv=Cov
+			Winv=Cov
+		endif
 
 		W=0d0
 		b=0d0
@@ -425,7 +454,7 @@ c				call output("removing " // trim(RetPar(i)%keyword))
 
 		dvar=b
 		var=var0+dvar
-		call WritePTlimits(var,Cov,ErrVec,error,chi2min)
+		call WritePTlimits(var,Cov,ErrVec,error,chi2min,dobsA,demis,demisR,.false.)
 		do i=1,n_ret
 			if(var(i).gt.1d0) var(i)=1d0
 			if(var(i).lt.0d0) var(i)=0d0
@@ -450,16 +479,27 @@ c				call output("removing " // trim(RetPar(i)%keyword))
 
 
 
-	subroutine WritePTlimits(var0,Cov,ErrVec,error,chi2)
+	subroutine WritePTlimits(var0,Cov,ErrVec,error,chi2,dobsA,demis,demisR,ioflag)
 	use GlobalSetup
+	use Constants
 	IMPLICIT NONE
 	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,w(n_ret),chi2,ErrVec(n_ret,n_ret)
 	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret)
-	real*8 dvar(n_ret)
+	real*8 dvar(n_ret),dobsA(n_ret,nlam),demis(n_ret,nlam),demisR(n_ret,nlam)
+	real*8 obsAmin(nlam),obsAmax(nlam),emismin(nlam),emismax(nlam),emisRmin(nlam),emisRmax(nlam)
+	real*8 emis0(nlam),obsA0(nlam),emisR0(nlam)
 	integer i,j,k,info,nk,ierr
 	character*6000 form
+	logical ioflag
 
 	call Eigenvalues(Cov,ErrVec,w,n_ret,INFO)
+	do i=1,n_ret
+		tot=0d0
+		do j=1,n_ret
+			tot=tot+ErrVec(i,j)**2
+		enddo
+		ErrVec(i,1:n_ret)=ErrVec(i,1:n_ret)/sqrt(tot)
+	enddo
 
 	call SetOutputMode(.false.)
 	var=var0
@@ -469,15 +509,24 @@ c				call output("removing " // trim(RetPar(i)%keyword))
 	Tbest=T
 	maxT=0d0
 	minT=1d200
+	obsAmin=1d200
+	emismin=1d200
+	emisRmin=1d200
+	obsAmax=0d0
+	emismax=0d0
+	emisRmax=0d0
+
 	do i=1,n_ret
 		error(1:2,i)=var0(i)
 	enddo
 
 	nk=n_ret*100
-	open(unit=35,file=trim(outputdir) // "error_cloud.dat",RECL=6000)
-	form='("#"' // trim(int2string(n_ret,'(i4)')) // 'a19)'
-	write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
-	form='(' // int2string(n_ret,'(i4)') // 'es19.7)'
+	if(ioflag) then
+		open(unit=35,file=trim(outputdir) // "error_cloud.dat",RECL=6000)
+		form='("#"' // trim(int2string(n_ret,'(i4)')) // 'a19)'
+		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
+		form='(' // int2string(n_ret,'(i4)') // 'es19.7)'
+	endif
 	
 	do k=1,nk
 		vec=0d0
@@ -490,20 +539,39 @@ c				call output("removing " // trim(RetPar(i)%keyword))
 		vec=vec/sqrt(tot)
 		vec=vec*sqrt(chi2)
 		vec=vec*sqrt(w)
+		obsA0=obsA(0,1:nlam)/(pi*Rstar**2)
+		emis0=phase(1,0,1:nlam)+flux(0,1:nlam)
+		emisR0(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
 		do i=1,n_ret
 			dvar(i)=0d0
 			do j=1,n_ret
 				dvar(i)=dvar(i)+vec(j)*ErrVec(i,j)
 			enddo
 			var(i)=var0(i)+dvar(i)
-			if(var(i).gt.1d0) var(i)=1d0
-			if(var(i).lt.0d0) var(i)=0d0
-		enddo	
+			if(var(i).gt.1d0) then
+				var(i)=1d0
+				dvar(i)=1d0-var0(i)
+			endif
+			if(var(i).lt.0d0) then
+				var(i)=0d0
+				dvar(i)=-var0(i)
+			endif
+			obsA0(1:nlam)=obsA0(1:nlam)+dobsA(i,1:nlam)*dvar(i)
+			emis0(1:nlam)=emis0(1:nlam)+demis(i,1:nlam)*dvar(i)
+			emisR0(1:nlam)=emisR0(1:nlam)+demisR(i,1:nlam)*dvar(i)
+		enddo
+		do i=1,nlam
+			if(obsA0(i).lt.0d0) obsA0(i)=0d0
+			if(emis0(i).lt.0d0) emis0(i)=0d0
+			if(emisR0(i).lt.0d0) emisR0(i)=0d0
+		enddo
 
 		call MapRetrieval(var,error)
-		write(35,form) (RetPar(i)%value,i=1,n_ret)
+		
+		if(ioflag) write(35,form) (RetPar(i)%value,i=1,n_ret)
 		call InitDens()
 		call SetupStructure(.false.)
+
 		do i=1,nr
 			if(T(i).gt.maxT(i)) maxT(i)=T(i)
 			if(T(i).lt.minT(i)) minT(i)=T(i)
@@ -512,19 +580,48 @@ c				call output("removing " // trim(RetPar(i)%keyword))
 			if(var(i).lt.error(1,i)) error(1,i)=var(i)
 			if(var(i).gt.error(2,i)) error(2,i)=var(i)
 		enddo
+		do i=1,nlam
+			if(obsA0(i).gt.obsAmax(i)) obsAmax(i)=obsA0(i)
+			if(emis0(i).gt.emismax(i)) emismax(i)=emis0(i)
+			if(emisR0(i).gt.emisRmax(i)) emisRmax(i)=emisR0(i)
+			if(obsA0(i).lt.obsAmin(i)) obsAmin(i)=obsA0(i)
+			if(emis0(i).lt.emismin(i)) emismin(i)=emis0(i)
+			if(emisR0(i).lt.emisRmin(i)) emisRmin(i)=emisR0(i)
+		enddo
 	enddo
-	close(unit=35)
 	error(1,1:n_ret)=abs(error(1,1:n_ret)-var0(1:n_ret))
 	error(2,1:n_ret)=abs(error(2,1:n_ret)-var0(1:n_ret))
 
 	call MapRetrieval(var0,error)
 
 	call SetOutputMode(.true.)
-	open(unit=45,file=trim(outputdir) // "limits.dat")
-	do i=1,nr
-		write(45,*) P(i),minT(i),maxT(i)
-	enddo
-	close(unit=45)
+	if(ioflag) then
+		close(unit=35)
+
+		open(unit=45,file=trim(outputdir) // "limits.dat")
+		do i=1,nr
+			write(45,*) P(i),minT(i),maxT(i)
+		enddo
+		close(unit=45)
+
+		open(unit=45,file=trim(outputdir) // "emis_limits.dat")
+		do i=1,nlam-1
+			write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emismin(i),emismax(i)
+		enddo
+		close(unit=45)
+
+		open(unit=45,file=trim(outputdir) // "emisR_limits.dat")
+		do i=1,nlam-1
+			write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emisRmin(i),emisRmax(i)
+		enddo
+		close(unit=45)
+
+		open(unit=45,file=trim(outputdir) // "trans_limits.dat")
+		do i=1,nlam-1
+			write(45,*) sqrt(lam(i)*lam(i+1))*1d4,obsAmin(i),obsAmax(i)
+		enddo
+		close(unit=45)
+	endif
 
 	return
 	end

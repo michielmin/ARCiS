@@ -271,6 +271,7 @@ c use Ackerman & Marley 2001 cloud computation
 		enddo
 	endif
 
+	j=0
 1	tot=0d0
 	do i=1,Cloud(ii)%nsize
 		Cloud(ii)%w(i)=(1q4*Cloud(ii)%rv(i))**(1q0+(1q0-3q0*Cloud(ii)%veff)/Cloud(ii)%veff)*
@@ -279,9 +280,14 @@ c use Ackerman & Marley 2001 cloud computation
 		tot=tot+Cloud(ii)%w(i)
 	enddo
 	if(.not.tot.gt.0d0) then
-		Cloud(ii)%veff=Cloud(ii)%veff*2d0
-		call output("increasing veff")
-		goto 1
+		if(j.lt.10) then
+			Cloud(ii)%veff=Cloud(ii)%veff*2d0
+			call output("increasing veff")
+			j=j+1
+			goto 1
+		else
+			tot=1d0
+		endif
 	endif
 	Cloud(ii)%w=Cloud(ii)%w/tot
 
