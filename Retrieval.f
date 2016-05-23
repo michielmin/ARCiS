@@ -73,6 +73,7 @@
 
 	subroutine DoRetrieval()
 	use GlobalSetup
+	use Constants
 	IMPLICIT NONE
 	external ComputeChi2
 	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret),chi2min,random
