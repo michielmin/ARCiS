@@ -497,11 +497,11 @@ c================================================
 	do i=1,n_ret
 		tot=0d0
 		do j=1,n_ret
-			tot=tot+ErrVec(i,j)**2
+			tot=tot+ErrVec(j,i)**2
 		enddo
-		ErrVec(i,1:n_ret)=ErrVec(i,1:n_ret)/sqrt(tot)
+		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*sqrt(w(i))/sqrt(tot)
 	enddo
-
+	
 	call SetOutputMode(.false.)
 	var=var0
 	call MapRetrieval(var,error)
@@ -539,7 +539,6 @@ c================================================
 		vec=vec*(random(idum)**(1d0/real(n_ret)))
 		vec=vec/sqrt(tot)
 		vec=vec*sqrt(chi2)
-		vec=vec*sqrt(w)
 		obsA0=obsA(0,1:nlam)/(pi*Rstar**2)
 		emis0=phase(1,0,1:nlam)+flux(0,1:nlam)
 		emisR0(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
