@@ -88,6 +88,7 @@
 	real*8 obsA1(nlam),obsA2(nlam),dobsA(n_ret,nlam)
 	real*8 emis1(nlam),emis2(nlam),demis(n_ret,nlam)
 	real*8 emisR1(nlam),emisR2(nlam),demisR(n_ret,nlam)
+	real*8 phase0(nlam),flux0(nlam),obsA0(nlam)
 	integer na,map(n_ret),info,iboot,nboot,niter1,niter2,n_not_improved
 	logical dofit(n_ret),dofit_prev(n_ret),new_best
 	logical,allocatable :: specornot(:)
@@ -210,13 +211,6 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 				endif
 			enddo
 			call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
-			call SetOutputMode(.false.)
-			call WriteStructure()
-			call WriteOutput()
-			call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
-			call WritePTlimits(var0,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)),
-     &			dobsA,demis,demisR,.true.)
-			call SetOutputMode(.true.)
 			if(chi2.le.chi2min) then
 				new_best=.false.
 				var_best=var
@@ -243,7 +237,17 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 			lambda=lambda*5d0
 			var=var0
 			y=y0
+			obsA(0,1:nlam)=obsA0(1:nlam)
+			phase(1,0,1:nlam)=phase0(1:nlam)
+			flux(0,1:nlam)=flux0(1:nlam)
 			dofit=dofit_prev
+			call SetOutputMode(.false.)
+			call WriteStructure()
+			call WriteOutput()
+			call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
+			call WritePTlimits(var0,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)),
+     &			dobsA,demis,demisR,.true.)
+			call SetOutputMode(.true.)
 			goto 1
 		else
 			new_best=.false.
@@ -261,6 +265,9 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 c			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
      	enddo
 		y0=y
+		obsA0(1:nlam)=obsA(0,1:nlam)
+		phase0(1:nlam)=phase(1,0,1:nlam)
+		flux0(1:nlam)=flux(0,1:nlam)
 		dofit=.true.
 		dofit_prev=.true.
 		do i=1,n_ret
@@ -472,6 +479,20 @@ c================================================
 		endif
 	enddo
 	enddo
+
+	var=var0
+	y=y0
+	obsA(0,1:nlam)=obsA0(1:nlam)
+	phase(1,0,1:nlam)=phase0(1:nlam)
+	flux(0,1:nlam)=flux0(1:nlam)
+	dofit=dofit_prev
+	call SetOutputMode(.false.)
+	call WriteStructure()
+	call WriteOutput()
+	call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
+	call WritePTlimits(var0,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)),
+     &			dobsA,demis,demisR,.true.)
+	call SetOutputMode(.true.)
 
 	close(unit=31)
 	
