@@ -177,7 +177,7 @@
 				call select_mate(male,npop,jj2,idum,mate(0:npop,1:nobs),nobs,jj1)
 			endif
 c			if(jj1.eq.jj2) goto 1
-			if(ipar(jj1).gt.(npop/4).or.ipar(jj2).gt.(npop/4)) goto 1
+c			if(ipar(jj1).gt.(npop/4).or.ipar(jj2).gt.(npop/4)) goto 1
 c			if(jj1.eq.0.or.jj2.eq.0.and.ipar(0).gt.2) goto 1
 
 			ipar(jj1)=ipar(jj1)+1
@@ -205,7 +205,7 @@ c			if(jj1.eq.0.or.jj2.eq.0.and.ipar(0).gt.2) goto 1
 			endif
 			do k=1,nvars
 				write(gene(i+1,j  ,k)(1:2),'("0.")')
-			if(gene_cross) then
+			if(.true.)then	!gene_cross) then
 c	use complex cross-over method with genes
 				do ig=3,7
 					r=ran1(idum)
@@ -232,7 +232,7 @@ c				one point mutation
 							ig=int(ran1(idum)*5.0)+3
 							ig=icreep
 							write(gene(i+1,j,k)(ig:ig),'(i1)') int(ran1(idum)*10d0)
-							read(gene(i+1,j,k)(1:7),*) var(i+1,j,k)
+							read(gene(i+1,j,k)(1:7),*,err=1) var(i+1,j,k)
 						else
 c				creep mutation
 3							continue
@@ -244,7 +244,7 @@ c				creep mutation
 								var(i+1,j,k)=var(i+1,j,k)-10d0**(-real(ig))
 							endif
 							if(var(i+1,j,k).gt.1d0.or.var(i+1,j,k).lt.0d0) then
-								read(gene(i+1,j,k)(1:7),*) var(i+1,j,k)
+								read(gene(i+1,j,k)(1:7),*,err=1) var(i+1,j,k)
 								goto 3
 							endif
 							write(gene(i+1,j,k),'(f7.5)') var(i+1,j,k)

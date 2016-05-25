@@ -65,8 +65,8 @@
 
 	if(par_tprofile) call ComputeParamT(T)
 	do i=1,nr
-		if(T(i).gt.3000d0) T(i)=3000d0
-		if(T(i).lt.100d0) T(i)=100d0
+		if(T(i).gt.1d6) T(i)=1d6
+		if(T(i).lt.3d0) T(i)=3d0
 	enddo
 
 	if(dochemistry.and.j.ne.niter) then
@@ -148,7 +148,7 @@ c			enddo
 		endif
 		x(i)=x(i)+(3d0*Tirr**4/4d0)*alphaT*eta
 		x(i)=x(i)**0.25d0
-		if(x(i).gt.10000d0) x(i)=10000d0
+c		if(x(i).gt.10000d0) x(i)=10000d0
 		tau=tau+kappaT*dens(i)*(R(i+1)-R(i))
 	enddo
 

@@ -375,15 +375,12 @@ c================================================
 		call MatrixInvert(W(1:n_ret,1:n_ret),Winv(1:n_ret,1:n_ret),WLU(1:n_ret,1:n_ret),n_ret,info)
 		if(INFO.eq.0) then
 			Cov=0d0
-			ErrVec=0d0
 			do i=1,n_ret
 				Cov(i,i)=1d0
-				ErrVec(i,i)=1d0
 			enddo
 			do i=1,n_ret
 				do j=1,n_ret
 					Cov(i,j)=Winv(i,j)
-					ErrVec(i,j)=WLU(i,j)
 				enddo
 			enddo
 c================================================
@@ -453,6 +450,8 @@ c================================================
 
 		PRGOPT(1)=1
 
+		PRGOPT(1)=1
+
 		IP(1)=2*(n_ret)+n_ret*3+(n_ret*2+2)*(n_ret+7)
 		IP(2)=n_ret*4+2
 
@@ -462,6 +461,10 @@ c================================================
 
 		dvar=b
 		var=var0+dvar
+		do i=1,n_ret
+			if(var(i).gt.1d0) var(i)=1d0
+			if(var(i).lt.0d0) var(i)=0d0
+		enddo
 		call WritePTlimits(var,Cov,ErrVec,error,chi2min,dobsA,demis,demisR,.false.)
 		do i=1,n_ret
 			if(var(i).gt.1d0) var(i)=1d0
@@ -510,7 +513,7 @@ c================================================
 	real*8 dvar(n_ret),dobsA(n_ret,nlam),demis(n_ret,nlam),demisR(n_ret,nlam)
 	real*8 obsAmin(nlam),obsAmax(nlam),emismin(nlam),emismax(nlam),emisRmin(nlam),emisRmax(nlam)
 	real*8 emis0(nlam),obsA0(nlam),emisR0(nlam)
-	integer i,j,k,info,nk,ierr
+	integer i,j,k,info,nk,ierr,iter
 	character*6000 form
 	logical ioflag
 
@@ -551,36 +554,57 @@ c================================================
 	endif
 	
 	do k=1,nk
-		vec=0d0
-		tot=0d0
-		do i=1,n_ret
-			vec(i)=2d0*(random(idum)-0.5d0)
-			tot=tot+vec(i)**2
-		enddo
-		vec=vec*(random(idum)**(1d0/real(n_ret)))
-		vec=vec/sqrt(tot)
-		vec=vec*sqrt(chi2)
-		obsA0=obsA(0,1:nlam)/(pi*Rstar**2)
-		emis0=phase(1,0,1:nlam)+flux(0,1:nlam)
-		emisR0(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
+		iter=0
+1		continue
+		if(k.le.n_ret) then
+			vec=0d0
+			vec(k)=sqrt(chi2)
+			iter=1000
+		else if(k.le.n_ret*2) then
+			vec=0d0
+			vec(k-n_ret)=-sqrt(chi2)
+			iter=1000
+		else
+			vec=0d0
+			tot=0d0
+			do i=1,n_ret
+				vec(i)=2d0*(random(idum)-0.5d0)
+				tot=tot+vec(i)**2
+			enddo
+			vec=vec*(random(idum)**(1d0/real(n_ret)))
+			vec=vec/sqrt(tot)
+			vec=vec*sqrt(chi2)
+		endif
 		do i=1,n_ret
 			dvar(i)=0d0
 			do j=1,n_ret
 				dvar(i)=dvar(i)+vec(j)*ErrVec(i,j)
 			enddo
+		enddo
+2		continue
+		iter=iter+1
+		obsA0=0d0
+		emis0=0d0
+		emisR0=0d0
+		do i=1,n_ret
 			var(i)=var0(i)+dvar(i)
 			if(var(i).gt.1d0) then
-				var(i)=1d0
-				dvar(i)=1d0-var0(i)
+				if(iter.lt.100) goto 1
+				dvar=dvar*0.999d0*(1d0-var0(i))/(var(i)-var0(i))
+				goto 2
 			endif
 			if(var(i).lt.0d0) then
-				var(i)=0d0
-				dvar(i)=-var0(i)
+				if(iter.lt.100) goto 1
+				dvar=dvar*0.999d0*(-var0(i))/(var(i)-var0(i))
+				goto 2
 			endif
 			obsA0(1:nlam)=obsA0(1:nlam)+dobsA(i,1:nlam)*dvar(i)
 			emis0(1:nlam)=emis0(1:nlam)+demis(i,1:nlam)*dvar(i)
 			emisR0(1:nlam)=emisR0(1:nlam)+demisR(i,1:nlam)*dvar(i)
 		enddo
+		obsA0=obsA0+obsA(0,1:nlam)/(pi*Rstar**2)
+		emis0=emis0+phase(1,0,1:nlam)+flux(0,1:nlam)
+		emisR0=emisR0+(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
 		do i=1,nlam
 			if(obsA0(i).lt.0d0) obsA0(i)=0d0
 			if(emis0(i).lt.0d0) emis0(i)=0d0

@@ -489,6 +489,20 @@ c allocate the arrays
 
 	call ReadDataCIA()
 
+	if(retrieval) then
+		do i=1,n_ret
+			if(RetPar(i)%dx.lt.0d0) then
+				if(RetPar(i)%logscale) then
+					RetPar(i)%x0=sqrt(RetPar(i)%xmax*RetPar(i)%xmin)
+					RetPar(i)%dx=5d0*(RetPar(i)%xmax/RetPar(i)%xmin)
+				else
+					RetPar(i)%x0=0.5d0*(RetPar(i)%xmax+RetPar(i)%xmin)
+					RetPar(i)%dx=5d0*(RetPar(i)%xmax-RetPar(i)%xmin)
+				endif
+			endif
+		enddo			
+	endif
+			
 	call output("==================================================================")
 	
 	return
