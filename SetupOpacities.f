@@ -543,6 +543,8 @@ c	Random sampling of the Voigt profile
 						if(inu2.gt.nnu) inu2=nnu
 						kline_omp(inu1:inu2)=kline_omp(inu1:inu2)+A/real(inu2-inu1+1)
 					endif
+				else
+					goto 1
 				endif
 			enddo
 		endif
