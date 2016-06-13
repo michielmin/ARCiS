@@ -18,7 +18,7 @@
 	use Constants
 	IMPLICIT NONE
 	integer imol
-	real*8 kappa(ng),nu1,nu2,tanscale,ll
+	real*8 kappa(ng),nu1,nu2,tanscale,ll,tot,tot2
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
 	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
@@ -74,13 +74,19 @@
 		enddo
 !$OMP PARALLEL IF(nlam.gt.200)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,j,nu1,nu2,k_line,imol,ig,kappa)
+!$OMP& PRIVATE(i,j,nu1,nu2,k_line,imol,ig,kappa,tot,tot2)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_r,ng,ir,kappa_mol,nu_line,cont_tot,freq,Cabs,Csca,opac_tot,Ndens,R,ig_comp,retrieval)
 		allocate(k_line(n_nu_line))
 !$OMP DO
 		do i=1,nlam-1
 			nu1=-1d0
 			nu2=2d0
+			tot=0d0
+			do imol=1,nmol
+				do ig=1,ng
+					tot=tot+kappa_mol(i,ig,imol)*mixrat_r(ir,imol)/real(ng)
+				enddo
+			enddo
 			do j=1,n_nu_line
 				k_line(j)=0d0
 				do imol=1,nmol
@@ -95,6 +101,11 @@
 				enddo
 			enddo
 			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cont_tot(i))
+			tot2=0d0
+			do ig=1,ng
+				tot2=tot2+kappa(ig)/real(ng)
+			enddo
+			kappa=kappa*tot/tot2
 			Cabs(ir,i,1:ng)=kappa(1:ng)
 			call RayleighScattering(Csca(ir,i),ir,i)
 			do j=1,ng
@@ -522,6 +533,7 @@ c	Random sampling of the Voigt profile
 			i_therm=random(idum)*real(n_voigt)
 			i_press=random(idum)*real(n_voigt)
 			do j=1,NV
+1				continue
 				i_therm=i_therm+1
 				i_press=i_press+1
 				if(i_therm.gt.n_voigt) i_therm=1

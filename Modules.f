@@ -96,6 +96,9 @@ c===============================================================================
 	real*8 Tmin,Tmax,minTprofile,maxTprofile
 	real*8 sintheta(360),costheta(360)
 	logical,allocatable :: do_dB(:)
+	
+	logical sinkZ
+	real*8 alphaZ
 
 	real*8,allocatable :: flux(:,:),obsA(:,:),phase(:,:,:)
 	integer ncc,nphase

@@ -312,7 +312,7 @@ C	 create the new empty FITS file
 	character*80 comment,errmessage
 	character*30 errtext
 	integer ig,ilam,iT,iP,imol,i,j,ir,ngF,i1,i2
-	real*8 kappa_mol(nlam,ng,nmol),wP1,wP2,wT1,wT2,x1,x2
+	real*8 kappa_mol(nlam,ng,nmol),wP1,wP2,wT1,wT2,x1,x2,tot,tot2
 	real*8,allocatable :: temp(:),lamF(:)
 
 	if(.not.Ktable(imol)%available) then
@@ -360,7 +360,7 @@ C	 create the new empty FITS file
  
 !$OMP PARALLEL IF(nlam.gt.200)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j)
+!$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2)
 !$OMP& SHARED(nlam,Ktable,lam,lamF,wT1,wT2,wP1,wP2,kappa_mol,imol,iT,iP,ng)
 	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam))
 !$OMP DO
@@ -384,12 +384,27 @@ C	 create the new empty FITS file
 				enddo
 			enddo
 			call sort(temp,ngF)
+			tot=0d0
+			do ig=1,ngF
+				tot=tot+temp(ig)
+			enddo
+			tot=tot/real(ngF)
 			do ig=1,ng
 				j=1+real(ngF-1)*real(ig-1)/real(ng-1)
 				if(j.lt.1) j=1
 				if(j.gt.ngF) j=ngF
 				kappa_mol(ilam,ig,imol)=temp(j)
 			enddo
+			tot2=0d0
+			do ig=1,ng
+				tot2=tot2+kappa_mol(ilam,ig,imol)
+			enddo
+			tot2=tot2/real(ng)
+			if(tot2.ne.0d0) then
+				kappa_mol(ilam,1:ng,imol)=kappa_mol(ilam,1:ng,imol)*tot/tot2
+			else
+				kappa_mol(ilam,1:ng,imol)=tot
+			endif
 		else
 			kappa_mol(ilam,1:ng,imol)=0d0
 		endif

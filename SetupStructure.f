@@ -2,7 +2,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 g,dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot
+	real*8 g,dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,met_r,dens1bar,minZ,Tc
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix,j,niter
 	logical ini,compute_mixrat
@@ -14,6 +14,8 @@
 
 	ini = .TRUE.
 
+	minZ=-5d0
+
 	niter=1
 	if(dochemistry) niter=2
 	if(par_tprofile) niter=2
@@ -23,6 +25,8 @@
 		Pb(i)=sqrt(P(i-1)*P(i))
 	enddo
 	Pb(nr+1)=P(nr)
+
+	if(par_tprofile) call ComputeParamT(T)
 
 	do j=1,niter
 
@@ -51,6 +55,12 @@
 		enddo
 
 		g=Ggrav*Mtot/R(i)**2
+
+		if(i.lt.nr) then
+			if(P(i).ge.1d0.and.P(i+1).lt.1d0.or.i.eq.1) then
+				dens1bar=Avogadro*mp*mu/(RgasBar*T(i))
+			endif
+		endif
 		
 		dp=Pb(i)-Pb(i+1)
 		dlogp=log(Pb(i)/Pb(i+1))
@@ -76,11 +86,38 @@
 		call output("Computing chemistry using easy_chem by Paul Molliere")
 		do i=1,nr
 			call tellertje(i,nr)
+			met_r=metallicity
+			if(sinkZ) then
+				met_r=metallicity+log10((dens(i)/dens1bar)**(1d0/alphaZ**2-1d0))
+				call easy_chem_set_molfracs_atoms(COratio,met_r)
+			endif
 			if(P(i).ge.mixP.or.i.eq.1) then
-				call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,XeqCloud(i,1:nclouds),nclouds)
+				if(met_r.gt.minZ) then
+					Tc=max(min(T(i),3000d0),100d0)
+					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,XeqCloud(i,1:nclouds),nclouds)
+				else if(i.gt.1) then
+					mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
+				else
+					mixrat_r(i,1:nmol)=0d0
+					mixrat_r(i,45)=0.85453462
+					mixrat_r(i,48)=1d0-mixrat_r(i,45)
+				endif
 			else
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
 			endif
+			do imol=1,nmol
+				if(includemol(imol)) then
+					if(IsNaN(mixrat_r(i,imol))) then
+						if(i.gt.1) then
+							mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
+						else
+							mixrat_r(i,1:nmol)=0d0
+							mixrat_r(i,45)=0.85453462
+							mixrat_r(i,48)=1d0-mixrat_r(i,45)
+						endif
+					endif
+				endif
+			enddo
 		enddo
 		call output("==================================================================")
 	else
@@ -99,15 +136,41 @@
 		call output("Computing chemistry using easy_chem by Paul Molliere")
 		do i=1,nr
 			call tellertje(i,nr)
-c			do j=1,nmol
-c				call MorleyChemistry(mixrat_r(i,j),T(i),P(i),molname(j),metallicity)
-c			enddo
+			met_r=metallicity
+			if(sinkZ) then
+				met_r=metallicity+log10(dens(i)/dens1bar)*(1d0/alphaZ**2-1d0)
+				call easy_chem_set_molfracs_atoms(COratio,met_r)
+			endif
 			if(P(i).ge.mixP.or.i.eq.1) then
-				call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,XeqCloud(i,1:nclouds),nclouds)
+				if(met_r.gt.minZ) then
+					Tc=max(min(T(i),3000d0),100d0)
+					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,XeqCloud(i,1:nclouds),nclouds)
+				else if(i.gt.1) then
+					mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
+				else
+					mixrat_r(i,1:nmol)=0d0
+					mixrat_r(i,45)=0.85453462
+					mixrat_r(i,48)=1d0-mixrat_r(i,45)
+				endif
 			else
-				if(cloudcompute) call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,XeqCloud(i,1:nclouds),nclouds)
+				Tc=max(min(T(i),3000d0),100d0)
+				if(cloudcompute) call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,XeqCloud(i,1:nclouds),nclouds)
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
 			endif
+			do imol=1,nmol
+				if(includemol(imol)) then
+					if(IsNaN(mixrat_r(i,imol))) then
+						print*,imol," is a NaN...",met_r
+						if(i.gt.1) then
+							mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
+						else
+							mixrat_r(i,1:nmol)=0d0
+							mixrat_r(i,45)=0.85453462
+							mixrat_r(i,48)=1d0-mixrat_r(i,45)
+						endif
+					endif
+				endif
+			enddo
 		enddo
 		call output("==================================================================")
 	else
@@ -132,6 +195,7 @@ c			enddo
 	tau=0d0
 	Tirr=betaT*sqrt(Rstar/(2d0*Dplanet))*Tstar
 	do i=nr,1,-1
+		if(tau.lt.0d0) tau=0d0
 		x(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)
 		if(tau.lt.100d0) then
 			eta=2d0/3d0+(2d0/(3d0*gammaT1))*(1d0+(gammaT1*tau/2d0-1)*exp(-gammaT1*tau))
@@ -149,6 +213,14 @@ c			enddo
 		x(i)=x(i)+(3d0*Tirr**4/4d0)*alphaT*eta
 		x(i)=x(i)**0.25d0
 c		if(x(i).gt.10000d0) x(i)=10000d0
+		if(IsNaN(x(i))) then
+			call output("NaN in temperature structure")
+			if(i.gt.1) then
+				x(i)=x(i-1)
+			else
+				x(i)=TeffP
+			endif
+		endif
 		tau=tau+kappaT*dens(i)*(R(i+1)-R(i))
 	enddo
 

@@ -341,7 +341,8 @@ c-----------------------------------------------------------------------
       REAL*8 a,b,c,d,del,fact,h,psi
       nm1=n-1
       if(n.lt.0.or.x.lt.0..or.(x.eq.0..and.(n.eq.0.or.n.eq.1)))then
-        stop 'bad arguments in expint'
+        print*,'bad arguments in expint'
+        expint=1./nm1
       else if(n.eq.0)then
         expint=exp(-x)/x
       else if(x.eq.0.)then

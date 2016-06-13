@@ -366,8 +366,10 @@ c==============================================================================
 	use ReadKeywords
 	IMPLICIT NONE
 	type(SettingKey),pointer :: key,first
+	type(SettingKey) keyret
 	integer i,j,omp_get_max_threads,omp_get_thread_num
 	real*8 tot,tot2,theta,Planck
+	character*1000 line
 
 	idum=-42
 #ifdef USE_OPENMP
@@ -410,6 +412,28 @@ c allocate the arrays
 	enddo
 
 	if(n_ret.gt.0) n_ret=n_ret+RetPar(n_ret)%n-1
+
+	if(retrieval) then
+
+	key => first%next
+
+	do while(.not.key%last)
+
+		do i=1,n_ret
+			line=trim(RetPar(i)%keyword) // "=0d0"
+			call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%value,keyret%nr1,keyret%nr2)
+			if(trim(keyret%key1).eq.trim(key%key1).and.trim(keyret%key2).eq.trim(key%key2).and.
+     &		   keyret%nr1.eq.key%nr1.and.keyret%nr2.eq.key%nr2) then
+				read(key%value,*) RetPar(i)%x0
+			endif
+		enddo
+
+		key => key%next
+	
+	enddo
+	
+	endif
+
 
 	call ConvertUnits()
 
@@ -489,14 +513,20 @@ c allocate the arrays
 
 	call ReadDataCIA()
 
+
 	if(retrieval) then
 		do i=1,n_ret
-			if(RetPar(i)%dx.lt.0d0) then
+			if(RetPar(i)%x0.lt.-1d150) then
 				if(RetPar(i)%logscale) then
 					RetPar(i)%x0=sqrt(RetPar(i)%xmax*RetPar(i)%xmin)
-					RetPar(i)%dx=5d0*(RetPar(i)%xmax/RetPar(i)%xmin)
 				else
 					RetPar(i)%x0=0.5d0*(RetPar(i)%xmax+RetPar(i)%xmin)
+				endif
+			endif
+			if(RetPar(i)%dx.lt.0d0) then
+				if(RetPar(i)%logscale) then
+					RetPar(i)%dx=5d0*(RetPar(i)%xmax/RetPar(i)%xmin)
+				else
 					RetPar(i)%dx=5d0*(RetPar(i)%xmax-RetPar(i)%xmin)
 				endif
 			endif
@@ -634,6 +664,10 @@ c			read(key%value,*) nr
 			read(key%value,*) cloudcompute
 		case("mixp")
 			read(key%value,*) mixP
+		case("sinkz")
+			read(key%value,*) sinkZ
+		case("alphaz")
+			read(key%value,*) alphaZ
 		case("nspike")
 			read(key%value,*) nspike
 		case("nphot")
@@ -885,6 +919,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Tin=-1d0
 	
 	specresfile=' '
+	
+	sinkZ=.false.
+	alphaZ=1d0
 
 	do i=1,nclouds
 		Cloud(i)%P=1d-4
@@ -914,7 +951,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 
 	retrieval=.false.
 	do i=1,n_ret
-		RetPar(i)%x0=-1d0
+		RetPar(i)%x0=-1d200
 		RetPar(i)%dx=-1d0
 		RetPar(i)%logscale=.false.
 		RetPar(i)%squarescale=.false.

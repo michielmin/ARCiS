@@ -106,12 +106,13 @@
 	IP(2)=n_ret*4+2
 	
 	do i=1,n_ret
-10		var0(i)=gasdev(idum)*0.1+0.5
-		var0(i)=0.5d0
-		if(var0(i).gt.1d0) goto 10
-		if(var0(i).lt.0d0) goto 10
+		RetPar(i)%value=RetPar(i)%x0
 	enddo
-c	call MapTprofile(var0)
+	call MapRetrievalInverse(var0)
+	do i=1,n_ret
+		if(var0(i).gt.1d0) var0(i)=1d0
+		if(var0(i).lt.0d0) var0(i)=0d0
+	enddo
 
 	dvar0=10d0
 	open(unit=31,file=trim(outputdir) // "Wolk.dat",RECL=6000)
@@ -840,6 +841,35 @@ c	linear
 	return
 	end
 	
+
+
+	
+	subroutine MapRetrievalInverse(var)
+	use GlobalSetup
+	use ReadKeywords
+	use Constants
+	IMPLICIT NONE
+	integer i
+	real*8 var(n_ret),x
+
+	do i=1,n_ret
+		if(RetPar(i)%logscale) then
+c	log
+			var(i)=log10(RetPar(i)%value/RetPar(i)%xmin)/log10(RetPar(i)%xmax/RetPar(i)%xmin)
+		else if(RetPar(i)%squarescale) then
+c	square
+			var(i)=(RetPar(i)%value**2-RetPar(i)%xmin**2)/(RetPar(i)%xmax**2-RetPar(i)%xmin**2)
+		else
+c	linear
+			var(i)=(RetPar(i)%value-RetPar(i)%xmin)/(RetPar(i)%xmax-RetPar(i)%xmin)
+		endif
+	enddo
+
+	return
+	end
+	
+
+
 
 	subroutine MapTprofile(var)
 	use GlobalSetup
