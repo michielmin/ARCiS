@@ -105,6 +105,7 @@ c===============================================================================
 	logical cloudcompute
 	logical,allocatable :: docloud(:,:)
 	real*8,allocatable :: cloudfrac(:),XCloud(:,:),XeqCloud(:,:),XeqCloud_old(:,:)
+	real*8,allocatable :: nabla_ad(:)
 
 	integer,allocatable,dimension(:) :: L_imol,L_iiso,L_nclose,L_ilam
 	real*8,allocatable,dimension(:) :: L_Aul,L_freq,L_Elow,L_lam,L_S0,L_S

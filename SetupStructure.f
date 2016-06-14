@@ -26,6 +26,7 @@
 	enddo
 	Pb(nr+1)=P(nr)
 
+	nabla_ad=2d0/7d0
 	if(par_tprofile) call ComputeParamT(T)
 
 	do j=1,niter
@@ -94,16 +95,20 @@
 			if(P(i).ge.mixP.or.i.eq.1) then
 				if(met_r.gt.minZ) then
 					Tc=max(min(T(i),3000d0),100d0)
-					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,XeqCloud(i,1:nclouds),nclouds)
+					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
+     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i))
 				else if(i.gt.1) then
 					mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
+					nabla_ad(i)=nabla_ad(i-1)
 				else
 					mixrat_r(i,1:nmol)=0d0
 					mixrat_r(i,45)=0.85453462
 					mixrat_r(i,48)=1d0-mixrat_r(i,45)
+					nabla_ad(i)=2d0/7d0
 				endif
 			else
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
+				nabla_ad(i)=nabla_ad(i-1)
 			endif
 			do imol=1,nmol
 				if(includemol(imol)) then
@@ -144,18 +149,23 @@
 			if(P(i).ge.mixP.or.i.eq.1) then
 				if(met_r.gt.minZ) then
 					Tc=max(min(T(i),3000d0),100d0)
-					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,XeqCloud(i,1:nclouds),nclouds)
+					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i))
 				else if(i.gt.1) then
 					mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
+					nabla_ad(i)=nabla_ad(i-1)
 				else
 					mixrat_r(i,1:nmol)=0d0
 					mixrat_r(i,45)=0.85453462
 					mixrat_r(i,48)=1d0-mixrat_r(i,45)
+					nabla_ad(i)=2d0/7d0
 				endif
 			else
 				Tc=max(min(T(i),3000d0),100d0)
-				if(cloudcompute) call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,XeqCloud(i,1:nclouds),nclouds)
+				if(cloudcompute) call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i))
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
+				nabla_ad(i)=nabla_ad(i-1)
 			endif
 			do imol=1,nmol
 				if(includemol(imol)) then
@@ -163,10 +173,12 @@
 						print*,imol," is a NaN...",met_r
 						if(i.gt.1) then
 							mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
+							nabla_ad(i)=nabla_ad(i-1)
 						else
 							mixrat_r(i,1:nmol)=0d0
 							mixrat_r(i,45)=0.85453462
 							mixrat_r(i,48)=1d0-mixrat_r(i,45)
+							nabla_ad(i)=2d0/7d0
 						endif
 					endif
 				endif
@@ -189,7 +201,7 @@
 	subroutine ComputeParamT(x)
 	use GlobalSetup
 	IMPLICIT NONE
-	real*8 x(nr),tau,Tirr,eta,expint
+	real*8 x(nr),tau,Tirr,eta,expint,dlnT,dlnP
 	integer i
 
 	tau=0d0
@@ -219,6 +231,14 @@ c		if(x(i).gt.10000d0) x(i)=10000d0
 				x(i)=x(i-1)
 			else
 				x(i)=TeffP
+			endif
+		endif
+		if(i.lt.nr) then
+			dlnP=log(P(i+1)/P(i))
+			dlnT=log(x(i+1)/x(i))
+			if((dlnT/dlnP).gt.(nabla_ad(i))) then
+				dlnT=(nabla_ad(i))*dlnP
+				x(i)=x(i+1)/exp(dlnT)
 			endif
 		endif
 		tau=tau+kappaT*dens(i)*(R(i+1)-R(i))
