@@ -416,6 +416,14 @@ c pressure broadening
 	integer i_therm,i_press,inu1,inu2,ig(ng+1)
 	logical converged
 	real*8 f,a_t,a_p
+
+	if(ng.eq.1) then
+		kappa=0d0
+		do i=1,nnu
+			kappa=kappa+kline(i)/real(nnu)
+		enddo
+		return
+	endif
 	
 	do i=1,ng
 		g(i)=(real(i)-0.5)/real(ng)

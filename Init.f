@@ -153,7 +153,7 @@ c===============================================================================
 	goto 1
 2	continue
 	if(i.eq.n) then
-		nr=0
+		nr=1
 	else
 		read(key(i+1:n),*,err=3) nr	
 	endif
@@ -635,7 +635,7 @@ c			read(key%value,*) nr
 			read(key%value,*) mixratHaze
 		case("scattering")
 			read(key%value,*) scattering
-		case("scattstar")
+		case("scattstar","starscatt")
 			read(key%value,*) scattstar
 		case("compute","compute_opac","computeopac")
 			read(key%value,*) compute_opac

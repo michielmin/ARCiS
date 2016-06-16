@@ -26,7 +26,7 @@
 	enddo
 	Pb(nr+1)=P(nr)
 
-	nabla_ad=2d0/7d0
+	if(compute_mixrat) nabla_ad=2d0/7d0
 	if(par_tprofile) call ComputeParamT(T)
 
 	do j=1,niter
@@ -349,7 +349,7 @@ c use Ackerman & Marley 2001 cloud computation
 		Xc1=Xc
 		cloud_dens(1,ii)=Xc*dens(1)
 		do i=2,nr
-			lambdaC=0.1d0
+			lambdaC=max(0.1d0,(log(T(i)/T(i-1))/log(P(i)/P(i-1)))/nabla_ad(i))
 			do j=1,nsubr
 				if(Cloud(ii)%haze) then
 					Xc=Cloud(ii)%fcond*XeqCloud(i,ii)
