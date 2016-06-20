@@ -90,7 +90,7 @@
 	real*8 emisR1(nlam),emisR2(nlam),demisR(n_ret,nlam)
 	real*8 phase0(nlam),flux0(nlam),obsA0(nlam)
 	integer na,map(n_ret),info,iboot,nboot,niter1,niter2,n_not_improved
-	logical dofit(n_ret),dofit_prev(n_ret),new_best
+	logical dofit(n_ret),dofit_prev(n_ret),new_best,improved_iter
 	logical,allocatable :: specornot(:)
 
 	integer ME,MA,MG,MODE,MDW,ii
@@ -197,10 +197,12 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 	 		call RemapObs(i,y(iy:iy+ObsSpec(i)%nlam-1))
 			iy=iy+ObsSpec(i)%nlam
 		enddo
+		improved_iter=.false.
 		if(chi2.le.chi2prev) then
 			var0=var
 			n_not_improved=0
 			call output("Iteration improved" // trim(dbl2string(chi2,'(f8.3)')))
+			improved_iter=.true.
 			lambda=lambda/5d0
 			chi2_spec=0d0
 			chi2_prof=0d0
@@ -472,6 +474,22 @@ c================================================
 			if(var(i).lt.0d0) var(i)=0d0
 			dvar(i)=sqrt(error(1,i)**2+error(2,i)**2)*3d0
 		enddo
+
+		if(improved_iter) then
+			var=var0
+			y=y0
+			obsA(0,1:nlam)=obsA0(1:nlam)
+			phase(1,0,1:nlam)=phase0(1:nlam)
+			flux(0,1:nlam)=flux0(1:nlam)
+			dofit=dofit_prev
+			call SetOutputMode(.false.)
+			call WriteStructure()
+			call WriteOutput()
+			call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
+			call WritePTlimits(var0,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)),
+     &			dobsA,demis,demisR,.true.)
+			call SetOutputMode(.true.)
+		endif
 	enddo
 	do i=1,nobs
 		if(.not.ObsSpec(i)%spec.and.ObsSpec(i)%scale.gt.0d0) then
@@ -483,20 +501,6 @@ c================================================
 		endif
 	enddo
 	enddo
-
-	var=var0
-	y=y0
-	obsA(0,1:nlam)=obsA0(1:nlam)
-	phase(1,0,1:nlam)=phase0(1:nlam)
-	flux(0,1:nlam)=flux0(1:nlam)
-	dofit=dofit_prev
-	call SetOutputMode(.false.)
-	call WriteStructure()
-	call WriteOutput()
-	call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
-	call WritePTlimits(var0,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)),
-     &			dobsA,demis,demisR,.true.)
-	call SetOutputMode(.true.)
 
 	close(unit=31)
 	

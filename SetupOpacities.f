@@ -105,7 +105,7 @@
 			do ig=1,ng
 				tot2=tot2+kappa(ig)/real(ng)
 			enddo
-			kappa=kappa*tot/tot2
+			if(tot2.gt.0d0) kappa=kappa*tot/tot2
 			Cabs(ir,i,1:ng)=kappa(1:ng)
 			call RayleighScattering(Csca(ir,i),ir,i)
 			do j=1,ng
