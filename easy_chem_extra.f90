@@ -1250,7 +1250,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,clouds
   DOUBLE PRECISION             :: molfracs_reactants(N_reactants), &
        massfracs_reactants(N_reactants)
   DOUBLE PRECISION             :: temp, press, nabla_ad,gamma2,MMW,rho
-  DOUBLE PRECISION             :: thermo_quants
+  DOUBLE PRECISION             :: thermo_quants,cpe
   LOGICAL                      :: ini,condensates
   INTEGER                      :: i_t, i_p, i_reac, N_reactants2
 	logical con(N_reactants)
@@ -1366,7 +1366,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,clouds
       press=Pin
         
         call EASY_CHEM(N_atoms,N_reactants2,names_atoms,names_reactants,molfracs_atoms, &
-             molfracs_reactants,massfracs_reactants,temp,press,ini,nabla_ad,gamma2,MMW,rho)
+             molfracs_reactants,massfracs_reactants,temp,press,ini,nabla_ad,gamma2,MMW,rho,cpe)
         ini = .FALSE.
 
 	do i=1,nmol
@@ -1376,6 +1376,9 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,clouds
 				mol_abun(i)=molfracs_reactants(i_reac)
 			endif
 		enddo
+		if(trim(mol_names(i)).eq.'C2H2') then
+			mol_abun(i)=molfracs_reactants(41)
+		endif
 	enddo
 
 	if(condensates) then
@@ -1433,24 +1436,24 @@ subroutine easy_chem_set_molfracs_atoms(CO,Z)
   names_atoms(17) = 'Fe'
   names_atoms(18) = 'Ni'
 
-  molfracs_atoms = (/ 0.92075393050000d0, &
-       0.07836886940000D0, &
-       0.0004722191D0, &
-       0.0001186161D0, &
-       0.0008592976D0, &
-       3.0489028162262D-6, &
-       6.98463283812515D-5, &
-       4.94467056311463D-6, &
-       5.67732020917149D-5, &
-       0.000000451D0, &
-       2.31282930483252D-5, &
-       5.5480910725052D-7, &
-       0.000000188D0, &
-       3.83834123343795D-6, &
-       1.56366451798494D-7, &
-       1.4932880217004D-8, &
-       5.5480910725052D-5, &
-       2.9116795849959D-6 &
+  molfracs_atoms = (/ 0.9207539305, &
+		0.0783688694, &
+		0.0002478241, &
+		6.22506056949881e-05, &
+		0.0004509658, &
+		1.60008694353205e-06, &
+		3.66558742055362e-05, &
+		2.595e-06, &
+		2.9795e-05, &
+		2.36670201997668e-07, &
+		1.2137900734604e-05, &
+		2.91167958499589e-07, &
+		9.86605611925677e-08, &
+		2.01439011429255e-06, &
+		8.20622804366359e-08, &
+		7.83688694089992e-09, &
+		2.91167958499589e-05, &
+		1.52807116806281e-06 &
        /)
 
 	molfracs_atoms(1)=molfracs_atoms(1)/(10d0**Z)

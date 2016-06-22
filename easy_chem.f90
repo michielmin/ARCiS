@@ -55,7 +55,7 @@ end module thermo_data_block
 !!!!----
 
 subroutine EASY_CHEM(N_atoms,N_reactants,names_atoms,names_reactants,molfracs_atoms, &
-     molfracs_reactants,massfracs_reactants,temp,press,ini,nabla_ad,gamma2,MMW,rho)
+     molfracs_reactants,massfracs_reactants,temp,press,ini,nabla_ad,gamma2,MMW,rho,c_pe)
 
   use thermo_data_block
   implicit none
@@ -67,13 +67,13 @@ subroutine EASY_CHEM(N_atoms,N_reactants,names_atoms,names_reactants,molfracs_at
   DOUBLE PRECISION             :: molfracs_atoms(N_atoms), molfracs_reactants(N_reactants), &
        massfracs_reactants(N_reactants)
   DOUBLE PRECISION             :: temp, press
-  DOUBLE PRECISION             :: thermo_quants,nabla_ad,gamma2,MMW,rho
+  DOUBLE PRECISION             :: thermo_quants,nabla_ad,gamma2,MMW,rho,c_pe
   LOGICAL                      :: ini
 
   !! Internal:
   DOUBLE PRECISION             :: C_P_0(N_reactants), H_0(N_reactants), S_0(N_reactants), &
-       molfracs_atoms_ions(N_atoms+1)
-  INTEGER                      :: i_reac, N_atoms_use
+       molfracs_atoms_ions(N_atoms+1), temp_use
+  INTEGER                      :: i_reac, N_atoms_use, gamma_neg_try
   CHARACTER*40                 :: names_atoms_ions(N_atoms+1)
 
   verbose = .FALSE.
@@ -116,13 +116,30 @@ subroutine EASY_CHEM(N_atoms,N_reactants,names_atoms,names_reactants,molfracs_at
   END IF
   
   call ec_CALC_THERMO_QUANTS(N_reactants,names_reactants,temp,C_P_0, H_0, S_0)
-  call ec_CALC_EQU_CHEM(N_atoms_use,N_reactants,names_atoms_ions(1:N_atoms_use), &
-       names_reactants,molfracs_atoms_ions(1:N_atoms_use), &
-       molfracs_reactants,massfracs_reactants,temp,press,C_P_0, H_0, S_0, &
-       names_reactants_orig,nabla_ad,gamma2,MMW,rho)
+  gamma2 = 0d0
+  temp_use = temp
+  gamma_neg_try = 0d0
+  do while (gamma2 < 1d0)
+     call ec_CALC_EQU_CHEM(N_atoms_use,N_reactants,names_atoms_ions(1:N_atoms_use), &
+          names_reactants,molfracs_atoms_ions(1:N_atoms_use), &
+          molfracs_reactants,massfracs_reactants,temp_use,press,C_P_0, H_0, S_0, &
+          names_reactants_orig,nabla_ad,gamma2,MMW,rho,c_pe)
+     if (gamma2 < 1d0) then
+        write(*,*) 'Gamma was < 1, redo! gamma2, temp, ', gamma2, temp
+        gamma_neg_try = gamma_neg_try + 1
+        if (gamma_neg_try > 10) then
+           call random_number(temp_use)
+           temp_use = temp*(1d0 + 0.01d0*temp_use)
+           write(*,*) 'temp, temp_use', temp, temp_use
+           call ec_CALC_THERMO_QUANTS(N_reactants,names_reactants,temp_use,C_P_0, H_0, S_0)
+        end if
+     end if
+  end do
 
   ! Restore names etc. to original, i.e. user input order.
   names_reactants = names_reactants_orig
+
+  c_pe = c_pe*1d7 ! J/(g K) to erg/(g K)
   
 end subroutine EASY_CHEM
 
@@ -158,7 +175,6 @@ subroutine ec_READ_ALL_DATA(N_reactants,names_reactants)
   OPEN(unit=17,file=fpath)
   DO WHILE (1>0)
      READ(17,'(A80)',end=122) file_line
-     
      DO i_reac = 1, N_reactants
         IF (TRIM(ADJUSTL(file_line(1:18))) .EQ. &
              TRIM(ADJUSTL(names_reactants(i_reac)))) THEN
@@ -342,7 +358,7 @@ end subroutine ec_CALC_THERMO_QUANTS
 
 recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reactants,molfracs_atoms, &
      molfracs_reactants,massfracs_reactants,temp,press,C_P_0, H_0, S_0,names_reactants_orig, &
-     nabla_ad,gamma2,MMW,rho)
+     nabla_ad,gamma2,MMW,rho,c_pe)
 
   use thermo_data_block
   implicit none
@@ -359,6 +375,8 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
   !! CEA McBride 1994 style variables:
   DOUBLE PRECISION             :: n ! Moles of gas particles per total mass of mixture in kg
   DOUBLE PRECISION             :: n_spec(N_reactants) ! Moles of species per total mass of mixture in kg
+  DOUBLE PRECISION             :: n_spec_old(N_reactants) ! Moles of species per total mass of mixture in kg
+                                                          ! of previous iteration
   DOUBLE PRECISION             :: pi_atom(N_atoms) ! Lagrangian multipliers for the atomic species divided
                                                    ! by (R*T)
   DOUBLE PRECISION             :: matrix(N_reactants+N_atoms+1,N_reactants+N_atoms+1)
@@ -375,7 +393,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
   DOUBLE PRECISION, allocatable :: dgdnj(:)
   INTEGER, allocatable          :: solid_indices(:), solid_indices_buff(:)
   DOUBLE PRECISION              :: nsum, mu_gas(N_gas), a_gas(N_gas,N_atoms), mass_species, atom_mass, &
-       msum
+       msum, c_pe
 
   converged = .FALSE.
   slowed = .FALSE.
@@ -385,6 +403,8 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
   current_solids_number = 0
 
   MMW = 0d0
+
+  n_spec_old = n_spec
 
   ! FIRST: DO GAS ONLY!
   DO i_iter = 1, iter_max
@@ -397,7 +417,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
              matrix(1:N_atoms+1,1:N_atoms+1),vector(1:N_atoms+1), &
              solution_vector(1:N_atoms+1))
         call ec_CHANGE_ABUNDS_short(N_atoms,N_gas,solution_vector(1:N_atoms+1),n_spec,pi_atom,n,converged,&
-             (/1,1,1,1,1/),5,mu_gas,a_gas,temp,names_atoms,molfracs_atoms,N_reactants)
+             (/1,1,1,1,1/),5,mu_gas,a_gas,temp,names_atoms,molfracs_atoms,N_reactants,n_spec_old)
      ELSE
         call ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_gas,&
              press,temp,C_P_0,H_0,S_0,n,n_spec,pi_atom, &
@@ -407,8 +427,11 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
              matrix(1:N_gas+N_atoms+1,1:N_gas+N_atoms+1),vector(1:N_gas+N_atoms+1), &
              solution_vector(1:N_gas+N_atoms+1))
         call ec_CHANGE_ABUNDS_long(N_atoms,N_gas,solution_vector(1:N_gas+N_atoms+1), &
-             n_spec,pi_atom,n,converged,(/1,1,1,1,1/),5,names_atoms,molfracs_atoms,N_reactants)
+             n_spec,pi_atom,n,converged,(/1,1,1,1,1/),5,names_atoms,molfracs_atoms,N_reactants,&
+             n_spec_old)
      END IF
+
+     n_spec_old = n_spec
      
      IF (verbose) THEN
         write(*,*)
@@ -426,8 +449,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
 
   IF (.NOT. converged) THEN
      WRITE(*,*) 
-!     STOP 'EASY CHEM: Terminated without convergence!'
-     print*,'EASY CHEM: Terminated without convergence!'
+     WRITE(*,*) 'EASY CHEM WARNING: One ore more convergence criteria not satisfied!'
   END IF
 
   converged = .FALSE.
@@ -435,7 +457,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
 
   IF (N_gas .EQ. N_reactants) THEN
      call ec_CALC_ADIABATIC_GRADIENT(N_atoms,N_gas,N_reactants,n_spec, &
-          n,H_0,C_P_0,(/ 1,1,1,1,1 /),5,temp,names_atoms,nabla_ad,gamma2)
+          n,H_0,C_P_0,(/ 1,1,1,1,1 /),5,temp,names_atoms,nabla_ad,gamma2,c_pe)
   END IF
   
   ! THEN: INCLUDE CONDENSATES!
@@ -502,7 +524,8 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
                       solution_vector(1:N_atoms+1+N_spec_eff-N_gas))
                  call ec_CHANGE_ABUNDS_short(N_atoms,N_spec_eff,solution_vector(1:N_atoms+1+N_spec_eff-N_gas), &
                       n_spec,pi_atom,n,converged,&
-                      solid_indices,N_spec_eff-N_gas,mu_gas,a_gas,temp,names_atoms,molfracs_atoms,N_reactants)
+                      solid_indices,N_spec_eff-N_gas,mu_gas,a_gas,temp,names_atoms,molfracs_atoms,N_reactants, &
+                      n_spec_old)
               ELSE
                  call ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_spec_eff,&
                       press,temp,C_P_0,H_0,S_0,n,n_spec,pi_atom, &
@@ -513,8 +536,12 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
                       solution_vector(1:N_spec_eff+N_atoms+1))
                  call ec_CHANGE_ABUNDS_long(N_atoms,N_spec_eff,solution_vector(1:N_spec_eff+N_atoms+1), &
                       n_spec,pi_atom,n,converged,&
-                      solid_indices,N_spec_eff-N_gas,names_atoms,molfracs_atoms,N_reactants)
+                      solid_indices,N_spec_eff-N_gas,names_atoms,molfracs_atoms,N_reactants, &
+                      n_spec_old)
               END IF
+
+              n_spec_old = n_spec
+              
               IF (verbose) THEN
                  write(*,*)
                  write(*,*)
@@ -545,7 +572,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
                       names_reactants,molfracs_atoms, &
                       molfracs_reactants,massfracs_reactants, &
                       temp,press,C_P_0, H_0, S_0,names_reactants_orig, &
-                      nabla_ad,gamma2,MMW,rho)
+                      nabla_ad,gamma2,MMW,rho,c_pe)
                  quick = .TRUE.
                  slowed = .TRUE.
                  if (verbose) THEN
@@ -555,8 +582,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
                  EXIT
               ELSE
                  WRITE(*,*)
-!                 STOP 'EASY CHEM: Terminated without convergence!'
-                 print*,'EASY CHEM: Terminated without convergence!'
+                 WRITE(*,*) 'EASY CHEM WARNING: One ore more convergence criteria not satisfied!'
               END IF
            END IF
 
@@ -571,7 +597,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
      ! Calc. nabla_ad
      IF (.NOT. slowed) THEN
         call ec_CALC_ADIABATIC_GRADIENT(N_atoms,N_spec_eff,N_reactants,n_spec, &
-             n,H_0,C_P_0,solid_indices,N_spec_eff-N_gas,temp,names_atoms,nabla_ad,gamma2)
+             n,H_0,C_P_0,solid_indices,N_spec_eff-N_gas,temp,names_atoms,nabla_ad,gamma2,c_pe)
      END IF
      
      deallocate(solid_inc)
@@ -1193,7 +1219,7 @@ end subroutine ec_INV_MATRIX_short
 !#####################################################
 
 subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_atom,n,converged,&
-     solid_indices,N_solids,names_atoms,molfracs_atoms,N_reactants2)
+     solid_indices,N_solids,names_atoms,molfracs_atoms,N_reactants2,n_spec_old)
 
   use thermo_data_block       
   implicit none
@@ -1203,6 +1229,7 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
   DOUBLE PRECISION             :: solution_vector(N_reactants+N_atoms+1)
   DOUBLE PRECISION             :: n ! Moles of gas particles per total mass of mixture in kg
   DOUBLE PRECISION             :: n_spec(N_reactants2) ! Moles of species per total mass of mixture in kg
+  DOUBLE PRECISION             :: n_spec_old(N_reactants2) ! Moles of species per total mass of mixture in kg
   DOUBLE PRECISION             :: pi_atom(N_atoms) ! Lagrangian multipliers for the atomic species divided
                                                    ! by (R*T)
   LOGICAL                      :: converged
@@ -1348,7 +1375,18 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
         pi_good = .FALSE.
      END IF
   END DO
-  
+
+  IF ((.NOT. mass_good) .OR. (.NOT. pi_good)) THEN
+     mass_good = .TRUE.
+     pi_good = .TRUE.   
+     DO i_reac = 1, N_reactants2
+        IF (ABS(n_spec(i_reac)-n_spec_old(i_reac)) > 1d-10) THEN
+           mass_good = .FALSE.
+           pi_good = .FALSE.
+        END IF
+     END DO
+  END IF
+
   !!!-------------------
 
   ! ION CONVERGENCE?
@@ -1420,7 +1458,7 @@ end subroutine ec_CHANGE_ABUNDS_long
 !#####################################################
 
 subroutine ec_CHANGE_ABUNDS_short(N_atoms,N_reactants,solution_vector,n_spec,pi_atom,n,converged,&
-     solid_indices,N_solids,mu_gas,a_gas,temp,names_atoms,molfracs_atoms,N_reactants2)
+     solid_indices,N_solids,mu_gas,a_gas,temp,names_atoms,molfracs_atoms,N_reactants2,n_spec_old)
 
   use thermo_data_block       
   implicit none
@@ -1430,6 +1468,7 @@ subroutine ec_CHANGE_ABUNDS_short(N_atoms,N_reactants,solution_vector,n_spec,pi_
   DOUBLE PRECISION             :: solution_vector(N_atoms+1+(N_reactants-N_gas))
   DOUBLE PRECISION             :: n ! Moles of gas particles per total mass of mixture in kg
   DOUBLE PRECISION             :: n_spec(N_reactants2) ! Moles of species per total mass of mixture in kg
+  DOUBLE PRECISION             :: n_spec_old(N_reactants2) ! Moles of species per total mass of mixture in kg
   DOUBLE PRECISION             :: pi_atom(N_atoms) ! Lagrangian multipliers for the atomic species divided
                                                    ! by (R*T)
   LOGICAL                      :: converged
@@ -1586,6 +1625,17 @@ subroutine ec_CHANGE_ABUNDS_short(N_atoms,N_reactants,solution_vector,n_spec,pi_
         pi_good = .FALSE.
      END IF
   END DO
+
+  IF ((.NOT. mass_good) .OR. (.NOT. pi_good)) THEN
+     mass_good = .TRUE.
+     pi_good = .TRUE.   
+     DO i_reac = 1, N_reactants2
+        IF (ABS(n_spec(i_reac)-n_spec_old(i_reac)) > 1d-10) THEN
+           mass_good = .FALSE.
+           pi_good = .FALSE.
+        END IF
+     END DO
+  END IF
   
   !!!-------------------
 
@@ -1756,7 +1806,7 @@ end subroutine ec_INCLUDE_SOLIDS_QUESTIONMARK
 !#####################################################
 
 subroutine ec_CALC_ADIABATIC_GRADIENT(N_atoms,N_spec_eff,N_reactants,n_spec, &
-     n,H_0,C_P_0,solid_indices,N_solids,temp,names_atoms,nabla_ad,gamma2)
+     n,H_0,C_P_0,solid_indices,N_solids,temp,names_atoms,nabla_ad,gamma2,c_pe)
 
   use thermo_data_block
   implicit none
@@ -2024,7 +2074,7 @@ subroutine init_random_seed()
              + dt(6) * 60 * 1000 + dt(7) * 1000 &
              + dt(8)
      end if
-     pid = 4444!getpid()
+     pid = 0!getpid()
      t = ieor(t, int(pid, kind(t)))
      do i = 1, n
         seed(i) = lcg(t)

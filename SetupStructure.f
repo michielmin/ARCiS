@@ -2,7 +2,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 g,dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,met_r,dens1bar,minZ,Tc
+	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,met_r,dens1bar,minZ,Tc
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix,j,niter
 	logical ini,compute_mixrat
@@ -26,11 +26,15 @@
 	enddo
 	Pb(nr+1)=P(nr)
 
+	Mtot=Mplanet
+	grav=Ggrav*Mtot/(Rplanet)**2
+
 	if(compute_mixrat) nabla_ad=2d0/7d0
 	if(par_tprofile) call ComputeParamT(T)
 
 	do j=1,niter
 
+	if(.not.dochemistry.or.j.eq.1) then
 	do i=1,nr
 		tot=0d0
 		do imol=1,nmol
@@ -38,10 +42,9 @@
 		enddo
 		mixrat_r(i,1:nmol)=mixrat_r(i,1:nmol)/tot
 	enddo
+	endif
 
-	Mtot=Mplanet
-	g=Ggrav*Mtot/(Rplanet)**2
-	call output("log(g) [cgs]: " // dbl2string(log10(g),'(f8.3)'))
+	call output("log(g) [cgs]: " // dbl2string(log10(grav(1)),'(f8.3)'))
 
 	R(1)=Rplanet
 	mu=0d0
@@ -55,7 +58,7 @@
 			if(mixrat_r(i,imol).gt.0d0) mu=mu+mixrat_r(i,imol)*Mmol(imol)
 		enddo
 
-		g=Ggrav*Mtot/R(i)**2
+		grav(i)=Ggrav*Mtot/R(i)**2
 
 		if(i.lt.nr) then
 			if(P(i).ge.1d0.and.P(i+1).lt.1d0.or.i.eq.1) then
@@ -67,7 +70,7 @@
 		dlogp=log(Pb(i)/Pb(i+1))
 
 		Ndens(i)=P(i)*Avogadro/(RgasBar*T(i))
-		Hp(i)=(T(i)*kb)/(g*mp*mu)
+		Hp(i)=(T(i)*kb)/(grav(i)*mp*mu)
 		dz=dlogp*Hp(i)
 		dens(i)=Ndens(i)*mp*mu
 		R(i+1)=R(i)+dz
@@ -82,7 +85,7 @@
 
 	if(dochemistry.and.j.ne.niter) then
 	if(compute_mixrat) then
-		if(ini) call easy_chem_set_molfracs_atoms(COratio,metallicity)
+		call easy_chem_set_molfracs_atoms(COratio,metallicity)
 		call output("==================================================================")
 		call output("Computing chemistry using easy_chem by Paul Molliere")
 		do i=1,nr
@@ -241,7 +244,8 @@ c		if(x(i).gt.10000d0) x(i)=10000d0
 				x(i)=x(i+1)/exp(dlnT)
 			endif
 		endif
-		tau=tau+kappaT*dens(i)*(R(i+1)-R(i))
+c		tau=tau+kappaT*dens(i)*(R(i+1)-R(i))
+		tau=tau+kappaT*1d6*P(i)/grav(i)
 	enddo
 
 	return

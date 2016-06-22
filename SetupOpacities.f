@@ -370,7 +370,7 @@ c line strength
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,imol,w,gamma,x1,x2)
 !$OMP& SHARED(nlines,minw,iT,Mmol,P,ir,T,Saver,L_Saver,L_ilam,nlines_lam,L_nclose,mixrat_r,
-!$OMP&     L_do,L_gamma_air,L_gamma_self,L_a_therm,L_a_press,L_freq,L_imol,L_n)
+!$OMP&     L_do,L_gamma_air,L_gamma_self,L_a_therm,L_a_press,L_freq,L_imol,L_n,opacitymode)
 !$OMP DO
 	do i=1,nlines
 		if(L_do(i)) then
@@ -379,8 +379,13 @@ c thermal broadening
 			w=(sqrt(2d0*kb*T(ir)/(Mmol(imol)*mp)))
 			L_a_therm(i)=w*L_freq(i)/clight
 c pressure broadening
-			x1=L_gamma_air(i)*(1d0-mixrat_r(ir,imol))
-			x2=L_gamma_self(i)*mixrat_r(ir,imol)
+			if(opacitymode) then
+				x1=L_gamma_air(i)*(1d0-1d-4)
+				x2=L_gamma_self(i)*1d-4
+			else
+				x1=L_gamma_air(i)*(1d0-mixrat_r(ir,imol))
+				x2=L_gamma_self(i)*mixrat_r(ir,imol)
+			endif
 			L_a_press(i)=((x1+x2)*P(ir)/atm)*(296d0/T(ir))**L_n(i)
 
 			gamma=((L_a_press(i)*4d0)**2+L_a_therm(i)**2)/L_freq(i)**2

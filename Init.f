@@ -462,6 +462,7 @@ c allocate the arrays
 		allocate(P(nr))
 		allocate(Hp(nr))
 		allocate(nabla_ad(nr))
+		allocate(grav(nr))
 		allocate(mixrat_r(nr,nmol))
 		allocate(mixrat_old_r(nr,nmol))
 		allocate(cloud_dens(nr,max(nclouds,1)))
