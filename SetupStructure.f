@@ -98,6 +98,7 @@
 			if(P(i).ge.mixP.or.i.eq.1) then
 				if(met_r.gt.minZ) then
 					Tc=max(min(T(i),3000d0),100d0)
+c					Tc=T(i)
 					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
      &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i))
 				else if(i.gt.1) then
@@ -152,6 +153,7 @@
 			if(P(i).ge.mixP.or.i.eq.1) then
 				if(met_r.gt.minZ) then
 					Tc=max(min(T(i),3000d0),100d0)
+					Tc=T(i)
 					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
      &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i))
 				else if(i.gt.1) then
@@ -165,6 +167,7 @@
 				endif
 			else
 				Tc=max(min(T(i),3000d0),100d0)
+					Tc=T(i)
 				if(cloudcompute) call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
      &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i))
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)

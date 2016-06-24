@@ -1245,7 +1245,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,clouds
 	character*500 cloudspecies(max(Ncloud,1)),namecloud
 	integer j1,j2
 
-  INTEGER,parameter            :: N_reactants = 100
+  INTEGER,parameter            :: N_reactants = 104
   CHARACTER*40                 :: names_reactants(N_reactants)
   DOUBLE PRECISION             :: molfracs_reactants(N_reactants), &
        massfracs_reactants(N_reactants)
@@ -1349,20 +1349,27 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,clouds
   names_reactants(91) = 'H2O(c)'
   names_reactants(92) = 'TiO(c)'
   names_reactants(93) = 'TiO(L)'
-  names_reactants(94) = 'NaAlSi3O8(c)'
-  names_reactants(95) = 'KAlSi3O8(c)'
-  names_reactants(96) = 'MgAl2O4(c)'
-  names_reactants(97) = 'FeO(c)'
-  names_reactants(98) = 'Fe2O3(c)'
-  names_reactants(99) = 'Fe3O4(c)'
-  names_reactants(100) = 'Fe2SiO4(c)'
+  names_reactants(94) = 'MgAl2O4(c)'
+  names_reactants(95) = 'FeO(c)'
+  names_reactants(96) = 'Fe2O3(c)'
+  names_reactants(97) = 'Fe2SiO4(c)'
+  names_reactants(98) = 'TiO2(c)'
+  names_reactants(99) = 'TiO2(L)'
+  names_reactants(100) = 'H3PO4(c)'
+  names_reactants(101) = 'H3PO4(L)'
+  names_reactants(102) = 'Fe3O4(c)'
+  names_reactants(103) = 'NaAlSi3O8(c)'
+  names_reactants(104) = 'KAlSi3O8(c)'
+
+
+
 
 	N_reactants2=76
-	if(condensates) N_reactants2=100
+	if(condensates) N_reactants2=104
 
       temp=Tin
-      if(temp.gt.3000d0) temp=3000d0
-      if(temp.lt.70d0) temp=70d0
+!      if(temp.gt.3000d0) temp=3000d0
+!      if(temp.lt.70d0) temp=70d0
       press=Pin
         
         call EASY_CHEM(N_atoms,N_reactants2,names_atoms,names_reactants,molfracs_atoms, &
