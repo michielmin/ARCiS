@@ -209,6 +209,8 @@
 						ir=ir_next
 						xx1=xx2
 						goto 1
+					else if(ir_next.le.0.or.tautot.ge.maxtau) then
+						fluxg=fluxg+A*BBr(ir)*fact
 					endif
 					if(ir_next.le.0.or.tautot.ge.maxtau) fact=0d0
 					Ag=Ag+A*(1d0-fact)

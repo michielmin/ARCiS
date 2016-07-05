@@ -81,12 +81,12 @@
 		do i=1,nlam-1
 			nu1=-1d0
 			nu2=2d0
-			tot=0d0
-			do imol=1,nmol
-				do ig=1,ng
-					tot=tot+kappa_mol(i,ig,imol)*mixrat_r(ir,imol)/real(ng)
-				enddo
-			enddo
+c			tot=cont_tot(i)
+c			do imol=1,nmol
+c				do ig=1,ng
+c					tot=tot+kappa_mol(i,ig,imol)*mixrat_r(ir,imol)/real(ng)
+c				enddo
+c			enddo
 			do j=1,n_nu_line
 				k_line(j)=0d0
 				do imol=1,nmol
@@ -101,11 +101,11 @@
 				enddo
 			enddo
 			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cont_tot(i))
-			tot2=0d0
-			do ig=1,ng
-				tot2=tot2+kappa(ig)/real(ng)
-			enddo
-			if(tot2.gt.0d0) kappa=kappa*tot/tot2
+c			tot2=0d0
+c			do ig=1,ng
+c				tot2=tot2+kappa(ig)/real(ng)
+c			enddo
+c			if(tot2.gt.0d0) kappa=kappa*tot/tot2
 			Cabs(ir,i,1:ng)=kappa(1:ng)
 			call RayleighScattering(Csca(ir,i),ir,i)
 			do j=1,ng

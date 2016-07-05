@@ -47,11 +47,13 @@
 				allocate(ObsSpec(i)%R(ObsSpec(i)%nlam))
 				allocate(ObsSpec(i)%Rexp(ObsSpec(i)%nlam))
 				allocate(ObsSpec(i)%model(ObsSpec(i)%nlam))
+				allocate(ObsSpec(i)%model0(ObsSpec(i)%nlam))
+				allocate(ObsSpec(i)%modelbest(ObsSpec(i)%nlam))
 				ilam=1
 				do j=1,nj
 3					read(20,'(a1000)',err=3) line
 					specres_obs=specres
-					expspecres_obs=2d0
+					expspecres_obs=20d0
 					read(line,*,err=3,end=4) x,y,dy,specres_obs,expspecres_obs
 4					if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) then
 						ObsSpec(i)%lam(ilam)=x*1d-4
@@ -78,7 +80,7 @@
 	external ComputeChi2
 	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret),chi2min,random
 	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:),ybest(:),y0(:)
-	real*8 chi2obs(nobs),var(n_ret),chi2,gasdev,maxd,error(2,n_ret),var_best(n_ret)
+	real*8 chi2obs(nobs),var(n_ret),chi2,gasdev,maxd,error(2,n_ret),var_best(n_ret),chi2_0
 	real*8 x1,x2,minT(nr),maxT(nr),ran1,tot,lambda,chi2_1,chi2_2,dchi2(n_ret),chi2prev
 	integer imodel,ny,i,j,iter1,iter2,iy,k
 	
@@ -201,8 +203,8 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 		if(chi2.le.chi2prev) then
 			var0=var
 			n_not_improved=0
-			call output("Iteration improved" // trim(dbl2string(chi2,'(f8.3)')))
 			improved_iter=.true.
+			call output("Iteration improved" // trim(dbl2string(chi2,'(f8.3)')))
 			lambda=lambda/5d0
 			chi2_spec=0d0
 			chi2_prof=0d0
@@ -221,6 +223,11 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 				mixrat_best_r=mixrat_r
 				XeqCloud_best=XeqCloud
 				chi2min=chi2
+				do i=1,nobs
+					if(ObsSpec(i)%spec) then
+						ObsSpec(i)%modelbest=ObsSpec(i)%model
+					endif
+				enddo
 			else
 				new_best=.false.
 				var=var_best
@@ -230,6 +237,11 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 				XeqCloud=XeqCloud_best
 				chi2=chi2min
 				n_not_improved=0
+				do i=1,nobs
+					if(ObsSpec(i)%spec) then
+						ObsSpec(i)%model=ObsSpec(i)%modelbest
+					endif
+				enddo
 			endif
 			chi2prev=chi2
 		else if(iter2.eq.1) then
@@ -244,13 +256,6 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 			phase(1,0,1:nlam)=phase0(1:nlam)
 			flux(0,1:nlam)=flux0(1:nlam)
 			dofit=dofit_prev
-			call SetOutputMode(.false.)
-			call WriteStructure()
-			call WriteOutput()
-			call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
-			call WritePTlimits(var0,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)),
-     &			dobsA,demis,demisR,.true.)
-			call SetOutputMode(.true.)
 			goto 1
 		else
 			new_best=.false.
@@ -261,6 +266,11 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 			XeqCloud=XeqCloud_best
 			chi2=chi2prev
 			n_not_improved=0
+			do i=1,nobs
+				if(ObsSpec(i)%spec) then
+					ObsSpec(i)%model=ObsSpec(i)%modelbest
+				endif
+			enddo
 		endif
 		do i=1,n_ret
 			dvar(i)=max(error(1,i),error(2,i))
@@ -271,6 +281,12 @@ c			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
 		obsA0(1:nlam)=obsA(0,1:nlam)
 		phase0(1:nlam)=phase(1,0,1:nlam)
 		flux0(1:nlam)=flux(0,1:nlam)
+		chi2_0=chi2
+		do j=1,nobs
+			if(ObsSpec(j)%spec) then
+				ObsSpec(j)%model0=ObsSpec(j)%model
+			endif
+		enddo
 		dofit=.true.
 		dofit_prev=.true.
 		do i=1,n_ret
@@ -304,6 +320,7 @@ c			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
 				do j=1,nobs
 					if(ObsSpec(j)%spec) then
 						chi2_spec=chi2_spec+1d0/chi2obs(j)
+						ObsSpec(j)%modelbest=ObsSpec(j)%model
 					else
 						chi2_prof=chi2_prof+1d0/chi2obs(j)
 					endif
@@ -339,6 +356,7 @@ c			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
 				do j=1,nobs
 					if(ObsSpec(j)%spec) then
 						chi2_spec=chi2_spec+1d0/chi2obs(j)
+						ObsSpec(j)%modelbest=ObsSpec(j)%model
 					else
 						chi2_prof=chi2_prof+1d0/chi2obs(j)
 					endif
@@ -468,7 +486,7 @@ c================================================
 			if(var(i).gt.1d0) var(i)=1d0
 			if(var(i).lt.0d0) var(i)=0d0
 		enddo
-		call WritePTlimits(var,Cov,ErrVec,error,chi2min,dobsA,demis,demisR,.false.)
+		call WritePTlimits(var,Cov,ErrVec,error,chi2_0,dobsA,demis,demisR,.false.)
 		do i=1,n_ret
 			if(var(i).gt.1d0) var(i)=1d0
 			if(var(i).lt.0d0) var(i)=0d0
@@ -482,12 +500,21 @@ c================================================
 			phase(1,0,1:nlam)=phase0(1:nlam)
 			flux(0,1:nlam)=flux0(1:nlam)
 			dofit=dofit_prev
+			do j=1,nobs
+				if(ObsSpec(j)%spec) then
+					ObsSpec(j)%model=ObsSpec(j)%model0
+				endif
+			enddo
+			iy=1
+			do j=1,nobs
+		 		call RemapObs(j,y(iy:iy+ObsSpec(j)%nlam-1))
+				iy=iy+ObsSpec(j)%nlam
+			enddo
 			call SetOutputMode(.false.)
+			call WritePTlimits(var0,Cov,ErrVec,error,chi2_0,dobsA,demis,demisR,.true.)
+			call WriteRetrieval(imodel,chi2_spec,var0,error)
 			call WriteStructure()
 			call WriteOutput()
-			call WriteRetrieval(imodel,chi2_spec,var(1:n_ret))
-			call WritePTlimits(var0,Cov,ErrVec,error,chi2*real(ny)/real(max(1,ny-n_ret)),
-     &			dobsA,demis,demisR,.true.)
 			call SetOutputMode(.true.)
 		endif
 	enddo
@@ -755,8 +782,8 @@ c	print*,j,T(j-1),T(j),T(j+1)
 c	print*,imodel,(trim(dbl2string(RetPar(i)%value,'(es18.7)')),i=1,n_ret)
 
 	call InitDens()
-	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam)
-	Fstar=Fstar*pi*Rstar**2*pi/3.336e11
+	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
+	Fstar=Fstar*pi*Rstar**2
 	call SetOutputMode(.false.)
 	call ComputeModel(recomputeopac)
 	call SetOutputMode(.true.)
@@ -966,11 +993,13 @@ c	linear
 	end
 	
 
-	subroutine WriteRetrieval(imodel,chi2,var)
+	subroutine WriteRetrieval(imodel,chi2,var,error)
 	use GlobalSetup
 	IMPLICIT NONE
-	real*8 var(n_ret),chi2
+	real*8 var(n_ret),chi2,error(2,n_ret)
 	integer i,imodel,j
+
+	call MapRetrieval(var,error)
 
 	open(unit=20,file=trim(outputdir) // "retrieval",RECL=1000)
 	write(20,'("Model ",i)') imodel

@@ -92,7 +92,7 @@ c===============================================================================
 	integer n_voigt
 	logical HITEMP,opacitymode,compute_opac
 	integer nPom,nTom
-	character*500 opacitydir,specresfile
+	character*500 opacitydir,specresfile,starfile
 	real*8 Tmin,Tmax,minTprofile,maxTprofile
 	real*8 sintheta(360),costheta(360)
 	logical,allocatable :: do_dB(:)
@@ -168,7 +168,7 @@ cPoints for the temperature structure
 	type ObservedSpec
 		character*500 file
 		character*10 type
-		real*8,allocatable :: lam(:),y(:),dy(:),R(:),Rexp(:),model(:)
+		real*8,allocatable :: lam(:),y(:),dy(:),R(:),Rexp(:),model(:),modelbest(:),model0(:)
 		real*8 beta,scale
 		integer nlam
 		logical spec

@@ -13255,12 +13255,19 @@
 
 
 
-	subroutine ReadKurucz(Tk,loggk,lam,flux,nlam)
+	subroutine ReadKurucz(Tk,loggk,lam,flux,nlam,file)
 	use Kurucz
 	IMPLICIT NONE
 	integer nlam
-	real*8 Tk,loggk,Planck,lam(nlam),flux(nlam),x0,y0,x1,y1
+	real*8 Tk,loggk,Planck,lam(nlam),flux(nlam),x0,y0,x1,y1,scale
 	integer iTk,iloggk,i,i0,minT,ming,j,k
+	character*500 file
+	logical usefile
+	
+	if(file.ne.' ') then
+		call regridlog(file,lam,flux,nlam)
+		return
+	endif
 	
 	iTk=Tk
 	iloggk=loggk*10d0
@@ -13282,10 +13289,12 @@
 c	print*,Tk,loggk
 c	print*,real(kuruczT(i0)),real(kuruczg(i0))/10d0
 
+	scale=((Tk/real(kuruczT(i0)))**4)*3.1415926536/3.336e11
+
 	i=1
 	k=1
 1	x0=kuruczlam(k)
-	y0=kuruczflux(i0,k)*kuruczlam(k)**2
+	y0=scale*kuruczflux(i0,k)*kuruczlam(k)**2
 103	if(x0.ge.lam(i)) then
 		flux(i)=y0
 		i=i+1
@@ -13294,7 +13303,7 @@ c	print*,real(kuruczT(i0)),real(kuruczg(i0))/10d0
 100	k=k+1
 	if(k.gt.nkuruczlam) goto 102
 	x1=kuruczlam(k)
-	y1=kuruczflux(i0,k)*kuruczlam(k)**2
+	y1=scale*kuruczflux(i0,k)*kuruczlam(k)**2
 101	if(lam(i).le.x1.and.lam(i).gt.x0) then
 		if(y1.gt.1d-60.and.y0.gt.1d-60) then
 			flux(i)=10d0**(log10(y1)+(log10(lam(i))-log10(x1))*(log10(y0)-log10(y1))/(log10(x0)-log10(x1)))

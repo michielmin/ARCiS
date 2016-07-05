@@ -500,8 +500,8 @@ c allocate the arrays
 	enddo
 
 	allocate(Fstar(nlam))
-	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam)
-	Fstar=Fstar*pi*Rstar**2*pi/3.336e11
+	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
+	Fstar=Fstar*pi*Rstar**2
 
 	call output("==================================================================")
 
@@ -560,6 +560,9 @@ c			read(key%value,*) nr
 			read(key%value,*) Rstar
 		case("tstar")
 			read(key%value,*) Tstar
+		case("starfile")
+c starfile should be in W/(m^2 Hz) at the stellar surface
+			starfile=key%value
 		case("logg")
 			read(key%value,*) logg
 		case("dp","dplanet")
@@ -919,6 +922,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	TPfile=' '
 	mixratfile=.false.
 	Tin=-1d0
+
+	starfile=' '
 	
 	specresfile=' '
 	

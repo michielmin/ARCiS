@@ -84,23 +84,26 @@
 		finished=.false.
 
 		do j=1,npop
-			fit(i,j)=geneticfun(j+(i-1)*npop,nvars,var(i,j,1:nvars),nobs,fitobs(i,j,1:nobs),.true.,error)
-			ncomp=ncomp+1
-			finished(j)=.true.
 			if(same(j)) then
 				print*,'individual ',j+(i-1)*npop,' is a clone of ',same_pop(j)+(same_gen(j)-1)*npop
-			endif
-			if(fit(i,j).gt.max) then
-				print*,'fittest individual: ',j+(i-1)*npop
-				print*,' (generation ',i,' individual ',j,')'
-				max=fit(i,j)
-				var(i,0,1:nvars)=var(i,j,1:nvars)
-				fit(i,0)=fit(i,j)
-				fitobs(i,0,1:nobs)=fitobs(i,j,1:nobs)
-				gene(i,0,1:nvars)(1:7)=gene(i,j,1:nvars)(1:7)
-				call WriteStructure()
-				call WriteOutput()
-				call WriteRetrieval(j+(i-1)*npop,1d0/fit(i,j),var(i,j,1:nvars))
+				fit(i,j)=fit(same_gen(j),same_pop(j))
+				fitobs(i,j,1:nobs)=fitobs(same_gen(j),same_pop(j),1:nobs)
+			else
+				fit(i,j)=geneticfun(j+(i-1)*npop,nvars,var(i,j,1:nvars),nobs,fitobs(i,j,1:nobs),.true.,error)
+				ncomp=ncomp+1
+				finished(j)=.true.
+				if(fit(i,j).gt.max) then
+					print*,'fittest individual: ',j+(i-1)*npop
+					print*,' (generation ',i,' individual ',j,')'
+					max=fit(i,j)
+					var(i,0,1:nvars)=var(i,j,1:nvars)
+					fit(i,0)=fit(i,j)
+					fitobs(i,0,1:nobs)=fitobs(i,j,1:nobs)
+					gene(i,0,1:nvars)(1:7)=gene(i,j,1:nvars)(1:7)
+					call WriteStructure()
+					call WriteOutput()
+					call WriteRetrieval(j+(i-1)*npop,1d0/fit(i,j),var(i,j,1:nvars))
+				endif
 			endif
 		enddo
 
