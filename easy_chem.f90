@@ -395,6 +395,9 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
   DOUBLE PRECISION              :: nsum, mu_gas(N_gas), a_gas(N_gas,N_atoms), mass_species, atom_mass, &
        msum, c_pe
 
+  DOUBLE PRECISION             :: a(N_reactants,N_atoms)
+  logical :: inita
+
   converged = .FALSE.
   slowed = .FALSE.
   call ec_MAKE_ini_vals(N_reactants,N_atoms,n,n_spec,pi_atom)
@@ -406,6 +409,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
 
   n_spec_old = n_spec
 
+	inita=.false.
   ! FIRST: DO GAS ONLY!
   DO i_iter = 1, iter_max
 
@@ -422,13 +426,13 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
         call ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_gas,&
              press,temp,C_P_0,H_0,S_0,n,n_spec,pi_atom, &
              matrix(1:N_gas+N_atoms+1,1:N_gas+N_atoms+1),vector(1:N_gas+N_atoms+1),&
-             (/1,1,1,1,1/),names_reactants,N_reactants,5)
+             (/1,1,1,1,1/),names_reactants,N_reactants,5,a,inita)
         call ec_INV_MATRIX_long(N_atoms+N_gas+1, &
              matrix(1:N_gas+N_atoms+1,1:N_gas+N_atoms+1),vector(1:N_gas+N_atoms+1), &
              solution_vector(1:N_gas+N_atoms+1))
         call ec_CHANGE_ABUNDS_long(N_atoms,N_gas,solution_vector(1:N_gas+N_atoms+1), &
              n_spec,pi_atom,n,converged,(/1,1,1,1,1/),5,names_atoms,molfracs_atoms,N_reactants,&
-             n_spec_old)
+             n_spec_old,a)
      END IF
 
      n_spec_old = n_spec
@@ -510,6 +514,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
            END IF
            
            N_spec_eff = N_gas+current_solids_number
+              	inita=.false.
            DO i_iter = 1, iter_max
 
               IF (quick) THEN
@@ -530,14 +535,14 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
                  call ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_spec_eff,&
                       press,temp,C_P_0,H_0,S_0,n,n_spec,pi_atom, &
                       matrix(1:N_spec_eff+N_atoms+1,1:N_spec_eff+N_atoms+1),vector(1:N_spec_eff+N_atoms+1),&
-                      solid_indices,names_reactants,N_reactants,N_spec_eff-N_gas)
+                      solid_indices,names_reactants,N_reactants,N_spec_eff-N_gas,a,inita)
                  call ec_INV_MATRIX_long(N_atoms+N_spec_eff+1, &
                       matrix(1:N_spec_eff+N_atoms+1,1:N_spec_eff+N_atoms+1),vector(1:N_spec_eff+N_atoms+1), &
                       solution_vector(1:N_spec_eff+N_atoms+1))
                  call ec_CHANGE_ABUNDS_long(N_atoms,N_spec_eff,solution_vector(1:N_spec_eff+N_atoms+1), &
                       n_spec,pi_atom,n,converged,&
                       solid_indices,N_spec_eff-N_gas,names_atoms,molfracs_atoms,N_reactants, &
-                      n_spec_old)
+                      n_spec_old,a)
               END IF
 
               n_spec_old = n_spec
@@ -691,7 +696,7 @@ end subroutine ec_MAKE_ini_vals
 
 subroutine ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_reactants,press,temp,&
      C_P_0,H_0,S_0,n,n_spec,pi_atom,matrix,vector,solid_indices,&
-     names_reactants, N_reactants2, N_solids)
+     names_reactants, N_reactants2, N_solids, a, inita)
 
   use thermo_data_block       
   implicit none
@@ -712,10 +717,11 @@ subroutine ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_reactants,pr
   
   !! Internal:
   DOUBLE PRECISION             :: b_0(N_atoms), b_0_norm, mass_atom, b(N_atoms)
-  DOUBLE PRECISION             :: a(N_reactants,N_atoms), mu(N_reactants)
+  DOUBLE PRECISION             :: a(N_reactants2,N_atoms), mu(N_reactants)
   INTEGER                      :: i_atom, i_reac, i_ratom
   CHARACTER*40                 :: upper_atom_name
   CHARACTER*2                  :: upper_ratom_name
+	logical inita
 
 !!$  write(*,*) N_reactants
 
@@ -727,8 +733,11 @@ subroutine ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_reactants,pr
   END DO
   b_0 = molfracs_atoms/b_0_norm
 
+	if(.not.inita) then
   ! Set up a_ij
+	inita=.true.
   a = 0d0
+
   DO i_atom = 1, N_atoms
      call To_upper(names_atoms(i_atom),upper_atom_name)
      DO i_reac = 1, N_gas
@@ -756,6 +765,8 @@ subroutine ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_reactants,pr
         END DO
      END DO
   END DO
+
+	endif
 
   ! Set up mu_j
   DO i_reac = 1, N_reactants
@@ -1219,7 +1230,7 @@ end subroutine ec_INV_MATRIX_short
 !#####################################################
 
 subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_atom,n,converged,&
-     solid_indices,N_solids,names_atoms,molfracs_atoms,N_reactants2,n_spec_old)
+     solid_indices,N_solids,names_atoms,molfracs_atoms,N_reactants2,n_spec_old,a)
 
   use thermo_data_block       
   implicit none
@@ -1247,7 +1258,7 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
 
   ! MASS BALANCE CHECKS
   DOUBLE PRECISION             :: b_0(N_atoms), b_0_norm, mass_atom, b(N_atoms), pi_atom_old(N_atoms)
-  DOUBLE PRECISION             :: a(N_reactants,N_atoms), mu(N_reactants), mval_mass_good
+  DOUBLE PRECISION             :: a(N_reactants2,N_atoms), mu(N_reactants), mval_mass_good
   INTEGER                      :: i_atom, i_ratom
   CHARACTER*40                 :: upper_atom_name
   CHARACTER*2                  :: upper_ratom_name
@@ -1333,6 +1344,7 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
   END DO
   b_0 = molfracs_atoms/b_0_norm
 
+	if(.false.) then
   ! Set up a_ij
   a = 0d0
   DO i_atom = 1, N_atoms
@@ -1362,6 +1374,7 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
         END DO
      END DO
   END DO
+	endif
 
   mval_mass_good = MAXVAL(b_0)*1d-2
   DO i_atom = 1, N_atoms
@@ -1969,7 +1982,7 @@ subroutine To_upper(strin,strout)
   integer :: i
 
   strout = strin
-  do i = 1, len(strout)
+  do i = 1, len_trim(strout)
      select case(strout(i:i))
      case("a":"z")
         strout(i:i) = achar(iachar(strout(i:i))-32)
