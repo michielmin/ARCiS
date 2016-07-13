@@ -3,10 +3,14 @@
 	use Constants
 	IMPLICIT NONE
 	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,met_r,dens1bar,minZ,Tc
+	real*8 Otot,Ctot
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix,j,niter
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
+	
+	real*8 starttime,stoptime,chemtime
+	chemtime=0d0
 	
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
@@ -99,8 +103,11 @@
 				if(met_r.gt.minZ) then
 					Tc=max(min(T(i),3000d0),100d0)
 c					Tc=T(i)
+					call cpu_time(starttime)
 					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
      &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i))
+					call cpu_time(stoptime)
+					chemtime=chemtime+stoptime-starttime
 				else if(i.gt.1) then
 					mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
 					nabla_ad(i)=nabla_ad(i-1)
@@ -154,8 +161,11 @@ c					Tc=T(i)
 				if(met_r.gt.minZ) then
 					Tc=max(min(T(i),3000d0),100d0)
 					Tc=T(i)
+				call cpu_time(starttime)
 					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
      &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i))
+				call cpu_time(stoptime)
+				chemtime=chemtime+stoptime-starttime
 				else if(i.gt.1) then
 					mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
 					nabla_ad(i)=nabla_ad(i-1)
@@ -168,8 +178,11 @@ c					Tc=T(i)
 			else
 				Tc=max(min(T(i),3000d0),100d0)
 					Tc=T(i)
+				call cpu_time(starttime)
 				if(cloudcompute) call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
      &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i))
+				call cpu_time(stoptime)
+				chemtime=chemtime+stoptime-starttime
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
 				nabla_ad(i)=nabla_ad(i-1)
 			endif
@@ -201,6 +214,21 @@ c					Tc=T(i)
 		call SetupCloud(i)
 	enddo
 
+	Otot=0d0
+	Ctot=0d0
+	do i=1,nr
+		do imol=1,nmol
+			if(includemol(imol)) then
+				Otot=Otot+Ndens(i)*mixrat_r(i,imol)*real(Oatoms(imol))
+				Ctot=Ctot+Ndens(i)*mixrat_r(i,imol)*real(Catoms(imol))
+			endif
+		enddo
+	enddo
+	COret=Ctot/Otot
+	call output("C/O: " // dbl2string(COret,'(f8.3)'))
+
+	call output("Chemistry runtime:  " // trim(dbl2string((chemtime),'(f10.2)')) // " s")
+	
 	return
 	end
 
@@ -213,6 +241,7 @@ c					Tc=T(i)
 	tau=0d0
 	Tirr=betaT*sqrt(Rstar/(2d0*Dplanet))*Tstar
 	do i=nr,1,-1
+		tau=kappaT*1d6*P(i)/grav(i)
 		if(tau.lt.0d0) tau=0d0
 		x(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)
 		if(tau.lt.100d0) then
@@ -247,8 +276,6 @@ c		if(x(i).gt.10000d0) x(i)=10000d0
 				x(i)=x(i+1)/exp(dlnT)
 			endif
 		endif
-c		tau=tau+kappaT*dens(i)*(R(i+1)-R(i))
-		tau=tau+kappaT*1d6*P(i)/grav(i)
 	enddo
 
 	return

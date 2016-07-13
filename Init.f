@@ -693,6 +693,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Tin(key%nr1)
 		case("retrieve_profile")
 			read(key%value,*) retrieve_profile
+		case("faircoverage")
+			read(key%value,*) faircoverage
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -921,7 +923,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 
 	TPfile=' '
 	mixratfile=.false.
-	Tin=-1d0
+	Tin=0d0
 
 	starfile=' '
 	
@@ -929,6 +931,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	sinkZ=.false.
 	alphaZ=1d0
+	
+	faircoverage=.false.
 
 	do i=1,nclouds
 		Cloud(i)%P=1d-4
@@ -1119,9 +1123,9 @@ c number of cloud/nocloud combinations
 				RetPar(i+j-1)%xmax=RetPar(i)%xmax
 			enddo
 			if(RetPar(i)%keyword.eq.'tvalue001') then
-				do j=1,nr
-					RetPar(i+j-1)%xmin=-RetPar(i)%xmax
-				enddo
+c				do j=1,nr
+c					RetPar(i+j-1)%xmin=-RetPar(i)%xmax
+c				enddo
 				maxTprofile=RetPar(i)%xmax
 				RetPar(i+RetPar(i)%n-1)%xmax=0.2
 			endif

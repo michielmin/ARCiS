@@ -4,6 +4,8 @@
 	integer i,j,ilam,nj
 	real*8 x,y,dy,specres_obs,expspecres_obs
 	character*1000 line
+	real*8 scale,scale_av,d,dmin
+	integer nscale,i2,j2
 	
 	do i=1,nobs
 		select case(ObsSpec(i)%type)
@@ -31,6 +33,7 @@
 				enddo
 				ObsSpec(i)%spec=.false.
 			case default
+				ObsSpec(i)%spec=.true.
 				open(unit=20,file=ObsSpec(i)%file,RECL=1000)
 				j=1
 				ilam=1
@@ -50,6 +53,7 @@
 				allocate(ObsSpec(i)%model0(ObsSpec(i)%nlam))
 				allocate(ObsSpec(i)%modelbest(ObsSpec(i)%nlam))
 				ilam=1
+				if(ObsSpec(i)%beta.lt.0d0) ObsSpec(i)%beta=ObsSpec(i)%nlam
 				do j=1,nj
 3					read(20,'(a1000)',err=3) line
 					specres_obs=specres
@@ -65,8 +69,39 @@
 					endif
 				enddo
 		end select
-		if(ObsSpec(i)%beta.lt.0d0) ObsSpec(i)%beta=ObsSpec(i)%nlam
 	enddo
+
+	if(faircoverage) then
+		scale_av=0d0
+		nscale=0
+		do i=1,nobs
+			if(ObsSpec(i)%spec) then
+				do j=1,ObsSpec(i)%nlam
+					scale=0d0
+					do i2=1,nobs
+						if(ObsSpec(i2)%spec) then
+							do j2=1,ObsSpec(i2)%nlam
+								d=ObsSpec(i)%lam(j)/ObsSpec(i2)%lam(j2)
+								d=log10(d)/log10(2d0)
+								scale=scale+exp(-d**2)
+							enddo
+						endif
+					enddo
+					ObsSpec(i)%dy(j)=ObsSpec(i)%dy(j)*scale
+					scale_av=scale_av+scale
+					nscale=nscale+1
+				enddo
+			endif
+		enddo
+		scale_av=scale_av/real(nscale)
+		do i=1,nobs
+			if(ObsSpec(i)%spec) then
+				do j=1,ObsSpec(i)%nlam
+					ObsSpec(i)%dy(j)=ObsSpec(i)%dy(j)/scale_av
+				enddo
+			endif
+		enddo
+	endif
 	
 	return
 	end
@@ -85,7 +120,7 @@
 	integer imodel,ny,i,j,iter1,iter2,iy,k
 	
 	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret*3),W(n_ret*3,n_ret+1),Winv(n_ret,n_ret),dmax,scale
-	real*8 chi2_spec,chi2_prof,maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret)
+	real*8 chi2_spec,chi2_prof,maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret),dvar_prev(n_ret)
 	real*8 backup_xmin(n_ret),backup_xmax(n_ret)
 	real*8 obsA1(nlam),obsA2(nlam),dobsA(n_ret,nlam)
 	real*8 emis1(nlam),emis2(nlam),demis(n_ret,nlam)
@@ -141,7 +176,7 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 	iy=1
 	do i=1,nobs
 		yobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%y(1:ObsSpec(i)%nlam)
-		dyobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%dy(1:ObsSpec(i)%nlam)
+		dyobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%dy(1:ObsSpec(i)%nlam)*sqrt(real(ObsSpec(i)%nlam))
 		specornot(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%spec
 		iy=iy+ObsSpec(i)%nlam		
 	enddo
@@ -204,7 +239,7 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 			var0=var
 			n_not_improved=0
 			improved_iter=.true.
-			call output("Iteration improved" // trim(dbl2string(chi2,'(f8.3)')))
+			call output("Iteration improved" // trim(dbl2string(chi2,'(f13.3)')))
 			lambda=lambda/5d0
 			chi2_spec=0d0
 			chi2_prof=0d0
@@ -215,7 +250,7 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 					chi2_prof=chi2_prof+1d0/chi2obs(j)
 				endif
 			enddo
-			call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
+			call output("   " // trim(dbl2string(chi2_spec,'(f13.3)')) // trim(dbl2string(chi2_prof,'(f13.3)')))
 			if(chi2.le.chi2min) then
 				new_best=.false.
 				var_best=var
@@ -275,8 +310,9 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 		do i=1,n_ret
 			dvar(i)=max(error(1,i),error(2,i))
 			if(dvar(i).eq.0d0) dvar(i)=0.1d0
-c			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
+			dvar(i)=(dvar(i)+dvar_prev(i))/2d0
      	enddo
+		dvar_prev=dvar
 		y0=y
 		obsA0(1:nlam)=obsA(0,1:nlam)
 		phase0(1:nlam)=phase(1,0,1:nlam)
@@ -305,6 +341,12 @@ c			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
 				iy=iy+ObsSpec(j)%nlam
 			enddo
 			chi2_1=chi2
+			chi2_1=0d0
+			do j=1,nobs
+				if(ObsSpec(j)%spec) then
+					chi2_1=chi2_1+1d0/chi2obs(j)
+				endif
+			enddo
 			obsA1(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
 			emis1(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 			emisR1(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
@@ -325,8 +367,8 @@ c			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
 						chi2_prof=chi2_prof+1d0/chi2obs(j)
 					endif
 				enddo
-				call output("Updating best fit " // trim(dbl2string(chi2,'(f8.3)')))
-				call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
+				call output("Updating best fit " // trim(dbl2string(chi2,'(f13.3)')))
+				call output("   " // trim(dbl2string(chi2_spec,'(f13.3)')) // trim(dbl2string(chi2_prof,'(f13.3)')))
 			endif
 			var=var0
 			var(i)=var(i)-dvar(i)
@@ -341,6 +383,12 @@ c			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
 				iy=iy+ObsSpec(j)%nlam
 			enddo
 			chi2_2=chi2
+			chi2_2=0d0
+			do j=1,nobs
+				if(ObsSpec(j)%spec) then
+					chi2_2=chi2_2+1d0/chi2obs(j)
+				endif
+			enddo
 			obsA2(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
 			emis2(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 			emisR2(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
@@ -361,8 +409,8 @@ c			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
 						chi2_prof=chi2_prof+1d0/chi2obs(j)
 					endif
 				enddo
-				call output("Updating best fit " // trim(dbl2string(chi2,'(f8.3)')))
-				call output("   " // trim(dbl2string(chi2_spec,'(f8.3)')) // trim(dbl2string(chi2_prof,'(f8.3)')))
+				call output("Updating best fit " // trim(dbl2string(chi2,'(f13.3)')))
+				call output("   " // trim(dbl2string(chi2_spec,'(f13.3)')) // trim(dbl2string(chi2_prof,'(f13.3)')))
 			endif
 			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/(x1-x2)
 			dchi2(i)=(chi2_1-chi2_2)/(x1-x2)
@@ -371,7 +419,7 @@ c			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
 			demisR(i,1:nlam)=(emisR1(1:nlam)-emisR2(1:nlam))/(x1-x2)
 			if(abs(chi2_1-chi2_2)/(chi2_1+chi2_2).lt.1d-4) then
 				if(dvar(i).lt.0.99d0) then
-					dvar(i)=dvar(i)*5d0
+					dvar(i)=dvar(i)*2d0
 					goto 20
 				else if(dvar(i).lt.0.999d0) then
 					dvar(i)=1d0
@@ -480,19 +528,7 @@ c================================================
 		call dlsei(w, MDW, ME, MA, MG, n_ret, PRGOPT, b, RNORME,
      +   RNORML, MODE, WS, IP)
 
-		dvar=b
-		var=var0+dvar
-		do i=1,n_ret
-			if(var(i).gt.1d0) var(i)=1d0
-			if(var(i).lt.0d0) var(i)=0d0
-		enddo
-		call WritePTlimits(var,Cov,ErrVec,error,chi2_0,dobsA,demis,demisR,.false.)
-		do i=1,n_ret
-			if(var(i).gt.1d0) var(i)=1d0
-			if(var(i).lt.0d0) var(i)=0d0
-			dvar(i)=sqrt(error(1,i)**2+error(2,i)**2)*3d0
-		enddo
-
+		dvar(1:n_ret)=b(1:n_ret)
 		if(improved_iter) then
 			var=var0
 			y=y0
@@ -512,11 +548,22 @@ c================================================
 			enddo
 			call SetOutputMode(.false.)
 			call WritePTlimits(var0,Cov,ErrVec,error,chi2_0,dobsA,demis,demisR,.true.)
-			call WriteRetrieval(imodel,chi2_spec,var0,error)
+			call WriteRetrieval(imodel,chi2_0,var0,error)
 			call WriteStructure()
 			call WriteOutput()
 			call SetOutputMode(.true.)
 		endif
+		var=var0+dvar
+		do i=1,n_ret
+			if(var(i).gt.1d0) var(i)=1d0
+			if(var(i).lt.0d0) var(i)=0d0
+		enddo
+		call WritePTlimits(var,Cov,ErrVec,error,chi2_0,dobsA,demis,demisR,.false.)
+		do i=1,n_ret
+			if(var(i).gt.1d0) var(i)=1d0
+			if(var(i).lt.0d0) var(i)=0d0
+			dvar(i)=sqrt(error(1,i)**2+error(2,i)**2)*3d0
+		enddo
 	enddo
 	do i=1,nobs
 		if(.not.ObsSpec(i)%spec.and.ObsSpec(i)%scale.gt.0d0) then
@@ -525,6 +572,7 @@ c================================================
 			ObsSpec(i)%beta=10d0**(ObsSpec(i)%beta/2d0)
 			call output("Adjusting beta to " // trim(dbl2string(ObsSpec(i)%beta,'(es10.4)')))
 			chi2min=1d200
+			chi2prev=1d200
 		endif
 	enddo
 	enddo
@@ -572,6 +620,8 @@ c================================================
 	obsAmax=0d0
 	emismax=0d0
 	emisRmax=0d0
+	COerr(1)=1d200
+	COerr(2)=0d0
 
 	do i=1,n_ret
 		error(1:2,i)=var0(i)
@@ -588,15 +638,15 @@ c================================================
 	do k=1,nk
 		iter=0
 1		continue
-		if(k.le.n_ret) then
-			vec=0d0
-			vec(k)=sqrt(chi2)
-			iter=1000
-		else if(k.le.n_ret*2) then
-			vec=0d0
-			vec(k-n_ret)=-sqrt(chi2)
-			iter=1000
-		else
+c		if(k.le.n_ret) then
+c			vec=0d0
+c			vec(k)=sqrt(chi2)
+c			iter=1000
+c		else if(k.le.n_ret*2) then
+c			vec=0d0
+c			vec(k-n_ret)=-sqrt(chi2)
+c			iter=1000
+c		else
 			vec=0d0
 			tot=0d0
 			do i=1,n_ret
@@ -606,7 +656,7 @@ c================================================
 			vec=vec*(random(idum)**(1d0/real(n_ret)))
 			vec=vec/sqrt(tot)
 			vec=vec*sqrt(chi2)
-		endif
+c		endif
 		do i=1,n_ret
 			dvar(i)=0d0
 			do j=1,n_ret
@@ -657,6 +707,8 @@ c================================================
 			if(var(i).lt.error(1,i)) error(1,i)=var(i)
 			if(var(i).gt.error(2,i)) error(2,i)=var(i)
 		enddo
+		if(COret.lt.COerr(1)) COerr(1)=COret
+		if(COret.gt.COerr(2)) COerr(2)=COret
 		do i=1,nlam
 			if(obsA0(i).gt.obsAmax(i)) obsAmax(i)=obsA0(i)
 			if(emis0(i).gt.emismax(i)) emismax(i)=emis0(i)
@@ -670,6 +722,11 @@ c================================================
 	error(2,1:n_ret)=abs(error(2,1:n_ret)-var0(1:n_ret))
 
 	call MapRetrieval(var0,error)
+	call InitDens()
+	call SetupStructure(.false.)
+
+	COerr(1)=abs(COerr(1)-COret)
+	COerr(2)=abs(COerr(2)-COret)
 
 	call SetOutputMode(.true.)
 	if(ioflag) then
@@ -818,11 +875,42 @@ c	print*,imodel,(trim(dbl2string(RetPar(i)%value,'(es18.7)')),i=1,n_ret)
 	IMPLICIT NONE
 	type(SettingKey) key
 	character*1000 readline
-	integer i
-	real*8 var(n_ret),dvar(2,n_ret),x
+	integer i,j
+	real*8 var(n_ret),dvar(2,n_ret),x,xx
 
 	do i=1,n_ret
-		if(RetPar(i)%logscale) then
+		if(RetPar(i)%keyword(1:6).eq.'tvalue') then
+			read(RetPar(i)%keyword(7:len_trim(RetPar(i)%keyword)),*) j
+			xx=10d0**(log10(TP0)+dTP*log10(P(j)))
+			x=var(i)
+			if(x.gt.0.5) then
+				x=(x-0.5)*2d0
+				RetPar(i)%value=(RetPar(i)%xmax-xx)*x
+			else
+				x=(0.5-x)*2d0
+				RetPar(i)%value=(RetPar(i)%xmin-xx)*x
+			endif
+			x=var(i)+dvar(1,i)
+			if(x.gt.0.5) then
+				x=(x-0.5)*2d0
+				RetPar(i)%error1=(RetPar(i)%xmax-xx)*x
+				RetPar(i)%error1=RetPar(i)%error1-RetPar(i)%value
+			else
+				x=(0.5-x)*2d0
+				RetPar(i)%error1=(RetPar(i)%xmin-xx)*x
+				RetPar(i)%error1=RetPar(i)%error1-RetPar(i)%value
+			endif
+			x=var(i)+dvar(2,i)
+			if(x.gt.0.5) then
+				x=(x-0.5)*2d0
+				RetPar(i)%error2=(RetPar(i)%xmax-xx)*x
+				RetPar(i)%error2=RetPar(i)%error2-RetPar(i)%value
+			else
+				x=(0.5-x)*2d0
+				RetPar(i)%error2=(RetPar(i)%xmin-xx)*x
+				RetPar(i)%error2=RetPar(i)%error2-RetPar(i)%value
+			endif
+		else if(RetPar(i)%logscale) then
 c	log
 			x=var(i)
 			RetPar(i)%value=10d0**(log10(RetPar(i)%xmin)+log10(RetPar(i)%xmax/RetPar(i)%xmin)*x)
@@ -880,11 +968,29 @@ c	linear
 	use ReadKeywords
 	use Constants
 	IMPLICIT NONE
-	integer i
-	real*8 var(n_ret),x
+	integer i,j
+	real*8 var(n_ret),x,xx
 
 	do i=1,n_ret
-		if(RetPar(i)%logscale) then
+		if(RetPar(i)%keyword(1:6).eq.'tvalue') then
+			read(RetPar(i)%keyword(7:len_trim(RetPar(i)%keyword)),*) j
+			xx=10d0**(log10(TP0)+dTP*log10(P(j)))
+			if(RetPar(i)%value.lt.0d0) then
+				if(xx.lt.RetPar(i)%xmin) then
+					var(i)=0d0
+				else
+					x=RetPar(i)%value/(RetPar(i)%xmin-xx)
+					var(i)=0.5d0-x/2d0
+				endif
+			else
+				if(xx.gt.RetPar(i)%xmax) then
+					var(i)=1d0
+				else
+					x=RetPar(i)%value/(RetPar(i)%xmax-xx)
+					var(i)=0.5d0+x/2d0
+				endif
+			endif
+		else if(RetPar(i)%logscale) then
 c	log
 			var(i)=log10(RetPar(i)%value/RetPar(i)%xmin)/log10(RetPar(i)%xmax/RetPar(i)%xmin)
 		else if(RetPar(i)%squarescale) then
@@ -1015,6 +1121,10 @@ c	linear/squared
      &					RetPar(i)%error2,RetPar(i)%error1
 		endif
 	enddo
+	if(.not.dochemistry) then
+		write(20,'("C/O ratio = ",f14.3," +/- ",f11.3,f11.3)') COret,COerr(2),COerr(1)
+	endif
+
 	close(unit=20)
 	
 	do i=1,nobs

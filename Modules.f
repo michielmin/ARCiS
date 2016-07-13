@@ -55,7 +55,7 @@ c===============================================================================
 	integer idum,maxiter,Nphot0
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT
-	logical dochemistry,retrieve_profile,condensates
+	logical dochemistry,retrieve_profile,condensates,faircoverage
 	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT
@@ -88,6 +88,23 @@ c===============================================================================
      &	31.7949,  94.2413,  40.7302,  87.3580,  49.6543,  50.6424,   2.0014,  43.7539,  
      &	79.3792,   4.0030,   0.0000,   0.0000,   0.0000,   0.0000,   0.0000,   0.0000,
      &   0.0000,  22.9900,  39.0980,  63.8660,  66.9410 /))
+	integer Catoms(59),Oatoms(59)
+	parameter(Catoms = (/0,1,0,0,1,1,
+     &				 0,0,0,0,0,0,0,0,
+     &				 0,0,0,0,1,1,0,0,
+     &				 1,1,0,2,2,0,1,0,
+     &				 0,1,0,0,0,0,0,2,
+     &				 1,0,1,1,4,3,0,1,
+     &				 0,0,0,0,0,0,0,0,
+     &				 0,0,0,0,0 /))
+	parameter(Oatoms = (/1,2,3,1,1,0,
+     &				 2,1,2,2,0,3,1,0,
+     &				 0,0,0,1,1,1,1,0,
+     &				 0,0,2,0,0,0,1,0,
+     &				 0,2,2,1,3,1,1,0,
+     &				 1,0,0,0,0,0,0,0,
+     &				 3,0,0,0,0,0,0,0,
+     &				 0,0,0,1,1 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt
 	logical HITEMP,opacitymode,compute_opac
@@ -96,6 +113,7 @@ c===============================================================================
 	real*8 Tmin,Tmax,minTprofile,maxTprofile
 	real*8 sintheta(360),costheta(360)
 	logical,allocatable :: do_dB(:)
+	real*8 COret,COerr(2)
 	
 	logical sinkZ
 	real*8 alphaZ

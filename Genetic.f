@@ -166,25 +166,23 @@
 1			continue
 
 			r=ran1(idum)
-			if(r.lt.0.25d0) then
+			if(r.lt.0.70d0) then
 				call select_mate(male,npop,jj1,idum,mate(0:npop,1:nobs),nobs,-1)
 				call select_mate(male,npop,jj2,idum,mate(0:npop,1:nobs),nobs,jj1)
-			else if(r.lt.0.50d0) then
+			else if(r.lt.0.80d0) then
 				call select_mate(female,npop,jj1,idum,mate(0:npop,1:nobs),nobs,-1)
 				call select_mate(female,npop,jj2,idum,mate(0:npop,1:nobs),nobs,jj1)
-			else if(r.lt.0.75) then
+			else if(r.lt.0.90d0) then
 				call select_mate(male,npop,jj1,idum,mate(0:npop,1:nobs),nobs,-1)
 				call select_mate(female,npop,jj2,idum,mate(0:npop,1:nobs),nobs,jj1)
 			else
 				call select_mate(female,npop,jj1,idum,mate(0:npop,1:nobs),nobs,-1)
 				call select_mate(male,npop,jj2,idum,mate(0:npop,1:nobs),nobs,jj1)
 			endif
-c			if(jj1.eq.jj2) goto 1
-c			if(ipar(jj1).gt.(npop/4).or.ipar(jj2).gt.(npop/4)) goto 1
-c			if(jj1.eq.0.or.jj2.eq.0.and.ipar(0).gt.2) goto 1
 
-			ipar(jj1)=ipar(jj1)+1
-			ipar(jj2)=ipar(jj2)+1
+			if(jj1.eq.jj2) goto 1
+			if(ipar(jj1).gt.(npop/4).or.ipar(jj2).gt.(npop/4)) goto 1
+			if(jj1.eq.0.or.jj2.eq.0.and.ipar(0).gt.2) goto 1
 
 			idupl=0
 2			continue
@@ -208,11 +206,11 @@ c			if(jj1.eq.0.or.jj2.eq.0.and.ipar(0).gt.2) goto 1
 			endif
 			do k=1,nvars
 				write(gene(i+1,j  ,k)(1:2),'("0.")')
-			if(.true.)then	!gene_cross) then
+			if(ran1(idum).gt.0.5d0) then	!gene_cross) then
 c	use complex cross-over method with genes
 				do ig=3,7
 					r=ran1(idum)
-					if(r.lt.(r1(k)/(r1(k)+r2(k)))) then
+					if(r.lt.0.5d0) then		!(r1(k)/(r1(k)+r2(k)))) then
 						gene(i+1,j  ,k)(ig:ig)=gene(i,jj1,k)(ig:ig)
 					else
 						gene(i+1,j  ,k)(ig:ig)=gene(i,jj2,k)(ig:ig)
@@ -223,7 +221,8 @@ c	use complex cross-over method with genes
 			else
 c	use simple cross-over method
 4				continue
-				xx=gasdev(idum)*(mutate+abs(var(i,jj1,k)-var(i,jj2,k)))+(r1(k)/(r1(k)+r2(k)))
+c				xx=gasdev(idum)*(mutate+abs(var(i,jj1,k)-var(i,jj2,k)))+(r1(k)/(r1(k)+r2(k)))
+				xx=gasdev(idum)+0.5d0
 				var(i+1,j,k)=var(i,jj1,k)*xx+var(i,jj2,k)*(1d0-xx)
 				if(var(i+1,j,k).lt.0d0.or.var(i+1,j,k).ge.1d0) goto 4
 				write(gene(i+1,j,k),'(f7.5)') var(i+1,j,k)
@@ -290,6 +289,8 @@ c				creep mutation
 				enddo				
 			endif
 50			continue
+			ipar(jj1)=ipar(jj1)+1
+			ipar(jj2)=ipar(jj2)+1
 		enddo
 	enddo
 
