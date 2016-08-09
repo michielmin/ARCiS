@@ -90,6 +90,11 @@
 	if(dochemistry.and.j.ne.niter) then
 	if(compute_mixrat) then
 		call easy_chem_set_molfracs_atoms(COratio,metallicity)
+		if(Tform.gt.0d0) then
+			call call_easy_chem(Tform,Pform,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,.true.,cloudspecies,
+     &					XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),.true.)
+    		ini=.true.
+    	endif
 		call output("==================================================================")
 		call output("Computing chemistry using easy_chem by Paul Molliere")
 		do i=1,nr
@@ -105,7 +110,7 @@
 c					Tc=T(i)
 					call cpu_time(starttime)
 					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
-     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i))
+     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
 					call cpu_time(stoptime)
 					chemtime=chemtime+stoptime-starttime
 				else if(i.gt.1) then
@@ -148,6 +153,11 @@ c					Tc=T(i)
 	if(compute_mixrat) then
 		ini=.true.
 		call easy_chem_set_molfracs_atoms(COratio,metallicity)
+		if(Tform.gt.0d0) then
+			call call_easy_chem(Tform,Pform,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,.true.,cloudspecies,
+     &					XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),.true.)
+    		ini=.true.
+    	endif
 		call output("==================================================================")
 		call output("Computing chemistry using easy_chem by Paul Molliere")
 		do i=1,nr
@@ -163,7 +173,7 @@ c					Tc=T(i)
 					Tc=T(i)
 				call cpu_time(starttime)
 					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i))
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
 				call cpu_time(stoptime)
 				chemtime=chemtime+stoptime-starttime
 				else if(i.gt.1) then
@@ -180,7 +190,7 @@ c					Tc=T(i)
 					Tc=T(i)
 				call cpu_time(starttime)
 				if(cloudcompute) call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i))
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
 				call cpu_time(stoptime)
 				chemtime=chemtime+stoptime-starttime
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
@@ -271,7 +281,7 @@ c		if(x(i).gt.10000d0) x(i)=10000d0
 		if(i.lt.nr) then
 			dlnP=log(P(i+1)/P(i))
 			dlnT=log(x(i+1)/x(i))
-			if((dlnT/dlnP).gt.(nabla_ad(i))) then
+			if((dlnT/dlnP).gt.(nabla_ad(i)).and.adiabatic_tprofile) then
 				dlnT=(nabla_ad(i))*dlnP
 				x(i)=x(i+1)/exp(dlnT)
 			endif
@@ -291,7 +301,7 @@ c		if(x(i).gt.10000d0) x(i)=10000d0
 	character*10 namemix(nmol)
 	
 	open(unit=50,file=trim(outputdir) // 'densityprofile.dat',RECL=100)
-	write(50,'("#",a14,a15,a15,a13,a10,a10)') "radius [cm]","height [cm]","dens [g/cm^3]","N [1/cm^3]","T [K]","P [Ba]"
+	write(50,'("#",a14,a15,a15,a13,a10,a10)') "radius [cm]","height [cm]","dens [g/cm^3]","N [1/cm^3]","T [K]","P [bar]"
 	do i=1,nr
 		write(50,'(es15.7,es15.4,es15.4,es13.4,f10.3,es10.3)') sqrt(R(i)*R(i+1)),sqrt(R(i)*R(i+1))-Rplanet
      &			,dens(i),Ndens(i),T(i),P(i)
@@ -316,7 +326,7 @@ c		if(x(i).gt.10000d0) x(i)=10000d0
 
 	open(unit=50,file=trim(outputdir) // 'mixingratios.dat',RECL=1000)
 	form='("#",a9,a10,' // trim(int2string(nmix,'(i2)')) // 'a15)'
-	write(50,form) "T [K]","P [Ba]",namemix(1:nmix)
+	write(50,form) "T [K]","P [bar]",namemix(1:nmix)
 	form='(f10.3,es10.3,' // trim(int2string(nmix,'(i2)')) // 'es15.4)'
 	do i=1,nr
 		write(50,form) T(i),P(i),mix(i,1:nmix)
@@ -326,7 +336,7 @@ c		if(x(i).gt.10000d0) x(i)=10000d0
 	do ii=1,nclouds
 		open(unit=50,file=trim(outputdir) // 'clouddens' // trim(int2string(ii,'(i0.2)')) // '.dat',RECL=1000)
 		form='("#",a9,a15,a15,a15)'
-		write(50,form) "P [Ba]","dens [g/cm^3]","Eq. dens","gas dens"
+		write(50,form) "P [bar]","dens [g/cm^3]","Eq. dens","gas dens"
 		form='(es10.3,es15.3,es15.3,es15.3)'
 		do i=1,nr
 			write(50,form) P(i),cloud_dens(i,ii),dens(i)*XeqCloud(i,ii),dens(i)

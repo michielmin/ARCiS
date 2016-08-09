@@ -515,14 +515,19 @@ c allocate the arrays
 
 	call ReadDataCIA()
 
+	if(Pform.lt.0d0) Pform=-Pform*82.05736*1.01325*Tform/(mp*2.2*Avogadro)
 
 	if(retrieval) then
 		do i=1,n_ret
 			if(RetPar(i)%x0.lt.-1d150) then
-				if(RetPar(i)%logscale) then
-					RetPar(i)%x0=sqrt(RetPar(i)%xmax*RetPar(i)%xmin)
+				if(RetPar(i)%keyword(1:6).eq.'tvalue') then
+					RetPar(i)%x0=0d0
 				else
-					RetPar(i)%x0=0.5d0*(RetPar(i)%xmax+RetPar(i)%xmin)
+					if(RetPar(i)%logscale) then
+						RetPar(i)%x0=sqrt(RetPar(i)%xmax*RetPar(i)%xmin)
+					else
+						RetPar(i)%x0=0.5d0*(RetPar(i)%xmax+RetPar(i)%xmin)
+					endif
 				endif
 			endif
 			if(RetPar(i)%dx.lt.0d0) then
@@ -695,6 +700,17 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) retrieve_profile
 		case("faircoverage")
 			read(key%value,*) faircoverage
+		case("speclimits")
+			read(key%value,*) speclimits
+		case("adiabatic","adiabatic_tprofile")
+			read(key%value,*) adiabatic_tprofile
+		case("tform")
+			read(key%value,*) Tform
+		case("pform")
+			read(key%value,*) Pform
+		case("rhoform","densform")
+			read(key%value,*) Pform
+			Pform=-Pform
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -929,10 +945,17 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	specresfile=' '
 	
+	speclimits=.false.
+	
 	sinkZ=.false.
 	alphaZ=1d0
 	
 	faircoverage=.false.
+
+	Tform=-10d0
+	Pform=1d0
+	
+	adiabatic_tprofile=.false.
 
 	do i=1,nclouds
 		Cloud(i)%P=1d-4

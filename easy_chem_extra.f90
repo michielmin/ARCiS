@@ -1233,7 +1233,8 @@ END MODULE nrutil
 !===================================================================================
 
 
-subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,cloudspecies,Xcloud,Ncloud,nabla_ad)
+subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
+   cloudspecies,Xcloud,Ncloud,nabla_ad,set_gas_atoms)
 	use AtomsModule
   implicit none
 
@@ -1255,82 +1256,217 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,clouds
   INTEGER                      :: i_t, i_p, i_reac, N_reactants2
 	logical con(N_reactants)
 
+	integer at_re(N_reactants,N_atoms)
+	real*8 tot
+	logical set_gas_atoms
+
+	at_re=0
   names_reactants(1) = 'H'
+	at_re(1,1)=1
   names_reactants(2) = 'H2'
+	at_re(2,1)=2
   names_reactants(3) = 'He'
+	at_re(3,2)=1
   names_reactants(4) = 'O'
+	at_re(4,5)=1
   names_reactants(5) = 'C'
+	at_re(5,3)=1
   names_reactants(6) = 'N'
+	at_re(6,4)=1
   names_reactants(7) = 'Mg'
+	at_re(7,7)=1
   names_reactants(8) = 'Si'
+	at_re(8,9)=1
   names_reactants(9) = 'Fe'
+	at_re(9,17)=1
   names_reactants(10) = 'S'
+	at_re(10,11)=1
   names_reactants(11) = 'AL'
+	at_re(11,8)=1
   names_reactants(12) = 'Ca'
+	at_re(12,14)=1
   names_reactants(13) = 'Na'
+	at_re(13,6)=1
   names_reactants(14) = 'Ni'
+	at_re(14,18)=1
   names_reactants(15) = 'P'
+	at_re(15,10)=1
   names_reactants(16) = 'K'
+	at_re(16,13)=1
   names_reactants(17) = 'Ti'
+	at_re(17,15)=1
   names_reactants(18) = 'CO'
+	at_re(18,3)=1
+	at_re(18,5)=1
   names_reactants(19) = 'OH'
+	at_re(19,1)=1
+	at_re(19,5)=1
   names_reactants(20) = 'SH'
+	at_re(20,1)=1
+	at_re(20,11)=1
   names_reactants(21) = 'N2'
+	at_re(21,4)=2
   names_reactants(22) = 'O2'
+	at_re(22,5)=2
   names_reactants(23) = 'SiO'
+	at_re(23,5)=1
+	at_re(23,9)=1
   names_reactants(24) = 'TiO'
+	at_re(24,15)=1
+	at_re(24,5)=1
   names_reactants(25) = 'SiS'
+	at_re(25,9)=1
+	at_re(25,11)=1
   names_reactants(26) = 'H2O'
+	at_re(26,1)=2
+	at_re(26,5)=1
   names_reactants(27) = 'C2'
+	at_re(27,3)=2
   names_reactants(28) = 'CH'
+	at_re(28,1)=1
+	at_re(28,3)=1
   names_reactants(29) = 'CN'
+	at_re(29,3)=1
+	at_re(29,4)=1
   names_reactants(30) = 'CS'
+	at_re(30,3)=1
+	at_re(30,11)=1
   names_reactants(31) = 'SiC'
+	at_re(31,3)=1
+	at_re(31,9)=1
   names_reactants(32) = 'NH'
+	at_re(32,1)=1
+	at_re(32,4)=1
   names_reactants(33) = 'SiH'
+	at_re(33,1)=1
+	at_re(33,9)=1
   names_reactants(34) = 'NO'
+	at_re(34,4)=1
+	at_re(34,5)=1
   names_reactants(35) = 'SN'
+	at_re(35,4)=1
+	at_re(35,11)=1
   names_reactants(36) = 'SiN'
+	at_re(36,4)=1
+	at_re(36,9)=1
   names_reactants(37) = 'SO'
+	at_re(37,5)=1
+	at_re(37,11)=1
   names_reactants(38) = 'S2'
+	at_re(38,11)=2
   names_reactants(39) = 'C2H'
+	at_re(39,1)=1
+	at_re(39,3)=2
   names_reactants(40) = 'HCN'
+	at_re(40,1)=1
+	at_re(40,3)=1
+	at_re(40,4)=1
   names_reactants(41) = 'C2H2,acetylene'
+	at_re(41,1)=2
+	at_re(41,3)=2
   names_reactants(42) = 'CH4'
+	at_re(42,1)=4
+	at_re(42,3)=1
   names_reactants(43) = 'ALH'
+	at_re(43,1)=1
+	at_re(43,8)=1
   names_reactants(44) = 'ALOH'
+	at_re(44,1)=1
+	at_re(44,8)=1
+	at_re(44,5)=1
   names_reactants(45) = 'AL2O'
+	at_re(45,8)=2
+	at_re(45,5)=1
   names_reactants(46) = 'CaOH'
+	at_re(46,1)=1
+	at_re(46,5)=1
+	at_re(46,14)=1
   names_reactants(47) = 'MgH'
+	at_re(47,1)=1
+	at_re(47,7)=1
   names_reactants(48) = 'MgOH'
+	at_re(48,1)=1
+	at_re(48,7)=1
+	at_re(48,5)=1
   names_reactants(49) = 'PH3'
+	at_re(49,1)=3
+	at_re(49,10)=1
   names_reactants(50) = 'CO2'
+	at_re(50,3)=1
+	at_re(50,5)=2
   names_reactants(51) = 'TiO2'
+	at_re(51,15)=1
+	at_re(51,5)=2
   names_reactants(52) = 'Si2C'
+	at_re(52,9)=2
+	at_re(52,3)=1
   names_reactants(53) = 'SiO2'
+	at_re(53,9)=1
+	at_re(53,5)=2
   names_reactants(54) = 'FeO'
+	at_re(54,17)=1
+	at_re(54,5)=1
   names_reactants(55) = 'NH2'
+	at_re(55,1)=2
+	at_re(55,4)=1
   names_reactants(56) = 'NH3'
+	at_re(56,1)=3
+	at_re(56,4)=1
   names_reactants(57) = 'CH2'
+	at_re(57,1)=2
+	at_re(57,3)=1
   names_reactants(58) = 'CH3'
+	at_re(58,1)=3
+	at_re(58,3)=1
   names_reactants(59) = 'H2S'
+	at_re(59,1)=2
+	at_re(59,11)=1
   names_reactants(60) = 'VO'
+	at_re(60,16)=1
+	at_re(60,5)=1
   names_reactants(61) = 'VO2'
+	at_re(61,16)=1
+	at_re(61,5)=2
   names_reactants(62) = 'NaCL'
+	at_re(62,6)=1
+	at_re(62,12)=1
   names_reactants(63) = 'KCL'
+	at_re(63,13)=1
+	at_re(63,12)=1
   names_reactants(64) = 'NaOH'
+	at_re(64,1)=1
+	at_re(64,5)=1
+	at_re(64,6)=1
   names_reactants(65) = 'KOH'
+	at_re(65,1)=1
+	at_re(65,5)=1
+	at_re(65,13)=1
   names_reactants(66) = 'e-'
   names_reactants(67) = 'H+'
+	at_re(67,1)=1
   names_reactants(68) = 'H-'
+	at_re(68,1)=1
   names_reactants(69) = 'Na+'
+	at_re(69,6)=1
   names_reactants(70) = 'K+'
+	at_re(70,13)=1
   names_reactants(71) = 'PH2'
+	at_re(71,1)=2
+	at_re(71,10)=1
   names_reactants(72) = 'P2'
+	at_re(72,10)=2
   names_reactants(73) = 'PS'
+	at_re(73,10)=1
+	at_re(73,11)=1
   names_reactants(74) = 'PO'
+	at_re(74,10)=1
+	at_re(74,5)=1
   names_reactants(75) = 'P4O6'
+	at_re(75,10)=4
+	at_re(75,5)=6
   names_reactants(76) = 'PH'
+	at_re(76,1)=1
+	at_re(76,10)=1
 
   names_reactants(77) = 'VO(c)'
   names_reactants(78) = 'VO(L)'
@@ -1360,7 +1496,6 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,clouds
   names_reactants(102) = 'Fe3O4(c)'
   names_reactants(103) = 'NaAlSi3O8(c)'
   names_reactants(104) = 'KAlSi3O8(c)'
-
 
 
 
@@ -1407,13 +1542,24 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,clouds
 				j1=j2+1
 			enddo
 		enddo
-! 		do i=1,N_reactants2
-! 			if(con(i)) then
-! 				print*,'can condense: ',trim(names_reactants(i))
-! 			endif
-! 		enddo
 	endif
-		
+
+	if(set_gas_atoms) then
+		molfracs_atoms=0d0
+		do i=1,N_atoms
+			do i_reac=1,N_reactants2
+				molfracs_atoms(i)=molfracs_atoms(i)+molfracs_reactants(i_reac)*real(at_re(i_reac,i))
+			enddo
+		enddo
+		tot=sum(molfracs_atoms(1:N_atoms))
+		molfracs_atoms=molfracs_atoms/tot
+ 		do i=1,N_reactants2
+			if(i.ge.77.and.massfracs_reactants(i).gt.0d0) then
+ 				print*,'In the core: ',trim(names_reactants(i))
+ 			endif
+ 		enddo
+	endif
+
 	return
 	end
 

@@ -417,15 +417,15 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 			dobsA(i,1:nlam)=(obsA1(1:nlam)-obsA2(1:nlam))/(x1-x2)
 			demis(i,1:nlam)=(emis1(1:nlam)-emis2(1:nlam))/(x1-x2)
 			demisR(i,1:nlam)=(emisR1(1:nlam)-emisR2(1:nlam))/(x1-x2)
-			if(abs(chi2_1-chi2_2)/(chi2_1+chi2_2).lt.1d-4) then
-				if(dvar(i).lt.0.99d0) then
-					dvar(i)=dvar(i)*2d0
-					goto 20
-				else if(dvar(i).lt.0.999d0) then
-					dvar(i)=1d0
-					goto 20
-				endif
-			endif
+c			if(abs(chi2_1-chi2_2)/(chi2_1+chi2_2).lt.1d-4) then
+c				if(dvar(i).lt.0.99d0) then
+c					dvar(i)=dvar(i)*2d0
+c					goto 20
+c				else if(dvar(i).lt.0.999d0) then
+c					dvar(i)=1d0
+c					goto 20
+c				endif
+c			endif
 		enddo
 
 		dofit_prev=dofit
@@ -665,9 +665,11 @@ c		endif
 		enddo
 2		continue
 		iter=iter+1
-		obsA0=0d0
-		emis0=0d0
-		emisR0=0d0
+		if(speclimits) then
+			obsA0=0d0
+			emis0=0d0
+			emisR0=0d0
+		endif
 		do i=1,n_ret
 			var(i)=var0(i)+dvar(i)
 			if(var(i).gt.1d0) then
@@ -680,18 +682,22 @@ c		endif
 				dvar=dvar*0.999d0*(-var0(i))/(var(i)-var0(i))
 				goto 2
 			endif
-			obsA0(1:nlam)=obsA0(1:nlam)+dobsA(i,1:nlam)*dvar(i)
-			emis0(1:nlam)=emis0(1:nlam)+demis(i,1:nlam)*dvar(i)
-			emisR0(1:nlam)=emisR0(1:nlam)+demisR(i,1:nlam)*dvar(i)
+			if(speclimits) then
+				obsA0(1:nlam)=obsA0(1:nlam)+dobsA(i,1:nlam)*dvar(i)
+				emis0(1:nlam)=emis0(1:nlam)+demis(i,1:nlam)*dvar(i)
+				emisR0(1:nlam)=emisR0(1:nlam)+demisR(i,1:nlam)*dvar(i)
+			endif
 		enddo
-		obsA0=obsA0+obsA(0,1:nlam)/(pi*Rstar**2)
-		emis0=emis0+phase(1,0,1:nlam)+flux(0,1:nlam)
-		emisR0=emisR0+(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
-		do i=1,nlam
-			if(obsA0(i).lt.0d0) obsA0(i)=0d0
-			if(emis0(i).lt.0d0) emis0(i)=0d0
-			if(emisR0(i).lt.0d0) emisR0(i)=0d0
-		enddo
+		if(speclimits) then
+			obsA0=obsA0+obsA(0,1:nlam)/(pi*Rstar**2)
+			emis0=emis0+phase(1,0,1:nlam)+flux(0,1:nlam)
+			emisR0=emisR0+(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
+			do i=1,nlam
+				if(obsA0(i).lt.0d0) obsA0(i)=0d0
+				if(emis0(i).lt.0d0) emis0(i)=0d0
+				if(emisR0(i).lt.0d0) emisR0(i)=0d0
+			enddo
+		endif
 
 		call MapRetrieval(var,error)
 		
@@ -709,14 +715,16 @@ c		endif
 		enddo
 		if(COret.lt.COerr(1)) COerr(1)=COret
 		if(COret.gt.COerr(2)) COerr(2)=COret
-		do i=1,nlam
-			if(obsA0(i).gt.obsAmax(i)) obsAmax(i)=obsA0(i)
-			if(emis0(i).gt.emismax(i)) emismax(i)=emis0(i)
-			if(emisR0(i).gt.emisRmax(i)) emisRmax(i)=emisR0(i)
-			if(obsA0(i).lt.obsAmin(i)) obsAmin(i)=obsA0(i)
-			if(emis0(i).lt.emismin(i)) emismin(i)=emis0(i)
-			if(emisR0(i).lt.emisRmin(i)) emisRmin(i)=emisR0(i)
-		enddo
+		if(speclimits) then
+			do i=1,nlam
+				if(obsA0(i).gt.obsAmax(i)) obsAmax(i)=obsA0(i)
+				if(emis0(i).gt.emismax(i)) emismax(i)=emis0(i)
+				if(emisR0(i).gt.emisRmax(i)) emisRmax(i)=emisR0(i)
+				if(obsA0(i).lt.obsAmin(i)) obsAmin(i)=obsA0(i)
+				if(emis0(i).lt.emismin(i)) emismin(i)=emis0(i)
+				if(emisR0(i).lt.emisRmin(i)) emisRmin(i)=emisR0(i)
+			enddo
+		endif
 	enddo
 	error(1,1:n_ret)=abs(error(1,1:n_ret)-var0(1:n_ret))
 	error(2,1:n_ret)=abs(error(2,1:n_ret)-var0(1:n_ret))
@@ -738,23 +746,25 @@ c		endif
 		enddo
 		close(unit=45)
 
-		open(unit=45,file=trim(outputdir) // "emis_limits.dat")
-		do i=1,nlam-1
-			write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emismin(i),emismax(i)
-		enddo
-		close(unit=45)
+		if(speclimits) then
+			open(unit=45,file=trim(outputdir) // "emis_limits.dat")
+			do i=1,nlam-1
+				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emismin(i),emismax(i)
+			enddo
+			close(unit=45)
 
-		open(unit=45,file=trim(outputdir) // "emisR_limits.dat")
-		do i=1,nlam-1
-			write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emisRmin(i),emisRmax(i)
-		enddo
-		close(unit=45)
+			open(unit=45,file=trim(outputdir) // "emisR_limits.dat")
+			do i=1,nlam-1
+				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emisRmin(i),emisRmax(i)
+			enddo
+			close(unit=45)
 
-		open(unit=45,file=trim(outputdir) // "trans_limits.dat")
-		do i=1,nlam-1
-			write(45,*) sqrt(lam(i)*lam(i+1))*1d4,obsAmin(i),obsAmax(i)
-		enddo
-		close(unit=45)
+			open(unit=45,file=trim(outputdir) // "trans_limits.dat")
+			do i=1,nlam-1
+				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,obsAmin(i),obsAmax(i)
+			enddo
+			close(unit=45)
+		endif
 	endif
 
 	return
@@ -799,13 +809,11 @@ c     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
 			call ComputeParamT(spec(1:nr))
 			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta
 		case("logtp")
-			spec(1)=(log10(abs(T(1)/T(2))/log10(P(1)/P(2))))
+			spec(1)=0d0!(log10(abs(T(1)/T(2))/log10(P(1)/P(2))))
 			do j=2,nr-1
 				spec(j)=(log10(abs(T(j-1)/T(j)))/log10(P(j-1)/P(j)))-(log10(abs(T(j)/T(j+1)))/log10(P(j)/P(j+1)))
-c				spec(j)=spec(j)+log10(abs(T(j-1)/T(j+1)))/log10(P(j-1)/P(j+1))
-c	print*,j,T(j-1),T(j),T(j+1)
 			enddo
-			spec(nr)=(log10(abs(T(nr-1)/T(nr)))/log10(P(nr-1)/P(nr)))
+			spec(nr)=0d0!(log10(abs(T(nr-1)/T(nr)))/log10(P(nr-1)/P(nr)))
 			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)/real(nr)
 			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta
 		case("prior","priors")
@@ -875,8 +883,10 @@ c	print*,imodel,(trim(dbl2string(RetPar(i)%value,'(es18.7)')),i=1,n_ret)
 	IMPLICIT NONE
 	type(SettingKey) key
 	character*1000 readline
-	integer i,j
+	integer i,j,k
 	real*8 var(n_ret),dvar(2,n_ret),x,xx
+
+	do k=1,2
 
 	do i=1,n_ret
 		if(RetPar(i)%keyword(1:6).eq.'tvalue') then
@@ -956,6 +966,8 @@ c	linear
 		call ReadAndSetKey(key)
 	enddo
 	call ConvertUnits()
+
+	enddo
 
 	return
 	end

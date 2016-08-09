@@ -119,7 +119,7 @@
      &				trim(int2string(nclouds,'(i3)')) // 'l1))'
 		write(30,form) "lambda [mu]",docloud0(1:nclouds,1:ncc)
 	else
-		write(30,'("#",a13,a19)') "lambda [mu]","P [Ba]"
+		write(30,'("#",a13,a19)') "lambda [mu]","P [bar]"
 	endif
 	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7)'
 	do i=1,nlam-1
@@ -244,7 +244,7 @@
 	
 	file=trim(outputdir) // "opacity_" // trim(flag) // "_" // trim(int2string(ir,'(i0.4)')) // ".dat"
 	open(unit=30,file=file,RECL=100)
-	write(30,'("# Pressure:    ",es10.3," Ba")') P(ir)
+	write(30,'("# Pressure:    ",es10.3," bar")') P(ir)
 	write(30,'("# Temperature: ",f10.3," K")') T(ir)
 	write(30,'("#",a13,a19)') "lambda [mu]","kappa [cm^2/mol]"
 	do i=1,nnu0

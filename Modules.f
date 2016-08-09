@@ -55,14 +55,14 @@ c===============================================================================
 	integer idum,maxiter,Nphot0
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT
-	logical dochemistry,retrieve_profile,condensates,faircoverage
+	logical dochemistry,retrieve_profile,condensates,faircoverage,speclimits
 	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT
-	logical mixratfile,par_tprofile
+	logical mixratfile,par_tprofile,adiabatic_tprofile
 	character*500 TPfile
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze
-	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW
+	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ,nspike
@@ -79,7 +79,7 @@ c===============================================================================
      &	'H2S   ','HCOOH ','HO2   ','O     ','ClONO2','NO+   ','HOBr  ','C2H4  ',
      &	'CH3OH ','CH3Br ','CH3CN ','CF4   ','C4H2  ','HC3N  ','H2    ','CS    ',
      &	'SO3   ','He    ','X     ','X     ','X     ','X     ','X     ','X     ',
-     &  'X     ','Na    ','K     ','TiO   ','VO    ' /))
+     &  'C2    ','Na    ','K     ','TiO   ','VO    ' /))
 	parameter(Mmol = (/     17.8851,  43.6918,  47.6511,  43.6947,  27.8081,  15.9272,  
      &	31.7674,  29.7889,  63.5840,  45.6607,  16.9072,  62.5442,  16.8841,  19.8619,  
      &	36.1973,  80.3271,   1.0070,  51.0760,  59.6379,  29.8088,  52.0765,  27.8112,  
@@ -87,7 +87,7 @@ c===============================================================================
      &	33.8332,  45.6731,  32.7593,  15.8794,  96.7366,  29.7813,  96.2063,  27.8507,  
      &	31.7949,  94.2413,  40.7302,  87.3580,  49.6543,  50.6424,   2.0014,  43.7539,  
      &	79.3792,   4.0030,   0.0000,   0.0000,   0.0000,   0.0000,   0.0000,   0.0000,
-     &   0.0000,  22.9900,  39.0980,  63.8660,  66.9410 /))
+     &  24.0214,  22.9900,  39.0980,  63.8660,  66.9410 /))
 	integer Catoms(59),Oatoms(59)
 	parameter(Catoms = (/0,1,0,0,1,1,
      &				 0,0,0,0,0,0,0,0,
