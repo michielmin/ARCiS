@@ -163,6 +163,15 @@
 		ipar=0
 		nclones=0
 		do j=1,npop
+			if(j.lt.npop/5) then
+c random freakshow
+			do k=1,nvars
+				var(i+1,j,k)=ran1(idum)
+				write(gene(i+1,j,k),'(f7.5)') var(i+1,j,k)
+			enddo
+
+			else
+c normal evolution
 1			continue
 
 			r=ran1(idum)
@@ -291,6 +300,8 @@ c				creep mutation
 50			continue
 			ipar(jj1)=ipar(jj1)+1
 			ipar(jj2)=ipar(jj2)+1
+
+			endif
 		enddo
 	enddo
 
