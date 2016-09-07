@@ -6,13 +6,14 @@
 	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,v,fluxg,dx,dy,wphase(nphase)
 	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase0(nphase),theta,fstop,albedo,ct1,ct2,E0
 	real*8 tot,g(nr),Eabs,EJv(nr),Crw(nr)
+	real*8 Eemit(nr),Femit(nr)
 	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,irdark
 	logical docloud0(nclouds),goingup,hitR,onedge,hitR1,hitR2,dorw(nr)
 	type(Mueller) M(nr)
 	real*8 starttime,stoptime
 	
 	NphotPlanet=Nphot0/real(ng)+5
-	NphotStar=nphase*Nphot0/real(ng)+5
+	NphotStar=nphase*Nphot0/real(ng*45)+5
 
 	EJv=0d0
 
@@ -44,38 +45,37 @@
 			if((R(ir+1)-R(ir))*Crw(ir).gt.factRW) dorw(ir)=.true.
 		enddo
 
-		irdark=0
-		do ir=nr,1,-1
-			tau=0d0
-			do jr=ir+1,nr
-				tau=tau+Ca(jr)*(R(jr+1)-R(jr))
-			enddo
-			if(tau.gt.maxtau) then
-				irdark=ir
-				exit
-			endif
-		enddo
 
-		do ir=irdark+1,nr
-			E0=4d0*pi*(R(ir+1)**3-R(ir)**3)*Planck(T(ir),freq(ilam))*Ca(ir)/3d0
-			if(E0.gt.0d0) then
-				Nphot=NphotPlanet
-				E0=E0/real(Nphot)
-				do iphot=1,Nphot
-					call randomdirection(x,y,z)
-					rr=R(ir)+(R(ir+1)-R(ir))*random(idum)
-					x=x*rr
-					y=y*rr
-					z=z*rr
-					call randomdirection(dx,dy,dz)
-					jr=ir
-					onedge=.false.
-					goingup=((x*dx+y*dy+z*dz).gt.0d0)
-					call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,0.5d0,Eabs,EJv)
-					if(jr.gt.nr.and.nscat.gt.0) then
-						fluxg=fluxg+E*E0/real(ng)
-					endif
-				enddo
+		tau=0d0
+		do ir=nr,1,-1
+			Eemit(ir)=4d0*pi*(R(ir+1)**3-R(ir)**3)*Planck(T(ir),freq(ilam))*Ca(ir)/3d0
+			Femit(ir)=Eemit(ir)*exp(-tau)
+			tau=tau+Ca(ir)*(R(ir+1)-R(ir))
+		enddo
+		E0=sum(Femit(1:nr))
+		Femit=Femit/E0
+		
+		Nphot=NphotPlanet
+		do iphot=1,Nphot
+			E0=random(idum)
+			do ir=nr,1,-1
+				E0=E0-Femit(ir)
+				if(E0.lt.0d0) exit
+			enddo
+			E0=Eemit(ir)/(real(Nphot)*Femit(ir))
+
+			call randomdirection(x,y,z)
+			rr=R(ir)+(R(ir+1)-R(ir))*random(idum)
+			x=x*rr
+			y=y*rr
+			z=z*rr
+			call randomdirection(dx,dy,dz)
+			jr=ir
+			onedge=.false.
+			goingup=((x*dx+y*dy+z*dz).gt.0d0)
+			call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,0.5d0,Eabs,EJv)
+			if(jr.gt.nr.and.nscat.gt.0) then
+				fluxg=fluxg+E*E0/real(ng)
 			endif
 		enddo
 

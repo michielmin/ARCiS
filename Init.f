@@ -926,7 +926,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	par_tprofile=.false.
 	
 	nphase=0
-	Nphot0=100
+	Nphot0=2500
 
 	dochemistry=.false.
 	metallicity=0d0
