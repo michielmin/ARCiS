@@ -783,7 +783,7 @@ c	endif
 	enddo
 	
 	if(mixratfile) then
-		open(unit=20,file=TPfile)
+		open(unit=20,file=TPfile,RECL=1000)
 		read(20,*) n
 		read(20,*) names(1:n)
 		do j=1,n

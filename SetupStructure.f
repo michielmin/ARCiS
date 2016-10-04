@@ -38,7 +38,7 @@
 
 	do j=1,niter
 
-	if(.not.dochemistry.or.j.eq.1) then
+	if(.not.mixratfile.and.(.not.dochemistry.or.j.eq.1)) then
 	do i=1,nr
 		tot=0d0
 		do imol=1,nmol
