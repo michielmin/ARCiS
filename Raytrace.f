@@ -233,6 +233,7 @@
 	phase=phase*1d23/distance**2
 
 	deallocate(rtrace)
+	deallocate(phase0)
 	
 	return
 	end

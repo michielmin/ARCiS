@@ -36,7 +36,8 @@
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7)'
 	do i=1,nlam-1
 		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
-     &					flux(0:ncc,i)
+c     &					flux(0:ncc,i)
+     &					(phase(1,j,i)+flux(j,i),j=0,ncc)
 	enddo
 	close(unit=30)
 
@@ -54,7 +55,8 @@
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7)'
 	do i=1,nlam-1
 		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
-     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
+c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
+     &					((phase(1,j,i)+flux(j,i))/(Fstar(i)*1d23/distance**2),j=0,ncc)
 	enddo
 	close(unit=30)
 
@@ -78,21 +80,21 @@
 	close(unit=30)
 
 
-
-	filename=trim(outputdir) // "phase"
-	call output("Writing spectrum to: " // trim(filename))
-	open(unit=30,file=filename,RECL=6000)
-	form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
+	if(.not.domakeai) then
+		filename=trim(outputdir) // "phase"
+		call output("Writing spectrum to: " // trim(filename))
+		open(unit=30,file=filename,RECL=6000)
+		form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         fstar [Jy]")'
-	write(30,form) "lambda [mu]",theta(1:nphase)
-	form='(f14.6,' // int2string(nphase+1,'(i3)') // 'es19.7)'
-	do i=1,nlam-1
-		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+		write(30,form) "lambda [mu]",theta(1:nphase)
+		form='(f14.6,' // int2string(nphase+1,'(i3)') // 'es19.7)'
+		do i=1,nlam-1
+			write(30,form) sqrt(lam(i)*lam(i+1))/micron,
      &					phase(1:nphase,0,i)+flux(0,i),
      &					Fstar(i)*1d23/distance**2
-	enddo
-	close(unit=30)
-
+		enddo
+		close(unit=30)
+	endif
 
 	filename=trim(outputdir) // "transC"
 	call output("Writing spectrum to: " // trim(filename))
@@ -219,12 +221,18 @@
 	enddo
 	close(unit=30)
 
+	deallocate(lamR)
+	deallocate(specR)
+	deallocate(specRexp)
+	deallocate(specSNR)
+	deallocate(spec)
 	endif
 	
 
 
 
 	deallocate(docloud0)
+	deallocate(theta)
 	call output("==================================================================")
 	
 	

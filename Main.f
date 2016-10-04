@@ -43,6 +43,8 @@ c terms of use
 				call WriteOpacityFITS()
 			endif
 		enddo
+	else if(domakeai) then
+		call MakeAI()
 	else if(retrieval) then
 		call DoRetrieval()
 	else
@@ -81,6 +83,7 @@ c terms of use
 #ENDIF
 	Tconverged=.false.
 	call SetupStructure(computeopac)
+	if(domakeai.and..not.modelsucces) return
 	if(computeopac) call SetupOpacities()
 	if(computeT) then
 		nTiter=0

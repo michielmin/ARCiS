@@ -63,12 +63,7 @@
 					if(dy.lt.1d-2*y) dy=1d-2*y
 					if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) then
 						ObsSpec(i)%lam(ilam)=x*1d-4
-						if(ObsSpec(i)%type.eq."emisa".or.ObsSpec(i)%type.eq."emis".or.ObsSpec(i)%type.eq."emission") then
-							dy=dy/y
-							ObsSpec(i)%y(ilam)=log(y)
-						else
-							ObsSpec(i)%y(ilam)=y
-						endif
+						ObsSpec(i)%y(ilam)=y
 						ObsSpec(i)%dy(ilam)=dy/ObsSpec(i)%beta
 						ObsSpec(i)%R(ilam)=specres_obs
 						ObsSpec(i)%Rexp(ilam)=expspecres_obs
@@ -126,13 +121,13 @@
 	real*8 x1,x2,minT(nr),maxT(nr),ran1,tot,lambda,chi2_1,chi2_2,dchi2(n_ret),chi2prev
 	integer imodel,ny,i,j,iter1,iter2,iy,k
 	
-	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret*3),W(n_ret*3,n_ret+1),Winv(n_ret,n_ret),dmax
+	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret*3),W(n_ret*3,n_ret+1),Winv(n_ret,n_ret),dmax,scale
 	real*8 chi2_spec,chi2_prof,maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret),dvar_prev(n_ret)
-	real*8 backup_xmin(n_ret),backup_xmax(n_ret)
+	real*8 backup_xmin(n_ret),backup_xmax(n_ret),ErrVec0(n_ret,n_ret)
 	real*8 obsA1(nlam),obsA2(nlam),dobsA(n_ret,nlam)
 	real*8 emis1(nlam),emis2(nlam),demis(n_ret,nlam)
 	real*8 emisR1(nlam),emisR2(nlam),demisR(n_ret,nlam)
-	real*8 phase0(nlam),flux0(nlam),obsA0(nlam),scale,scalemin
+	real*8 phase0(nlam),flux0(nlam),obsA0(nlam)
 	integer na,map(n_ret),info,iboot,nboot,niter1,niter2,n_not_improved
 	logical dofit(n_ret),dofit_prev(n_ret),new_best,improved_iter
 	logical,allocatable :: specornot(:)
@@ -306,19 +301,19 @@ c			flux(0,1:nlam)=flux0(1:nlam)
 c			dofit=dofit_prev
 
 			improved_iter=new_best
-			new_best=.false.
-			var=var_best
-			var0=var_best
-			y=ybest
-			mixrat_r=mixrat_best_r
-			XeqCloud=XeqCloud_best
-			chi2=chi2min
-			n_not_improved=0
-			do i=1,nobs
-				if(ObsSpec(i)%spec) then
-					ObsSpec(i)%model=ObsSpec(i)%modelbest
-				endif
-			enddo
+				new_best=.false.
+				var=var_best
+				var0=var_best
+				y=ybest
+				mixrat_r=mixrat_best_r
+				XeqCloud=XeqCloud_best
+				chi2=chi2min
+				n_not_improved=0
+				do i=1,nobs
+					if(ObsSpec(i)%spec) then
+						ObsSpec(i)%model=ObsSpec(i)%modelbest
+					endif
+				enddo
 
 c			goto 1
 		else
@@ -360,10 +355,22 @@ c			goto 1
 			call output("varying " // trim(RetPar(i)%keyword))
 			if(dvar(i).lt.1d-3) dvar(i)=1d-3
 20			var=var0
-			var(i)=var(i)+dvar(i)
-			if(var(i).gt.1d0) var(i)=1d0
-			if(var(i).lt.0d0) var(i)=0d0
-			x1=var(i)
+c			var(i)=var(i)+dvar(i)
+c			if(var(i).gt.1d0) var(i)=1d0
+c			if(var(i).lt.0d0) var(i)=0d0
+c			x1=var(i)
+			x1=0.5d0
+			do k=1,n_ret+1
+			do j=1,n_ret
+				var(j)=var0(j)+x1*ErrVec(j,i)
+				if(var(j).gt.1d0.and.k.le.n_ret) then
+					x1=(1d0-var0(j))/ErrVec(j,i)
+				endif
+				if(var(j).lt.0d0.and.k.le.n_ret) then
+					x1=-var0(j)/ErrVec(j,i)
+				endif
+			enddo
+			enddo
 			imodel=imodel+1
 			chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,RetPar(i)%opacitycomp,error)
 			iy=1
@@ -402,10 +409,22 @@ c			goto 1
 				call output("   " // trim(dbl2string(chi2_spec,'(f13.3)')) // trim(dbl2string(chi2_prof,'(f13.3)')))
 			endif
 			var=var0
-			var(i)=var(i)-dvar(i)
-			if(var(i).gt.1d0) var(i)=1d0
-			if(var(i).lt.0d0) var(i)=0d0
-			x2=var(i)
+c			var(i)=var(i)-dvar(i)
+c			if(var(i).gt.1d0) var(i)=1d0
+c			if(var(i).lt.0d0) var(i)=0d0
+c			x2=var(i)
+			x2=-1d0
+			do k=1,n_ret+1
+			do j=1,n_ret
+				var(j)=var0(j)+x2*ErrVec(j,i)
+				if(var(j).gt.1d0.and.k.le.n_ret) then
+					x2=(1d0-var0(j))/ErrVec(j,i)
+				endif
+				if(var(j).lt.0d0.and.k.le.n_ret) then
+					x2=-var0(j)/ErrVec(j,i)
+				endif
+			enddo
+			enddo
 			imodel=imodel+1
 			chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,RetPar(i)%opacitycomp,error)
 			iy=1
@@ -527,10 +546,36 @@ c================================================
 		do j=1,n_ret
 			W(j+n_ret,1:n_ret)=0d0
 			b(j+n_ret)=-var0(j)
+			x2=-1d200
+			do k=1,n_ret+1
+			do i=1,n_ret
+				var(i)=var0(i)+x2*ErrVec(i,j)
+				if(var(i).gt.1d0.and.k.le.n_ret) then
+					x2=(1d0-var0(i))/ErrVec(i,j)
+				endif
+				if(var(i).lt.0d0.and.k.le.n_ret) then
+					x2=-var0(i)/ErrVec(i,j)
+				endif
+			enddo
+			enddo
+			b(j+n_ret)=x2
 			W(j+n_ret,j)=1d0
 
 			W(j+n_ret*2,1:n_ret)=0d0
 			b(j+n_ret*2)=var0(j)-1d0
+			x1=1d200
+			do k=1,n_ret+1
+			do i=1,n_ret
+				var(i)=var0(i)+x1*ErrVec(i,j)
+				if(var(i).gt.1d0.and.k.le.n_ret) then
+					x1=(1d0-var0(i))/ErrVec(i,j)
+				endif
+				if(var(i).lt.0d0.and.k.le.n_ret) then
+					x1=-var0(i)/ErrVec(i,j)
+				endif
+			enddo
+			enddo
+			b(j+n_ret*2)=-x1
 			W(j+n_ret*2,j)=-1d0
 		enddo
 
@@ -551,23 +596,15 @@ c================================================
      +   RNORML, MODE, WS, IP)
 
 		dvar(1:n_ret)=b(1:n_ret)
-		scalemin=1d0
-		var=var0+dvar
 		do i=1,n_ret
-			if(var(i).gt.1d0) then
-				scale=(1d0-var0(i))/(var(i)-var0(i))
-				if(scale.lt.scalemin) scalemin=scale
-			endif
-			if(var(i).lt.0d0) then
-				scale=(-var0(i))/(var(i)-var0(i))
-				if(scale.lt.scalemin) scalemin=scale
-			endif
+			var=var0+dvar(i)*ErrVec(:,i)
 		enddo
-		var=var0+0.75d0*scalemin*dvar
+c		var=var0+dvar
 		do i=1,n_ret
 			if(var(i).gt.1d0) var(i)=1d0
 			if(var(i).lt.0d0) var(i)=0d0
 		enddo
+		ErrVec0=ErrVec
 		if(improved_iter) then
 			y=y0
 			obsA(0,1:nlam)=obsA0(1:nlam)
@@ -591,11 +628,12 @@ c================================================
 			call WriteOutput()
 			call SetOutputMode(.true.)
 		endif
+		ErrVec=ErrVec0
 		call WritePTlimits(var,Cov,ErrVec,error,chi2_0,dobsA,demis,demisR,.false.)
 		do i=1,n_ret
 			if(var(i).gt.1d0) var(i)=1d0
 			if(var(i).lt.0d0) var(i)=0d0
-			dvar(i)=sqrt(error(1,i)**2+error(2,i)**2)*max(lambda*10d0,0.1d0)
+			dvar(i)=sqrt(error(1,i)**2+error(2,i)**2)*3d0
 		enddo
 	enddo
 	do i=1,nobs
@@ -625,11 +663,12 @@ c================================================
 	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret)
 	real*8 dvar(n_ret),dobsA(n_ret,nlam),demis(n_ret,nlam),demisR(n_ret,nlam)
 	real*8 obsAmin(nlam),obsAmax(nlam),emismin(nlam),emismax(nlam),emisRmin(nlam),emisRmax(nlam)
-	real*8 emis0(nlam),obsA0(nlam),emisR0(nlam)
+	real*8 emis0(nlam),obsA0(nlam),emisR0(nlam),ErrVec0(n_ret,n_ret),A(n_ret,n_ret)
 	integer i,j,k,info,nk,ierr,iter
 	character*6000 form
 	logical ioflag
 
+	ErrVec0=ErrVec
 	call Eigenvalues(Cov,ErrVec,w,n_ret,INFO)
 	do i=1,n_ret
 		tot=0d0
@@ -638,6 +677,13 @@ c================================================
 		enddo
 		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*sqrt(w(i))*sqrt(chi2)/sqrt(tot)
 	enddo
+	A=0d0
+	do i=1,n_ret
+		do j=1,n_ret
+			A(1:n_ret,i)=A(1:n_ret,i)+ErrVec(j,i)*ErrVec0(1:n_ret,j)
+		enddo
+	enddo
+	ErrVec=A
 	
 	call SetOutputMode(.false.)
 	var=var0
@@ -837,7 +883,6 @@ c     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
 			call regridspecres(lamobs,phase(1,0,1:nlam-1)+flux(0,1:nlam-1),
      &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
      		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
-			spec(1:ObsSpec(i)%nlam)=log(spec(1:ObsSpec(i)%nlam))
 		case("tprofile")
 			call ComputeParamT(spec(1:nr))
 			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta

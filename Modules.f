@@ -59,13 +59,13 @@ c===============================================================================
 	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT
-	logical mixratfile,par_tprofile,adiabatic_tprofile
+	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces
 	character*500 TPfile
-	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze
+	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
-	integer nTZ,nspike
+	integer nTZ,nspike,nai
 	integer,allocatable :: niso(:)
 	real*8 Mmol(59),mu
 	integer nBB
@@ -88,15 +88,15 @@ c===============================================================================
      &	31.7949,  94.2413,  40.7302,  87.3580,  49.6543,  50.6424,   2.0014,  43.7539,  
      &	79.3792,   4.0030,   0.0000,   0.0000,   0.0000,   0.0000,   0.0000,   0.0000,
      &  24.0214,  22.9900,  39.0980,  63.8660,  66.9410 /))
-	integer Catoms(59),Oatoms(59)
+	integer Catoms(59),Oatoms(59),Hatoms(59)
 	parameter(Catoms = (/0,1,0,0,1,1,
      &				 0,0,0,0,0,0,0,0,
      &				 0,0,0,0,1,1,0,0,
      &				 1,1,0,2,2,0,1,0,
      &				 0,1,0,0,0,0,0,2,
-     &				 1,0,1,1,4,3,0,1,
+     &				 1,1,2,1,4,3,0,1,
      &				 0,0,0,0,0,0,0,0,
-     &				 0,0,0,0,0 /))
+     &				 2,0,0,0,0 /))
 	parameter(Oatoms = (/1,2,3,1,1,0,
      &				 2,1,2,2,0,3,1,0,
      &				 0,0,0,1,1,1,1,0,
@@ -105,6 +105,14 @@ c===============================================================================
      &				 1,0,0,0,0,0,0,0,
      &				 3,0,0,0,0,0,0,0,
      &				 0,0,0,1,1 /))
+	parameter(Hatoms = (/2,0,0,0,0,4,
+     &				 0,0,0,0,3,1,1,1,
+     &				 1,1,1,0,0,2,1,0,
+     &				 1,3,2,2,6,3,0,0,
+     &				 2,2,0,0,0,0,1,4,
+     &				 4,3,3,0,2,1,2,0,
+     &				 0,0,0,0,0,0,0,0,
+     &				 0,0,0,0,0 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt
 	logical HITEMP,opacitymode,compute_opac
@@ -158,7 +166,7 @@ c===============================================================================
 		real*8,allocatable :: rv(:),w(:)							! dimension nsize
 		real*8 rho,amin,amax,fmax,porosity,fcarbon,reff,veff
 		logical blend,haze
-		real*8 fcond,mixrat
+		real*8 fcond,mixrat,tau,lam
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
 		type(Mueller),allocatable :: F(:,:)							! dimension nsize,nlam
 		character*500 file

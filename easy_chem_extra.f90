@@ -1523,6 +1523,10 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 		endif
 	enddo
 
+	write(92,'(76a10)') names_reactants(1:N_reactants2)
+	write(92,'(76es10.1)') molfracs_reactants(1:N_reactants2)
+	call flush(92)
+
 	if(condensates) then
 		con=.false.
 		do i=1,Ncloud
@@ -1569,6 +1573,7 @@ subroutine easy_chem_set_molfracs_atoms(CO,Z)
 	use AtomsModule
   implicit none
   real*8 CO,Z,tot
+  integer i
 
   names_atoms(1) = 'H'
   names_atoms(2) = 'He'
@@ -1615,6 +1620,13 @@ subroutine easy_chem_set_molfracs_atoms(CO,Z)
 
 	tot=sum(molfracs_atoms(1:N_atoms))
 	molfracs_atoms=molfracs_atoms/tot
+
+	open(unit=50,file='atomic.dat')
+	do i=1,18
+		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
+	enddo
+	close(unit=50)
+
 
 	return
 	end

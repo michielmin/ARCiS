@@ -414,8 +414,11 @@ C	 create the new empty FITS file
 		endif
 	enddo
 !$OMP END DO
+	deallocate(temp)
 !$OMP FLUSH
 !$OMP END PARALLEL
+
+	deallocate(lamF)
 
 	return
 	end

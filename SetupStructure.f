@@ -3,7 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,met_r,dens1bar,minZ,Tc
-	real*8 Otot,Ctot
+	real*8 Otot,Ctot,Htot
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix,j,niter
 	logical ini,compute_mixrat
@@ -83,7 +83,7 @@
 
 	if(par_tprofile) call ComputeParamT(T)
 	do i=1,nr
-		if(T(i).gt.1d6) T(i)=1d6
+		if(T(i).gt.maxTprofile) T(i)=maxTprofile
 		if(T(i).lt.3d0) T(i)=3d0
 	enddo
 
@@ -99,6 +99,10 @@
 		call output("Computing chemistry using easy_chem by Paul Molliere")
 		do i=1,nr
 			call tellertje(i,nr)
+			if(chemtime.gt.maxchemtime.and.domakeai) then
+				modelsucces=.false.
+				return
+			endif
 			met_r=metallicity
 			if(sinkZ) then
 				met_r=metallicity+log10((dens(i)/dens1bar)**(1d0/alphaZ**2-1d0))
@@ -162,6 +166,10 @@ c					Tc=T(i)
 		call output("Computing chemistry using easy_chem by Paul Molliere")
 		do i=1,nr
 			call tellertje(i,nr)
+			if(chemtime.gt.maxchemtime.and.domakeai) then
+				modelsucces=.false.
+				return
+			endif
 			met_r=metallicity
 			if(sinkZ) then
 				met_r=metallicity+log10(dens(i)/dens1bar)*(1d0/alphaZ**2-1d0)
@@ -226,16 +234,40 @@ c					Tc=T(i)
 
 	Otot=0d0
 	Ctot=0d0
+	Htot=0d0
 	do i=1,nr
 		do imol=1,nmol
 			if(includemol(imol)) then
 				Otot=Otot+Ndens(i)*mixrat_r(i,imol)*real(Oatoms(imol))
 				Ctot=Ctot+Ndens(i)*mixrat_r(i,imol)*real(Catoms(imol))
+				Htot=Htot+Ndens(i)*mixrat_r(i,imol)*real(Hatoms(imol))
 			endif
 		enddo
 	enddo
 	COret=Ctot/Otot
 	call output("C/O: " // dbl2string(COret,'(f8.3)'))
+	call output("[O]: " // dbl2string(log10(Otot/Htot)-log10(0.0004509658/0.9207539305),'(f8.3)'))
+	call output("[C]: " // dbl2string(log10(Ctot/Htot)-log10(0.0002478241/0.9207539305),'(f8.3)'))
+
+	open(unit=50,file=trim(outputdir) // 'COprofile.dat',RECL=100)
+	write(50,'("#",a14,3a10)') "P [bar]","C/O","[O]","[C]"
+	do i=1,nr
+		Otot=0d0
+		Ctot=0d0
+		Htot=0d0
+		do imol=1,nmol
+			if(includemol(imol)) then
+				Otot=Otot+Ndens(i)*mixrat_r(i,imol)*real(Oatoms(imol))
+				Ctot=Ctot+Ndens(i)*mixrat_r(i,imol)*real(Catoms(imol))
+				Htot=Htot+Ndens(i)*mixrat_r(i,imol)*real(Hatoms(imol))
+			endif
+		enddo
+		write(50,'(es15.4,3f10.3)') P(i),Ctot/Otot,
+     &			log10(Otot/Htot)-log10(0.0004509658/0.9207539305),
+     &			log10(Ctot/Htot)-log10(0.0002478241/0.9207539305)
+	enddo
+	close(unit=50)
+
 
 	call output("Chemistry runtime:  " // trim(dbl2string((chemtime),'(f10.2)')) // " s")
 	
@@ -354,8 +386,9 @@ c		if(x(i).gt.10000d0) x(i)=10000d0
 	use Constants
 	IMPLICIT NONE
 	real*8 pp,tot,column
-	integer ii,i,j,nsubr
-	real*8 Xc,Xc1,lambdaC
+	integer ii,i,j,nsubr,isize,ilam
+	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau
+	logical cl
 	
 	if(.not.cloudcompute) then
 		if(Cloud(ii)%haze) then
@@ -392,6 +425,7 @@ c use Ackerman & Marley 2001 cloud computation
 		endif
 		Xc1=Xc
 		cloud_dens(1,ii)=Xc*dens(1)
+		cl=.false.
 		do i=2,nr
 			lambdaC=max(0.1d0,(log(T(i)/T(i-1))/log(P(i)/P(i-1)))/nabla_ad(i))
 			do j=1,nsubr
@@ -400,11 +434,17 @@ c use Ackerman & Marley 2001 cloud computation
 				else
 					Xc=(Xc1+(XeqCloud(i,ii)-XeqCloud(i-1,ii))/real(nsubr))/(1d0-Cloud(ii)%frain*((P(i)-P(i-1))/real(nsubr))/(lambdaC*P(i)))
 				endif
+				if(Xc.le.0d0.and.cl) then
+					cloud_dens(i,ii)=Xc*dens(i)
+					goto 2
+				endif
 				Xc=max(Xc,0d0)
+				if(Xc.gt.0d0) cl=.true.
 				Xc1=Xc
 			enddo
 			cloud_dens(i,ii)=Xc*dens(i)
 		enddo
+2 		continue
 	endif
 
 	j=0
@@ -426,6 +466,26 @@ c use Ackerman & Marley 2001 cloud computation
 		endif
 	endif
 	Cloud(ii)%w=Cloud(ii)%w/tot
+	
+	if(Cloud(ii)%tau.gt.0d0) then
+		tau=0d0
+		do ilam=nlam-1,1,-1
+			if(lam(ilam).gt.Cloud(ii)%lam.and.lam(ilam+1).le.Cloud(ii)%lam) exit
+		enddo
+		if(ilam.lt.1) ilam=1
+		do i=nr,2,-1
+			Ca=0d0
+			Cs=0d0
+			do isize=1,Cloud(ii)%nsize
+				Ca=Ca+
+     &		Cloud(ii)%Kabs(isize,ilam)*Cloud(ii)%w(isize)*cloud_dens(i,ii)
+				Cs=Cs+
+     &		Cloud(ii)%Ksca(isize,ilam)*Cloud(ii)%w(isize)*cloud_dens(i,ii)
+			enddo
+			tau=tau+(R(i)-R(i-1))*(Ca+Cs)
+		enddo
+		cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%tau/tau
+	endif
 
 	return
 	end	

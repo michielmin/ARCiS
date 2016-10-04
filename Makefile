@@ -86,6 +86,7 @@ OBJS	= Modules.o \
 		ChemistryMorley.o \
 		Retrieval.o \
 		Genetic.o \
+		MakeAI.o \
 		dlsei.o \
 		Lapack.o \
 		easy_chem_extra.o \

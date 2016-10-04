@@ -542,6 +542,8 @@ c allocate the arrays
 			
 	call output("==================================================================")
 	
+	open(unit=92,file='temp',RECL=1000)
+	
 	return
 	end
 
@@ -617,6 +619,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) mixratfile
 		case("gridtpfile")
 			read(key%value,*) gridTPfile
+		case("maxt","maxtprofile")
+			read(key%value,*) maxTprofile
 		case("tp")
 			read(key%value,*) TP0
 		case("dtp")
@@ -711,6 +715,12 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		case("rhoform","densform")
 			read(key%value,*) Pform
 			Pform=-Pform
+		case("makeai")
+			read(key%value,*) domakeai
+		case("nai")
+			read(key%value,*) nai
+		case("maxchemtime")
+			read(key%value,*) maxchemtime
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -957,11 +967,16 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	adiabatic_tprofile=.false.
 
+	domakeai=.false.
+	nai=1000
+
 	do i=1,nclouds
 		Cloud(i)%P=1d-4
 		Cloud(i)%dP=10d0
 		Cloud(i)%s=2d0
 		Cloud(i)%column=0d0
+		Cloud(i)%tau=-1d0
+		Cloud(i)%lam=0.55d0
 		Cloud(i)%file=' '
 		Cloud(i)%standard='ASTROSIL'
 		Cloud(i)%nsize=50
@@ -1053,7 +1068,11 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	retrieve_profile=.false.
 	
+	maxTprofile=1d6
+	
 	maxiter=6
+	
+	maxchemtime=1d200
 	
 	return
 	end
@@ -1361,6 +1380,10 @@ c				enddo
 			read(key%value,*) Cloud(key%nr1)%s
 		case("column")
 			read(key%value,*) Cloud(key%nr1)%column
+		case("tau")
+			read(key%value,*) Cloud(key%nr1)%tau
+		case("lam")
+			read(key%value,*) Cloud(key%nr1)%lam
 		case("reff")
 			read(key%value,*) Cloud(key%nr1)%reff
 		case("veff")

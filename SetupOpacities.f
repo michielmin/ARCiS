@@ -35,7 +35,7 @@
 	n_nu_line=ng*min(nmol,4)
 	allocate(nu_line(n_nu_line))
 
-	if(.not.allocated(ig_comp).and.retrieval) then
+	if(.not.allocated(ig_comp).and.(retrieval.or.domakeai)) then
 		allocate(ig_comp(nmol,n_nu_line,nlam))
 		do i=1,nlam
 			do j=1,n_nu_line
@@ -75,7 +75,8 @@
 !$OMP PARALLEL IF(nlam.gt.200)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,j,nu1,nu2,k_line,imol,ig,kappa,tot,tot2)
-!$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_r,ng,ir,kappa_mol,nu_line,cont_tot,freq,Cabs,Csca,opac_tot,Ndens,R,ig_comp,retrieval)
+!$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_r,ng,ir,kappa_mol,nu_line,cont_tot,freq,Cabs,Csca,opac_tot,Ndens,R,
+!$OMP&        ig_comp,retrieval,domakeai)
 		allocate(k_line(n_nu_line))
 !$OMP DO
 		do i=1,nlam-1
@@ -91,7 +92,7 @@
 				k_line(j)=0d0
 				do imol=1,nmol
 					if(mixrat_r(ir,imol).gt.0d0) then
-						if(retrieval) then
+						if(retrieval.or.domakeai) then
 							ig=ig_comp(imol,j,i)
 						else
 							ig=random(idum)*real(ng)+1
@@ -136,6 +137,12 @@
 		write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
 	enddo
 	close(unit=30)
+
+	deallocate(cont_tot)
+	deallocate(kaver)
+	deallocate(opac_tot)
+	deallocate(kappa_mol)
+	deallocate(nu_line)
 
 	return
 	end
