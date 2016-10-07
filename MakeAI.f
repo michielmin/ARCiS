@@ -37,6 +37,8 @@
 				call output("try different set of parameters")
 				goto 1
 			endif
+		else
+			chi2=random(idum)
 		endif
 	enddo		
 	
