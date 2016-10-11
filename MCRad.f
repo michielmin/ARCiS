@@ -204,7 +204,7 @@
 	z=z+v*dz
 	EJv(jr)=EJv(jr)+tau*(1d0-albedo)
 
-	fstop=1d0-albedo**powstop
+	fstop=1d0-albedo**powstop+1d-4
 	if(random(idum).lt.fstop) return
 
 	call scattangle(M(jr),dx,dy,dz)
