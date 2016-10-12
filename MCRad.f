@@ -204,7 +204,7 @@
 	z=z+v*dz
 	EJv(jr)=EJv(jr)+tau*(1d0-albedo)
 
-	fstop=1d0-albedo**powstop+1d-4
+	fstop=max(1d0-albedo**powstop,1d-4)
 	if(random(idum).lt.fstop) return
 
 	call scattangle(M(jr),dx,dy,dz)
@@ -500,7 +500,7 @@ c-----------------------------------------------------------------------
 	z=z+dmin*dz
 
 	albedo=Cs/Ce
-	fstop=1d0-albedo**powstop
+	fstop=max(1d0-albedo**powstop,1d-4)
 	fstop=fstop**v
 	absorbed=.false.
 
