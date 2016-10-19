@@ -817,7 +817,7 @@ c		endif
 		lamobs(j)=sqrt(lam(j)*lam(j+1))
 	enddo
 	select case(ObsSpec(i)%type)
-		case("trans","transmission")
+		case("trans","transmission","transC")
 c			call regridarray(lamobs,obsA(0,1:nlam-1)/(pi*Rstar**2),nlam-1,
 c     &					ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
 			call regridspecres(lamobs,obsA(0,1:nlam-1)/(pi*Rstar**2),nlam-1,
@@ -1174,7 +1174,7 @@ c	linear/squared
 	
 	do i=1,nobs
 		select case(ObsSpec(i)%type)
-			case("trans","transmission","emisr","emisR","emisa","emis","emission")
+			case("trans","transmission","emisr","emisR","emisa","emis","emission","transC")
 				open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),RECL=1000)
 				do j=1,ObsSpec(i)%nlam
 					write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
