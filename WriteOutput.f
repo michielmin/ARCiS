@@ -182,6 +182,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			ilam=ilam+1
 		endif
 	enddo
+	close(unit=20)
 
 	filename=trim(outputdir) // "obs_emisR"
 	call output("Writing spectrum to: " // trim(filename))

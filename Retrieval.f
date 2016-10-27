@@ -75,6 +75,7 @@
 						ilam=ilam+1
 					endif
 				enddo
+				close(unit=20)
 		end select
 	enddo
 
@@ -305,7 +306,7 @@ c			phase(1,0,1:nlam)=phase0(1:nlam)
 c			flux(0,1:nlam)=flux0(1:nlam)
 c			dofit=dofit_prev
 
-			improved_iter=new_best
+			improved_iter=.false.
 			new_best=.false.
 			var=var_best
 			var0=var_best
@@ -322,7 +323,7 @@ c			dofit=dofit_prev
 
 c			goto 1
 		else
-			improved_iter=new_best
+			improved_iter=.false.
 			lambda=0.01d0
 			new_best=.false.
 			var=var_best
@@ -343,6 +344,15 @@ c			goto 1
 			if(dvar(i).eq.0d0) dvar(i)=0.1d0
 			dvar(i)=(dvar(i)+dvar_prev(i))/2d0
      	enddo
+		var=var0
+		chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,.true.,error)
+		mixrat_old_r=mixrat_r
+		XeqCloud_old=XeqCloud
+		iy=1
+		do i=1,nobs
+	 		call RemapObs(i,y(iy:iy+ObsSpec(i)%nlam-1))
+			iy=iy+ObsSpec(i)%nlam
+		enddo
 		dvar_prev=dvar
 		y0=y
 		obsA0(1:nlam)=obsA(0,1:nlam)
@@ -554,13 +564,19 @@ c================================================
 		scalemin=1d0
 		var=var0+dvar
 		do i=1,n_ret
+c			if(var(i).gt.1d0) then
+c				scale=(1d0-var0(i))/(var(i)-var0(i))
+c				if(scale.lt.scalemin) scalemin=scale
+c			endif
+c			if(var(i).lt.0d0) then
+c				scale=(-var0(i))/(var(i)-var0(i))
+c				if(scale.lt.scalemin) scalemin=scale
+c			endif
 			if(var(i).gt.1d0) then
-				scale=(1d0-var0(i))/(var(i)-var0(i))
-				if(scale.lt.scalemin) scalemin=scale
+				var(i)=1d0
 			endif
 			if(var(i).lt.0d0) then
-				scale=(-var0(i))/(var(i)-var0(i))
-				if(scale.lt.scalemin) scalemin=scale
+				var(i)=0d0
 			endif
 		enddo
 		var=var0+0.75d0*scalemin*dvar
