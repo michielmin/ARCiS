@@ -1503,7 +1503,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 	if(condensates) N_reactants2=104
 
       temp=Tin
-      if(temp.gt.3000d0) temp=3000d0
+!      if(temp.gt.3000d0) temp=3000d0
       if(temp.lt.70d0) temp=70d0
       press=Pin
         

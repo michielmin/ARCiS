@@ -5,12 +5,10 @@
 	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot,Ag
 	real*8 Ca,Cs,BBr(nr)
 	integer icloud,isize
-	real*8,allocatable :: rtrace(:),phase0(:)
+	real*8,allocatable :: rtrace(:),phase0(:),slant_tau(:,:),ptrace(:)
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig,nsub,j,k
 	logical in
 	integer icc
-
-	allocate(phase0(nphase))
 
 	docloud=.false.
 	do icc=2,ncc
@@ -94,13 +92,16 @@
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,fluxg,icc,phase0)
 !$OMP& SHARED(nlam,nclouds,flux,phase,ncc,docloud,cloudfrac,nphase)
+	allocate(phase0(nphase))
 !$OMP DO SCHEDULE(STATIC,1)
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
 		flux(:,ilam)=0d0
 		phase(:,:,ilam)=0d0
 		do icc=1,ncc
-			call MCRad(ilam,fluxg,phase0,docloud(icc,1:nclouds))
+			if(cloudfrac(icc).gt.0d0) then
+				call MCRad(ilam,fluxg,phase0,docloud(icc,1:nclouds))
+			endif
 			flux(0,ilam)=flux(0,ilam)+cloudfrac(icc)*fluxg
 			flux(icc,ilam)=flux(icc,ilam)+fluxg
 			phase(1:nphase,icc,ilam)=phase(1:nphase,icc,ilam)+
@@ -110,6 +111,7 @@
 		enddo
 	enddo
 !$OMP END DO
+	deallocate(phase0)
 !$OMP FLUSH
 !$OMP END PARALLEL
 	call tellertje(nlam,nlam)
@@ -122,26 +124,31 @@
 	
 	nrtrace=nr*nsub+ndisk
 	allocate(rtrace(nrtrace))
+	allocate(ptrace(nrtrace))
 
 	k=0
 	do i=1,ndisk
 		k=k+1
 		rtrace(k)=Rplanet*real(i-1)/real(ndisk)
+		ptrace(k)=P(1)*real(i-1)/real(ndisk)
 	enddo
 	do i=1,nr
 		do j=1,nsub
 			k=k+1
 			rtrace(k)=R(i)+(R(i+1)-R(i))*real(j-1)/real(nsub)
+			ptrace(k)=P(i)+(P(i+1)-P(i))*real(j-1)/real(nsub)
 		enddo
 	enddo
 
+	allocate(slant_tau(nrtrace,nlam))
+	slant_tau=0d0
 	call tellertje(1,nlam)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,
 !$OMP&         Ca,Cs,icloud,isize,BBr)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
-!$OMP&			cloud_dens)
+!$OMP&			cloud_dens,slant_tau)
 !$OMP DO SCHEDULE(STATIC,1)
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
@@ -214,6 +221,7 @@
 					endif
 					if(ir_next.le.0.or.tautot.ge.maxtau) fact=0d0
 					Ag=Ag+A*(1d0-fact)
+					slant_tau(i,ilam)=slant_tau(i,ilam)+tautot/real(ng)
 				enddo
 				flux(0,ilam)=flux(0,ilam)+cloudfrac(icc)*fluxg/real(ng)
 				obsA(0,ilam)=obsA(0,ilam)+cloudfrac(icc)*Ag/real(ng)
@@ -228,12 +236,19 @@
 !$OMP END PARALLEL
 	call tellertje(nlam,nlam)
 	
+	open(unit=44,file=trim(outputdir) // "slanttau",RECL=6000)
+	write(44,*) '#',(lam(ilam),ilam=1,nlam-1,(nlam/100)+1)
+	do i=1,nrtrace-1
+		write(44,*) sqrt(ptrace(i)*ptrace(i+1)),(slant_tau(i,ilam),ilam=1,nlam-1,(nlam/100)+1)
+	enddo
+	close(unit=44)
 
 	flux=flux*1d23/distance**2
 	phase=phase*1d23/distance**2
 
 	deallocate(rtrace)
-	deallocate(phase0)
+	deallocate(ptrace)
+	deallocate(slant_tau)
 	
 	return
 	end
@@ -249,6 +264,21 @@ c-----------------------------------------------------------------------
 
 	x=hplanck*nu*clight/(kb*T)
 	Planck=(2d0*hplanck*nu**3*clight)/(exp(x)-1d0)
+
+	return
+	end
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+
+	real*8 function dPlanck(T,nu)
+	use Constants
+	IMPLICIT NONE
+	real*8 T,nu,x,expx
+
+	x=hplanck*nu*clight/(kb*T)
+	expx=exp(x)
+	dPlanck=(2d0*nu**2*x**2*kb*expx)/((expx-1d0)**2)
 
 	return
 	end

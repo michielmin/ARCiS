@@ -9,7 +9,7 @@
 	real*8 Fp1,Fp2,ApAs
 	logical,allocatable :: docloud0(:,:)
 	real*8,allocatable :: spec(:,:),specR(:),lamR(:),specRexp(:),specSNR(:)
-	real*8 x,specres_obs,expspecres_obs,SNR,gasdev
+	real*8 x,specres_obs,expspecres_obs,SNR,gasdev,tot
 	integer ilam,j,nj,nlamR
 	character*1000 line
 
@@ -17,6 +17,7 @@
 	allocate(theta(nphase))
 	do i=1,nphase
 		theta(i)=acos(1d0-2d0*(real(i)-0.5d0)/real(nphase))*180d0/pi
+		theta(i)=(real(i)-0.5d0)*180d0/real(nphase)
 	enddo
 	do i=1,nclouds
 		docloud0(i,:)=docloud(:,i)
@@ -81,19 +82,53 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 
 
 	if(.not.domakeai) then
-		filename=trim(outputdir) // "phase"
-		call output("Writing spectrum to: " // trim(filename))
-		open(unit=30,file=filename,RECL=6000)
-		form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
+		if(nphase.le.310) then
+			filename=trim(outputdir) // "phase"
+			call output("Writing spectrum to: " // trim(filename))
+			open(unit=30,file=filename,RECL=6000)
+			form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         fstar [Jy]")'
-		write(30,form) "lambda [mu]",theta(1:nphase)
-		form='(f14.6,' // int2string(nphase+1,'(i3)') // 'es19.7)'
-		do i=1,nlam-1
-			write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+			write(30,form) "lambda [mu]",theta(1:nphase)
+			form='(f14.6,' // int2string(nphase+1,'(i3)') // 'es19.7)'
+			do i=1,nlam-1
+				write(30,form) sqrt(lam(i)*lam(i+1))/micron,
      &					phase(1:nphase,0,i)+flux(0,i),
      &					Fstar(i)*1d23/distance**2
-		enddo
-		close(unit=30)
+			enddo
+			close(unit=30)
+		endif
+
+		if(nlam.lt.350) then
+			allocate(specR(nlam))
+			filename=trim(outputdir) // "phasecurve"
+			call output("Writing phasecurve to: " // trim(filename))
+			open(unit=30,file=filename,RECL=6000)
+			form='("#",a13,' // '"       fint [Jy]",'// trim(int2string(nlam-1,'(i4)')) // 
+     &				 '("      F(",es7.1,")"),"      fstar [Jy]")'
+			write(30,form) "lambda [mu]",lam(1:nlam-1)
+			form='(f14.6,' // int2string(nlam+1,'(i3)') // 'es16.9)'
+			do i=1,nphase
+				specR(1:nlam-1)=Fstar(1:nlam-1)*1d23/distance**2
+				if(sin(pi-pi*theta(i)/180d0).lt.(Rstar/Dplanet)) then
+					if(theta(i).gt.90d0) then
+						specR(1:nlam-1)=((pi*Rstar**2-obsA(0,1:nlam-1))/(pi*Rstar**2))*Fstar(1:nlam-1)*1d23/distance**2
+					endif
+				endif
+				if(sin(pi*theta(i)/180d0).gt.(Rstar/Dplanet).or.theta(i).gt.90d0) then
+					specR(1:nlam-1)=specR(1:nlam-1)+phase(i,0,1:nlam-1)+flux(0,1:nlam-1)
+				endif
+				x=0d0
+				tot=0d0
+				do j=1,nlam-1
+					x=x+dfreq(j)*specR(j)
+					tot=tot+dfreq(j)
+				enddo
+				x=x/tot
+				write(30,form) theta(i),x,specR(1:nlam-1),Fstar(i)*1d23/distance**2
+			enddo
+			close(unit=30)
+			deallocate(specR)
+		endif
 	endif
 
 	filename=trim(outputdir) // "transC"

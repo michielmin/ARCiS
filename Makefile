@@ -76,6 +76,7 @@ OBJS	= Modules.o \
 		ReadParticleFits.o \
 		RefIndData.o \
 		EnstatiteData.o \
+		ForsteriteData.o \
 		BrookiteData.o \
 		WaterData.o \
 		KuruczData.o \

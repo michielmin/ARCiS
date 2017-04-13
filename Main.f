@@ -35,14 +35,15 @@ c terms of use
 	call output("==================================================================")
 
 	if(opacitymode) then
-		do i=1,nmol
-			if(mixrat(i).gt.0d0) then
-				mixrat_r=0d0
-				mixrat_r(:,i)=1d0
-				call SetupOpacities()
-				call WriteOpacityFITS()
-			endif
-		enddo
+		if(dochemistry) then
+			call OnlyChemCompute
+		else
+			do i=1,nmol
+				mixrat_r(:,i)=mixrat(i)
+			enddo
+		endif
+		call SetupOpacities()
+		call WriteOpacityFITS()
 	else if(domakeai) then
 		call MakeAI()
 	else if(retrieval) then

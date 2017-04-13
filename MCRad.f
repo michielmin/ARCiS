@@ -6,11 +6,12 @@
 	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,v,fluxg,dx,dy,wphase(nphase)
 	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase0(nphase),theta,fstop,albedo,ct1,ct2,E0
 	real*8 tot,g(nr),Eabs,EJv(nr),Crw(nr)
-	real*8 Eemit(nr),Femit(nr)
-	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,irdark
+	real*8 Eemit(nr),Femit(nr),xs,ys,zs,inp
+	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,irdark,j
 	logical docloud0(nclouds),goingup,hitR,onedge,hitR1,hitR2,dorw(nr)
 	type(Mueller) M(nr)
 	real*8 starttime,stoptime
+	logical hitplanet
 	
 	NphotPlanet=Nphot0/real(ng)+5
 	NphotStar=nphase*Nphot0/real(ng*45)+5
@@ -19,10 +20,16 @@
 
 	fluxg=0d0
 	phase0=0d0
+	theta=0d0
+	ct1=cos(theta)
 	do iphase=1,nphase
-		ct1=1d0-2d0*real(iphase-1)/real(nphase)
-		ct2=1d0-2d0*real(iphase)/real(nphase)
+c		ct1=1d0-2d0*real(iphase-1)/real(nphase)
+c		ct2=1d0-2d0*real(iphase)/real(nphase)
+		theta=real(iphase)*pi/real(nphase)
+		ct2=cos(theta)
 		wphase(iphase)=2d0/abs(ct1-ct2)
+		if(IsNaN(wphase(iphase))) print*,wphase(iphase)
+		ct1=ct2
 	enddo
 
 	do ir=1,nr
@@ -80,6 +87,43 @@
 		enddo
 
 		if(scattstar) then
+c		do ir=0,nr
+c			if(ir.ne.0) then
+c				E0=Fstar(ilam)*(R(ir+1)**2-R(ir)**2)/Dplanet**2
+c				Nphot=NphotStar/real(nr)
+c			else
+c				E0=Fstar(ilam)*R(1)**2/Dplanet**2
+c				Nphot=NphotStar
+c			endif
+c			E0=E0/real(Nphot)
+c			do iphot=1,Nphot
+c				if(ir.eq.0) then
+c					call randomdisk(x,y,0d0,R(1))
+c				else
+c					call randomdisk(x,y,R(ir),R(ir+1))
+c				endif
+c				z=sqrt(R(nr+1)**2-x**2-y**2)
+c
+c				dz=-1d0
+c				dx=0d0
+c				dy=0d0
+c				goingup=.false.
+c				onedge=.true.
+c				jr=nr
+c				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,0.5d0,Eabs,EJv)
+c				if(jr.gt.nr.and.nscat.gt.0) then
+c					iphase=real(nphase)*(1d0-dz)/2d0+1
+c					if(dz.gt.1d0) dz=1d0
+c					if(dz.lt.-1d0) dz=-1d0
+c					iphase=real(nphase)*(acos(dz)/pi)+1
+c					if(iphase.lt.1) iphase=1
+c					if(iphase.gt.nphase) iphase=nphase
+c					phase0(iphase)=phase0(iphase)+wphase(iphase)*E*E0/real(ng)
+c				endif
+c			enddo
+c		enddo		
+
+
 		do ir=0,nr
 			if(ir.ne.0) then
 				E0=Fstar(ilam)*(R(ir+1)**2-R(ir)**2)/Dplanet**2
@@ -90,34 +134,99 @@
 			endif
 			E0=E0/real(Nphot)
 			do iphot=1,Nphot
-				if(ir.eq.0) then
+1				if(ir.eq.0) then
 					call randomdisk(x,y,0d0,R(1))
 				else
 					call randomdisk(x,y,R(ir),R(ir+1))
 				endif
 				z=sqrt(R(nr+1)**2-x**2-y**2)
 
-				dz=-1d0
-				dx=0d0
-				dy=0d0
+				call randomdirection(xs,ys,zs)
+				xs=xs*Rstar
+				ys=ys*Rstar
+				zs=zs*Rstar+Dplanet
+			
+				dx=x-xs
+				dy=y-ys
+				dz=z-zs
+
+				inp=x*dx+y*dy+z*dz
+				if(inp.gt.0d0) goto 1
+				inp=xs*dx+ys*dy+(zs-Dplanet)*dz
+				if(inp.lt.0d0) goto 1
+				
+				tot=sqrt(dx**2+dy**2+dz**2)
+				dx=dx/tot
+				dy=dy/tot
+				dz=dz/tot
+
 				goingup=.false.
 				onedge=.true.
 				jr=nr
 				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,0.5d0,Eabs,EJv)
 				if(jr.gt.nr.and.nscat.gt.0) then
 					iphase=real(nphase)*(1d0-dz)/2d0+1
+					if(dz.gt.1d0) dz=1d0
+					if(dz.lt.-1d0) dz=-1d0
+					iphase=real(nphase)*(acos(dz)/pi)+1
 					if(iphase.lt.1) iphase=1
 					if(iphase.gt.nphase) iphase=nphase
 					phase0(iphase)=phase0(iphase)+wphase(iphase)*E*E0/real(ng)
 				endif
 			enddo
-		enddo		
+		enddo
 		endif
-
 	enddo
 
 	return
 	end
+
+	logical function hitplanet(x,y,z,dx,dy,dz)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 x,y,z,dx,dy,dz,R1,R2,aa,b,cc
+	real*8 v,vr1,vr2,qq,discr,xt,yt,zt,vxt,vyt,vzt
+
+	xt=x
+	yt=y
+	zt=z+Dplanet
+	vxt=dx
+	vyt=dy
+	vzt=dz
+
+	R1=R(nr+1)**2
+	R2=xt**2+yt**2+zt**2
+
+	aa=vxt**2+vyt**2+vzt**2
+	b=2d0*(xt*vxt+yt*vyt+zt*vzt)
+	cc=R2-R1
+	discr=(b**2-4d0*cc*aa)
+	hitplanet=.false.
+	if(discr.ge.0d0) then
+		discr=sqrt(discr)
+		if(b.gt.0d0) then
+			qq=-0.5d0*(b+discr)
+		else
+			qq=-0.5d0*(b-discr)
+		endif
+		vr1=qq/aa
+		vr2=cc/qq
+		v=vr1
+		hitplanet=.true.
+		if(vr2.lt.v) then
+			v=vr2
+			hitplanet=.true.
+		endif
+		x=x+v*dx
+		y=y+v*dy
+		z=z+v*dz
+	endif
+
+	return
+	end
+	
+
 	
 	
 	subroutine travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,powstop,Eabs,EJv)
@@ -272,14 +381,26 @@
 	use Constants
 	IMPLICIT NONE
 	integer i,it
-	real*8 dz,theta,Fr,Fi,random,dx,dy,x,y,z,rr,u,v,w
+	real*8 dz,theta,Fr,Fi,random,dx,dy,x,y,z,rr,u,v,w,cost,sint
 	type(Mueller) M
 
 	Fr=random(idum)*M%IF11(180)
 	it=0
 	call hunt(M%IF11,180,Fr,it)
-	if(it.lt.1) it=1
-	if(it.gt.180) it=180
+c	if(it.lt.1) it=1
+c	if(it.gt.180) it=180
+
+	if(it.lt.180.and.it.ge.1) then
+		theta=real(it)-0.5d0+(Fr-M%IF11(it))/(M%IF11(it+1)-M%IF11(it))
+	else if(it.lt.1) then
+		theta=0.5d0*(M%IF11(1)-Fr)/M%IF11(1)
+	else	
+		theta=180d0
+	endif
+	theta=theta*pi/180d0
+	cost=cos(theta)
+	sint=sin(theta)
+
 
 	x=dx
 	y=dy
@@ -293,18 +414,26 @@
 	v=v/rr
 	w=w/rr
 
-	call rotate(dx,dy,dz,u,v,w,costheta(it),sintheta(it))
+c	call rotate(dx,dy,dz,u,v,w,costheta(it),sintheta(it))
+	call rotate(dx,dy,dz,u,v,w,cost,sint)
 	rr=sqrt(dx*dx+dy*dy+dz*dz)
 	dx=dx/rr
 	dy=dy/rr
 	dz=dz/rr
-	it=random(idum)*360d0
-	it=it+1
-	call rotate(dx,dy,dz,x,y,z,costheta(it),sintheta(it))
+
+c	it=random(idum)*360d0
+c	it=it+1
+c	call rotate(dx,dy,dz,x,y,z,costheta(it),sintheta(it))
+	theta=random(idum)*2d0*pi
+	cost=cos(theta)
+	sint=sin(theta)
+	call rotate(dx,dy,dz,x,y,z,cost,sint)
 	rr=sqrt(dx*dx+dy*dy+dz*dz)
 	dx=dx/rr
 	dy=dy/rr
 	dz=dz/rr
+
+
 
 	return
 	end
@@ -408,11 +537,11 @@ c-----------------------------------------------------------------------
 	IMPLICIT NONE
 	real*8 x,y,s,random,r1,r2,theta,sr1,sr2
 	
-	sr1=sqrt(r1)
-	sr2=sqrt(r2)
+	sr1=r1**2
+	sr2=r2**2
 	s=sr1+(sr2-sr1)*random(idum)
 	theta=random(idum)*2d0*pi
-	s=s*s
+	s=sqrt(s)
 	
 	x=s*cos(theta)
 	y=s*sin(theta)

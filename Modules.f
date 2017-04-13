@@ -58,8 +58,8 @@ c===============================================================================
 	logical dochemistry,retrieve_profile,condensates,faircoverage,speclimits
 	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
-	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT
-	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces
+	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem
+	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun
 	character*500 TPfile
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform
@@ -128,7 +128,7 @@ c===============================================================================
 
 	real*8,allocatable :: flux(:,:),obsA(:,:),phase(:,:,:)
 	integer ncc,nphase
-	logical cloudcompute
+	logical cloudcompute,useDRIFT
 	logical,allocatable :: docloud(:,:)
 	real*8,allocatable :: cloudfrac(:),XCloud(:,:),XeqCloud(:,:),XeqCloud_old(:,:)
 	real*8,allocatable :: nabla_ad(:),grav(:)
@@ -173,6 +173,7 @@ c===============================================================================
 		character*20 standard,ptype
 		character*500 species
 		integer nsize,nsubgrains
+		real*8 tmix,betamix
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 

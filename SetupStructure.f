@@ -3,9 +3,9 @@
 	use Constants
 	IMPLICIT NONE
 	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,met_r,dens1bar,minZ,Tc
-	real*8 Otot,Ctot,Htot
+	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill
 	parameter(RgasBar=82.05736*1.01325)
-	integer i,imol,nmix,j,niter
+	integer i,imol,nmix,j,niter,k
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
 	
@@ -17,6 +17,16 @@
 	enddo
 
 	ini = .TRUE.
+
+	if(PTchemAbun) then
+		call easy_chem_set_molfracs_atoms(COratio,metallicity)
+		call call_easy_chem(Tchem,Pchem,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
+		do i=2,nr
+			mixrat_r(i,1:nmol)=mixrat_r(1,1:nmol)
+		enddo
+		mixrat(1:nmol)=mixrat_r(1,1:nmol)		
+   	endif
 
 	minZ=-5d0
 
@@ -30,13 +40,14 @@
 	enddo
 	Pb(nr+1)=P(nr)
 
-	Mtot=Mplanet
-	grav=Ggrav*Mtot/(Rplanet)**2
-
 	if(compute_mixrat) nabla_ad=2d0/7d0
+	grav=Ggrav*Mplanet/(Rplanet)**2
 	if(par_tprofile) call ComputeParamT(T)
 
 	do j=1,niter
+
+	Mtot=Mplanet
+	grav=Ggrav*Mtot/(Rplanet)**2
 
 	if(.not.mixratfile.and.(.not.dochemistry.or.j.eq.1)) then
 	do i=1,nr
@@ -79,6 +90,20 @@
 		dens(i)=Ndens(i)*mp*mu
 		R(i+1)=R(i)+dz
 		Mtot=Mtot+dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
+	enddo
+	do i=nr,1,-1
+		vescape=sqrt(2d0*Ggrav*Mplanet/R(i))
+		vtherm=sqrt(3d0*kb*T(i)/(mp*mu))
+		Mtot=Mtot-dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
+		if(vtherm.gt.vescape) then
+			Ndens(i)=1d-10
+			dens(i)=Ndens(i)*mp*mu
+			print*,'layer',P(i),'escapes to space'
+			modelsucces=.false.
+			return
+		else
+			exit
+		endif
 	enddo
 
 	if(par_tprofile) call ComputeParamT(T)
@@ -249,6 +274,11 @@ c					Tc=T(i)
 	call output("[O]: " // dbl2string(log10(Otot/Htot)-log10(0.0004509658/0.9207539305),'(f8.3)'))
 	call output("[C]: " // dbl2string(log10(Ctot/Htot)-log10(0.0002478241/0.9207539305),'(f8.3)'))
 
+	if(.not.PTchemAbun.and..not.dochemistry) then
+		COratio=COret
+		metallicity=log10((Ctot+Otot)/Htot)-log10((0.0002478241+0.0004509658)/0.9207539305)
+	endif
+
 	open(unit=50,file=trim(outputdir) // 'COprofile.dat',RECL=100)
 	write(50,'("#",a14,3a10)') "P [bar]","C/O","[O]","[C]"
 	do i=1,nr
@@ -301,7 +331,7 @@ c					Tc=T(i)
 		endif
 		x(i)=x(i)+(3d0*Tirr**4/4d0)*alphaT*eta
 		x(i)=x(i)**0.25d0
-c		if(x(i).gt.10000d0) x(i)=10000d0
+		if(x(i).gt.10000d0) x(i)=10000d0
 		if(IsNaN(x(i))) then
 			call output("NaN in temperature structure")
 			if(i.gt.1) then
@@ -379,19 +409,92 @@ c		if(x(i).gt.10000d0) x(i)=10000d0
 	return
 	end
 	
+
+	subroutine RunDRIFT(ii)
+	use GlobalSetup
+	use Constants
+	use AtomsModule
+	IMPLICIT NONE
+	integer i,ii
+	real*8 tmix
+	character*200 command
+
+	open(unit=25,file='SPARCtoDRIFT.dat',RECL=1000)
+	write(25,'("#Elemental abundances")')
+	call easy_chem_set_molfracs_atoms(COratio,metallicity)
+	do i=1,18
+		write(25,'(se18.6,"   ",a5)') molfracs_atoms(i),names_atoms(i)
+	enddo
+	
+	write(25,'("#Density setup")')
+	write(25,'(i5)') nr
+	do i=nr,1,-1
+		tmix=Cloud(ii)%tmix*P(i)**(-Cloud(ii)%betamix)
+        write(25,*) T(i), P(i) , R(i), dens(i), grav(i), 1d0/tmix
+	enddo
+	close(unit=25)
+	command="rm -rf restart.dat"
+	call system(command)
+	command="static_weather11_SPARC 4"
+	call system(command)
+
+	return
+	end
 	
 
 	subroutine SetupCloud(ii)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 pp,tot,column
+	real*8 pp,tot,column,tt,z
 	integer ii,i,j,nsubr,isize,ilam
-	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau
+	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau,P_SI1,P_SI2
 	logical cl
 	
+	if(useDRIFT) then
+		call RunDRIFT(ii)
+		return
+	endif
+
 	if(.not.cloudcompute) then
-		if(Cloud(ii)%haze) then
+		if(Cloud(ii)%file.ne.' ') then
+			open(unit=43,file=Cloud(ii)%file,RECL=1000)
+			read(43,*)
+			read(43,*)
+			i=1
+			P_SI1=P(i)*1d6
+			P_SI2=P(i+1)*1d6
+			Xc=0d0
+			tot=0d0
+			j=0
+11			read(43,*,end=13) z,pp,tt,Xc1
+			print*,pp,P(i)
+12				if(pp.le.P_SI1.and.pp.gt.P_SI2) then
+					Xc=Xc+Xc1*pp
+					tot=tot+pp
+					j=j+1
+					goto 11
+				else
+					if(j.gt.0) then
+						cloud_dens(i,ii)=Xc*dens(i)/tot
+					else
+						cloud_dens(i,ii)=0d0
+					endif
+					i=i+1
+					if(i.eq.nr) goto 13
+					P_SI1=P(i)*1d6
+					P_SI2=P(i+1)*1d6
+					Xc=0d0
+					tot=0d0
+					j=0
+					goto 12
+				endif
+13			continue
+			close(unit=43)
+			do j=i+1,nr
+				cloud_dens(i,ii)=0d0
+			enddo
+		else if(Cloud(ii)%haze) then
 			column=0d0
 			do i=1,nr
 				cloud_dens(i,ii)=Cloud(ii)%mixrat*dens(i)
@@ -435,7 +538,7 @@ c use Ackerman & Marley 2001 cloud computation
 					Xc=(Xc1+(XeqCloud(i,ii)-XeqCloud(i-1,ii))/real(nsubr))/(1d0-Cloud(ii)%frain*((P(i)-P(i-1))/real(nsubr))/(lambdaC*P(i)))
 				endif
 				if(Xc.le.0d0.and.cl) then
-					cloud_dens(i,ii)=Xc*dens(i)
+					cloud_dens(i,ii)=0d0
 					goto 2
 				endif
 				Xc=max(Xc,0d0)
@@ -511,6 +614,27 @@ c use Ackerman & Marley 2001 cloud computation
 	return
 	end
 
+
+	subroutine OnlyChemCompute()
+	use GlobalSetup
+	IMPLICIT NONE
+	logical ini
+	integer i
+	character*500 cloudspecies(max(nclouds,1))
+	
+	do i=1,nclouds
+		cloudspecies(i)=Cloud(i)%species
+	enddo
+	call easy_chem_set_molfracs_atoms(COratio,metallicity)
+	ini=.true.
+	do i=1,nr
+		call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
+	enddo
+
+	return
+	end
+	
 
 
 	

@@ -19,6 +19,7 @@
 	IMPLICIT NONE
 	integer imol
 	real*8 kappa(ng),nu1,nu2,tanscale,ll,tot,tot2
+	real*16 kross,kplanck
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
 	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
@@ -137,6 +138,17 @@
 		write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
 	enddo
 	close(unit=30)
+	
+	if(opacitymode) then
+		open(unit=30,file=trim(outputdir) // "meanopacities",RECL=6000)
+		write(30,'("#",a20,3a19)') "T [K]","P [bar]","K_Ross [cm^2/g]","K_Planck [cm^2/g]"
+	print*,nr
+		do i=1,nr
+			call ComputeMeanOpac(i,kross,kplanck)
+			write(30,'(4es19.7)') T(i),P(i),kross,kplanck
+		enddo
+		close(unit=30)
+	endif
 
 	deallocate(cont_tot)
 	deallocate(kaver)
@@ -388,13 +400,8 @@ c thermal broadening
 			w=(sqrt(2d0*kb*T(ir)/(Mmol(imol)*mp)))
 			L_a_therm(i)=w*L_freq(i)/clight
 c pressure broadening
-			if(opacitymode) then
-				x1=L_gamma_air(i)*(1d0-1d-4)
-				x2=L_gamma_self(i)*1d-4
-			else
-				x1=L_gamma_air(i)*(1d0-mixrat_r(ir,imol))
-				x2=L_gamma_self(i)*mixrat_r(ir,imol)
-			endif
+			x1=L_gamma_air(i)*(1d0-mixrat_r(ir,imol))
+			x2=L_gamma_self(i)*mixrat_r(ir,imol)
 			L_a_press(i)=((x1+x2)*P(ir)/atm)*(296d0/T(ir))**L_n(i)
 
 			gamma=((L_a_press(i)*4d0)**2+L_a_therm(i)**2)/L_freq(i)**2
@@ -634,4 +641,62 @@ c For other than H2 from Sneep & Ubachs (2005)
 
 	return
 	end
+
+
+	subroutine ComputeMeanOpac(i,kross,kplanck)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	integer i,ilam,ig,imol
+	real*16 kross,kplanck,c1,c2
+	real*8 Planck,dPlanck
+	real*16 nu1,nu2,s1,s2,tross,tplanck,bb1,bb2,dbb1,dbb2
 	
+	kross=0d0
+	kplanck=0d0
+	tross=0d0
+	tplanck=0d0
+	
+	bb2=Planck(T(i),freq(1))
+	dbb2=dPlanck(T(i),freq(1))
+	do ilam=1,nlam-2
+		nu1 = freq(ilam)
+		nu2 = freq(ilam+1)
+		bb1=bb2
+		bb2=Planck(T(i),freq(ilam+1))
+		dbb1=dbb2
+		dbb2=dPlanck(T(i),freq(ilam+1))
+
+		do ig=1,ng
+			c1=Cabs(i,ilam,ig)+Csca(i,ilam)
+			c2=Cabs(i,ilam+1,ig)+Csca(i,ilam+1)
+
+			s1 = c1*bb1
+			s2 = c2*bb2
+			kplanck = kplanck + ABS(nu1-nu2)*0.5*(s1+s2)
+			s1 = bb1
+			s2 = bb2
+			tplanck = tplanck + ABS(nu1-nu2)*0.5*(s1+s2)
+
+			s1 = dbb1/c1
+			s2 = dbb2/c2
+			kross = kross + ABS(nu1-nu2)*0.5*(s1+s2)
+			s1 = dbb1
+			s2 = dbb2
+			tross = tross + ABS(nu1-nu2)*0.5*(s1+s2)
+		enddo
+	enddo
+	kross=tross/kross
+	kplanck=kplanck/tplanck
+
+	mu=0d0
+	do imol=1,nmol
+		if(mixrat_r(i,imol).gt.0d0) mu=mu+mixrat_r(i,imol)*Mmol(imol)
+	enddo
+
+	kross=kross/(mp*mu)
+	kplanck=kplanck/(mp*mu)
+	
+	return
+	end
+		

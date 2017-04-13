@@ -31,6 +31,7 @@
 	logical truefalse,checkparticlefile,lnkloglog
 	external Carbon_BE_Zubko1996,Mg07Fe03SiO3_Dorschner1995,AstroSilicate
 	external Enstatite_X,Enstatite_Y,Enstatite_Z
+	external Forsterite_X,Forsterite_Y,Forsterite_Z
 	external Brookite_X,Brookite_Y,Brookite_Z,Water
 	integer abun_in_name
 	parameter(abun_in_name=2)
@@ -154,6 +155,37 @@ c changed this to mass fractions (11-05-2010)
 		e2(2,1:nlam)=e2d(1:nlam)
 		filename(3)='Enstatite_Z'
 		call RegridDataLNK(Enstatite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(3,1:nlam)=e1d(1:nlam)
+		e2(3,1:nlam)=e2d(1:nlam)
+	else if(C%standard.eq.'FORSTERITE') then
+		input='FORSTERITE'
+		ns=C%nsubgrains
+		C%blend=.false.
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		allocate(r0(ns))
+		allocate(nr0(MAXMAT,ns))
+		allocate(f(nf))
+		allocate(wf(nf))
+		nm=3
+		rho(1)=3.33
+		rho(2)=3.33
+		rho(3)=3.33
+		frac(1)=1d0/3d0
+		frac(2)=1d0/3d0
+		frac(3)=1d0/3d0
+		allocate(e1d(nlam))
+		allocate(e2d(nlam))
+		filename(1)='Forsterite_X'
+		call RegridDataLNK(Forsterite_X,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(1,1:nlam)=e1d(1:nlam)
+		e2(1,1:nlam)=e2d(1:nlam)
+		filename(2)='Forsterite_Y'
+		call RegridDataLNK(Forsterite_Y,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(2,1:nlam)=e1d(1:nlam)
+		e2(2,1:nlam)=e2d(1:nlam)
+		filename(3)='Forsterite_Z'
+		call RegridDataLNK(Forsterite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(3,1:nlam)=e1d(1:nlam)
 		e2(3,1:nlam)=e2d(1:nlam)
 	else if(C%standard.eq.'BROOKITE'.or.C%standard.eq.'TiO2') then
@@ -535,6 +567,30 @@ c changed this to mass fractions (11-05-2010)
 		e2(2,1:nlam)=e2d(1:nlam)
 		filename(2)='Enstatite_Z'
 		call RegridDataLNK(Enstatite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(3,1:nlam)=e1d(1:nlam)
+		e2(3,1:nlam)=e2d(1:nlam)
+	else if(C%standard.eq.'FORSTERITE') then
+		input='FORSTERITE'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		nm=3
+		rho(1)=3.33
+		rho(2)=3.33
+		rho(3)=3.33
+		frac(1)=1d0/3d0
+		frac(2)=1d0/3d0
+		frac(3)=1d0/3d0
+		filename(1)='Forsterite_X'
+		call RegridDataLNK(Forsterite_X,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(1,1:nlam)=e1d(1:nlam)
+		e2(1,1:nlam)=e2d(1:nlam)
+		filename(2)='Forsterite_Y'
+		call RegridDataLNK(Forsterite_Y,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(2,1:nlam)=e1d(1:nlam)
+		e2(2,1:nlam)=e2d(1:nlam)
+		filename(2)='Forsterite_Z'
+		call RegridDataLNK(Forsterite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(3,1:nlam)=e1d(1:nlam)
 		e2(3,1:nlam)=e2d(1:nlam)
 	else if(C%standard.eq.'BROOKITE'.or.C%standard.eq.'TiO2') then

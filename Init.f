@@ -443,10 +443,12 @@ c allocate the arrays
 
 	if(gammaT2.lt.0d0) gammaT2=gammaT1
 	
-	if(nphase.le.0) nphase=2d0*pi/asin(Rstar/Dplanet)
-	if(nphase.gt.90) then
-		call output("Adjusting number of phase angles to 90")
-		nphase=90
+	if(nphase.le.0) then
+		nphase=2d0*pi/asin(Rstar/Dplanet)
+		if(nphase.gt.90) then
+			call output("Adjusting number of phase angles to 90")
+			nphase=90
+		endif
 	endif
 
 	if(opacitydir(len_trim(opacitydir)-1:len_trim(opacitydir)).ne.'/') then
@@ -471,9 +473,15 @@ c allocate the arrays
 		do i=1,nclouds
 			call output("==================================================================")
 			call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
-			call SetupPartCloud(i)
-			allocate(Cloud(i)%w(Cloud(i)%nsize))
-			if(Cloud(i)%species.eq.' ') call NameCloudSpecies(Cloud(i)%standard,Cloud(i)%species)
+c			if(.not.useDRIFT) then
+				call SetupPartCloud(i)
+				allocate(Cloud(i)%w(Cloud(i)%nsize))
+				if(Cloud(i)%species.eq.' ') call NameCloudSpecies(Cloud(i)%standard,Cloud(i)%species)
+c			else
+c				Cloud(i)%nsize=nr
+c				allocate(Cloud(i)%w(Cloud(i)%nsize))
+c				Cloud(i)%species="DRIFT"
+c			endif
 		enddo
 	endif
 
@@ -495,6 +503,8 @@ c allocate the arrays
 	enddo
 	Rayleigh%F11=Rayleigh%F11*tot2/tot
 	Rayleigh%IF11=0d0
+	j=1
+	Rayleigh%IF11(j)=sintheta(j)*Rayleigh%F11(j)
 	do j=2,180
 		Rayleigh%IF11(j)=Rayleigh%IF11(j-1)+sintheta(j)*Rayleigh%F11(j)
 	enddo
@@ -676,6 +686,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) condensates
 		case("cloudcompute")
 			read(key%value,*) cloudcompute
+		case("usedrift")
+			read(key%value,*) useDRIFT
 		case("mixp")
 			read(key%value,*) mixP
 		case("sinkz")
@@ -712,6 +724,12 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Tform
 		case("pform")
 			read(key%value,*) Pform
+		case("tchem")
+			read(key%value,*) Tchem
+		case("pchem")
+			read(key%value,*) Pchem
+		case("chemabun","ptchemabun")
+			read(key%value,*) PTchemAbun
 		case("rhoform","densform")
 			read(key%value,*) Pform
 			Pform=-Pform
@@ -880,20 +898,27 @@ c	if(par_tprofile) call ComputeParamT(T)
 	character*10 names(nmol)
 	integer imol(nmol)
 
-	nclouds=0
-	ncia=0
 	nr=nPom*nTom
 	maxtau=-1d0
 
-	compute_opac=.true.
-	
 	allocate(dens(nr))
 	allocate(Ndens(nr))
 	allocate(R(nr+1))
 	allocate(T(nr))
 	allocate(P(nr))
+	allocate(Hp(nr))
+	allocate(nabla_ad(nr))
+	allocate(grav(nr))
 	allocate(mixrat_r(nr,nmol))
+	allocate(mixrat_old_r(nr,nmol))
 	allocate(cloud_dens(nr,max(nclouds,1)))
+	do i=1,nclouds
+		call output("==================================================================")
+		call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
+		call SetupPartCloud(i)
+		allocate(Cloud(i)%w(Cloud(i)%nsize))
+		if(Cloud(i)%species.eq.' ') call NameCloudSpecies(Cloud(i)%standard,Cloud(i)%species)
+	enddo
 
 	do i=1,nr
 		mixrat_r(i,1:nmol)=mixrat(1:nmol)
@@ -965,6 +990,10 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Tform=-10d0
 	Pform=1d0
 	
+	PTchemAbun=.false.
+	Tchem=500d0
+	Pchem=1d0
+	
 	adiabatic_tprofile=.false.
 
 	domakeai=.false.
@@ -994,8 +1023,11 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%frain=1d0
 		Cloud(i)%species=''
 		Cloud(i)%haze=.false.
+		Cloud(i)%tmix=300d0
+		Cloud(i)%betamix=2.2
 	enddo
 	cloudcompute=.false.
+	useDRIFT=.false.
 	nspike=0
 
 	retrieval=.false.
@@ -1398,6 +1430,10 @@ c				enddo
 			read(key%value,*) Cloud(key%nr1)%mixrat
 		case("fcond")
 			read(key%value,*) Cloud(key%nr1)%fcond
+		case("tmix")
+			read(key%value,*) Cloud(key%nr1)%tmix
+		case("betamix")
+			read(key%value,*) Cloud(key%nr1)%betamix
 		case default
 			call output("Unknown cloud keyword: " // trim(key%key2))
 			stop
@@ -1489,6 +1525,9 @@ c the nspike parameter removes the n degree spike in the forward direction.
 	do ilam=1,nlam
 		do is=1,Cloud(ii)%nsize
 			Cloud(ii)%F(is,ilam)%IF11=0d0
+			j=1
+			thet=pi*(real(j)-0.5d0)/180d0
+			Cloud(ii)%F(is,ilam)%IF11(j)=sin(thet)*Cloud(ii)%F(is,ilam)%F11(j)
 			do j=2,180
 				thet=pi*(real(j)-0.5d0)/180d0
 				Cloud(ii)%F(is,ilam)%IF11(j)=Cloud(ii)%F(is,ilam)%IF11(j-1)+sin(thet)

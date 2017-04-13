@@ -25,7 +25,7 @@
 				do j=1,n_ret
 					if(RetPar(j)%logscale) then
 						ObsSpec(i)%y(j)=log10(RetPar(j)%x0)
-						ObsSpec(i)%dy(j)=log10(RetPar(j)%dx)
+						ObsSpec(i)%dy(j)=log10(RetPar(j)%dx)/ObsSpec(i)%beta
 					else
 						ObsSpec(i)%y(j)=RetPar(j)%x0
 						ObsSpec(i)%dy(j)=RetPar(j)%dx/ObsSpec(i)%beta
@@ -249,10 +249,8 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 			iy=iy+ObsSpec(i)%nlam
 		enddo
 		improved_iter=.false.
+
 		if(chi2.le.chi2prev) then
-			var0=var
-			n_not_improved=0
-			improved_iter=.true.
 			call output("Iteration improved" // trim(dbl2string(chi2,'(f13.3)')))
 			lambda=lambda/5d0
 			chi2_spec=0d0
@@ -265,48 +263,34 @@ c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.tru
 				endif
 			enddo
 			call output("   " // trim(dbl2string(chi2_spec,'(f13.3)')) // trim(dbl2string(chi2_prof,'(f13.3)')))
-			if(chi2.le.chi2min) then
-				new_best=.false.
-				var_best=var
-				ybest=y
-				mixrat_best_r=mixrat_r
-				XeqCloud_best=XeqCloud
-				chi2min=chi2
-				do i=1,nobs
-					if(ObsSpec(i)%spec) then
-						ObsSpec(i)%modelbest=ObsSpec(i)%model
-					endif
-				enddo
-			else
-				new_best=.false.
-				var=var_best
-				var0=var_best
-				y=ybest
-				mixrat_r=mixrat_best_r
-				XeqCloud=XeqCloud_best
-				chi2=chi2min
-				n_not_improved=0
-				do i=1,nobs
-					if(ObsSpec(i)%spec) then
-						ObsSpec(i)%model=ObsSpec(i)%modelbest
-					endif
-				enddo
-			endif
-			chi2prev=chi2
-		else if(iter2.eq.1) then
-			dofit=.true.
-			var=var0
-		else if(n_not_improved.lt.10.or..not.new_best) then
-			n_not_improved=n_not_improved+1
+		else
 			lambda=lambda*5d0
-c			var=var0
-c			y=y0
-c			obsA(0,1:nlam)=obsA0(1:nlam)
-c			phase(1,0,1:nlam)=phase0(1:nlam)
-c			flux(0,1:nlam)=flux0(1:nlam)
-c			dofit=dofit_prev
+		endif
+		chi2_spec=0d0
+		chi2_prof=0d0
+		do j=1,nobs
+			if(ObsSpec(j)%spec) then
+				chi2_spec=chi2_spec+1d0/chi2obs(j)
+			else
+				chi2_prof=chi2_prof+1d0/chi2obs(j)
+			endif
+		enddo
+		call output("   " // trim(dbl2string(chi2_spec,'(f13.3)')) // trim(dbl2string(chi2_prof,'(f13.3)')))
 
-			improved_iter=.false.
+		if(chi2.le.chi2min) then
+			new_best=.false.
+			var_best=var
+			var0=var
+			ybest=y
+			mixrat_best_r=mixrat_r
+			XeqCloud_best=XeqCloud
+			chi2min=chi2
+			do i=1,nobs
+				if(ObsSpec(i)%spec) then
+					ObsSpec(i)%modelbest=ObsSpec(i)%model
+				endif
+			enddo
+		else
 			new_best=.false.
 			var=var_best
 			var0=var_best
@@ -320,25 +304,93 @@ c			dofit=dofit_prev
 					ObsSpec(i)%model=ObsSpec(i)%modelbest
 				endif
 			enddo
-
-c			goto 1
-		else
-			improved_iter=.false.
-			lambda=0.01d0
-			new_best=.false.
-			var=var_best
-			var0=var_best
-			y=ybest
-			mixrat_r=mixrat_best_r
-			XeqCloud=XeqCloud_best
-			chi2=chi2prev
-			n_not_improved=0
-			do i=1,nobs
-				if(ObsSpec(i)%spec) then
-					ObsSpec(i)%model=ObsSpec(i)%modelbest
-				endif
-			enddo
 		endif
+		chi2prev=chi2
+
+		improved_iter=.true.
+
+C	if(chi2.le.chi2prev) then
+C		var0=var
+C		n_not_improved=0
+C		improved_iter=.true.
+C		call output("Iteration improved" // trim(dbl2string(chi2,'(f13.3)')))
+C		lambda=lambda/5d0
+C		chi2_spec=0d0
+C		chi2_prof=0d0
+C		do j=1,nobs
+C			if(ObsSpec(j)%spec) then
+C				chi2_spec=chi2_spec+1d0/chi2obs(j)
+C			else
+C				chi2_prof=chi2_prof+1d0/chi2obs(j)
+C			endif
+C		enddo
+C		call output("   " // trim(dbl2string(chi2_spec,'(f13.3)')) // trim(dbl2string(chi2_prof,'(f13.3)')))
+C		if(chi2.le.chi2min) then
+C			new_best=.false.
+C			var_best=var
+C			ybest=y
+C			mixrat_best_r=mixrat_r
+C			XeqCloud_best=XeqCloud
+C			chi2min=chi2
+C			do i=1,nobs
+C				if(ObsSpec(i)%spec) then
+C					ObsSpec(i)%modelbest=ObsSpec(i)%model
+C				endif
+C			enddo
+C		else
+C			new_best=.false.
+C			var=var_best
+C			var0=var_best
+C			y=ybest
+C			mixrat_r=mixrat_best_r
+C			XeqCloud=XeqCloud_best
+C			chi2=chi2min
+C			n_not_improved=0
+C			do i=1,nobs
+C				if(ObsSpec(i)%spec) then
+C					ObsSpec(i)%model=ObsSpec(i)%modelbest
+C				endif
+C			enddo
+C		endif
+C		chi2prev=chi2
+C	else if(iter2.eq.1) then
+C		dofit=.true.
+C		var=var0
+C	else if(n_not_improved.lt.10.or..not.new_best) then
+C		n_not_improved=n_not_improved+1
+C		lambda=lambda*5d0
+C		improved_iter=.false.
+C		new_best=.false.
+C		var=var_best
+C		var0=var_best
+C		y=ybest
+C		mixrat_r=mixrat_best_r
+C		XeqCloud=XeqCloud_best
+C		chi2=chi2min
+C		n_not_improved=0
+C		do i=1,nobs
+C			if(ObsSpec(i)%spec) then
+C				ObsSpec(i)%model=ObsSpec(i)%modelbest
+C			endif
+C		enddo
+C	else
+C		improved_iter=.false.
+C		lambda=0.01d0
+C		new_best=.false.
+C		var=var_best
+C		var0=var_best
+C		y=ybest
+C		mixrat_r=mixrat_best_r
+C		XeqCloud=XeqCloud_best
+C		chi2=chi2prev
+C		n_not_improved=0
+C		do i=1,nobs
+C			if(ObsSpec(i)%spec) then
+C				ObsSpec(i)%model=ObsSpec(i)%modelbest
+C			endif
+C		enddo
+C	endif
+
 		do i=1,n_ret
 			dvar(i)=max(error(1,i),error(2,i))
 			if(dvar(i).eq.0d0) dvar(i)=0.1d0
@@ -475,10 +527,6 @@ c================================================
 		enddo
 		call MatrixInvert(W(1:n_ret,1:n_ret),Winv(1:n_ret,1:n_ret),WLU(1:n_ret,1:n_ret),n_ret,info)
 		if(INFO.eq.0) then
-			Cov=0d0
-			do i=1,n_ret
-				Cov(i,i)=1d0
-			enddo
 			do i=1,n_ret
 				do j=1,n_ret
 					Cov(i,j)=Winv(i,j)
@@ -564,14 +612,6 @@ c================================================
 		scalemin=1d0
 		var=var0+dvar
 		do i=1,n_ret
-c			if(var(i).gt.1d0) then
-c				scale=(1d0-var0(i))/(var(i)-var0(i))
-c				if(scale.lt.scalemin) scalemin=scale
-c			endif
-c			if(var(i).lt.0d0) then
-c				scale=(-var0(i))/(var(i)-var0(i))
-c				if(scale.lt.scalemin) scalemin=scale
-c			endif
 			if(var(i).gt.1d0) then
 				var(i)=1d0
 			endif
@@ -652,7 +692,7 @@ c			endif
 		do j=1,n_ret
 			tot=tot+ErrVec(j,i)**2
 		enddo
-		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*sqrt(w(i))*sqrt(chi2)/sqrt(tot)
+		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*sqrt(w(i))*chi2/sqrt(tot)
 	enddo
 	
 	call SetOutputMode(.false.)
@@ -1163,7 +1203,7 @@ c	linear
 	subroutine WriteRetrieval(imodel,chi2,var,error)
 	use GlobalSetup
 	IMPLICIT NONE
-	real*8 var(n_ret),chi2,error(2,n_ret)
+	real*8 var(n_ret),chi2,error(2,n_ret),sig
 	integer i,imodel,j
 
 	call MapRetrieval(var,error)
@@ -1174,12 +1214,14 @@ c	linear
 	do i=1,n_ret
 		if(RetPar(i)%logscale) then
 c	log
-			write(20,'(a15," = ",es14.7," x/: ",es11.4,es11.4)') trim(RetPar(i)%keyword),RetPar(i)%value,
-     &					RetPar(i)%error2,RetPar(i)%error1
+			sig=log(RetPar(i)%value/RetPar(i)%x0)/RetPar(i)%dx
+			write(20,'(a15," = ",es14.7," x/: ",es11.4,es11.4,f9.2)') trim(RetPar(i)%keyword),RetPar(i)%value,
+     &					RetPar(i)%error2,RetPar(i)%error1,sig
  		else
 c	linear/squared
-			write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') trim(RetPar(i)%keyword),RetPar(i)%value,
-     &					RetPar(i)%error2,RetPar(i)%error1
+			sig=(RetPar(i)%value-RetPar(i)%x0)/RetPar(i)%dx
+			write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4,f9.2)') trim(RetPar(i)%keyword),RetPar(i)%value,
+     &					RetPar(i)%error2,RetPar(i)%error1,sig
 		endif
 	enddo
 	if(.not.dochemistry) then
