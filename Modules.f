@@ -163,7 +163,8 @@ c===============================================================================
 	type CloudType
 		real*8 P,dP,s,column
 		real*8 coverage,frain
-		real*8,allocatable :: rv(:),w(:)							! dimension nsize
+		real*8,allocatable :: rv(:),w(:),M(:)					! dimension nsize
+		real*8,allocatable :: frac(:,:),sigma(:)
 		real*8 rho,amin,amax,fmax,porosity,fcarbon,reff,veff
 		logical blend,haze
 		real*8 fcond,mixrat,tau,lam
@@ -172,7 +173,7 @@ c===============================================================================
 		character*500 file
 		character*20 standard,ptype
 		character*500 species
-		integer nsize,nsubgrains
+		integer nr,nsubgrains
 		real*8 tmix,betamix
 	end type CloudType
 

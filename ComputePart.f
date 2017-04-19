@@ -13,7 +13,7 @@
 	real,allocatable :: f11(:,:),f12(:,:)
 	real,allocatable :: f22(:,:),f33(:,:)
 	real,allocatable :: f34(:,:),f44(:,:)
-	real e1av,e2av,rad,r1,r2,tot,lmax,lmin,Mass,tot2
+	real e1av,e2av,rad,r1,r2,tot,lmax,lmin,Mass,tot2,Ntot
 	real lambda,Vol,rho_av
 	real,allocatable :: r0(:),nr0(:,:),f(:),wf(:),rho(:)
 	real,allocatable :: e1(:,:),e2(:,:),frac(:)
@@ -33,6 +33,7 @@
 	external Enstatite_X,Enstatite_Y,Enstatite_Z
 	external Forsterite_X,Forsterite_Y,Forsterite_Z
 	external Brookite_X,Brookite_Y,Brookite_Z,Water
+	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O
 	integer abun_in_name
 	parameter(abun_in_name=2)
 
@@ -69,8 +70,13 @@
 	allocate(f34(nlam,na))
 	allocate(f44(nlam,na))
 
-	amin=10d0**(log10(C%amin)+log10(C%amax/C%amin)*real(isize-1)/real(C%nsize))
-	amax=10d0**(log10(C%amin)+log10(C%amax/C%amin)*real(isize)/real(C%nsize))
+	if(useDRIFT) then
+		amin=C%amin
+		amax=C%amax
+	else
+		amin=10d0**(log10(C%amin)+log10(C%amax/C%amin)*real(isize-1)/real(C%nr))
+		amax=10d0**(log10(C%amin)+log10(C%amax/C%amin)*real(isize)/real(C%nr))
+	endif
 
 	minlog=log10(amin)
 	maxlog=log10(amax)
@@ -255,6 +261,142 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(AstroSilicate,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(1,1:nlam)=e1d(1:nlam)
 		e2(1,1:nlam)=e2d(1:nlam)
+	else if(C%standard.eq.'DRIFT') then
+		input='DRIFT'
+		ns=C%nsubgrains
+		C%Blend=.true.
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		allocate(r0(ns))
+		allocate(nr0(MAXMAT,ns))
+		allocate(f(nf))
+		allocate(wf(nf))
+		nm=16
+		i=0
+		allocate(e1d(nlam))
+		allocate(e2d(nlam))
+		frac(1:nm)=C%frac(isize,1:nm)
+		i=i+1
+		filename(i)='Brookite_X'
+		rho(i)=4.23
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Brookite_X,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+		i=i+1
+		filename(i)='Brookite_Y'
+		rho(i)=4.23
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Brookite_Y,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+		i=i+1
+		filename(i)='Brookite_Z'
+		rho(i)=4.23
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Brookite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='Forsterite_X'
+		rho(i)=3.21
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Forsterite_X,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+		i=i+1
+		filename(i)='Forsterite_Y'
+		rho(i)=3.21
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Forsterite_Y,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+		i=i+1
+		filename(i)='Forsterite_Z'
+		rho(i)=3.21
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Forsterite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='SiO'
+		rho(i)=2.18
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(SiO,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='SiO2'
+		rho(i)=2.648
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(SiO2,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='Iron'
+		rho(i)=7.87
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Iron,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='Corrundum'
+		rho(i)=3.97
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Corrundum,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='FeO'
+		rho(i)=5.7
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(FeO,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='Mg06Fe04O'
+		rho(i)=4.79
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Mg06Fe04O,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='Enstatite_X'
+		rho(i)=3.19
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Enstatite_X,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+		i=i+1
+		filename(i)='Enstatite_Y'
+		rho(i)=3.19
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Enstatite_Y,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+		i=i+1
+		filename(i)='Enstatite_Z'
+		rho(i)=3.19
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Enstatite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='Carbon_BE_Zubko1996'
+		rho(i)=1.80
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Carbon_BE_Zubko1996,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
 	endif
 		
 	min=dcmplx(1d0,0d0)
@@ -263,7 +405,11 @@ c changed this to mass fractions (11-05-2010)
 	do i=1,nm
 		tot=tot+frac(i)
 	enddo
-	frac=frac/tot
+	if(tot.gt.0d0) then
+		frac=frac/tot
+	else
+		frac=1d0/real(nm)
+	endif
 
 	partfile=trim(outputdir) // "particle" 
      &	// trim(int2string(ii,'(i0.4)')) // "_" // trim(int2string(isize,'(i0.4)')) 
@@ -362,19 +508,42 @@ c	call tellertje(ilam,nlam)
 	cext0=0d0
 	Mass=0d0
 	Vol=0d0
+	Ntot=0d0
 
 	do i=1,na/2
 		theta=(real(i)-0.5)/real(na/2)*3.1415926536/2d0
 		mu0(i)=cos(theta)
 	enddo
 
-	C%rv(isize)=0d0
 	do l=1,nm
-		if(ns.eq.1) then
+		if(C%standard.eq.'DRIFT') then
+			j=0
+			if(C%sigma(isize).le.1d-3) C%sigma(isize)=1d-3
+101			tot=0d0
+			do k=1,ns
+				r0(k)=10d0**(minlog+(maxlog-minlog)*real(k-1)/real(ns-1))
+				nr0(l,k)=exp(-((r0(k)-C%rv(isize))/C%sigma(isize))**2)/(C%sigma(isize))
+				nr0(l,k)=nr0(l,k)*r0(k)
+				tot=tot+nr0(l,k)*r0(k)**3
+			enddo
+			if(.not.tot.gt.0d0) then
+				ns=1
+				r0(1)=C%rv(isize)
+				if(r0(1).lt.amin) r0(1)=amin
+				if(r0(1).gt.amax) r0(1)=amax
+				nr0(l,1)=1d0
+				tot=r0(1)**3
+			endif
+			do k=1,ns
+				nr0(l,k)=frac(l)*nr0(l,k)/tot
+			enddo
+		else if(ns.eq.1) then
 			r0(1)=10d0**((minlog+maxlog)/2d0)
 			nr0(l,1)=frac(l)
+			C%rv(isize)=r0(1)
 		else
 			tot=0d0
+			C%rv(isize)=0d0
 			do k=1,ns
 				r0(k)=10d0**(minlog
      &				+(maxlog-minlog)*real(k-1)/real(ns-1))
@@ -385,9 +554,9 @@ c	call tellertje(ilam,nlam)
 				nr0(l,k)=frac(l)*nr0(l,k)/tot
 				C%rv(isize)=C%rv(isize)+nr0(l,k)*r0(k)**2
 			enddo
+			C%rv(isize)=sqrt(C%rv(isize))
 		endif
 	enddo
-	C%rv(isize)=sqrt(C%rv(isize))
 
 	do l=1,nm
 	if(frac(l).eq.0d0) goto 10
@@ -491,11 +660,13 @@ c	make sure the scattering matrix is properly normalized by adjusting the forwar
 	   	cabs0=cabs0+wf(i)*nr0(l,k)*(cemie-csmie)
 		Mass=Mass+wf(i)*nr0(l,k)*rho(l)*4d0*pi*r1**3/3d0
 		Vol=Vol+wf(i)*nr0(l,k)*4d0*pi*r1**3/3d0
+		Ntot=Ntot+wf(i)*nr0(l,k)
 	enddo
 	enddo
 10	continue
 	enddo
 
+	C%M(isize)=Mass*(1d-4)**3/Ntot
 	C%rho=Mass/Vol
 	rho_av=Mass/Vol
 	C%Kabs(isize,ilam)=1d4*cabs0/Mass
@@ -642,6 +813,136 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(AstroSilicate,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(1,1:nlam)=e1d(1:nlam)
 		e2(1,1:nlam)=e2d(1:nlam)
+	else if(C%standard.eq.'DRIFT') then
+		input='DRIFT'
+		ns=C%nsubgrains
+		C%Blend=.true.
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		nm=16
+		i=0
+		frac(1:nm)=C%frac(isize,1:nm)
+		i=i+1
+		filename(i)='Brookite_X'
+		rho(i)=4.23
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Brookite_X,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+		i=i+1
+		filename(i)='Brookite_Y'
+		rho(i)=4.23
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Brookite_Y,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+		i=i+1
+		filename(i)='Brookite_Z'
+		rho(i)=4.23
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Brookite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='Forsterite_X'
+		rho(i)=3.21
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Forsterite_X,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+		i=i+1
+		filename(i)='Forsterite_Y'
+		rho(i)=3.21
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Forsterite_Y,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+		i=i+1
+		filename(i)='Forsterite_Z'
+		rho(i)=3.21
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Forsterite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='SiO'
+		rho(i)=2.18
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(SiO,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='SiO2'
+		rho(i)=2.648
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(SiO2,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='Iron'
+		rho(i)=7.87
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Iron,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='Corrundum'
+		rho(i)=3.97
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Corrundum,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='FeO'
+		rho(i)=5.7
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(FeO,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='Mg06Fe04O'
+		rho(i)=4.79
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Mg06Fe04O,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='Enstatite_X'
+		rho(i)=3.19
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Enstatite_X,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+		i=i+1
+		filename(i)='Enstatite_Y'
+		rho(i)=3.19
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Enstatite_Y,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+		i=i+1
+		filename(i)='Enstatite_Z'
+		rho(i)=3.19
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Enstatite_Z,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='Carbon_BE_Zubko1996'
+		rho(i)=1.80
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Carbon_BE_Zubko1996,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
 	endif
 
 
@@ -649,9 +950,16 @@ c changed this to mass fractions (11-05-2010)
 	do i=1,nm
 		tot=tot+frac(i)
 	enddo
-	frac=frac/tot
-
-	call ParticleFITS(C,r0,nr0(1:nm,1:ns),nm,ns,rho_av,ii,amin,amax,dble(pow),C%fmax,C%blend,C%porosity,frac,rho,filename,isize)
+	if(tot.gt.0d0) then
+		frac=frac/tot
+	else
+		frac=1d0/real(nm)
+	endif
+	
+	if(.not.domakeai) then
+		call ParticleFITS(C,r0,nr0(1:nm,1:ns),nm,ns,rho_av,ii,amin,amax,dble(pow),
+     &						C%fmax,C%blend,C%porosity,frac,rho,filename,isize)
+	endif
 	
 	deallocate(e1)
 	deallocate(e2)
@@ -897,7 +1205,7 @@ c		call output("FITS file already exists, overwriting")
 	a2=a2/a0
 	a3=a3/a0
 
-	C%rv(isize)=sqrt(a2)*1d-4
+c	C%rv(isize)=sqrt(a2)*1d-4
 	
 	  status=0
 C	 Get an unused Logical Unit Number to use to create the FITS file

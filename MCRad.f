@@ -337,12 +337,17 @@ c		enddo
 	Cs=Csca(ir,ilam)*Ndens(ir)
 	do icloud=1,nclouds
 		if(docloud0(icloud)) then
-			do isize=1,Cloud(icloud)%nsize
-				Ca=Ca+
+			if(useDRIFT) then
+				Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+				Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+			else
+				do isize=1,Cloud(icloud)%nr
+					Ca=Ca+
      &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-				Cs=Cs+
+					Cs=Cs+
      &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-			enddo
+				enddo
+			endif
 		endif
 	enddo
 
@@ -362,12 +367,17 @@ c		enddo
 	M%IF11=Rayleigh%IF11*Csca(ir,ilam)*Ndens(ir)
 	do icloud=1,nclouds
 		if(docloud0(icloud)) then
-			do isize=1,Cloud(icloud)%nsize
-				M%F11=M%F11+Cloud(icloud)%F(isize,ilam)%F11*
-     &				Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-				M%IF11=M%IF11+Cloud(icloud)%F(isize,ilam)%IF11*
-     &				Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-			enddo
+			if(useDRIFT) then
+				M%F11=M%F11+Cloud(icloud)%F(ir,ilam)%F11*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+				M%IF11=M%IF11+Cloud(icloud)%F(ir,ilam)%IF11*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+			else
+				do isize=1,Cloud(icloud)%nr
+					M%F11=M%F11+Cloud(icloud)%F(isize,ilam)%F11*
+     &					Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+					M%IF11=M%IF11+Cloud(icloud)%F(isize,ilam)%IF11*
+     &					Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+				enddo
+			endif
 		endif
 	enddo
 

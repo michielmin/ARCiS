@@ -416,10 +416,13 @@ c					Tc=T(i)
 	use AtomsModule
 	IMPLICIT NONE
 	integer i,ii
-	real*8 tmix
-	character*200 command
+	real*8 tmix,frac(nr,10),temp(nr,3)
+	character*500 command
+	character*500 filename
 
-	open(unit=25,file='SPARCtoDRIFT.dat',RECL=1000)
+	call output("Running DRIFT cloud formation model")
+
+	open(unit=25,file=trim(outputdir) // 'SPARCtoDRIFT.dat',RECL=1000)
 	write(25,'("#Elemental abundances")')
 	call easy_chem_set_molfracs_atoms(COratio,metallicity)
 	do i=1,18
@@ -430,13 +433,63 @@ c					Tc=T(i)
 	write(25,'(i5)') nr
 	do i=nr,1,-1
 		tmix=Cloud(ii)%tmix*P(i)**(-Cloud(ii)%betamix)
-        write(25,*) T(i), P(i) , R(i), dens(i), grav(i), 1d0/tmix
+        write(25,*) max(T(i),500d0), P(i) , R(i), dens(i), grav(i), 1d0/tmix
 	enddo
 	close(unit=25)
-	command="rm -rf restart.dat"
+	command="rm -rf " // trim(outputdir) // "restart.dat"
 	call system(command)
-	command="static_weather11_SPARC 4"
+	command="cd " // trim(outputdir) // "; nohup static_weather11_SPARC 4 1d-3"
 	call system(command)
+
+	filename=trim(outputdir) // "out3_dust.dat"
+	call regridN(filename,P*1d6,frac,nr,2,9,10,4)
+	Cloud(ii)%frac(1:nr,1)=frac(1:nr,1)/3d0
+	Cloud(ii)%frac(1:nr,2)=frac(1:nr,1)/3d0
+	Cloud(ii)%frac(1:nr,3)=frac(1:nr,1)/3d0
+
+	Cloud(ii)%frac(1:nr,4)=frac(1:nr,2)/3d0
+	Cloud(ii)%frac(1:nr,5)=frac(1:nr,2)/3d0
+	Cloud(ii)%frac(1:nr,6)=frac(1:nr,2)/3d0
+
+	Cloud(ii)%frac(1:nr,7)=frac(1:nr,3)
+	Cloud(ii)%frac(1:nr,8)=frac(1:nr,4)
+	Cloud(ii)%frac(1:nr,9)=frac(1:nr,5)
+	Cloud(ii)%frac(1:nr,10)=frac(1:nr,6)
+	Cloud(ii)%frac(1:nr,11)=frac(1:nr,7)
+	Cloud(ii)%frac(1:nr,12)=frac(1:nr,8)
+
+	Cloud(ii)%frac(1:nr,13)=frac(1:nr,9)/3d0
+	Cloud(ii)%frac(1:nr,14)=frac(1:nr,9)/3d0
+	Cloud(ii)%frac(1:nr,15)=frac(1:nr,9)/3d0
+
+	Cloud(ii)%frac(1:nr,16)=frac(1:nr,10)
+
+	call regridN(filename,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,4)
+
+	filename=trim(outputdir) // "out3_dist.dat"
+	call regridN(filename,P,temp,nr,1,4,3,4)
+
+	cloud_dens(1:nr,ii)=temp(1:nr,1)
+	if(.not.allocated(Cloud(ii)%rv)) then
+		allocate(Cloud(ii)%rv(nr))
+		allocate(Cloud(ii)%sigma(nr))
+	endif
+	Cloud(ii)%rv(1:nr)=temp(1:nr,2)*1d4
+	Cloud(ii)%sigma(1:nr)=temp(1:nr,3)*1d4
+
+	call output("Computing inhomogeneous cloud particles")
+
+	call SetupPartCloud(ii)
+
+	cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%M(1:nr)
+
+	open(unit=25,file=trim(outputdir) // "DRIFTcloud" // trim(int2string(ii,'(i0.4)')),recl=6000)
+	do i=1,nr
+		write(25,*) P(i),T(i),Cloud(ii)%rv(i),Cloud(ii)%sigma(i),cloud_dens(i,ii),dens(i),
+     &			Cloud(ii)%frac(i,1)*3d0,Cloud(ii)%frac(i,4)*3d0,Cloud(ii)%frac(i,7:12),
+     &			Cloud(ii)%frac(i,13)*3d0,Cloud(ii)%frac(i,16)
+	enddo
+	close(unit=25)
 
 	return
 	end
@@ -552,7 +605,7 @@ c use Ackerman & Marley 2001 cloud computation
 
 	j=0
 1	tot=0d0
-	do i=1,Cloud(ii)%nsize
+	do i=1,Cloud(ii)%nr
 		Cloud(ii)%w(i)=(1q4*Cloud(ii)%rv(i))**(1q0+(1q0-3q0*Cloud(ii)%veff)/Cloud(ii)%veff)*
      &					exp(-1q4*Cloud(ii)%rv(i)/(Cloud(ii)%reff*Cloud(ii)%veff))
 		Cloud(ii)%w(i)=Cloud(ii)%w(i)*Cloud(ii)%rv(i)**3
@@ -579,7 +632,7 @@ c use Ackerman & Marley 2001 cloud computation
 		do i=nr,2,-1
 			Ca=0d0
 			Cs=0d0
-			do isize=1,Cloud(ii)%nsize
+			do isize=1,Cloud(ii)%nr
 				Ca=Ca+
      &		Cloud(ii)%Kabs(isize,ilam)*Cloud(ii)%w(isize)*cloud_dens(i,ii)
 				Cs=Cs+

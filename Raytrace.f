@@ -37,12 +37,17 @@
 			Cs=Csca(ir,ilam)*Ndens(ir)
 			do icloud=1,nclouds
 				if(docloud(icc,icloud)) then
-					do isize=1,Cloud(icloud)%nsize
-						Ca=Ca+
+					if(useDRIFT) then
+						Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+						Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+					else
+						do isize=1,Cloud(icloud)%nr
+							Ca=Ca+
      &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-						Cs=Cs+
+							Cs=Cs+
      &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-					enddo
+						enddo
+					endif
 				endif
 			enddo
 			tau_a=(R(ir)-R(ir-1))*(Ca+Cs)
@@ -64,12 +69,17 @@
 			Cs=0d0
 			do icloud=1,nclouds
 				if(docloud(icc,icloud)) then
-					do isize=1,Cloud(icloud)%nsize
-						Ca=Ca+
+					if(useDRIFT) then
+						Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+						Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+					else
+						do isize=1,Cloud(icloud)%nr
+							Ca=Ca+
      &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-						Cs=Cs+
+							Cs=Cs+
      &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-					enddo
+						enddo
+					endif
 				endif
 			enddo
 			tau=tau+(R(ir)-R(ir-1))*(Ca+Cs)
@@ -122,7 +132,7 @@
 	ndisk=10
 	nsub=3
 	
-	nrtrace=nr*nsub+ndisk
+	nrtrace=(nr-1)*nsub+ndisk
 	allocate(rtrace(nrtrace))
 	allocate(ptrace(nrtrace))
 
@@ -132,7 +142,7 @@
 		rtrace(k)=Rplanet*real(i-1)/real(ndisk)
 		ptrace(k)=P(1)*real(i-1)/real(ndisk)
 	enddo
-	do i=1,nr
+	do i=1,nr-1
 		do j=1,nsub
 			k=k+1
 			rtrace(k)=R(i)+(R(i+1)-R(i))*real(j-1)/real(nsub)
@@ -148,7 +158,7 @@
 !$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,
 !$OMP&         Ca,Cs,icloud,isize,BBr)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
-!$OMP&			cloud_dens,slant_tau)
+!$OMP&			cloud_dens,slant_tau,useDRIFT)
 !$OMP DO SCHEDULE(STATIC,1)
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
@@ -198,12 +208,17 @@
 					Cs=Csca(ir,ilam)*Ndens(ir)
 					do icloud=1,nclouds
 						if(docloud(icc,icloud)) then
-							do isize=1,Cloud(icloud)%nsize
-								Ca=Ca+
+							if(useDRIFT) then
+								Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+								Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+							else
+								do isize=1,Cloud(icloud)%nr
+									Ca=Ca+
      &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-								Cs=Cs+
+									Cs=Cs+
      &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-							enddo
+								enddo
+							endif
 						endif
 					enddo
 					tau_a=d*Ca

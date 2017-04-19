@@ -83,9 +83,13 @@
 	IMPLICIT NONE
 	logical saneplanet
 	real*8 RHill
+	integer i
 
 	saneplanet=.true.
 c	call SetupStructure(.true.)
+c	do i=1,nr
+c		if(T(i).lt.Tmin) saneplanet=.false.
+c	enddo
 	
 	return
 	end

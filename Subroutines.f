@@ -194,6 +194,73 @@ c-----------------------------------------------------------------------
 	return
 	end
 
+
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+	
+	subroutine regridN(input,grid,y,n,i1,i2,nn,nskip)
+	IMPLICIT NONE
+	integer i,j,n,i1,i2,nn,nskip
+	real*8 grid(n),y(n,nn),x0,y0(nn),x1,y1(nn),dummy(max(i1,i2+nn))
+	character*500 input
+	logical truefalse
+	inquire(file=input,exist=truefalse)
+	if(.not.truefalse) then
+		write(*,200) input(1:len_trim(input))
+200		format('File "',a,'" does not exist')
+		stop
+	endif
+	y0=1d-60
+	y1=1d-60
+	y=1d-60
+	open(unit=20,file=input,RECL=6000)
+	do j=1,nskip
+		read(20,*)
+	enddo
+	i=1
+1	read(20,*,end=102,err=1) dummy(1:max(i1,i2+nn-1))
+	x0=dummy(i1)
+	y0(1:nn)=dummy(i2:i2+nn-1)
+c	do j=1,nn
+c		if(y0(j).le.0d0) y0(j)=1d-50
+c	enddo
+103	if(x0.ge.grid(n-i+1)) then
+c		y(n-i+1,1:nn)=y0(1:nn)
+		i=i+1
+		goto 103
+	endif
+100	read(20,*,end=102,err=100) dummy(1:max(i1,i2+nn-1))
+	x1=dummy(i1)
+	y1(1:nn)=dummy(i2:i2+nn-1)
+c	do j=1,nn
+c		if(y1(j).le.0d0) y1(j)=y0(j)*1d-50
+c	enddo
+101	if(grid(n-i+1).le.x1.and.grid(n-i+1).ge.x0) then
+c		y(n-i+1,1:nn)=10d0**(log10(y1(1:nn))+(log10(grid(n-i+1)/x1))*(log10(y0(1:nn)/y1(1:nn)))/(log10(x0/x1)))
+		y(n-i+1,1:nn)=y1(1:nn)+(grid(n-i+1)-x1)*(y0(1:nn)-y1(1:nn))/(x0-x1)
+		i=i+1
+		if(i.gt.n) goto 102
+		goto 101
+	endif
+	x0=x1
+	y0=y1
+	goto 100
+102	continue
+c	do j=i,n
+c		y(n-j+1,1:nn)=y0(1:nn)*x0/grid(n-j+1)
+c	enddo
+	close(unit=20)
+c	do i=1,n
+c		do j=1,nn
+c			if(y(i,j).le.0d0) y(i,j)=1d-60
+c		enddo
+c	enddo
+	return
+	end
+
+
+
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 	

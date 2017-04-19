@@ -79,12 +79,17 @@ OBJS	= Modules.o \
 		ForsteriteData.o \
 		BrookiteData.o \
 		WaterData.o \
+		CorrundumData.o \
+		SiO2Data.o \
+		SiOData.o \
+		FeOData.o \
+		Mg0.6Fe0.4OData.o \
+		IronData.o \
 		KuruczData.o \
 		MCRad.o \
 		OpacityFITS.o \
 		ComputeT.o \
 		polyPartition.o \
-		ChemistryMorley.o \
 		Retrieval.o \
 		Genetic.o \
 		MakeAI.o \

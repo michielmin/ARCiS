@@ -292,13 +292,13 @@ C	return
 	deallocate(M)
 	deallocate(Eplanck)
 
-	do ir=1,nr
-		if(dochemistry) then
-			do i=1,nmol
-				call MorleyChemistry(mixrat_r(ir,i),T(ir),P(ir),molname(i),metallicity)
-			enddo
-		endif
-	enddo
+c	do ir=1,nr
+c		if(dochemistry) then
+c			do i=1,nmol
+c				call MorleyChemistry(mixrat_r(ir,i),T(ir),P(ir),molname(i),metallicity)
+c			enddo
+c		endif
+c	enddo
 
 	call WriteStructure
 

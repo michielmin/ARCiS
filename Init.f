@@ -473,15 +473,17 @@ c allocate the arrays
 		do i=1,nclouds
 			call output("==================================================================")
 			call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
-c			if(.not.useDRIFT) then
+			if(.not.useDRIFT) then
 				call SetupPartCloud(i)
-				allocate(Cloud(i)%w(Cloud(i)%nsize))
+				allocate(Cloud(i)%w(Cloud(i)%nr))
 				if(Cloud(i)%species.eq.' ') call NameCloudSpecies(Cloud(i)%standard,Cloud(i)%species)
-c			else
-c				Cloud(i)%nsize=nr
-c				allocate(Cloud(i)%w(Cloud(i)%nsize))
-c				Cloud(i)%species="DRIFT"
-c			endif
+			else
+				Cloud(i)%nr=nr
+				allocate(Cloud(i)%w(Cloud(i)%nr))
+				allocate(Cloud(i)%frac(nr,20))
+				Cloud(i)%species="DRIFT"
+				Cloud(i)%standard="DRIFT"
+			endif
 		enddo
 	endif
 
@@ -916,7 +918,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 		call output("==================================================================")
 		call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
 		call SetupPartCloud(i)
-		allocate(Cloud(i)%w(Cloud(i)%nsize))
+		allocate(Cloud(i)%w(Cloud(i)%nr))
 		if(Cloud(i)%species.eq.' ') call NameCloudSpecies(Cloud(i)%standard,Cloud(i)%species)
 	enddo
 
@@ -1008,7 +1010,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%lam=0.55d0
 		Cloud(i)%file=' '
 		Cloud(i)%standard='ASTROSIL'
-		Cloud(i)%nsize=50
+		Cloud(i)%nr=50
 		Cloud(i)%nsubgrains=1
 		Cloud(i)%amin=0.1
 		Cloud(i)%amax=100d0
@@ -1384,8 +1386,8 @@ c				enddo
 	select case(key%key2)
 		case("file")
 			Cloud(key%nr1)%file=trim(key%value)
-		case("ngrains","nsize")
-			read(key%value,*) Cloud(key%nr1)%nsize
+		case("ngrains","nsize","nr")
+			read(key%value,*) Cloud(key%nr1)%nr
 		case("nsubgrains")
 			read(key%value,*) Cloud(key%nr1)%nsubgrains
 		case("amin")
@@ -1454,16 +1456,19 @@ c-----------------------------------------------------------------------
 	integer ii,is,ilam,j
 	real*8 phi,thet,tot,tot2,fact
 	
-	allocate(Cloud(ii)%rv(Cloud(ii)%nsize))
-	allocate(Cloud(ii)%Kabs(Cloud(ii)%nsize,nlam))
-	allocate(Cloud(ii)%Ksca(Cloud(ii)%nsize,nlam))
-	allocate(Cloud(ii)%Kext(Cloud(ii)%nsize,nlam))
-	allocate(Cloud(ii)%F(Cloud(ii)%nsize,nlam))
+	if(.not.allocated(Cloud(ii)%rv)) allocate(Cloud(ii)%rv(Cloud(ii)%nr))
+	if(.not.allocated(Cloud(ii)%M)) allocate(Cloud(ii)%M(Cloud(ii)%nr))
+	if(.not.allocated(Cloud(ii)%Kabs)) then
+		allocate(Cloud(ii)%Kabs(Cloud(ii)%nr,nlam))
+		allocate(Cloud(ii)%Ksca(Cloud(ii)%nr,nlam))
+		allocate(Cloud(ii)%Kext(Cloud(ii)%nr,nlam))
+		allocate(Cloud(ii)%F(Cloud(ii)%nr,nlam))
+	endif
 
 	select case(Cloud(ii)%ptype)
 		case("COMPUTE")
-			do is=1,Cloud(ii)%nsize
-				call tellertje(is,Cloud(ii)%nsize)
+			do is=1,Cloud(ii)%nr
+				call tellertje(is,Cloud(ii)%nr)
 				call ComputePart(Cloud(ii),ii,is)
 			enddo
 c		case("PARTFILE")
@@ -1474,7 +1479,7 @@ c			call ReadParticle(Cloud(ii),ii)
 	
 	if(nspike.gt.0.and.nspike.le.180) call output("making the first " // trim(int2string(nspike,'(i3)')) // " degrees isotropic")
 	do ilam=1,nlam
-		do is=1,Cloud(ii)%nsize
+		do is=1,Cloud(ii)%nr
 			tot=0d0
 			tot2=0d0
 			do j=1,180
@@ -1523,7 +1528,7 @@ c the nspike parameter removes the n degree spike in the forward direction.
 	enddo
 
 	do ilam=1,nlam
-		do is=1,Cloud(ii)%nsize
+		do is=1,Cloud(ii)%nr
 			Cloud(ii)%F(is,ilam)%IF11=0d0
 			j=1
 			thet=pi*(real(j)-0.5d0)/180d0
