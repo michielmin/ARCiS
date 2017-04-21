@@ -64,7 +64,7 @@
 				call WriteStructure()
 				call WriteOutput()
 			else
-				call output("chemistry is taking too long...")
+				call output("something is wrong...")
 				call output("try different set of parameters")
 				goto 1
 			endif
@@ -88,7 +88,7 @@
 	saneplanet=.true.
 c	call SetupStructure(.true.)
 c	do i=1,nr
-c		if(T(i).lt.Tmin) saneplanet=.false.
+c		if(T(i).le.Tmin) saneplanet=.false.
 c	enddo
 	
 	return

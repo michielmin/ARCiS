@@ -199,18 +199,29 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 	
-	subroutine regridN(input,grid,y,n,i1,i2,nn,nskip)
+	subroutine regridN(input,grid_in,y_in,n,i1,i2,nn,nskip,invert)
 	IMPLICIT NONE
 	integer i,j,n,i1,i2,nn,nskip
 	real*8 grid(n),y(n,nn),x0,y0(nn),x1,y1(nn),dummy(max(i1,i2+nn))
+	real*8 grid_in(n),y_in(n,nn)
 	character*500 input
-	logical truefalse
+	logical truefalse,invert
 	inquire(file=input,exist=truefalse)
 	if(.not.truefalse) then
 		write(*,200) input(1:len_trim(input))
 200		format('File "',a,'" does not exist')
 		stop
 	endif
+	if(invert) then
+		do i=1,n
+			grid(i)=grid_in(n-i+1)
+			y(i,1:nn)=y_in(n-i+1,1:nn)
+		enddo
+	else
+		grid=grid_in
+		y=y_in
+	endif
+
 	y0=1d-60
 	y1=1d-60
 	y=1d-60
@@ -225,8 +236,8 @@ c-----------------------------------------------------------------------
 c	do j=1,nn
 c		if(y0(j).le.0d0) y0(j)=1d-50
 c	enddo
-103	if(x0.ge.grid(n-i+1)) then
-c		y(n-i+1,1:nn)=y0(1:nn)
+103	if((invert.and.x0.ge.grid(i)).or.(.not.invert.and.x0.le.grid(i))) then
+c		y(i,1:nn)=y0(1:nn)
 		i=i+1
 		goto 103
 	endif
@@ -236,9 +247,10 @@ c		y(n-i+1,1:nn)=y0(1:nn)
 c	do j=1,nn
 c		if(y1(j).le.0d0) y1(j)=y0(j)*1d-50
 c	enddo
-101	if(grid(n-i+1).le.x1.and.grid(n-i+1).ge.x0) then
-c		y(n-i+1,1:nn)=10d0**(log10(y1(1:nn))+(log10(grid(n-i+1)/x1))*(log10(y0(1:nn)/y1(1:nn)))/(log10(x0/x1)))
-		y(n-i+1,1:nn)=y1(1:nn)+(grid(n-i+1)-x1)*(y0(1:nn)-y1(1:nn))/(x0-x1)
+101	if((invert.and.(grid(i).le.x1.and.grid(i).ge.x0)).or.
+     &		(.not.invert.and.(grid(i).ge.x1.and.grid(i).le.x0))) then
+c		y(i,1:nn)=10d0**(log10(y1(1:nn))+(log10(grid(i)/x1))*(log10(y0(1:nn)/y1(1:nn)))/(log10(x0/x1)))
+		y(i,1:nn)=y1(1:nn)+(grid(i)-x1)*(y0(1:nn)-y1(1:nn))/(x0-x1)
 		i=i+1
 		if(i.gt.n) goto 102
 		goto 101
@@ -256,6 +268,15 @@ c		do j=1,nn
 c			if(y(i,j).le.0d0) y(i,j)=1d-60
 c		enddo
 c	enddo
+
+	if(invert) then
+		do i=1,n
+			y_in(i,1:nn)=y(n-i+1,1:nn)
+		enddo
+	else
+		y_in=y
+	endif
+
 	return
 	end
 

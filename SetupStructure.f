@@ -433,7 +433,12 @@ c					Tc=T(i)
 	write(25,'(i5)') nr
 	do i=nr,1,-1
 		tmix=Cloud(ii)%tmix*P(i)**(-Cloud(ii)%betamix)
-        write(25,*) max(T(i),500d0), P(i) , R(i), dens(i), grav(i), 1d0/tmix
+		if(T(i).lt.Tmin) then
+			modelsucces=.false.
+			close(unit=25)
+			return
+		endif
+        write(25,*) T(i), P(i) , R(i), dens(i), grav(i), 1d0/tmix
 	enddo
 	close(unit=25)
 	command="rm -rf " // trim(outputdir) // "restart.dat"
@@ -442,7 +447,7 @@ c					Tc=T(i)
 	call system(command)
 
 	filename=trim(outputdir) // "out3_dust.dat"
-	call regridN(filename,P*1d6,frac,nr,2,9,10,4)
+	call regridN(filename,P*1d6,frac,nr,2,9,10,4,.true.)
 	Cloud(ii)%frac(1:nr,1)=frac(1:nr,1)/3d0
 	Cloud(ii)%frac(1:nr,2)=frac(1:nr,1)/3d0
 	Cloud(ii)%frac(1:nr,3)=frac(1:nr,1)/3d0
@@ -464,10 +469,10 @@ c					Tc=T(i)
 
 	Cloud(ii)%frac(1:nr,16)=frac(1:nr,10)
 
-	call regridN(filename,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,4)
+	call regridN(filename,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,4,.true.)
 
 	filename=trim(outputdir) // "out3_dist.dat"
-	call regridN(filename,P,temp,nr,1,4,3,4)
+	call regridN(filename,P,temp,nr,1,4,3,4,.true.)
 
 	cloud_dens(1:nr,ii)=temp(1:nr,1)
 	if(.not.allocated(Cloud(ii)%rv)) then
@@ -505,49 +510,37 @@ c					Tc=T(i)
 	logical cl
 	
 	if(useDRIFT) then
-		call RunDRIFT(ii)
+		if(Cloud(ii)%file.ne.' ') then
+			call regridN(Cloud(ii)%file,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,3,.false.)
+			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
+			if(.not.allocated(Cloud(ii)%rv)) then
+				allocate(Cloud(ii)%rv(nr))
+				allocate(Cloud(ii)%sigma(nr))
+			endif
+			call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,13,1,3,.false.)
+			Cloud(ii)%rv=Cloud(ii)%rv*1d4
+			Cloud(ii)%sigma=1d-10
+			Cloud(ii)%frac(1:nr,1:16)=1d-10
+			Cloud(ii)%frac(1:nr,13:15)=1d0/3d0
+			call output("Computing inhomogeneous cloud particles")
+
+			call SetupPartCloud(ii)
+
+			open(unit=25,file=trim(outputdir) // "DRIFTcloud" // trim(int2string(ii,'(i0.4)')),recl=6000)
+			do i=1,nr
+				write(25,*) P(i),T(i),Cloud(ii)%rv(i),Cloud(ii)%sigma(i),cloud_dens(i,ii),dens(i),
+     &			Cloud(ii)%frac(i,1)*3d0,Cloud(ii)%frac(i,4)*3d0,Cloud(ii)%frac(i,7:12),
+     &			Cloud(ii)%frac(i,13)*3d0,Cloud(ii)%frac(i,16)
+			enddo
+			close(unit=25)
+		else
+			call RunDRIFT(ii)
+		endif
 		return
 	endif
 
 	if(.not.cloudcompute) then
-		if(Cloud(ii)%file.ne.' ') then
-			open(unit=43,file=Cloud(ii)%file,RECL=1000)
-			read(43,*)
-			read(43,*)
-			i=1
-			P_SI1=P(i)*1d6
-			P_SI2=P(i+1)*1d6
-			Xc=0d0
-			tot=0d0
-			j=0
-11			read(43,*,end=13) z,pp,tt,Xc1
-			print*,pp,P(i)
-12				if(pp.le.P_SI1.and.pp.gt.P_SI2) then
-					Xc=Xc+Xc1*pp
-					tot=tot+pp
-					j=j+1
-					goto 11
-				else
-					if(j.gt.0) then
-						cloud_dens(i,ii)=Xc*dens(i)/tot
-					else
-						cloud_dens(i,ii)=0d0
-					endif
-					i=i+1
-					if(i.eq.nr) goto 13
-					P_SI1=P(i)*1d6
-					P_SI2=P(i+1)*1d6
-					Xc=0d0
-					tot=0d0
-					j=0
-					goto 12
-				endif
-13			continue
-			close(unit=43)
-			do j=i+1,nr
-				cloud_dens(i,ii)=0d0
-			enddo
-		else if(Cloud(ii)%haze) then
+		if(Cloud(ii)%haze) then
 			column=0d0
 			do i=1,nr
 				cloud_dens(i,ii)=Cloud(ii)%mixrat*dens(i)

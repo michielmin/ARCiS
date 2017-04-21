@@ -73,6 +73,22 @@
 	if(useDRIFT) then
 		amin=C%amin
 		amax=C%amax
+		if(cloud_dens(isize,ii).lt.1d-50) then
+			C%M(isize)=(3d0*4d0*pi*(amin*1d-4)**3)/3d0
+			C%rho=3d0
+			do ilam=1,nlam
+				C%Kabs(isize,ilam)=1d0
+				C%Ksca(isize,ilam)=1d0
+				C%Kext(isize,ilam)=1d0
+				C%F(isize,ilam)%F11(1:180)=1d0
+				C%F(isize,ilam)%F12(1:180)=1d0
+				C%F(isize,ilam)%F22(1:180)=1d0
+				C%F(isize,ilam)%F33(1:180)=1d0
+				C%F(isize,ilam)%F34(1:180)=1d0
+				C%F(isize,ilam)%F44(1:180)=1d0
+			enddo
+			return
+		endif
 	else
 		amin=10d0**(log10(C%amin)+log10(C%amax/C%amin)*real(isize-1)/real(C%nr))
 		amax=10d0**(log10(C%amin)+log10(C%amax/C%amin)*real(isize)/real(C%nr))
@@ -518,7 +534,14 @@ c	call tellertje(ilam,nlam)
 	do l=1,nm
 		if(C%standard.eq.'DRIFT') then
 			j=0
-			if(C%sigma(isize).le.1d-3) C%sigma(isize)=1d-3
+			if(C%sigma(isize).le.1d-3) then
+				ns=1
+				r0(1)=C%rv(isize)
+				if(r0(1).lt.amin) r0(1)=amin
+				if(r0(1).gt.amax) r0(1)=amax
+				nr0(l,1)=1d0
+				tot=r0(1)**3
+			else
 101			tot=0d0
 			do k=1,ns
 				r0(k)=10d0**(minlog+(maxlog-minlog)*real(k-1)/real(ns-1))
@@ -533,6 +556,7 @@ c	call tellertje(ilam,nlam)
 				if(r0(1).gt.amax) r0(1)=amax
 				nr0(l,1)=1d0
 				tot=r0(1)**3
+			endif
 			endif
 			do k=1,ns
 				nr0(l,k)=frac(l)*nr0(l,k)/tot
