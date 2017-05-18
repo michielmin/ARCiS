@@ -61,6 +61,8 @@ OBJS	= Modules.o \
 		InputOutput.o \
 		Main.o \
 		Init.o \
+		easy_chem_extra.o \
+		easy_chem.o \
 		SetupStructure.o \
 		SetupOpacities.o \
 		Raytrace.o \
@@ -95,8 +97,7 @@ OBJS	= Modules.o \
 		MakeAI.o \
 		dlsei.o \
 		Lapack.o \
-		easy_chem_extra.o \
-		easy_chem.o
+		DiffuseCloud.o
 
 # program name and install location
 PROGRAM       = SPARC

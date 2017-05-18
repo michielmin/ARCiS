@@ -684,6 +684,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) metallicity
 		case("coratio")
 			read(key%value,*) COratio
+		case("tiscale")
+			read(key%value,*) TiScale
+		case("enhancecarbon")
+			read(key%value,*) enhancecarbon
 		case("condensates")
 			read(key%value,*) condensates
 		case("cloudcompute")
@@ -969,6 +973,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	metallicity=0d0
 	condensates=.true.
 	COratio=0.55
+	TiScale=1d0
+	enhancecarbon=.false.
 	mixP=0d0
 	mixratHaze=0d0
 	
@@ -1436,6 +1442,8 @@ c				enddo
 			read(key%value,*) Cloud(key%nr1)%tmix
 		case("betamix")
 			read(key%value,*) Cloud(key%nr1)%betamix
+		case("kzz","k")
+			read(key%value,*) Cloud(key%nr1)%Kzz
 		case default
 			call output("Unknown cloud keyword: " // trim(key%key2))
 			stop

@@ -142,7 +142,6 @@
 	if(opacitymode) then
 		open(unit=30,file=trim(outputdir) // "meanopacities",RECL=6000)
 		write(30,'("#",a20,3a19)') "T [K]","P [bar]","K_Ross [cm^2/g]","K_Planck [cm^2/g]"
-	print*,nr
 		do i=1,nr
 			call ComputeMeanOpac(i,kross,kplanck)
 			write(30,'(4es19.7)') T(i),P(i),kross,kplanck

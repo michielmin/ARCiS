@@ -22,6 +22,7 @@
 		inquire(file=trim(outputdir) // "emis",exist=exist)
 		if(.not.exist) then
 			call MapRetrieval(var,dvar)
+			call WriteRetrieval(i,chi2,var,dvar)
 			call InitDens()
 			call CheckPlanet(saneplanet)
 			if(.not.saneplanet) then
@@ -32,7 +33,7 @@
 			endif
 			call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
 			Fstar=Fstar*pi*Rstar**2
-			call SetOutputMode(.false.)
+c			call SetOutputMode(.false.)
 			call ComputeModel(.true.)
 			if(PTchemAbun) then
 				do k=1,n_ret
@@ -64,6 +65,7 @@
 				call WriteStructure()
 				call WriteOutput()
 			else
+				call SetOutputMode(.true.)
 				call output("something is wrong...")
 				call output("try different set of parameters")
 				goto 1

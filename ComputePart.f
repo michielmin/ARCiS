@@ -87,7 +87,7 @@
 				C%F(isize,ilam)%F34(1:180)=1d0
 				C%F(isize,ilam)%F44(1:180)=1d0
 			enddo
-			return
+			goto 301
 		endif
 	else
 		amin=10d0**(log10(C%amin)+log10(C%amax/C%amin)*real(isize-1)/real(C%nr))
@@ -452,7 +452,7 @@ c changed this to mass fractions (11-05-2010)
 		if(checkparticlefile(partfile,amin,amax,dble(pow),ns,C%fmax,C%blend,C%porosity,frac,rho,nm,
      &					filename,(abun_in_name.le.0))) then
 			call ReadParticleFits(partfile,C,isize)
-			return
+			goto 300
 		endif
 	endif
 	
@@ -980,15 +980,25 @@ c changed this to mass fractions (11-05-2010)
 		frac=1d0/real(nm)
 	endif
 	
-	if(.not.domakeai) then
+	if(.not.domakeai.and..false.) then
 		call ParticleFITS(C,r0,nr0(1:nm,1:ns),nm,ns,rho_av,ii,amin,amax,dble(pow),
      &						C%fmax,C%blend,C%porosity,frac,rho,filename,isize)
 	endif
-	
-	deallocate(e1)
-	deallocate(e2)
+
+
+300	continue	
+
+	deallocate(r0)
+	deallocate(nr0)
+	deallocate(f)
+	deallocate(wf)
 	deallocate(e1d)
 	deallocate(e2d)
+
+301	continue
+
+	deallocate(e1)
+	deallocate(e2)
 	
 	deallocate(Mief11)
 	deallocate(Mief12)
@@ -1011,10 +1021,6 @@ c changed this to mass fractions (11-05-2010)
 	deallocate(f34)
 	deallocate(f44)
 
-	deallocate(r0)
-	deallocate(nr0)
-	deallocate(f)
-	deallocate(wf)
 
 
 	return

@@ -61,7 +61,8 @@ c===============================================================================
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun
 	character*500 TPfile
-	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime
+	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime,TiScale
+	logical enhancecarbon
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
@@ -174,7 +175,7 @@ c===============================================================================
 		character*20 standard,ptype
 		character*500 species
 		integer nr,nsubgrains
-		real*8 tmix,betamix
+		real*8 tmix,betamix,Kzz
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 

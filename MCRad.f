@@ -69,6 +69,7 @@ c		ct2=1d0-2d0*real(iphase)/real(nphase)
 				E0=E0-Femit(ir)
 				if(E0.lt.0d0) exit
 			enddo
+			if(ir.lt.1) ir=1
 			E0=Eemit(ir)/(real(Nphot)*Femit(ir))
 
 			call randomdirection(x,y,z)
@@ -628,7 +629,14 @@ c-----------------------------------------------------------------------
 
 	v=-3d0*log(yy(iy))*dmin**2/(lr**2*pi**2)
 
-	if(random(idum).gt.fstop) then
+	albedo=Cs/Ce
+	fstop=max(1d0-albedo**powstop,1d-4)
+	E=E*(albedo/(1d0-fstop))**v
+
+	fstop=1d0-(1d0-fstop)**v
+	absorbed=.false.
+
+	if(random(idum).lt.fstop) then
 		absorbed=.true.
 		return
 	endif
@@ -637,13 +645,6 @@ c-----------------------------------------------------------------------
 	x=x+dmin*dx
 	y=y+dmin*dy
 	z=z+dmin*dz
-
-	albedo=Cs/Ce
-	fstop=max(1d0-albedo**powstop,1d-4)
-	fstop=fstop**v
-	absorbed=.false.
-
-	E=E*(albedo/(1d0-fstop))**v
 
 	EJv=EJv+v*(1d0-albedo)
 	Eabs=Eabs+v*(1d0-albedo)

@@ -199,13 +199,13 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 	
-	subroutine regridN(input,grid_in,y_in,n,i1,i2,nn,nskip,invert)
+	subroutine regridN(input,grid_in,y_in,n,i1,i2,nn,nskip,invert,extrapol)
 	IMPLICIT NONE
 	integer i,j,n,i1,i2,nn,nskip
 	real*8 grid(n),y(n,nn),x0,y0(nn),x1,y1(nn),dummy(max(i1,i2+nn))
 	real*8 grid_in(n),y_in(n,nn)
 	character*500 input
-	logical truefalse,invert
+	logical truefalse,invert,extrapol
 	inquire(file=input,exist=truefalse)
 	if(.not.truefalse) then
 		write(*,200) input(1:len_trim(input))
@@ -237,7 +237,7 @@ c	do j=1,nn
 c		if(y0(j).le.0d0) y0(j)=1d-50
 c	enddo
 103	if((invert.and.x0.ge.grid(i)).or.(.not.invert.and.x0.le.grid(i))) then
-c		y(i,1:nn)=y0(1:nn)
+		if(extrapol) y(i,1:nn)=y0(1:nn)
 		i=i+1
 		goto 103
 	endif
@@ -259,9 +259,11 @@ c		y(i,1:nn)=10d0**(log10(y1(1:nn))+(log10(grid(i)/x1))*(log10(y0(1:nn)/y1(1:nn)
 	y0=y1
 	goto 100
 102	continue
-c	do j=i,n
-c		y(n-j+1,1:nn)=y0(1:nn)*x0/grid(n-j+1)
-c	enddo
+	if(extrapol) then
+		do j=i,n
+			y(j,1:nn)=y0(1:nn)
+		enddo
+	endif
 	close(unit=20)
 c	do i=1,n
 c		do j=1,nn

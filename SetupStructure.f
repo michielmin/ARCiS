@@ -19,7 +19,7 @@
 	ini = .TRUE.
 
 	if(PTchemAbun) then
-		call easy_chem_set_molfracs_atoms(COratio,metallicity)
+		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		call call_easy_chem(Tchem,Pchem,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
      &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
 		do i=2,nr
@@ -112,9 +112,21 @@
 		if(T(i).lt.3d0) T(i)=3d0
 	enddo
 
+	if(useDRIFT.and.domakeai) then
+		modelsucces=.false.
+		do i=1,nr
+			if(T(i).lt.Tmax.and.Tmax.gt.0d0) modelsucces=.true.
+		enddo
+		do i=1,nr
+			if(T(i).lt.Tmin.and.Tmin.gt.0d0) modelsucces=.false.
+		enddo
+		if(.not.modelsucces) return
+	endif
+
+
 	if(dochemistry.and.j.ne.niter) then
 	if(compute_mixrat) then
-		call easy_chem_set_molfracs_atoms(COratio,metallicity)
+		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		if(Tform.gt.0d0) then
 			call call_easy_chem(Tform,Pform,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,.true.,cloudspecies,
      &					XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),.true.)
@@ -131,7 +143,7 @@
 			met_r=metallicity
 			if(sinkZ) then
 				met_r=metallicity+log10((dens(i)/dens1bar)**(1d0/alphaZ**2-1d0))
-				call easy_chem_set_molfracs_atoms(COratio,met_r)
+				call easy_chem_set_molfracs_atoms(COratio,met_r,TiScale,enhancecarbon)
 			endif
 			if(P(i).ge.mixP.or.i.eq.1) then
 				if(met_r.gt.minZ) then
@@ -181,7 +193,7 @@ c					Tc=T(i)
 	if(dochemistry) then
 	if(compute_mixrat) then
 		ini=.true.
-		call easy_chem_set_molfracs_atoms(COratio,metallicity)
+		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		if(Tform.gt.0d0) then
 			call call_easy_chem(Tform,Pform,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,.true.,cloudspecies,
      &					XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),.true.)
@@ -198,7 +210,7 @@ c					Tc=T(i)
 			met_r=metallicity
 			if(sinkZ) then
 				met_r=metallicity+log10(dens(i)/dens1bar)*(1d0/alphaZ**2-1d0)
-				call easy_chem_set_molfracs_atoms(COratio,met_r)
+				call easy_chem_set_molfracs_atoms(COratio,met_r,TiScale,enhancecarbon)
 			endif
 			if(P(i).ge.mixP.or.i.eq.1) then
 				if(met_r.gt.minZ) then
@@ -417,23 +429,35 @@ c					Tc=T(i)
 	IMPLICIT NONE
 	integer i,ii
 	real*8 tmix,frac(nr,10),temp(nr,3)
+	real*8 elabun(nr,7)
 	character*500 command
 	character*500 filename
-
+	logical ini
+	character*500 cloudspecies(max(nclouds,1))
+	
 	call output("Running DRIFT cloud formation model")
 
 	open(unit=25,file=trim(outputdir) // 'SPARCtoDRIFT.dat',RECL=1000)
 	write(25,'("#Elemental abundances")')
-	call easy_chem_set_molfracs_atoms(COratio,metallicity)
+	call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 	do i=1,18
 		write(25,'(se18.6,"   ",a5)') molfracs_atoms(i),names_atoms(i)
 	enddo
+
+	modelsucces=.false.
+	do i=1,nr
+		if(T(i).lt.2000d0) modelsucces=.true.
+	enddo
+	if(.not.modelsucces) then
+		close(unit=25)
+		return
+	endif
 	
 	write(25,'("#Density setup")')
 	write(25,'(i5)') nr
 	do i=nr,1,-1
 		tmix=Cloud(ii)%tmix*P(i)**(-Cloud(ii)%betamix)
-		if(T(i).lt.Tmin) then
+		if(T(i).lt.Tmin.and.domakeai) then
 			modelsucces=.false.
 			close(unit=25)
 			return
@@ -443,11 +467,21 @@ c					Tc=T(i)
 	close(unit=25)
 	command="rm -rf " // trim(outputdir) // "restart.dat"
 	call system(command)
-	command="cd " // trim(outputdir) // "; nohup static_weather11_SPARC 4 1d-3"
+	command="cd " // trim(outputdir) // "; gtimeout 1800s nohup static_weather12 4 1d-3"
 	call system(command)
 
+	inquire(file=trim(outputdir) // "done",exist=modelsucces)
+	if(modelsucces) then
+		open(unit=25,file=trim(outputdir) // "done")
+		read(25,*) modelsucces
+	endif
+	command="rm -rf " // trim(outputdir) // "nohup.out"
+	call system(command)
+
+	if(.not.modelsucces.and.domakeai) return
+
 	filename=trim(outputdir) // "out3_dust.dat"
-	call regridN(filename,P*1d6,frac,nr,2,9,10,4,.true.)
+	call regridN(filename,P*1d6,frac,nr,2,9,10,4,.true.,.true.)
 	Cloud(ii)%frac(1:nr,1)=frac(1:nr,1)/3d0
 	Cloud(ii)%frac(1:nr,2)=frac(1:nr,1)/3d0
 	Cloud(ii)%frac(1:nr,3)=frac(1:nr,1)/3d0
@@ -469,10 +503,26 @@ c					Tc=T(i)
 
 	Cloud(ii)%frac(1:nr,16)=frac(1:nr,10)
 
-	call regridN(filename,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,4,.true.)
+	call regridN(filename,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,4,.true.,.false.)
+	call regridN(filename,P*1d6,elabun,nr,2,36,7,4,.true.,.true.)
 
+	do i=1,nclouds
+		cloudspecies(i)=Cloud(i)%species
+	enddo
+	do i=1,nr
+		ini=.true.
+		if(cloud_dens(i,ii).lt.1d-25) then
+			call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+		else
+			call easy_chem_set_molfracs_atoms_elabun(COratio,metallicity,elabun(i,1:7))
+		endif
+		call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
+     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
+	enddo	
+
+	call output("Computing chemistry after dust condensation")
 	filename=trim(outputdir) // "out3_dist.dat"
-	call regridN(filename,P,temp,nr,1,4,3,4,.true.)
+	call regridN(filename,P,temp,nr,1,4,3,4,.true.,.false.)
 
 	cloud_dens(1:nr,ii)=temp(1:nr,1)
 	if(.not.allocated(Cloud(ii)%rv)) then
@@ -510,14 +560,35 @@ c					Tc=T(i)
 	logical cl
 	
 	if(useDRIFT) then
-		if(Cloud(ii)%file.ne.' ') then
-			call regridN(Cloud(ii)%file,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,3,.false.)
+		if(cloudcompute) then
+			if(.not.allocated(Cloud(ii)%rv)) then
+				allocate(Cloud(ii)%rv(nr))
+				allocate(Cloud(ii)%sigma(nr))
+			endif
+			call DiffuseCloud(ii)
+			Cloud(ii)%rv=Cloud(ii)%rv*1d4
+			Cloud(ii)%sigma=1d-10
+			Cloud(ii)%frac(1:nr,1:16)=1d-10
+			Cloud(ii)%frac(1:nr,13:15)=1d0/3d0
+			call output("Computing inhomogeneous cloud particles")
+
+			call SetupPartCloud(ii)
+
+			open(unit=25,file=trim(outputdir) // "DRIFTcloud" // trim(int2string(ii,'(i0.4)')),recl=6000)
+			do i=1,nr
+				write(25,*) P(i),T(i),Cloud(ii)%rv(i),Cloud(ii)%sigma(i),cloud_dens(i,ii),dens(i),
+     &			Cloud(ii)%frac(i,1)*3d0,Cloud(ii)%frac(i,4)*3d0,Cloud(ii)%frac(i,7:12),
+     &			Cloud(ii)%frac(i,13)*3d0,Cloud(ii)%frac(i,16)
+			enddo
+			close(unit=25)
+		else if(Cloud(ii)%file.ne.' ') then
+			call regridN(Cloud(ii)%file,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,3,.false.,.false.)
 			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
 			if(.not.allocated(Cloud(ii)%rv)) then
 				allocate(Cloud(ii)%rv(nr))
 				allocate(Cloud(ii)%sigma(nr))
 			endif
-			call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,13,1,3,.false.)
+			call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,13,1,3,.false.,.true.)
 			Cloud(ii)%rv=Cloud(ii)%rv*1d4
 			Cloud(ii)%sigma=1d-10
 			Cloud(ii)%frac(1:nr,1:16)=1d-10
@@ -671,7 +742,7 @@ c use Ackerman & Marley 2001 cloud computation
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
 	enddo
-	call easy_chem_set_molfracs_atoms(COratio,metallicity)
+	call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 	ini=.true.
 	do i=1,nr
 		call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
