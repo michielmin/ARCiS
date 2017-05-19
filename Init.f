@@ -371,21 +371,6 @@ c==============================================================================
 	real*8 tot,tot2,theta,Planck
 	character*1000 line
 
-	idum=-42
-#ifdef USE_OPENMP
-	j=omp_get_max_threads()
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& SHARED(j)
-!$OMP DO SCHEDULE(STATIC,j)
-	do i=1,j
-		idum=-42-omp_get_thread_num()
-	enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
-#endif
-
 	allocate(key)
 	first => key
 
@@ -410,6 +395,21 @@ c allocate the arrays
 		key => key%next
 	
 	enddo
+
+	idum=-idum0
+#ifdef USE_OPENMP
+	j=omp_get_max_threads()
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& SHARED(j,idum0)
+!$OMP DO SCHEDULE(STATIC,j)
+	do i=1,j
+		idum=-idum0-omp_get_thread_num()
+	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+#endif
 
 	if(n_ret.gt.0) n_ret=n_ret+RetPar(n_ret)%n-1
 
@@ -745,6 +745,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) nai
 		case("maxchemtime")
 			read(key%value,*) maxchemtime
+		case("idum","seed")
+			read(key%value,*) idum0
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -950,6 +952,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	integer i
 	character*100 homedir
 	
+	idum0=42
+
 	Mplanet=1d0
 	Rplanet=1d0
 	
