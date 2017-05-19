@@ -467,7 +467,7 @@ c					Tc=T(i)
 	close(unit=25)
 	command="rm -rf " // trim(outputdir) // "restart.dat"
 	call system(command)
-	command="cd " // trim(outputdir) // "; gtimeout 1800s nohup static_weather12 4 1d-3"
+	command="cd " // trim(outputdir) // "; gtimeout 900s nohup static_weather12 4 1d-3"
 	call system(command)
 
 	inquire(file=trim(outputdir) // "done",exist=modelsucces)
