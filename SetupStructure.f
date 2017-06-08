@@ -509,18 +509,23 @@ c					Tc=T(i)
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
 	enddo
-	do i=1,nr
-		ini=.true.
-		if(cloud_dens(i,ii).lt.1d-25) then
-			call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
-		else
-			call easy_chem_set_molfracs_atoms_elabun(COratio,metallicity,elabun(i,1:7))
-		endif
-		call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
+	if(mixratfile) then
+		call regridN(TPfile,P,mixrat_r,nr,2,3,nmol,2,.true.,.false.)
+	else
+		call output("Computing chemistry after dust condensation")
+		do i=1,nr
+			call tellertje(i,nr)
+			ini=.true.
+			if(cloud_dens(i,ii).lt.1d-25) then
+				call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+			else
+				call easy_chem_set_molfracs_atoms_elabun(COratio,metallicity,elabun(i,1:7))
+			endif
+			call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
      &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
-	enddo	
+		enddo
+	endif
 
-	call output("Computing chemistry after dust condensation")
 	filename=trim(outputdir) // "out3_dist.dat"
 	call regridN(filename,P,temp,nr,1,4,3,4,.true.,.false.)
 

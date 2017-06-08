@@ -487,6 +487,7 @@ c	call output("Size: " // trim(dbl2string(amin,'(f10.3)')) // " - " // trim(dbl2
 		enddo
 		rho(1)=rho_av
 		nm=1
+		frac(1)=1d0
 		write(lnkfile,'(a,a,".lnk")') trim(outputdir),trim(input)
 		open(unit=30,file=lnkfile,RECL=200)
 		do i=1,nlam
@@ -534,7 +535,7 @@ c	call tellertje(ilam,nlam)
 	do l=1,nm
 		if(C%standard.eq.'DRIFT') then
 			j=0
-			if(C%sigma(isize).le.1d-3) then
+			if(C%sigma(isize).le.1d-3.or.ns.eq.1) then
 				ns=1
 				r0(1)=C%rv(isize)
 				if(r0(1).lt.amin) r0(1)=amin
