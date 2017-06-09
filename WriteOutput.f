@@ -249,6 +249,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	call regridspecres(lam,obsA(0,1:nlam-1),nlam-1,
      &					lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
 	spec=spec/(pi*Rstar**2)
+
 	do i=1,nlamR
 		spec(1,i)=spec(1,i)*(1d0+gasdev(idum)/specSNR(i))
 	enddo

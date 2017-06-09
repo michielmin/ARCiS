@@ -91,6 +91,11 @@
 		R(i+1)=R(i)+dz
 		Mtot=Mtot+dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
 	enddo
+	if(R(nr)/R(1).gt.2.0) then
+		print*,'too inflated',R(nr)/R(1)
+		modelsucces=.false.
+		if(domakeai) return
+	endif
 	do i=nr,1,-1
 		vescape=sqrt(2d0*Ggrav*Mplanet/R(i))
 		vtherm=sqrt(3d0*kb*T(i)/(mp*mu))
@@ -100,7 +105,7 @@
 			dens(i)=Ndens(i)*mp*mu
 			print*,'layer',P(i),'escapes to space'
 			modelsucces=.false.
-			return
+			if(domakeai) return
 		else
 			exit
 		endif
