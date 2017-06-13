@@ -1045,6 +1045,7 @@ c	linear
 	Rplanet=Rplanet/Rjup
 	Mplanet=Mplanet/Mjup
 	Rstar=Rstar/Rsun
+	Mstar=Mstar/Msun
 	Dplanet=Dplanet/AU
 	lam1=lam1/micron
 	lam2=lam2/micron
