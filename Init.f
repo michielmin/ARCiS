@@ -577,6 +577,8 @@ c			read(key%value,*) nr
 			read(key%value,*) Rplanet
 		case("rstar")
 			read(key%value,*) Rstar
+		case("mstar")
+			read(key%value,*) Mstar
 		case("tstar")
 			read(key%value,*) Tstar
 		case("starfile")
@@ -774,6 +776,7 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 	Mplanet=Mplanet*Mjup
 
 	Rstar=Rstar*Rsun
+	Mstar=Mstar*Msun
 	Dplanet=Dplanet*AU
 	
 	lam1=lam1*micron
@@ -959,6 +962,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	Tstar=5777d0
 	Rstar=1d0
+	Mstar=1d0
 	Dplanet=1d0
 	logg=4.5d0
 	

@@ -91,21 +91,26 @@
 		R(i+1)=R(i)+dz
 		Mtot=Mtot+dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
 	enddo
-	if(R(nr)/R(1).gt.2.0) then
-		print*,'too inflated',R(nr)/R(1)
-		modelsucces=.false.
-		if(domakeai) return
-	endif
+	Mtot=Mplanet
+	do i=1,nr
+		RHill=(Dplanet*(Mtot/(3d0*Mstar))**(1d0/3d0))
+		if(R(i+1).gt.RHill) then
+			print*,'layer',P(i),'is beyond the Hill Sphere'
+			print*,'adjusting radius'
+			R(i+1)=sqrt(R(i)*RHill)
+		endif
+		Mtot=Mtot+dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
+	enddo
 	do i=nr,1,-1
 		vescape=sqrt(2d0*Ggrav*Mplanet/R(i))
 		vtherm=sqrt(3d0*kb*T(i)/(mp*mu))
 		Mtot=Mtot-dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
 		if(vtherm.gt.vescape) then
-			Ndens(i)=1d-10
+			Ndens(i)=1d-20
 			dens(i)=Ndens(i)*mp*mu
 			print*,'layer',P(i),'escapes to space'
-			modelsucces=.false.
-			if(domakeai) return
+c			modelsucces=.false.
+c			if(domakeai) return
 		else
 			exit
 		endif
@@ -432,7 +437,7 @@ c					Tc=T(i)
 	use Constants
 	use AtomsModule
 	IMPLICIT NONE
-	integer i,ii
+	integer i,ii,j
 	real*8 tmix,frac(nr,10),temp(nr,3)
 	real*8 elabun(nr,7)
 	character*500 command
@@ -449,15 +454,16 @@ c					Tc=T(i)
 		write(25,'(se18.6,"   ",a5)') molfracs_atoms(i),names_atoms(i)
 	enddo
 
-	modelsucces=.false.
-	do i=1,nr
-		if(T(i).lt.2000d0) modelsucces=.true.
-	enddo
-	if(.not.modelsucces) then
-		close(unit=25)
-		return
-	endif
-	
+c	modelsucces=.false.
+c	do i=1,nr
+c		if(T(i).lt.3000d0) modelsucces=.true.
+c	enddo
+c	if(.not.modelsucces) then
+c		close(unit=25)
+c		return
+c	endif
+	modelsucces=.true.
+
 	write(25,'("#Density setup")')
 	write(25,'(i5)') nr
 	do i=nr,1,-1
@@ -467,7 +473,7 @@ c					Tc=T(i)
 			close(unit=25)
 			return
 		endif
-        write(25,*) T(i), P(i) , R(i), dens(i), grav(i), 1d0/tmix
+   	 	write(25,*) T(i), P(i) , R(i), dens(i), grav(i), 1d0/tmix
 	enddo
 	close(unit=25)
 	command="rm -rf " // trim(outputdir) // "restart.dat"

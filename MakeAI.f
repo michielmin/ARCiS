@@ -88,6 +88,9 @@ c			call SetOutputMode(.false.)
 	integer i
 
 	saneplanet=.true.
+	RHill=(Dplanet*(Mplanet/(3d0*Mstar))**(1d0/3d0))
+	if(Rplanet.gt.RHill) saneplanet=.false.
+	
 c	call SetupStructure(.true.)
 c	do i=1,nr
 c		if(T(i).le.Tmin) saneplanet=.false.
