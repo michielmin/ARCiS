@@ -1226,7 +1226,7 @@ c	linear/squared
 		endif
 	enddo
 	if(.not.dochemistry) then
-		write(20,'("C/O ratio = ",f14.3," +/- ",f11.3,f11.3)') COret,COerr(2),COerr(1)
+		write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4,f9.2)') 'COratio',COret,COerr(2),COerr(1)
 	endif
 
 	close(unit=20)

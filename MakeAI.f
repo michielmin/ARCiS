@@ -22,6 +22,7 @@
 		inquire(file=trim(outputdir) // "emis",exist=exist)
 		if(.not.exist) then
 			call MapRetrieval(var,dvar)
+			if(mapCOratio.and..not.dochemistry) call DoMapCOratio()
 			call WriteRetrieval(i,chi2,var,dvar)
 			call InitDens()
 			call CheckPlanet(saneplanet)
@@ -98,5 +99,96 @@ c	enddo
 	
 	return
 	end
+
+
+
+	subroutine DoMapCOratio()
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 random,COrat,tot,met,scale
+	real*8 f(nmol),Ctot,Otot,Htot,f0(nmol),eps,prev,eps0
+	integer i,n,imol
 	
+	COrat=-1d0
+	f=0d0
+	eps=10d0
+	prev=10d0
+	f0=f
+	eps0=1d-4
+	do while(eps.gt.eps0)
+		Otot=0d0
+		Ctot=0d0
+		Htot=0d0
+		tot=0d0
+		do imol=1,nmol
+			if(molname(imol).ne.'H2'.and.molname(imol).ne.'He') then
+				f(imol)=f(imol)+10d0**(10d0*random(idum)-10d0)!random(idum)
+			else if(molname(imol).eq.'H2') then
+				f(imol)=0.85d0
+			else if(molname(imol).eq.'He') then
+				f(imol)=0.15d0
+			endif
+			if(includemol(imol)) then
+				tot=tot+f(imol)
+			endif
+		enddo
+		f=f/tot
+		do imol=1,nmol
+			if(includemol(imol)) then
+				Otot=Otot+f(imol)*real(Oatoms(imol))
+				Ctot=Ctot+f(imol)*real(Catoms(imol))
+				Htot=Htot+f(imol)*real(Hatoms(imol))
+			endif
+		enddo
+		COrat=Ctot/Otot
+		eps=abs((COrat-COratio)/(COrat+COratio))
+		if(eps.lt.prev) then
+			f0=f
+			prev=eps
+		else
+			f=f0
+		endif
+	enddo
+	Otot=Otot/tot
+	Ctot=Ctot/tot
+	Htot=Htot/tot
+
+	do imol=1,nmol
+		if(molname(imol).ne.'H2'.and.molname(imol).ne.'He'
+     &				.and.Oatoms(imol).eq.0.and.Catoms(imol).eq.0) then
+			f(imol)=10d0**(10d0*random(idum)-10d0)
+		else if(molname(imol).eq.'H2') then
+			f(imol)=0.85d0
+		else if(molname(imol).eq.'He') then
+			f(imol)=0.15d0
+		endif
+		if(includemol(imol)) then
+			Otot=Otot+f(imol)*real(Oatoms(imol))
+			Ctot=Ctot+f(imol)*real(Catoms(imol))
+			Htot=Htot+f(imol)*real(Hatoms(imol))
+		endif
+	enddo
+
+	scale=10d0**(metallicity)*(Htot*0.0002478241/0.9207539305)/Ctot
+	tot=0d0
+	do imol=1,nmol
+		if(includemol(imol)) then
+			if(molname(imol).ne.'H2'.and.molname(imol).ne.'He') then
+				f(imol)=f(imol)*scale
+			endif
+			tot=tot+f(imol)
+		else
+			f(imol)=-1d-8
+		endif
+	enddo
+	f=f/tot
+
+	do i=1,nr
+		mixrat_r(i,1:nmol)=f(1:nmol)
+	enddo
+	mixrat(1:nmol)=f(1:nmol)
 	
+	return
+	end
+		

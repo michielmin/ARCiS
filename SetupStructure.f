@@ -122,7 +122,8 @@ c			if(domakeai) return
 		if(T(i).lt.3d0) T(i)=3d0
 	enddo
 
-	if(useDRIFT.and.domakeai) then
+c	if(useDRIFT.and.domakeai) then
+	if(domakeai) then
 		modelsucces=.false.
 		do i=1,nr
 			if(T(i).lt.Tmax.and.Tmax.gt.0d0) modelsucces=.true.

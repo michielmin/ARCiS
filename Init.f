@@ -743,6 +743,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			Pform=-Pform
 		case("makeai")
 			read(key%value,*) domakeai
+		case("mapcoratio")
+			read(key%value,*) mapCOratio
 		case("nai")
 			read(key%value,*) nai
 		case("maxchemtime")
