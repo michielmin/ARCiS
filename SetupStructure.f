@@ -335,6 +335,7 @@ c					Tc=T(i)
 
 	tau=0d0
 	Tirr=betaT*sqrt(Rstar/(2d0*Dplanet))*Tstar
+	print*,'Tirr=',Tirr
 	do i=nr,1,-1
 		tau=kappaT*1d6*P(i)/grav(i)
 		if(tau.lt.0d0) tau=0d0
