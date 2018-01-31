@@ -405,6 +405,7 @@ c allocate the arrays
 			loggPlanet=log10(Ggrav*(Mplanet*Mjup)/(Rplanet*Rjup)**2)
 		else
 			Mplanet=((Rplanet*Rjup)**2)*(10d0**(loggPlanet))/(Ggrav*Mjup)
+			call output("Planet mass: " // dbl2string(Mplanet,'(f8.3)') // " Mjup")
 		endif
 	else
 		loggPlanet=log10(Ggrav*(Mplanet*Mjup)/(Rplanet*Rjup)**2)
@@ -590,6 +591,8 @@ c			read(key%value,*) nr
 			read(key%value,*) Mplanet
 		case("rp")
 			read(key%value,*) Rplanet
+		case("pp")
+			read(key%value,*) Pplanet
 		case("loggp")
 			read(key%value,*) loggPlanet
 		case("rstar")
