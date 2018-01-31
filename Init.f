@@ -184,6 +184,7 @@ c===============================================================================
 	n_ret=0
 	j=0
 	mixratfile=.false.
+	fcloud_default=1d0
 
 	nr=20
 	key => firstkey
@@ -218,6 +219,8 @@ c===============================================================================
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nclouds) nclouds=key%nr1
+			case("fcloud")
+				read(key%value,*) fcloud_default
 			case("point")
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
@@ -396,6 +399,17 @@ c allocate the arrays
 	
 	enddo
 
+	if(Mplanet.le.0d0) then
+		if(loggPlanet.lt.-10d0) then
+			Mplanet=1d0
+			loggPlanet=log10(Ggrav*(Mplanet*Mjup)/(Rplanet*Rjup)**2)
+		else
+			Mplanet=((Rplanet*Rjup)**2)*(10d0**(loggPlanet))/(Ggrav*Mjup)
+		endif
+	else
+		loggPlanet=log10(Ggrav*(Mplanet*Mjup)/(Rplanet*Rjup)**2)
+	endif	
+
 	idum=-idum0
 #ifdef USE_OPENMP
 	j=omp_get_max_threads()
@@ -465,6 +479,7 @@ c allocate the arrays
 		allocate(Hp(nr))
 		allocate(nabla_ad(nr))
 		allocate(grav(nr))
+		allocate(MMW(nr))
 		allocate(mixrat_r(nr,nmol))
 		allocate(mixrat_old_r(nr,nmol))
 		allocate(cloud_dens(nr,max(nclouds,1)))
@@ -575,6 +590,8 @@ c			read(key%value,*) nr
 			read(key%value,*) Mplanet
 		case("rp")
 			read(key%value,*) Rplanet
+		case("loggp")
+			read(key%value,*) loggPlanet
 		case("rstar")
 			read(key%value,*) Rstar
 		case("mstar")
@@ -611,6 +628,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) pmin
 		case("pmax")
 			read(key%value,*) pmax
+		case("pcloud","psimplecloud")
+			read(key%value,*) psimplecloud
 		case("tmin")
 			read(key%value,*) Tmin
 		case("tmax")
@@ -751,6 +770,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) maxchemtime
 		case("idum","seed")
 			read(key%value,*) idum0
+		case("fcloud")
+			read(key%value,*) fcloud_default
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -959,8 +980,10 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	idum0=42
 
-	Mplanet=1d0
+	Mplanet=-1d0
 	Rplanet=1d0
+	Pplanet=1d-2
+	loggPlanet=-50d0
 	
 	Tstar=5777d0
 	Rstar=1d0
@@ -987,6 +1010,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	enhancecarbon=.false.
 	mixP=0d0
 	mixratHaze=0d0
+	Psimplecloud=1d9
 	
 	PRplanet=10d0
 
@@ -1036,7 +1060,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%blend=.true.
 		Cloud(i)%reff=1d0
 		Cloud(i)%veff=0.1
-		Cloud(i)%coverage=1.0
+		Cloud(i)%coverage=fcloud_default
 		Cloud(i)%ptype='COMPUTE'
 		Cloud(i)%frain=1d0
 		Cloud(i)%species=''

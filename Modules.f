@@ -35,7 +35,7 @@ c global setup for the code
 c=========================================================================================
 	module GlobalSetup
 	IMPLICIT NONE
-	real*8 Mplanet,Rplanet									! mass and radius of the planet
+	real*8 Mplanet,Rplanet,Pplanet,loggPlanet				! mass and radius of the planet at pressure Pplanet
 	real*8 Tstar,Rstar,Mstar,logg,Dplanet
 	real*8,allocatable :: dens(:),T(:),P(:),Ndens(:),Tin(:)	! radius
 	real*8,allocatable :: dust_dens(:,:)					! radius, component
@@ -58,7 +58,7 @@ c===============================================================================
 	logical dochemistry,retrieve_profile,condensates,faircoverage,speclimits,mapCOratio
 	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
-	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem
+	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun
 	character*500 TPfile
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime,TiScale
@@ -68,7 +68,8 @@ c===============================================================================
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ,nspike,nai
 	integer,allocatable :: niso(:)
-	real*8 Mmol(59),mu
+	real*8 Mmol(59)
+	real*8,allocatable :: MMW(:)
 	integer nBB
 	parameter(nBB=10000)
 	real*8,allocatable :: BB(:,:)						! nBB,nlam
@@ -79,7 +80,7 @@ c===============================================================================
      &	'HCN   ','CH3Cl ','H2O2  ','C2H2  ','C2H6  ','PH3   ','COF2  ','SF6   ',
      &	'H2S   ','HCOOH ','HO2   ','O     ','ClONO2','NO+   ','HOBr  ','C2H4  ',
      &	'CH3OH ','CH3Br ','CH3CN ','CF4   ','C4H2  ','HC3N  ','H2    ','CS    ',
-     &	'SO3   ','He    ','X     ','X     ','X     ','X     ','X     ','X     ',
+     &	'SO3   ','He    ','X     ','X     ','X     ','X     ','X     ','SiO   ',
      &  'C2    ','Na    ','K     ','TiO   ','VO    ' /))
 	parameter(Mmol = (/     17.8851,  43.6918,  47.6511,  43.6947,  27.8081,  15.9272,  
      &	31.7674,  29.7889,  63.5840,  45.6607,  16.9072,  62.5442,  16.8841,  19.8619,  
@@ -87,7 +88,7 @@ c===============================================================================
      &	26.8304,  50.1116,  33.7598,  25.8499,  29.8518,  33.7516,  65.5261, 144.9081,  
      &	33.8332,  45.6731,  32.7593,  15.8794,  96.7366,  29.7813,  96.2063,  27.8507,  
      &	31.7949,  94.2413,  40.7302,  87.3580,  49.6543,  50.6424,   2.0014,  43.7539,  
-     &	79.3792,   4.0030,   0.0000,   0.0000,   0.0000,   0.0000,   0.0000,   0.0000,
+     &	79.3792,   4.0030,   0.0000,   0.0000,   0.0000,   0.0000,   0.0000,  44.0845,
      &  24.0214,  22.9900,  39.0980,  63.8660,  66.9410 /))
 	integer Catoms(59),Oatoms(59),Hatoms(59)
 	parameter(Catoms = (/0,1,0,0,1,1,
@@ -104,7 +105,7 @@ c===============================================================================
      &				 0,0,2,0,0,0,1,0,
      &				 0,2,2,1,3,1,1,0,
      &				 1,0,0,0,0,0,0,0,
-     &				 3,0,0,0,0,0,0,0,
+     &				 3,0,0,0,0,0,0,1,
      &				 0,0,0,1,1 /))
 	parameter(Hatoms = (/2,0,0,0,0,4,
      &				 0,0,0,0,3,1,1,1,
@@ -119,7 +120,7 @@ c===============================================================================
 	logical HITEMP,opacitymode,compute_opac
 	integer nPom,nTom
 	character*500 opacitydir,specresfile,starfile
-	real*8 Tmin,Tmax,minTprofile,maxTprofile
+	real*8 Tmin,Tmax,minTprofile,maxTprofile,fcloud_default
 	real*8 sintheta(360),costheta(360)
 	logical,allocatable :: do_dB(:)
 	real*8 COret,COerr(2)

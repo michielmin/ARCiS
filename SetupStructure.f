@@ -2,8 +2,8 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,met_r,dens1bar,minZ,Tc
-	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill
+	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,met_r,dens1bar,minZ,Tc,Rscale
+	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill,MMW_form
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix,j,niter,k
 	logical ini,compute_mixrat
@@ -21,7 +21,7 @@
 	if(PTchemAbun) then
 		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		call call_easy_chem(Tchem,Pchem,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,MMW_form)
 		do i=2,nr
 			mixrat_r(i,1:nmol)=mixrat_r(1,1:nmol)
 		enddo
@@ -31,8 +31,8 @@
 	minZ=-5d0
 
 	niter=1
-	if(dochemistry) niter=2
-	if(par_tprofile) niter=2
+	if(dochemistry) niter=3
+	if(par_tprofile) niter=3
 
 	Pb(1)=P(1)
 	do i=2,nr
@@ -44,10 +44,9 @@
 	grav=Ggrav*Mplanet/(Rplanet)**2
 	if(par_tprofile) call ComputeParamT(T)
 
-	do j=1,niter
+	Rscale=1d0
 
-	Mtot=Mplanet
-	grav=Ggrav*Mtot/(Rplanet)**2
+	do j=1,niter
 
 	if(.not.mixratfile.and.(.not.dochemistry.or.j.eq.1)) then
 	do i=1,nr
@@ -59,25 +58,37 @@
 	enddo
 	endif
 
-	call output("log(g) [cgs]: " // dbl2string(log10(grav(1)),'(f8.3)'))
+	call output("log(g) [cgs]: " // dbl2string(log10(Ggrav*Mplanet/Rplanet**2),'(f8.3)'))
 
-	R(1)=Rplanet
-	mu=0d0
-	do imol=1,nmol
-		if(mixrat_r(1,imol).gt.0d0) mu=mu+mixrat_r(1,imol)*Mmol(imol)
-	enddo
-	call output("Mean molecular weight: " // dbl2string(mu,'(f8.3)'))
-	do i=1,nr
-		mu=0d0
+	R(1)=Rplanet*Rscale
+
+	Mtot=Mplanet
+	grav=Ggrav*Mtot/R(1)**2
+
+	print*,Rscale
+	if(j.eq.1) then
+		MMW=0d0
 		do imol=1,nmol
-			if(mixrat_r(i,imol).gt.0d0) mu=mu+mixrat_r(i,imol)*Mmol(imol)
+			if(mixrat_r(1,imol).gt.0d0) MMW=MMW+mixrat_r(1,imol)*Mmol(imol)
 		enddo
+	endif
+	call output("Mean molecular weight: " // dbl2string(MMW(1),'(f8.3)'))
+	do i=1,nr
+		if(.not.dochemistry) then
+			MMW(i)=0d0
+			do imol=1,nmol
+				if(mixrat_r(i,imol).gt.0d0) MMW(i)=MMW(i)+mixrat_r(i,imol)*Mmol(imol)
+			enddo
+		endif
 
 		grav(i)=Ggrav*Mtot/R(i)**2
 
 		if(i.lt.nr) then
 			if(P(i).ge.1d0.and.P(i+1).lt.1d0.or.i.eq.1) then
-				dens1bar=Avogadro*mp*mu/(RgasBar*T(i))
+				dens1bar=Avogadro*mp*MMW(i)/(RgasBar*T(i))
+			endif
+			if(P(i).ge.Pplanet.and.P(i+1).lt.Pplanet) then
+				Rscale=R(1)/R(i)
 			endif
 		endif
 		
@@ -85,9 +96,9 @@
 		dlogp=log(Pb(i)/Pb(i+1))
 
 		Ndens(i)=P(i)*Avogadro/(RgasBar*T(i))
-		Hp(i)=(T(i)*kb)/(grav(i)*mp*mu)
+		Hp(i)=(T(i)*kb)/(grav(i)*mp*MMW(i))
 		dz=dlogp*Hp(i)
-		dens(i)=Ndens(i)*mp*mu
+		dens(i)=Ndens(i)*mp*MMW(i)
 		R(i+1)=R(i)+dz
 		Mtot=Mtot+dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
 	enddo
@@ -103,11 +114,11 @@
 	enddo
 	do i=nr,1,-1
 		vescape=sqrt(2d0*Ggrav*Mplanet/R(i))
-		vtherm=sqrt(3d0*kb*T(i)/(mp*mu))
+		vtherm=sqrt(3d0*kb*T(i)/(mp*MMW(i)))
 		Mtot=Mtot-dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
 		if(vtherm.gt.vescape) then
 			Ndens(i)=1d-20
-			dens(i)=Ndens(i)*mp*mu
+			dens(i)=Ndens(i)*mp*MMW(i)
 			print*,'layer',P(i),'escapes to space'
 c			modelsucces=.false.
 c			if(domakeai) return
@@ -135,12 +146,12 @@ c	if(useDRIFT.and.domakeai) then
 	endif
 
 
-	if(dochemistry.and.j.ne.niter) then
+	if(dochemistry.and.j.eq.1) then
 	if(compute_mixrat) then
 		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		if(Tform.gt.0d0) then
 			call call_easy_chem(Tform,Pform,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,.true.,cloudspecies,
-     &					XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),.true.)
+     &					XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),.true.,MMW_form)
     		ini=.true.
     	endif
 		call output("==================================================================")
@@ -162,7 +173,7 @@ c	if(useDRIFT.and.domakeai) then
 c					Tc=T(i)
 					call cpu_time(starttime)
 					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
-     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
+     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,MMW(i))
 					call cpu_time(stoptime)
 					chemtime=chemtime+stoptime-starttime
 				else if(i.gt.1) then
@@ -207,7 +218,7 @@ c					Tc=T(i)
 		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		if(Tform.gt.0d0) then
 			call call_easy_chem(Tform,Pform,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,.true.,cloudspecies,
-     &					XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),.true.)
+     &					XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),.true.,MMW_form)
     		ini=.true.
     	endif
 		call output("==================================================================")
@@ -229,7 +240,7 @@ c					Tc=T(i)
 					Tc=T(i)
 				call cpu_time(starttime)
 					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,MMW(i))
 				call cpu_time(stoptime)
 				chemtime=chemtime+stoptime-starttime
 				else if(i.gt.1) then
@@ -246,7 +257,7 @@ c					Tc=T(i)
 					Tc=T(i)
 				call cpu_time(starttime)
 				if(cloudcompute) call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,MMW(i))
 				call cpu_time(stoptime)
 				chemtime=chemtime+stoptime-starttime
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
@@ -280,6 +291,7 @@ c					Tc=T(i)
 		call SetupCloud(i)
 	enddo
 
+c bug needs to be fixed!!!!!
 	Otot=0d0
 	Ctot=0d0
 	Htot=0d0
@@ -292,6 +304,7 @@ c					Tc=T(i)
 			endif
 		enddo
 	enddo
+c bug needs to be fixed!!!!!
 	COret=Ctot/Otot
 	call output("C/O: " // dbl2string(COret,'(f8.3)'))
 	call output("[O]: " // dbl2string(log10(Otot/Htot)-log10(0.0004509658/0.9207539305),'(f8.3)'))
@@ -449,7 +462,7 @@ c					Tc=T(i)
 	
 	call output("Running DRIFT cloud formation model")
 
-	open(unit=25,file=trim(outputdir) // 'SPARCtoDRIFT.dat',RECL=1000)
+	open(unit=25,file=trim(outputdir) // 'SPARCtoDRIFT_CO11.dat',RECL=1000)
 	write(25,'("#Elemental abundances")')
 	call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 	do i=1,18
@@ -470,6 +483,10 @@ c	endif
 	write(25,'(i5)') nr
 	do i=nr,1,-1
 		tmix=Cloud(ii)%tmix*P(i)**(-Cloud(ii)%betamix)
+c		print*,Hp(i)**2/tmix
+c		print*,P(i),1,tmix
+c		tmix=Hp(i)**2/Cloud(ii)%Kzz
+c		print*,P(i),2,tmix
 		if(T(i).lt.Tmin.and.domakeai) then
 			modelsucces=.false.
 			close(unit=25)
@@ -480,7 +497,7 @@ c	endif
 	close(unit=25)
 	command="rm -rf " // trim(outputdir) // "restart.dat"
 	call system(command)
-	command="cd " // trim(outputdir) // "; gtimeout 900s nohup static_weather12 4 1d-3"
+	command="cd " // trim(outputdir) // "; gtimeout 900s nohup static_weather13 4 1d-3"
 	call system(command)
 
 	inquire(file=trim(outputdir) // "done",exist=modelsucces)
@@ -535,7 +552,7 @@ c	endif
 				call easy_chem_set_molfracs_atoms_elabun(COratio,metallicity,elabun(i,1:7))
 			endif
 			call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
-     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
+     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,MMW(i))
 		enddo
 	endif
 
@@ -764,7 +781,7 @@ c use Ackerman & Marley 2001 cloud computation
 	ini=.true.
 	do i=1,nr
 		call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.)
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,MMW(i))
 	enddo
 
 	return

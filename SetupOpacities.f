@@ -688,13 +688,13 @@ c For other than H2 from Sneep & Ubachs (2005)
 	kross=tross/kross
 	kplanck=kplanck/tplanck
 
-	mu=0d0
-	do imol=1,nmol
-		if(mixrat_r(i,imol).gt.0d0) mu=mu+mixrat_r(i,imol)*Mmol(imol)
-	enddo
+c	mu=0d0
+c	do imol=1,nmol
+c		if(mixrat_r(i,imol).gt.0d0) mu=mu+mixrat_r(i,imol)*Mmol(imol)
+c	enddo
 
-	kross=kross/(mp*mu)
-	kplanck=kplanck/(mp*mu)
+	kross=kross/(mp*MMW(i))
+	kplanck=kplanck/(mp*MMW(i))
 	
 	return
 	end

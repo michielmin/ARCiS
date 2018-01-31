@@ -1234,7 +1234,7 @@ END MODULE nrutil
 
 
 subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
-   cloudspecies,Xcloud,Ncloud,nabla_ad,set_gas_atoms)
+   cloudspecies,Xcloud,Ncloud,nabla_ad,set_gas_atoms,MMW)
 	use AtomsModule
   implicit none
 

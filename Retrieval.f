@@ -60,7 +60,7 @@
 					expspecres_obs=20d0
 					read(line,*,err=3,end=4) x,y,dy,specres_obs,expspecres_obs
 4					continue
-					if(dy.lt.1d-2*y) dy=1d-2*y
+c					if(dy.lt.1d-2*y) dy=1d-2*y
 					if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) then
 						ObsSpec(i)%lam(ilam)=x*1d-4
 						if(ObsSpec(i)%type.eq."emisa".or.ObsSpec(i)%type.eq."emis".or.ObsSpec(i)%type.eq."emission") then
@@ -1226,7 +1226,12 @@ c	linear/squared
 		endif
 	enddo
 	if(.not.dochemistry) then
-		write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4,f9.2)') 'COratio',COret,COerr(2),COerr(1)
+		write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'COratio',COret,COerr(2),COerr(1)
+	endif
+	if(mapCOratio) then
+		do i=1,nmol
+			if(mixrat_r(1,i).gt.0d0) write(20,'(a15," = ",es14.7)') trim(molname(i)),mixrat_r(1,i)
+		enddo
 	endif
 
 	close(unit=20)

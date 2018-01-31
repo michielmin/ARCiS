@@ -18,7 +18,7 @@
 	call output("==================================================================")
 c terms of use
 	call output("By using SPARC you agree to the terms of use.")
-	call output("It basically means you offer us co-author rights on any paper.")
+	call output("It basically means you offer us co-author rights on any paper")
 	call output("that uses results computed with SPARC.")
 
 	call output("==================================================================")
