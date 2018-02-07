@@ -33,7 +33,7 @@
 	allocate(opac_tot(nlam,ng))
 	allocate(kappa_mol(nlam,ng,nmol))
 
-	n_nu_line=ng*min(nmol,4)
+	n_nu_line=ng*min(nmol,4)*5
 	allocate(nu_line(n_nu_line))
 
 	if(.not.allocated(ig_comp).and.(retrieval.or.domakeai)) then
@@ -108,6 +108,16 @@
 				tot2=tot2+kappa(ig)/real(ng)
 			enddo
 			if(tot2.gt.0d0) kappa=kappa*tot/tot2
+
+c below the wrong way of computing the correlated-k tables
+c	kappa=cont_tot(i)
+c	do imol=1,nmol
+c		do ig=1,ng
+c			kappa(ig)=kappa(ig)+kappa_mol(i,ig,imol)*mixrat_r(ir,imol)
+c		enddo
+c	enddo
+c above the wrong way of computing the correlated-k tables
+	
 			Cabs(ir,i,1:ng)=kappa(1:ng)
 			call RayleighScattering(Csca(ir,i),ir,i)
 			do j=1,ng

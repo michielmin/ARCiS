@@ -312,7 +312,7 @@ C	 create the new empty FITS file
 	character*80 comment,errmessage
 	character*30 errtext
 	integer ig,ilam,iT,iP,imol,i,j,ir,ngF,i1,i2
-	real*8 kappa_mol(nlam,ng,nmol),wP1,wP2,wT1,wT2,x1,x2,tot,tot2
+	real*8 kappa_mol(nlam,ng,nmol),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random
 	real*8,allocatable :: temp(:),lamF(:)
 
 	if(.not.Ktable(imol)%available) then
@@ -398,6 +398,7 @@ C	 create the new empty FITS file
 					if(j.gt.ngF) j=ngF
 					kappa_mol(ilam,ig,imol)=temp(j)
 				enddo
+				call sort(kappa_mol(ilam,1:ng,imol),ng)
 				tot2=0d0
 				do ig=1,ng
 					tot2=tot2+kappa_mol(ilam,ig,imol)

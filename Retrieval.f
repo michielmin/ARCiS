@@ -1206,10 +1206,17 @@ c	linear
 	IMPLICIT NONE
 	real*8 var(n_ret),chi2,error(2,n_ret),sig
 	integer i,imodel,j
+	character*500 command
 
 	call MapRetrieval(var,error)
 
-	open(unit=20,file=trim(outputdir) // "retrieval",RECL=1000)
+98	open(unit=20,file=trim(outputdir) // "retrieval",RECL=1000,ERR=99)
+	goto 100
+99	write(command,'("mkdir -p ",a)') trim(outputdir)
+	call system(command)
+	call sleep(10)
+	goto 98
+100	continue
 	write(20,'("Model ",i)') imodel
 	write(20,'("chi2=",f14.6)') chi2
 	do i=1,n_ret

@@ -99,8 +99,10 @@
 		Hp(i)=(T(i)*kb)/(grav(i)*mp*MMW(i))
 		dz=dlogp*Hp(i)
 		dens(i)=Ndens(i)*mp*MMW(i)
+
 		R(i+1)=R(i)+dz
 		Mtot=Mtot+dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
+		
 	enddo
 	Mtot=Mplanet
 	do i=1,nr
