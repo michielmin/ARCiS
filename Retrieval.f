@@ -1236,6 +1236,10 @@ c	linear/squared
 		write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'COratio',COret,COerr(2),COerr(1)
 	endif
 	if(Tform.gt.0d0) then
+		if(domakeai.and..not.retrieval) then
+			write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'Tform',Tform,0d0,0d0
+			write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'enrich',f_enrich,0d0,0d0
+		endif
 		write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'COratio',COratio,0d0,0d0
 		write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'metallicity',metallicity,0d0,0d0
 	endif
