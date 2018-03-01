@@ -24,8 +24,8 @@
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
 	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
 	integer n_nu_line,iT
-	integer i,j,ir,k,nl,ig
-	integer,allocatable :: inu1(:),inu2(:)
+	integer i,j,ir,k,nl,ig,maxcount
+	integer,allocatable :: inu1(:),inu2(:),count_g(:,:)
 	character*500 filename
 
 	allocate(cont_tot(nlam))
@@ -33,18 +33,29 @@
 	allocate(opac_tot(nlam,ng))
 	allocate(kappa_mol(nlam,ng,nmol))
 
-	n_nu_line=ng*min(nmol,4)*5
+	maxcount=min(nmol,4)
+	n_nu_line=ng*maxcount
+	
 	allocate(nu_line(n_nu_line))
 
 	if(.not.allocated(ig_comp).and.(retrieval.or.domakeai)) then
 		allocate(ig_comp(nmol,n_nu_line,nlam))
+		allocate(count_g(nmol,ng))
 		do i=1,nlam
+			count_g=0
 			do j=1,n_nu_line
 				do imol=1,nmol
-					ig_comp(imol,j,i)=random(idum)*real(ng)+1
+2					ig_comp(imol,j,i)=random(idum)*real(ng)+1
+					ig=ig_comp(imol,j,i)
+					if(count_g(imol,ig).lt.maxcount) then
+						count_g(imol,ig)=count_g(imol,ig)+1
+					else
+						goto 2
+					endif
 				enddo
 			enddo
 		enddo
+		deallocate(count_g)
 	endif
 	
 	opac_tot=0d0
@@ -75,10 +86,11 @@
 		enddo
 !$OMP PARALLEL IF(nlam.gt.200)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,j,nu1,nu2,k_line,imol,ig,kappa,tot,tot2)
+!$OMP& PRIVATE(i,j,nu1,nu2,k_line,imol,ig,kappa,tot,tot2,count_g)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_r,ng,ir,kappa_mol,nu_line,cont_tot,freq,Cabs,Csca,opac_tot,Ndens,R,
-!$OMP&        ig_comp,retrieval,domakeai)
+!$OMP&        ig_comp,retrieval,domakeai,maxcount)
 		allocate(k_line(n_nu_line))
+		allocate(count_g(nmol,ng))
 !$OMP DO
 		do i=1,nlam-1
 			nu1=-1d0
@@ -89,14 +101,20 @@
 					tot=tot+kappa_mol(i,ig,imol)*mixrat_r(ir,imol)/real(ng)
 				enddo
 			enddo
+			count_g=0
 			do j=1,n_nu_line
 				k_line(j)=0d0
 				do imol=1,nmol
 					if(mixrat_r(ir,imol).gt.0d0) then
-						if(retrieval.or.domakeai) then
+1						if(retrieval.or.domakeai) then
 							ig=ig_comp(imol,j,i)
 						else
 							ig=random(idum)*real(ng)+1
+						endif
+						if(count_g(imol,ig).lt.maxcount) then
+							count_g(imol,ig)=count_g(imol,ig)+1
+						else
+							goto 1
 						endif
 						k_line(j)=k_line(j)+kappa_mol(i,ig,imol)*mixrat_r(ir,imol)
 					endif
@@ -127,6 +145,7 @@ c above the wrong way of computing the correlated-k tables
 		enddo
 !$OMP END DO
 		deallocate(k_line)
+		deallocate(count_g)
 !$OMP FLUSH
 !$OMP END PARALLEL
 		if(outputopacity) then
@@ -447,6 +466,10 @@ c pressure broadening
 	logical converged
 	real*8 f,a_t,a_p
 
+	real*8 tot1,tot2
+	integer nnu_bin
+	real*8,allocatable :: kap_bin(:)
+
 	if(ng.eq.1) then
 		kappa=Ccont
 		do i=1,nnu
@@ -469,6 +492,33 @@ c pressure broadening
 	if(inu2.gt.nnu) inu2=nnu
 	if(inu1.lt.2) inu1=2
 	if(inu2.lt.2) inu2=2
+
+
+	nnu_bin=abs(inu2-inu1)+1
+	allocate(kap_bin(nnu_bin))
+	do inu=1,nnu_bin
+		kap_bin(inu)=kline(inu+inu1-1)+Ccont
+		tot1=tot1+kap_bin(inu)
+	enddo
+	tot1=tot1/real(nnu_bin)
+	call sort(kap_bin,nnu_bin)
+	tot2=0d0
+	inu1=1
+	do i=1,ng
+		inu2=real(i)*real(nnu_bin)/real(ng)
+		kappa(i)=0d0
+		do inu=inu1,inu2
+			kappa(i)=kappa(i)+kap_bin(inu)/real(inu2-inu1+1)
+		enddo
+		tot2=tot2+kappa(i)
+		inu1=inu2+1
+		if(inu1.gt.nnu_bin) inu1=nnu_bin
+	enddo
+	tot2=tot2/real(ng)
+	if(tot2.gt.0d0) kappa=kappa*tot1/tot2
+	deallocate(kap_bin)
+	return
+
 
 	kmin=1d200
 	kmax=Ccont

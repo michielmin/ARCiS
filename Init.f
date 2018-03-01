@@ -610,6 +610,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Dplanet
 		case("retrieval")
 			read(key%value,*) retrieval
+		case("contrib","computecontrib")
+			read(key%value,*) computecontrib
 		case("outputopacity","writeopacity")
 			read(key%value,*) outputopacity
 		case("nphase")
@@ -754,6 +756,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Tform
 		case("pform")
 			read(key%value,*) Pform
+		case("fenrich","f_enrich","enrich")
+			read(key%value,*) f_enrich
 		case("tchem")
 			read(key%value,*) Tchem
 		case("pchem")
@@ -1034,6 +1038,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 
 	Tform=-10d0
 	Pform=1d0
+	f_enrich=0d0
 	
 	PTchemAbun=.false.
 	Tchem=500d0
@@ -1044,6 +1049,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	domakeai=.false.
 	nai=1000
 
+	computecontrib=.false.
+
 	do i=1,nclouds
 		Cloud(i)%P=1d-4
 		Cloud(i)%dP=10d0
@@ -1052,6 +1059,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%tau=-1d0
 		Cloud(i)%lam=0.55d0
 		Cloud(i)%file=' '
+		Cloud(i)%Kzzfile=' '
 		Cloud(i)%standard='ASTROSIL'
 		Cloud(i)%nr=50
 		Cloud(i)%nsubgrains=1
@@ -1429,6 +1437,8 @@ c				enddo
 	select case(key%key2)
 		case("file")
 			Cloud(key%nr1)%file=trim(key%value)
+		case("kzzfile")
+			Cloud(key%nr1)%Kzzfile=trim(key%value)
 		case("ngrains","nsize","nr")
 			read(key%value,*) Cloud(key%nr1)%nr
 		case("nsubgrains")

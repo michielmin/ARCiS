@@ -18,10 +18,13 @@
 
 	ini = .TRUE.
 
+	
+
+
 	if(PTchemAbun) then
 		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		call call_easy_chem(Tchem,Pchem,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,MMW_form)
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW_form)
 		do i=2,nr
 			mixrat_r(i,1:nmol)=mixrat_r(1,1:nmol)
 		enddo
@@ -150,11 +153,10 @@ c	if(useDRIFT.and.domakeai) then
 
 	if(dochemistry.and.j.eq.1) then
 	if(compute_mixrat) then
-		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		if(Tform.gt.0d0) then
-			call call_easy_chem(Tform,Pform,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,.true.,cloudspecies,
-     &					XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),.true.,MMW_form)
-    		ini=.true.
+			call FormAbun(Tform,f_enrich)
+		else
+			call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
     	endif
 		call output("==================================================================")
 		call output("Computing chemistry using easy_chem by Paul Molliere")
@@ -175,7 +177,7 @@ c	if(useDRIFT.and.domakeai) then
 c					Tc=T(i)
 					call cpu_time(starttime)
 					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
-     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,MMW(i))
+     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i))
 					call cpu_time(stoptime)
 					chemtime=chemtime+stoptime-starttime
 				else if(i.gt.1) then
@@ -217,11 +219,10 @@ c					Tc=T(i)
 	if(dochemistry) then
 	if(compute_mixrat) then
 		ini=.true.
-		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		if(Tform.gt.0d0) then
-			call call_easy_chem(Tform,Pform,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,.true.,cloudspecies,
-     &					XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),.true.,MMW_form)
-    		ini=.true.
+			call FormAbun(Tform,f_enrich)
+		else
+			call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
     	endif
 		call output("==================================================================")
 		call output("Computing chemistry using easy_chem by Paul Molliere")
@@ -242,7 +243,7 @@ c					Tc=T(i)
 					Tc=T(i)
 				call cpu_time(starttime)
 					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,MMW(i))
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i))
 				call cpu_time(stoptime)
 				chemtime=chemtime+stoptime-starttime
 				else if(i.gt.1) then
@@ -259,7 +260,7 @@ c					Tc=T(i)
 					Tc=T(i)
 				call cpu_time(starttime)
 				if(cloudcompute) call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,MMW(i))
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i))
 				call cpu_time(stoptime)
 				chemtime=chemtime+stoptime-starttime
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
@@ -456,7 +457,7 @@ c bug needs to be fixed!!!!!
 	IMPLICIT NONE
 	integer i,ii,j
 	real*8 tmix,frac(nr,10),temp(nr,3)
-	real*8 elabun(nr,7)
+	real*8 elabun(nr,7),MMW_form,Kzz(nr)
 	character*500 command
 	character*500 filename
 	logical ini
@@ -466,7 +467,12 @@ c bug needs to be fixed!!!!!
 
 	open(unit=25,file=trim(outputdir) // 'SPARCtoDRIFT_CO11.dat',RECL=1000)
 	write(25,'("#Elemental abundances")')
-	call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+  	ini=.true.
+	if(Tform.gt.0d0) then
+		call FormAbun(Tform,f_enrich)
+	else
+		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+   	endif
 	do i=1,18
 		write(25,'(se18.6,"   ",a5)') molfracs_atoms(i),names_atoms(i)
 	enddo
@@ -483,23 +489,34 @@ c	endif
 
 	write(25,'("#Density setup")')
 	write(25,'(i5)') nr
-	do i=nr,1,-1
-		tmix=Cloud(ii)%tmix*P(i)**(-Cloud(ii)%betamix)
-c		print*,Hp(i)**2/tmix
-c		print*,P(i),1,tmix
-c		tmix=Hp(i)**2/Cloud(ii)%Kzz
-c		print*,P(i),2,tmix
-		if(T(i).lt.Tmin.and.domakeai) then
-			modelsucces=.false.
-			close(unit=25)
-			return
-		endif
-   	 	write(25,*) T(i), P(i) , R(i), dens(i), grav(i), 1d0/tmix
-	enddo
+	if(Cloud(ii)%Kzzfile.ne.' ') then
+		call regridN(Cloud(ii)%Kzzfile,P,Kzz,nr,1,2,1,0,.true.,.true.)
+		do i=nr,1,-1
+			write(82,*) P(i), Kzz(i)
+			tmix=Hp(i)**2/abs(Kzz(i))
+			if(T(i).lt.Tmin.and.domakeai) then
+				modelsucces=.false.
+				close(unit=25)
+				return
+			endif
+   		 	write(25,*) T(i), P(i) , R(i), dens(i), grav(i), 1d0/tmix
+		enddo
+
+	else
+		do i=nr,1,-1
+			tmix=Cloud(ii)%tmix*P(i)**(-Cloud(ii)%betamix)
+			if(T(i).lt.Tmin.and.domakeai) then
+				modelsucces=.false.
+				close(unit=25)
+				return
+			endif
+   		 	write(25,*) T(i), P(i) , R(i), dens(i), grav(i), 1d0/tmix
+		enddo
+	endif
 	close(unit=25)
 	command="rm -rf " // trim(outputdir) // "restart.dat"
 	call system(command)
-	command="cd " // trim(outputdir) // "; gtimeout 900s nohup static_weather13 4 1d-3"
+	command="cd " // trim(outputdir) // "; gtimeout 3600s nohup static_weather13 4 1d-3"
 	call system(command)
 
 	inquire(file=trim(outputdir) // "done",exist=modelsucces)
@@ -549,12 +566,16 @@ c		print*,P(i),2,tmix
 			call tellertje(i,nr)
 			ini=.true.
 			if(cloud_dens(i,ii).lt.1d-25) then
-				call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+				if(Tform.gt.0d0) then
+					call FormAbun(Tform,f_enrich)
+				else
+					call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+		    	endif
 			else
 				call easy_chem_set_molfracs_atoms_elabun(COratio,metallicity,elabun(i,1:7))
 			endif
 			call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
-     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,MMW(i))
+     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i))
 		enddo
 	endif
 
@@ -625,7 +646,7 @@ c		print*,P(i),2,tmix
 				allocate(Cloud(ii)%rv(nr))
 				allocate(Cloud(ii)%sigma(nr))
 			endif
-			call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,13,1,3,.false.,.true.)
+			call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,11,1,3,.false.,.true.)
 			Cloud(ii)%rv=Cloud(ii)%rv*1d4
 			Cloud(ii)%sigma=1d-10
 			Cloud(ii)%frac(1:nr,1:16)=1d-10
@@ -783,10 +804,198 @@ c use Ackerman & Marley 2001 cloud computation
 	ini=.true.
 	do i=1,nr
 		call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,MMW(i))
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i))
 	enddo
 
 	return
+	end
+	
+
+	subroutine FormAbun(T,enrich)
+	use AtomsModule
+	IMPLICIT NONE
+	character*10 species(20)
+	real*8 gas_atoms(N_atoms),solid_atoms(N_atoms),tot
+	real*8 sil_atoms(N_atoms),tot_atoms(N_atoms)
+	real*8 Tmax(20),abun(20),max,maxf(20),T,enrich
+	integer atoms(20,N_atoms),limit(20,N_atoms),nspecies,i,j,k
+	character*100 temp,filename
+	logical molecule(20)
+
+	names_atoms(1) = 'H'
+	names_atoms(2) = 'He'
+	names_atoms(3) = 'C'
+	names_atoms(4) = 'N'
+	names_atoms(5) = 'O'
+	names_atoms(6) = 'Na'
+	names_atoms(7) = 'Mg'
+	names_atoms(8) = 'Al'
+	names_atoms(9) = 'Si'
+	names_atoms(10) = 'P'
+	names_atoms(11) = 'S'
+	names_atoms(12) = 'Cl'
+	names_atoms(13) = 'K'
+	names_atoms(14) = 'Ca'
+	names_atoms(15) = 'Ti'
+	names_atoms(16) = 'V'
+	names_atoms(17) = 'Fe'
+	names_atoms(18) = 'Ni'
+
+	atoms=0
+	maxf=1d0
+	molecule=.false.
+	i=1
+	species(i)='C'
+		atoms(i,3)=1
+		Tmax(i)=700d0
+		maxf(i)=0.25d0
+	i=i+1
+	species(i)='CO'
+		atoms(i,3)=1
+		atoms(i,5)=1
+		Tmax(i)=20d0
+		molecule(i)=.true.
+	i=i+1
+	species(i)='TiO2'
+		atoms(i,5)=2
+		atoms(i,15)=1
+		Tmax(i)=1700d0
+	i=i+1
+	species(i)='VO'
+		atoms(i,5)=1
+		atoms(i,16)=1
+		Tmax(i)=1700d0
+	i=i+1
+	species(i)='Al2O3'
+		atoms(i,5)=3
+		atoms(i,8)=2
+		Tmax(i)=1700d0
+	i=i+1
+	species(i)='FeS'
+		atoms(i,11)=1
+		atoms(i,17)=1
+		Tmax(i)=700d0
+	i=i+1
+	species(i)='Mg2SiO4'
+		atoms(i,7)=2
+		atoms(i,9)=1
+		atoms(i,5)=4
+		Tmax(i)=1500d0
+	i=i+1
+	species(i)='MgSiO3'
+		atoms(i,7)=1
+		atoms(i,9)=1
+		atoms(i,5)=3
+		Tmax(i)=1500d0
+	i=i+1
+	species(i)='Fe2SiO4'
+		atoms(i,17)=2
+		atoms(i,9)=1
+		atoms(i,5)=4
+		Tmax(i)=1500d0
+	i=i+1
+	species(i)='FeSiO3'
+		atoms(i,17)=1
+		atoms(i,9)=1
+		atoms(i,5)=3
+		Tmax(i)=1500d0
+	i=i+1
+	species(i)='SiO2'
+		atoms(i,9)=1
+		atoms(i,5)=2
+		Tmax(i)=1700d0
+	i=i+1
+	species(i)='FeO'
+		atoms(i,17)=1
+		atoms(i,5)=1
+		Tmax(i)=1700d0
+	i=i+1
+	species(i)='MgO'
+		atoms(i,7)=1
+		atoms(i,5)=1
+		Tmax(i)=1700d0
+	i=i+1
+	species(i)='Fe'
+		atoms(i,17)=1
+		Tmax(i)=1700d0
+	i=i+1
+	species(i)='CO2'
+		atoms(i,3)=1
+		atoms(i,5)=2
+		Tmax(i)=47d0
+	i=i+1
+	species(i)='H2O'
+		atoms(i,1)=2
+		atoms(i,5)=1
+		Tmax(i)=135d0
+		
+	nspecies=i
+
+	molfracs_atoms = (/ 0.9207539305,
+     &  0.0783688694,
+     &  0.0002478241, 
+     &  6.22506056949881e-05, 
+     &  0.0004509658, 
+     &  1.60008694353205e-06, 
+     &  3.66558742055362e-05, 
+     &  2.595e-06, 
+     &  2.9795e-05, 
+     &  2.36670201997668e-07, 
+     &  1.2137900734604e-05, 
+     &  2.91167958499589e-07, 
+     &  9.86605611925677e-08, 
+     &  2.01439011429255e-06, 
+     &  8.20622804366359e-08,
+     &  7.83688694089992e-09,
+     &  2.91167958499589e-05,
+     &  1.52807116806281e-06
+     &  /)
+
+	gas_atoms=molfracs_atoms
+	tot_atoms=0d0
+	abun=0d0
+	do i=1,nspecies
+		max=1d200
+		do j=1,n_atoms
+			if(atoms(i,j).gt.0) then
+				if(maxf(i)*gas_atoms(j)/real(atoms(i,j)).lt.max) max=maxf(i)*gas_atoms(j)/real(atoms(i,j))
+			endif
+		enddo
+		if(T.lt.Tmax(i)) then
+			abun(i)=max
+			do j=1,n_atoms
+				gas_atoms(j)=gas_atoms(j)-abun(i)*real(atoms(i,j))
+			enddo
+		else if(molecule(i)) then
+			abun(i)=max
+			do j=1,n_atoms
+				gas_atoms(j)=gas_atoms(j)-abun(i)*real(atoms(i,j))
+				tot_atoms(j)=tot_atoms(j)+abun(i)*real(atoms(i,j))
+			enddo
+			abun(i)=0d0
+		endif
+	enddo
+	gas_atoms=gas_atoms+tot_atoms
+	solid_atoms=molfracs_atoms-gas_atoms
+
+	tot_atoms=gas_atoms+enrich*solid_atoms
+
+	print*,'C/O: ',tot_atoms(3)/tot_atoms(5)
+	print*,'Si/O:',tot_atoms(9)/tot_atoms(5)
+
+	print*,'metallicity: ',log10((sum(tot_atoms(3:18))/sum(tot_atoms(1:18)))/
+     &			(sum(molfracs_atoms(3:18))/sum(molfracs_atoms(1:18))))
+
+	sil_atoms=0d0
+	do i=7,13
+		sil_atoms(1:18)=sil_atoms(1:18)+abun(i)*real(atoms(i,1:18))
+	enddo
+	sil_atoms=sil_atoms/sil_atoms(9)
+	write(*,'("Mg",f3.1,"Fe",f3.1,"SiO",f3.1)')sil_atoms(7),sil_atoms(17),sil_atoms(5)
+
+	tot=sum(tot_atoms(1:N_atoms))
+	molfracs_atoms=tot_atoms/tot
+	
 	end
 	
 

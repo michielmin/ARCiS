@@ -97,6 +97,7 @@ OBJS	= Modules.o \
 		MakeAI.o \
 		dlsei.o \
 		Lapack.o \
+		writeFITS.f \
 		DiffuseCloud.o
 
 # program name and install location

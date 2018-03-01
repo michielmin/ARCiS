@@ -55,7 +55,7 @@ c===============================================================================
 	character*500 outputdir,HITRANdir,HITEMPdir
 	integer idum,maxiter,Nphot0,idum0
 !$OMP THREADPRIVATE(idum)
-	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT
+	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib
 	logical dochemistry,retrieve_profile,condensates,faircoverage,speclimits,mapCOratio
 	logical,allocatable :: includemol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
@@ -64,7 +64,7 @@ c===============================================================================
 	character*500 TPfile
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime,TiScale
 	logical enhancecarbon
-	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform
+	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_enrich
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ,nspike,nai
@@ -173,7 +173,7 @@ c===============================================================================
 		real*8 fcond,mixrat,tau,lam
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
 		type(Mueller),allocatable :: F(:,:)							! dimension nsize,nlam
-		character*500 file
+		character*500 file,Kzzfile
 		character*20 standard,ptype
 		character*500 species
 		integer nr,nsubgrains

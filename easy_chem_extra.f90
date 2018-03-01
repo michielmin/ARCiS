@@ -1234,19 +1234,19 @@ END MODULE nrutil
 
 
 subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
-   cloudspecies,Xcloud,Ncloud,nabla_ad,set_gas_atoms,MMW)
+   cloudspecies,Xcloud,Ncloud,nabla_ad,set_gas_atoms,f_enrich,MMW)
 	use AtomsModule
   implicit none
 
 	integer nmol,i
-	real*8 COratio,Zmetal,Tin,Pin,mol_abun(nmol)
+	real*8 COratio,Zmetal,Tin,Pin,mol_abun(nmol),f_enrich
 	character*10 mol_names(nmol)
 	integer Ncloud
 	real*8 Xcloud(max(Ncloud,1))
 	character*500 cloudspecies(max(Ncloud,1)),namecloud
-	integer j1,j2
+	integer j1,j2,N_reactants_gas
 
-  INTEGER,parameter            :: N_reactants = 104
+  INTEGER,parameter            :: N_reactants = 109
   CHARACTER*40                 :: names_reactants(N_reactants)
   DOUBLE PRECISION             :: molfracs_reactants(N_reactants), &
        massfracs_reactants(N_reactants)
@@ -1469,38 +1469,119 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 	at_re(76,10)=1
 
   names_reactants(77) = 'VO(c)'
+	at_re(77,16)=1
+	at_re(77,5)=1
   names_reactants(78) = 'VO(L)'
+	at_re(78,16)=1
+	at_re(78,5)=1
   names_reactants(79) = 'MgSiO3(c)'
+	at_re(79,7)=1
+	at_re(79,9)=1
+	at_re(79,5)=3
   names_reactants(80) = 'Mg2SiO4(c)'
+	at_re(80,7)=2
+	at_re(80,9)=1
+	at_re(80,5)=4
   names_reactants(81) = 'SiC(c)'
+	at_re(81,9)=1
+	at_re(81,3)=1
   names_reactants(82) = 'Fe(c)'
+	at_re(82,17)=1
   names_reactants(83) = 'AL2O3(c)'
+	at_re(83,8)=2
+	at_re(83,5)=3
   names_reactants(84) = 'Na2S(c)'
+	at_re(84,6)=2
+	at_re(84,11)=1
   names_reactants(85) = 'KCL(c)'
+	at_re(85,13)=1
+	at_re(85,12)=1
   names_reactants(86) = 'Fe(L)'
+	at_re(86,17)=1
   names_reactants(87) = 'Mg2SiO4(L)'
+	at_re(87,7)=2
+	at_re(87,9)=1
+	at_re(87,5)=4
   names_reactants(88) = 'SiC(L)'
+	at_re(88,9)=1
+	at_re(88,3)=1
   names_reactants(89) = 'MgSiO3(L)'
+	at_re(89,7)=1
+	at_re(89,9)=1
+	at_re(89,5)=3
   names_reactants(90) = 'H2O(L)'
+	at_re(90,1)=2
+	at_re(90,5)=1
   names_reactants(91) = 'H2O(c)'
+	at_re(91,1)=2
+	at_re(91,5)=1
   names_reactants(92) = 'TiO(c)'
+	at_re(92,15)=1
+	at_re(92,5)=1
   names_reactants(93) = 'TiO(L)'
+	at_re(93,15)=1
+	at_re(93,5)=1
   names_reactants(94) = 'MgAl2O4(c)'
+	at_re(94,7)=1
+	at_re(94,8)=2
+	at_re(94,5)=4
   names_reactants(95) = 'FeO(c)'
+	at_re(95,17)=1
+	at_re(95,5)=1
   names_reactants(96) = 'Fe2O3(c)'
+	at_re(96,17)=2
+	at_re(96,5)=3
   names_reactants(97) = 'Fe2SiO4(c)'
+	at_re(97,17)=2
+	at_re(97,5)=4
+	at_re(97,9)=1
   names_reactants(98) = 'TiO2(c)'
+	at_re(98,15)=1
+	at_re(98,5)=2
   names_reactants(99) = 'TiO2(L)'
+	at_re(99,15)=1
+	at_re(99,5)=2
   names_reactants(100) = 'H3PO4(c)'
+	at_re(100,1)=3
+	at_re(100,10)=1
+	at_re(100,5)=4
   names_reactants(101) = 'H3PO4(L)'
+	at_re(101,1)=3
+	at_re(101,10)=1
+	at_re(101,5)=4
   names_reactants(102) = 'Fe3O4(c)'
+	at_re(102,17)=3
+	at_re(102,5)=4
   names_reactants(103) = 'NaAlSi3O8(c)'
+	at_re(103,6)=1
+	at_re(103,8)=1
+	at_re(103,9)=3
+	at_re(103,5)=8
   names_reactants(104) = 'KAlSi3O8(c)'
+	at_re(104,13)=1
+	at_re(104,8)=1
+	at_re(104,9)=3
+	at_re(104,5)=8
+  names_reactants(105) = 'C(gr)'
+	at_re(105,3)=1
+  names_reactants(106) = 'FeS(a)'
+	at_re(105,17)=1
+	at_re(105,11)=1
+  names_reactants(107) = 'FeS(b)'
+	at_re(105,17)=1
+	at_re(105,11)=1
+  names_reactants(108) = 'FeS(c)'
+	at_re(105,17)=1
+	at_re(105,11)=1
+  names_reactants(109) = 'FeS(L)'
+	at_re(105,17)=1
+	at_re(105,11)=1
 
 
 
 	N_reactants2=76
-	if(condensates) N_reactants2=104
+	N_reactants_gas=N_reactants2
+	if(condensates) N_reactants2=109
 
       temp=Tin
 !      if(temp.gt.3000d0) temp=3000d0
@@ -1551,12 +1632,18 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 	if(set_gas_atoms) then
 		molfracs_atoms=0d0
 		do i=1,N_atoms
-			do i_reac=1,N_reactants2
+			do i_reac=1,N_reactants_gas
 				molfracs_atoms(i)=molfracs_atoms(i)+molfracs_reactants(i_reac)*real(at_re(i_reac,i))
+			enddo
+		enddo
+		do i=1,N_atoms
+			do i_reac=N_reactants_gas+1,N_reactants2
+				molfracs_atoms(i)=molfracs_atoms(i)+f_enrich*molfracs_reactants(i_reac)*real(at_re(i_reac,i))
 			enddo
 		enddo
 		tot=sum(molfracs_atoms(1:N_atoms))
 		molfracs_atoms=molfracs_atoms/tot
+		print*,'C/O:',molfracs_atoms(3)/molfracs_atoms(5)
  		do i=1,N_reactants2
 			if(i.ge.77.and.massfracs_reactants(i).gt.0d0) then
  				print*,'In the core: ',trim(names_reactants(i))

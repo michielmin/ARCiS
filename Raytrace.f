@@ -3,13 +3,16 @@
 	use Constants
 	IMPLICIT NONE
 	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot,Ag
-	real*8 Ca,Cs,BBr(nr)
+	real*8 Ca,Cs,BBr(nr),tot,contr
 	integer icloud,isize
-	real*8,allocatable :: rtrace(:),phase0(:),slant_tau(:,:),ptrace(:)
+	real*8,allocatable :: rtrace(:),phase0(:),ptrace(:)
+	real*8,allocatable :: obsA_contr(:,:),flux_contr(:,:),fluxg_contr(:),fact_contr(:),Ag_contr(:)
+	integer irc
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig,nsub,j,k
 	logical in
 	integer icc,imol
-	real*8 Ocolumn(2,nlam,ncc),Ccolumn(2,nlam,ncc),Hcolumn(2,nlam,ncc),Otot,Ctot,Htot
+	real*8 Ocolumn(2,nlam,ncc),Ccolumn(2,nlam,ncc),Hcolumn(2,nlam,ncc),Otot,Ctot,Htot,dP
+	character*500 filename
 
 	docloud=.false.
 	do icc=2,ncc
@@ -163,7 +166,7 @@
 	do i=1,ndisk
 		k=k+1
 		rtrace(k)=Rplanet*real(i-1)/real(ndisk)
-		ptrace(k)=P(1)*real(i-1)/real(ndisk)
+		ptrace(k)=P(1)*(1d0+real(ndisk-i)/real(ndisk))
 	enddo
 	do i=1,nr-1
 		do j=1,nsub
@@ -173,8 +176,8 @@
 		enddo
 	enddo
 
-	allocate(slant_tau(nrtrace,nlam))
-	slant_tau=0d0
+	allocate(flux_contr(nr,nlam))
+	allocate(obsA_contr(nr,nlam))
 	Ocolumn=0d0
 	Ccolumn=0d0
 	Hcolumn=0d0
@@ -182,15 +185,20 @@
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,
-!$OMP&         Ca,Cs,icloud,isize,BBr,Otot,Ctot,Htot,imol)
+!$OMP&         Ca,Cs,icloud,isize,BBr,Otot,Ctot,Htot,imol,irc,contr,fact_contr,fluxg_contr,Ag_contr)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
-!$OMP&			cloud_dens,slant_tau,useDRIFT,Psimplecloud,P,
-!$OMP&			Ocolumn,Ccolumn,Hcolumn,nmol,Oatoms,Catoms,Hatoms,mixrat_r,includemol)
+!$OMP&			cloud_dens,useDRIFT,Psimplecloud,P,flux_contr,obsA_contr,
+!$OMP&			Ocolumn,Ccolumn,Hcolumn,nmol,Oatoms,Catoms,Hatoms,mixrat_r,includemol,computecontrib)
+	allocate(fact_contr(nr))
+	allocate(fluxg_contr(nr))
+	allocate(Ag_contr(nr))
 !$OMP DO SCHEDULE(STATIC,1)
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
 		freq0=sqrt(freq(ilam)*freq(ilam+1))
 		obsA(:,ilam)=0d0
+		obsA_contr(1:nr,ilam)=0d0
+		flux_contr(1:nr,ilam)=flux(0,ilam)
 		do ir=1,nr
 			BBr(ir)=Planck(T(ir),freq0)
 		enddo
@@ -199,11 +207,14 @@
 			if(cloudfrac(icc).gt.0d0) then
 				fluxg=0d0
 				Ag=0d0
+				fluxg_contr=0d0
+				Ag_contr=0d0
 				do i=1,nrtrace-1
 					Otot=0d0
 					Ctot=0d0
 					Htot=0d0
 					fact=1d0
+					fact_contr=1d0
 					tautot=0d0
 					A=pi*(rtrace(i+1)**2-rtrace(i)**2)
 					rr=sqrt(rtrace(i)*rtrace(i+1))
@@ -263,24 +274,50 @@
 					if(P(ir).gt.Psimplecloud) tau=1d4
 					exp_tau=exp(-tau)
 					tautot=tautot+tau
-					fluxg=fluxg+A*BBr(ir)*(1d0-exp_tau)*fact*tau_a/tau
+					contr=A*BBr(ir)*(1d0-exp_tau)*fact*tau_a/tau
+					fluxg=fluxg+contr
 					fact=fact*exp_tau
+					if(computecontrib) then
+						do irc=1,nr
+							if(ir.ne.irc) then
+								contr=A*BBr(ir)*(1d0-exp_tau)*fact_contr(irc)*tau_a/tau
+								fluxg_contr(irc)=fluxg_contr(irc)+contr
+								fact_contr(irc)=fact_contr(irc)*exp_tau
+							endif
+						enddo
+					endif
 					if(ir_next.gt.0.and.ir_next.le.nr.and.tautot.lt.maxtau) then
 						ir=ir_next
 						xx1=xx2
 						goto 1
 					else if(ir_next.le.0.or.tautot.ge.maxtau) then
 						fluxg=fluxg+A*BBr(ir)*fact
+						if(computecontrib) then
+							do irc=1,nr
+								if(ir.ne.irc) then
+									contr=A*BBr(ir)*fact_contr(irc)
+									fluxg_contr(irc)=fluxg_contr(irc)+contr
+								endif
+							enddo
+						endif
 					endif
 					if(ir_next.le.0.or.tautot.ge.maxtau) fact=0d0
 					Ag=Ag+A*(1d0-fact)
-					slant_tau(i,ilam)=slant_tau(i,ilam)+tautot/real(ng)
+					if(computecontrib) then
+						Ag_contr=Ag_contr+A*(1d0-fact_contr)
+					endif
 					Ocolumn(1,ilam,icc)=Ocolumn(1,ilam,icc)+A*fact*Otot/real(ng)
 					Ccolumn(1,ilam,icc)=Ccolumn(1,ilam,icc)+A*fact*Ctot/real(ng)
 					Hcolumn(1,ilam,icc)=Hcolumn(1,ilam,icc)+A*fact*Htot/real(ng)
 				enddo
 				flux(0,ilam)=flux(0,ilam)+cloudfrac(icc)*fluxg/real(ng)
 				obsA(0,ilam)=obsA(0,ilam)+cloudfrac(icc)*Ag/real(ng)
+				if(computecontrib) then
+					do irc=1,nr
+						flux_contr(irc,ilam)=flux_contr(irc,ilam)+cloudfrac(icc)*fluxg_contr(irc)/real(ng)
+						obsA_contr(irc,ilam)=obsA_contr(irc,ilam)+cloudfrac(icc)*Ag_contr(irc)/real(ng)
+					enddo
+				endif
 				write(72,*) lam(ilam),Ag/real(ng)
 				flux(icc,ilam)=flux(icc,ilam)+fluxg/real(ng)
 				obsA(icc,ilam)=obsA(icc,ilam)+Ag/real(ng)
@@ -289,16 +326,34 @@
 		enddo
 	enddo
 !$OMP END DO
+	deallocate(fact_contr)
+	deallocate(fluxg_contr)
+	deallocate(Ag_contr)
 !$OMP FLUSH
 !$OMP END PARALLEL
 	call tellertje(nlam,nlam)
 	
-	open(unit=44,file=trim(outputdir) // "slanttau",RECL=6000)
-	write(44,*) '#',(lam(ilam),ilam=1,nlam-1,(nlam/100)+1)
-	do i=1,nrtrace-1
-		write(44,*) sqrt(ptrace(i)*ptrace(i+1)),(slant_tau(i,ilam),ilam=1,nlam-1,(nlam/100)+1)
-	enddo
-	close(unit=44)
+	if(computecontrib) then
+		filename=trim(outputdir) // "contribution.fits.gz"
+		do irc=1,nr
+			if(irc.eq.1) then
+				dP=log10(P(1)/P(2))
+			else if(irc.eq.nr) then
+				dP=log10(P(nr-1)/P(nr))
+			else
+				dP=log10(P(irc-1)/P(irc+1))
+			endif
+			flux_contr(irc,1:nlam)=(flux(0,1:nlam)-flux_contr(irc,1:nlam))/dP
+			obsA_contr(irc,1:nlam)=(obsA(0,1:nlam)-obsA_contr(irc,1:nlam))/dP
+		enddo
+		do ilam=1,nlam
+			tot=sum(flux_contr(1:nr,ilam))
+			flux_contr(1:nr,ilam)=flux_contr(1:nr,ilam)/tot
+			tot=sum(obsA_contr(1:nr,ilam))
+			obsA_contr(1:nr,ilam)=obsA_contr(1:nr,ilam)/tot
+		enddo
+		call writeContribution(filename,P,lam,obsA_contr,flux_contr,nr,nlam)
+	endif
 
 	open(unit=44,file=trim(outputdir) // "COcolumns",RECL=6000)
 	do ilam=1,nlam
@@ -316,7 +371,9 @@
 
 	deallocate(rtrace)
 	deallocate(ptrace)
-	deallocate(slant_tau)
+
+	deallocate(flux_contr)
+	deallocate(obsA_contr)
 	
 	return
 	end
