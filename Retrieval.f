@@ -1235,6 +1235,10 @@ c	linear/squared
 	if(.not.dochemistry) then
 		write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'COratio',COret,COerr(2),COerr(1)
 	endif
+	if(Tform.gt.0d0) then
+		write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'COratio',COratio,0d0,0d0
+		write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'metallicity',metallicity,0d0,0d0
+	endif
 	if(mapCOratio) then
 		do i=1,nmol
 			if(mixrat_r(1,i).gt.0d0) write(20,'(a15," = ",es14.7)') trim(molname(i)),mixrat_r(1,i)

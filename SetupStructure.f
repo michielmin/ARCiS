@@ -154,7 +154,7 @@ c	if(useDRIFT.and.domakeai) then
 	if(dochemistry.and.j.eq.1) then
 	if(compute_mixrat) then
 		if(Tform.gt.0d0) then
-			call FormAbun(Tform,f_enrich)
+			call FormAbun(Tform,f_enrich,COratio,metallicity)
 		else
 			call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
     	endif
@@ -220,7 +220,7 @@ c					Tc=T(i)
 	if(compute_mixrat) then
 		ini=.true.
 		if(Tform.gt.0d0) then
-			call FormAbun(Tform,f_enrich)
+			call FormAbun(Tform,f_enrich,COratio,metallicity)
 		else
 			call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
     	endif
@@ -469,7 +469,7 @@ c bug needs to be fixed!!!!!
 	write(25,'("#Elemental abundances")')
   	ini=.true.
 	if(Tform.gt.0d0) then
-		call FormAbun(Tform,f_enrich)
+		call FormAbun(Tform,f_enrich,COratio,metallicity)
 	else
 		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
    	endif
@@ -567,7 +567,7 @@ c	endif
 			ini=.true.
 			if(cloud_dens(i,ii).lt.1d-25) then
 				if(Tform.gt.0d0) then
-					call FormAbun(Tform,f_enrich)
+					call FormAbun(Tform,f_enrich,COratio,metallicity)
 				else
 					call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		    	endif
@@ -811,12 +811,12 @@ c use Ackerman & Marley 2001 cloud computation
 	end
 	
 
-	subroutine FormAbun(T,enrich)
+	subroutine FormAbun(T,enrich,COratio,metallicity)
 	use AtomsModule
 	IMPLICIT NONE
 	character*10 species(20)
 	real*8 gas_atoms(N_atoms),solid_atoms(N_atoms),tot
-	real*8 sil_atoms(N_atoms),tot_atoms(N_atoms)
+	real*8 sil_atoms(N_atoms),tot_atoms(N_atoms),COratio,metallicity
 	real*8 Tmax(20),abun(20),max,maxf(20),T,enrich
 	integer atoms(20,N_atoms),limit(20,N_atoms),nspecies,i,j,k
 	character*100 temp,filename
@@ -980,11 +980,13 @@ c use Ackerman & Marley 2001 cloud computation
 
 	tot_atoms=gas_atoms+enrich*solid_atoms
 
+	COratio=tot_atoms(3)/tot_atoms(5)
 	print*,'C/O: ',tot_atoms(3)/tot_atoms(5)
 	print*,'Si/O:',tot_atoms(9)/tot_atoms(5)
 
-	print*,'metallicity: ',log10((sum(tot_atoms(3:18))/sum(tot_atoms(1:18)))/
-     &			(sum(molfracs_atoms(3:18))/sum(molfracs_atoms(1:18))))
+	metallicity=log10((sum(tot_atoms(3:n_atoms))/sum(tot_atoms(1:n_atoms)))/
+     &			(sum(molfracs_atoms(3:n_atoms))/sum(molfracs_atoms(1:n_atoms))))
+	print*,'metallicity: ',metallicity
 
 	sil_atoms=0d0
 	do i=7,13
