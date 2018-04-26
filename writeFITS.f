@@ -1,6 +1,4 @@
 	subroutine writeContribution(filename,ptrace,lam,obsA,flux,ntrace,nlam)
-c	use GlobalSetup
-c	use Constants
 	IMPLICIT NONE
 	integer ntrace,nlam
 	real*8 lam(nlam),ptrace(ntrace),obsA(ntrace,nlam),flux(ntrace,nlam)
