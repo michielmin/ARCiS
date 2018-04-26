@@ -90,7 +90,8 @@ c terms of use
 		nTiter=0
 		do while(.not.Tconverged.and.nTiter.lt.maxiter)
 			call DoComputeT(Tconverged)
-			call SetupStructure()
+			par_tprofile=.false.
+			call SetupStructure(.true.)
 			call SetupOpacities()
 			nTiter=nTiter+1
 		enddo

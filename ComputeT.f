@@ -27,7 +27,7 @@
 	
 	call output("Temperature computation (in beta phase!!)")
 
-	NphotPlanet=5000
+	NphotPlanet=1000
 	NphotStar=10000
 
 	docloud0=.false.

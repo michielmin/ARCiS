@@ -86,6 +86,7 @@ OBJS	= Modules.o \
 		SiOData.o \
 		FeOData.o \
 		Mg0.6Fe0.4OData.o \
+		MgOData.o \
 		IronData.o \
 		KuruczData.o \
 		MCRad.o \
@@ -97,7 +98,7 @@ OBJS	= Modules.o \
 		MakeAI.o \
 		dlsei.o \
 		Lapack.o \
-		writeFITS.f \
+		writeFITS.o \
 		DiffuseCloud.o
 
 # program name and install location

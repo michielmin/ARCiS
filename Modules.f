@@ -57,10 +57,11 @@ c===============================================================================
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib
 	logical dochemistry,retrieve_profile,condensates,faircoverage,speclimits,mapCOratio
-	logical,allocatable :: includemol(:)
+	logical,allocatable :: includemol(:),didcondens(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
-	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud
+	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud,metallicity0
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun
+	logical didcondens_chem
 	character*500 TPfile
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime,TiScale
 	logical enhancecarbon
@@ -177,7 +178,7 @@ c===============================================================================
 		character*20 standard,ptype
 		character*500 species
 		integer nr,nsubgrains
-		real*8 tmix,betamix,Kzz
+		real*8 tmix,betamix,Kzz,Kscale,Sigmadot
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 

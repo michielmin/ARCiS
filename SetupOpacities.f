@@ -138,9 +138,9 @@ c above the wrong way of computing the correlated-k tables
 	
 			Cabs(ir,i,1:ng)=kappa(1:ng)
 			call RayleighScattering(Csca(ir,i),ir,i)
-			do j=1,ng
-				if(Cabs(ir,i,j).lt.Csca(ir,i)*1d-4) Cabs(ir,i,j)=Csca(ir,i)*1d-4 
-			enddo
+c			do j=1,ng
+c				if(Cabs(ir,i,j).lt.Csca(ir,i)*1d-4) Cabs(ir,i,j)=Csca(ir,i)*1d-4 
+c			enddo
 			opac_tot(i,1:ng)=opac_tot(i,1:ng)+(Cabs(ir,i,1:ng)+Csca(ir,i))*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
 !$OMP END DO
@@ -284,9 +284,9 @@ c above the wrong way of computing the correlated-k tables
 			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cont_tot(i))
 			Cabs(ir,i,1:ng)=kappa(1:ng)
 			call RayleighScattering(Csca(ir,i),ir,i)
-			do j=1,ng
-				if(Cabs(ir,i,j).lt.Csca(ir,i)*1d-4) Cabs(ir,i,j)=Csca(ir,i)*1d-4 
-			enddo
+c			do j=1,ng
+c				if(Cabs(ir,i,j).lt.Csca(ir,i)*1d-4) Cabs(ir,i,j)=Csca(ir,i)*1d-4 
+c			enddo
 			opac_tot(i,1:ng)=opac_tot(i,1:ng)+(Cabs(ir,i,1:ng)+Csca(ir,i))*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
 !$OMP END DO
@@ -496,6 +496,7 @@ c pressure broadening
 
 	nnu_bin=abs(inu2-inu1)+1
 	allocate(kap_bin(nnu_bin))
+	tot1=0d0
 	do inu=1,nnu_bin
 		kap_bin(inu)=kline(inu+inu1-1)+Ccont
 		tot1=tot1+kap_bin(inu)

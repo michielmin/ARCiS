@@ -1234,7 +1234,7 @@ END MODULE nrutil
 
 
 subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
-   cloudspecies,Xcloud,Ncloud,nabla_ad,set_gas_atoms,f_enrich,MMW)
+   cloudspecies,Xcloud,Ncloud,nabla_ad,set_gas_atoms,f_enrich,MMW,didcondens)
 	use AtomsModule
   implicit none
 
@@ -1254,7 +1254,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
   DOUBLE PRECISION             :: thermo_quants,cpe
   LOGICAL                      :: ini,condensates
   INTEGER                      :: i_t, i_p, i_reac, N_reactants2
-	logical con(N_reactants)
+	logical con(N_reactants),didcondens
 
 	integer at_re(N_reactants,N_atoms)
 	real*8 tot
@@ -1608,6 +1608,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 	write(92,'(76es10.1)') molfracs_reactants(1:N_reactants2)
 	call flush(92)
 
+	didcondens=.false.
 	if(condensates) then
 		con=.false.
 		do i=1,Ncloud
@@ -1622,7 +1623,10 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 					if(trim(names_reactants(i_reac)).eq.trim(namecloud)) then
 						Xcloud(i)=Xcloud(i)+massfracs_reactants(i_reac)
 					endif
-					if(i_reac.ge.77.and.massfracs_reactants(i_reac).gt.0d0) con(i_reac)=.true.
+					if(i_reac.ge.77.and.massfracs_reactants(i_reac).gt.0d0) then
+						con(i_reac)=.true.
+						didcondens=.true.
+					endif
 				enddo
 				j1=j2+1
 			enddo

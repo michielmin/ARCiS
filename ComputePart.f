@@ -33,7 +33,7 @@
 	external Enstatite_X,Enstatite_Y,Enstatite_Z
 	external Forsterite_X,Forsterite_Y,Forsterite_Z
 	external Brookite_X,Brookite_Y,Brookite_Z,Water
-	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O
+	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O,MgO
 	integer abun_in_name
 	parameter(abun_in_name=2)
 
@@ -377,10 +377,10 @@ c changed this to mass fractions (11-05-2010)
 		e2(i,1:nlam)=e2d(1:nlam)
 
 		i=i+1
-		filename(i)='Mg06Fe04O'
-		rho(i)=4.79
+		filename(i)='MgO'
+		rho(i)=3.58
 		frac(i)=frac(i)/rho(i)
-		call RegridDataLNK(Mg06Fe04O,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		call RegridDataLNK(MgO,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(i,1:nlam)=e1d(1:nlam)
 		e2(i,1:nlam)=e2d(1:nlam)
 
@@ -414,7 +414,7 @@ c changed this to mass fractions (11-05-2010)
 		e1(i,1:nlam)=e1d(1:nlam)
 		e2(i,1:nlam)=e2d(1:nlam)
 	endif
-		
+			
 	min=dcmplx(1d0,0d0)
 
 	tot=0d0
@@ -932,10 +932,10 @@ c changed this to mass fractions (11-05-2010)
 		e2(i,1:nlam)=e2d(1:nlam)
 
 		i=i+1
-		filename(i)='Mg06Fe04O'
-		rho(i)=4.79
+		filename(i)='MgO'
+		rho(i)=3.58
 		frac(i)=frac(i)/rho(i)
-		call RegridDataLNK(Mg06Fe04O,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		call RegridDataLNK(MgO,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(i,1:nlam)=e1d(1:nlam)
 		e2(i,1:nlam)=e2d(1:nlam)
 

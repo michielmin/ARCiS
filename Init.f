@@ -452,7 +452,7 @@ c allocate the arrays
 
 	call ConvertUnits()
 
-	condensates=(condensates.or.cloudcompute)
+c	condensates=(condensates.or.cloudcompute)
 
 	call InitFreq()
 
@@ -481,6 +481,7 @@ c allocate the arrays
 		allocate(nabla_ad(nr))
 		allocate(grav(nr))
 		allocate(MMW(nr))
+		allocate(didcondens(nr))
 		allocate(mixrat_r(nr,nmol))
 		allocate(mixrat_old_r(nr,nmol))
 		allocate(cloud_dens(nr,max(nclouds,1)))
@@ -502,6 +503,8 @@ c allocate the arrays
 			endif
 		enddo
 	endif
+
+	metallicity0=metallicity
 
 	allocate(Cabs(nr,nlam,ng))
 	allocate(Csca(nr,nlam))
@@ -1078,6 +1081,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%haze=.false.
 		Cloud(i)%tmix=300d0
 		Cloud(i)%betamix=2.2
+		Cloud(i)%Kscale=1d0
+		Cloud(i)%Kzz=1d8
+		Cloud(i)%Sigmadot=1d-17
 	enddo
 	cloudcompute=.false.
 	useDRIFT=.false.
@@ -1437,8 +1443,6 @@ c				enddo
 	select case(key%key2)
 		case("file")
 			Cloud(key%nr1)%file=trim(key%value)
-		case("kzzfile")
-			Cloud(key%nr1)%Kzzfile=trim(key%value)
 		case("ngrains","nsize","nr")
 			read(key%value,*) Cloud(key%nr1)%nr
 		case("nsubgrains")
@@ -1489,8 +1493,14 @@ c				enddo
 			read(key%value,*) Cloud(key%nr1)%tmix
 		case("betamix")
 			read(key%value,*) Cloud(key%nr1)%betamix
+		case("kzzfile")
+			Cloud(key%nr1)%Kzzfile=trim(key%value)
 		case("kzz","k")
 			read(key%value,*) Cloud(key%nr1)%Kzz
+		case("kscale")
+			read(key%value,*) Cloud(key%nr1)%Kscale
+		case("sigmadot","nucleation")
+			read(key%value,*) Cloud(key%nr1)%Sigmadot
 		case default
 			call output("Unknown cloud keyword: " // trim(key%key2))
 			stop
