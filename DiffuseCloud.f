@@ -3,21 +3,21 @@
 	use Constants
 	use AtomsModule
 	IMPLICIT NONE
-	real*8,allocatable :: x(:),vsed(:),xtot(:),vth(:)
+	real*8,allocatable :: x(:),vsed(:),xtot(:),vth(:),vthv(:)
 	real*8,allocatable :: Sc(:),Sn(:),rpart(:),mpart(:)
 	real*8,allocatable :: An(:,:),y(:,:),xv(:),xn(:),xc(:),A(:,:)
-	real*8,allocatable :: drho(:),drhovsed(:)
-	real*8 K,dz,f,z12,z13,z12_2,z13_2,g,mu,rhodust,rr,Kc,Kp,xv_bot,densv,mutot,npart
+	real*8,allocatable :: drho(:),drhovsed(:),tcinv(:)
+	real*8 K,dz,z12,z13,z12_2,z13_2,g,mu,rhodust,rr,Kc,Kp,xv_bot,densv,mutot,npart
 	integer info,i,j,iter,NN,NRHS,niter,ii
-	real*8 cs,err,maxerr,eps,SupSat,frac_nuc,r_nuc,m_nuc,tcoaginv,Dp,vmol
-	real*8 af,bf,f1,f2,Pv,f0,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn
+	real*8 cs,err,maxerr,eps,SupSat,frac_nuc,r_nuc,m_nuc,tcoaginv,Dp,vmol,f
+	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn
 	integer,allocatable :: IWORK(:)
-	real*8 sigmastar,Sigmadot,Pstar,gz,dmol,COabun
+	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick
 	logical quadratic,ini
 	integer atoms_cloud(N_atoms)
 	character*500 cloudspecies(max(nclouds,1))
 
-	quadratic=.false.
+	quadratic=.true.
 
 	w_atoms(1) = 1.00794		!'H'
 	w_atoms(2) = 4.002602		!'He'
@@ -72,8 +72,9 @@ c MgSiO3
 
 	sigmastar=0.1
 	Pstar=60d-6
+	fstick=1d0
 	
-	dmol=2.5d-8
+	sigmamol=8d-15
 
 	eps=1d-3
 
@@ -97,11 +98,13 @@ c	BB=12.471d0		!37.8
 	allocate(Sc(nr))
 	allocate(Sn(nr))
 	allocate(vth(nr))
+	allocate(vthv(nr))
 	allocate(drho(nr))
 	allocate(drhovsed(nr))
 	allocate(xv(nr))
 	allocate(xc(nr))
 	allocate(xn(nr))
+	allocate(tcinv(nr))
 	allocate(vsed(nr))
 
 	f=0.1d0
@@ -117,32 +120,23 @@ c	BB=12.471d0		!37.8
 	xn=0d0
 	xc=0d0
 	xv=xv_bot
+	tcinv=0d0
 
-	f0=0.5d0
-	f=1d-8
 c start the loop
 	do iter=1,niter
 	if(iter.le.2) xv=xv_bot
-c	f=exp(-((real(niter/2-iter)/real(niter/2))/0.2d0)**2)
-c	if(iter.gt.niter/2) f=1d0
-	f=10d0**(-8d0+8d0*real(iter)*1.1/real(niter))
-	if(f.gt.1d0) f=1d0
 	call tellertje(iter,niter)
 
 	vsed=0d0
 	do i=1,nr
 		cs=sqrt(kb*T(i)/(2.3*mp))
-		vsed(i)=-sqrt(pi)*rpart(i)*rhodust*Ggrav*Mplanet/(2d0*dens(i)*cs*R(i)**2)
-		vth(i)=sqrt(8d0*kb*T(i)/(pi*mu*mp))
+		vth(i)=sqrt(8d0*kb*T(i)/(pi*2.3*mp))
+		vthv(i)=sqrt(8d0*kb*T(i)/(pi*mu*mp))
+		vsed(i)=-sqrt(pi)*rpart(i)*rhodust*Ggrav*Mplanet/(2d0*dens(i)*vth(i)*R(i)**2)
 		mpart(i)=rhodust*4d0*pi*rpart(i)**3/3d0
-		
-c		vmol=5d0*(sqrt(pi*mu*mp*kb*T(i))*(T(i)/59.7)**(0.16))/(16d0*pi*1.22*dmol**2)
-c		NKn=1d0/(rpart(i)*pi*dmol**2*Ndens(i))
-c		vsed(i)=-2d0*(1d0+1.26d0*NKn)*(Ggrav*Mplanet/(R(i)**2))*rpart(i)**2*rhodust/(9d0*vmol)
 
-		Sc(i)=min(vth(i)*rpart(i),kb*T(i)*sqrt(8d0*kb*T(i)/(pi*2.3*mp))/(3d0*P(i)*1d6*8e-15))*4d0*pi*rpart(i)*dens(i)
-
-		Sc(i)=Sc(i)*f
+		Sc(i)=min(vthv(i)*rpart(i),kb*T(i)*sqrt(8d0*kb*T(i)/(pi*2.3*mp))/(3d0*P(i)*1d6*8e-15))*4d0*pi*rpart(i)*dens(i)
+		Sc(i)=fstick*Sc(i)
 	enddo
 
 	do i=1,nr
@@ -172,11 +166,11 @@ c		vsed(i)=-2d0*(1d0+1.26d0*NKn)*(Ggrav*Mplanet/(R(i)**2))*rpart(i)**2*rhodust/(
 
 		Pv=1.04e17*exp(-58663d0/T(i))
 c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
-		densv=Pv/vth(i)**2
+		densv=Pv/vthv(i)**2
 		SupSat=dens(i)*xv(i)/densv
 		gz=Ggrav*Mplanet/R(i)**2
 
-		Sn(i)=(dens(i)*gz*Sigmadot/(sigmastar*P(i)*1d6*sqrt(2d0*pi)))*exp(-log10(P(i)/Pstar)**2/(2d0*sigmastar**2))
+		Sn(i)=(dens(i)*gz*Sigmadot/(sigmastar*P(i)*1d6*sqrt(2d0*pi)))*exp(-log(P(i)/Pstar)**2/(2d0*sigmastar**2))
 	enddo
 	
 
@@ -187,7 +181,7 @@ c equations for Nuclii
 
 		Pv=1.04e17*exp(-58663d0/T(i))
 c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
-		densv=Pv/vth(i)**2
+		densv=Pv/vthv(i)**2
 
 		j=i+1
 
@@ -220,13 +214,28 @@ c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
 		x(j)=-Sn(i)
 
 c coagulation
-c		vmol=5d0*(sqrt(pi*2.33*mp*kb*T(i))*(T(i)/59.7)**(0.16))/(16d0*pi*1.22*dmol**2)
-c		npart=xn(i)*dens(i)/m_nuc
-c		Dp=kb*T(i)/(6d0*pi*rpart(i)*dens(i)*vmol)
-c		tcoaginv=npart*pi*rpart(i)**2*vsed(i)
-c		tcoaginv=tcoaginv+2d0*rpart(i)*npart*min(sqrt(16d0*kb*T(i)/(pi*mpart(i)))*rpart(i),Dp)
-c		An(j,i)=An(j,i)-f**2*dens(i)*tcoaginv
+		if(coagulation) then
+			npart=xn(i)*dens(i)/m_nuc
+			lmfp=2.3*mp/(sqrt(2d0)*dens(i)*sigmamol)
+			vmol=0.5d0*lmfp*vth(i)
+			Dp=kb*T(i)/(6d0*pi*rpart(i)*vmol*dens(i))
 
+c			tcoaginv=npart*pi*rpart(i)**2*abs(vsed(i))
+c rewritten for better convergence
+			tcoaginv=sqrt(pi)*3d0*xc(i)*Ggrav*Mplanet/(8d0*vth(i)*R(i)**2)
+
+			if(sqrt(16d0*kb*T(i)/(pi*mpart(i)))*rpart(i).lt.Dp) then
+				tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*sqrt(16d0*kb*T(i)/(pi*mpart(i)))
+			else
+				tcoaginv=tcoaginv+2d0*pi*rpart(i)*npart*Dp
+			endif
+
+			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
+
+			tcinv(i)=(tcinv(i)+tcoaginv)/2d0
+
+			An(j,i)=An(j,i)-dens(i)*tcinv(i)
+		endif
 	enddo
 	i=nr
 	dz=R(i)-R(i-1)
@@ -252,7 +261,7 @@ c equations for material
 		dz=R(i+1)-R(i-1)
 		Pv=1.04e17*exp(-58663d0/T(i))
 c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
-		densv=Pv/vth(i)**2
+		densv=Pv/vthv(i)**2
 
 		f1=(R(i-1)**2-R(i)**2)/(R(i+1)**2-R(i)**2)
 		f2=(R(i-1)-R(i))/(R(i+1)-R(i))
@@ -341,7 +350,7 @@ c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
 	do i=1,nr
 		Pv=1.04e17*exp(-58663d0/T(i))
 c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
-		densv=Pv/vth(i)**2
+		densv=Pv/vthv(i)**2
 		write(20,*) P(i),dens(i),xn(i),xc(i),xv(i),rpart(i),dens(i)*xv(i)/densv,T(i)
 	enddo
 	close(unit=20)
@@ -354,7 +363,6 @@ c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
 			rr=r_nuc
 		endif
 		rpart(i)=sqrt(rr*rpart(i))
-		rpart(i)=rr
 	enddo
 
 	enddo
@@ -364,7 +372,7 @@ c end the loop
 	do i=1,nr
 		Pv=1.04e17*exp(-58663d0/T(i))
 c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
-		densv=Pv/vth(i)**2
+		densv=Pv/vthv(i)**2
 		write(20,*) P(i),dens(i),xn(i),xc(i),xv(i),rpart(i),dens(i)*xv(i)/densv,T(i)
 	enddo
 	close(unit=20)
@@ -390,11 +398,13 @@ c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
 	deallocate(Sc)
 	deallocate(Sn)
 	deallocate(vth)
+	deallocate(vthv)
 	deallocate(drho)
 	deallocate(drhovsed)
 	deallocate(xv)
 	deallocate(xc)
 	deallocate(xn)
+	deallocate(tcinv)
 	deallocate(vsed)
 	deallocate(x)
 	deallocate(IWORK)

@@ -449,6 +449,7 @@ c allocate the arrays
 	
 	endif
 
+	if(specresfile.ne.' ') do_obs=.true.
 
 	call ConvertUnits()
 
@@ -782,6 +783,14 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) idum0
 		case("fcloud")
 			read(key%value,*) fcloud_default
+		case("coagulation")
+			read(key%value,*) coagulation
+		case("doobs")
+			read(key%value,*) do_obs
+		case("instrument")
+			read(key%value,*) obs_instrument
+		case("ntrans")
+			read(key%value,*) obs_ntrans
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -1021,6 +1030,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	mixP=0d0
 	mixratHaze=0d0
 	Psimplecloud=1d9
+	coagulation=.true.
 	
 	PRplanet=10d0
 
@@ -1053,6 +1063,10 @@ c	if(par_tprofile) call ComputeParamT(T)
 	nai=1000
 
 	computecontrib=.false.
+	
+	do_obs=.false.
+	obs_instrument="ARIEL"
+	obs_ntrans=1d0
 
 	do i=1,nclouds
 		Cloud(i)%P=1d-4
