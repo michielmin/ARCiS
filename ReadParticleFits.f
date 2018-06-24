@@ -1,4 +1,4 @@
-	subroutine ReadParticleFits(input,C,isize,iT)
+	subroutine ReadParticleFits(input,C,isize)
 	use GlobalSetup
 	use Constants
 	implicit none
@@ -15,7 +15,7 @@
 	real*8,allocatable :: array(:,:),matrix(:,:,:)
 
 	type(CloudType) C,p0,p1
-	integer i,j,ia,iT,iread,nl_read,isize
+	integer i,j,ia,iread,nl_read,isize
 	logical truefalse
 	real*8 l0,l1,tot,tot2,theta,asym,HG,asym2,wasym2
 	real rho_av,a2
@@ -45,7 +45,7 @@
 	firstpix=1
 	nullval=-999
 
-	call output("Reading particle file: " // trim(input))
+c	call output("Reading particle file: " // trim(input))
 
 	!------------------------------------------------------------------------
 	! HDU0 : opacities
@@ -59,8 +59,6 @@
 
 	! Read model info
 
-	call ftgkye(unit,'a2',a2,comment,status)
-	C%rv(isize)=sqrt(a2)*1d-4
 	call ftgkye(unit,'density',rho_av,comment,status)
 	C%rho=rho_av
 
@@ -110,7 +108,7 @@ c	call ftgkyj(unit,'mcfost2prodimo',mcfost(1)%mcfost2ProDiMo,comment,stat4)
 
 	i=1
 	iread=1
-	l0=array(i,1)
+	l0=array(i,1)/1d4
 	p0%Kext(1,1)=array(iread,2)
 	p0%Kabs(1,1)=array(iread,3)
 	p0%Ksca(1,1)=array(iread,4)
@@ -127,13 +125,13 @@ c	call ftgkyj(unit,'mcfost2prodimo',mcfost(1)%mcfost2ProDiMo,comment,stat4)
 		C%Ksca(isize,i)=p0%Ksca(1,1)
 		C%Kabs(isize,i)=p0%Kabs(1,1)
 		C%F(isize,i)=p0%F(1,1)
-		call tellertje(i,nlam)
+c		call tellertje(i,nlam)
 		i=i+1
 		goto 103
 	endif
 100	iread=iread+1
 	if(iread.gt.nl_read) goto 102
-	l1=array(iread,1)
+	l1=array(iread,1)/1d4
 	p1%Kext(1,1)=array(iread,2)
 	p1%Kabs(1,1)=array(iread,3)
 	p1%Ksca(1,1)=array(iread,4)
@@ -155,7 +153,7 @@ c	call ftgkyj(unit,'mcfost2prodimo',mcfost(1)%mcfost2ProDiMo,comment,stat4)
 		C%F(isize,i)%F33(1:180)=p1%F(1,1)%F33(1:180)+(lam(i)-l1)*(p0%F(1,1)%F33(1:180)-p1%F(1,1)%F33(1:180))/(l0-l1)
 		C%F(isize,i)%F34(1:180)=p1%F(1,1)%F34(1:180)+(lam(i)-l1)*(p0%F(1,1)%F34(1:180)-p1%F(1,1)%F34(1:180))/(l0-l1)
 		C%F(isize,i)%F44(1:180)=p1%F(1,1)%F44(1:180)+(lam(i)-l1)*(p0%F(1,1)%F44(1:180)-p1%F(1,1)%F44(1:180))/(l0-l1)
-		call tellertje(i,nlam)
+c		call tellertje(i,nlam)
 		i=i+1
 		if(i.gt.nlam) goto 102
 		goto 101
@@ -168,7 +166,7 @@ c	call ftgkyj(unit,'mcfost2prodimo',mcfost(1)%mcfost2ProDiMo,comment,stat4)
 	goto 100
 102	continue
 	do j=i,nlam
-		call tellertje(j,nlam)
+c		call tellertje(j,nlam)
 		C%Ksca(isize,j)=C%Ksca(isize,i-1)*(lam(i-1)/lam(j))**4
 		C%Kabs(isize,j)=C%Kabs(isize,i-1)*(lam(i-1)/lam(j))**2
 		C%Kext(isize,j)=C%Kabs(isize,j)+C%Ksca(isize,j)

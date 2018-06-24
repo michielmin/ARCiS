@@ -182,6 +182,7 @@ c===============================================================================
 	nclouds=0
 	n_points=0
 	n_ret=0
+	n_instr=0
 	j=0
 	mixratfile=.false.
 	fcloud_default=1d0
@@ -203,6 +204,10 @@ c===============================================================================
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nobs) nobs=key%nr1
+			case("instrument")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr2.eq.0) key%nr2=1
+				if(key%nr1.gt.n_instr) n_instr=key%nr1
 			case("cia")
 				if(key%key2.eq.' ') then
 					read(key%value,*) do_cia
@@ -270,6 +275,8 @@ c===============================================================================
 	allocate(RetPar(max(n_ret,1)))
 	allocate(ObsSpec(max(nobs,1)))
 	allocate(Tin(nr))
+	allocate(instrument(max(n_instr,1)))
+	allocate(instr_ntrans(max(n_instr,1)))
 
 	ncia0=0
 	existh2h2=.false.
@@ -449,8 +456,6 @@ c allocate the arrays
 	
 	endif
 
-	if(specresfile.ne.' ') do_obs=.true.
-
 	call ConvertUnits()
 
 c	condensates=(condensates.or.cloudcompute)
@@ -466,6 +471,8 @@ c	condensates=(condensates.or.cloudcompute)
 			nphase=90
 		endif
 	endif
+
+	if(particledir.eq.' ') particledir=trim(outputdir)
 
 	if(opacitydir(len_trim(opacitydir)-1:len_trim(opacitydir)).ne.'/') then
 		opacitydir=trim(opacitydir) // '/'
@@ -655,6 +662,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) specres
 		case("specresfile")
 			read(key%value,*) specresfile
+		case("particledir","dirparticle")
+			read(key%value,*) particledir
 		case("tpfile")
 			TPfile=key%value
 		case("mixratfile")
@@ -740,12 +749,16 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadRetrieval(key)
 		case("obs")
 			call ReadObsSpec(key)
+		case("instrument")
+			call ReadInstrument(key)
 		case("npop")
 			read(key%value,*) npop
 		case("ngen")
 			read(key%value,*) ngen
 		case("gene_cross")
 			read(key%value,*) gene_cross
+		case("resume_nest")
+			read(key%value,*) resume_multinest
 		case("tvalue")
 			read(key%value,*) Tin(key%nr1)
 		case("retrieve_profile")
@@ -785,12 +798,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) fcloud_default
 		case("coagulation")
 			read(key%value,*) coagulation
-		case("doobs")
-			read(key%value,*) do_obs
-		case("instrument")
-			read(key%value,*) obs_instrument
-		case("ntrans")
-			read(key%value,*) obs_ntrans
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -999,6 +1006,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	idum0=42
 
+	particledir=' '
+
 	Mplanet=-1d0
 	Rplanet=1d0
 	Pplanet=1d-2
@@ -1064,9 +1073,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 
 	computecontrib=.false.
 	
-	do_obs=.false.
-	obs_instrument="ARIEL"
-	obs_ntrans=1d0
+	instrument="ARIEL"
+	instr_ntrans=1d0
 
 	do i=1,nclouds
 		Cloud(i)%P=1d-4
@@ -1114,6 +1122,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	npop=30
 	ngen=0
 	gene_cross=.false.
+	resume_multinest=.false.
 
 	do i=1,nobs
 		ObsSpec(i)%beta=-1d0
@@ -1338,6 +1347,27 @@ c				enddo
 			read(key%value,*) ObsSpec(i)%beta
 		case("scale")
 			read(key%value,*) ObsSpec(i)%scale
+		case default
+			call output("Keyword not recognised: " // trim(key%key2))
+	end select
+	
+	return
+	end
+
+	subroutine ReadInstrument(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i
+	i=key%nr1
+	
+	select case(key%key2)
+		case("name")
+			read(key%value,*) instrument(i)
+		case("ntrans")
+			read(key%value,*) instr_ntrans(i)
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

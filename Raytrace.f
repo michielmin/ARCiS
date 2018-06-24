@@ -194,7 +194,7 @@
 	allocate(Ag_contr(nr))
 !$OMP DO SCHEDULE(STATIC,1)
 	do ilam=1,nlam-1
-		call tellertje(ilam+1,nlam+1)
+c		call tellertje(ilam+1,nlam+1)
 		freq0=sqrt(freq(ilam)*freq(ilam+1))
 		obsA(:,ilam)=0d0
 		obsA_contr(1:nr,ilam)=0d0
@@ -210,9 +210,9 @@
 				fluxg_contr=0d0
 				Ag_contr=0d0
 				do i=1,nrtrace-1
-					Otot=0d0
-					Ctot=0d0
-					Htot=0d0
+c					Otot=0d0
+c					Ctot=0d0
+c					Htot=0d0
 					fact=1d0
 					fact_contr=1d0
 					tautot=0d0
@@ -262,13 +262,13 @@
 							endif
 						endif
 					enddo
-					do imol=1,nmol
-						if(includemol(imol)) then
-							Otot=Otot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Oatoms(imol))
-							Ctot=Ctot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Catoms(imol))
-							Htot=Htot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Hatoms(imol))
-						endif
-					enddo
+c					do imol=1,nmol
+c						if(includemol(imol)) then
+c							Otot=Otot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Oatoms(imol))
+c							Ctot=Ctot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Catoms(imol))
+c							Htot=Htot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Hatoms(imol))
+c						endif
+c					enddo
 					tau_a=d*Ca
 					tau=tau_a+d*Cs
 					if(P(ir).gt.Psimplecloud) tau=1d4
@@ -306,9 +306,9 @@
 					if(computecontrib) then
 						Ag_contr=Ag_contr+A*(1d0-fact_contr)
 					endif
-					Ocolumn(1,ilam,icc)=Ocolumn(1,ilam,icc)+A*fact*Otot/real(ng)
-					Ccolumn(1,ilam,icc)=Ccolumn(1,ilam,icc)+A*fact*Ctot/real(ng)
-					Hcolumn(1,ilam,icc)=Hcolumn(1,ilam,icc)+A*fact*Htot/real(ng)
+c					Ocolumn(1,ilam,icc)=Ocolumn(1,ilam,icc)+A*fact*Otot/real(ng)
+c					Ccolumn(1,ilam,icc)=Ccolumn(1,ilam,icc)+A*fact*Ctot/real(ng)
+c					Hcolumn(1,ilam,icc)=Hcolumn(1,ilam,icc)+A*fact*Htot/real(ng)
 				enddo
 				flux(0,ilam)=flux(0,ilam)+cloudfrac(icc)*fluxg/real(ng)
 				obsA(0,ilam)=obsA(0,ilam)+cloudfrac(icc)*Ag/real(ng)
@@ -318,7 +318,6 @@
 						obsA_contr(irc,ilam)=obsA_contr(irc,ilam)+cloudfrac(icc)*Ag_contr(irc)/real(ng)
 					enddo
 				endif
-				write(72,*) lam(ilam),Ag/real(ng)
 				flux(icc,ilam)=flux(icc,ilam)+fluxg/real(ng)
 				obsA(icc,ilam)=obsA(icc,ilam)+Ag/real(ng)
 			endif
@@ -355,16 +354,16 @@
 		call writeContribution(filename,P,lam,obsA_contr,flux_contr,nr,nlam)
 	endif
 
-	open(unit=44,file=trim(outputdir) // "COcolumns",RECL=6000)
-	do ilam=1,nlam
-		write(44,*) lam(ilam)*1e4,(Ccolumn(1,ilam,icc)/Ocolumn(1,ilam,icc),icc=1,ncc),
-     &							  (Ccolumn(2,ilam,icc)/Ocolumn(2,ilam,icc),icc=1,ncc),
-     &							  (Ccolumn(1,ilam,icc)/Hcolumn(1,ilam,icc),icc=1,ncc),
-     &							  (Ccolumn(2,ilam,icc)/Hcolumn(2,ilam,icc),icc=1,ncc),
-     &							  (Ocolumn(1,ilam,icc)/Hcolumn(1,ilam,icc),icc=1,ncc),
-     &							  (Ocolumn(2,ilam,icc)/Hcolumn(2,ilam,icc),icc=1,ncc)
-	enddo
-	close(unit=44)
+c	open(unit=44,file=trim(outputdir) // "COcolumns",RECL=6000)
+c	do ilam=1,nlam
+c		write(44,*) lam(ilam)*1e4,(Ccolumn(1,ilam,icc)/Ocolumn(1,ilam,icc),icc=1,ncc),
+c     &							  (Ccolumn(2,ilam,icc)/Ocolumn(2,ilam,icc),icc=1,ncc),
+c     &							  (Ccolumn(1,ilam,icc)/Hcolumn(1,ilam,icc),icc=1,ncc),
+c     &							  (Ccolumn(2,ilam,icc)/Hcolumn(2,ilam,icc),icc=1,ncc),
+c     &							  (Ocolumn(1,ilam,icc)/Hcolumn(1,ilam,icc),icc=1,ncc),
+c     &							  (Ocolumn(2,ilam,icc)/Hcolumn(2,ilam,icc),icc=1,ncc)
+c	enddo
+c	close(unit=44)
 
 	flux=flux*1d23/distance**2
 	phase=phase*1d23/distance**2

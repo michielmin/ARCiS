@@ -46,6 +46,8 @@
 	na=180
 	lnkloglog=.true.
 
+	call AllocateDMiLay
+
 	allocate(e1(MAXMAT,nlam))
 	allocate(e2(MAXMAT,nlam))
 
@@ -427,9 +429,9 @@ c changed this to mass fractions (11-05-2010)
 		frac=1d0/real(nm)
 	endif
 
-	partfile=trim(outputdir) // "particle" 
-     &	// trim(int2string(ii,'(i0.4)')) // "_" // trim(int2string(isize,'(i0.4)')) 
+	partfile=trim(particledir) // "particle" 
 	if(abun_in_name.gt.0) then
+		partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*C%rv(isize),'(es8.2)'))
 		do i=1,nm
 			select case(abun_in_name)
 				case(1)
@@ -444,6 +446,8 @@ c changed this to mass fractions (11-05-2010)
 					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f7.5)'))
 			end select
 		enddo
+	else
+		partfile=trim(partfile) // trim(int2string(ii,'(i0.4)')) // "_" // trim(int2string(isize,'(i0.4)'))
 	endif
 	partfile=trim(partfile) // ".fits.gz"
 
@@ -981,10 +985,10 @@ c changed this to mass fractions (11-05-2010)
 		frac=1d0/real(nm)
 	endif
 	
-	if(.not.domakeai.and..false.) then
+c	if(.not.domakeai.and..false.) then
 		call ParticleFITS(C,r0,nr0(1:nm,1:ns),nm,ns,rho_av,ii,amin,amax,dble(pow),
      &						C%fmax,C%blend,C%porosity,frac,rho,filename,isize)
-	endif
+c	endif
 
 
 300	continue	
@@ -1022,7 +1026,7 @@ c changed this to mass fractions (11-05-2010)
 	deallocate(f34)
 	deallocate(f44)
 
-
+	call DeallocateDMiLay
 
 	return
 	end
@@ -1051,8 +1055,8 @@ c-----------------------------------------------------------------------
 
 	integer i,j,ia,iopac,iread,nl_read
 
-	checkparticlefile=.false.
-	return
+c	checkparticlefile=.false.
+c	return
 
 	! Get an unused Logical Unit Number to use to open the FITS file.
 	status=0
@@ -1071,7 +1075,7 @@ c-----------------------------------------------------------------------
 	firstpix=1
 	nullval=-999
 
-	call output("Checking particle file: " // trim(partfile) )
+c	call output("Checking particle file: " // trim(partfile) )
 
 	!------------------------------------------------------------------------
 	! HDU0 : opacities
@@ -1187,9 +1191,9 @@ c-----------------------------------------------------------------------
 	  logical simple,extend,truefalse
 	character*500 filename
 
-	filename=trim(outputdir) // "particle" 
-     &	// trim(int2string(ii,'(i0.4)')) // "_" // trim(int2string(isize,'(i0.4)')) 
+	filename=trim(particledir) // "particle" 
 	if(abun_in_name.gt.0) then
+		filename=trim(filename) // "_f" // trim(dbl2string(1d0*C%rv(isize),'(es8.2)'))
 		do i=1,nm
 			select case(abun_in_name)
 				case(1)
@@ -1204,6 +1208,8 @@ c-----------------------------------------------------------------------
 					filename=trim(filename) // "_f" // trim(dbl2string(1d0*frac(i),'(f7.5)'))
 			end select
 		enddo
+	else
+		filename=trim(filename) // trim(int2string(ii,'(i0.4)')) // "_" // trim(int2string(isize,'(i0.4)'))
 	endif
 	filename=trim(filename) // ".fits.gz"
 
@@ -1267,9 +1273,9 @@ C	 create the new empty FITS file
 	call ftpkye(unit,'r_pow',real(apow),8,'',status)
 	call ftpkye(unit,'f_max',real(fmax),8,'',status)
 
-	call ftpkye(unit,'a1',real(a1),8,'[micron]',status)
-	call ftpkye(unit,'a2',real(a2),8,'[micron^2]',status)
-	call ftpkye(unit,'a3',real(a3),8,'[micron^3]',status)
+c	call ftpkye(unit,'a1',real(a1),8,'[micron]',status)
+c	call ftpkye(unit,'a2',real(a2),8,'[micron^2]',status)
+c	call ftpkye(unit,'a3',real(a3),8,'[micron^3]',status)
 	call ftpkye(unit,'density',real(rho_av),8,'[g/cm^3]',status)
 
 	if(blend) call ftpkye(unit,'porosity',real(porosity),8,'[g/cm^3]',status)
@@ -1509,6 +1515,35 @@ c-----------------------------------------------------------------------
       END
 
 
+	module ArraysDMiLay
+	IMPLICIT NONE
+	INTEGER   LL
+	PARAMETER (LL = 200000)
+
+	double complex,allocatable :: W(:,:),acap(:)
+	
+	end module ArraysDMiLay
+
+	subroutine AllocateDMiLay()
+	USE ArraysDMiLay
+	IMPLICIT NONE
+
+	allocate(w(3,LL))
+	allocate(acap(LL))
+		
+	return
+	end
+
+	subroutine DeallocateDMiLay()
+	USE ArraysDMiLay
+	IMPLICIT NONE
+
+	deallocate(w)
+	deallocate(acap)
+		
+	return
+	end
+
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 
@@ -1516,7 +1551,7 @@ c-----------------------------------------------------------------------
       SUBROUTINE DMiLay( RCORE, RSHELL, WVNO, RINDSH, RINDCO, MU,
      &                   NUMANG, QEXT, QSCA, QBS, GQSC, 
      &                   M1, M2, S21, D21, MAXANG, Err)
-
+	USE ArraysDMiLay
 c **********************************************************************
 c    DOUBLE PRECISION version of MieLay, which computes electromagnetic 
 c    scattering by a stratified sphere, i.e. a particle consisting of a 
@@ -1554,9 +1589,9 @@ c **********************************************************************
 
 c     .. Parameters ..
 
-      INTEGER   MXANG, LL, Err
+      INTEGER   MXANG, Err
       DOUBLE PRECISION ZERO, ONE, TWO
-      PARAMETER ( MXANG = 200, LL = 200000, ZERO = 0.0D0, ONE = 1.0D0,
+      PARAMETER ( MXANG = 200, ZERO = 0.0D0, ONE = 1.0D0,
      &            TWO = 2.0D0 )
 c     ..
 c     .. Scalar Arguments ..
@@ -1593,7 +1628,6 @@ c     .. Local Arrays ..
 
       DOUBLE COMPLEX  S1( MXANG, 2 ), S2( MXANG, 2 ),
      &                U( 8 ), WFN( 2 ), Z( 4 )
-	double complex,allocatable :: W(:,:),acap(:)
 c     ..
 c     .. External Functions ..
 
@@ -1617,9 +1651,6 @@ c     .. Data statements ..
       DATA      PASS1 / .True. / , TOLER / 1.D-6 / ,
      &          CZERO / ( 0.D0, 0.D0 ) / , CI / ( 0.D0, 1.D0 ) /
 c     ..
-
-	allocate(w(3,LL))
-	allocate(acap(LL))
 
       IF( PASS1 ) THEN
 

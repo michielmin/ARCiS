@@ -72,6 +72,10 @@ c MgSiO3
 
 	sigmastar=0.1
 	Pstar=60d-6
+
+	Pstar=Cloud(ii)%P
+	sigmastar=log(Cloud(ii)%dP)
+
 	fstick=1d0
 	
 	sigmamol=8d-15

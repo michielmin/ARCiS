@@ -61,8 +61,8 @@ c===============================================================================
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud,metallicity0
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun
-	logical didcondens_chem,coagulation
-	character*500 TPfile
+	logical didcondens_chem,coagulation,resume_multinest
+	character*500 TPfile,particledir
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime,TiScale
 	logical enhancecarbon
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_enrich
@@ -118,11 +118,13 @@ c===============================================================================
      &				 0,0,0,0,0,0,0,0,
      &				 0,0,0,0,0 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
-	integer n_voigt
-	logical HITEMP,opacitymode,compute_opac,do_obs
+	integer n_voigt,n_instr
+	logical HITEMP,opacitymode,compute_opac
 	integer nPom,nTom
-	character*500 opacitydir,specresfile,starfile,obs_instrument
-	real*8 Tmin,Tmax,minTprofile,maxTprofile,fcloud_default,obs_ntrans
+	character*500 opacitydir,specresfile,starfile
+	character*20,allocatable :: instrument(:)
+	real*8,allocatable :: instr_ntrans(:)
+	real*8 Tmin,Tmax,minTprofile,maxTprofile,fcloud_default
 	real*8 sintheta(360),costheta(360)
 	logical,allocatable :: do_dB(:)
 	real*8 COret,COerr(2)

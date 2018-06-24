@@ -145,6 +145,9 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 
 	real*8 XeqCloud_best(nr,max(nclouds,1)),mixrat_best_r(nr,nmol)
 
+	call doMultiNest
+	return
+
 	allocate(WS(2*(n_ret)+n_ret*3+(n_ret*2+2)*(n_ret+7)))
 	allocate(IP(n_ret*4+2))
 	IP(1)=2*(n_ret)+n_ret*3+(n_ret*2+2)*(n_ret+7)
@@ -419,6 +422,9 @@ C	endif
 		dofit=.true.
 		dofit_prev=.true.
 		do i=1,n_ret
+			dvar(i)=dvar(i)*(0.5d0+0.5d0*random(idum))
+		enddo
+		do i=1,n_ret
 			call output("varying " // trim(RetPar(i)%keyword))
 			if(dvar(i).lt.1d-3) dvar(i)=1d-3
 20			var=var0
@@ -692,6 +698,7 @@ c================================================
 		do j=1,n_ret
 			tot=tot+ErrVec(j,i)**2
 		enddo
+		if(tot.le.0d0) tot=1d0
 		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*sqrt(w(i))*chi2/sqrt(tot)
 	enddo
 	
@@ -761,14 +768,16 @@ c		endif
 		do i=1,n_ret
 			var(i)=var0(i)+dvar(i)
 			if(var(i).gt.1d0) then
-				if(iter.lt.100) goto 1
-				dvar=dvar*0.999d0*(1d0-var0(i))/(var(i)-var0(i))
-				goto 2
+				var(i)=1d0
+c				if(iter.lt.100) goto 1
+c				dvar=dvar*0.999d0*(1d0-var0(i))/(var(i)-var0(i))
+c				goto 2
 			endif
 			if(var(i).lt.0d0) then
-				if(iter.lt.100) goto 1
-				dvar=dvar*0.999d0*(-var0(i))/(var(i)-var0(i))
-				goto 2
+				var(i)=0d0
+c				if(iter.lt.100) goto 1
+c				dvar=dvar*0.999d0*(-var0(i))/(var(i)-var0(i))
+c				goto 2
 			endif
 			if(speclimits) then
 				obsA0(1:nlam)=obsA0(1:nlam)+dobsA(i,1:nlam)*dvar(i)
@@ -1170,28 +1179,37 @@ c	linear
 
 	subroutine regridspecres(x0,y0,n0,x1,y1,R1,expR1,n1)
 	IMPLICIT NONE
-	integer i1,i0,n0,n1
+	integer i1,i0,n0,n1,i,nn0
 	real*8 x0(n0),y0(n0),x1(n1),y1(n1),R1(n1),expR1(n1),w,tot
+	real*8 xx0(n0+n1),yy0(n0+n1)
+
+	do i=1,n1
+		xx0(n0+i)=x1(i)
+	enddo
+	nn0=n0+n1
+	call sort(xx0,nn0)
+
+	call regridarray(x0,y0,n0,xx0,yy0,nn0)
 
 	do i1=1,n1
-		if(x1(i1).lt.x0(1)) then
-			y1(i1)=y0(1)
-		else if(x1(i1).gt.x0(n0)) then
-			y1(i1)=y0(n0)
+		if(x1(i1).lt.xx0(1)) then
+			y1(i1)=yy0(1)
+		else if(x1(i1).gt.xx0(nn0)) then
+			y1(i1)=yy0(nn0)
 		else
 			y1(i1)=0d0
 			tot=0d0
-			do i0=1,n0
-				w=exp(-abs((x0(i0)-x1(i1))*R1(i1)*2d0/x1(i1))**expR1(i1))
+			do i0=1,nn0
+				w=exp(-abs((xx0(i0)-x1(i1))*R1(i1)*2d0/x1(i1))**expR1(i1))
 				if(i0.eq.1) then
-					w=w*abs(x0(2)-x0(1))/2d0
-				else if(i0.eq.n0) then
-					w=w*abs(x0(n0)-x0(n0-1))/2d0
+					w=w*abs(xx0(2)-xx0(1))/2d0
+				else if(i0.eq.nn0) then
+					w=w*abs(xx0(nn0)-xx0(nn0-1))/2d0
 				else
-					w=w*abs(x0(i0-1)-x0(i0+1))/2d0
+					w=w*abs(xx0(i0-1)-xx0(i0+1))/2d0
 				endif
 				tot=tot+w
-				y1(i1)=y1(i1)+w*y0(i0)
+				y1(i1)=y1(i1)+w*yy0(i0)
 			enddo
 			y1(i1)=y1(i1)/tot
 		endif

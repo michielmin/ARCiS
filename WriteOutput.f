@@ -9,8 +9,8 @@
 	real*8 Fp1,Fp2,ApAs
 	logical,allocatable :: docloud0(:,:)
 	real*8,allocatable :: spec(:,:),specR(:),lamR(:),specRexp(:),specErr(:),Fstar_obs(:)
-	real*8 x,specres_obs,expspecres_obs,gasdev,tot,Dmirror,f_phot
-	integer ilam,j,nj,nlamR
+	real*8 x,specres_obs,expspecres_obs,gasdev,tot,Dmirror,f_phot,noisefloor
+	integer ilam,j,nj,nlamR,i_instr
 	character*1000 line
 
 	allocate(docloud0(max(nclouds,1),ncc))
@@ -137,8 +137,8 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	write(30,'("#",a13,a19,a26)') "lambda [mu]","Rp^2/Rstar^2","Rp^2/Rstar^2 using eclipse"
 	form='(f14.6,es19.7,es19.7)'
 	do i=1,nlam-1
-		Fp1=(phase(nphase-1,0,i)+flux(0,i))/(Fstar(i)*1d23/distance**2)
-		Fp2=(phase(nphase,0,i)+flux(0,i))/(Fstar(i)*1d23/distance**2)
+		Fp1=(phase(nphase-1,0,i)+flux(0,i)*abs(theta(nphase)-theta(nphase-1))/180d0)/(Fstar(i)*1d23/distance**2)
+		Fp2=(phase(nphase,0,i))/(Fstar(i)*1d23/distance**2)
 		ApAs=obsA(0,i)/(pi*Rstar**2)
 		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
      &					(Fp1-Fp2+ApAs)/(Fp1+1d0),ApAs-Fp2
@@ -184,9 +184,11 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	enddo
 	close(unit=30)
 
-	if(do_obs) then
+	if(n_instr.gt.0) then
 
-	select case(obs_instrument)
+	do i_instr=1,n_instr
+	
+	select case(instrument(i_instr))
 		case("ARIEL")
 			nlamR=103
 			allocate(lamR(nlamR))
@@ -195,6 +197,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			call ARIELspecres(lamR,specR,specRexp)
 			Dmirror=1d0
 			f_phot=0.5d0
+			noisefloor=10d-6
 		case("JWST")
 			nlamR=470
 			allocate(lamR(nlamR))
@@ -202,7 +205,8 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			allocate(specRexp(nlamR))
 			call JWSTspecres(lamR,specR,specRexp)
 			Dmirror=6.5d0
-			f_phot=0.5d0
+			f_phot=0.25d0
+			noisefloor=20d-6
 		case("MIRI")
 			nlamR=308
 			allocate(lamR(nlamR))
@@ -210,7 +214,8 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			allocate(specRexp(nlamR))
 			call MIRIspecres(lamR,specR,specRexp)
 			Dmirror=6.5d0
-			f_phot=0.5d0
+			f_phot=0.25d0
+			noisefloor=20d-6
 		case("NIRSPEC")
 			nlamR=162
 			allocate(lamR(nlamR))
@@ -218,7 +223,8 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			allocate(specRexp(nlamR))
 			call NIRSPECspecres(lamR,specR,specRexp)
 			Dmirror=6.5d0
-			f_phot=0.5d0
+			f_phot=0.25d0
+			noisefloor=20d-6
 		case("WFC3")
 			nlamR=13
 			allocate(lamR(nlamR))
@@ -227,6 +233,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			call WFC3specres(lamR,specR,specRexp)
 			Dmirror=2.4d0
 			f_phot=0.1d0
+			noisefloor=100d-6
 	end select
 	allocate(specErr(nlamR))
 	allocate(spec(nphase,nlamR))
@@ -235,16 +242,22 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
      &						lamR,Fstar_obs(1:nlamR),specR,specRexp,nlamR)
 	do i=1,nlamR
 		tot=1.51d7*(Fstar_obs(i)*1d23/distance**2)*(pi*(Dmirror/2d0)**2)
+		print*,lamR(i),tot/specR(i),Fstar_obs(i)*1d23/distance**2
 		tot=tot*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
-		tot=tot*obs_ntrans*f_phot/specR(i)
+		tot=tot*instr_ntrans(i_instr)*f_phot/specR(i)
 		specErr(i)=1d0/sqrt(tot)
+		if(specErr(i).lt.noisefloor) specErr(i)=noisefloor
 	enddo
 
-	filename=trim(outputdir) // "obs_emisR_" // trim(obs_instrument)
+	filename=trim(outputdir) // "obs_emisR_" // trim(instrument(i_instr))
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=6000)
+	write(30,'("# transit time       : ",es19.7, "sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
+	write(30,'("# number of transits : ",i)') instr_ntrans(i_instr)
+	write(30,'("# integration time   : ",es19.7,"hours")') 
+     &		2d0*(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
 	form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
-     &				 '("   flux(",f5.1,") [Jy]"),"         fstar [Jy]")'
+     &				 '("   flux(",f5.1,") [Jy]"),"         error")'
 	write(30,form) "lambda [mu]",theta(1:nphase)
 	form='(f14.6,' // int2string(nphase+1,'(i3)') // 'es19.7)'
 	do i=1,nphase
@@ -260,15 +273,19 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		enddo
 	enddo
 	do i=1,nlamR
-		write(30,form) lamR(i)/micron,spec(1:nphase,i),specErr(i)
+		write(30,form) lamR(i)/micron,spec(1,i),specErr(i),specR(i),specRexp(i)
 	enddo
 	close(unit=30)
 
-	filename=trim(outputdir) // "obs_trans_" // trim(obs_instrument)
+	filename=trim(outputdir) // "obs_trans_" // trim(instrument(i_instr))
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=1000)
-	write(30,'("#",a13,3a19)') "lambda [mu]","Rp^2/Rstar^2","dlam [mu]","error"
-	form='(f14.6,3es19.7)'
+	write(30,'("# transit time       : ",f10.3," sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
+	write(30,'("# number of transits : ",f10.3)') instr_ntrans(i_instr)
+	write(30,'("# integration time   : ",f10.3," hours")') 
+     &			(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
+	write(30,'("#",a13,3a19)') "lambda [mu]","Rp^2/Rstar^2","error"
+	form='(f14.6,2es19.7)'
 	call regridspecres(lam,obsA(0,1:nlam-1),nlam-1,
      &					lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
 	spec=spec/(pi*Rstar**2)
@@ -277,7 +294,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		spec(1,i)=spec(1,i)+gasdev(idum)*specErr(i)
 	enddo
 	do i=1,nlamR
-		write(30,form) lamR(i)/micron,spec(1,i),specErr(i)
+		write(30,form) lamR(i)/micron,spec(1,i),specErr(i),specR(i),specRexp(i)
 	enddo
 	close(unit=30)
 
@@ -287,6 +304,8 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	deallocate(specErr)
 	deallocate(spec)
 	deallocate(Fstar_obs)
+
+	enddo
 
 	endif
 	

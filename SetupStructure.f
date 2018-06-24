@@ -287,9 +287,11 @@ c					Tc=T(i)
 	endif
 	endif
 
-	do i=1,nclouds
-		call SetupCloud(i)
-	enddo
+	if(compute_mixrat) then
+		do i=1,nclouds
+			call SetupCloud(i)
+		enddo
+	endif
 
 c bug needs to be fixed!!!!!
 	Otot=0d0
