@@ -104,7 +104,7 @@ OBJS	= Modules.o \
 		MultiNestARCiS.o
 
 # program name and install location
-PROGRAM       = SPARC
+PROGRAM       = ARCiS
 DEST	      = ${HOME}/bin
 
 # make actions 
