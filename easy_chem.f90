@@ -9,7 +9,7 @@
 
 module thermo_data_block
   implicit none
-  CHARACTER*80, parameter, public :: fpath = '~/SPARC/Data/thermo_easy_chem_simp_own.inp'                
+  CHARACTER*80, parameter, public :: fpath = '~/ARCiS/Data/thermo_easy_chem_simp_own.inp'                
   INTEGER, parameter, public      :: N_coeffs = 10, N_temps = 10, N_reac_save = 1000
   INTEGER, public                 :: thermo_data_n_coeffs(N_temps,N_reac_save), thermo_data_n_intervs(N_reac_save)
   DOUBLE PRECISION, public        :: thermo_data(N_coeffs,N_temps,N_reac_save), mol_weight(N_reac_save)

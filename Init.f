@@ -1405,7 +1405,7 @@ c				enddo
 	integer ncla
 	character*500 readline,command
 
-	outputdir='./outputSPARC/'
+	outputdir='./outputARCiS/'
 
 	ncla=2
 1	continue

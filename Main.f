@@ -14,16 +14,16 @@
 	call output("Output dir: " // trim(outputdir))
 
 	call output("==================================================================")
-	call output("         SRON Planetary Atmosphere Retrieval Code - SPARC")
+	call output("         ARtful modelling code for exoplanet Science - ARCiS")
 	call output("==================================================================")
 c terms of use
-	call output("By using SPARC you agree to the terms of use.")
+	call output("By using ARCiS you agree to the terms of use.")
 	call output("It basically means you offer us co-author rights on any paper")
-	call output("that uses results computed with SPARC.")
+	call output("that uses results computed with ARCiS.")
 
 	call output("==================================================================")
 	call output("Let's get the show on the road!!")
-	call output("SPARC version "//trim(VersionGIT()))
+	call output("ARCiS version "//trim(VersionGIT()))
 	call output("==================================================================")
 
 	call Init()
