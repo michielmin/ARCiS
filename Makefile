@@ -34,7 +34,7 @@ endif
 
 # Platform specific compilation options
 ifeq ($(gfort),true)
-  FLAG_ALL      = -O3 -g $(DEBUGGING) $(MULTICORE) -lgfortran -I/usr/local/include -I/Users/michielm/MultiNest/MultiNest_v3.11
+  FLAG_ALL      = -O3 -g $(DEBUGGING) $(MULTICORE) -lgfortran -I/usr/local/modules
   FLAG_LINUX    = -cpp
   FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else
