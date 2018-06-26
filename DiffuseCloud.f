@@ -393,7 +393,7 @@ c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
 		molfracs_atoms(3)=molfracs_atoms(3)+COabun
 		molfracs_atoms(5)=molfracs_atoms(5)+COabun
 		call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
-     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i),didcondens(i))
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i),didcondens(i),fast_chem,includemol)
 	enddo
 
 	deallocate(rpart)

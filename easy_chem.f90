@@ -1266,6 +1266,7 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
   CHARACTER*40                 :: names_atoms(N_atoms)
   DOUBLE PRECISION             :: molfracs_atoms(N_atoms)
 
+	logical iseqtest(5,N_reactants)
 
   ! Calculate correction factors as described in Section 3.3 of the McBride Manual
   lambda1 = 9d99
@@ -1407,12 +1408,19 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
   IF (ions .AND. (.NOT. remove_ions)) THEN
 
      ! DO THE MAGIC THEY DO IN SECT. 3.7 in McBride
+
+     DO i_reac = 1, N_reactants
+        DO i_stoich = 1, 5
+           iseqtest(i_stoich,i_reac)=(trim(adjustl(reac_atoms_names(i_stoich,i_reac))) .EQ. 'E')
+        END DO
+     END DO
+
      
      pi_ion = 0d0
      pi_ion_norm = 0d0
      DO i_reac = 1, N_reactants
         DO i_stoich = 1, 5
-           IF (trim(adjustl(reac_atoms_names(i_stoich,i_reac))) .EQ. 'E') THEN
+           IF (iseqtest(i_stoich,i_reac)) THEN
               pi_ion = pi_ion - n_spec(i_reac)*reac_stoich(i_stoich,i_reac)
               pi_ion_norm = pi_ion_norm + n_spec(i_reac)*reac_stoich(i_stoich,i_reac)**2d0
               EXIT
@@ -1426,7 +1434,7 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
         DO i_ion = 1, 80
            DO i_reac = 1, N_reactants
               DO i_stoich = 1, 5
-                 IF (trim(adjustl(reac_atoms_names(i_stoich,i_reac))) .EQ. 'E') THEN
+                 IF (iseqtest(i_stoich,i_reac)) THEN
                     n_spec(i_reac) = n_spec(i_reac)*exp(reac_stoich(i_stoich,i_reac)*pi_ion)
                     EXIT
                  END IF
@@ -1437,7 +1445,7 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
            pi_ion_norm = 0d0
            DO i_reac = 1, N_reactants
               DO i_stoich = 1, 5
-                 IF (trim(adjustl(reac_atoms_names(i_stoich,i_reac))) .EQ. 'E') THEN
+                 IF (iseqtest(i_stoich,i_reac)) THEN
                     pi_ion = pi_ion - n_spec(i_reac)*reac_stoich(i_stoich,i_reac)
                     pi_ion_norm = pi_ion_norm + n_spec(i_reac)*reac_stoich(i_stoich,i_reac)**2d0
                     EXIT

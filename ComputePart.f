@@ -429,7 +429,7 @@ c changed this to mass fractions (11-05-2010)
 		frac=1d0/real(nm)
 	endif
 
-	partfile=trim(particledir) // "particle" 
+	partfile=trim(particledir) // "/particle" 
 	if(abun_in_name.gt.0) then
 		partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*C%rv(isize),'(es8.2)'))
 		do i=1,nm
@@ -1191,7 +1191,7 @@ c	call output("Checking particle file: " // trim(partfile) )
 	  logical simple,extend,truefalse
 	character*500 filename
 
-	filename=trim(particledir) // "particle" 
+	filename=trim(particledir) // "/particle" 
 	if(abun_in_name.gt.0) then
 		filename=trim(filename) // "_f" // trim(dbl2string(1d0*C%rv(isize),'(es8.2)'))
 		do i=1,nm

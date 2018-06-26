@@ -1234,17 +1234,18 @@ END MODULE nrutil
 
 
 subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
-   cloudspecies,Xcloud,Ncloud,nabla_ad,set_gas_atoms,f_enrich,MMW,didcondens)
+   cloudspecies,Xcloud,Ncloud,nabla_ad,set_gas_atoms,f_enrich,MMW,didcondens,fast_chem,includemol)
 	use AtomsModule
   implicit none
 
 	integer nmol,i
 	real*8 COratio,Zmetal,Tin,Pin,mol_abun(nmol),f_enrich
 	character*10 mol_names(nmol)
+	logical includemol(nmol)
 	integer Ncloud
 	real*8 Xcloud(max(Ncloud,1))
 	character*500 cloudspecies(max(Ncloud,1)),namecloud
-	integer j1,j2,N_reactants_gas
+	integer j1,j2,N_reactants_gas,j
 
   INTEGER,parameter            :: N_reactants = 109
   CHARACTER*40                 :: names_reactants(N_reactants)
@@ -1254,11 +1255,16 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
   DOUBLE PRECISION             :: thermo_quants,cpe
   LOGICAL                      :: ini,condensates
   INTEGER                      :: i_t, i_p, i_reac, N_reactants2
-	logical con(N_reactants),didcondens
+	logical con(N_reactants),didcondens,atoms_used(N_atoms)
 
 	integer at_re(N_reactants,N_atoms)
 	real*8 tot
 	logical set_gas_atoms
+
+	character*40 :: names_reactants_used(N_reactants),names_atoms_used(N_atoms)
+	real*8 molfracs_atoms_used(N_atoms)
+	integer :: N_reactants_used,N_atoms_used
+	logical fast_chem
 
 	at_re=0
   names_reactants(1) = 'H'
@@ -1583,12 +1589,55 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 	N_reactants_gas=N_reactants2
 	if(condensates) N_reactants2=109
 
+	N_atoms_used=N_atoms
+	names_atoms_used(1:N_atoms_used)=names_atoms(1:N_atoms_used)
+	molfracs_atoms_used(1:N_atoms_used)=molfracs_atoms(1:N_atoms_used)
+	if(fast_chem) then
+		N_reactants_used=0
+		N_atoms_used=0
+		atoms_used=.false.
+		do i_reac=1,N_reactants2
+			if(i_reac.le.10.or.i_reac.eq.19.or.i_reac.eq.21) then
+				N_reactants_used=N_reactants_used+1
+				names_reactants_used(N_reactants_used)=names_reactants(i_reac)
+				do j=1,N_atoms
+					if(at_re(i_reac,j).gt.0) atoms_used(j)=.true.
+				enddo
+			else
+				do i=1,nmol
+					if(includemol(i)) then
+					if(trim(names_reactants(i_reac)).eq.trim(mol_names(i)).or.	&
+      (trim(mol_names(i)).eq.'C2H2'.and.trim(names_reactants(i_reac)).eq.'C2H2,acetylene')) then
+						N_reactants_used=N_reactants_used+1
+						names_reactants_used(N_reactants_used)=names_reactants(i_reac)
+						do j=1,N_atoms
+							if(at_re(i_reac,j).gt.0) atoms_used(j)=.true.
+						enddo
+					endif
+					endif
+				enddo
+			endif
+		enddo
+		N_reactants2=N_reactants_used
+		names_reactants(1:N_reactants2)=names_reactants_used(1:N_reactants2)
+		tot=0d0
+		do i=1,N_atoms
+			if(atoms_used(i)) then
+				N_atoms_used=N_atoms_used+1
+				names_atoms_used(N_atoms_used)=names_atoms(i)
+				molfracs_atoms_used(N_atoms_used)=molfracs_atoms(i)
+				tot=tot+molfracs_atoms_used(N_atoms_used)
+			endif
+		enddo
+		molfracs_atoms_used=molfracs_atoms_used/tot
+	endif
+
       temp=Tin
 !      if(temp.gt.3000d0) temp=3000d0
       if(temp.lt.70d0) temp=70d0
       press=Pin
         
-        call EASY_CHEM(N_atoms,N_reactants2,names_atoms,names_reactants,molfracs_atoms, &
+        call EASY_CHEM(N_atoms_used,N_reactants2,names_atoms_used,names_reactants,molfracs_atoms_used, &
              molfracs_reactants,massfracs_reactants,temp,press,ini,nabla_ad,gamma2,MMW,rho,cpe)
         ini = .FALSE.
 

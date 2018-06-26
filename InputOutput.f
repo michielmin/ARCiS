@@ -38,7 +38,7 @@ c-----------------------------------------------------------------------
 	use OutputModeModule
 	IMPLICIT NONE
 	logical doit
-	do_output=.true.!doit
+	do_output=doit
 	return
 	end
 

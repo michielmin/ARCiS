@@ -38,7 +38,7 @@ implicit none
       
       	!evidence tolerance factor
       	double precision nest_tol 
-      	parameter(nest_tol=0.5)
+      	parameter(nest_tol=0.1)
       
       	!enlargement factor reduction parameter
       	double precision nest_efr

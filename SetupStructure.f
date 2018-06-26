@@ -22,7 +22,7 @@
 	if(PTchemAbun) then
 		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		call call_easy_chem(Tchem,Pchem,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW_form,didcondens_chem)
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW_form,didcondens_chem,fast_chem,includemol)
 		do i=2,nr
 			mixrat_r(i,1:nmol)=mixrat_r(1,1:nmol)
 		enddo
@@ -66,7 +66,6 @@
 	Mtot=Mplanet
 	grav=Ggrav*Mtot/R(1)**2
 
-	print*,Rscale
 	if(j.eq.1) then
 		MMW=0d0
 		do imol=1,nmol
@@ -174,7 +173,7 @@ c	if(useDRIFT.and.domakeai) then
 c					Tc=T(i)
 					call cpu_time(starttime)
 					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
-     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i),didcondens(i))
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i),didcondens(i),fast_chem,includemol)
 					call cpu_time(stoptime)
 					chemtime=chemtime+stoptime-starttime
 				else if(i.gt.1) then
@@ -213,7 +212,7 @@ c					Tc=T(i)
 
 	enddo
 
-	if(dochemistry) then
+	if(dochemistry.and..false.) then
 	if(compute_mixrat) then
 		ini=.true.
 		if(Tform.gt.0d0) then
@@ -240,7 +239,7 @@ c					Tc=T(i)
 					Tc=T(i)
 				call cpu_time(starttime)
 					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i),didcondens(i))
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i),didcondens(i),fast_chem,includemol)
 				call cpu_time(stoptime)
 				chemtime=chemtime+stoptime-starttime
 				else if(i.gt.1) then
@@ -257,7 +256,7 @@ c					Tc=T(i)
 					Tc=T(i)
 				call cpu_time(starttime)
 				if(cloudcompute) call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i),didcondens(i))
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i),didcondens(i),fast_chem,includemol)
 				call cpu_time(stoptime)
 				chemtime=chemtime+stoptime-starttime
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
@@ -350,7 +349,6 @@ c bug needs to be fixed!!!!!
 
 	tau=0d0
 	Tirr=betaT*sqrt(Rstar/(2d0*Dplanet))*Tstar
-	print*,'Tirr=',Tirr
 	do i=nr,1,-1
 		tau=kappaT*1d6*P(i)/grav(i)
 		if(tau.lt.0d0) tau=0d0
@@ -586,7 +584,7 @@ c			write(82,*) P(i), Kzz(i)
 				call easy_chem_set_molfracs_atoms_elabun(COratio,metallicity,elabun(i,1:7))
 			endif
 			call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
-     &						XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i),didcondens(i))
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i),didcondens(i),fast_chem,includemol)
 		enddo
 	endif
 
@@ -821,7 +819,7 @@ c use Ackerman & Marley 2001 cloud computation
 	ini=.true.
 	do i=1,nr
 		call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i),didcondens(i))
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_enrich,MMW(i),didcondens(i),fast_chem,includemol)
 	enddo
 
 	return

@@ -64,7 +64,7 @@ c===============================================================================
 	logical didcondens_chem,coagulation,resume_multinest
 	character*500 TPfile,particledir
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime,TiScale
-	logical enhancecarbon
+	logical enhancecarbon,fast_chem
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_enrich
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function

@@ -31,14 +31,14 @@
 	use Constants
 	use params_multinest
 	IMPLICIT NONE
-	integer nvars,i,j
+	integer nvars,i,j,nlamtot
 	real*8 var(nvars),chi2obs(nobs),error(2,nvars),lnew
 	real*8,allocatable :: spec(:)
 	logical recomputeopac
 
 	recomputeopac=.true.
 	imodel=imodel+1
-	print*,"model  number: ", imodel,var(1:nvars)
+	call output("model number: " // int2string(imodel,'(i7)'))
 
 	do i=1,nvars
 		if(var(i).gt.1d0) var(i)=1d0
@@ -60,6 +60,7 @@
 	call SetOutputMode(.true.)
 	
 	lnew=0d0
+	nlamtot=0
 	do i=1,nobs
 		allocate(spec(ObsSpec(i)%nlam))
 		call RemapObs(i,spec)
@@ -67,10 +68,12 @@
 		do j=1,ObsSpec(i)%nlam
 			chi2obs(i)=chi2obs(i)+((spec(j)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
 		enddo
-		chi2obs(i)=chi2obs(i)/real(ObsSpec(i)%nlam)
+		nlamtot=nlamtot+ObsSpec(i)%nlam
 		lnew=lnew+chi2obs(i)
+		chi2obs(i)=chi2obs(i)/real(ObsSpec(i)%nlam)
 		deallocate(spec)
 	enddo
+	lnew=lnew/real(nlamtot)
 
 	write(72,*) imodel,lnew,var(1:nvars)
 	call flush(72)

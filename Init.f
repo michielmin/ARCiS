@@ -719,6 +719,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) maxiter
 		case("chemistry")
 			read(key%value,*) dochemistry
+		case("fastchem","fast_chem")
+			read(key%value,*) fast_chem
 		case("metallicity")
 			read(key%value,*) metallicity
 		case("coratio")
@@ -1031,6 +1033,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Nphot0=2500
 
 	dochemistry=.false.
+	fast_chem=.false.
 	metallicity=0d0
 	condensates=.true.
 	COratio=0.55
