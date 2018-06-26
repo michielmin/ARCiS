@@ -38,11 +38,11 @@ implicit none
       
       	!evidence tolerance factor
       	double precision nest_tol 
-      	parameter(nest_tol=0.1)
+      	parameter(nest_tol=0.5)
       
       	!enlargement factor reduction parameter
       	double precision nest_efr
-      	parameter(nest_efr=0.1d0)
+      	parameter(nest_efr=0.3d0)
       
       	!root for saving posterior files
       	character*1000 nest_root
@@ -63,7 +63,7 @@ implicit none
       
       	!no. of parameters to cluster (for mode detection)
       	integer nest_nClsPar
-      	parameter(nest_nClsPar=2)
+      	!parameter(nest_nClsPar=2)
       
       	!whether to resume from a previous run
       	logical nest_resume

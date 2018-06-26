@@ -125,6 +125,7 @@
 	write(nest_root,'(a,"/")') trim(outputdir)		
 	nest_pWrap=0
 	sdim=n_ret
+	nest_nClsPar=n_ret
 	nest_nlive=npop
 	nest_resume=resume_multinest
 
