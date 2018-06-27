@@ -129,7 +129,11 @@
 	nest_nlive=npop
 	nest_resume=resume_multinest
 
-	open(unit=72,file=trim(outputdir) // '/Wolk.dat',RECL=6000)
+	if(nest_resume) then
+		open(unit=72,file=trim(outputdir) // '/Wolk.dat',RECL=6000,ACCESS='APPEND')
+	else
+		open(unit=72,file=trim(outputdir) // '/Wolk.dat',RECL=6000)
+	endif
 
 	call nestRun(nest_IS,nest_mmodal,nest_ceff,nest_nlive,nest_tol,nest_efr,sdim,sdim, 
      & nest_nClsPar,nest_maxModes,nest_updInt,nest_Ztol,nest_root,nest_rseed,nest_pWrap, 
