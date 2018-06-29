@@ -761,6 +761,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) gene_cross
 		case("resume_nest")
 			read(key%value,*) resume_multinest
+		case("fmultinest","efr")
+			read(key%value,*) f_multinest
 		case("tvalue")
 			read(key%value,*) Tin(key%nr1)
 		case("retrieve_profile")
@@ -1126,6 +1128,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	ngen=0
 	gene_cross=.false.
 	resume_multinest=.false.
+	f_multinest=0.3d0
 
 	do i=1,nobs
 		ObsSpec(i)%beta=-1d0

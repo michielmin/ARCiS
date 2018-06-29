@@ -63,7 +63,7 @@ c===============================================================================
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun
 	logical didcondens_chem,coagulation,resume_multinest
 	character*500 TPfile,particledir
-	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime,TiScale
+	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime,TiScale,f_multinest
 	logical enhancecarbon,fast_chem
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_enrich
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)

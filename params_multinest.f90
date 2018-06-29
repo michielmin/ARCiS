@@ -42,7 +42,7 @@ implicit none
       
       	!enlargement factor reduction parameter
       	double precision nest_efr
-      	parameter(nest_efr=0.3d0)
+!      	parameter(nest_efr=0.3d0)
       
       	!root for saving posterior files
       	character*1000 nest_root
