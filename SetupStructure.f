@@ -108,8 +108,8 @@
 		RHill=(Dplanet*(Mtot/(3d0*Mstar))**(1d0/3d0))
 		if(R(i+1).gt.RHill) then
 			print*,'layer',P(i),'is beyond the Hill Sphere'
-			print*,'adjusting radius'
-			R(i+1)=sqrt(R(i)*RHill)
+c			print*,'adjusting radius'
+c			R(i+1)=sqrt(R(i)*RHill)
 		endif
 		Mtot=Mtot+dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
 	enddo

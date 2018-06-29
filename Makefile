@@ -47,11 +47,11 @@ LIBS_FITS		= -lcfitsio
 
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -diag-disable vec
-  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS)
+  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) Version.f
   LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) -lmultinest
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
-  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
+  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) Version.f
   LIBS    =  -L/usr/local/lib $(LIBS_FITS) -lmultinest
 endif
 
@@ -67,7 +67,6 @@ OBJS	= Modules.o \
 		SetupOpacities.o \
 		Raytrace.o \
 		WriteOutput.o \
-		Version.o \
 		AdjustParameters.o \
 		ReadData.o \
 		Subroutines.o \
