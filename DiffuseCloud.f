@@ -384,7 +384,7 @@ c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
 	enddo
 	close(unit=20)
 
-	cloud_dens(1:nr,ii)=(xc(1:nr)+xn(1:nr))*dens(1:nr)
+	cloud_dens(1:nr,ii)=xc(1:nr)*dens(1:nr)
 	Cloud(ii)%rv(1:nr)=rpart(1:nr)
 
 	do i=1,nr
