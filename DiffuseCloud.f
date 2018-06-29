@@ -12,7 +12,7 @@
 	real*8 cs,err,maxerr,eps,SupSat,frac_nuc,r_nuc,m_nuc,tcoaginv,Dp,vmol,f
 	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn
 	integer,allocatable :: IWORK(:)
-	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick
+	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud
 	logical quadratic,ini
 	integer atoms_cloud(N_atoms)
 	character*500 cloudspecies(max(nclouds,1))
@@ -175,6 +175,9 @@ c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
 		gz=Ggrav*Mplanet/R(i)**2
 
 		Sn(i)=(dens(i)*gz*Sigmadot/(sigmastar*P(i)*1d6*sqrt(2d0*pi)))*exp(-log(P(i)/Pstar)**2/(2d0*sigmastar**2))
+
+c		kappa_cloud=1d-6
+c		Sn(i)=dens(i)*gz*Sigmadot*(gz)*(kappa_cloud)*exp(-gz*kappa_cloud*P(i)*1d6)
 	enddo
 	
 
@@ -355,7 +358,7 @@ c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
 		Pv=1.04e17*exp(-58663d0/T(i))
 c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
 		densv=Pv/vthv(i)**2
-		write(20,*) P(i),dens(i),xn(i),xc(i),xv(i),rpart(i),dens(i)*xv(i)/densv,T(i)
+		write(20,*) P(i),dens(i),xn(i),xc(i),xv(i),rpart(i),dens(i)*xv(i)/densv,T(i),Sn(i)
 	enddo
 	close(unit=20)
 
@@ -377,11 +380,11 @@ c end the loop
 		Pv=1.04e17*exp(-58663d0/T(i))
 c		densv=10d0**(BB-AA/T(i)-log10(T(i)))
 		densv=Pv/vthv(i)**2
-		write(20,*) P(i),dens(i),xn(i),xc(i),xv(i),rpart(i),dens(i)*xv(i)/densv,T(i)
+		write(20,*) P(i),dens(i),xn(i),xc(i),xv(i),rpart(i),dens(i)*xv(i)/densv,T(i),Sn(i)
 	enddo
 	close(unit=20)
 
-	cloud_dens(1:nr,ii)=xc(1:nr)*dens(1:nr)
+	cloud_dens(1:nr,ii)=(xc(1:nr)+xn(1:nr))*dens(1:nr)
 	Cloud(ii)%rv(1:nr)=rpart(1:nr)
 
 	do i=1,nr
