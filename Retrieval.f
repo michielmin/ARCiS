@@ -219,14 +219,14 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 		endif
 		do j=1,n_ret
 			if(pamoeba(i,j).eq.1d0) then
-				pamoeba(i,j)=100d0
+				pamoeba(i,j)=25d0
 			else if(pamoeba(i,j).eq.0d0) then
-				pamoeba(i,j)=-100d0
+				pamoeba(i,j)=-25d0
 			else
 				pamoeba(i,j)=-log(1d0/pamoeba(i,j)-1d0)
 			endif
-			if(pamoeba(i,j).gt.100d0) pamoeba(i,j)=100d0
-			if(pamoeba(i,j).lt.-100d0) pamoeba(i,j)=-100d0
+			if(pamoeba(i,j).gt.25d0) pamoeba(i,j)=25d0
+			if(pamoeba(i,j).lt.-25d0) pamoeba(i,j)=-25d0
 		enddo
 		yamoeba(i)=amoebafunk(pamoeba(i,1:n_ret),ny)
 	enddo
@@ -344,9 +344,9 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 
 	do i=1,n_ret
 		x=var_in(i)
-		if(x.gt.100.0) then
+		if(x.gt.25.0) then
 			var(i)=1d0
-		else if(x.lt.-100.0) then
+		else if(x.lt.-25.0) then
 			var(i)=0d0
 		else
 			var(i)=1d0/(1d0+qexp(-x))
