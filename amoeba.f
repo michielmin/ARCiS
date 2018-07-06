@@ -1,4 +1,4 @@
-      SUBROUTINE amoeba(p,y,mp,np,ndim,ftol,funk,iter,ny,ITERMAX)
+      SUBROUTINE amoeba(p,y,mp,np,ndim,ftol,funk,iter,ny,ITMAX)
       INTEGER iter,mp,ndim,np,NMAX,ITMAX,ny
       real*8 ftol,p(mp,np),y(mp),funk,TINY
       PARAMETER (NMAX=200,TINY=1.d-10)
