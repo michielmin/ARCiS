@@ -1,12 +1,3 @@
-	module RetrievalMod
-	implicit none
-	integer imodel
-	real*8 bestlike
-	real*8,allocatable :: dvarq(:)
-	end module RetrievalMod
-
-
-
 	subroutine ReadObs()
 	use GlobalSetup
 	IMPLICIT NONE
@@ -128,43 +119,42 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	subroutine DoRetrieval()
 	use GlobalSetup
 	use Constants
-	use RetrievalMod
 	IMPLICIT NONE
-	external ComputeChi2,mrqcomputemodel
+	external ComputeChi2
 	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret),chi2min,random
 	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:),ybest(:),y0(:)
 	real*8 chi2obs(nobs),var(n_ret),chi2,gasdev,maxd,error(2,n_ret),var_best(n_ret),chi2_0
 	real*8 x1,x2,minT(nr),maxT(nr),ran1,tot,lambda,chi2_1,chi2_2,dchi2(n_ret),chi2prev
-	integer ny,i,j,iter,itermax,iy,k
+	integer imodel,ny,i,j,iter1,iter2,iy,k
 	
-	real*8 maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret),dvar_prev(n_ret)
-	real*8 backup_xmin(n_ret),backup_xmax(n_ret),alphaW(3*n_ret,3*n_ret),Cov(3*n_ret,3*n_ret)
+	real*8 dvar_av(n_ret),Cov(n_ret,n_ret),b(n_ret*3),W(n_ret*3,n_ret+1),Winv(n_ret,n_ret),dmax
+	real*8 chi2_spec,chi2_prof,maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret),dvar_prev(n_ret)
+	real*8 backup_xmin(n_ret),backup_xmax(n_ret)
 	real*8 obsA1(nlam),obsA2(nlam),dobsA(n_ret,nlam)
 	real*8 emis1(nlam),emis2(nlam),demis(n_ret,nlam)
-	real*8 emisR1(nlam),emisR2(nlam),demisR(n_ret,nlam),beta(n_ret),da(n_ret)
-	real*8 phase0(nlam),flux0(nlam),obsA0(nlam),scale,scalemin,Covar(n_ret,n_ret)
-	integer na,map(n_ret),info,iboot,nboot,niter1,niter2,n_not_improved,ia(n_ret)
+	real*8 emisR1(nlam),emisR2(nlam),demisR(n_ret,nlam)
+	real*8 phase0(nlam),flux0(nlam),obsA0(nlam),scale,scalemin
+	integer na,map(n_ret),info,iboot,nboot,niter1,niter2,n_not_improved
 	logical dofit(n_ret),dofit_prev(n_ret),new_best,improved_iter
 	logical,allocatable :: specornot(:)
 
-	integer ME,MA,MG,MODE,MDW,ii,nca
+	integer ME,MA,MG,MODE,MDW,ii
 	integer,allocatable :: IP(:)
 	real*8 PRGOPT(10),RNORME,RNORML
 	real*8,allocatable :: WS(:)
 
 	real*8 XeqCloud_best(nr,max(nclouds,1)),mixrat_best_r(nr,nmol)
 
-	external amoebafunk
-	real*8 pamoeba(n_ret+1,n_ret),yamoeba(n_ret+1),ftol,amoebafunk
-
 	if(retrievaltype.eq.'MN'.or.retrievaltype.eq.'MultiNest') then
 		call doMultiNest
 		return
 	endif
-	
-	imodel=0
-	bestlike=1d200
 
+	allocate(WS(2*(n_ret)+n_ret*3+(n_ret*2+2)*(n_ret+7)))
+	allocate(IP(n_ret*4+2))
+	IP(1)=2*(n_ret)+n_ret*3+(n_ret*2+2)*(n_ret+7)
+	IP(2)=n_ret*4+2
+	
 	do i=1,n_ret
 		RetPar(i)%value=RetPar(i)%x0
 	enddo
@@ -174,13 +164,19 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 		if(var0(i).lt.0d0) var0(i)=0d0
 	enddo
 
+	dvar0=10d0
 	open(unit=31,file=trim(outputdir) // "Wolk.dat",RECL=6000)
 
+	if(ngen.gt.0) then
+c first genetic algoritm to make the first estimate
+c		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.true.)
+	endif
+
+	imodel=npop*ngen
 	ny=0
 	do i=1,nobs
 		ny=ny+ObsSpec(i)%nlam
 	enddo
-	ny=ny+n_ret
 	allocate(y(ny))
 	allocate(y0(ny))
 	allocate(ybest(ny))
@@ -190,244 +186,499 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	allocate(yobs(ny))
 	allocate(dyobs(ny))
 	allocate(specornot(ny))
-	allocate(dvarq(n_ret))
 	iy=1
 	do i=1,nobs
 		yobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%y(1:ObsSpec(i)%nlam)
 		dyobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%dy(1:ObsSpec(i)%nlam)*sqrt(real(ObsSpec(i)%nlam))
 		specornot(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%spec
-		iy=iy+ObsSpec(i)%nlam
+		iy=iy+ObsSpec(i)%nlam		
 	enddo
-	do i=1,n_ret
-		yobs(iy)=var0(i)
-		dyobs(iy)=10d0
-		iy=iy+1
-	enddo
-	
+	dvar=0.1d0
+	var=var0
+	var_best=var0
+	chi2min=1d200
+	chi2prev=1d200
+	error=0.1d0
+	lambda=0.1
 	Cov=0d0
 
-	var=var0
-	dvarq=0.02d0
+	niter1=7
+	niter2=15
+	n_not_improved=0
+	new_best=.false.
 
-	do i=1,n_ret+1
-		if(i.eq.1) then
-			pamoeba(i,1:n_ret)=var0(1:n_ret)
+	if(ngen.gt.0) then
+		do i=1,n_ret
+			if(RetPar(i)%keyword(1:6).eq."tvalue") then
+				backup_xmin(i)=RetPar(i)%xmin
+				backup_xmax(i)=RetPar(i)%xmax
+				RetPar(i)%xmin=-1d0
+				RetPar(i)%xmax=1d0
+			endif
+		enddo
+		var0=var
+		dvar0=10d0
+		call Genetic(ComputeChi2,var0,dvar0,n_ret,nobs,npop,ngen,idum,gene_cross,.true.)
+		chi2prev=1d200
+		imodel=npop*ngen
+		do i=1,n_ret
+			if(RetPar(i)%keyword(1:6).eq."tvalue") then
+				RetPar(i)%xmin=backup_xmin(i)
+				RetPar(i)%xmax=backup_xmax(i)
+				var0(i)=-RetPar(i)%xmin/(RetPar(i)%xmax-RetPar(i)%xmin)
+				if(var0(i).lt.0d0) var0(i)=0d0
+			endif
+		enddo
+		var=var0
+	endif
+
+
+	do i=1,n_ret
+		ErrVec(:,i)=0d0
+		ErrVec(i,i)=dvar(i)
+	enddo
+
+	do iter1=1,niter1
+
+	do iter2=1,niter2
+		j=0
+		imodel=imodel+1
+		call output("Iteration " // trim(int2string(iter2+niter2*(iter1-1),'(i4)')) // 
+     &				" - model" // trim(int2string(imodel,'(i5)')))
+		chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,.true.,error)
+		mixrat_old_r=mixrat_r
+		XeqCloud_old=XeqCloud
+		iy=1
+		do i=1,nobs
+	 		call RemapObs(i,y(iy:iy+ObsSpec(i)%nlam-1))
+			iy=iy+ObsSpec(i)%nlam
+		enddo
+		improved_iter=.false.
+
+		if(chi2.le.chi2prev) then
+			call output("Iteration improved" // trim(dbl2string(chi2,'(f13.3)')))
+			lambda=lambda/5d0
+			chi2_spec=0d0
+			chi2_prof=0d0
+			do j=1,nobs
+				if(ObsSpec(j)%spec) then
+					chi2_spec=chi2_spec+1d0/chi2obs(j)
+				else
+					chi2_prof=chi2_prof+1d0/chi2obs(j)
+				endif
+			enddo
+			call output("   " // trim(dbl2string(chi2_spec,'(f13.3)')) // trim(dbl2string(chi2_prof,'(f13.3)')))
 		else
-			do j=1,n_ret
-				pamoeba(i,j)=random(idum)
+			lambda=lambda*5d0
+		endif
+		chi2_spec=0d0
+		chi2_prof=0d0
+		do j=1,nobs
+			if(ObsSpec(j)%spec) then
+				chi2_spec=chi2_spec+1d0/chi2obs(j)
+			else
+				chi2_prof=chi2_prof+1d0/chi2obs(j)
+			endif
+		enddo
+		call output("   " // trim(dbl2string(chi2_spec,'(f13.3)')) // trim(dbl2string(chi2_prof,'(f13.3)')))
+
+		if(chi2.le.chi2min) then
+			new_best=.false.
+			var_best=var
+			var0=var
+			ybest=y
+			mixrat_best_r=mixrat_r
+			XeqCloud_best=XeqCloud
+			chi2min=chi2
+			do i=1,nobs
+				if(ObsSpec(i)%spec) then
+					ObsSpec(i)%modelbest=ObsSpec(i)%model
+				endif
+			enddo
+		else
+			new_best=.false.
+			var=var_best
+			var0=var_best
+			y=ybest
+			mixrat_r=mixrat_best_r
+			XeqCloud=XeqCloud_best
+			chi2=chi2min
+			n_not_improved=0
+			do i=1,nobs
+				if(ObsSpec(i)%spec) then
+					ObsSpec(i)%model=ObsSpec(i)%modelbest
+				endif
 			enddo
 		endif
-		do j=1,n_ret
-			pamoeba(i,j)=-log(1d0/pamoeba(i,j)-1d0)
-			if(pamoeba(i,j).gt.100d0) pamoeba(i,j)=100d0
-			if(pamoeba(i,j).lt.-100d0) pamoeba(i,j)=-100d0
-		enddo
-		yamoeba(i)=amoebafunk(pamoeba(i,1:n_ret),ny)
-	enddo
-	ftol=0.2d0
-	i=1
-	nca=n_ret+1
-	itermax=1000
-	call amoeba(pamoeba,yamoeba,nca,n_ret,n_ret,ftol,amoebafunk,iter,ny,itermax)
-	var=0d0
-	do i=1,n_ret+1
-		pamoeba(i,1:n_ret)=1d0/(1d0+exp(-pamoeba(i,1:n_ret)))
-		var(1:n_ret)=var(1:n_ret)+pamoeba(i,1:n_ret)/real(n_ret+1)
-	enddo
-	do i=1,n_ret+1
-		pamoeba(i,1:n_ret)=1d0/(1d0+exp(-pamoeba(i,1:n_ret)))
-		dvarq(1:n_ret)=dvarq(1:n_ret)+(var(1:n_ret)+pamoeba(i,1:n_ret))**2
-	enddo
-	dvarq=sqrt(dvarq/real(n_ret))
+		chi2prev=chi2
 
-	ia=1
-	nca=3*n_ret
-	lambda=-1d0
-	n_not_improved=0
-	chi2_0=1d200
-	do i=1,100
-		print*,"Iteration: ",i,chi2
-		call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
-		do j=1,n_ret
-			if(var(j).gt.1d0) var(j)=1d0
-			if(var(j).lt.0d0) var(j)=0d0
+		improved_iter=.true.
+
+C	if(chi2.le.chi2prev) then
+C		var0=var
+C		n_not_improved=0
+C		improved_iter=.true.
+C		call output("Iteration improved" // trim(dbl2string(chi2,'(f13.3)')))
+C		lambda=lambda/5d0
+C		chi2_spec=0d0
+C		chi2_prof=0d0
+C		do j=1,nobs
+C			if(ObsSpec(j)%spec) then
+C				chi2_spec=chi2_spec+1d0/chi2obs(j)
+C			else
+C				chi2_prof=chi2_prof+1d0/chi2obs(j)
+C			endif
+C		enddo
+C		call output("   " // trim(dbl2string(chi2_spec,'(f13.3)')) // trim(dbl2string(chi2_prof,'(f13.3)')))
+C		if(chi2.le.chi2min) then
+C			new_best=.false.
+C			var_best=var
+C			ybest=y
+C			mixrat_best_r=mixrat_r
+C			XeqCloud_best=XeqCloud
+C			chi2min=chi2
+C			do i=1,nobs
+C				if(ObsSpec(i)%spec) then
+C					ObsSpec(i)%modelbest=ObsSpec(i)%model
+C				endif
+C			enddo
+C		else
+C			new_best=.false.
+C			var=var_best
+C			var0=var_best
+C			y=ybest
+C			mixrat_r=mixrat_best_r
+C			XeqCloud=XeqCloud_best
+C			chi2=chi2min
+C			n_not_improved=0
+C			do i=1,nobs
+C				if(ObsSpec(i)%spec) then
+C					ObsSpec(i)%model=ObsSpec(i)%modelbest
+C				endif
+C			enddo
+C		endif
+C		chi2prev=chi2
+C	else if(iter2.eq.1) then
+C		dofit=.true.
+C		var=var0
+C	else if(n_not_improved.lt.10.or..not.new_best) then
+C		n_not_improved=n_not_improved+1
+C		lambda=lambda*5d0
+C		improved_iter=.false.
+C		new_best=.false.
+C		var=var_best
+C		var0=var_best
+C		y=ybest
+C		mixrat_r=mixrat_best_r
+C		XeqCloud=XeqCloud_best
+C		chi2=chi2min
+C		n_not_improved=0
+C		do i=1,nobs
+C			if(ObsSpec(i)%spec) then
+C				ObsSpec(i)%model=ObsSpec(i)%modelbest
+C			endif
+C		enddo
+C	else
+C		improved_iter=.false.
+C		lambda=0.01d0
+C		new_best=.false.
+C		var=var_best
+C		var0=var_best
+C		y=ybest
+C		mixrat_r=mixrat_best_r
+C		XeqCloud=XeqCloud_best
+C		chi2=chi2prev
+C		n_not_improved=0
+C		do i=1,nobs
+C			if(ObsSpec(i)%spec) then
+C				ObsSpec(i)%model=ObsSpec(i)%modelbest
+C			endif
+C		enddo
+C	endif
+
+		do i=1,n_ret
+			dvar(i)=max(error(1,i),error(2,i))
+			if(dvar(i).eq.0d0) dvar(i)=0.1d0
+			if(dvar(i).gt.0.1d0) dvar(i)=0.1d0
+			dvar(i)=(dvar(i)+dvar_prev(i))/2d0
+     	enddo
+		var=var0
+		chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,.true.,error)
+		mixrat_old_r=mixrat_r
+		XeqCloud_old=XeqCloud
+		iy=1
+		do i=1,nobs
+	 		call RemapObs(i,y(iy:iy+ObsSpec(i)%nlam-1))
+			iy=iy+ObsSpec(i)%nlam
 		enddo
-		if((chi2_0-chi2).gt.0d0) then
-			if((chi2_0-chi2).lt.0.01d0) then
-				n_not_improved=n_not_improved+1
-			else if((chi2_0-chi2).gt.0.5d0) then
-				n_not_improved=0
+		dvar_prev=dvar
+		y0=y
+		obsA0(1:nlam)=obsA(0,1:nlam)
+		phase0(1:nlam)=phase(1,0,1:nlam)
+		flux0(1:nlam)=flux(0,1:nlam)
+		chi2_0=chi2
+		do j=1,nobs
+			if(ObsSpec(j)%spec) then
+				ObsSpec(j)%model0=ObsSpec(j)%model
 			endif
-			if(n_not_improved.gt.2) exit
+		enddo
+		dofit=.true.
+		dofit_prev=.true.
+		do i=1,n_ret
+			dvar(i)=dvar(i)*(0.5d0+0.5d0*random(idum))
+		enddo
+		do i=1,n_ret
+			call output("varying " // trim(RetPar(i)%keyword))
+			if(dvar(i).lt.1d-3) dvar(i)=1d-3
+20			var=var0
+			var(i)=var(i)+dvar(i)
+			if(var(i).gt.1d0) var(i)=1d0
+			if(var(i).lt.0d0) var(i)=0d0
+			x1=var(i)
+			imodel=imodel+1
+			chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,RetPar(i)%opacitycomp,error)
+			iy=1
+			do j=1,nobs
+		 		call RemapObs(j,y1(iy:iy+ObsSpec(j)%nlam-1))
+				iy=iy+ObsSpec(j)%nlam
+			enddo
+			chi2_1=chi2
+			chi2_1=0d0
+			do j=1,nobs
+				if(ObsSpec(j)%spec) then
+					chi2_1=chi2_1+1d0/chi2obs(j)
+				endif
+			enddo
+			obsA1(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+			emis1(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
+			emisR1(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
+			if(chi2.lt.chi2min) then	!.and.RetPar(i)%opacitycomp) then
+				new_best=.true.
+				chi2min=chi2
+				var_best=var
+				ybest=y1
+				mixrat_best_r=mixrat_r
+				XeqCloud_best=XeqCloud
+				chi2_spec=0d0
+				chi2_prof=0d0
+				do j=1,nobs
+					if(ObsSpec(j)%spec) then
+						chi2_spec=chi2_spec+1d0/chi2obs(j)
+						ObsSpec(j)%modelbest=ObsSpec(j)%model
+					else
+						chi2_prof=chi2_prof+1d0/chi2obs(j)
+					endif
+				enddo
+				call output("Updating best fit " // trim(dbl2string(chi2,'(f13.3)')))
+				call output("   " // trim(dbl2string(chi2_spec,'(f13.3)')) // trim(dbl2string(chi2_prof,'(f13.3)')))
+			endif
+			var=var0
+			var(i)=var(i)-dvar(i)
+			if(var(i).gt.1d0) var(i)=1d0
+			if(var(i).lt.0d0) var(i)=0d0
+			x2=var(i)
+			imodel=imodel+1
+			chi2=1d0/ComputeChi2(imodel,n_ret,var,nobs,chi2obs,RetPar(i)%opacitycomp,error)
+			iy=1
+			do j=1,nobs
+		 		call RemapObs(j,y2(iy:iy+ObsSpec(j)%nlam-1))
+				iy=iy+ObsSpec(j)%nlam
+			enddo
+			chi2_2=chi2
+			chi2_2=0d0
+			do j=1,nobs
+				if(ObsSpec(j)%spec) then
+					chi2_2=chi2_2+1d0/chi2obs(j)
+				endif
+			enddo
+			obsA2(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+			emis2(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
+			emisR2(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
+			if(chi2.lt.chi2min) then	!.and.RetPar(i)%opacitycomp) then
+				new_best=.true.
+				chi2min=chi2
+				var_best=var
+				ybest=y2
+				mixrat_best_r=mixrat_r
+				XeqCloud_best=XeqCloud
+				chi2_spec=0d0
+				chi2_prof=0d0
+				do j=1,nobs
+					if(ObsSpec(j)%spec) then
+						chi2_spec=chi2_spec+1d0/chi2obs(j)
+						ObsSpec(j)%modelbest=ObsSpec(j)%model
+					else
+						chi2_prof=chi2_prof+1d0/chi2obs(j)
+					endif
+				enddo
+				call output("Updating best fit " // trim(dbl2string(chi2,'(f13.3)')))
+				call output("   " // trim(dbl2string(chi2_spec,'(f13.3)')) // trim(dbl2string(chi2_prof,'(f13.3)')))
+			endif
+			dy(i,1:ny)=(y1(1:ny)-y2(1:ny))/(x1-x2)
+			dchi2(i)=(chi2_1-chi2_2)/(x1-x2)
+			dobsA(i,1:nlam)=(obsA1(1:nlam)-obsA2(1:nlam))/(x1-x2)
+			demis(i,1:nlam)=(emis1(1:nlam)-emis2(1:nlam))/(x1-x2)
+			demisR(i,1:nlam)=(emisR1(1:nlam)-emisR2(1:nlam))/(x1-x2)
+		enddo
+
+		dofit_prev=dofit
+1		continue
+
+c================================================
+		W=0d0
+		b=0d0
+		do k=1,ny
+			do i=1,n_ret
+				do j=1,n_ret
+					W(i,j)=W(i,j)+dy(i,k)*dy(j,k)/dyobs(k)**2
+				enddo
+			enddo
+		enddo
+		call MatrixInvert(W(1:n_ret,1:n_ret),Winv(1:n_ret,1:n_ret),WLU(1:n_ret,1:n_ret),n_ret,info)
+		if(INFO.eq.0) then
+			do i=1,n_ret
+				do j=1,n_ret
+					Cov(i,j)=Winv(i,j)
+				enddo
+			enddo
+c================================================
+		else
+			call output('Error in matrix inversion.')
+			call output('Retrieving parameters with no influence on the observations?')
+			do ii=1,n_ret
+				W=0d0
+				b=0d0
+				do k=1,ny
+					do i=1,n_ret
+						do j=1,n_ret
+							W(i,j)=W(i,j)+dy(i,k)*dy(j,k)/dyobs(k)**2
+						enddo
+					enddo
+				enddo
+
+				ME=0
+				MA=n_ret
+				MG=0
+				MDW=n_ret*3
+
+				PRGOPT(1)=1
+
+				IP(1)=2*(n_ret)+n_ret*3+(n_ret*2+2)*(n_ret+7)
+				IP(2)=n_ret*4+2
+
+				W(1:n_ret,n_ret+1)=0d0
+				W(ii,n_ret+1)=1d0
+				call dlsei(w, MDW, ME, MA, MG, n_ret, PRGOPT, b, RNORME,
+     +   RNORML, MODE, WS, IP)
+   
+				do j=1,n_ret
+					Cov(ii,j)=b(j)
+				enddo
+			enddo
+			Winv=Cov
 		endif
 
-		Covar(1:n_ret,1:n_ret)=alphaW(1:n_ret,1:n_ret)
-		da(1:n_ret)=beta(1:n_ret)
-
-		call gaussj(Covar,n_ret,n_ret,da,1,1)
-		call covsrt(Covar,n_ret,n_ret,ia,n_ret)
+		W=0d0
+		b=0d0
+		do k=1,ny
+			do i=1,n_ret
+				do j=1,n_ret
+					W(i,j)=W(i,j)+dy(i,k)*dy(j,k)/dyobs(k)**2
+				enddo
+				b(i)=b(i)+(yobs(k)-y(k))*dy(i,k)/dyobs(k)**2
+			enddo
+		enddo
+		do i=1,n_ret
+			W(i,i)=W(i,i)*(1d0+lambda)
+		enddo
 		do j=1,n_ret
-			dvarq(j)=sqrt(chi2*Covar(j,j))*0.1d0
-			if(dvarq(j).gt.1d-1) dvarq(j)=1d-1
-			if(dvarq(j).lt.1d-3) dvarq(j)=1d-3
+			W(j+n_ret,1:n_ret)=0d0
+			b(j+n_ret)=-var0(j)
+			W(j+n_ret,j)=1d0
+
+			W(j+n_ret*2,1:n_ret)=0d0
+			b(j+n_ret*2)=var0(j)-1d0
+			W(j+n_ret*2,j)=-1d0
 		enddo
 
-		chi2_0=chi2
-	enddo
-	lambda=0d0
-	call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
-	do j=1,n_ret
-		if(var(j).gt.1d0) var(j)=1d0
-		if(var(j).lt.0d0) var(j)=0d0
-	enddo
+		ME=0
+		MA=n_ret
+		MG=n_ret*2
+		MDW=n_ret*3
 
-	call WritePTlimits(var,Cov(1:n_ret,1:n_ret),ErrVec,error,chi2,dobsA,demis,demisR,.true.)
-	call WriteRetrieval(imodel,chi2,var,error)
+		PRGOPT(1)=1
+
+		PRGOPT(1)=1
+
+		IP(1)=2*(n_ret)+n_ret*3+(n_ret*2+2)*(n_ret+7)
+		IP(2)=n_ret*4+2
+
+		W(1:MDW,n_ret+1)=b(1:MDW)
+		call dlsei(w, MDW, ME, MA, MG, n_ret, PRGOPT, b, RNORME,
+     +   RNORML, MODE, WS, IP)
+
+		dvar(1:n_ret)=b(1:n_ret)
+		scalemin=1d0
+		var=var0+dvar
+		do i=1,n_ret
+			if(var(i).gt.1d0) then
+				var(i)=1d0
+			endif
+			if(var(i).lt.0d0) then
+				var(i)=0d0
+			endif
+		enddo
+		var=var0+0.75d0*scalemin*dvar
+		do i=1,n_ret
+			if(var(i).gt.1d0) var(i)=1d0
+			if(var(i).lt.0d0) var(i)=0d0
+		enddo
+		if(improved_iter) then
+			y=y0
+			obsA(0,1:nlam)=obsA0(1:nlam)
+			phase(1,0,1:nlam)=phase0(1:nlam)
+			flux(0,1:nlam)=flux0(1:nlam)
+			dofit=dofit_prev
+			do j=1,nobs
+				if(ObsSpec(j)%spec) then
+					ObsSpec(j)%model=ObsSpec(j)%model0
+				endif
+			enddo
+			iy=1
+			do j=1,nobs
+		 		call RemapObs(j,y(iy:iy+ObsSpec(j)%nlam-1))
+				iy=iy+ObsSpec(j)%nlam
+			enddo
+			call SetOutputMode(.false.)
+			call WritePTlimits(var0,Cov,ErrVec,error,chi2_0,dobsA,demis,demisR,.true.)
+			call WriteRetrieval(imodel,chi2_0,var0,error)
+			call WriteStructure()
+			call WriteOutput()
+			call SetOutputMode(.true.)
+		endif
+		call WritePTlimits(var,Cov,ErrVec,error,chi2_0,dobsA,demis,demisR,.false.)
+		do i=1,n_ret
+			if(var(i).gt.1d0) var(i)=1d0
+			if(var(i).lt.0d0) var(i)=0d0
+			dvar(i)=sqrt(error(1,i)**2+error(2,i)**2)*max(lambda*10d0,0.1d0)
+		enddo
+	enddo
+	do i=1,nobs
+		if(.not.ObsSpec(i)%spec.and.ObsSpec(i)%scale.gt.0d0) then
+			print*,chi2_spec,chi2_prof,chi2min
+			ObsSpec(i)%beta=log10(ObsSpec(i)%scale*ObsSpec(i)%beta*sqrt(chi2_spec/chi2_prof))+log10(ObsSpec(i)%beta)
+			ObsSpec(i)%beta=10d0**(ObsSpec(i)%beta/2d0)
+			call output("Adjusting beta to " // trim(dbl2string(ObsSpec(i)%beta,'(es10.4)')))
+			chi2min=1d200
+			chi2prev=1d200
+		endif
+	enddo
+	enddo
 
 	close(unit=31)
 	
 	return
 	end
-
-
-
-	
-	subroutine mrqcomputemodel(var0,ymod,dyda,nvars,ny)
-	use GlobalSetup
-	use Constants
-	use RetrievalMod
-	IMPLICIT NONE
-	integer nvars,i,j,nlamtot,ny
-	real*8 var(nvars),ymod(ny),dyda(ny,nvars),error(2,nvars),var0(nvars),lnew
-	real*8 y1(ny),y2(ny),var1(nvars),var2(nvars),chi2_0,chi2_1,random
-	real*8,allocatable :: spec(:)
-	logical recomputeopac
-
-	recomputeopac=.true.
-
-	var=var0
-	do i=1,nvars
-		if(var(i).gt.1d0) var(i)=1d0
-		if(var(i).lt.0d0) var(i)=0d0
-	enddo
-	call mrqcomputeY(var,ymod,nvars,ny,chi2_0)
-	
-	do i=1,nvars
-		var1=var
-		if(var1(i).gt.0.5d0) then
-			var1(i)=var1(i)-dvarq(i)*(0.5d0+0.5d0*random(idum))
-		else
-			var1(i)=var1(i)+dvarq(i)*(0.5d0+0.5d0*random(idum))
-		endif
-		if(var1(i).lt.0d0) var1(i)=0d0
-		call mrqcomputeY(var1,y1,nvars,ny,chi2_1)
-		dyda(1:ny,i)=(y1(1:ny)-ymod(1:ny))/(var1(i)-var(i))
-	enddo
-		
-	return
-	end
-
-	real*8 function amoebafunk(var_in,ny)
-	use GlobalSetup
-	use Constants
-	use RetrievalMod
-	IMPLICIT NONE
-	integer ny,i
-	real*8 ymod(ny),var(n_ret),chi2,var_in(n_ret)
-	real*16 x
-
-	do i=1,n_ret
-		x=var_in(i)
-		if(x.gt.100.0) then
-			var(i)=1d0
-		else if(x.lt.-100.0) then
-			var(i)=0d0
-		else
-			var(i)=1d0/(1d0+qexp(-x))
-		endif
-	enddo
-	call mrqcomputeY(var,ymod,n_ret,ny,chi2)
-	amoebafunk=chi2
-	
-	return
-	end
-
-
-	subroutine mrqcomputeY(var,ymod,nvars,ny,lnew)
-	use GlobalSetup
-	use Constants
-	use RetrievalMod
-	IMPLICIT NONE
-	integer nvars,i,j,nlamtot,ny,k
-	real*8 var(nvars),ymod(ny),error(2,nvars),lnew
-	real*8,allocatable :: spec(:)
-	logical recomputeopac
-
-	recomputeopac=.true.
-	imodel=imodel+1
-	call output("model number: " // int2string(imodel,'(i7)'))
-
-	error=0d0
-	call MapRetrieval(var,error)
-
-	call InitDens()
-	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
-	Fstar=Fstar*pi*Rstar**2
-	call SetOutputMode(.false.)
-	call ComputeModel(recomputeopac)
-	call SetOutputMode(.true.)
-	
-	k=0
-	lnew=0d0
-	do i=1,nobs
-		allocate(spec(ObsSpec(i)%nlam))
-		call RemapObs(i,spec)
-		do j=1,ObsSpec(i)%nlam
-			k=k+1
-			ymod(k)=spec(j)
-			lnew=lnew+((spec(j)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
-		enddo
-		do j=1,n_ret
-			k=k+1
-			ymod(k)=var(j)
-		enddo
-		deallocate(spec)
-	enddo
-	lnew=lnew/real(k-1)
-
-	write(31,*) imodel,lnew,var(1:nvars)
-	call flush(31)
-
-	if(lnew.lt.bestlike) then
-		call WriteStructure()
-		call WriteOutput()
-
-		do i=1,nobs
-			select case(ObsSpec(i)%type)
-				case("trans","transmission","emisr","emisR","emisa","emis","emission","transC")
-					open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),RECL=1000)
-					do j=1,ObsSpec(i)%nlam
-						write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
-					enddo
-					close(unit=20)
-			end select
-		enddo
-
-		call system("cp " // trim(outputdir) // "input.dat " // trim(outputdir) // "bestfit.dat")
-		open(unit=21,file=trim(outputdir) // "bestfit.dat",RECL=1000,access='APPEND')
-		write(21,'("*** retrieval keywords ***")')
-		write(21,'("retrieval=.false.")')
-		do i=1,n_ret
-			write(21,'(a," = ",es14.7)') trim(RetPar(i)%keyword),RetPar(i)%value
-		enddo
-		close(unit=21)	
-
-		bestlike=lnew
-	endif
-	
-	return
-	end
-	
 
 
 
@@ -437,35 +688,21 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	IMPLICIT NONE
 	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,w(n_ret),chi2,ErrVec(n_ret,n_ret)
 	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret)
-	real*8 dvar(n_ret),dobsA(n_ret,nlam),demis(n_ret,nlam),demisR(n_ret,nlam),value(n_ret)
+	real*8 dvar(n_ret),dobsA(n_ret,nlam),demis(n_ret,nlam),demisR(n_ret,nlam)
 	real*8 obsAmin(nlam),obsAmax(nlam),emismin(nlam),emismax(nlam),emisRmin(nlam),emisRmax(nlam)
-	real*8 emis0(nlam),obsA0(nlam),emisR0(nlam),Cinv(n_ret,n_ret),ALU(n_ret,n_ret),max(n_ret)
-	integer i,j,k,info,nk,ierr,iter,iCO(2),ivar(2,n_ret),imaxT(nr),iminT(nr),seed
+	real*8 emis0(nlam),obsA0(nlam),emisR0(nlam)
+	integer i,j,k,info,nk,ierr,iter
 	character*6000 form
 	logical ioflag
-	seed=42
 
-	call MatrixInvert(Cov,Cinv,ALU,n_ret,INFO)
-
-	call Eigenvalues(Cinv,ErrVec,w,n_ret,INFO)
-
+	call Eigenvalues(Cov,ErrVec,w,n_ret,INFO)
 	do i=1,n_ret
 		tot=0d0
 		do j=1,n_ret
 			tot=tot+ErrVec(j,i)**2
 		enddo
 		if(tot.le.0d0) tot=1d0
-		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)/sqrt(tot*w(i))
-c		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*chi2
-		print*,i,ErrVec(1:n_ret,i)
-	enddo
-	do i=1,n_ret
-		max(i)=1d4
-		do j=1,n_ret
-			tot=1d0/abs(ErrVec(j,i))
-			if(tot.lt.max(i)) max(i)=tot
-		enddo
-		print*,max(i)
+		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*sqrt(w(i))*chi2/sqrt(tot)
 	enddo
 	
 	call SetOutputMode(.false.)
@@ -475,21 +712,21 @@ c		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*chi2
 	call SetupStructure(.false.)
 	Tbest=T
 	maxT=0d0
-	minT=0d0
+	minT=1d200
 	obsAmin=1d200
 	emismin=1d200
 	emisRmin=1d200
 	obsAmax=0d0
 	emismax=0d0
 	emisRmax=0d0
-	COerr=0d0
-	error=0d0
-	ivar=0
-	imaxT=0
-	iminT=0
-	iCO=0
+	COerr(1)=1d200
+	COerr(2)=0d0
 
-	nk=n_ret*2500
+	do i=1,n_ret
+		error(1:2,i)=var0(i)
+	enddo
+
+	nk=n_ret*100
 	if(ioflag) then
 		open(unit=35,file=trim(outputdir) // "error_cloud.dat",RECL=6000)
 		form='("#"' // trim(int2string(n_ret,'(i4)')) // 'a19)'
@@ -500,33 +737,51 @@ c		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*chi2
 	do k=1,nk
 		iter=0
 1		continue
-		vec=0d0
-		tot=0d0
-		do i=1,n_ret
-			call truncated_normal_ab_sample ( 0d0, 1d0, -max(i), max(i), seed, vec(i) )
-		enddo
-c		vec=vec/sqrt(tot)
-c		vec=vec*gasdev(idum)**(1d0/real(n_ret))
-		dvar=0d0
-		do j=1,n_ret
+c		if(k.le.n_ret) then
+c			vec=0d0
+c			vec(k)=sqrt(chi2)
+c			iter=1000
+c		else if(k.le.n_ret*2) then
+c			vec=0d0
+c			vec(k-n_ret)=-sqrt(chi2)
+c			iter=1000
+c		else
+			vec=0d0
+			tot=0d0
 			do i=1,n_ret
+				vec(i)=2d0*(random(idum)-0.5d0)
+				tot=tot+vec(i)**2
+			enddo
+			vec=vec*(random(idum)**(1d0/real(n_ret)))
+			vec=vec/sqrt(tot)
+c		endif
+		do i=1,n_ret
+			dvar(i)=0d0
+			do j=1,n_ret
 				dvar(i)=dvar(i)+vec(j)*ErrVec(i,j)
 			enddo
 		enddo
-		if(k.eq.1) dvar=0d0
 2		continue
 		iter=iter+1
-		var=var0+dvar
-		do i=1,n_ret
-			if(var(i).gt.1d0) goto 1
-			if(var(i).lt.0d0) goto 1
-		enddo
 		if(speclimits) then
 			obsA0=0d0
 			emis0=0d0
 			emisR0=0d0
 		endif
 		do i=1,n_ret
+			var(i)=var0(i)+dvar(i)
+			if(var(i).gt.1d0) then
+				var(i)=1d0
+c				if(iter.lt.100) goto 1
+c				dvar=dvar*0.999d0*(1d0-var0(i))/(var(i)-var0(i))
+c				goto 2
+			endif
+			if(var(i).lt.0d0) then
+				var(i)=0d0
+c				if(iter.lt.100) goto 1
+c				dvar=dvar*0.999d0*(-var0(i))/(var(i)-var0(i))
+c				goto 2
+			endif
 			if(speclimits) then
 				obsA0(1:nlam)=obsA0(1:nlam)+dobsA(i,1:nlam)*dvar(i)
 				emis0(1:nlam)=emis0(1:nlam)+demis(i,1:nlam)*dvar(i)
@@ -546,46 +801,20 @@ c		vec=vec*gasdev(idum)**(1d0/real(n_ret))
 
 		call MapRetrieval(var,error)
 		
-		do i=1,n_ret
-			value(i)=RetPar(i)%value
-			if(RetPar(i)%logscale) value(i)=log10(value(i))
-		enddo
-		if(ioflag) write(35,form) (value(i),i=1,n_ret)
+		if(ioflag) write(35,form) (RetPar(i)%value,i=1,n_ret)
 		call InitDens()
 		call SetupStructure(.false.)
 
-		if(k.eq.1) then
-			Tbest(1:nr)=T(1:nr)
-			COratio=COret
-		endif
 		do i=1,nr
-			if(T(i).gt.Tbest(i)) then
-				maxT(i)=maxT(i)+(T(i)-Tbest(i))**2
-				imaxT(i)=imaxT(i)+1
-			endif
-			if(T(i).lt.Tbest(i)) then
-				minT(i)=minT(i)+(T(i)-Tbest(i))**2
-				iminT(i)=iminT(i)+1
-			endif
+			if(T(i).gt.maxT(i)) maxT(i)=T(i)
+			if(T(i).lt.minT(i)) minT(i)=T(i)
 		enddo
 		do i=1,n_ret
-			if(var(i).lt.var0(i)) then
-				error(1,i)=error(1,i)+(var(i)-var0(i))**2
-				ivar(1,i)=ivar(1,i)+1
-			endif
-			if(var(i).gt.var0(i)) then
-				error(2,i)=error(2,i)+(var(i)-var0(i))**2
-				ivar(2,i)=ivar(2,i)+1
-			endif
+			if(var(i).lt.error(1,i)) error(1,i)=var(i)
+			if(var(i).gt.error(2,i)) error(2,i)=var(i)
 		enddo
-		if(COret.lt.COratio) then
-			COerr(1)=COerr(1)+(COret-COratio)**2
-			iCO(1)=iCO(1)+1
-		endif
-		if(COret.gt.COratio) then
-			COerr(2)=COerr(2)+(COret-COratio)**2
-			iCO(2)=iCO(2)+1
-		endif
+		if(COret.lt.COerr(1)) COerr(1)=COret
+		if(COret.gt.COerr(2)) COerr(2)=COret
 		if(speclimits) then
 			do i=1,nlam
 				if(obsA0(i).gt.obsAmax(i)) obsAmax(i)=obsA0(i)
@@ -597,204 +826,15 @@ c		vec=vec*gasdev(idum)**(1d0/real(n_ret))
 			enddo
 		endif
 	enddo
-	error(1,1:n_ret)=sqrt(error(1,1:n_ret)/real(ivar(1,1:n_ret)-1))
-	error(2,1:n_ret)=sqrt(error(2,1:n_ret)/real(ivar(2,1:n_ret)-1))
-	COerr(1:2)=sqrt(COerr(1:2)/real(iCO(1:2)-1))
-	minT(1:nr)=sqrt(minT(1:nr)/real(iminT(1:nr)-1))
-	maxT(1:nr)=sqrt(maxT(1:nr)/real(imaxT(1:nr)-1))
+	error(1,1:n_ret)=abs(error(1,1:n_ret)-var0(1:n_ret))
+	error(2,1:n_ret)=abs(error(2,1:n_ret)-var0(1:n_ret))
 
 	call MapRetrieval(var0,error)
 	call InitDens()
 	call SetupStructure(.false.)
 
-	call SetOutputMode(.true.)
-	if(ioflag) then
-		close(unit=35)
-
-		open(unit=45,file=trim(outputdir) // "limits.dat",RECL=1000)
-		do i=1,nr
-			write(45,*) P(i),Tbest(i),minT(i),maxT(i)
-		enddo
-		close(unit=45)
-
-		if(speclimits) then
-			open(unit=45,file=trim(outputdir) // "emis_limits.dat",RECL=1000)
-			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emismin(i),emismax(i)
-			enddo
-			close(unit=45)
-
-			open(unit=45,file=trim(outputdir) // "emisR_limits.dat",RECL=1000)
-			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emisRmin(i),emisRmax(i)
-			enddo
-			close(unit=45)
-
-			open(unit=45,file=trim(outputdir) // "trans_limits.dat",RECL=1000)
-			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,obsAmin(i),obsAmax(i)
-			enddo
-			close(unit=45)
-		endif
-	endif
-
-	return
-	end
-
-
-	subroutine WritePTlimits_slow(var0,Cov,ErrVec,error,chi2,dobsA,demis,demisR,ioflag)
-	use GlobalSetup
-	use Constants
-	IMPLICIT NONE
-	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,w(n_ret),chi2,ErrVec(n_ret,n_ret)
-	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret)
-	real*8 dvar(n_ret),dobsA(n_ret,nlam),demis(n_ret,nlam),demisR(n_ret,nlam),value(n_ret)
-	real*8 obsAmin(nlam),obsAmax(nlam),emismin(nlam),emismax(nlam),emisRmin(nlam),emisRmax(nlam)
-	real*8 emis0(nlam),obsA0(nlam),emisR0(nlam),Cinv(n_ret,n_ret),ALU(n_ret,n_ret)
-	integer i,j,k,info,nk,ierr,iter,iCO(2),ivar(2,n_ret),imaxT(nr),iminT(nr)
-	character*6000 form
-	logical ioflag
-
-
-	call MatrixInvert(Cov,Cinv,ALU,n_ret,INFO)
-	
-	call SetOutputMode(.false.)
-	var=var0
-	call MapRetrieval(var,error)
-	call InitDens()
-	call SetupStructure(.false.)
-	Tbest=T
-	maxT=0d0
-	minT=0d0
-	obsAmin=1d200
-	emismin=1d200
-	emisRmin=1d200
-	obsAmax=0d0
-	emismax=0d0
-	emisRmax=0d0
-	COerr=0d0
-	error=0d0
-	ivar=0
-	imaxT=0
-	iminT=0
-	iCO=0
-
-	nk=n_ret*1000
-	if(ioflag) then
-		open(unit=35,file=trim(outputdir) // "error_cloud.dat",RECL=6000)
-		form='("#"' // trim(int2string(n_ret,'(i4)')) // 'a19)'
-		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
-		form='(' // int2string(n_ret,'(i4)') // 'es19.7)'
-	endif
-	
-	do k=1,nk
-		iter=0
-1		continue
-		dvar=0d0
-		do i=1,n_ret
-			var(i)=random(idum)
-		enddo
-		if(k.eq.1) var=var0
-2		continue
-		iter=iter+1
-		dvar=var0-var
-		vec=0d0
-		do i=1,n_ret
-			do j=1,n_ret
-				vec(j)=vec(j)+dvar(i)*Cinv(i,j)
-			enddo
-		enddo
-		tot=0d0
-		do i=1,n_ret
-			tot=tot+vec(i)*dvar(i)
-		enddo
-		if(tot.gt.abs(gasdev(idum))) goto 1
-
-		if(speclimits) then
-			obsA0=0d0
-			emis0=0d0
-			emisR0=0d0
-		endif
-		do i=1,n_ret
-			if(speclimits) then
-				obsA0(1:nlam)=obsA0(1:nlam)+dobsA(i,1:nlam)*dvar(i)
-				emis0(1:nlam)=emis0(1:nlam)+demis(i,1:nlam)*dvar(i)
-				emisR0(1:nlam)=emisR0(1:nlam)+demisR(i,1:nlam)*dvar(i)
-			endif
-		enddo
-		if(speclimits) then
-			obsA0=obsA0+obsA(0,1:nlam)/(pi*Rstar**2)
-			emis0=emis0+phase(1,0,1:nlam)+flux(0,1:nlam)
-			emisR0=emisR0+(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
-			do i=1,nlam
-				if(obsA0(i).lt.0d0) obsA0(i)=0d0
-				if(emis0(i).lt.0d0) emis0(i)=0d0
-				if(emisR0(i).lt.0d0) emisR0(i)=0d0
-			enddo
-		endif
-
-		call MapRetrieval(var,error)
-		
-		do i=1,n_ret
-			value(i)=RetPar(i)%value
-			if(RetPar(i)%logscale) value(i)=log10(value(i))
-		enddo
-		if(ioflag) write(35,form) (value(i),i=1,n_ret)
-		call InitDens()
-		call SetupStructure(.false.)
-
-		if(k.eq.1) then
-			Tbest(1:nr)=T(1:nr)
-			COratio=COret
-		endif
-		do i=1,nr
-			if(T(i).gt.Tbest(i)) then
-				maxT(i)=maxT(i)+(T(i)-Tbest(i))**2
-				imaxT(i)=imaxT(i)+1
-			endif
-			if(T(i).lt.Tbest(i)) then
-				minT(i)=minT(i)+(T(i)-Tbest(i))**2
-				iminT(i)=iminT(i)+1
-			endif
-		enddo
-		do i=1,n_ret
-			if(var(i).lt.var0(i)) then
-				error(1,i)=error(1,i)+(var(i)-var0(i))**2
-				ivar(1,i)=ivar(1,i)+1
-			endif
-			if(var(i).gt.var0(i)) then
-				error(2,i)=error(2,i)+(var(i)-var0(i))**2
-				ivar(2,i)=ivar(2,i)+1
-			endif
-		enddo
-		if(COret.lt.COratio) then
-			COerr(1)=COerr(1)+(COret-COratio)**2
-			iCO(1)=iCO(1)+1
-		endif
-		if(COret.gt.COratio) then
-			COerr(2)=COerr(2)+(COret-COratio)**2
-			iCO(2)=iCO(2)+1
-		endif
-		if(speclimits) then
-			do i=1,nlam
-				if(obsA0(i).gt.obsAmax(i)) obsAmax(i)=obsA0(i)
-				if(emis0(i).gt.emismax(i)) emismax(i)=emis0(i)
-				if(emisR0(i).gt.emisRmax(i)) emisRmax(i)=emisR0(i)
-				if(obsA0(i).lt.obsAmin(i)) obsAmin(i)=obsA0(i)
-				if(emis0(i).lt.emismin(i)) emismin(i)=emis0(i)
-				if(emisR0(i).lt.emisRmin(i)) emisRmin(i)=emisR0(i)
-			enddo
-		endif
-	enddo
-	error(1,1:n_ret)=sqrt(error(1,1:n_ret)/real(ivar(1,1:n_ret)-1))
-	error(2,1:n_ret)=sqrt(error(2,1:n_ret)/real(ivar(2,1:n_ret)-1))
-	COerr(1:2)=sqrt(COerr(1:2)/real(iCO(1:2)-1))
-	minT(1:nr)=sqrt(minT(1:nr)/real(iminT(1:nr)-1))
-	maxT(1:nr)=sqrt(maxT(1:nr)/real(imaxT(1:nr)-1))
-
-	call MapRetrieval(var0,error)
-	call InitDens()
-	call SetupStructure(.false.)
+	COerr(1)=abs(COerr(1)-COret)
+	COerr(2)=abs(COerr(2)-COret)
 
 	call SetOutputMode(.true.)
 	if(ioflag) then
@@ -802,7 +842,7 @@ c		vec=vec*gasdev(idum)**(1d0/real(n_ret))
 
 		open(unit=45,file=trim(outputdir) // "limits.dat")
 		do i=1,nr
-			write(45,*) P(i),Tbest(i),minT(i),maxT(i)
+			write(45,*) P(i),minT(i),maxT(i)
 		enddo
 		close(unit=45)
 

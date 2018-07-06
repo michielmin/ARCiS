@@ -763,6 +763,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) resume_multinest
 		case("fmultinest","efr")
 			read(key%value,*) f_multinest
+		case("retrievaltype")
+			read(key%value,*) retrievaltype
 		case("tvalue")
 			read(key%value,*) Tin(key%nr1)
 		case("retrieve_profile")
@@ -802,6 +804,11 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) fcloud_default
 		case("coagulation")
 			read(key%value,*) coagulation
+		case("parameterfile","planetparameterfile")
+			read(key%value,*) planetparameterfile
+		case("planetname")
+			read(key%value,*) planetname
+			call ReadPlanetName
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -1129,6 +1136,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	gene_cross=.false.
 	resume_multinest=.false.
 	f_multinest=0.3d0
+	retrievaltype='MN'
 
 	do i=1,nobs
 		ObsSpec(i)%beta=-1d0
@@ -1149,6 +1157,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 	HITEMPdir=trim(homedir) // '/HITEMP/'
 
 	HITEMP=.false.
+
+	planetparameterfile=trim(homedir) // '/ARCiS/Data/allplanets-ascii.txt'
+	planetname=' '
 
 	ng=25
 	epsCk=0.25d0
@@ -1691,6 +1702,66 @@ c not entirely correct...
 			species='H2O(c)'
 	end select
 
+	return
+	end
+	
+	
+	
+	subroutine ReadPlanetName()
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 x,dR1,dR2,dM1,dM2
+	character*100 name,namestar
+	integer i
+
+	i=len_trim(planetname)
+	if(planetname(i:i).eq.'b') then
+		planetname(i:i)=' '
+	endif
+	print*,trim(planetname)
+	
+	open(unit=72,file=planetparameterfile,RECL=6000)
+	read(72,*)
+1	read(72,*,end=2) name,Tstar,x,x,metallicity,x,x,Mstar,x,x,Rstar,x,x,logg,x,x,x,x,x,x,x,x,x,Dplanet,x,x,Mplanet,dM1,dM2,Rplanet,dR1,dR2
+	i=len_trim(name)
+	if(name(i:i).eq.'b') then
+		name(i:i)=' '
+	endif
+	if(trim(planetname).eq.trim(name)) then	
+		close(unit=72)
+		call output("Stellar mass:   " // dbl2string(Mstar,'(f7.2)') // "Msun")
+		call output("Stellar T:      " // dbl2string(Tstar,'(f7.2)') // "K")
+		call output("Stellar radius: " // dbl2string(Rstar,'(f7.2)') // "Rsun")
+		call output("Stellar logg:   " // dbl2string(logg,'(f7.2)'))
+		call output("Metallicity:    " // dbl2string(metallicity,'(f7.2)'))
+		call output("Planet orbit:   " // dbl2string(Dplanet,'(f7.4)') // "AU")
+		call output("Planet radius:  " // dbl2string(Rplanet,'(f7.2)') // "Rjup")
+		call output("Planet mass:    " // dbl2string(Mplanet,'(f7.2)') // "Mjup")
+		do i=1,n_ret
+			select case(RetPar(i)%keyword)
+				case("Rp","rp","RP")
+					RetPar(i)%x0=Rplanet
+					RetPar(i)%xmin=Rplanet-6d0*dR1
+					RetPar(i)%xmax=Rplanet+6d0*dR2
+					if(RetPar(i)%xmin.lt.0d0) RetPar(i)%xmin=0d0
+		call output("Minimum radius: " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Rjup")
+		call output("Maximum radius: " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Rjup")
+				case("Mp","mp","MP")
+					RetPar(i)%x0=Mplanet
+					RetPar(i)%xmin=Mplanet-3d0*dM1
+					RetPar(i)%xmax=Mplanet+3d0*dM2
+					if(RetPar(i)%xmin.lt.0d0) RetPar(i)%xmin=0d0
+		call output("Minimum mass:   " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Mjup")
+		call output("Maximum mass:   " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Mjup")
+			end select
+		enddo
+		return
+	endif
+	goto 1
+2	close(unit=72)
+	call output("Planet not found: " // trim(planetname))
+	stop
+	
 	return
 	end
 	

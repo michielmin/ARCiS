@@ -100,7 +100,10 @@ OBJS	= Modules.o \
 		writeFITS.o \
 		DiffuseCloud.o \
 		params_multinest.o \
-		MultiNestARCiS.o
+		MultiNestARCiS.o \
+		mrqmin.o \
+		truncated_normal.o \
+		amoeba.o
 
 # program name and install location
 PROGRAM       = ARCiS

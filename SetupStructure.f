@@ -107,7 +107,7 @@
 	do i=1,nr
 		RHill=(Dplanet*(Mtot/(3d0*Mstar))**(1d0/3d0))
 		if(R(i+1).gt.RHill) then
-			print*,'layer',P(i),'is beyond the Hill Sphere'
+			call output("layer" // dbl2string(P(i),'(es10.3)') // "is beyond the Hill Sphere")
 c			print*,'adjusting radius'
 c			R(i+1)=sqrt(R(i)*RHill)
 		endif
@@ -120,7 +120,7 @@ c			R(i+1)=sqrt(R(i)*RHill)
 		if(vtherm.gt.vescape) then
 			Ndens(i)=1d-20
 			dens(i)=Ndens(i)*mp*MMW(i)
-			print*,'layer',P(i),'escapes to space'
+			call output("layer" // dbl2string(P(i),'(es10.3)') // "escapes to space")
 c			modelsucces=.false.
 c			if(domakeai) return
 		else
