@@ -218,7 +218,13 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 			enddo
 		endif
 		do j=1,n_ret
-			pamoeba(i,j)=-log(1d0/pamoeba(i,j)-1d0)
+			if(pamoeba(i,j).eq.1d0) then
+				pamoeba(i,j)=100d0
+			else if(pamoeba(i,j).eq.0d0) then
+				pamoeba(i,j)=-100d0
+			else
+				pamoeba(i,j)=-log(1d0/pamoeba(i,j)-1d0)
+			endif
 			if(pamoeba(i,j).gt.100d0) pamoeba(i,j)=100d0
 			if(pamoeba(i,j).lt.-100d0) pamoeba(i,j)=-100d0
 		enddo
