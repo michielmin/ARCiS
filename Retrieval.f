@@ -218,15 +218,8 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 			enddo
 		endif
 		do j=1,n_ret
-			if(pamoeba(i,j).eq.1d0) then
-				pamoeba(i,j)=25d0
-			else if(pamoeba(i,j).eq.0d0) then
-				pamoeba(i,j)=-25d0
-			else
-				pamoeba(i,j)=-log(1d0/pamoeba(i,j)-1d0)
-			endif
-			if(pamoeba(i,j).gt.25d0) pamoeba(i,j)=25d0
-			if(pamoeba(i,j).lt.-25d0) pamoeba(i,j)=-25d0
+			if(pamoeba(i,j).gt.1d0) pamoeba(i,j)=1d0
+			if(pamoeba(i,j).lt.0d0) pamoeba(i,j)=0d0
 		enddo
 		yamoeba(i)=amoebafunk(pamoeba(i,1:n_ret),ny)
 	enddo
@@ -237,11 +230,9 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	call amoeba(pamoeba,yamoeba,nca,n_ret,n_ret,ftol,amoebafunk,iter,ny,itermax)
 	var=0d0
 	do i=1,n_ret+1
-		pamoeba(i,1:n_ret)=1d0/(1d0+exp(-pamoeba(i,1:n_ret)))
 		var(1:n_ret)=var(1:n_ret)+pamoeba(i,1:n_ret)/real(n_ret+1)
 	enddo
 	do i=1,n_ret+1
-		pamoeba(i,1:n_ret)=1d0/(1d0+exp(-pamoeba(i,1:n_ret)))
 		dvarq(1:n_ret)=dvarq(1:n_ret)+(var(1:n_ret)+pamoeba(i,1:n_ret))**2
 	enddo
 	dvarq=sqrt(dvarq/real(n_ret))
@@ -340,20 +331,22 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	IMPLICIT NONE
 	integer ny,i
 	real*8 ymod(ny),var(n_ret),chi2,var_in(n_ret)
-	real*16 x
+	real*8 fact
 
+	fact=1d0
 	do i=1,n_ret
-		x=var_in(i)
-		if(x.gt.25.0) then
+		var(i)=var_in(i)
+		if(var(i).gt.1d0) then
+			fact=fact*var(i)**2
 			var(i)=1d0
-		else if(x.lt.-25.0) then
+		endif
+		if(var(i).lt.0d0) then
+			fact=fact*(1d0-var(i))**2
 			var(i)=0d0
-		else
-			var(i)=1d0/(1d0+qexp(-x))
 		endif
 	enddo
 	call mrqcomputeY(var,ymod,n_ret,ny,chi2)
-	amoebafunk=chi2
+	amoebafunk=chi2*fact
 	
 	return
 	end
