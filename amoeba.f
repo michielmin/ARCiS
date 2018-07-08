@@ -58,7 +58,7 @@ CU    USES amotry,funk
                 psum(j)=0.5*(p(i,j)+p(ilo,j))
                 p(i,j)=psum(j)
 15            continue
-              y(i)=funk(psum)
+              y(i)=funk(psum,ny)
             endif
 16        continue
           iter=iter+ndim
