@@ -462,7 +462,11 @@ c	condensates=(condensates.or.cloudcompute)
 
 	call InitFreq()
 
-	if(gammaT2.lt.0d0) gammaT2=gammaT1
+	gamma_equal=.false.
+	if(gammaT2.lt.0d0) then
+		gamma_equal=.true.
+		gammaT2=gammaT1
+	endif
 	
 	if(nphase.le.0) then
 		nphase=2d0*pi/asin(Rstar/Dplanet)

@@ -1065,6 +1065,7 @@ c	linear
 		call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2)
 		call ReadAndSetKey(key)
 	enddo
+	if(gamma_equal) gammaT2=gammaT1
 	call ConvertUnits()
 
 	enddo
