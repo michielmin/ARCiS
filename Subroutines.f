@@ -484,3 +484,21 @@ c        print*,'series failed in expint'
       END
 
 
+	
+	subroutine quadint(x1,x2,x3,y1,y2,y3,a,b,c)
+	IMPLICIT NONE
+	real*8 x1,x2,x3,y1,y2,y3,a,b,c
+	real*8 y12,y23,x12,x23
+	
+	y12=(y1-y2)/(x1-x2)
+	y23=(y2-y3)/(x2-x3)
+	x12=(x1**2-x2**2)/(x1-x2)
+	x23=(x2**2-x3**2)/(x2-x3)
+	
+	a=(y12-y23)/(x12-x23)
+	b=y12-a*x12
+	c=y1-b*x1-a*x1**2
+	
+	return
+	end
+	

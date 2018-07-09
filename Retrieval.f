@@ -209,6 +209,8 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	var=var0
 	dvarq=0.02d0
 
+	goto 2	! skip the amoeba step
+
 	do i=1,n_ret+1
 		if(i.eq.1) then
 			pamoeba(i,1:n_ret)=var0(1:n_ret)
@@ -244,6 +246,8 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 		dvarq(1:n_ret)=dvarq(1:n_ret)+(var(1:n_ret)+pamoeba(i,1:n_ret))**2
 	enddo
 	dvarq=sqrt(dvarq/real(n_ret))
+
+2	continue
 
 	ia=1
 	nca=3*n_ret
@@ -304,7 +308,8 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	IMPLICIT NONE
 	integer nvars,i,j,nlamtot,ny
 	real*8 var(nvars),ymod(ny),dyda(ny,nvars),error(2,nvars),var0(nvars),lnew
-	real*8 y1(ny),y2(ny),var1(nvars),var2(nvars),chi2_0,chi2_1,random
+	real*8 y1(ny),y2(ny),var1(nvars),var2(nvars),chi2_0,chi2_1,chi2_2,random
+	real*8 aq,bq,cq
 	real*8,allocatable :: spec(:)
 	logical recomputeopac
 
@@ -319,14 +324,42 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	
 	do i=1,nvars
 		var1=var
-		if(var1(i).gt.0.5d0) then
-			var1(i)=var1(i)-dvarq(i)*(0.5d0+0.5d0*random(idum))
-		else
+		if(var(i).lt.0.5d0) then
 			var1(i)=var1(i)+dvarq(i)*(0.5d0+0.5d0*random(idum))
+		else
+			var1(i)=var1(i)-dvarq(i)*(0.5d0+0.5d0*random(idum))
 		endif
 		if(var1(i).lt.0d0) var1(i)=0d0
+		if(var1(i).gt.1d0) var1(i)=1d0
 		call mrqcomputeY(var1,y1,nvars,ny,chi2_1)
 		dyda(1:ny,i)=(y1(1:ny)-ymod(1:ny))/(var1(i)-var(i))
+	enddo
+	return
+		
+	do i=1,nvars
+1		var1=var
+		var2=var
+		if(var(i).eq.0d0) then
+			var1(i)=var1(i)+dvarq(i)*(0.5d0+0.5d0*random(idum))
+			var2(i)=var2(i)+dvarq(i)*(0.5d0+0.5d0*random(idum))
+		else if(var(i).eq.1d0) then
+			var1(i)=var1(i)-dvarq(i)*(0.5d0+0.5d0*random(idum))
+			var2(i)=var2(i)-dvarq(i)*(0.5d0+0.5d0*random(idum))
+		else
+			var1(i)=var1(i)-dvarq(i)*(0.5d0+0.5d0*random(idum))
+			var2(i)=var2(i)+dvarq(i)*(0.5d0+0.5d0*random(idum))
+		endif
+		if(var1(i).lt.0d0) var1(i)=0d0
+		if(var1(i).gt.1d0) var1(i)=1d0
+		if(var2(i).lt.0d0) var2(i)=0d0
+		if(var2(i).gt.1d0) var2(i)=1d0
+		if(var1(i).eq.var(i).or.var2(i).eq.var(i).or.var1(i).eq.var2(i)) goto 1
+		call mrqcomputeY(var1,y1,nvars,ny,chi2_1)
+		call mrqcomputeY(var2,y2,nvars,ny,chi2_2)
+		do j=1,ny
+			call quadint(var1(i),var(i),var2(i),y1(j),ymod(j),y2(j),aq,bq,cq)
+			dyda(j,i)=2d0*aq*var(i)+bq
+		enddo
 	enddo
 		
 	return
