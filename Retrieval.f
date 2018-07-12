@@ -342,7 +342,7 @@ c		enddo
 	emis0(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 	emisR0(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
 
-	goto 2	
+c	goto 2	
 	do i=1,nvars
 		var1=var
 		if(var(i).lt.0.5d0) then
@@ -357,6 +357,11 @@ c		enddo
 		emis1(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 		emisR1(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
 		dyda(1:ny,i)=(y1(1:ny)-ymod(1:ny))/(var1(i)-var(i))
+		do j=1,nlam
+			dobsA(i,j)=(obsA1(j)-obsA0(j))/(var1(i)-var(i))
+			demis(i,j)=(emis1(j)-emis0(j))/(var1(i)-var(i))
+			demisR(i,j)=(emisR1(j)-emisR0(j))/(var1(i)-var(i))
+		enddo
 		dvarq(i)=sqrt(dvarq(i)*(0.2d0*abs(var1(i)-var(i))*chi2_0/abs(chi2_0-chi2_1)))
 		if(dvarq(i).gt.0.1d0) dvarq(i)=0.1d0
 		if(dvarq(i).lt.1d-5) dvarq(i)=1d-5
