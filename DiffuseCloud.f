@@ -85,7 +85,7 @@ c MgSiO3
 	K=Cloud(ii)%Kzz
 	Sigmadot=Cloud(ii)%Sigmadot
 
-	niter=100
+	niter=40
 	
 	Kc=K
 	Kp=K

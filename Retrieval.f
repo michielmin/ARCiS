@@ -2,7 +2,10 @@
 	implicit none
 	integer imodel
 	real*8 bestlike
-	real*8,allocatable :: dvarq(:)
+	real*8,allocatable :: dvarq(:),bestvar(:)
+	real*8,allocatable :: obsA0(:),obsA1(:),obsA2(:),dobsA(:,:)
+	real*8,allocatable :: emis0(:),emis1(:),emis2(:),demis(:,:)
+	real*8,allocatable :: emisR0(:),emisR1(:),emisR2(:),demisR(:,:)
 	end module RetrievalMod
 
 
@@ -139,10 +142,8 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	
 	real*8 maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret),dvar_prev(n_ret)
 	real*8 backup_xmin(n_ret),backup_xmax(n_ret),alphaW(3*n_ret,3*n_ret),Cov(3*n_ret,3*n_ret)
-	real*8 obsA1(nlam),obsA2(nlam),dobsA(n_ret,nlam)
-	real*8 emis1(nlam),emis2(nlam),demis(n_ret,nlam)
-	real*8 emisR1(nlam),emisR2(nlam),demisR(n_ret,nlam),beta(n_ret),da(n_ret)
-	real*8 phase0(nlam),flux0(nlam),obsA0(nlam),scale,scalemin,Covar(n_ret,n_ret)
+	real*8 beta(n_ret),da(n_ret)
+	real*8 phase0(nlam),flux0(nlam),scale,scalemin,Covar(n_ret,n_ret)
 	integer na,map(n_ret),info,iboot,nboot,niter1,niter2,n_not_improved,ia(n_ret)
 	logical dofit(n_ret),dofit_prev(n_ret),new_best,improved_iter
 	logical,allocatable :: specornot(:)
@@ -156,6 +157,19 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 
 	external amoebafunk
 	real*8 pamoeba(n_ret+1,n_ret),yamoeba(n_ret+1),ftol,amoebafunk
+
+	allocate(obsA0(nlam))
+	allocate(obsA1(nlam))
+	allocate(obsA2(nlam))
+	allocate(dobsA(n_ret,nlam))
+	allocate(emis0(nlam))
+	allocate(emis1(nlam))
+	allocate(emis2(nlam))
+	allocate(demis(n_ret,nlam))
+	allocate(emisR0(nlam))
+	allocate(emisR1(nlam))
+	allocate(emisR2(nlam))
+	allocate(demisR(n_ret,nlam))
 
 	if(retrievaltype.eq.'MN'.or.retrievaltype.eq.'MultiNest') then
 		call doMultiNest
@@ -191,6 +205,7 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	allocate(dyobs(ny))
 	allocate(specornot(ny))
 	allocate(dvarq(n_ret))
+	allocate(bestvar(n_ret))
 	iy=1
 	do i=1,nobs
 		yobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%y(1:ObsSpec(i)%nlam)
@@ -254,7 +269,7 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	lambda=-1d0
 	n_not_improved=0
 	chi2_0=1d200
-	do i=1,100
+	do i=1,50
 		print*,"Iteration: ",i,chi2
 		call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
 		do j=1,n_ret
@@ -288,9 +303,12 @@ c		enddo
 		if(var(j).gt.1d0) var(j)=1d0
 		if(var(j).lt.0d0) var(j)=0d0
 	enddo
+	if(speclimits) then
+		call mrqcomputemodel(bestvar,ybest,dy,n_ret,ny)
+	endif
 
-	call WritePTlimits(var,Cov(1:n_ret,1:n_ret),ErrVec,error,chi2,dobsA,demis,demisR,.true.)
-	call WriteRetrieval(imodel,chi2,var,error)
+	call WritePTlimits(bestvar,Cov(1:n_ret,1:n_ret),ErrVec,error,chi2,.true.)
+	call WriteRetrieval(imodel,chi2,bestvar,error)
 
 	close(unit=31)
 	
@@ -320,6 +338,9 @@ c		enddo
 		if(var(i).lt.0d0) var(i)=0d0
 	enddo
 	call mrqcomputeY(var,ymod,nvars,ny,chi2_0)
+	obsA0(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+	emis0(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
+	emisR0(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
 
 	goto 2	
 	do i=1,nvars
@@ -332,6 +353,9 @@ c		enddo
 		if(var1(i).lt.0d0) var1(i)=0d0
 		if(var1(i).gt.1d0) var1(i)=1d0
 		call mrqcomputeY(var1,y1,nvars,ny,chi2_1)
+		obsA1(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+		emis1(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
+		emisR1(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
 		dyda(1:ny,i)=(y1(1:ny)-ymod(1:ny))/(var1(i)-var(i))
 		dvarq(i)=sqrt(dvarq(i)*(0.2d0*abs(var1(i)-var(i))*chi2_0/abs(chi2_0-chi2_1)))
 		if(dvarq(i).gt.0.1d0) dvarq(i)=0.1d0
@@ -359,12 +383,25 @@ c		enddo
 		if(var2(i).gt.1d0) var2(i)=1d0
 		if(var1(i).eq.var(i).or.var2(i).eq.var(i).or.var1(i).eq.var2(i)) goto 1
 		call mrqcomputeY(var1,y1,nvars,ny,chi2_1)
+		obsA1(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+		emis1(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
+		emisR1(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
 		call mrqcomputeY(var2,y2,nvars,ny,chi2_2)
+		obsA2(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+		emis2(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
+		emisR2(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
 		do j=1,ny
 			call quadint(var1(i),var(i),var2(i),y1(j),ymod(j),y2(j),aq,bq,cq)
 			dyda(j,i)=2d0*aq*var(i)+bq
 		enddo
-
+		do j=1,nlam
+			call quadint(var1(i),var(i),var2(i),obsA1(j),obsA0(j),obsA2(j),aq,bq,cq)
+			dobsA(i,j)=2d0*aq*var(i)+bq
+			call quadint(var1(i),var(i),var2(i),emis1(j),emis0(j),emis2(j),aq,bq,cq)
+			demis(i,j)=2d0*aq*var(i)+bq
+			call quadint(var1(i),var(i),var2(i),emisR1(j),emisR0(j),emisR2(j),aq,bq,cq)
+			demisR(i,j)=2d0*aq*var(i)+bq
+		enddo
 		dvarq(i)=sqrt(dvarq(i)*(0.2d0*abs(var1(i)-var2(i))*chi2_0/(abs(chi2_0-chi2_1)+abs(chi2_0-chi2_1))))
 		if(dvarq(i).gt.0.1d0) dvarq(i)=0.1d0
 		if(dvarq(i).lt.1d-5) dvarq(i)=1d-5
@@ -469,6 +506,7 @@ c		enddo
 		close(unit=21)	
 
 		bestlike=lnew
+		bestvar=var
 	endif
 	
 	return
@@ -477,15 +515,17 @@ c		enddo
 
 
 
-	subroutine WritePTlimits(var0,Cov,ErrVec,error,chi2,dobsA,demis,demisR,ioflag)
+	subroutine WritePTlimits(var0,Cov,ErrVec,error,chi2,ioflag)
 	use GlobalSetup
 	use Constants
+	use RetrievalMod
 	IMPLICIT NONE
 	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,w(n_ret),chi2,ErrVec(n_ret,n_ret)
 	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret)
-	real*8 dvar(n_ret),dobsA(n_ret,nlam),demis(n_ret,nlam),demisR(n_ret,nlam),value(n_ret)
-	real*8 obsAmin(nlam),obsAmax(nlam),emismin(nlam),emismax(nlam),emisRmin(nlam),emisRmax(nlam)
-	real*8 emis0(nlam),obsA0(nlam),emisR0(nlam),Cinv(n_ret,n_ret),ALU(n_ret,n_ret),max(n_ret)
+	real*8 dvar(n_ret),value(n_ret)
+	real*8 obsAerr(2,nlam),emiserr(2,nlam),emisRerr(2,nlam)
+	integer iobsA(2,nlam),iemis(2,nlam),iemisR(2,nlam)
+	real*8 Cinv(n_ret,n_ret),ALU(n_ret,n_ret),max(n_ret)
 	integer i,j,k,info,nk,ierr,iter,iCO(2),ivar(2,n_ret),imaxT(nr),iminT(nr),seed
 	character*6000 form
 	logical ioflag
@@ -502,8 +542,6 @@ c		enddo
 		enddo
 		if(tot.le.0d0) tot=1d0
 		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)/sqrt(tot*w(i))
-c		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*chi2
-		print*,i,ErrVec(1:n_ret,i)
 	enddo
 	do i=1,n_ret
 		max(i)=1d4
@@ -511,7 +549,6 @@ c		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*chi2
 			tot=1d0/abs(ErrVec(j,i))
 			if(tot.lt.max(i)) max(i)=tot
 		enddo
-		print*,max(i)
 	enddo
 	
 	call SetOutputMode(.false.)
@@ -522,18 +559,18 @@ c		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*chi2
 	Tbest=T
 	maxT=0d0
 	minT=0d0
-	obsAmin=1d200
-	emismin=1d200
-	emisRmin=1d200
-	obsAmax=0d0
-	emismax=0d0
-	emisRmax=0d0
 	COerr=0d0
 	error=0d0
 	ivar=0
 	imaxT=0
 	iminT=0
 	iCO=0
+	obsAerr=0d0
+	iobsA=0d0
+	emiserr=0d0
+	iemis=0d0
+	emisRerr=0d0
+	iemisR=0d0
 
 	nk=n_ret*2500
 	if(ioflag) then
@@ -568,25 +605,18 @@ c		vec=vec*gasdev(idum)**(1d0/real(n_ret))
 			if(var(i).lt.0d0) goto 1
 		enddo
 		if(speclimits) then
-			obsA0=0d0
-			emis0=0d0
-			emisR0=0d0
-		endif
-		do i=1,n_ret
-			if(speclimits) then
-				obsA0(1:nlam)=obsA0(1:nlam)+dobsA(i,1:nlam)*dvar(i)
-				emis0(1:nlam)=emis0(1:nlam)+demis(i,1:nlam)*dvar(i)
-				emisR0(1:nlam)=emisR0(1:nlam)+demisR(i,1:nlam)*dvar(i)
-			endif
-		enddo
-		if(speclimits) then
-			obsA0=obsA0+obsA(0,1:nlam)/(pi*Rstar**2)
-			emis0=emis0+phase(1,0,1:nlam)+flux(0,1:nlam)
-			emisR0=emisR0+(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
+			obsA1=obsA0
+			emis1=emis0
+			emisR1=emisR0
+			do i=1,n_ret
+				obsA1(1:nlam)=obsA1(1:nlam)+dobsA(i,1:nlam)*dvar(i)
+				emis1(1:nlam)=emis1(1:nlam)+demis(i,1:nlam)*dvar(i)
+				emisR1(1:nlam)=emisR1(1:nlam)+demisR(i,1:nlam)*dvar(i)
+			enddo
 			do i=1,nlam
-				if(obsA0(i).lt.0d0) obsA0(i)=0d0
-				if(emis0(i).lt.0d0) emis0(i)=0d0
-				if(emisR0(i).lt.0d0) emisR0(i)=0d0
+				if(obsA1(i).lt.0d0) obsA1(i)=0d0
+				if(emis1(i).lt.0d0) emis1(i)=0d0
+				if(emisR1(i).lt.0d0) emisR1(i)=0d0
 			enddo
 		endif
 
@@ -614,6 +644,31 @@ c		vec=vec*gasdev(idum)**(1d0/real(n_ret))
 				iminT(i)=iminT(i)+1
 			endif
 		enddo
+		if(speclimits) then
+			do i=1,nlam
+				if(obsA1(i).lt.obsA0(i)) then
+					obsAerr(1,i)=obsAerr(1,i)+(obsA1(i)-obsA0(i))**2
+					iobsA(1,i)=iobsA(1,i)+1
+				else
+					obsAerr(2,i)=obsAerr(2,i)+(obsA1(i)-obsA0(i))**2
+					iobsA(2,i)=iobsA(2,i)+1
+				endif
+				if(emis1(i).lt.emis0(i)) then
+					emiserr(1,i)=emiserr(1,i)+(emis1(i)-emis0(i))**2
+					iemis(1,i)=iemis(1,i)+1
+				else
+					emiserr(2,i)=emiserr(2,i)+(emis1(i)-emis0(i))**2
+					iemis(2,i)=iemis(2,i)+1
+				endif
+				if(emisR1(i).lt.emisR0(i)) then
+					emisRerr(1,i)=emisRerr(1,i)+(emisR1(i)-emisR0(i))**2
+					iemisR(1,i)=iemisR(1,i)+1
+				else
+					emisRerr(2,i)=emisRerr(2,i)+(emisR1(i)-emisR0(i))**2
+					iemisR(2,i)=iemisR(2,i)+1
+				endif
+			enddo
+		endif
 		do i=1,n_ret
 			if(var(i).lt.var0(i)) then
 				error(1,i)=error(1,i)+(var(i)-var0(i))**2
@@ -631,16 +686,6 @@ c		vec=vec*gasdev(idum)**(1d0/real(n_ret))
 		if(COret.gt.COratio) then
 			COerr(2)=COerr(2)+(COret-COratio)**2
 			iCO(2)=iCO(2)+1
-		endif
-		if(speclimits) then
-			do i=1,nlam
-				if(obsA0(i).gt.obsAmax(i)) obsAmax(i)=obsA0(i)
-				if(emis0(i).gt.emismax(i)) emismax(i)=emis0(i)
-				if(emisR0(i).gt.emisRmax(i)) emisRmax(i)=emisR0(i)
-				if(obsA0(i).lt.obsAmin(i)) obsAmin(i)=obsA0(i)
-				if(emis0(i).lt.emismin(i)) emismin(i)=emis0(i)
-				if(emisR0(i).lt.emisRmin(i)) emisRmin(i)=emisR0(i)
-			enddo
 		endif
 	enddo
 	error(1,1:n_ret)=sqrt(error(1,1:n_ret)/real(ivar(1,1:n_ret)-1))
@@ -664,21 +709,25 @@ c		vec=vec*gasdev(idum)**(1d0/real(n_ret))
 		close(unit=45)
 
 		if(speclimits) then
+			obsAerr=sqrt(obsAerr/real(iobsA-1))
+			emiserr=sqrt(emiserr/real(iemis-1))
+			emisRerr=sqrt(emisRerr/real(iemisR-1))
+
 			open(unit=45,file=trim(outputdir) // "emis_limits.dat",RECL=1000)
 			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emismin(i),emismax(i)
+				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emis0(i),emiserr(1,i),emiserr(2,i)
 			enddo
 			close(unit=45)
 
 			open(unit=45,file=trim(outputdir) // "emisR_limits.dat",RECL=1000)
 			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emisRmin(i),emisRmax(i)
+				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emisR0(i),emisRerr(1,i),emisRerr(2,i)
 			enddo
 			close(unit=45)
 
 			open(unit=45,file=trim(outputdir) // "trans_limits.dat",RECL=1000)
 			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,obsAmin(i),obsAmax(i)
+				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,obsA0(i),obsAerr(1,i),obsAerr(2,i)
 			enddo
 			close(unit=45)
 		endif
