@@ -270,16 +270,15 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 			if(n_not_improved.gt.2) exit
 		endif
 
-		Covar(1:n_ret,1:n_ret)=alphaW(1:n_ret,1:n_ret)
-		da(1:n_ret)=beta(1:n_ret)
-
-		call gaussj(Covar,n_ret,n_ret,da,1,1)
-		call covsrt(Covar,n_ret,n_ret,ia,n_ret)
-		do j=1,n_ret
-			dvarq(j)=sqrt(chi2*Covar(j,j))*0.1d0
-			if(dvarq(j).gt.1d-1) dvarq(j)=1d-1
-			if(dvarq(j).lt.1d-3) dvarq(j)=1d-3
-		enddo
+c		Covar(1:n_ret,1:n_ret)=alphaW(1:n_ret,1:n_ret)
+c		da(1:n_ret)=beta(1:n_ret)
+c		call gaussj(Covar,n_ret,n_ret,da,1,1)
+c		call covsrt(Covar,n_ret,n_ret,ia,n_ret)
+c		do j=1,n_ret
+c			dvarq(j)=sqrt(chi2*Covar(j,j))*0.1d0
+c			if(dvarq(j).gt.1d-1) dvarq(j)=1d-1
+c			if(dvarq(j).lt.1d-5) dvarq(j)=1d-5
+c		enddo
 
 		chi2_0=chi2
 	enddo
@@ -321,7 +320,8 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 		if(var(i).lt.0d0) var(i)=0d0
 	enddo
 	call mrqcomputeY(var,ymod,nvars,ny,chi2_0)
-	
+
+	goto 2	
 	do i=1,nvars
 		var1=var
 		if(var(i).lt.0.5d0) then
@@ -333,9 +333,13 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 		if(var1(i).gt.1d0) var1(i)=1d0
 		call mrqcomputeY(var1,y1,nvars,ny,chi2_1)
 		dyda(1:ny,i)=(y1(1:ny)-ymod(1:ny))/(var1(i)-var(i))
+		dvarq(i)=sqrt(dvarq(i)*(0.2d0*abs(var1(i)-var(i))*chi2_0/abs(chi2_0-chi2_1)))
+		if(dvarq(i).gt.0.1d0) dvarq(i)=0.1d0
+		if(dvarq(i).lt.1d-5) dvarq(i)=1d-5
 	enddo
 	return
-		
+
+2	continue
 	do i=1,nvars
 1		var1=var
 		var2=var
@@ -360,6 +364,10 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 			call quadint(var1(i),var(i),var2(i),y1(j),ymod(j),y2(j),aq,bq,cq)
 			dyda(j,i)=2d0*aq*var(i)+bq
 		enddo
+
+		dvarq(i)=sqrt(dvarq(i)*(0.2d0*abs(var1(i)-var2(i))*chi2_0/(abs(chi2_0-chi2_1)+abs(chi2_0-chi2_1))))
+		if(dvarq(i).gt.0.1d0) dvarq(i)=0.1d0
+		if(dvarq(i).lt.1d-5) dvarq(i)=1d-5
 	enddo
 		
 	return

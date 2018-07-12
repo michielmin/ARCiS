@@ -986,8 +986,8 @@ c changed this to mass fractions (11-05-2010)
 	endif
 	
 c	if(.not.domakeai.and..false.) then
-		call ParticleFITS(C,r0,nr0(1:nm,1:ns),nm,ns,rho_av,ii,amin,amax,dble(pow),
-     &						C%fmax,C%blend,C%porosity,frac,rho,filename,isize)
+c		call ParticleFITS(C,r0,nr0(1:nm,1:ns),nm,ns,rho_av,ii,amin,amax,dble(pow),
+c     &						C%fmax,C%blend,C%porosity,frac,rho,filename,isize)
 c	endif
 
 
