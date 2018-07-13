@@ -307,8 +307,8 @@ c	if(speclimits) then
 c		call mrqcomputemodel(bestvar,ybest,dy,n_ret,ny)
 c	endif
 
-	call WritePTlimits(bestvar,Cov(1:n_ret,1:n_ret),ErrVec,error,chi2,.true.)
-	call WriteRetrieval(imodel,chi2,bestvar,error)
+	call WritePTlimits(var,Cov(1:n_ret,1:n_ret),ErrVec,error,chi2,.true.)
+	call WriteRetrieval(imodel,chi2,var,bestvar,error)
 
 	close(unit=31)
 	
@@ -1281,10 +1281,10 @@ c	linear
 	end
 	
 
-	subroutine WriteRetrieval(imodel,chi2,var,error)
+	subroutine WriteRetrieval(imodel,chi2,var,bestvar,error)
 	use GlobalSetup
 	IMPLICIT NONE
-	real*8 var(n_ret),chi2,error(2,n_ret),sig
+	real*8 var(n_ret),chi2,error(2,n_ret),sig,bestvar(n_ret)
 	integer i,imodel,j
 	character*500 command
 
@@ -1341,6 +1341,8 @@ c	linear/squared
 				close(unit=20)
 		end select
 	enddo
+
+	call MapRetrieval(bestvar,error)
 
 	call system("cp " // trim(outputdir) // "input.dat " // trim(outputdir) // "bestfit.dat")
 	open(unit=21,file=trim(outputdir) // "bestfit.dat",RECL=1000,access='APPEND')

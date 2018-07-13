@@ -23,7 +23,7 @@
 		if(.not.exist) then
 			call MapRetrieval(var,dvar)
 			if(mapCOratio.and..not.dochemistry) call DoMapCOratio()
-			call WriteRetrieval(i,chi2,var,dvar)
+			call WriteRetrieval(i,chi2,var,var,dvar)
 			call InitDens()
 			call CheckPlanet(saneplanet)
 			if(.not.saneplanet) then
@@ -62,7 +62,7 @@ c			call SetOutputMode(.false.)
 			endif
 			if(modelsucces) then
 				call SetOutputMode(.true.)
-				call WriteRetrieval(i,chi2,var,dvar)
+				call WriteRetrieval(i,chi2,var,var,dvar)
 				call WriteStructure()
 				call WriteOutput()
 			else
