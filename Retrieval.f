@@ -536,9 +536,7 @@ c	goto 2
 	logical ioflag
 	seed=42
 
-	call MatrixInvert(Cov,Cinv,ALU,n_ret,INFO)
-
-	call Eigenvalues(Cinv,ErrVec,w,n_ret,INFO)
+	call Eigenvalues(Cov,ErrVec,w,n_ret,INFO)
 
 	do i=1,n_ret
 		tot=0d0
@@ -546,7 +544,7 @@ c	goto 2
 			tot=tot+ErrVec(j,i)**2
 		enddo
 		if(tot.le.0d0) tot=1d0
-		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)/sqrt(tot*w(i))
+		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*sqrt(w(i))/sqrt(tot)
 	enddo
 	do i=1,n_ret
 		max(i)=1d4

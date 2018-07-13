@@ -1067,7 +1067,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	specresfile=' '
 	
-	speclimits=.false.
+	speclimits=.true.
 	
 	sinkZ=.false.
 	alphaZ=1d0
