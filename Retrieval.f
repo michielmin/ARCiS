@@ -269,7 +269,7 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	lambda=-1d0
 	n_not_improved=0
 	chi2_0=1d200
-	do i=1,50
+	do i=1,100
 		print*,"Iteration: ",i,chi2
 		call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
 		do j=1,n_ret
@@ -303,9 +303,9 @@ c		enddo
 		if(var(j).gt.1d0) var(j)=1d0
 		if(var(j).lt.0d0) var(j)=0d0
 	enddo
-	if(speclimits) then
-		call mrqcomputemodel(bestvar,ybest,dy,n_ret,ny)
-	endif
+c	if(speclimits) then
+c		call mrqcomputemodel(bestvar,ybest,dy,n_ret,ny)
+c	endif
 
 	call WritePTlimits(bestvar,Cov(1:n_ret,1:n_ret),ErrVec,error,chi2,.true.)
 	call WriteRetrieval(imodel,chi2,bestvar,error)
