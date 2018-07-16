@@ -1653,10 +1653,6 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 		endif
 	enddo
 
-	write(92,'(76a10)') names_reactants(1:N_reactants2)
-	write(92,'(76es10.1)') molfracs_reactants(1:N_reactants2)
-	call flush(92)
-
 	didcondens=.false.
 	if(condensates) then
 		con=.false.

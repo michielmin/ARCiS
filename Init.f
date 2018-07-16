@@ -585,8 +585,6 @@ c	condensates=(condensates.or.cloudcompute)
 			
 	call output("==================================================================")
 	
-	open(unit=92,file='temp',RECL=1000)
-	
 	return
 	end
 
