@@ -259,7 +259,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         error")'
 	write(30,form) "lambda [mu]",theta(1:nphase)
-	form='(f14.6,' // int2string(nphase+1,'(i3)') // 'es19.7)'
+	form='(f14.6,4es19.7)'
 	do i=1,nphase
 		call regridspecres(lam,phase(i,0,1:nlam-1)+flux(0,1:nlam-1),nlam-1,
      &						lamR,spec(i,1:nlamR),specR,specRexp,nlamR)
@@ -285,7 +285,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	write(30,'("# integration time   : ",f10.3," hours")') 
      &			(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
 	write(30,'("#",a13,3a19)') "lambda [mu]","Rp^2/Rstar^2","error"
-	form='(f14.6,2es19.7)'
+	form='(f14.6,4es19.7)'
 	call regridspecres(lam,obsA(0,1:nlam-1),nlam-1,
      &					lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
 	spec=spec/(pi*Rstar**2)

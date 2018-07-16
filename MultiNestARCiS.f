@@ -75,7 +75,7 @@
 	enddo
 	lnew=lnew/real(nlamtot)
 
-	write(72,*) imodel,lnew,var(1:nvars)
+	write(72,*) imodel,lnew,var(1:nvars),COratio,metallicity
 	call flush(72)
 
 	if(lnew.lt.bestlike) then

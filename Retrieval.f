@@ -271,6 +271,7 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	chi2_0=1d200
 	do i=1,100
 		print*,"Iteration: ",i,chi2
+		var=bestvar
 		call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
 		do j=1,n_ret
 			if(var(j).gt.1d0) var(j)=1d0
@@ -326,7 +327,7 @@ c	endif
 	integer nvars,i,j,nlamtot,ny
 	real*8 var(nvars),ymod(ny),dyda(ny,nvars),error(2,nvars),var0(nvars),lnew
 	real*8 y1(ny),y2(ny),var1(nvars),var2(nvars),chi2_0,chi2_1,chi2_2,random
-	real*8 aq,bq,cq
+	real*8 aq,bq,cq,gasdev,dd
 	real*8,allocatable :: spec(:)
 	logical recomputeopac
 
@@ -344,14 +345,17 @@ c	endif
 
 c	goto 2	
 	do i=1,nvars
-		var1=var
+3		var1=var
 		if(var(i).lt.0.5d0) then
 			var1(i)=var1(i)+dvarq(i)*(0.5d0+0.5d0*random(idum))
 		else
 			var1(i)=var1(i)-dvarq(i)*(0.5d0+0.5d0*random(idum))
 		endif
+		dd=gasdev(idum)
+		var1(i)=var(i)+dd*dvarq(i)
 		if(var1(i).lt.0d0) var1(i)=0d0
 		if(var1(i).gt.1d0) var1(i)=1d0
+		if(abs(var(i)-var1(i)).lt.1d-5) goto 3
 		call mrqcomputeY(var1,y1,nvars,ny,chi2_1)
 		obsA1(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
 		emis1(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
@@ -362,7 +366,7 @@ c	goto 2
 			demis(i,j)=(emis1(j)-emis0(j))/(var1(i)-var(i))
 			demisR(i,j)=(emisR1(j)-emisR0(j))/(var1(i)-var(i))
 		enddo
-		dvarq(i)=sqrt(dvarq(i)*(0.2d0*abs(var1(i)-var(i))*chi2_0/abs(chi2_0-chi2_1)))
+		dvarq(i)=sqrt(dvarq(i)*(0.2d0*abs(var1(i)-var(i))*chi2_0/abs(dd*(chi2_0-chi2_1))))
 		if(dvarq(i).gt.0.1d0) dvarq(i)=0.1d0
 		if(dvarq(i).lt.1d-5) dvarq(i)=1d-5
 	enddo
@@ -483,7 +487,7 @@ c	goto 2
 	enddo
 	lnew=lnew/real(k-1)
 
-	write(31,*) imodel,lnew,var(1:nvars)
+	write(31,*) imodel,lnew,var(1:nvars),COratio,metallicity
 	call flush(31)
 
 	if(lnew.lt.bestlike) then
@@ -578,9 +582,10 @@ c	goto 2
 	nk=n_ret*2500
 	if(ioflag) then
 		open(unit=35,file=trim(outputdir) // "error_cloud.dat",RECL=6000)
-		form='("#"' // trim(int2string(n_ret,'(i4)')) // 'a19)'
+		form='("#"' // trim(int2string(n_ret+2,'(i4)')) // 'a19)'
 		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
-		form='(' // int2string(n_ret,'(i4)') // 'es19.7)'
+     &	,(trim(int2string(n_ret+1,'(i4)')) // " COratio"),(trim(int2string(n_ret+2,'(i4)')) // " metallicity")
+		form='(' // int2string(n_ret+2,'(i4)') // 'es19.7)'
 	endif
 	
 	do k=1,nk
@@ -629,7 +634,7 @@ c		vec=vec*gasdev(idum)**(1d0/real(n_ret))
 			value(i)=RetPar(i)%value
 			if(RetPar(i)%logscale) value(i)=log10(value(i))
 		enddo
-		if(ioflag) write(35,form) (value(i),i=1,n_ret)
+		if(ioflag) write(35,form) (value(i),i=1,n_ret),COratio,metallicity
 		call InitDens()
 		call SetupStructure(.false.)
 
