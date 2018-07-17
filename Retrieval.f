@@ -224,7 +224,7 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	var=var0
 	dvarq=0.02d0
 
-	goto 2	! skip the amoeba step
+c	goto 2	! skip the amoeba step
 
 	do i=1,n_ret+1
 		if(i.eq.1) then
@@ -286,16 +286,6 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 			if(n_not_improved.gt.2) exit
 		endif
 
-c		Covar(1:n_ret,1:n_ret)=alphaW(1:n_ret,1:n_ret)
-c		da(1:n_ret)=beta(1:n_ret)
-c		call gaussj(Covar,n_ret,n_ret,da,1,1)
-c		call covsrt(Covar,n_ret,n_ret,ia,n_ret)
-c		do j=1,n_ret
-c			dvarq(j)=sqrt(chi2*Covar(j,j))*0.1d0
-c			if(dvarq(j).gt.1d-1) dvarq(j)=1d-1
-c			if(dvarq(j).lt.1d-5) dvarq(j)=1d-5
-c		enddo
-
 		chi2_0=chi2
 	enddo
 	lambda=0d0
@@ -304,9 +294,6 @@ c		enddo
 		if(var(j).gt.1d0) var(j)=1d0
 		if(var(j).lt.0d0) var(j)=0d0
 	enddo
-c	if(speclimits) then
-c		call mrqcomputemodel(bestvar,ybest,dy,n_ret,ny)
-c	endif
 
 	call WritePTlimits(var,Cov(1:n_ret,1:n_ret),ErrVec,error,chi2,.true.)
 	call WriteRetrieval(imodel,chi2,var,bestvar,error)
