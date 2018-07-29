@@ -129,6 +129,7 @@
 	nest_nlive=npop
 	nest_resume=resume_multinest
 	nest_efr=f_multinest
+	nest_tol=tol_multinest
 
 	if(nest_resume) then
 		open(unit=72,file=trim(outputdir) // '/Wolk.dat',RECL=6000,ACCESS='APPEND')

@@ -765,6 +765,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) resume_multinest
 		case("fmultinest","efr")
 			read(key%value,*) f_multinest
+		case("tolmultinest","ftol")
+			read(key%value,*) tol_multinest
 		case("retrievaltype")
 			read(key%value,*) retrievaltype
 		case("tvalue")
@@ -1138,6 +1140,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	gene_cross=.false.
 	resume_multinest=.false.
 	f_multinest=0.3d0
+	tol_multinest=0.5d0
 	retrievaltype='MN'
 
 	do i=1,nobs
