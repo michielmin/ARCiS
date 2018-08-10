@@ -214,7 +214,7 @@ c	enddo
 	iy=1
 	do i=1,nobs
 		yobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%y(1:ObsSpec(i)%nlam)
-		dyobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%dy(1:ObsSpec(i)%nlam)*sqrt(real(ObsSpec(i)%nlam))
+		dyobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%dy(1:ObsSpec(i)%nlam)
 		specornot(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%spec
 		iy=iy+ObsSpec(i)%nlam
 	enddo
@@ -229,7 +229,7 @@ c	enddo
 	var=var0
 	dvarq=0.02d0
 
-c	goto 2	! skip the amoeba step
+	goto 2	! skip the amoeba step
 
 	do i=1,n_ret+1
 		if(i.eq.1) then
@@ -279,10 +279,6 @@ c	goto 2	! skip the amoeba step
 	do i=1,100
 		print*,"Iteration: ",i,chi2
 		call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
-c		do j=1,n_ret
-c			if(var(j).gt.1d0) var(j)=1d0
-c			if(var(j).lt.0d0) var(j)=0d0
-c		enddo
 		if((chi2prev-chi2).gt.0d0) then
 			if((chi2prev-chi2).lt.0.01d0) then
 				n_not_improved=n_not_improved+1
@@ -434,7 +430,7 @@ c	enddo
 		do j=1,ObsSpec(i)%nlam
 			k=k+1
 			ymod(k)=spec(j)
-			lnew=lnew+((spec(j)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
+			lnew=lnew+((spec(k)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
 		enddo
 		deallocate(spec)
 	enddo
