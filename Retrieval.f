@@ -1,7 +1,7 @@
 	module RetrievalMod
 	implicit none
 	integer imodel
-	real*8 bestlike
+	real*8 bestlike,chi2_0
 	real*8,allocatable :: dvarq(:),bestvar(:)
 	real*8,allocatable :: obsA0(:),obsA1(:),obsA2(:),dobsA(:,:)
 	real*8,allocatable :: emis0(:),emis1(:),emis2(:),demis(:,:)
@@ -136,7 +136,7 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	external ComputeChi2,mrqcomputemodel
 	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret),chi2min,random
 	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:),ybest(:),y0(:)
-	real*8 chi2obs(nobs),var(n_ret),chi2,gasdev,maxd,error(2,n_ret),var_best(n_ret),chi2_0
+	real*8 chi2obs(nobs),var(n_ret),chi2,gasdev,maxd,error(2,n_ret),var_best(n_ret)
 	real*8 x1,x2,minT(nr),maxT(nr),ran1,tot,lambda,chi2_1,chi2_2,dchi2(n_ret),chi2prev
 	integer ny,i,j,iter,itermax,iy,k
 	
@@ -155,7 +155,7 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 
 	real*8 XeqCloud_best(nr,max(nclouds,1)),mixrat_best_r(nr,nmol)
 
-	external amoebafunk
+	external amoebafunk,lmcompute
 	real*8 pamoeba(n_ret+1,n_ret),yamoeba(n_ret+1),ftol,amoebafunk
 
 	allocate(obsA0(nlam))
@@ -229,7 +229,7 @@ c	enddo
 	var=var0
 	dvarq=0.02d0
 
-	goto 2	! skip the amoeba step
+c	goto 2	! skip the amoeba step
 
 	do i=1,n_ret+1
 		if(i.eq.1) then
@@ -274,7 +274,8 @@ c	enddo
 	nca=3*n_ret
 	lambda=-1d0
 	n_not_improved=0
-	chi2_0=1d200
+	chi2prev=1d200
+
 	do i=1,100
 		print*,"Iteration: ",i,chi2
 		call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
@@ -282,15 +283,15 @@ c		do j=1,n_ret
 c			if(var(j).gt.1d0) var(j)=1d0
 c			if(var(j).lt.0d0) var(j)=0d0
 c		enddo
-		if((chi2_0-chi2).gt.0d0) then
-			if((chi2_0-chi2).lt.0.01d0) then
+		if((chi2prev-chi2).gt.0d0) then
+			if((chi2prev-chi2).lt.0.01d0) then
 				n_not_improved=n_not_improved+1
-			else if((chi2_0-chi2).gt.0.5d0) then
+			else if((chi2prev-chi2).gt.0.5d0) then
 				n_not_improved=0
 			endif
 			if(n_not_improved.gt.2) exit
 		endif
-		chi2_0=chi2
+		chi2prev=chi2
 	enddo
 	lambda=0d0
 	call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
@@ -310,26 +311,29 @@ c		enddo
 
 
 	
-	subroutine mrqcomputemodel(var0,ymod,dyda,nvars,ny)
+	subroutine mrqcomputemodel(var0,ymod,dyda,nvars,ny,what)
 	use GlobalSetup
 	use Constants
 	use RetrievalMod
 	IMPLICIT NONE
-	integer nvars,i,j,nlamtot,ny
+	integer nvars,i,j,nlamtot,ny,what
 	real*8 var(nvars),ymod(ny),dyda(ny,nvars),error(2,nvars),var0(nvars),lnew
-	real*8 y1(ny),y2(ny),var1(nvars),var2(nvars),chi2_0,chi2_1,chi2_2,random
+	real*8 y1(ny),y2(ny),var1(nvars),var2(nvars),chi2_1,chi2_2,random
 	real*8 aq,bq,cq,gasdev,dd
 	real*8,allocatable :: spec(:)
-	logical recomputeopac
+	logical recomputeopac,recompute
 
 	recomputeopac=.true.
 
 	var=var0
-	call mrqcomputeY(var,ymod,nvars,ny,chi2_0)
-	obsA0(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
-	emis0(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
-	emisR0(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
+	if(what.eq.1) then
+		call mrqcomputeY(var,ymod,nvars,ny,chi2_0)
+		obsA0(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+		emis0(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
+		emisR0(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
+	endif
 
+	if(what.eq.2) then
 	do i=1,nvars
 3		var1=var
 		dd=gasdev(idum)
@@ -350,8 +354,7 @@ c		enddo
 		if(dvarq(i).lt.1d-5) dvarq(i)=1d-5
 		if(abs(chi2_0-chi2_1).gt.(chi2_0/2d0)) goto 3
 	enddo
-	return
-
+	endif	
 		
 	return
 	end
@@ -380,7 +383,6 @@ c		enddo
 	
 	return
 	end
-
 
 	subroutine mrqcomputeY(var_in,ymod,nvars,ny,lnew)
 	use GlobalSetup

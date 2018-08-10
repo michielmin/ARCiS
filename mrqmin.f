@@ -14,7 +14,8 @@ CU    USES covsrt,gaussj,mrqcof
           if (ia(j).ne.0) mfit=mfit+1
 11      continue
         alamda=0.001
-        call mrqcof(y,sig,ndata,a,ia,ma,alpha,beta,nca,chisq,funcs)
+		ochisq=1d200
+        call mrqcof(y,sig,ndata,a,ia,ma,alpha,beta,nca,chisq,ochisq,funcs)
         ochisq=chisq
         do 12 j=1,ma
           atry(j)=a(j)
@@ -40,7 +41,7 @@ CU    USES covsrt,gaussj,mrqcof
           atry(l)=a(l)+da(j)
         endif
 15    continue
-      call mrqcof(y,sig,ndata,atry,ia,ma,covar,da,nca,chisq,funcs)
+      call mrqcof(y,sig,ndata,atry,ia,ma,covar,da,nca,chisq,ochisq,funcs)
       if(chisq.lt.ochisq)then
         alamda=0.1*alamda
         ochisq=chisq
@@ -163,15 +164,14 @@ CU    USES covsrt,gaussj,mrqcof
       return
       END
 
-      SUBROUTINE mrqcof(y,sig,ndata,a,ia,ma,alpha,beta,nalp,chisq,
+      SUBROUTINE mrqcof(y,sig,ndata,a,ia,ma,alpha,beta,nalp,chisq,ochisq,
      *funcs)
-      INTEGER ma,nalp,ndata,ia(ma),MMAX
+      INTEGER ma,nalp,ndata,ia(ma)
       REAL*8 chisq,a(ma),alpha(nalp,nalp),beta(ma),sig(ndata),
-     *y(ndata)
+     *y(ndata),ochisq
       EXTERNAL funcs
-      PARAMETER (MMAX=100)
-      INTEGER mfit,i,j,k,l,m
-      REAL*8 dy,sig2i,wt,ymod(ndata),dyda(ndata,MMAX)
+      INTEGER mfit,i,j,k,l,m,idum
+      REAL*8 dy,sig2i,wt,ymod(ndata),dyda(ndata,ma),ran2
       mfit=0
       do 11 j=1,ma
         if (ia(j).ne.0) mfit=mfit+1
@@ -183,7 +183,17 @@ CU    USES covsrt,gaussj,mrqcof
         beta(j)=0.
 13    continue
       chisq=0.
-		call funcs(a,ymod,dyda,ma,ndata)
+      i=1
+		call funcs(a,ymod,dyda,ma,ndata,i)
+	do i=1,ndata
+        sig2i=1./(sig(i)*sig(i))
+        dy=y(i)-ymod(i)
+        chisq=chisq+dy*dy*sig2i
+	enddo
+	if(chisq.gt.ochisq.and.ran2(idum).gt.0.1d0) return
+		i=2
+		call funcs(a,ymod,dyda,ma,ndata,i)
+		chisq=0.
       do 16 i=1,ndata
         sig2i=1./(sig(i)*sig(i))
         dy=y(i)-ymod(i)
