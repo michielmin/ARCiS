@@ -29,6 +29,9 @@ ifeq ($(multi),true)
 	ifeq ($(debug),true)
   		MULTICORE = -openmp -DUSE_OPENMP
 	endif
+	ifeq ($(shell uname),Linux)
+		MULTICORE = -qopenmp -fp-model strict -DUSE_OPENMP
+	endif
 endif
 
 

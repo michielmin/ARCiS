@@ -187,6 +187,11 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 		if(var0(i).gt.1d0) var0(i)=1d0
 		if(var0(i).lt.0d0) var0(i)=0d0
 	enddo
+c	do i=1,n_ret
+c		var0(i)=-log(1d0/var0(i)-1d0)
+c		if(var0(i).gt.25d0) var0(i)=25d0
+c		if(var0(i).lt.-25d0) var0(i)=-25d0
+c	enddo
 
 	open(unit=31,file=trim(outputdir) // "Wolk.dat",RECL=6000)
 
@@ -215,7 +220,7 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	enddo
 	do i=1,n_ret
 		yobs(iy)=var0(i)
-		dyobs(iy)=10d0
+		dyobs(iy)=2d0
 		iy=iy+1
 	enddo
 	
@@ -224,7 +229,7 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	var=var0
 	dvarq=0.02d0
 
-c	goto 2	! skip the amoeba step
+	goto 2	! skip the amoeba step
 
 	do i=1,n_ret+1
 		if(i.eq.1) then
@@ -264,6 +269,7 @@ c	goto 2	! skip the amoeba step
 
 2	continue
 
+	bestvar=var
 	ia=1
 	nca=3*n_ret
 	lambda=-1d0
@@ -271,12 +277,11 @@ c	goto 2	! skip the amoeba step
 	chi2_0=1d200
 	do i=1,100
 		print*,"Iteration: ",i,chi2
-		var=bestvar
 		call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
-		do j=1,n_ret
-			if(var(j).gt.1d0) var(j)=1d0
-			if(var(j).lt.0d0) var(j)=0d0
-		enddo
+c		do j=1,n_ret
+c			if(var(j).gt.1d0) var(j)=1d0
+c			if(var(j).lt.0d0) var(j)=0d0
+c		enddo
 		if((chi2_0-chi2).gt.0d0) then
 			if((chi2_0-chi2).lt.0.01d0) then
 				n_not_improved=n_not_improved+1
@@ -285,7 +290,6 @@ c	goto 2	! skip the amoeba step
 			endif
 			if(n_not_improved.gt.2) exit
 		endif
-
 		chi2_0=chi2
 	enddo
 	lambda=0d0
@@ -321,27 +325,15 @@ c	goto 2	! skip the amoeba step
 	recomputeopac=.true.
 
 	var=var0
-	do i=1,nvars
-		if(var(i).gt.1d0) var(i)=1d0
-		if(var(i).lt.0d0) var(i)=0d0
-	enddo
 	call mrqcomputeY(var,ymod,nvars,ny,chi2_0)
 	obsA0(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
 	emis0(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 	emisR0(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
 
-c	goto 2	
 	do i=1,nvars
 3		var1=var
-		if(var(i).lt.0.5d0) then
-			var1(i)=var1(i)+dvarq(i)*(0.5d0+0.5d0*random(idum))
-		else
-			var1(i)=var1(i)-dvarq(i)*(0.5d0+0.5d0*random(idum))
-		endif
 		dd=gasdev(idum)
 		var1(i)=var(i)+dd*dvarq(i)
-		if(var1(i).lt.0d0) var1(i)=0d0
-		if(var1(i).gt.1d0) var1(i)=1d0
 		if(abs(var(i)-var1(i)).lt.1d-5) goto 3
 		call mrqcomputeY(var1,y1,nvars,ny,chi2_1)
 		obsA1(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
@@ -353,55 +345,13 @@ c	goto 2
 			demis(i,j)=(emis1(j)-emis0(j))/(var1(i)-var(i))
 			demisR(i,j)=(emisR1(j)-emisR0(j))/(var1(i)-var(i))
 		enddo
-		dvarq(i)=sqrt(dvarq(i)*(0.2d0*abs(var1(i)-var(i))*chi2_0/abs(dd*(chi2_0-chi2_1))))
+		dvarq(i)=sqrt(dvarq(i)*(0.2d0*abs(var1(i)-var(i))*chi2_0/abs(chi2_0-chi2_1)))
 		if(dvarq(i).gt.0.1d0) dvarq(i)=0.1d0
 		if(dvarq(i).lt.1d-5) dvarq(i)=1d-5
+		if(abs(chi2_0-chi2_1).gt.(chi2_0/2d0)) goto 3
 	enddo
 	return
 
-2	continue
-	do i=1,nvars
-1		var1=var
-		var2=var
-		if(var(i).eq.0d0) then
-			var1(i)=var1(i)+dvarq(i)*(0.5d0+0.5d0*random(idum))
-			var2(i)=var2(i)+dvarq(i)*(0.5d0+0.5d0*random(idum))
-		else if(var(i).eq.1d0) then
-			var1(i)=var1(i)-dvarq(i)*(0.5d0+0.5d0*random(idum))
-			var2(i)=var2(i)-dvarq(i)*(0.5d0+0.5d0*random(idum))
-		else
-			var1(i)=var1(i)-dvarq(i)*(0.5d0+0.5d0*random(idum))
-			var2(i)=var2(i)+dvarq(i)*(0.5d0+0.5d0*random(idum))
-		endif
-		if(var1(i).lt.0d0) var1(i)=0d0
-		if(var1(i).gt.1d0) var1(i)=1d0
-		if(var2(i).lt.0d0) var2(i)=0d0
-		if(var2(i).gt.1d0) var2(i)=1d0
-		if(var1(i).eq.var(i).or.var2(i).eq.var(i).or.var1(i).eq.var2(i)) goto 1
-		call mrqcomputeY(var1,y1,nvars,ny,chi2_1)
-		obsA1(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
-		emis1(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
-		emisR1(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
-		call mrqcomputeY(var2,y2,nvars,ny,chi2_2)
-		obsA2(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
-		emis2(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
-		emisR2(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
-		do j=1,ny
-			call quadint(var1(i),var(i),var2(i),y1(j),ymod(j),y2(j),aq,bq,cq)
-			dyda(j,i)=2d0*aq*var(i)+bq
-		enddo
-		do j=1,nlam
-			call quadint(var1(i),var(i),var2(i),obsA1(j),obsA0(j),obsA2(j),aq,bq,cq)
-			dobsA(i,j)=2d0*aq*var(i)+bq
-			call quadint(var1(i),var(i),var2(i),emis1(j),emis0(j),emis2(j),aq,bq,cq)
-			demis(i,j)=2d0*aq*var(i)+bq
-			call quadint(var1(i),var(i),var2(i),emisR1(j),emisR0(j),emisR2(j),aq,bq,cq)
-			demisR(i,j)=2d0*aq*var(i)+bq
-		enddo
-		dvarq(i)=sqrt(dvarq(i)*(0.2d0*abs(var1(i)-var2(i))*chi2_0/(abs(chi2_0-chi2_1)+abs(chi2_0-chi2_1))))
-		if(dvarq(i).gt.0.1d0) dvarq(i)=0.1d0
-		if(dvarq(i).lt.1d-5) dvarq(i)=1d-5
-	enddo
 		
 	return
 	end
@@ -432,15 +382,33 @@ c	goto 2
 	end
 
 
-	subroutine mrqcomputeY(var,ymod,nvars,ny,lnew)
+	subroutine mrqcomputeY(var_in,ymod,nvars,ny,lnew)
 	use GlobalSetup
 	use Constants
 	use RetrievalMod
 	IMPLICIT NONE
 	integer nvars,i,j,nlamtot,ny,k
-	real*8 var(nvars),ymod(ny),error(2,nvars),lnew
+	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars)
 	real*8,allocatable :: spec(:)
 	logical recomputeopac
+	real*16 x
+
+	var=var_in
+	do i=1,n_ret
+		if(var(i).gt.1d0) var(i)=1d0
+		if(var(i).lt.0d0) var(i)=0d0
+	enddo
+
+c	do i=1,n_ret
+c		x=var_in(i)
+c		if(x.gt.25.0) then
+c			var(i)=1d0
+c		else if(x.lt.-25.0) then
+c			var(i)=0d0
+c		else
+c			var(i)=1d0/(1d0+qexp(-x))
+c		endif
+c	enddo
 
 	recomputeopac=.true.
 	imodel=imodel+1
@@ -466,13 +434,13 @@ c	goto 2
 			ymod(k)=spec(j)
 			lnew=lnew+((spec(j)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
 		enddo
-		do j=1,n_ret
-			k=k+1
-			ymod(k)=var(j)
-		enddo
 		deallocate(spec)
 	enddo
 	lnew=lnew/real(k-1)
+	do j=1,n_ret
+		k=k+1
+		ymod(k)=var_in(j)
+	enddo
 
 	write(31,*) imodel,lnew,var(1:nvars),COratio,metallicity
 	call flush(31)
@@ -511,7 +479,7 @@ c	goto 2
 
 
 
-	subroutine WritePTlimits(var0,Cov,ErrVec,error,chi2,ioflag)
+	subroutine WritePTlimits_nolimits(var0,Cov,ErrVec,error,chi2,ioflag)
 	use GlobalSetup
 	use Constants
 	use RetrievalMod
@@ -519,7 +487,7 @@ c	goto 2
 	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,w(n_ret),chi2,ErrVec(n_ret,n_ret)
 	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret)
 	real*8 dvar(n_ret),value(n_ret)
-	real*8 obsAerr(2,nlam),emiserr(2,nlam),emisRerr(2,nlam)
+	real*8 obsAerr(2,nlam),emiserr(2,nlam),emisRerr(2,nlam),errdummy(2,n_ret)
 	integer iobsA(2,nlam),iemis(2,nlam),iemisR(2,nlam)
 	real*8 Cinv(n_ret,n_ret),ALU(n_ret,n_ret),max(n_ret)
 	integer i,j,k,info,nk,ierr,iter,iCO(2),ivar(2,n_ret),imaxT(nr),iminT(nr),seed
@@ -547,7 +515,223 @@ c	goto 2
 	
 	call SetOutputMode(.false.)
 	var=var0
-	call MapRetrieval(var,error)
+	errdummy=0d0
+	call MapRetrieval(var,errdummy)
+	call InitDens()
+	call SetupStructure(.false.)
+	Tbest=T
+	maxT=0d0
+	minT=0d0
+	COerr=0d0
+	error=0d0
+	ivar=0
+	imaxT=0
+	iminT=0
+	iCO=0
+	obsAerr=0d0
+	iobsA=0d0
+	emiserr=0d0
+	iemis=0d0
+	emisRerr=0d0
+	iemisR=0d0
+
+	nk=n_ret*2500
+	if(ioflag) then
+		open(unit=35,file=trim(outputdir) // "error_cloud.dat",RECL=6000)
+		form='("#"' // trim(int2string(n_ret+2,'(i4)')) // 'a19)'
+		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
+     &	,(trim(int2string(n_ret+1,'(i4)')) // " COratio"),(trim(int2string(n_ret+2,'(i4)')) // " metallicity")
+		form='(' // int2string(n_ret+2,'(i4)') // 'es19.7)'
+	endif
+	
+	do k=1,nk
+		iter=0
+1		continue
+		vec=0d0
+		tot=0d0
+		do i=1,n_ret
+			vec(i)=gasdev(idum)
+		enddo
+		dvar=0d0
+		do j=1,n_ret
+			do i=1,n_ret
+				dvar(i)=dvar(i)+vec(j)*ErrVec(i,j)
+			enddo
+		enddo
+		if(k.eq.1) dvar=0d0
+2		continue
+		iter=iter+1
+		var=var0+dvar
+		if(speclimits) then
+			obsA1=obsA0
+			emis1=emis0
+			emisR1=emisR0
+			do i=1,n_ret
+				obsA1(1:nlam)=obsA1(1:nlam)+dobsA(i,1:nlam)*dvar(i)
+				emis1(1:nlam)=emis1(1:nlam)+demis(i,1:nlam)*dvar(i)
+				emisR1(1:nlam)=emisR1(1:nlam)+demisR(i,1:nlam)*dvar(i)
+			enddo
+			do i=1,nlam
+				if(obsA1(i).lt.0d0) obsA1(i)=0d0
+				if(emis1(i).lt.0d0) emis1(i)=0d0
+				if(emisR1(i).lt.0d0) emisR1(i)=0d0
+			enddo
+		endif
+
+		call MapRetrieval(var,errdummy)
+		
+		do i=1,n_ret
+			value(i)=RetPar(i)%value
+			if(RetPar(i)%logscale) value(i)=log10(value(i))
+		enddo
+		if(ioflag) write(35,form) (value(i),i=1,n_ret),COratio,metallicity
+
+		if(k.eq.1) then
+			Tbest(1:nr)=T(1:nr)
+			COratio=COret
+		endif
+		do i=1,nr
+			if(T(i).gt.Tbest(i)) then
+				maxT(i)=maxT(i)+(T(i)-Tbest(i))**2
+				imaxT(i)=imaxT(i)+1
+			endif
+			if(T(i).lt.Tbest(i)) then
+				minT(i)=minT(i)+(T(i)-Tbest(i))**2
+				iminT(i)=iminT(i)+1
+			endif
+		enddo
+		if(speclimits) then
+			do i=1,nlam
+				if(obsA1(i).lt.obsA0(i)) then
+					obsAerr(1,i)=obsAerr(1,i)+(obsA1(i)-obsA0(i))**2
+					iobsA(1,i)=iobsA(1,i)+1
+				else
+					obsAerr(2,i)=obsAerr(2,i)+(obsA1(i)-obsA0(i))**2
+					iobsA(2,i)=iobsA(2,i)+1
+				endif
+				if(emis1(i).lt.emis0(i)) then
+					emiserr(1,i)=emiserr(1,i)+(emis1(i)-emis0(i))**2
+					iemis(1,i)=iemis(1,i)+1
+				else
+					emiserr(2,i)=emiserr(2,i)+(emis1(i)-emis0(i))**2
+					iemis(2,i)=iemis(2,i)+1
+				endif
+				if(emisR1(i).lt.emisR0(i)) then
+					emisRerr(1,i)=emisRerr(1,i)+(emisR1(i)-emisR0(i))**2
+					iemisR(1,i)=iemisR(1,i)+1
+				else
+					emisRerr(2,i)=emisRerr(2,i)+(emisR1(i)-emisR0(i))**2
+					iemisR(2,i)=iemisR(2,i)+1
+				endif
+			enddo
+		endif
+		do i=1,n_ret
+			if(var(i).lt.var0(i)) then
+				error(1,i)=error(1,i)+(var(i)-var0(i))**2
+				ivar(1,i)=ivar(1,i)+1
+			endif
+			if(var(i).gt.var0(i)) then
+				error(2,i)=error(2,i)+(var(i)-var0(i))**2
+				ivar(2,i)=ivar(2,i)+1
+			endif
+		enddo
+		if(COret.lt.COratio) then
+			COerr(1)=COerr(1)+(COret-COratio)**2
+			iCO(1)=iCO(1)+1
+		endif
+		if(COret.gt.COratio) then
+			COerr(2)=COerr(2)+(COret-COratio)**2
+			iCO(2)=iCO(2)+1
+		endif
+	enddo
+	error(1,1:n_ret)=sqrt(error(1,1:n_ret)/real(ivar(1,1:n_ret)-1))
+	error(2,1:n_ret)=sqrt(error(2,1:n_ret)/real(ivar(2,1:n_ret)-1))
+	COerr(1:2)=sqrt(COerr(1:2)/real(iCO(1:2)-1))
+	minT(1:nr)=sqrt(minT(1:nr)/real(iminT(1:nr)-1))
+	maxT(1:nr)=sqrt(maxT(1:nr)/real(imaxT(1:nr)-1))
+
+	call MapRetrieval(var0,error)
+	call InitDens()
+	call SetupStructure(.false.)
+
+	call SetOutputMode(.true.)
+	if(ioflag) then
+		close(unit=35)
+
+		open(unit=45,file=trim(outputdir) // "limits.dat",RECL=1000)
+		do i=1,nr
+			write(45,*) P(i),Tbest(i),minT(i),maxT(i)
+		enddo
+		close(unit=45)
+
+		if(speclimits) then
+			obsAerr=sqrt(obsAerr/real(iobsA-1))
+			emiserr=sqrt(emiserr/real(iemis-1))
+			emisRerr=sqrt(emisRerr/real(iemisR-1))
+
+			open(unit=45,file=trim(outputdir) // "emis_limits.dat",RECL=1000)
+			do i=1,nlam-1
+				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emis0(i),emiserr(1,i),emiserr(2,i)
+			enddo
+			close(unit=45)
+
+			open(unit=45,file=trim(outputdir) // "emisR_limits.dat",RECL=1000)
+			do i=1,nlam-1
+				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emisR0(i),emisRerr(1,i),emisRerr(2,i)
+			enddo
+			close(unit=45)
+
+			open(unit=45,file=trim(outputdir) // "trans_limits.dat",RECL=1000)
+			do i=1,nlam-1
+				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,obsA0(i),obsAerr(1,i),obsAerr(2,i)
+			enddo
+			close(unit=45)
+		endif
+	endif
+
+	return
+	end
+
+
+
+	subroutine WritePTlimits(var0,Cov,ErrVec,error,chi2,ioflag)
+	use GlobalSetup
+	use Constants
+	use RetrievalMod
+	IMPLICIT NONE
+	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,w(n_ret),chi2,ErrVec(n_ret,n_ret)
+	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret)
+	real*8 dvar(n_ret),value(n_ret)
+	real*8 obsAerr(2,nlam),emiserr(2,nlam),emisRerr(2,nlam),errdummy(2,n_ret)
+	integer iobsA(2,nlam),iemis(2,nlam),iemisR(2,nlam)
+	real*8 Cinv(n_ret,n_ret),ALU(n_ret,n_ret),max(n_ret)
+	integer i,j,k,info,nk,ierr,iter,iCO(2),ivar(2,n_ret),imaxT(nr),iminT(nr),seed
+	character*6000 form
+	logical ioflag
+	seed=42
+
+	call Eigenvalues(Cov,ErrVec,w,n_ret,INFO)
+
+	do i=1,n_ret
+		tot=0d0
+		do j=1,n_ret
+			tot=tot+ErrVec(j,i)**2
+		enddo
+		if(tot.le.0d0) tot=1d0
+		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*sqrt(chi2*w(i))/sqrt(tot)
+	enddo
+	do i=1,n_ret
+		max(i)=1d4
+		do j=1,n_ret
+			tot=1d0/abs(ErrVec(j,i))
+			if(tot.lt.max(i)) max(i)=tot
+		enddo
+	enddo
+	
+	call SetOutputMode(.false.)
+	var=var0
+	errdummy=0d0
+	call MapRetrieval(var,errdummy)
 	call InitDens()
 	call SetupStructure(.false.)
 	Tbest=T
@@ -582,9 +766,8 @@ c	goto 2
 		tot=0d0
 		do i=1,n_ret
 			call truncated_normal_ab_sample ( 0d0, 1d0, -max(i), max(i), seed, vec(i) )
+c			vec(i)=gasdev(idum)
 		enddo
-c		vec=vec/sqrt(tot)
-c		vec=vec*gasdev(idum)**(1d0/real(n_ret))
 		dvar=0d0
 		do j=1,n_ret
 			do i=1,n_ret
@@ -615,7 +798,7 @@ c		vec=vec*gasdev(idum)**(1d0/real(n_ret))
 			enddo
 		endif
 
-		call MapRetrieval(var,error)
+		call MapRetrieval(var,errdummy)
 		
 		do i=1,n_ret
 			value(i)=RetPar(i)%value

@@ -107,9 +107,10 @@ c	enddo
 	use Constants
 	IMPLICIT NONE
 	real*8 random,COrat,tot,met,scale
-	real*8 f(nmol),Ctot,Otot,Htot,f0(nmol),eps,prev,eps0
+	real*8 f(nmol),Ctot,Otot,Htot,f0(nmol),eps,prev,eps0,minf
 	integer i,n,imol
 	
+	minf=20d0
 	COrat=-1d0
 	f=0d0
 	eps=10d0
@@ -123,22 +124,23 @@ c	enddo
 		tot=0d0
 		do imol=1,nmol
 			if(molname(imol).ne.'H2'.and.molname(imol).ne.'He') then
-				f(imol)=f(imol)+10d0**(10d0*random(idum)-10d0)!random(idum)
+c				f(imol)=f(imol)+10d0**(10d0*random(idum)-10d0)!random(idum)
+				f(imol)=(f(imol)-random(idum)*minf)/2d0
 			else if(molname(imol).eq.'H2') then
-				f(imol)=0.85d0
+				f(imol)=log10(0.85d0)
 			else if(molname(imol).eq.'He') then
-				f(imol)=0.15d0
+				f(imol)=log10(0.15d0)
 			endif
 			if(includemol(imol)) then
-				tot=tot+f(imol)
+				tot=tot+10d0**f(imol)
 			endif
 		enddo
-		f=f/tot
+c		f=f/tot
 		do imol=1,nmol
 			if(includemol(imol)) then
-				Otot=Otot+f(imol)*real(Oatoms(imol))
-				Ctot=Ctot+f(imol)*real(Catoms(imol))
-				Htot=Htot+f(imol)*real(Hatoms(imol))
+				Otot=Otot+10d0**f(imol)*real(Oatoms(imol))/tot
+				Ctot=Ctot+10d0**f(imol)*real(Catoms(imol))/tot
+				Htot=Htot+10d0**f(imol)*real(Hatoms(imol))/tot
 			endif
 		enddo
 		COrat=Ctot/Otot
@@ -150,14 +152,16 @@ c	enddo
 			f=f0
 		endif
 	enddo
-	Otot=Otot/tot
-	Ctot=Ctot/tot
-	Htot=Htot/tot
+	Otot=0d0
+	Ctot=0d0
+	Htot=0d0
+
+	f=10d0**f
 
 	do imol=1,nmol
 		if(molname(imol).ne.'H2'.and.molname(imol).ne.'He'
      &				.and.Oatoms(imol).eq.0.and.Catoms(imol).eq.0) then
-			f(imol)=10d0**(10d0*random(idum)-10d0)
+			f(imol)=10d0**(minf*random(idum)-minf)
 		else if(molname(imol).eq.'H2') then
 			f(imol)=0.85d0
 		else if(molname(imol).eq.'He') then
@@ -179,7 +183,7 @@ c	enddo
 			endif
 			tot=tot+f(imol)
 		else
-			f(imol)=-1d-8
+			f(imol)=-1d-20
 		endif
 	enddo
 	f=f/tot

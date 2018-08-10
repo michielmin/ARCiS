@@ -10,6 +10,7 @@
 
 	subroutine dumper(nSamples,nlive,nPar,physLive,posterior, 
      &     		paramConstr,maxloglike,logZ,INSlogZ,logZerr,context)		!subroutine called after every updInt*10 iterations with the posterior 
+	use GlobalSetup
 	IMPLICIT NONE								!distribution, parameter constraints, max loglike & log evidence values
 	integer nSamples,nlive,nPar
 	real*8 physLive(nlive, nPar+1) 		     		!= 2D array containing the last set of live points (physical parameters plus derived parameters) along with their loglikelihood values
@@ -20,7 +21,6 @@
 	real*8 INSlogZ						     	!= log evidence value from the INS mode
 	real*8 logZerr						     	!= error on log evidence value
 	integer context							!not required by MultiNest, any additional information user wants to pass
-	integer i
 
 	return
 	end
