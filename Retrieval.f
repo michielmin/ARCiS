@@ -1408,6 +1408,15 @@ c	linear
 		endif
 	enddo
 
+1	continue
+	do i1=1,n1-1
+		if(IsNaN(y1(i1))) then
+			y1(i1)=y1(i1+1)
+			goto 1
+		endif
+	enddo
+	if(IsNaN(y1(n1))) y1(n1)=y1(n1-1)
+
 	return
 	end
 	
