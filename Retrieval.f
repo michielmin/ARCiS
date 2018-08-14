@@ -1408,14 +1408,25 @@ c	linear
 		endif
 	enddo
 
+	i1=n1-1
+	do while(IsNaN(y1(n1)).and.i1.gt.0) 
+		y1(n1)=y1(i1)
+		i1=i1-1
+	enddo
+
 1	continue
+	i0=0
 	do i1=1,n1-1
 		if(IsNaN(y1(i1))) then
 			y1(i1)=y1(i1+1)
-			goto 1
+			i0=i0+1
 		endif
 	enddo
-	if(IsNaN(y1(n1))) y1(n1)=y1(n1-1)
+	if(i0.eq.n1-1) then
+		y1=1d0
+	else if(i0.gt.0) then
+		goto 1
+	endif
 
 	return
 	end
