@@ -542,8 +542,8 @@ c	call tellertje(ilam,nlam)
 			if(C%sigma(isize).le.1d-3.or.ns.eq.1) then
 				ns=1
 				r0(1)=C%rv(isize)
-				if(r0(1).lt.amin) r0(1)=amin
-				if(r0(1).gt.amax) r0(1)=amax
+c				if(r0(1).lt.amin) r0(1)=amin
+c				if(r0(1).gt.amax) r0(1)=amax
 				nr0(l,1)=1d0
 				tot=r0(1)**3
 			else
@@ -603,7 +603,7 @@ c	call tellertje(ilam,nlam)
 			spheres=1
 			goto 20
 		endif
-		if(r1*wvno.gt.10000d0) then
+		if(r1*wvno.gt.1000d0) then
 c			if(i.eq.1) then
 c				print*,'Particle too large for hollow spheres'
 c				print*,'Using homogeneous spheres (r=',r1,', lam=',lam(ilam),')'
@@ -985,10 +985,10 @@ c changed this to mass fractions (11-05-2010)
 		frac=1d0/real(nm)
 	endif
 	
-c	if(.not.domakeai.and..false.) then
-c		call ParticleFITS(C,r0,nr0(1:nm,1:ns),nm,ns,rho_av,ii,amin,amax,dble(pow),
-c     &						C%fmax,C%blend,C%porosity,frac,rho,filename,isize)
-c	endif
+	if(.not.domakeai) then
+		call ParticleFITS(C,r0,nr0(1:nm,1:ns),nm,ns,rho_av,ii,amin,amax,dble(pow),
+     &						C%fmax,C%blend,C%porosity,frac,rho,filename,isize)
+	endif
 
 
 300	continue	
@@ -1189,7 +1189,10 @@ c	call output("Checking particle file: " // trim(partfile) )
 	  integer status,unit,blocksize,bitpix,naxis,naxes(3)
 	  integer group,fpixel,nelements
 	  logical simple,extend,truefalse
-	character*500 filename
+	character*500 filename,command
+
+	write(command,'("mkdir -p ",a)') trim(particledir)
+	call system(command)
 
 	filename=trim(particledir) // "/particle" 
 	if(abun_in_name.gt.0) then
@@ -1215,7 +1218,7 @@ c	call output("Checking particle file: " // trim(partfile) )
 
 	inquire(file=filename,exist=truefalse)
 	if(truefalse) then
-c		call output("FITS file already exists, overwriting")
+		call output("FITS file already exists, overwriting")
 		open(unit=90,file=filename)
 		close(unit=90,status='delete')
 	endif
@@ -1325,6 +1328,8 @@ c	call ftpkye(unit,'a3',real(a3),8,'[micron^3]',status)
 	naxes(3)=180
 	nelements=naxes(1)*naxes(2)*naxes(3)
 
+	if(scattering.or..not.retrieval) then
+
 	allocate(array(nlam,6,180))
 
 	! create new hdu
@@ -1348,6 +1353,8 @@ c	call ftpkye(unit,'a3',real(a3),8,'[micron^3]',status)
 	call ftpprd(unit,group,fpixel,nelements,array,status)
 
 	deallocate(array)
+
+	endif
 	
 	!  Close the file and free the unit number.
 	call ftclos(unit, status)

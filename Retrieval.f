@@ -148,7 +148,7 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	logical dofit(n_ret),dofit_prev(n_ret),new_best,improved_iter
 	logical,allocatable :: specornot(:)
 
-	integer ME,MA,MG,MODE,MDW,ii,nca
+	integer ME,MA,MG,MODE,MDW,ii,nca,jj
 	integer,allocatable :: IP(:)
 	real*8 PRGOPT(10),RNORME,RNORML
 	real*8,allocatable :: WS(:)
@@ -183,6 +183,7 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 		RetPar(i)%value=RetPar(i)%x0
 	enddo
 	call MapRetrievalInverse(var0)
+	call fold(var0,var0,n_ret)
 	do i=1,n_ret
 		if(var0(i).gt.1d0) var0(i)=1d0
 		if(var0(i).lt.0d0) var0(i)=0d0
@@ -229,27 +230,20 @@ c	enddo
 	var=var0
 	dvarq=0.02d0
 
-	goto 2	! skip the amoeba step
+	jj=0
+c	goto 2	! skip the amoeba step
+1	continue
+	jj=jj+1
 
 	do i=1,n_ret+1
-		if(i.eq.1) then
-			pamoeba(i,1:n_ret)=var0(1:n_ret)
+		if(i.eq.1.and.jj.eq.1) then
+			pamoeba(i,1:n_ret)=var(1:n_ret)
 		else
+			pamoeba(i,1:n_ret)=var(1:n_ret)
 			do j=1,n_ret
 				pamoeba(i,j)=random(idum)
 			enddo
 		endif
-		do j=1,n_ret
-			if(pamoeba(i,j).ge.1d0) then
-				pamoeba(i,j)=25d0
-			else if(pamoeba(i,j).le.0d0) then
-				pamoeba(i,j)=-25d0
-			else
-				pamoeba(i,j)=-log(1d0/pamoeba(i,j)-1d0)
-			endif
-			if(pamoeba(i,j).gt.25d0) pamoeba(i,j)=25d0
-			if(pamoeba(i,j).lt.-25d0) pamoeba(i,j)=-25d0
-		enddo
 		yamoeba(i)=amoebafunk(pamoeba(i,1:n_ret),ny)
 	enddo
 	ftol=0.2d0
@@ -259,7 +253,6 @@ c	enddo
 	call amoeba(pamoeba,yamoeba,nca,n_ret,n_ret,ftol,amoebafunk,iter,ny,itermax)
 	var=0d0
 	do i=1,n_ret+1
-		pamoeba(i,1:n_ret)=1d0/(1d0+exp(-pamoeba(i,1:n_ret)))
 		var(1:n_ret)=var(1:n_ret)+pamoeba(i,1:n_ret)/real(n_ret+1)
 	enddo
 	do i=1,n_ret+1
@@ -269,7 +262,22 @@ c	enddo
 
 2	continue
 
-	bestvar=var
+	do ii=1,3
+
+	if(jj.eq.1.or.ii.gt.1) then
+		if(jj.eq.1.and.ii.eq.1) then
+			var=bestvar
+		else
+			if(chi2.lt.1d4) then
+				var=bestvar
+			else
+				do i=1,n_ret
+					var(i)=random(idum)
+				enddo
+			endif
+		endif
+	endif
+
 	ia=1
 	nca=3*n_ret
 	lambda=-1d0
@@ -277,8 +285,9 @@ c	enddo
 	chi2prev=1d200
 
 	do i=1,100
-		print*,"Iteration: ",i,chi2
+		print*,"Iteration: ",ii,i,chi2
 		call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
+		chi2=chi2/real(ny-1)
 		if((chi2prev-chi2).gt.0d0) then
 			if((chi2prev-chi2).lt.0.01d0) then
 				n_not_improved=n_not_improved+1
@@ -289,14 +298,23 @@ c	enddo
 		endif
 		chi2prev=chi2
 	enddo
+
+	enddo
+
+	if((.not.chi2.lt.chimax).and.jj.lt.3) goto 1
+
+	lambda=-1d0
+	call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
 	lambda=0d0
 	call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
+	chi2=chi2/real(ny-1)
+	call fold(var,var,n_ret)
 	do j=1,n_ret
 		if(var(j).gt.1d0) var(j)=1d0
 		if(var(j).lt.0d0) var(j)=0d0
 	enddo
 
-	call WritePTlimits(var,Cov(1:n_ret,1:n_ret),ErrVec,error,chi2,.true.)
+	call WritePTlimits(var,Cov(1:n_ret,1:n_ret),ErrVec,error,bestlike,.true.)
 	call WriteRetrieval(imodel,chi2,var,bestvar,error)
 
 	close(unit=31)
@@ -304,6 +322,26 @@ c	enddo
 	return
 	end
 
+	subroutine fold(var0,var1,nvar)
+	IMPLICIT NONE
+	integer nvar,i
+	real*8 var0(nvar),var1(nvar)
+	
+	var1=var0
+	do i=1,nvar
+1		continue
+		if(var1(i).gt.1d0) then
+			var1(i)=2d0-var1(i)
+			goto 1
+		endif
+		if(var1(i).lt.0d0) then
+			var1(i)=-var1(i)
+			goto 1
+		endif
+	enddo
+
+	return
+	end
 
 
 	
@@ -312,7 +350,7 @@ c	enddo
 	use Constants
 	use RetrievalMod
 	IMPLICIT NONE
-	integer nvars,i,j,nlamtot,ny,what
+	integer nvars,i,j,nlamtot,ny,what,ii
 	real*8 var(nvars),ymod(ny),dyda(ny,nvars),error(2,nvars),var0(nvars),lnew
 	real*8 y1(ny),y2(ny),var1(nvars),var2(nvars),chi2_1,chi2_2,random
 	real*8 aq,bq,cq,gasdev,dd
@@ -331,7 +369,9 @@ c	enddo
 
 	if(what.eq.2) then
 	do i=1,nvars
-3		var1=var
+		ii=0
+3		ii=ii+1
+		var1=var
 		dd=gasdev(idum)
 		var1(i)=var(i)+dd*dvarq(i)
 		if(abs(var(i)-var1(i)).lt.1d-5) goto 3
@@ -346,34 +386,28 @@ c	enddo
 			demisR(i,j)=(emisR1(j)-emisR0(j))/(var1(i)-var(i))
 		enddo
 		dvarq(i)=sqrt(dvarq(i)*(0.2d0*abs(var1(i)-var(i))*chi2_0/abs(chi2_0-chi2_1)))
+		if(abs(chi2_0-chi2_1).lt.1d-4.and.ii.lt.3.and.dvarq(i).lt.0.02d0) then
+			dvarq(i)=dvarq(i)*5d0
+			goto 3
+		endif
 		if(dvarq(i).gt.0.1d0) dvarq(i)=0.1d0
 		if(dvarq(i).lt.1d-5) dvarq(i)=1d-5
-		if(abs(chi2_0-chi2_1).gt.(chi2_0/2d0)) goto 3
+		if(abs(chi2_0-chi2_1).gt.(chi2_0/2d0).and.ii.lt.3) goto 3
 	enddo
 	endif	
 		
 	return
 	end
 
-	real*8 function amoebafunk(var_in,ny)
+	real*8 function amoebafunk(var,ny)
 	use GlobalSetup
 	use Constants
 	use RetrievalMod
 	IMPLICIT NONE
 	integer ny,i
-	real*8 ymod(ny),var(n_ret),chi2,var_in(n_ret)
+	real*8 ymod(ny),var(n_ret),chi2
 	real*16 x
 
-	do i=1,n_ret
-		x=var_in(i)
-		if(x.gt.25.0) then
-			var(i)=1d0
-		else if(x.lt.-25.0) then
-			var(i)=0d0
-		else
-			var(i)=1d0/(1d0+qexp(-x))
-		endif
-	enddo
 	call mrqcomputeY(var,ymod,n_ret,ny,chi2)
 	amoebafunk=chi2
 	
@@ -392,6 +426,7 @@ c	enddo
 	real*16 x
 
 	var=var_in
+	call fold(var_in,var,n_ret)
 	do i=1,n_ret
 		if(var(i).gt.1d0) var(i)=1d0
 		if(var(i).lt.0d0) var(i)=0d0
@@ -413,7 +448,9 @@ c	enddo
 	call output("model number: " // int2string(imodel,'(i7)'))
 
 	error=0d0
+	call SetOutputMode(.false.)
 	call MapRetrieval(var,error)
+	call SetOutputMode(.true.)
 
 	call InitDens()
 	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
@@ -699,7 +736,7 @@ c	enddo
 	IMPLICIT NONE
 	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,w(n_ret),chi2,ErrVec(n_ret,n_ret)
 	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret)
-	real*8 dvar(n_ret),value(n_ret)
+	real*8 dvar(n_ret),value(n_ret),COret0
 	real*8 obsAerr(2,nlam),emiserr(2,nlam),emisRerr(2,nlam),errdummy(2,n_ret)
 	integer iobsA(2,nlam),iemis(2,nlam),iemisR(2,nlam)
 	real*8 Cinv(n_ret,n_ret),ALU(n_ret,n_ret),max(n_ret)
@@ -808,7 +845,7 @@ c			vec(i)=gasdev(idum)
 
 		if(k.eq.1) then
 			Tbest(1:nr)=T(1:nr)
-			COratio=COret
+			COret0=COret
 		endif
 		do i=1,nr
 			if(T(i).gt.Tbest(i)) then
@@ -855,12 +892,12 @@ c			vec(i)=gasdev(idum)
 				ivar(2,i)=ivar(2,i)+1
 			endif
 		enddo
-		if(COret.lt.COratio) then
-			COerr(1)=COerr(1)+(COret-COratio)**2
+		if(COret.lt.COret0) then
+			COerr(1)=COerr(1)+(COret-COret0)**2
 			iCO(1)=iCO(1)+1
 		endif
-		if(COret.gt.COratio) then
-			COerr(2)=COerr(2)+(COret-COratio)**2
+		if(COret.gt.COret0) then
+			COerr(2)=COerr(2)+(COret-COret0)**2
 			iCO(2)=iCO(2)+1
 		endif
 	enddo
@@ -1293,12 +1330,13 @@ c	linear
 	lam1=lam1/micron
 	lam2=lam2/micron
 	distance=distance/parsec
+	r_nuc=r_nuc/micron
+
 	do i=1,n_ret
 		readline=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
 		call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2)
 		call ReadAndSetKey(key)
 	enddo
-	if(gamma_equal) gammaT2=gammaT1
 	call ConvertUnits()
 
 	enddo

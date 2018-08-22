@@ -119,12 +119,12 @@ c===============================================================================
      &				 0,0,0,0,0 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt,n_instr
-	logical HITEMP,opacitymode,compute_opac
+	logical HITEMP,opacitymode,compute_opac,Mp_from_logg
 	integer nPom,nTom
 	character*500 opacitydir,specresfile,starfile
 	character*20,allocatable :: instrument(:)
 	real*8,allocatable :: instr_ntrans(:)
-	real*8 Tmin,Tmax,minTprofile,maxTprofile,fcloud_default
+	real*8 Tmin,Tmax,minTprofile,maxTprofile,fcloud_default,chimax,r_nuc
 	real*8 sintheta(360),costheta(360)
 	logical,allocatable :: do_dB(:)
 	real*8 COret,COerr(2)
@@ -134,7 +134,7 @@ c===============================================================================
 
 	real*8,allocatable :: flux(:,:),obsA(:,:),phase(:,:,:)
 	integer ncc,nphase
-	logical cloudcompute,useDRIFT
+	logical cloudcompute,useDRIFT,singlecloud
 	logical,allocatable :: docloud(:,:)
 	real*8,allocatable :: cloudfrac(:),XCloud(:,:),XeqCloud(:,:),XeqCloud_old(:,:)
 	real*8,allocatable :: nabla_ad(:),grav(:)

@@ -34,7 +34,7 @@
 	else
 		write(30,'("#",a13,a19)') "lambda [mu]","flux [Jy]"
 	endif
-	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7)'
+	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam-1
 		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
 c     &					flux(0:ncc,i)
@@ -53,7 +53,7 @@ c     &					flux(0:ncc,i)
 	else
 		write(30,'("#",a13,a19)') "lambda [mu]","flux [Jy]"
 	endif
-	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7)'
+	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam-1
 		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
 c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
@@ -73,7 +73,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	else
 		write(30,'("#",a13,a19)') "lambda [mu]","Rp^2/Rstar^2"
 	endif
-	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7)'
+	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam-1
 		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
      &					obsA(0:ncc,i)/(pi*Rstar**2)
@@ -89,7 +89,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         fstar [Jy]")'
 			write(30,form) "lambda [mu]",theta(1:nphase)
-			form='(f14.6,' // int2string(nphase+1,'(i3)') // 'es19.7)'
+			form='(f14.6,' // int2string(nphase+1,'(i3)') // 'es19.7E3)'
 			do i=1,nlam-1
 				write(30,form) sqrt(lam(i)*lam(i+1))/micron,
      &					phase(1:nphase,0,i)+flux(0,i),
@@ -104,9 +104,9 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			call output("Writing phasecurve to: " // trim(filename))
 			open(unit=30,file=filename,RECL=6000)
 			form='("#",a13,' // '"       fint [Jy]",'// trim(int2string(nlam-1,'(i4)')) // 
-     &				 '("      F(",es7.1,")"),"      fstar [Jy]")'
+     &				 '("      F(",es7.1E3,")"),"      fstar [Jy]")'
 			write(30,form) "lambda [mu]",lam(1:nlam-1)
-			form='(f14.6,' // int2string(nlam+1,'(i3)') // 'es16.9)'
+			form='(f14.6,' // int2string(nlam+1,'(i3)') // 'es16.9E3)'
 			do i=1,nphase
 				specR(1:nlam-1)=Fstar(1:nlam-1)*1d23/distance**2
 				if(sin(pi-pi*theta(i)/180d0).lt.(Rstar/Dplanet)) then
@@ -135,7 +135,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=1000)
 	write(30,'("#",a13,a19,a26)') "lambda [mu]","Rp^2/Rstar^2","Rp^2/Rstar^2 using eclipse"
-	form='(f14.6,es19.7,es19.7)'
+	form='(f14.6,es19.7E3,es19.7E3)'
 	do i=1,nlam-1
 		Fp1=(phase(nphase-1,0,i)+flux(0,i)*abs(theta(nphase)-theta(nphase-1))/180d0)/(Fstar(i)*1d23/distance**2)
 		Fp2=(phase(nphase,0,i))/(Fstar(i)*1d23/distance**2)
@@ -158,7 +158,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	else
 		write(30,'("#",a13,a19)') "lambda [mu]","P [bar]"
 	endif
-	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7)'
+	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7E3)'
 	do i=1,nlam-1
 		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
      &					tau1depth(1:ncc,i)
@@ -177,7 +177,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	else
 		write(30,'("#",a13,a19)') "lambda [mu]","optical depth"
 	endif
-	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7)'
+	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7E3)'
 	do i=1,nlam-1
 		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
      &					cloudtau(1:ncc,i)
@@ -252,14 +252,14 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	filename=trim(outputdir) // "obs_emisR_" // trim(instrument(i_instr))
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=6000)
-	write(30,'("# transit time       : ",es19.7, "sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
+	write(30,'("# transit time       : ",es19.7E3, "sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
 	write(30,'("# number of transits : ",i)') instr_ntrans(i_instr)
-	write(30,'("# integration time   : ",es19.7,"hours")') 
+	write(30,'("# integration time   : ",es19.7E3,"hours")') 
      &		2d0*(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
 	form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         error")'
 	write(30,form) "lambda [mu]",theta(1:nphase)
-	form='(f14.6,4es19.7)'
+	form='(f14.6,4es19.7E3)'
 	do i=1,nphase
 		call regridspecres(lam,phase(i,0,1:nlam-1)+flux(0,1:nlam-1),nlam-1,
      &						lamR,spec(i,1:nlamR),specR,specRexp,nlamR)
@@ -285,7 +285,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	write(30,'("# integration time   : ",f10.3," hours")') 
      &			(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
 	write(30,'("#",a13,3a19)') "lambda [mu]","Rp^2/Rstar^2","error"
-	form='(f14.6,4es19.7)'
+	form='(f14.6,4es19.7E3)'
 	call regridspecres(lam,obsA(0,1:nlam-1),nlam-1,
      &					lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
 	spec=spec/(pi*Rstar**2)
@@ -331,12 +331,12 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	
 	file=trim(outputdir) // "opacity_" // trim(flag) // "_" // trim(int2string(ir,'(i0.4)')) // ".dat"
 	open(unit=30,file=file,RECL=100)
-	write(30,'("# Pressure:    ",es10.3," bar")') P(ir)
+	write(30,'("# Pressure:    ",es10.3E3," bar")') P(ir)
 	write(30,'("# Temperature: ",f10.3," K")') T(ir)
 	write(30,'("#",a13,a19)') "lambda [mu]","kappa [cm^2/mol]"
 	do i=1,nnu0
 		do j=1,ng0
-			write(30,'(f12.6,es19.7)') 1d4/nu0(i),kappa0(i,j)
+			write(30,'(f12.6,es19.7E3)') 1d4/nu0(i),kappa0(i,j)
 		enddo
 	enddo
 	close(unit=30)

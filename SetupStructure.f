@@ -31,7 +31,7 @@
 
 	minZ=-5d0
 
-	niter=1
+	niter=3
 	if(dochemistry) niter=3
 	if(par_tprofile) niter=3
 
@@ -107,7 +107,7 @@
 	do i=1,nr
 		RHill=(Dplanet*(Mtot/(3d0*Mstar))**(1d0/3d0))
 		if(R(i+1).gt.RHill) then
-			call output("layer" // dbl2string(P(i),'(es10.3)') // "is beyond the Hill Sphere")
+			call output("layer" // dbl2string(P(i),'(es10.3E3)') // "is beyond the Hill Sphere")
 c			print*,'adjusting radius'
 c			R(i+1)=sqrt(R(i)*RHill)
 		endif
@@ -120,7 +120,7 @@ c			R(i+1)=sqrt(R(i)*RHill)
 		if(vtherm.gt.vescape) then
 			Ndens(i)=1d-20
 			dens(i)=Ndens(i)*mp*MMW(i)
-			call output("layer" // dbl2string(P(i),'(es10.3)') // "escapes to space")
+			call output("layer" // dbl2string(P(i),'(es10.3E3)') // "escapes to space")
 c			modelsucces=.false.
 c			if(domakeai) return
 		else
@@ -400,9 +400,9 @@ c bug needs to be fixed!!!!!
 	character*10 namemix(nmol)
 	
 	open(unit=50,file=trim(outputdir) // 'densityprofile.dat',RECL=100)
-	write(50,'("#",a14,a15,a15,a13,a10,a10)') "radius [cm]","height [cm]","dens [g/cm^3]","N [1/cm^3]","T [K]","P [bar]"
+	write(50,'("#",a14,a15,a15,a13,a10,a11)') "radius [cm]","height [cm]","dens [g/cm^3]","N [1/cm^3]","T [K]","P [bar]"
 	do i=1,nr
-		write(50,'(es15.7,es15.4,es15.4,es13.4,f10.3,es10.3)') sqrt(R(i)*R(i+1)),sqrt(R(i)*R(i+1))-Rplanet
+		write(50,'(es15.7E3,es15.4E3,es15.4E3,es13.4E3,f10.3,es11.3E3)') sqrt(R(i)*R(i+1)),sqrt(R(i)*R(i+1))-Rplanet
      &			,dens(i),Ndens(i),T(i),P(i)
 	enddo
 	close(unit=50)
@@ -424,9 +424,9 @@ c bug needs to be fixed!!!!!
 	enddo
 
 	open(unit=50,file=trim(outputdir) // 'mixingratios.dat',RECL=1000)
-	form='("#",a9,a10,' // trim(int2string(nmix,'(i2)')) // 'a15)'
+	form='("#",a9,a13,' // trim(int2string(nmix,'(i2)')) // 'a15)'
 	write(50,form) "T [K]","P [bar]",namemix(1:nmix)
-	form='(f10.3,es10.3,' // trim(int2string(nmix,'(i2)')) // 'es15.4)'
+	form='(f10.3,es13.3E3,' // trim(int2string(nmix,'(i2)')) // 'es15.4E3)'
 	do i=1,nr
 		write(50,form) T(i),P(i),mix(i,1:nmix)
 	enddo
@@ -434,9 +434,9 @@ c bug needs to be fixed!!!!!
 
 	do ii=1,nclouds
 		open(unit=50,file=trim(outputdir) // 'clouddens' // trim(int2string(ii,'(i0.2)')) // '.dat',RECL=1000)
-		form='("#",a9,a15,a15,a15)'
+		form='("#",a12,a15,a15,a15)'
 		write(50,form) "P [bar]","dens [g/cm^3]","Eq. dens","gas dens"
-		form='(es10.3,es15.3,es15.3,es15.3)'
+		form='(es13.3,es15.3E3,es15.3E3,es15.3E3)'
 		do i=1,nr
 			write(50,form) P(i),cloud_dens(i,ii),dens(i)*XeqCloud(i,ii),dens(i)
 		enddo
@@ -471,7 +471,7 @@ c bug needs to be fixed!!!!!
 		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
    	endif
 	do i=1,18
-		write(25,'(se18.6,"   ",a5)') molfracs_atoms(i),names_atoms(i)
+		write(25,'(se18.6E3,"   ",a5)') molfracs_atoms(i),names_atoms(i)
 	enddo
 
 c	modelsucces=.false.

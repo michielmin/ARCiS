@@ -15,6 +15,13 @@
 	character*500 filename
 
 	docloud=.false.
+	if(singlecloud) then
+	cloudfrac(1)=0d0
+	do i=1,nclouds
+		cloudfrac(i+1)=Cloud(i)%coverage
+		docloud(i+1,i)=.true.
+	enddo
+	else
 	do icc=2,ncc
 		docloud(icc,1:nclouds)=docloud(icc-1,1:nclouds)
 		i=0
@@ -32,6 +39,7 @@
 			endif
 		enddo
 	enddo
+	endif
 
 	do icc=1,ncc
 		do ilam=1,nlam

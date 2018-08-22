@@ -42,7 +42,7 @@ CU    USES covsrt,gaussj,mrqcof
         endif
 15    continue
       call mrqcof(y,sig,ndata,atry,ia,ma,covar,da,nca,chisq,ochisq,funcs)
-      if(chisq.lt.ochisq)then
+      if(chisq.le.ochisq)then
         alamda=0.1*alamda
         ochisq=chisq
         do 17 j=1,mfit
@@ -130,7 +130,7 @@ CU    USES covsrt,gaussj,mrqcof
         endif
         indxr(i)=irow
         indxc(i)=icol
-        if (a(icol,icol).eq.0.) pause 'singular matrix in gaussj'
+        if (a(icol,icol).eq.0.) a(icol,icol)=1d-20!pause 'singular matrix in gaussj'
         pivinv=1./a(icol,icol)
         a(icol,icol)=1.
         do 16 l=1,n
@@ -190,7 +190,7 @@ CU    USES covsrt,gaussj,mrqcof
         dy=y(i)-ymod(i)
         chisq=chisq+dy*dy*sig2i
 	enddo
-	if(chisq.gt.ochisq.and.ran2(idum).gt.0.1d0) return
+	if(chisq.ge.ochisq) return
 		i=2
 		call funcs(a,ymod,dyda,ma,ndata,i)
 		chisq=0.

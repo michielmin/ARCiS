@@ -221,7 +221,7 @@ c===============================================================================
 			case("tpfile")
 				read(key%value,'(a)') TPfile
 			case("cloud")
-				if(key%nr1.eq.0) key%nr1=1
+c				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nclouds) nclouds=key%nr1
 			case("fcloud")
@@ -406,18 +406,6 @@ c allocate the arrays
 	
 	enddo
 
-	if(Mplanet.le.0d0) then
-		if(loggPlanet.lt.-10d0) then
-			Mplanet=1d0
-			loggPlanet=log10(Ggrav*(Mplanet*Mjup)/(Rplanet*Rjup)**2)
-		else
-			Mplanet=((Rplanet*Rjup)**2)*(10d0**(loggPlanet))/(Ggrav*Mjup)
-			call output("Planet mass: " // dbl2string(Mplanet,'(f8.3)') // " Mjup")
-		endif
-	else
-		loggPlanet=log10(Ggrav*(Mplanet*Mjup)/(Rplanet*Rjup)**2)
-	endif	
-
 	idum=-idum0
 #ifdef USE_OPENMP
 	j=omp_get_max_threads()
@@ -462,12 +450,6 @@ c	condensates=(condensates.or.cloudcompute)
 
 	call InitFreq()
 
-	gamma_equal=.false.
-	if(gammaT2.lt.0d0) then
-		gamma_equal=.true.
-		gammaT2=gammaT1
-	endif
-	
 	if(nphase.le.0) then
 		nphase=2d0*pi/asin(Rstar/Dplanet)
 		if(nphase.gt.90) then
@@ -601,12 +583,14 @@ c	condensates=(condensates.or.cloudcompute)
 c is already set in CountStuff
 c			read(key%value,*) nr
 		case("mp")
+			Mp_from_logg=.false.
 			read(key%value,*) Mplanet
 		case("rp")
 			read(key%value,*) Rplanet
 		case("pp")
 			read(key%value,*) Pplanet
 		case("loggp")
+			Mp_from_logg=.true.
 			read(key%value,*) loggPlanet
 		case("rstar")
 			read(key%value,*) Rstar
@@ -680,7 +664,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) dTP
 		case("gamma","gammat")
 			if(key%nr1.eq.1) read(key%value,*) gammaT1
-			if(key%nr1.eq.2) read(key%value,*) gammaT2			
+			if(key%nr1.eq.2) then
+				gamma_equal=.false.
+				read(key%value,*) gammaT2
+			endif
 		case("kappa","kappat")
 			read(key%value,*) kappaT
 		case("alpha","alphat")
@@ -755,6 +742,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadObsSpec(key)
 		case("instrument")
 			call ReadInstrument(key)
+		case("chimax","chi2max")
+			read(key%value,*) chimax
 		case("npop")
 			read(key%value,*) npop
 		case("ngen")
@@ -791,6 +780,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Pchem
 		case("chemabun","ptchemabun")
 			read(key%value,*) PTchemAbun
+		case("rnuc","r_nuc")
+			read(key%value,*) r_nuc
 		case("rhoform","densform")
 			read(key%value,*) Pform
 			Pform=-Pform
@@ -806,6 +797,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) idum0
 		case("fcloud")
 			read(key%value,*) fcloud_default
+		case("singlecloud","exactcoverage")
+			read(key%value,*) singlecloud
 		case("coagulation")
 			read(key%value,*) coagulation
 		case("parameterfile","planetparameterfile")
@@ -839,12 +832,25 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 	Rplanet=Rplanet*Rjup
 	Mplanet=Mplanet*Mjup
 
+	if(Mp_from_logg) then
+		Mplanet=(Rplanet**2)*(10d0**(loggPlanet))/Ggrav
+		call output("Planet mass: " // dbl2string(Mplanet/Mjup,'(f8.3)') // " Mjup")
+	else
+		loggPlanet=log10(Ggrav*Mplanet/(Rplanet**2))
+		call output("Planet logg: " // dbl2string(loggPlanet,'(f8.3)'))
+	endif	
+	if(gamma_equal) then
+		gammaT2=gammaT1
+	endif
+
 	Rstar=Rstar*Rsun
 	Mstar=Mstar*Msun
 	Dplanet=Dplanet*AU
 	
 	lam1=lam1*micron
 	lam2=lam2*micron
+	
+	r_nuc=r_nuc*micron
 
 	distance=distance*parsec
 
@@ -941,6 +947,13 @@ c	endif
 		endif
 	endif
 
+	if(retrieval) then
+		do i=1,nr
+			if(T0(i).gt.Tmax) T0(i)=Tmax
+			if(T0(i).lt.Tmin) T0(i)=Tmin
+		enddo
+	endif
+
 	do i=1,nr
 		T(i)=T0(nr+1-i)
 		P(i)=P0(nr+1-i)
@@ -1021,12 +1034,13 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	idum0=42
 
-	particledir=' '
+	particledir='./Particles/'
 
-	Mplanet=-1d0
+	Mplanet=1d0
 	Rplanet=1d0
 	Pplanet=1d-2
-	loggPlanet=-50d0
+	loggPlanet=2.5d0
+	Mp_from_logg=.false.
 	
 	Tstar=5777d0
 	Rstar=1d0
@@ -1056,6 +1070,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	mixratHaze=0d0
 	Psimplecloud=1d9
 	coagulation=.true.
+	singlecloud=.false.
 	
 	PRplanet=10d0
 
@@ -1077,6 +1092,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Tform=-10d0
 	Pform=1d0
 	f_enrich=0d0
+	
+	r_nuc=1d-3
 	
 	PTchemAbun=.false.
 	Tchem=500d0
@@ -1197,12 +1214,14 @@ c	if(par_tprofile) call ComputeParamT(T)
 	dTP=0.1
 	
 	gammaT1=1.58e-1
-	gammaT2=-1.58e-1
+	gammaT2=1.58e-1
+	gamma_equal=.true.
 	kappaT=3d-2
 	betaT=1d0
 	alphaT=1d0
 	
 	retrieve_profile=.false.
+	chimax=1d0
 	
 	maxTprofile=1d6
 	
@@ -1221,6 +1240,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 
 c number of cloud/nocloud combinations
 	ncc=2**nclouds
+	if(singlecloud) ncc=1+nclouds
 	allocate(docloud(ncc,nclouds))
 	allocate(cloudfrac(ncc))
 	allocate(flux(0:ncc,nlam))
@@ -1502,75 +1522,85 @@ c				enddo
 	use ReadKeywords
 	IMPLICIT NONE
 	type(SettingKey) key
-	integer j
+	integer j,j1,j2
 
 	Cloud(key%nr1)%ptype="COMPUTE"
 
+	if(key%nr1.eq.0) then
+		j1=1
+		j2=nclouds
+	else
+		j1=key%nr1
+		j2=key%nr1
+	endif
+
+	do j=j1,j2
 	select case(key%key2)
 		case("file")
-			Cloud(key%nr1)%file=trim(key%value)
+			Cloud(j)%file=trim(key%value)
 		case("ngrains","nsize","nr")
-			read(key%value,*) Cloud(key%nr1)%nr
+			read(key%value,*) Cloud(j)%nr
 		case("nsubgrains")
-			read(key%value,*) Cloud(key%nr1)%nsubgrains
+			read(key%value,*) Cloud(j)%nsubgrains
 		case("amin")
-			read(key%value,*) Cloud(key%nr1)%amin
+			read(key%value,*) Cloud(j)%amin
 		case("amax")
-			read(key%value,*) Cloud(key%nr1)%amax
+			read(key%value,*) Cloud(j)%amax
 		case("fmax")
-			read(key%value,*) Cloud(key%nr1)%fmax
+			read(key%value,*) Cloud(j)%fmax
 		case("blend")
-			read(key%value,*) Cloud(key%nr1)%blend
+			read(key%value,*) Cloud(j)%blend
 		case("porosity")
-			read(key%value,*) Cloud(key%nr1)%porosity
+			read(key%value,*) Cloud(j)%porosity
 		case("standard")
-			Cloud(key%nr1)%standard=trim(key%value)
+			Cloud(j)%standard=trim(key%value)
 		case("species")
-			Cloud(key%nr1)%species=trim(key%value)
+			Cloud(j)%species=trim(key%value)
 		case("fcarbon")
-			read(key%value,*) Cloud(key%nr1)%fcarbon
+			read(key%value,*) Cloud(j)%fcarbon
 		case("pressure","p")
-			read(key%value,*) Cloud(key%nr1)%P
+			read(key%value,*) Cloud(j)%P
 		case("dp")
-			read(key%value,*) Cloud(key%nr1)%dP
+			read(key%value,*) Cloud(j)%dP
 		case("s","sharpness")
-			read(key%value,*) Cloud(key%nr1)%s
+			read(key%value,*) Cloud(j)%s
 		case("column")
-			read(key%value,*) Cloud(key%nr1)%column
+			read(key%value,*) Cloud(j)%column
 		case("tau")
-			read(key%value,*) Cloud(key%nr1)%tau
+			read(key%value,*) Cloud(j)%tau
 		case("lam")
-			read(key%value,*) Cloud(key%nr1)%lam
+			read(key%value,*) Cloud(j)%lam
 		case("reff")
-			read(key%value,*) Cloud(key%nr1)%reff
+			read(key%value,*) Cloud(j)%reff
 		case("veff")
-			read(key%value,*) Cloud(key%nr1)%veff
+			read(key%value,*) Cloud(j)%veff
 		case("coverage")
-			read(key%value,*) Cloud(key%nr1)%coverage
+			read(key%value,*) Cloud(j)%coverage
 		case("frain")
-			read(key%value,*) Cloud(key%nr1)%frain
+			read(key%value,*) Cloud(j)%frain
 		case("haze")
-			read(key%value,*) Cloud(key%nr1)%haze
+			read(key%value,*) Cloud(j)%haze
 		case("mixrat")
-			read(key%value,*) Cloud(key%nr1)%mixrat
+			read(key%value,*) Cloud(j)%mixrat
 		case("fcond")
-			read(key%value,*) Cloud(key%nr1)%fcond
+			read(key%value,*) Cloud(j)%fcond
 		case("tmix")
-			read(key%value,*) Cloud(key%nr1)%tmix
+			read(key%value,*) Cloud(j)%tmix
 		case("betamix")
-			read(key%value,*) Cloud(key%nr1)%betamix
+			read(key%value,*) Cloud(j)%betamix
 		case("kzzfile")
-			Cloud(key%nr1)%Kzzfile=trim(key%value)
+			Cloud(j)%Kzzfile=trim(key%value)
 		case("kzz","k")
-			read(key%value,*) Cloud(key%nr1)%Kzz
+			read(key%value,*) Cloud(j)%Kzz
 		case("kscale")
-			read(key%value,*) Cloud(key%nr1)%Kscale
+			read(key%value,*) Cloud(j)%Kscale
 		case("sigmadot","nucleation")
-			read(key%value,*) Cloud(key%nr1)%Sigmadot
+			read(key%value,*) Cloud(j)%Sigmadot
 		case default
 			call output("Unknown cloud keyword: " // trim(key%key2))
 			stop
 	end select
+	enddo
 
 	return
 	end
@@ -1714,6 +1744,7 @@ c not entirely correct...
 	
 	subroutine ReadPlanetName()
 	use GlobalSetup
+	use Constants
 	IMPLICIT NONE
 	real*8 x,dR1,dR2,dM1,dM2
 	character*100 name,namestar
@@ -1758,6 +1789,13 @@ c not entirely correct...
 					if(RetPar(i)%xmin.lt.0d0) RetPar(i)%xmin=0d0
 		call output("Minimum mass:   " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Mjup")
 		call output("Maximum mass:   " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Mjup")
+				case("loggP","loggp")
+					RetPar(i)%x0=log10(Ggrav*(Mplanet*Mjup)/((Rplanet*Rjup)**2))
+					RetPar(i)%xmin=log10(Ggrav*((Mplanet-3d0*dM1)*Mjup)/(((Rplanet+6d0*dR2)*Rjup)**2))
+					RetPar(i)%xmax=log10(Ggrav*((Mplanet+3d0*dM2)*Mjup)/(((Rplanet-6d0*dR1)*Rjup)**2))
+					if(RetPar(i)%xmin.lt.0.1d0) RetPar(i)%xmin=0.1d0
+		call output("Minimum logg:   " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
+		call output("Maximum logg:   " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
 			end select
 		enddo
 		return
