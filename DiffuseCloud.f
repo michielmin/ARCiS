@@ -20,6 +20,14 @@
 	parameter(nr_cloud=10)
 	real*8 CloudP((nr-1)*nr_cloud+1),CloudT((nr-1)*nr_cloud+1),CloudR((nr-1)*nr_cloud+1),Clouddens((nr-1)*nr_cloud+1)
 
+	real*8 Mc_top,Mn_top,IDP_dens,IDP_rad
+
+	IDP_dens=0d0
+	IDP_rad=0.01d0*micron
+
+	Mc_top=-IDP_dens*sqrt(Ggrav*Mplanet/Dplanet)
+	Mn_top=-Mc_top*(r_nuc/IDP_rad)**3
+
 	quadratic=.true.
 
 	w_atoms(1) = 1.00794		!'H'
@@ -265,9 +273,9 @@ c rewritten for better convergence
 	enddo
 	i=nnr
 	dz=CloudR(i)-CloudR(i-1)
-	An(1,i)=Kp/dz+vsed(i)
+	An(1,i)=Kp/dz-vsed(i)
 	An(1,i-1)=-Kp/dz
-	x(1)=0d0
+	x(1)=-Mn_top/Clouddens(i)
 	i=1
 	An(2,i)=1d0
 	x(2)=0d0
@@ -344,12 +352,12 @@ c		densv=10d0**(BB-AA/CloudT(i)-log10(CloudT(i)))
 	enddo
 	i=nnr
 	dz=CloudR(i)-CloudR(i-1)
-	A(nnr+1,i)=Kp/dz+vsed(i)
+	A(nnr+1,i)=Kp/dz-vsed(i)
 	A(nnr+1,i-1)=-Kp/dz
-	x(nnr+1)=0d0
+	x(nnr+1)=-Mc_top/Clouddens(i)
 	A(nnr+2,nnr+i)=Kc/dz
 	A(nnr+2,nnr+i-1)=-Kc/dz
-	x(nnr+2)=0d0
+	x(nnr+2)=0d0!Mc_top/Clouddens(i)
 	i=1
 	A(1,i)=1d0
 	x(1)=0d0

@@ -4,8 +4,6 @@ module params_multinest
 implicit none
 
 
-	integer imodel
-	real*8 bestlike
 ! Toy Model Parameters
 
 	!dimensionality

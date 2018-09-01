@@ -419,9 +419,9 @@ c	goto 2	! skip the amoeba step
 	use Constants
 	use RetrievalMod
 	IMPLICIT NONE
-	integer nvars,i,j,nlamtot,ny,k
+	integer nvars,i,j,nlamtot,ny,k,maxspec
 	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars)
-	real*8,allocatable :: spec(:)
+	real*8,allocatable :: spec(:),allspec(:,:)
 	logical recomputeopac
 	real*16 x
 
@@ -431,6 +431,12 @@ c	goto 2	! skip the amoeba step
 		if(var(i).gt.1d0) var(i)=1d0
 		if(var(i).lt.0d0) var(i)=0d0
 	enddo
+
+	maxspec=0
+	do i=1,nobs
+		if(ObsSpec(i)%nlam.gt.maxspec) maxspec=ObsSpec(i)%nlam
+	enddo
+	allocate(allspec(nobs,maxspec))
 
 c	do i=1,n_ret
 c		x=var_in(i)
@@ -445,8 +451,16 @@ c	enddo
 
 	recomputeopac=.true.
 	imodel=imodel+1
-	call output("model number: " // int2string(imodel,'(i7)'))
+	call output("model number: " // int2string(imodel,'(i7)') // dbl2string(bestlike,'(f10.2)'))
 
+	allspec=0d0
+	if(n2d.eq.0) then
+		i2d=0
+	else
+		i2d=1
+	endif
+
+1	continue
 	error=0d0
 	call SetOutputMode(.false.)
 	call MapRetrieval(var,error)
@@ -459,19 +473,37 @@ c	enddo
 	call ComputeModel(recomputeopac)
 	call SetOutputMode(.true.)
 	
-	k=0
-	lnew=0d0
 	do i=1,nobs
 		allocate(spec(ObsSpec(i)%nlam))
 		call RemapObs(i,spec)
-		do j=1,ObsSpec(i)%nlam
-			k=k+1
-			ymod(k)=spec(j)
-			lnew=lnew+((spec(k)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
-		enddo
+		select case(ObsSpec(i)%type)
+			case("trans","transmission","transC")
+				if(i2d.eq.0) then
+					allspec(i,1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
+				else if(i2d.le.2) then
+					allspec(i,1:ObsSpec(i)%nlam)=allspec(i,1:ObsSpec(i)%nlam)+spec(1:ObsSpec(i)%nlam)/2d0
+				endif
+			case("emis","emisR","emission","emisa","emisr")
+				if(i2d.eq.0.or.i2d.eq.3) then
+					allspec(i,1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
+				endif
+		end select		
 		deallocate(spec)
 	enddo
-	lnew=lnew/real(k-1)
+	i2d=i2d+1
+	if(i2d.le.n2d) goto 1
+
+	lnew=0d0
+	k=0
+	do i=1,nobs
+		do j=1,ObsSpec(i)%nlam
+			k=k+1
+			ymod(k)=allspec(i,j)
+			lnew=lnew+((ymod(k)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
+			ObsSpec(i)%model(j)=allspec(i,j)
+		enddo
+	enddo
+	lnew=lnew/real(max(1,k-n_ret))
 	do j=1,n_ret
 		k=k+1
 		ymod(k)=var_in(j)
@@ -507,6 +539,8 @@ c	enddo
 		bestlike=lnew
 		bestvar=var
 	endif
+	
+	deallocate(allspec)
 	
 	return
 	end
@@ -753,7 +787,7 @@ c	enddo
 			tot=tot+ErrVec(j,i)**2
 		enddo
 		if(tot.le.0d0) tot=1d0
-		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*sqrt(chi2*w(i))/sqrt(tot)
+		ErrVec(1:n_ret,i)=ErrVec(1:n_ret,i)*sqrt(w(i))/sqrt(tot)
 	enddo
 	do i=1,n_ret
 		max(i)=1d4
@@ -1334,7 +1368,7 @@ c	linear
 
 	do i=1,n_ret
 		readline=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
-		call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2)
+		call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2,key%key2d)
 		call ReadAndSetKey(key)
 	enddo
 	call ConvertUnits()
@@ -1562,16 +1596,16 @@ c	linear/squared
 
 	close(unit=20)
 	
-	do i=1,nobs
-		select case(ObsSpec(i)%type)
-			case("trans","transmission","emisr","emisR","emisa","emis","emission","transC")
-				open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),RECL=1000)
-				do j=1,ObsSpec(i)%nlam
-					write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
-				enddo
-				close(unit=20)
-		end select
-	enddo
+c	do i=1,nobs
+c		select case(ObsSpec(i)%type)
+c			case("trans","transmission","emisr","emisR","emisa","emis","emission","transC")
+c				open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),RECL=1000)
+c				do j=1,ObsSpec(i)%nlam
+c					write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
+c				enddo
+c				close(unit=20)
+c		end select
+c	enddo
 
 	call MapRetrieval(bestvar,error)
 

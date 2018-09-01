@@ -6,7 +6,7 @@ c==============================================================================
 
 	type SettingKey
 		character*500 key1,key2,value,key
-		integer nr1,nr2
+		integer nr1,nr2,key2d
 		logical last
 		type(SettingKey),pointer :: next
 	end type SettingKey
@@ -76,7 +76,7 @@ c				all arguments are read
 	allocate(key%next)
 	key => key%next
 	key%last=.false.
-	call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2)
+	call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2,key%key2d)
 
 c read another command, so go back
 	goto 10
@@ -95,11 +95,20 @@ c===============================================================================
 c This subroutine just seperates the key and value component of a string given
 c key=value syntax. Key is transformed to lowercase.
 c=========================================================================================
-	subroutine get_key_value(line,key,key1,key2,value,nr1,nr2)
+	subroutine get_key_value(line_in,key,key1,key2,value,nr1,nr2,key2d)
+	use GlobalSetup
 	IMPLICIT NONE
-	character*1000 line
+	character*1000 line_in,line
 	character*500 key,key1,key2,value
-	integer i,nr1,nr2,ikey1,ikey2
+	integer i,nr1,nr2,ikey1,ikey2,key2d
+	
+	line=line_in
+	key2d=0
+	if(line(1:2).eq.'2d'.and.line(4:4).eq.':') then
+		read(line(3:3),*) key2d
+		if(key2d.gt.n2d) n2d=key2d
+		write(line,'(a)') line_in(5:1000)
+	endif
 	
 	ikey1=index(line,'=')
 	ikey2=index(line,':')
@@ -396,14 +405,12 @@ c allocate the arrays
 
 	n_ret=0
 
+	i2d=0
+
 	key => first%next
-
 	do while(.not.key%last)
-
 		call ReadAndSetKey(key)
-
 		key => key%next
-	
 	enddo
 
 	idum=-idum0
@@ -431,9 +438,9 @@ c allocate the arrays
 
 		do i=1,n_ret
 			line=trim(RetPar(i)%keyword) // "=0d0"
-			call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%value,keyret%nr1,keyret%nr2)
+			call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%value,keyret%nr1,keyret%nr2,keyret%key2d)
 			if(trim(keyret%key1).eq.trim(key%key1).and.trim(keyret%key2).eq.trim(key%key2).and.
-     &		   keyret%nr1.eq.key%nr1.and.keyret%nr2.eq.key%nr2) then
+     &		   keyret%nr1.eq.key%nr1.and.keyret%nr2.eq.key%nr2.and.keyret%key2d.eq.key%key2d) then
 				read(key%value,*) RetPar(i)%x0
 			endif
 		enddo
@@ -577,6 +584,8 @@ c	condensates=(condensates.or.cloudcompute)
 	IMPLICIT NONE
 	type(SettingKey) key
 	integer i
+
+	if(key%key2d.eq.i2d.or.key%key2d.eq.0) then
 
 	select case(key%key1)
 		case("nr")
@@ -819,6 +828,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 1			continue
 	end select
 
+	endif
+	
 	return
 	end
 
@@ -1034,6 +1045,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	idum0=42
 
+	n2d=0
+	
 	particledir='./Particles/'
 
 	Mplanet=1d0
