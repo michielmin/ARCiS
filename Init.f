@@ -854,8 +854,9 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		loggPlanet=log10(Ggrav*Mplanet/(Rplanet**2))
 		call output("Planet logg: " // dbl2string(loggPlanet,'(f8.3)'))
 	endif	
-	if(gamma_equal) then
+	if(gamma_equal.or.gammaT2.lt.0d0) then
 		gammaT2=gammaT1
+		gamma_equal=.true.
 	endif
 
 	Rstar=Rstar*Rsun
