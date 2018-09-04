@@ -196,6 +196,8 @@ c===============================================================================
 	mixratfile=.false.
 	fcloud_default=1d0
 
+	i2d=0
+
 	nr=20
 	key => firstkey
 	do while(.not.key%last)
@@ -209,6 +211,8 @@ c===============================================================================
 	key => firstkey
 	do while(.not.key%last)
 		select case(key%key1)
+			case("i2d")
+				read(key%value,*) i2d
 			case("obs")
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
@@ -404,8 +408,6 @@ c allocate the arrays
 	call SetDefaults
 
 	n_ret=0
-
-	i2d=0
 
 	key => first%next
 	do while(.not.key%last)
@@ -815,6 +817,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		case("planetname")
 			read(key%value,*) planetname
 			call ReadPlanetName
+		case("i2d")
+			read(key%value,*) i2d
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then

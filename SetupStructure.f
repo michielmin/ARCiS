@@ -398,8 +398,15 @@ c bug needs to be fixed!!!!!
 	integer i,imol,nmix,ii
 	character*1000 form
 	character*10 namemix(nmol)
+	character*10 side
 	
-	open(unit=50,file=trim(outputdir) // 'densityprofile.dat',RECL=100)
+	if(i2d.eq.0) then
+		side=" "
+	else
+		write(side,'("_",i0.2)') i2d
+	endif
+	
+	open(unit=50,file=trim(outputdir) // 'densityprofile' // trim(side) // '.dat',RECL=100)
 	write(50,'("#",a14,a15,a15,a13,a10,a11)') "radius [cm]","height [cm]","dens [g/cm^3]","N [1/cm^3]","T [K]","P [bar]"
 	do i=1,nr
 		write(50,'(es15.7E3,es15.4E3,es15.4E3,es13.4E3,f10.3,es11.3E3)') sqrt(R(i)*R(i+1)),sqrt(R(i)*R(i+1))-Rplanet
@@ -407,7 +414,7 @@ c bug needs to be fixed!!!!!
 	enddo
 	close(unit=50)
 
-	open(unit=50,file=trim(outputdir) // 'density.dat',RECL=1000)
+	open(unit=50,file=trim(outputdir) // 'density' // trim(side) // '.dat',RECL=1000)
 	do i=1,nr
 		write(50,*) sqrt(R(i)*R(i+1)),sqrt(R(i)*R(i+1))-Rplanet
      &			,dens(i),cloud_dens(i,1:nclouds)
@@ -423,7 +430,7 @@ c bug needs to be fixed!!!!!
 		endif
 	enddo
 
-	open(unit=50,file=trim(outputdir) // 'mixingratios.dat',RECL=1000)
+	open(unit=50,file=trim(outputdir) // 'mixingratios' // trim(side) // '.dat',RECL=1000)
 	form='("#",a9,a13,' // trim(int2string(nmix,'(i2)')) // 'a15)'
 	write(50,form) "T [K]","P [bar]",namemix(1:nmix)
 	form='(f10.3,es13.3E3,' // trim(int2string(nmix,'(i2)')) // 'es15.4E3)'
@@ -433,7 +440,7 @@ c bug needs to be fixed!!!!!
 	close(unit=50)
 
 	do ii=1,nclouds
-		open(unit=50,file=trim(outputdir) // 'clouddens' // trim(int2string(ii,'(i0.2)')) // '.dat',RECL=1000)
+		open(unit=50,file=trim(outputdir) // 'clouddens' // trim(int2string(ii,'(i0.2)')) // trim(side) // '.dat',RECL=1000)
 		form='("#",a12,a15,a15,a15)'
 		write(50,form) "P [bar]","dens [g/cm^3]","Eq. dens","gas dens"
 		form='(es13.3,es15.3E3,es15.3E3,es15.3E3)'

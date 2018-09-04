@@ -12,6 +12,13 @@
 	real*8 x,specres_obs,expspecres_obs,gasdev,tot,Dmirror,f_phot,noisefloor
 	integer ilam,j,nj,nlamR,i_instr
 	character*1000 line
+	character*10 side
+	
+	if(i2d.eq.0) then
+		side=" "
+	else
+		write(side,'("_",i0.2)') i2d
+	endif
 
 	allocate(docloud0(max(nclouds,1),ncc))
 	allocate(theta(nphase))
@@ -23,7 +30,7 @@
 		docloud0(i,:)=docloud(:,i)
 	enddo
 	call output("==================================================================")
-	filename=trim(outputdir) // "emis"
+	filename=trim(outputdir) // "emis" // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=1000)
 	if(nclouds.gt.0) then
@@ -42,7 +49,7 @@ c     &					flux(0:ncc,i)
 	enddo
 	close(unit=30)
 
-	filename=trim(outputdir) // "emisR"
+	filename=trim(outputdir) // "emisR" // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=1000)
 	if(nclouds.gt.0) then
@@ -62,7 +69,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	close(unit=30)
 
 
-	filename=trim(outputdir) // "trans"
+	filename=trim(outputdir) // "trans" // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=1000)
 	if(nclouds.gt.0) then
@@ -83,7 +90,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 
 	if(.not.domakeai) then
 		if(nphase.le.310) then
-			filename=trim(outputdir) // "phase"
+			filename=trim(outputdir) // "phase" // trim(side)
 			call output("Writing spectrum to: " // trim(filename))
 			open(unit=30,file=filename,RECL=6000)
 			form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
@@ -100,7 +107,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 
 		if(nlam.lt.350) then
 			allocate(specR(nlam))
-			filename=trim(outputdir) // "phasecurve"
+			filename=trim(outputdir) // "phasecurve" // trim(side)
 			call output("Writing phasecurve to: " // trim(filename))
 			open(unit=30,file=filename,RECL=6000)
 			form='("#",a13,' // '"       fint [Jy]",'// trim(int2string(nlam-1,'(i4)')) // 
@@ -131,7 +138,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		endif
 	endif
 
-	filename=trim(outputdir) // "transC"
+	filename=trim(outputdir) // "transC" // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=1000)
 	write(30,'("#",a13,a19,a26)') "lambda [mu]","Rp^2/Rstar^2","Rp^2/Rstar^2 using eclipse"
@@ -147,7 +154,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 
 
 
-	filename=trim(outputdir) // "tau1depth"
+	filename=trim(outputdir) // "tau1depth" // trim(side)
 	call output("Writing tau1depth to: " // trim(filename))
 	open(unit=30,file=filename,RECL=1000)
 	if(nclouds.gt.0) then
@@ -166,7 +173,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	close(unit=30)
 
 
-	filename=trim(outputdir) // "cloudtau"
+	filename=trim(outputdir) // "cloudtau" // trim(side)
 	call output("Writing cloud optical depth to: " // trim(filename))
 	open(unit=30,file=filename,RECL=1000)
 	if(nclouds.gt.0) then
@@ -249,7 +256,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		if(specErr(i).lt.noisefloor) specErr(i)=noisefloor
 	enddo
 
-	filename=trim(outputdir) // "obs_emisR_" // trim(instrument(i_instr))
+	filename=trim(outputdir) // "obs_emisR_" // trim(instrument(i_instr)) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=6000)
 	write(30,'("# transit time       : ",es19.7E3, "sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
@@ -277,7 +284,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	enddo
 	close(unit=30)
 
-	filename=trim(outputdir) // "obs_trans_" // trim(instrument(i_instr))
+	filename=trim(outputdir) // "obs_trans_" // trim(instrument(i_instr)) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=1000)
 	write(30,'("# transit time       : ",f10.3," sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
