@@ -33,7 +33,7 @@
 	external Enstatite_X,Enstatite_Y,Enstatite_Z
 	external Forsterite_X,Forsterite_Y,Forsterite_Z
 	external Brookite_X,Brookite_Y,Brookite_Z,Water
-	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O,MgO
+	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O,MgO,SiC
 	integer abun_in_name
 	parameter(abun_in_name=2)
 
@@ -289,7 +289,7 @@ c changed this to mass fractions (11-05-2010)
 		allocate(nr0(MAXMAT,ns))
 		allocate(f(nf))
 		allocate(wf(nf))
-		nm=16
+		nm=17
 		i=0
 		allocate(e1d(nlam))
 		allocate(e2d(nlam))
@@ -413,6 +413,14 @@ c changed this to mass fractions (11-05-2010)
 		rho(i)=1.80
 		frac(i)=frac(i)/rho(i)
 		call RegridDataLNK(Carbon_BE_Zubko1996,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='SiC'		! Laor & Draine 1993
+		rho(i)=3.22
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(SiC,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(i,1:nlam)=e1d(1:nlam)
 		e2(i,1:nlam)=e2d(1:nlam)
 	endif
@@ -972,6 +980,14 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(Carbon_BE_Zubko1996,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(i,1:nlam)=e1d(1:nlam)
 		e2(i,1:nlam)=e2d(1:nlam)
+
+		i=i+1
+		filename(i)='SiC'		! Laor & Draine 1993
+		rho(i)=3.22
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(SiC,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		e1(i,1:nlam)=e1d(1:nlam)
+		e2(i,1:nlam)=e2d(1:nlam)
 	endif
 
 
@@ -985,10 +1001,10 @@ c changed this to mass fractions (11-05-2010)
 		frac=1d0/real(nm)
 	endif
 	
-	if(.not.domakeai) then
-		call ParticleFITS(C,r0,nr0(1:nm,1:ns),nm,ns,rho_av,ii,amin,amax,dble(pow),
-     &						C%fmax,C%blend,C%porosity,frac,rho,filename,isize)
-	endif
+c	if(.not.domakeai) then
+c		call ParticleFITS(C,r0,nr0(1:nm,1:ns),nm,ns,rho_av,ii,amin,amax,dble(pow),
+c     &						C%fmax,C%blend,C%porosity,frac,rho,filename,isize)
+c	endif
 
 
 300	continue	

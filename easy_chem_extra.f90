@@ -1223,6 +1223,7 @@ END MODULE nrutil
 	INTEGER,parameter            :: N_atoms = 18
 	CHARACTER*40                 :: names_atoms(N_atoms)
 	DOUBLE PRECISION             :: molfracs_atoms(N_atoms)
+	real*8 :: gas_atoms(N_atoms),solid_atoms(N_atoms)
 	
 	end module AtomsModule
 
@@ -1571,17 +1572,17 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
   names_reactants(105) = 'C(gr)'
 	at_re(105,3)=1
   names_reactants(106) = 'FeS(a)'
-	at_re(105,17)=1
-	at_re(105,11)=1
+	at_re(106,17)=1
+	at_re(106,11)=1
   names_reactants(107) = 'FeS(b)'
-	at_re(105,17)=1
-	at_re(105,11)=1
+	at_re(107,17)=1
+	at_re(107,11)=1
   names_reactants(108) = 'FeS(c)'
-	at_re(105,17)=1
-	at_re(105,11)=1
+	at_re(108,17)=1
+	at_re(108,11)=1
   names_reactants(109) = 'FeS(L)'
-	at_re(105,17)=1
-	at_re(105,11)=1
+	at_re(109,17)=1
+	at_re(109,11)=1
 
 
 
@@ -1636,7 +1637,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 !      if(temp.gt.3000d0) temp=3000d0
       if(temp.lt.70d0) temp=70d0
       press=Pin
-        
+        	
         call EASY_CHEM(N_atoms_used,N_reactants2,names_atoms_used,names_reactants,molfracs_atoms_used, &
              molfracs_reactants,massfracs_reactants,temp,press,ini,nabla_ad,gamma2,MMW,rho,cpe)
         ini = .FALSE.
@@ -1679,25 +1680,21 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 	endif
 
 	if(set_gas_atoms) then
-		molfracs_atoms=0d0
+		gas_atoms=0d0
+		solid_atoms=0d0
 		do i=1,N_atoms
 			do i_reac=1,N_reactants_gas
-				molfracs_atoms(i)=molfracs_atoms(i)+molfracs_reactants(i_reac)*real(at_re(i_reac,i))
+				gas_atoms(i)=gas_atoms(i)+molfracs_reactants(i_reac)*real(at_re(i_reac,i))
 			enddo
 		enddo
 		do i=1,N_atoms
 			do i_reac=N_reactants_gas+1,N_reactants2
-				molfracs_atoms(i)=molfracs_atoms(i)+f_enrich*molfracs_reactants(i_reac)*real(at_re(i_reac,i))
+				solid_atoms(i)=solid_atoms(i)+molfracs_reactants(i_reac)*real(at_re(i_reac,i))
 			enddo
 		enddo
-		tot=sum(molfracs_atoms(1:N_atoms))
-		molfracs_atoms=molfracs_atoms/tot
-		print*,'C/O:',molfracs_atoms(3)/molfracs_atoms(5)
- 		do i=1,N_reactants2
-			if(i.ge.77.and.massfracs_reactants(i).gt.0d0) then
- 				print*,'In the core: ',trim(names_reactants(i))
- 			endif
- 		enddo
+		tot=sum(solid_atoms(1:N_atoms)+gas_atoms(1:N_atoms))
+		solid_atoms=solid_atoms/tot
+		gas_atoms=gas_atoms/tot
 	endif
 
 	return

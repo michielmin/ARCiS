@@ -21,6 +21,18 @@
 	real*8 INSlogZ						     	!= log evidence value from the INS mode
 	real*8 logZerr						     	!= error on log evidence value
 	integer context							!not required by MultiNest, any additional information user wants to pass
+	integer i1,i2
+
+	if(n2d.eq.0) then
+		i1=0
+		i2=0
+	else
+		i1=1
+		i2=n2d
+	endif
+	do i2d=i1,i2
+		call WritePTlimitsMN
+	enddo
 
 	return
 	end

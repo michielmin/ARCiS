@@ -18,6 +18,7 @@ module thermo_data_block
        H_0_298_15_K_m_H_0_0_K(N_temps,N_reac_save)
   DOUBLE PRECISION, parameter, public :: R = 8.3144598d0
   CHARACTER*2, public             :: reac_atoms_names(5,N_reac_save)
+  CHARACTER*2, public             :: reac_atoms_names_UPPER(5,N_reac_save)
   LOGICAL, public                 :: reac_condensed(N_reac_save), reac_ion(N_reac_save)
   LOGICAL, public                 :: verbose, ions, quick, remove_ions
   INTEGER, public                 :: iter_max
@@ -26,6 +27,7 @@ module thermo_data_block
   DOUBLE PRECISION, public, parameter :: amu = 1.660538921d-24, kB=1.3806488d-16
   DOUBLE PRECISION, public, parameter :: mol = 6.02214129d23
   INTEGER, public, parameter      :: N_atoms_save = 104
+	double precision, public :: masses_atoms_used(N_atoms_save)
   ! The atomic mass data shown below was taken from http://www.science.co.il/PTelements.asp
   CHARACTER*2, public, parameter  :: names_atoms_save(N_atoms_save) = &
        (/ 'E ','H ','He','Li','Be','B ','C ','N ','O ','F ','Ne','Na', &
@@ -36,6 +38,7 @@ module thermo_data_block
        'Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W ','Re','Os','Ir', &
        'Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th', &
        'Pa','U ','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr' /)
+  CHARACTER*2, public  :: names_atoms_save_UPPER(N_atoms_save)
   DOUBLE PRECISION, public, parameter  :: masses_atoms_save(N_atoms_save) = &
        amu*(/ 0.000548579909d0, 1.0079d0,4.0026d0,6.941d0,9.0122d0,10.811d0,12.0107d0,14.0067d0 &
        ,15.9994d0,18.9984d0,20.1797d0,22.9897d0,24.305d0,26.9815d0,28.0855d0,30.9738d0,32.065d0 &
@@ -54,7 +57,7 @@ end module thermo_data_block
 !!!! MAIN SUBROUTINE
 !!!!----
 
-subroutine EASY_CHEM(N_atoms,N_reactants,names_atoms,names_reactants,molfracs_atoms, &
+subroutine EASY_CHEM(N_atoms,N_reactants,names_atoms_in,names_reactants,molfracs_atoms, &
      molfracs_reactants,massfracs_reactants,temp,press,ini,nabla_ad,gamma2,MMW,rho,c_pe)
 
   use thermo_data_block
@@ -63,7 +66,7 @@ subroutine EASY_CHEM(N_atoms,N_reactants,names_atoms,names_reactants,molfracs_at
   !! I/O:
   INTEGER                      :: N_atoms, N_reactants
   CHARACTER*40                 :: names_atoms(N_atoms), names_reactants(N_reactants), &
-       names_reactants_orig(N_reactants)
+       names_reactants_orig(N_reactants),names_atoms_in(N_atoms)
   DOUBLE PRECISION             :: molfracs_atoms(N_atoms), molfracs_reactants(N_reactants), &
        massfracs_reactants(N_reactants)
   DOUBLE PRECISION             :: temp, press
@@ -73,7 +76,7 @@ subroutine EASY_CHEM(N_atoms,N_reactants,names_atoms,names_reactants,molfracs_at
   !! Internal:
   DOUBLE PRECISION             :: C_P_0(N_reactants), H_0(N_reactants), S_0(N_reactants), &
        molfracs_atoms_ions(N_atoms+1), temp_use
-  INTEGER                      :: i_reac, N_atoms_use, gamma_neg_try
+  INTEGER                      :: i_reac, N_atoms_use, gamma_neg_try,i
   CHARACTER*40                 :: names_atoms_ions(N_atoms+1)
 
   verbose = .FALSE.
@@ -82,6 +85,13 @@ subroutine EASY_CHEM(N_atoms,N_reactants,names_atoms,names_reactants,molfracs_at
   
   ! Contains the original order of reactant names
   names_reactants_orig = names_reactants
+
+	do i=1,N_atoms
+		call To_upper(names_atoms_in(i),names_atoms(i))
+	enddo
+	do i=1,N_atoms_save
+		call To_upper(names_atoms_save(i),names_atoms_save_UPPER(i))
+	enddo
 
   call init_random_seed()
   
@@ -227,6 +237,7 @@ subroutine ec_READ_ALL_DATA(N_reactants,names_reactants)
                  reac_ion(i_reac) = .TRUE.
                  N_ions = N_ions + 1
               END IF
+			call To_upper(reac_atoms_names(i_stoich,i_reac),reac_atoms_names_UPPER(i_stoich,i_reac))
               READ(file_line(stoich_start+2:stoich_start+7),'(F6.2)') reac_stoich(i_stoich,i_reac)
               stoich_start = stoich_start+8
            END DO
@@ -637,7 +648,7 @@ recursive subroutine ec_CALC_EQU_CHEM(N_atoms,N_reactants,names_atoms,names_reac
         mass_species = 0d0
         DO i_atom = 1, 5
            if (trim(adjustl(reac_atoms_names(i_atom,i_reac))) .NE. '') THEN
-              call ec_ATOM_MASS(reac_atoms_names(i_atom,i_reac),atom_mass)
+              call ec_ATOM_MASS(reac_atoms_names_UPPER(i_atom,i_reac),atom_mass)
               mass_species = mass_species+atom_mass*DBLE(reac_stoich(i_atom,i_reac))
            END IF
         END DO
@@ -739,7 +750,8 @@ subroutine ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_reactants,pr
   a = 0d0
 
   DO i_atom = 1, N_atoms
-     call To_upper(names_atoms(i_atom),upper_atom_name)
+!     call To_upper(names_atoms(i_atom),upper_atom_name)
+	upper_atom_name=names_atoms(i_atom)
      DO i_reac = 1, N_gas
         IF (remove_ions) THEN
            IF (reac_ion(i_reac)) THEN
@@ -748,7 +760,8 @@ subroutine ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_reactants,pr
            END IF
         END IF
         DO i_ratom = 1, 5
-           call To_upper(reac_atoms_names(i_ratom,i_reac),upper_ratom_name)
+!           call To_upper(reac_atoms_names(i_ratom,i_reac),upper_ratom_name)
+           upper_ratom_name=reac_atoms_names_UPPER(i_ratom,i_reac)
            IF (trim(adjustl(upper_atom_name)) .EQ. &
                 trim(adjustl(upper_ratom_name))) THEN
               a(i_reac,i_atom) = reac_stoich(i_ratom,i_reac)*mol
@@ -757,7 +770,8 @@ subroutine ec_MAKE_MATRIX_long(N_atoms,names_atoms,molfracs_atoms,N_reactants,pr
      END DO
      DO i_reac = N_gas+1, N_reactants
         DO i_ratom = 1, 5
-           call To_upper(reac_atoms_names(i_ratom,solid_indices(i_reac-N_gas)),upper_ratom_name)
+!           call To_upper(reac_atoms_names(i_ratom,solid_indices(i_reac-N_gas)),upper_ratom_name)
+           upper_ratom_name=reac_atoms_names_UPPER(i_ratom,solid_indices(i_reac-N_gas))
            IF (trim(adjustl(upper_atom_name)) .EQ. &
                 trim(adjustl(upper_ratom_name))) THEN
               a(i_reac,i_atom) = reac_stoich(i_ratom,solid_indices(i_reac-N_gas))*mol
@@ -929,7 +943,8 @@ subroutine ec_MAKE_MATRIX_short(N_atoms,names_atoms,molfracs_atoms,N_reactants,p
   ! Set up a_ij
   a = 0d0
   DO i_atom = 1, N_atoms
-     call To_upper(names_atoms(i_atom),upper_atom_name)
+!     call To_upper(names_atoms(i_atom),upper_atom_name)
+	upper_atom_name=names_atoms(i_atom)
      DO i_reac = 1, N_gas
         IF (remove_ions) THEN
            IF (reac_ion(i_reac)) THEN
@@ -938,7 +953,8 @@ subroutine ec_MAKE_MATRIX_short(N_atoms,names_atoms,molfracs_atoms,N_reactants,p
            END IF
         END IF
         DO i_ratom = 1, 5
-           call To_upper(reac_atoms_names(i_ratom,i_reac),upper_ratom_name)
+!           call To_upper(reac_atoms_names(i_ratom,i_reac),upper_ratom_name)
+			upper_ratom_name=reac_atoms_names_UPPER(i_ratom,i_reac)
            IF (trim(adjustl(upper_atom_name)) .EQ. &
                 trim(adjustl(upper_ratom_name))) THEN
               a(i_reac,i_atom) = reac_stoich(i_ratom,i_reac)*mol
@@ -947,7 +963,8 @@ subroutine ec_MAKE_MATRIX_short(N_atoms,names_atoms,molfracs_atoms,N_reactants,p
      END DO
      DO i_reac = N_gas+1, N_reactants
         DO i_ratom = 1, 5
-           call To_upper(reac_atoms_names(i_ratom,solid_indices(i_reac-N_gas)),upper_ratom_name)
+!           call To_upper(reac_atoms_names(i_ratom,solid_indices(i_reac-N_gas)),upper_ratom_name)
+           upper_ratom_name=reac_atoms_names_UPPER(i_ratom,solid_indices(i_reac-N_gas))
            IF (trim(adjustl(upper_atom_name)) .EQ. &
                 trim(adjustl(upper_ratom_name))) THEN
               a(i_reac,i_atom) = reac_stoich(i_ratom,solid_indices(i_reac-N_gas))*mol
@@ -1113,6 +1130,10 @@ subroutine ec_INV_MATRIX_long(lens,matrix,vector,solution_vector)
   DOUBLE PRECISION             :: d
   INTEGER                      :: i_mat, j_mat
 
+     integer :: NRHS,info,dimen
+	integer :: IWORK(10*lens*lens)
+     
+
   INTERFACE
      SUBROUTINE ludcmp(a,indx,d)
        USE nrtype; USE nrutil, ONLY : assert_eq,imaxloc,nrerror,outerprod,swap
@@ -1142,6 +1163,7 @@ subroutine ec_INV_MATRIX_long(lens,matrix,vector,solution_vector)
      vector_nions = 0d0
      matrix_nions = 0d0
      corrf_i = 0
+     dimen=0
      DO i_mat = 1, lens
         corrf_j = 0
         IF (i_mat <= N_gas) THEN
@@ -1158,13 +1180,17 @@ subroutine ec_INV_MATRIX_long(lens,matrix,vector,solution_vector)
               END IF
            END IF
            matrix_nions(j_mat-corrf_j,i_mat-corrf_i) = matrix(j_mat,i_mat)
+			if((j_mat-corrf_j).gt.dimen) dimen=(j_mat-corrf_j)
         END DO
         vector_nions(i_mat-corrf_i) = vector(i_mat)
+		if((i_mat-corrf_i).gt.dimen) dimen=(i_mat-corrf_i)
      END DO
      solution_vector_nions = vector_nions
      
-     call ludcmp(matrix_nions,index_nions,d)
-     call lubksb(matrix_nions,index_nions,solution_vector_nions)
+	NRHS=1
+	call DGESV( dimen, NRHS, matrix_nions(1:dimen,1:dimen), dimen, IWORK, solution_vector, dimen, info )
+!     call ludcmp(matrix_nions,index_nions,d)
+!     call lubksb(matrix_nions,index_nions,solution_vector_nions)
      corrf_i = 0
      DO i_mat = 1, lens
         IF (i_mat <= N_gas) THEN
@@ -1176,8 +1202,10 @@ subroutine ec_INV_MATRIX_long(lens,matrix,vector,solution_vector)
         solution_vector(i_mat) = solution_vector_nions(i_mat-corrf_i)
      END DO
   ELSE
-     call ludcmp(matrix,index,d)
-     call lubksb(matrix,index,solution_vector)
+	NRHS=1
+	call DGESV( lens, NRHS, matrix(1:lens,1:lens), lens, IWORK, solution_vector, lens, info )
+!     call ludcmp(matrix,index,d)
+!     call lubksb(matrix,index,solution_vector)
   END IF
 
 end subroutine ec_INV_MATRIX_long
@@ -1220,10 +1248,16 @@ subroutine ec_INV_MATRIX_short(lens,matrix,vector,solution_vector)
      END SUBROUTINE lubksb
   END INTERFACE
 
+     integer :: NRHS,info
+	integer :: IWORK(10*lens*lens)
+     
   solution_vector = vector
 
-  call ludcmp(matrix,index,d)
-  call lubksb(matrix,index,solution_vector)
+	NRHS=1
+	call DGESV( lens, NRHS, matrix(1:lens,1:lens), lens, IWORK, solution_vector, lens, info )
+
+!  call ludcmp(matrix,index,d)
+!  call lubksb(matrix,index,solution_vector)
 
 end subroutine ec_INV_MATRIX_short
 
@@ -1349,7 +1383,8 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
   ! Set up a_ij
   a = 0d0
   DO i_atom = 1, N_atoms
-     call To_upper(names_atoms(i_atom),upper_atom_name)
+!     call To_upper(names_atoms(i_atom),upper_atom_name)
+	upper_atom_name=names_atoms(i_atom)
      DO i_reac = 1, N_gas
         IF (remove_ions) THEN
            IF (reac_ion(i_reac)) THEN
@@ -1358,7 +1393,8 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
            END IF
         END IF
         DO i_ratom = 1, 5
-           call To_upper(reac_atoms_names(i_ratom,i_reac),upper_ratom_name)
+!           call To_upper(reac_atoms_names(i_ratom,i_reac),upper_ratom_name)
+           upper_ratom_name=reac_atoms_names_UPPER(i_ratom,i_reac)
            IF (trim(adjustl(upper_atom_name)) .EQ. &
                 trim(adjustl(upper_ratom_name))) THEN
               a(i_reac,i_atom) = reac_stoich(i_ratom,i_reac)*mol
@@ -1367,7 +1403,8 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
      END DO
      DO i_reac = N_gas+1, N_reactants
         DO i_ratom = 1, 5
-           call To_upper(reac_atoms_names(i_ratom,solid_indices(i_reac-N_gas)),upper_ratom_name)
+!           call To_upper(reac_atoms_names(i_ratom,solid_indices(i_reac-N_gas)),upper_ratom_name)
+           upper_ratom_name=reac_atoms_names_UPPER(i_ratom,solid_indices(i_reac-N_gas))
            IF (trim(adjustl(upper_atom_name)) .EQ. &
                 trim(adjustl(upper_ratom_name))) THEN
               a(i_reac,i_atom) = reac_stoich(i_ratom,solid_indices(i_reac-N_gas))*mol
@@ -1409,9 +1446,11 @@ subroutine ec_CHANGE_ABUNDS_long(N_atoms,N_reactants,solution_vector,n_spec,pi_a
 
      ! DO THE MAGIC THEY DO IN SECT. 3.7 in McBride
 
+	iseqtest=.false.
      DO i_reac = 1, N_reactants
         DO i_stoich = 1, 5
-           iseqtest(i_stoich,i_reac)=(trim(adjustl(reac_atoms_names(i_stoich,i_reac))) .EQ. 'E')
+!           iseqtest(i_stoich,i_reac)=(trim(adjustl(reac_atoms_names(i_stoich,i_reac))) .EQ. 'E')
+			if(reac_atoms_names(i_stoich,i_reac)(1:1).eq.'E') iseqtest(i_stoich,i_reac)=.true.
         END DO
      END DO
 
@@ -1607,7 +1646,8 @@ subroutine ec_CHANGE_ABUNDS_short(N_atoms,N_reactants,solution_vector,n_spec,pi_
   ! Set up a_ij
   a = 0d0
   DO i_atom = 1, N_atoms
-     call To_upper(names_atoms(i_atom),upper_atom_name)
+!     call To_upper(names_atoms(i_atom),upper_atom_name)
+	upper_atom_name=names_atoms(i_atom)
      DO i_reac = 1, N_gas
         IF (remove_ions) THEN
            IF (reac_ion(i_reac)) THEN
@@ -1616,7 +1656,8 @@ subroutine ec_CHANGE_ABUNDS_short(N_atoms,N_reactants,solution_vector,n_spec,pi_
            END IF
         END IF
         DO i_ratom = 1, 5
-           call To_upper(reac_atoms_names(i_ratom,i_reac),upper_ratom_name)
+!           call To_upper(reac_atoms_names(i_ratom,i_reac),upper_ratom_name)
+           upper_ratom_name=reac_atoms_names_UPPER(i_ratom,i_reac)
            IF (trim(adjustl(upper_atom_name)) .EQ. &
                 trim(adjustl(upper_ratom_name))) THEN
               a(i_reac,i_atom) = reac_stoich(i_ratom,i_reac)*mol
@@ -1625,7 +1666,8 @@ subroutine ec_CHANGE_ABUNDS_short(N_atoms,N_reactants,solution_vector,n_spec,pi_
      END DO
      DO i_reac = N_gas+1, N_reactants
         DO i_ratom = 1, 5
-           call To_upper(reac_atoms_names(i_ratom,solid_indices(i_reac-N_gas)),upper_ratom_name)
+!           call To_upper(reac_atoms_names(i_ratom,solid_indices(i_reac-N_gas)),upper_ratom_name)
+           upper_ratom_name=reac_atoms_names_UPPER(i_ratom,solid_indices(i_reac-N_gas))
            IF (trim(adjustl(upper_atom_name)) .EQ. &
                 trim(adjustl(upper_ratom_name))) THEN
               a(i_reac,i_atom) = reac_stoich(i_ratom,solid_indices(i_reac-N_gas))*mol
@@ -1739,15 +1781,16 @@ subroutine ec_ATOM_MASS(atom_name,atom_mass)
   !! Internal:
   INTEGER                      :: i_atom
   CHARACTER(len(atom_name))    :: atom_name_UPPER
-  CHARACTER*2                  :: names_atoms_save_UPPER
+!  CHARACTER*2                  :: names_atoms_save_UPPER
 
   atom_mass = -1d0
 
+!  call To_upper(atom_name,atom_name_UPPER)
+	atom_name_UPPER=atom_name
   DO i_atom = 1, N_atoms_save
-     call To_upper(atom_name,atom_name_UPPER)
-     call To_upper(names_atoms_save(i_atom),names_atoms_save_UPPER)
+!     call To_upper(names_atoms_save(i_atom),names_atoms_save_UPPER)
      IF (trim(adjustl(atom_name_UPPER)) .EQ. &
-          trim(adjustl(names_atoms_save_UPPER))) THEN
+          trim(adjustl(names_atoms_save_UPPER(i_atom)))) THEN
         atom_mass = masses_atoms_save(i_atom)
         EXIT
      END IF
@@ -1788,7 +1831,8 @@ subroutine ec_INCLUDE_SOLIDS_QUESTIONMARK(N_reactants,N_atoms,pi_atom,names_atom
   ! Set up a_ij
   a = 0d0
   DO i_atom = 1, N_atoms
-     call To_upper(names_atoms(i_atom),upper_atom_name)
+!     call To_upper(names_atoms(i_atom),upper_atom_name)
+	upper_atom_name=names_atoms(i_atom)
      DO i_reac = 1, N_reactants
         IF (remove_ions) THEN
            IF (reac_ion(i_reac)) THEN
@@ -1796,7 +1840,8 @@ subroutine ec_INCLUDE_SOLIDS_QUESTIONMARK(N_reactants,N_atoms,pi_atom,names_atom
            END IF
         END IF
         DO i_ratom = 1, 5
-           call To_upper(reac_atoms_names(i_ratom,i_reac),upper_ratom_name)
+!           call To_upper(reac_atoms_names(i_ratom,i_reac),upper_ratom_name)
+           upper_ratom_name=reac_atoms_names_UPPER(i_ratom,i_reac)
            IF (trim(adjustl(upper_atom_name)) .EQ. &
                 trim(adjustl(upper_ratom_name))) THEN
               a(i_reac,i_atom) = reac_stoich(i_ratom,i_reac)*mol
@@ -1856,7 +1901,8 @@ subroutine ec_CALC_ADIABATIC_GRADIENT(N_atoms,N_spec_eff,N_reactants,n_spec, &
   ! Set up a_ij
   a = 0d0
   DO i_atom = 1, N_atoms
-     call To_upper(names_atoms(i_atom),upper_atom_name)
+!     call To_upper(names_atoms(i_atom),upper_atom_name)
+	upper_atom_name=names_atoms(i_atom)
      DO i_reac = 1, N_gas
         IF (remove_ions) THEN
            IF (reac_ion(i_reac)) THEN
@@ -1865,7 +1911,8 @@ subroutine ec_CALC_ADIABATIC_GRADIENT(N_atoms,N_spec_eff,N_reactants,n_spec, &
            END IF
         END IF
         DO i_ratom = 1, 5
-           call To_upper(reac_atoms_names(i_ratom,i_reac),upper_ratom_name)
+!           call To_upper(reac_atoms_names(i_ratom,i_reac),upper_ratom_name)
+           upper_ratom_name=reac_atoms_names_UPPER(i_ratom,i_reac)
            IF (trim(adjustl(upper_atom_name)) .EQ. &
                 trim(adjustl(upper_ratom_name))) THEN
               a(i_reac,i_atom) = reac_stoich(i_ratom,i_reac)*mol
@@ -1874,7 +1921,8 @@ subroutine ec_CALC_ADIABATIC_GRADIENT(N_atoms,N_spec_eff,N_reactants,n_spec, &
      END DO
      DO i_reac = N_gas+1, N_spec_eff
         DO i_ratom = 1, 5
-           call To_upper(reac_atoms_names(i_ratom,solid_indices(i_reac-N_gas)),upper_ratom_name)
+!           call To_upper(reac_atoms_names(i_ratom,solid_indices(i_reac-N_gas)),upper_ratom_name)
+           upper_ratom_name=reac_atoms_names_UPPER(i_ratom,solid_indices(i_reac-N_gas))
            IF (trim(adjustl(upper_atom_name)) .EQ. &
                 trim(adjustl(upper_ratom_name))) THEN
               a(i_reac,i_atom) = reac_stoich(i_ratom,solid_indices(i_reac-N_gas))*mol

@@ -783,8 +783,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Tform
 		case("pform")
 			read(key%value,*) Pform
-		case("fenrich","f_enrich","enrich")
-			read(key%value,*) f_enrich
+		case("fenrich","f_enrich","enrich","fdry","f_dry")
+			read(key%value,*) f_dry
+		case("fwet","f_wet")
+			read(key%value,*) f_wet
 		case("tchem")
 			read(key%value,*) Tchem
 		case("pchem")
@@ -1056,7 +1058,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 
 	Mplanet=1d0
 	Rplanet=1d0
-	Pplanet=1d-2
+	Pplanet=10d0
 	loggPlanet=2.5d0
 	Mp_from_logg=.false.
 	
@@ -1109,7 +1111,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 
 	Tform=-10d0
 	Pform=1d0
-	f_enrich=0d0
+	f_dry=0d0
+	f_wet=0d0
 	
 	r_nuc=1d-3
 	
@@ -1795,22 +1798,22 @@ c not entirely correct...
 			select case(RetPar(i)%keyword)
 				case("Rp","rp","RP")
 					RetPar(i)%x0=Rplanet
-					RetPar(i)%xmin=Rplanet-6d0*dR1
-					RetPar(i)%xmax=Rplanet+6d0*dR2
+					RetPar(i)%xmin=max(0d0,Rplanet-10d0*dR1)
+					RetPar(i)%xmax=Rplanet+10d0*dR2
 					if(RetPar(i)%xmin.lt.0d0) RetPar(i)%xmin=0d0
 		call output("Minimum radius: " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Rjup")
 		call output("Maximum radius: " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Rjup")
 				case("Mp","mp","MP")
 					RetPar(i)%x0=Mplanet
-					RetPar(i)%xmin=Mplanet-3d0*dM1
-					RetPar(i)%xmax=Mplanet+3d0*dM2
+					RetPar(i)%xmin=max(0d0,Mplanet-10d0*dM1)
+					RetPar(i)%xmax=Mplanet+10d0*dM2
 					if(RetPar(i)%xmin.lt.0d0) RetPar(i)%xmin=0d0
 		call output("Minimum mass:   " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Mjup")
 		call output("Maximum mass:   " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Mjup")
 				case("loggP","loggp")
 					RetPar(i)%x0=log10(Ggrav*(Mplanet*Mjup)/((Rplanet*Rjup)**2))
-					RetPar(i)%xmin=log10(Ggrav*((Mplanet-3d0*dM1)*Mjup)/(((Rplanet+6d0*dR2)*Rjup)**2))
-					RetPar(i)%xmax=log10(Ggrav*((Mplanet+3d0*dM2)*Mjup)/(((Rplanet-6d0*dR1)*Rjup)**2))
+					RetPar(i)%xmin=max(0.1,log10(Ggrav*((Mplanet-10d0*dM1)*Mjup)/(((Rplanet+10d0*dR2)*Rjup)**2)))
+					RetPar(i)%xmax=log10(Ggrav*((Mplanet+10d0*dM2)*Mjup)/(((Rplanet-10d0*dR1)*Rjup)**2))
 					if(RetPar(i)%xmin.lt.0.1d0) RetPar(i)%xmin=0.1d0
 		call output("Minimum logg:   " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 		call output("Maximum logg:   " // dbl2string(RetPar(i)%xmax,'(f7.2)'))

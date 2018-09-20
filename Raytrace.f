@@ -13,6 +13,8 @@
 	integer icc,imol
 	real*8 Ocolumn(2,nlam,ncc),Ccolumn(2,nlam,ncc),Hcolumn(2,nlam,ncc),Otot,Ctot,Htot,dP
 	character*500 filename
+	real*8,allocatable :: dtrace(:,:)
+	integer,allocatable :: irtrace(:,:),nirtrace(:)
 
 	docloud=.false.
 	if(singlecloud) then
@@ -184,6 +186,57 @@
 		enddo
 	enddo
 
+	allocate(dtrace(nrtrace,nr*2))
+	allocate(irtrace(nrtrace,nr*2))
+	allocate(nirtrace(nrtrace))
+	do i=1,nrtrace-1
+		rr=sqrt(rtrace(i)*rtrace(i+1))
+		ir=nr
+		k=0
+		si=-1d0
+		xx1=si*sqrt(R(ir+1)**2-rr**2)
+		in=.true.
+1		continue
+		k=k+1
+		if(in) then
+			xx2=(R(ir)**2-rr**2)
+			if(xx2.gt.0d0) then
+				xx2=si*sqrt(xx2)
+				d=abs(xx1-xx2)
+				ir_next=ir-1
+				goto 2
+			else
+				si=-si
+				xx2=si*sqrt(R(ir+1)**2-rr**2)
+				d=abs(xx1-xx2)
+				ir_next=ir+1
+				in=.false.
+				goto 2
+			endif
+		else
+			xx2=si*sqrt(R(ir+1)**2-rr**2)
+			d=abs(xx1-xx2)
+			ir_next=ir+1
+			goto 2
+		endif
+2		continue
+		irtrace(i,k)=ir
+		dtrace(i,k)=d
+		if(ir_next.gt.0.and.ir_next.le.nr) then
+			ir=ir_next
+			xx1=xx2
+			goto 1
+		endif
+		if(ir_next.le.0) then
+			k=k+1
+			irtrace(i,k)=ir_next
+			dtrace(i,k)=0d0
+		endif
+		nirtrace(i)=k
+	enddo
+
+
+
 	allocate(flux_contr(nr,nlam))
 	allocate(obsA_contr(nr,nlam))
 	Ocolumn=0d0
@@ -195,7 +248,7 @@
 !$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,
 !$OMP&         Ca,Cs,icloud,isize,BBr,Otot,Ctot,Htot,imol,irc,contr,fact_contr,fluxg_contr,Ag_contr)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
-!$OMP&			cloud_dens,useDRIFT,Psimplecloud,P,flux_contr,obsA_contr,
+!$OMP&			cloud_dens,useDRIFT,Psimplecloud,P,flux_contr,obsA_contr,irtrace,dtrace,nirtrace,
 !$OMP&			Ocolumn,Ccolumn,Hcolumn,nmol,Oatoms,Catoms,Hatoms,mixrat_r,includemol,computecontrib)
 	allocate(fact_contr(nr))
 	allocate(fluxg_contr(nr))
@@ -218,41 +271,15 @@ c		call tellertje(ilam+1,nlam+1)
 				fluxg_contr=0d0
 				Ag_contr=0d0
 				do i=1,nrtrace-1
-c					Otot=0d0
-c					Ctot=0d0
-c					Htot=0d0
 					fact=1d0
 					fact_contr=1d0
 					tautot=0d0
 					A=pi*(rtrace(i+1)**2-rtrace(i)**2)
-					rr=sqrt(rtrace(i)*rtrace(i+1))
-					ir=nr
-					si=-1d0
-					xx1=si*sqrt(R(ir+1)**2-rr**2)
-					in=.true.
-1					continue
-					if(in) then
-						xx2=(R(ir)**2-rr**2)
-						if(xx2.gt.0d0) then
-							xx2=si*sqrt(xx2)
-							d=abs(xx1-xx2)
-							ir_next=ir-1
-							goto 2
-						else
-							si=-si
-							xx2=si*sqrt(R(ir+1)**2-rr**2)
-							d=abs(xx1-xx2)
-							ir_next=ir+1
-							in=.false.
-							goto 2
-						endif
-					else
-						xx2=si*sqrt(R(ir+1)**2-rr**2)
-						d=abs(xx1-xx2)
-						ir_next=ir+1
-						goto 2
-					endif
-2					continue
+					do k=1,nirtrace(i)
+
+					ir=irtrace(i,k)
+					d=dtrace(i,k)
+
 					Ca=Cabs(ir,ilam,ig)*Ndens(ir)
 					Cs=Csca(ir,ilam)*Ndens(ir)
 					do icloud=1,nclouds
@@ -270,13 +297,6 @@ c					Htot=0d0
 							endif
 						endif
 					enddo
-c					do imol=1,nmol
-c						if(includemol(imol)) then
-c							Otot=Otot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Oatoms(imol))
-c							Ctot=Ctot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Catoms(imol))
-c							Htot=Htot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Hatoms(imol))
-c						endif
-c					enddo
 					tau_a=d*Ca
 					tau=tau_a+d*Cs
 					if(P(ir).gt.Psimplecloud) tau=1d4
@@ -294,11 +314,12 @@ c					enddo
 							endif
 						enddo
 					endif
-					if(ir_next.gt.0.and.ir_next.le.nr.and.tautot.lt.maxtau) then
-						ir=ir_next
-						xx1=xx2
-						goto 1
-					else if(ir_next.le.0.or.tautot.ge.maxtau) then
+					if(k.lt.nirtrace(i)) ir_next=irtrace(i,k+1)
+					if(ir_next.le.0) exit
+
+					enddo
+
+					if(ir_next.le.0) then
 						fluxg=fluxg+A*BBr(ir)*fact
 						if(computecontrib) then
 							do irc=1,nr
@@ -314,9 +335,6 @@ c					enddo
 					if(computecontrib) then
 						Ag_contr=Ag_contr+A*(1d0-fact_contr)
 					endif
-c					Ocolumn(1,ilam,icc)=Ocolumn(1,ilam,icc)+A*fact*Otot/real(ng)
-c					Ccolumn(1,ilam,icc)=Ccolumn(1,ilam,icc)+A*fact*Ctot/real(ng)
-c					Hcolumn(1,ilam,icc)=Hcolumn(1,ilam,icc)+A*fact*Htot/real(ng)
 				enddo
 				flux(0,ilam)=flux(0,ilam)+cloudfrac(icc)*fluxg/real(ng)
 				obsA(0,ilam)=obsA(0,ilam)+cloudfrac(icc)*Ag/real(ng)
@@ -339,6 +357,10 @@ c					Hcolumn(1,ilam,icc)=Hcolumn(1,ilam,icc)+A*fact*Htot/real(ng)
 !$OMP FLUSH
 !$OMP END PARALLEL
 	call tellertje(nlam,nlam)
+
+	deallocate(dtrace)
+	deallocate(irtrace)
+	deallocate(nirtrace)
 	
 	if(computecontrib) then
 		filename=trim(outputdir) // "contribution.fits.gz"

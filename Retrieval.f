@@ -984,6 +984,137 @@ c			vec(i)=gasdev(idum)
 	end
 
 
+
+
+	subroutine WritePTlimitsMN()
+	use GlobalSetup
+	use Constants
+	use RetrievalMod
+	IMPLICIT NONE
+	real*8 minT(nr),maxT(nr),var(n_ret),error(2,n_ret),tot,chi2
+	real*8 var0(n_ret),random,vec(n_ret),Tbest(nr),gasdev,Cov(n_ret,n_ret)
+	real*8 dvar(n_ret),value(n_ret),COret0,errdummy(2,n_ret)
+	real*8 iCO(2),ivar(2,n_ret),imaxT(nr),iminT(nr),w,wmax,dummy
+	integer i,j,k,info,nk,ierr,iter,seed
+	character*6000 form
+	character*10 side
+	logical ioflag,exist
+	
+	inquire(file=trim(outputdir)//".txt",exist=exist)
+	if(.not.exist) return
+
+	if(i2d.eq.0) then
+		side=" "
+	else
+		write(side,'("_",i0.2)') i2d
+	endif
+	
+	ioflag=.true.
+	
+	open(unit=40,file=trim(outputdir)//".txt",RECL=6000)
+	wmax=-1d200
+3	read(40,*,end=4) w,dummy,var(1:n_ret)
+	if(w.gt.wmax) then
+		wmax=w
+		var0=var
+	endif
+	goto 3
+4	close(unit=40)
+	
+	call SetOutputMode(.false.)
+	var=var0
+	errdummy=0d0
+	call MapRetrievalMN(var,errdummy)
+	call InitDens()
+	call SetupStructure(.false.)
+	Tbest=T
+	maxT=0d0
+	minT=0d0
+	COerr=0d0
+	error=0d0
+	ivar=0
+	imaxT=0
+	iminT=0
+	iCO=0
+
+	if(ioflag) then
+		open(unit=35,file=trim(outputdir) // "error_cloud.dat",RECL=6000)
+		form='("#"' // trim(int2string(n_ret+2,'(i4)')) // 'a19)'
+		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
+     &	,(trim(int2string(n_ret+1,'(i4)')) // " COratio"),(trim(int2string(n_ret+2,'(i4)')) // " metallicity")
+		form='(' // int2string(n_ret+2,'(i4)') // 'es19.7)'
+	endif
+
+	open(unit=40,file=trim(outputdir)//".txt",RECL=6000)
+1	continue
+		read(40,*,end=2) w,dummy,var(1:n_ret)
+		call MapRetrievalMN(var,errdummy)
+		
+		do i=1,n_ret
+			value(i)=RetPar(i)%value
+			if(RetPar(i)%logscale) value(i)=log10(value(i))
+		enddo
+		if(ioflag) write(35,form) (value(i),i=1,n_ret),COratio,metallicity
+		call InitDens()
+		call SetupStructure(.false.)
+
+		do i=1,nr
+			if(T(i).gt.Tbest(i)) then
+				maxT(i)=maxT(i)+w*(T(i)-Tbest(i))**2
+				imaxT(i)=imaxT(i)+w
+			endif
+			if(T(i).lt.Tbest(i)) then
+				minT(i)=minT(i)+w*(T(i)-Tbest(i))**2
+				iminT(i)=iminT(i)+w
+			endif
+		enddo
+		do i=1,n_ret
+			if(var(i).lt.var0(i)) then
+				error(1,i)=error(1,i)+w*(var(i)-var0(i))**2
+				ivar(1,i)=ivar(1,i)+w
+			endif
+			if(var(i).gt.var0(i)) then
+				error(2,i)=error(2,i)+w*(var(i)-var0(i))**2
+				ivar(2,i)=ivar(2,i)+w
+			endif
+		enddo
+		if(COret.lt.COret0) then
+			COerr(1)=COerr(1)+w*(COret-COret0)**2
+			iCO(1)=iCO(1)+w
+		endif
+		if(COret.gt.COret0) then
+			COerr(2)=COerr(2)+w*(COret-COret0)**2
+			iCO(2)=iCO(2)+w
+		endif
+	goto 1
+2	continue
+	close(unit=40)
+
+	error(1,1:n_ret)=sqrt(error(1,1:n_ret)/real(ivar(1,1:n_ret)))
+	error(2,1:n_ret)=sqrt(error(2,1:n_ret)/real(ivar(2,1:n_ret)))
+	COerr(1:2)=sqrt(COerr(1:2)/real(iCO(1:2)))
+	minT(1:nr)=sqrt(minT(1:nr)/real(iminT(1:nr)))
+	maxT(1:nr)=sqrt(maxT(1:nr)/real(imaxT(1:nr)))
+
+	call MapRetrievalMN(var0,error)
+	call InitDens()
+	call SetupStructure(.false.)
+
+	call SetOutputMode(.true.)
+	if(ioflag) then
+		close(unit=35)
+
+		open(unit=45,file=trim(outputdir) // "limits" // trim(side) //".dat",RECL=1000)
+		do i=1,nr
+			write(45,*) P(i),Tbest(i),minT(i),maxT(i)
+		enddo
+		close(unit=45)
+	endif
+
+	return
+	end
+
+
 	subroutine WritePTlimits_slow(var0,Cov,ErrVec,error,chi2,dobsA,demis,demisR,ioflag)
 	use GlobalSetup
 	use Constants
@@ -1372,6 +1503,56 @@ c	linear
 		call ReadAndSetKey(key)
 	enddo
 	call ConvertUnits()
+	metallicity0=metallicity
+
+	enddo
+
+	return
+	end
+	
+
+	
+	subroutine MapRetrievalMN(var,dvar)
+	use GlobalSetup
+	use ReadKeywords
+	use Constants
+	IMPLICIT NONE
+	type(SettingKey) key
+	character*1000 readline
+	integer i,j,k
+	real*8 var(n_ret),dvar(2,n_ret),x,xx
+
+	do k=1,2
+
+	do i=1,n_ret
+		if(RetPar(i)%logscale) then
+c	log
+			x=var(i)
+			RetPar(i)%value=10d0**x
+		else
+c	linear, square
+			x=var(i)
+			RetPar(i)%value=x
+		endif
+	enddo
+
+	Rplanet=Rplanet/Rjup
+	Mplanet=Mplanet/Mjup
+	Rstar=Rstar/Rsun
+	Mstar=Mstar/Msun
+	Dplanet=Dplanet/AU
+	lam1=lam1/micron
+	lam2=lam2/micron
+	distance=distance/parsec
+	r_nuc=r_nuc/micron
+
+	do i=1,n_ret
+		readline=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
+		call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2,key%key2d)
+		call ReadAndSetKey(key)
+	enddo
+	call ConvertUnits()
+	metallicity0=metallicity
 
 	enddo
 
@@ -1583,7 +1764,8 @@ c	linear/squared
 	if(Tform.gt.0d0) then
 		if(domakeai.and..not.retrieval) then
 			write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'Tform',Tform,0d0,0d0
-			write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'enrich',f_enrich,0d0,0d0
+			write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'f_dry',f_dry,0d0,0d0
+			write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'f_wet',f_wet,0d0,0d0
 		endif
 		write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'COratio',COratio,0d0,0d0
 		write(20,'(a15," = ",es14.7," +/- ",es11.4,es11.4)') 'metallicity',metallicity,0d0,0d0

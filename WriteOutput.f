@@ -249,7 +249,6 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
      &						lamR,Fstar_obs(1:nlamR),specR,specRexp,nlamR)
 	do i=1,nlamR
 		tot=1.51d7*(Fstar_obs(i)*1d23/distance**2)*(pi*(Dmirror/2d0)**2)
-		print*,lamR(i),tot/specR(i),Fstar_obs(i)*1d23/distance**2
 		tot=tot*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
 		tot=tot*instr_ntrans(i_instr)*f_phot/specR(i)
 		specErr(i)=1d0/sqrt(tot)

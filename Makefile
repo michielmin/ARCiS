@@ -18,7 +18,8 @@ ifeq ($(debug),true)
   ifeq ($(gfort),true)
     DEBUGGING = -fbounds-check -fbacktrace -fcheck=all
   else	
-    DEBUGGING = -check all -traceback -check bounds -O0 -g
+#    DEBUGGING = -check all -traceback -check bounds -O0 -g
+    DEBUGGING = -check bounds -O0 -g
   endif
 endif
 
@@ -90,6 +91,7 @@ OBJS	= Modules.o \
 		Mg0.6Fe0.4OData.o \
 		MgOData.o \
 		IronData.o \
+		SiCData.o \
 		KuruczData.o \
 		MCRad.o \
 		OpacityFITS.o \

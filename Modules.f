@@ -15,8 +15,9 @@ c===============================================================================
 	parameter(kb=1.3806503d-16)
 	parameter(sigma=5.6704d-5)
 c	parameter(mp=1.67262178d-24)	!proton mass
-	parameter(mp=1.660540210d-24)	!atomic mass unit
-	parameter(Ggrav=6.6725985d-8) ! in cm^3/g/s^2
+	parameter(mp=1.660539040d-24)	!atomic mass unit
+c	parameter(Ggrav=6.6725985d-8) ! in cm^3/g/s^2
+	parameter(Ggrav=6.6740831d-8) ! in cm^3/g/s^2
 	parameter(hplanck=6.626068d-27) ! cm^2 g/s
 	parameter(Mearth=5.97219d27)
 	parameter(Mjup=1.898d30)
@@ -31,10 +32,47 @@ c	parameter(Rjup=7.1492d9)
 	
 	end module Constants
 
+
+
+c========================================================
+c Interfaces for input/output subroutines
+c========================================================
+	module OutputModule
+	IMPLICIT NONE
+
+	interface
+		subroutine outputform(string,form)
+			character :: string*(*)
+			character,intent(in),optional :: form*(*)
+		end subroutine outputform
+	end interface
+
+	interface
+		function int2string(i,form)
+			character*20 :: int2string
+			integer :: i
+			character,intent(in),optional :: form*(*)
+		end function int2string
+	end interface
+
+	interface
+		function dbl2string(x,form)
+			character*20 :: dbl2string
+			real*8 :: x
+			character,intent(in),optional :: form*(*)
+		end function dbl2string
+	end interface
+
+
+	end module OutputModule
+	
+
+
 c=========================================================================================
 c global setup for the code
 c=========================================================================================
 	module GlobalSetup
+	use OutputModule
 	IMPLICIT NONE
 	real*8 Mplanet,Rplanet,Pplanet,loggPlanet				! mass and radius of the planet at pressure Pplanet
 	real*8 Tstar,Rstar,Mstar,logg,Dplanet
@@ -65,7 +103,7 @@ c===============================================================================
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime,TiScale,f_multinest,tol_multinest
 	logical enhancecarbon,fast_chem,gamma_equal
-	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_enrich
+	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet
 	real*8,allocatable :: lam(:),freq(:),dfreq(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ,nspike,nai
@@ -212,35 +250,6 @@ cPoints for the temperature structure
 	integer npop,ngen,nobs
 	logical gene_cross
 	
-
-c========================================================
-c Interfaces for input/output subroutines
-c========================================================
-
-	interface
-		subroutine outputform(string,form)
-			character :: string*(*)
-			character,intent(in),optional :: form*(*)
-		end subroutine outputform
-	end interface
-
-	interface
-		function int2string(i,form)
-			character*20 :: int2string
-			integer :: i
-			character,intent(in),optional :: form*(*)
-		end function int2string
-	end interface
-
-	interface
-		function dbl2string(x,form)
-			character*20 :: dbl2string
-			real*8 :: x
-			character,intent(in),optional :: form*(*)
-		end function dbl2string
-	end interface
-
-
 	end module GlobalSetup
 	
 
