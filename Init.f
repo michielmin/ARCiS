@@ -573,6 +573,9 @@ c	condensates=(condensates.or.cloudcompute)
 			endif
 		enddo			
 	endif
+
+	if(dochemistry) call init_GGchem()
+
 			
 	call output("==================================================================")
 	

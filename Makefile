@@ -108,7 +108,10 @@ OBJS	= Modules.o \
 		MultiNestARCiS.o \
 		mrqmin.o \
 		truncated_normal.o \
-		amoeba.o
+		amoeba.o \
+		GGchemARCiS.o \
+		GGchem_linpack_q.o \
+		GGchem_is_nan.o
 
 # program name and install location
 PROGRAM       = ARCiS

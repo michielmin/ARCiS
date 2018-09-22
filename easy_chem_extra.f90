@@ -1235,7 +1235,7 @@ END MODULE nrutil
 
 
 subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
-   cloudspecies,Xcloud,Ncloud,nabla_ad,set_gas_atoms,f_enrich,MMW,didcondens,fast_chem,includemol)
+   cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol)
 	use AtomsModule
   implicit none
 
@@ -1260,12 +1260,6 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 
 	integer at_re(N_reactants,N_atoms)
 	real*8 tot
-	logical set_gas_atoms
-
-	character*40 :: names_reactants_used(N_reactants),names_atoms_used(N_atoms)
-	real*8 molfracs_atoms_used(N_atoms)
-	integer :: N_reactants_used,N_atoms_used
-	logical fast_chem
 
 	at_re=0
   names_reactants(1) = 'H'
@@ -1590,55 +1584,13 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 	N_reactants_gas=N_reactants2
 	if(condensates) N_reactants2=109
 
-	N_atoms_used=N_atoms
-	names_atoms_used(1:N_atoms_used)=names_atoms(1:N_atoms_used)
-	molfracs_atoms_used(1:N_atoms_used)=molfracs_atoms(1:N_atoms_used)
-	if(fast_chem) then
-		N_reactants_used=0
-		N_atoms_used=0
-		atoms_used=.false.
-		do i_reac=1,N_reactants2
-			if(i_reac.le.10.or.i_reac.eq.19.or.i_reac.eq.21) then
-				N_reactants_used=N_reactants_used+1
-				names_reactants_used(N_reactants_used)=names_reactants(i_reac)
-				do j=1,N_atoms
-					if(at_re(i_reac,j).gt.0) atoms_used(j)=.true.
-				enddo
-			else
-				do i=1,nmol
-					if(includemol(i)) then
-					if(trim(names_reactants(i_reac)).eq.trim(mol_names(i)).or.	&
-      (trim(mol_names(i)).eq.'C2H2'.and.trim(names_reactants(i_reac)).eq.'C2H2,acetylene')) then
-						N_reactants_used=N_reactants_used+1
-						names_reactants_used(N_reactants_used)=names_reactants(i_reac)
-						do j=1,N_atoms
-							if(at_re(i_reac,j).gt.0) atoms_used(j)=.true.
-						enddo
-					endif
-					endif
-				enddo
-			endif
-		enddo
-		N_reactants2=N_reactants_used
-		names_reactants(1:N_reactants2)=names_reactants_used(1:N_reactants2)
-		tot=0d0
-		do i=1,N_atoms
-			if(atoms_used(i)) then
-				N_atoms_used=N_atoms_used+1
-				names_atoms_used(N_atoms_used)=names_atoms(i)
-				molfracs_atoms_used(N_atoms_used)=molfracs_atoms(i)
-				tot=tot+molfracs_atoms_used(N_atoms_used)
-			endif
-		enddo
-		molfracs_atoms_used=molfracs_atoms_used/tot
-	endif
 
       temp=Tin
 !      if(temp.gt.3000d0) temp=3000d0
       if(temp.lt.70d0) temp=70d0
       press=Pin
         	
-        call EASY_CHEM(N_atoms_used,N_reactants2,names_atoms_used,names_reactants,molfracs_atoms_used, &
+        call EASY_CHEM(N_atoms,N_reactants2,names_atoms,names_reactants,molfracs_atoms, &
              molfracs_reactants,massfracs_reactants,temp,press,ini,nabla_ad,gamma2,MMW,rho,cpe)
         ini = .FALSE.
 
@@ -1678,163 +1630,6 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 			enddo
 		enddo
 	endif
-
-	if(set_gas_atoms) then
-		gas_atoms=0d0
-		solid_atoms=0d0
-		do i=1,N_atoms
-			do i_reac=1,N_reactants_gas
-				gas_atoms(i)=gas_atoms(i)+molfracs_reactants(i_reac)*real(at_re(i_reac,i))
-			enddo
-		enddo
-		do i=1,N_atoms
-			do i_reac=N_reactants_gas+1,N_reactants2
-				solid_atoms(i)=solid_atoms(i)+molfracs_reactants(i_reac)*real(at_re(i_reac,i))
-			enddo
-		enddo
-		tot=sum(solid_atoms(1:N_atoms)+gas_atoms(1:N_atoms))
-		solid_atoms=solid_atoms/tot
-		gas_atoms=gas_atoms/tot
-	endif
-
-	return
-	end
-
-
-
-subroutine easy_chem_set_molfracs_atoms(CO,Z,TiScale,enhancecarbon)
-	use AtomsModule
-  implicit none
-  real*8 CO,Z,tot,TiScale
-  integer i
-  logical enhancecarbon
-
-  names_atoms(1) = 'H'
-  names_atoms(2) = 'He'
-  names_atoms(3) = 'C'
-  names_atoms(4) = 'N'
-  names_atoms(5) = 'O'
-  names_atoms(6) = 'Na'
-  names_atoms(7) = 'Mg'
-  names_atoms(8) = 'Al'
-  names_atoms(9) = 'Si'
-  names_atoms(10) = 'P'
-  names_atoms(11) = 'S'
-  names_atoms(12) = 'Cl'
-  names_atoms(13) = 'K'
-  names_atoms(14) = 'Ca'
-  names_atoms(15) = 'Ti'
-  names_atoms(16) = 'V'
-  names_atoms(17) = 'Fe'
-  names_atoms(18) = 'Ni'
-
-  molfracs_atoms = (/ 0.9207539305, &
-		0.0783688694, &
-		0.0002478241, &
-		6.22506056949881e-05, &
-		0.0004509658, &
-		1.60008694353205e-06, &
-		3.66558742055362e-05, &
-		2.595e-06, &
-		2.9795e-05, &
-		2.36670201997668e-07, &
-		1.2137900734604e-05, &
-		2.91167958499589e-07, &
-		9.86605611925677e-08, &
-		2.01439011429255e-06, &
-		8.20622804366359e-08, &
-		7.83688694089992e-09, &
-		2.91167958499589e-05, &
-		1.52807116806281e-06 &
-       /)
-
-	molfracs_atoms(1)=molfracs_atoms(1)/(10d0**Z)
-	molfracs_atoms(2)=molfracs_atoms(2)/(10d0**Z)
-	if(enhancecarbon) then
-		molfracs_atoms(3)=molfracs_atoms(5)*CO
-	else
-		molfracs_atoms(5)=molfracs_atoms(3)/CO
-	endif
-	
-	molfracs_atoms(15)=molfracs_atoms(15)*TiScale
-
-	tot=sum(molfracs_atoms(1:N_atoms))
-	molfracs_atoms=molfracs_atoms/tot
-
-	open(unit=50,file='atomic.dat')
-	do i=1,18
-		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
-	enddo
-	close(unit=50)
-
-
-	return
-	end
-
-
-
-subroutine easy_chem_set_molfracs_atoms_elabun(CO,Z,elabun)
-	use AtomsModule
-  implicit none
-  real*8 CO,Z,tot,elabun(7)
-  integer i
-
-  names_atoms(1) = 'H'
-  names_atoms(2) = 'He'
-  names_atoms(3) = 'C'
-  names_atoms(4) = 'N'
-  names_atoms(5) = 'O'
-  names_atoms(6) = 'Na'
-  names_atoms(7) = 'Mg'
-  names_atoms(8) = 'Al'
-  names_atoms(9) = 'Si'
-  names_atoms(10) = 'P'
-  names_atoms(11) = 'S'
-  names_atoms(12) = 'Cl'
-  names_atoms(13) = 'K'
-  names_atoms(14) = 'Ca'
-  names_atoms(15) = 'Ti'
-  names_atoms(16) = 'V'
-  names_atoms(17) = 'Fe'
-  names_atoms(18) = 'Ni'
-
-  molfracs_atoms = (/ 0.9207539305, &
-		0.0783688694, &
-		0.0002478241, &
-		6.22506056949881e-05, &
-		0.0004509658, &
-		1.60008694353205e-06, &
-		3.66558742055362e-05, &
-		2.595e-06, &
-		2.9795e-05, &
-		2.36670201997668e-07, &
-		1.2137900734604e-05, &
-		2.91167958499589e-07, &
-		9.86605611925677e-08, &
-		2.01439011429255e-06, &
-		8.20622804366359e-08, &
-		7.83688694089992e-09, &
-		2.91167958499589e-05, &
-		1.52807116806281e-06 &
-       /)
-
-	molfracs_atoms(1)=molfracs_atoms(1)/(10d0**Z)
-	molfracs_atoms(2)=molfracs_atoms(2)/(10d0**Z)
-	molfracs_atoms(5)=molfracs_atoms(3)/CO
-
-	tot=sum(molfracs_atoms(1:N_atoms))
-	molfracs_atoms=molfracs_atoms/tot
-
-	molfracs_atoms( 7)=molfracs_atoms(1)*elabun(1)
-	molfracs_atoms( 9)=molfracs_atoms(1)*elabun(2)
-	molfracs_atoms(15)=molfracs_atoms(1)*elabun(3)
-	molfracs_atoms( 5)=molfracs_atoms(1)*elabun(4)
-	molfracs_atoms(17)=molfracs_atoms(1)*elabun(5)
-	molfracs_atoms( 8)=molfracs_atoms(1)*elabun(6)
-	molfracs_atoms( 3)=molfracs_atoms(1)*elabun(7)
-
-	tot=sum(molfracs_atoms(1:N_atoms))
-	molfracs_atoms=molfracs_atoms/tot
 
 	return
 	end

@@ -20,9 +20,9 @@
 
 
 	if(PTchemAbun) then
-		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
-		call call_easy_chem(Tchem,Pchem,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_dry,MMW_form,didcondens_chem,fast_chem,includemol)
+		call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+		call call_chemistry(Tchem,Pchem,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW_form,didcondens_chem,includemol)
 		do i=2,nr
 			mixrat_r(i,1:nmol)=mixrat_r(1,1:nmol)
 		enddo
@@ -170,7 +170,7 @@ c	if(useDRIFT.and.domakeai) then
 		if(Tform.gt.0d0) then
 			call FormAbun(Tform,f_dry,f_wet,COratio,metallicity0,metallicity)
 		else
-			call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
     	endif
 		call output("==================================================================")
 		call output("Computing chemistry using easy_chem by Paul Molliere")
@@ -183,15 +183,15 @@ c	if(useDRIFT.and.domakeai) then
 			met_r=metallicity
 			if(sinkZ) then
 				met_r=metallicity+log10((dens(i)/dens1bar)**(1d0/alphaZ**2-1d0))
-				call easy_chem_set_molfracs_atoms(COratio,met_r,TiScale,enhancecarbon)
+				call set_molfracs_atoms(COratio,met_r,TiScale,enhancecarbon)
 			endif
 			if(P(i).ge.mixP.or.i.eq.1) then
 				if(met_r.gt.minZ) then
 					Tc=max(min(T(i),20000d0),100d0)
 c					Tc=T(i)
 					call cpu_time(starttime)
-					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_dry,MMW(i),didcondens(i),fast_chem,includemol)
+					call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
+     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
 					call cpu_time(stoptime)
 					chemtime=chemtime+stoptime-starttime
 				else if(i.gt.1) then
@@ -236,7 +236,7 @@ c					Tc=T(i)
 		if(Tform.gt.0d0) then
 			call FormAbun(Tform,f_dry,f_wet,COratio,metallicity0,metallicity)
 		else
-			call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
     	endif
 		call output("==================================================================")
 		call output("Computing chemistry using easy_chem by Paul Molliere")
@@ -249,15 +249,15 @@ c					Tc=T(i)
 			met_r=metallicity
 			if(sinkZ) then
 				met_r=metallicity+log10(dens(i)/dens1bar)*(1d0/alphaZ**2-1d0)
-				call easy_chem_set_molfracs_atoms(COratio,met_r,TiScale,enhancecarbon)
+				call set_molfracs_atoms(COratio,met_r,TiScale,enhancecarbon)
 			endif
 			if(P(i).ge.mixP.or.i.eq.1) then
 				if(met_r.gt.minZ) then
 					Tc=max(min(T(i),3000d0),100d0)
 					Tc=T(i)
 				call cpu_time(starttime)
-					call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_dry,MMW(i),didcondens(i),fast_chem,includemol)
+					call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
 				call cpu_time(stoptime)
 				chemtime=chemtime+stoptime-starttime
 				else if(i.gt.1) then
@@ -273,8 +273,8 @@ c					Tc=T(i)
 				Tc=max(min(T(i),3000d0),100d0)
 					Tc=T(i)
 				call cpu_time(starttime)
-				if(cloudcompute) call call_easy_chem(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_dry,MMW(i),didcondens(i),fast_chem,includemol)
+				if(cloudcompute) call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
 				call cpu_time(stoptime)
 				chemtime=chemtime+stoptime-starttime
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
@@ -500,7 +500,7 @@ c bug needs to be fixed!!!!!
 	if(Tform.gt.0d0) then
 		call FormAbun(Tform,f_dry,f_wet,COratio,metallicity0,metallicity)
 	else
-		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+		call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
    	endif
 	do i=1,18
 		write(25,'(se18.6E3,"   ",a5)') molfracs_atoms(i),names_atoms(i)
@@ -622,13 +622,13 @@ c			write(82,*) P(i), Kzz(i)
 				if(Tform.gt.0d0) then
 					call FormAbun(Tform,f_dry,f_wet,COratio,metallicity0,metallicity)
 				else
-					call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+					call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		    	endif
 			else
-				call easy_chem_set_molfracs_atoms_elabun(COratio,metallicity,elabun(i,1:7))
+				call set_molfracs_atoms_elabun(COratio,metallicity,elabun(i,1:7))
 			endif
-			call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_dry,MMW(i),didcondens(i),fast_chem,includemol)
+			call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
 		enddo
 	endif
 
@@ -859,108 +859,13 @@ c use Ackerman & Marley 2001 cloud computation
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
 	enddo
-	call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+	call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 	ini=.true.
 	do i=1,nr
-		call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_dry,MMW(i),didcondens(i),fast_chem,includemol)
+		call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
 	enddo
 
-	return
-	end
-	
-
-	subroutine FormAbunChemical(T,enrich,COratio,metallicity0,metallicity)
-	use AtomsModule
-	IMPLICIT NONE
-	character*10 species(20)
-	real*8 sil_atoms(N_atoms),tot_atoms(N_atoms),COratio,metallicity,tot
-	real*8 Tmax(20),abun(20),max,maxf(20),T,enrich,metallicity0,P,Csolid,fCsolid
-	integer atoms(20,N_atoms),limit(20,N_atoms),nspecies,i,j,k
-	character*100 temp,filename
-	logical molecule(20)
-	integer nmol,nclouds
-	parameter(nmol=1,nclouds=0)
-	real*8 mixrat(nmol),XeqCloud(1),nabla_ad,MMW,scale
-	character*10 molname(nmol)
-	logical ini,condensates,fast_chem,didcondens,includemol(nmol)
-	character*500 cloudspecies(1)
-	
-	fCsolid=0.5d0
-	
-	names_atoms(1) = 'H'
-	names_atoms(2) = 'He'
-	names_atoms(3) = 'C'
-	names_atoms(4) = 'N'
-	names_atoms(5) = 'O'
-	names_atoms(6) = 'Na'
-	names_atoms(7) = 'Mg'
-	names_atoms(8) = 'Al'
-	names_atoms(9) = 'Si'
-	names_atoms(10) = 'P'
-	names_atoms(11) = 'S'
-	names_atoms(12) = 'Cl'
-	names_atoms(13) = 'K'
-	names_atoms(14) = 'Ca'
-	names_atoms(15) = 'Ti'
-	names_atoms(16) = 'V'
-	names_atoms(17) = 'Fe'
-	names_atoms(18) = 'Ni'
-
-	molfracs_atoms = (/ 0.9207539305,
-     &  0.0783688694,
-     &  0.0002478241, 
-     &  6.22506056949881e-05, 
-     &  0.0004509658, 
-     &  1.60008694353205e-06, 
-     &  3.66558742055362e-05, 
-     &  2.595e-06, 
-     &  2.9795e-05, 
-     &  2.36670201997668e-07, 
-     &  1.2137900734604e-05, 
-     &  2.91167958499589e-07, 
-     &  9.86605611925677e-08, 
-     &  2.01439011429255e-06, 
-     &  8.20622804366359e-08,
-     &  7.83688694089992e-09,
-     &  2.91167958499589e-05,
-     &  1.52807116806281e-06
-     &  /)
-
-	Csolid=fCsolid*molfracs_atoms(3)
-	if(T.gt.700d0) Csolid=0d0
-	molfracs_atoms(3)=molfracs_atoms(3)-Csolid
-	scale=sum(molfracs_atoms(1:18))
-	molfracs_atoms=molfracs_atoms/scale
-
-	P=0.1d0
-
-	ini=.true.
-	condensates=.true.
-	fast_chem=.false.
-	includemol=.true.
-	call call_easy_chem(T,P,mixrat,molname,nmol,ini,condensates,cloudspecies,
-     &				XeqCloud,nclouds,nabla_ad,.true.,enrich,MMW,didcondens,fast_chem,includemol)
-	
-	gas_atoms=gas_atoms*scale
-	solid_atoms=solid_atoms*scale
-	solid_atoms(3)=solid_atoms(3)+Csolid
-
-	tot_atoms=gas_atoms+enrich*solid_atoms
-	tot_atoms(1:2)=tot_atoms(1:2)*10d0**-metallicity0
-	tot_atoms=tot_atoms/sum(tot_atoms(1:N_atoms))
-
-	COratio=tot_atoms(3)/tot_atoms(5)
-	print*,'C/O: ',tot_atoms(3)/tot_atoms(5)
-c	print*,'Si/O:',tot_atoms(9)/tot_atoms(5)
-
-	metallicity=log10((sum(tot_atoms(3:n_atoms))/sum(tot_atoms(1:n_atoms)))/
-     &			(sum(molfracs_atoms(3:n_atoms))/sum(molfracs_atoms(1:n_atoms))))
-c	print*,'metallicity: ',metallicity
-
-	tot=sum(tot_atoms(1:N_atoms))
-	molfracs_atoms=tot_atoms/tot
-	
 	return
 	end
 	
@@ -1143,5 +1048,167 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	end
 	
 
+	subroutine set_molfracs_atoms(CO,Z,TiScale,enhancecarbon)
+	use AtomsModule
+	implicit none
+	real*8 CO,Z,tot,TiScale
+	integer i
+	logical enhancecarbon
 
+	names_atoms(1) = 'H'
+	names_atoms(2) = 'He'
+	names_atoms(3) = 'C'
+	names_atoms(4) = 'N'
+	names_atoms(5) = 'O'
+	names_atoms(6) = 'Na'
+	names_atoms(7) = 'Mg'
+	names_atoms(8) = 'Al'
+	names_atoms(9) = 'Si'
+	names_atoms(10) = 'P'
+	names_atoms(11) = 'S'
+	names_atoms(12) = 'Cl'
+	names_atoms(13) = 'K'
+	names_atoms(14) = 'Ca'
+	names_atoms(15) = 'Ti'
+	names_atoms(16) = 'V'
+	names_atoms(17) = 'Fe'
+	names_atoms(18) = 'Ni'
+
+	molfracs_atoms = (/ 0.9207539305,
+     &	0.0783688694,
+     &	0.0002478241,
+     &	6.22506056949881e-05,
+     &	0.0004509658,
+     &	1.60008694353205e-06,
+     &	3.66558742055362e-05,
+     &	2.595e-06,
+     &	2.9795e-05,
+     &	2.36670201997668e-07,
+     &	1.2137900734604e-05,
+     &	2.91167958499589e-07,
+     &	9.86605611925677e-08,
+     &	2.01439011429255e-06,
+     &	8.20622804366359e-08,
+     &	7.83688694089992e-09,
+     &	2.91167958499589e-05,
+     &	1.52807116806281e-06
+     &  /)
+
+	molfracs_atoms(1)=molfracs_atoms(1)/(10d0**Z)
+	molfracs_atoms(2)=molfracs_atoms(2)/(10d0**Z)
+	if(enhancecarbon) then
+		molfracs_atoms(3)=molfracs_atoms(5)*CO
+	else
+		molfracs_atoms(5)=molfracs_atoms(3)/CO
+	endif
 	
+	molfracs_atoms(15)=molfracs_atoms(15)*TiScale
+
+	tot=sum(molfracs_atoms(1:N_atoms))
+	molfracs_atoms=molfracs_atoms/tot
+
+	open(unit=50,file='atomic.dat')
+	do i=1,18
+		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
+	enddo
+	close(unit=50)
+
+
+	return
+	end
+
+
+
+	subroutine set_molfracs_atoms_elabun(CO,Z,elabun)
+	use AtomsModule
+	implicit none
+	real*8 CO,Z,tot,elabun(7)
+	integer i
+
+	names_atoms(1) = 'H'
+	names_atoms(2) = 'He'
+	names_atoms(3) = 'C'
+	names_atoms(4) = 'N'
+	names_atoms(5) = 'O'
+	names_atoms(6) = 'Na'
+	names_atoms(7) = 'Mg'
+	names_atoms(8) = 'Al'
+	names_atoms(9) = 'Si'
+	names_atoms(10) = 'P'
+	names_atoms(11) = 'S'
+	names_atoms(12) = 'Cl'
+	names_atoms(13) = 'K'
+	names_atoms(14) = 'Ca'
+	names_atoms(15) = 'Ti'
+	names_atoms(16) = 'V'
+	names_atoms(17) = 'Fe'
+	names_atoms(18) = 'Ni'
+
+	molfracs_atoms = (/ 0.9207539305,
+     &	0.0783688694,
+     &	0.0002478241,
+     &	6.22506056949881e-05,
+     &	0.0004509658,
+     &	1.60008694353205e-06,
+     &	3.66558742055362e-05,
+     &	2.595e-06,
+     &	2.9795e-05,
+     &	2.36670201997668e-07,
+     &	1.2137900734604e-05,
+     &	2.91167958499589e-07,
+     &	9.86605611925677e-08,
+     &	2.01439011429255e-06,
+     &	8.20622804366359e-08,
+     &	7.83688694089992e-09,
+     &	2.91167958499589e-05,
+     &	1.52807116806281e-06
+     &  /)
+
+	molfracs_atoms(1)=molfracs_atoms(1)/(10d0**Z)
+	molfracs_atoms(2)=molfracs_atoms(2)/(10d0**Z)
+	molfracs_atoms(5)=molfracs_atoms(3)/CO
+
+	tot=sum(molfracs_atoms(1:N_atoms))
+	molfracs_atoms=molfracs_atoms/tot
+
+	molfracs_atoms( 7)=molfracs_atoms(1)*elabun(1)
+	molfracs_atoms( 9)=molfracs_atoms(1)*elabun(2)
+	molfracs_atoms(15)=molfracs_atoms(1)*elabun(3)
+	molfracs_atoms( 5)=molfracs_atoms(1)*elabun(4)
+	molfracs_atoms(17)=molfracs_atoms(1)*elabun(5)
+	molfracs_atoms( 8)=molfracs_atoms(1)*elabun(6)
+	molfracs_atoms( 3)=molfracs_atoms(1)*elabun(7)
+
+	tot=sum(molfracs_atoms(1:N_atoms))
+	molfracs_atoms=molfracs_atoms/tot
+
+	return
+	end
+
+
+
+	subroutine call_chemistry(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,
+     &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol)
+	use AtomsModule
+	IMPLICIT NONE
+	integer nmol
+	real*8 Tin,Pin,mol_abun(nmol),nabla_ad
+	character*10 mol_names(nmol)
+	logical includemol(nmol),didcondens,ini,condensates
+	integer Ncloud
+	real*8 Xcloud(max(Ncloud,1)),MMW
+	character*500 cloudspecies(max(Ncloud,1)),namecloud
+
+	call call_GGchem(Tin,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates)
+
+	nabla_ad=2d0/7d0
+
+	return
+
+	call call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,
+     &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol)
+
+
+	return
+	end
+

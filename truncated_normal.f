@@ -2248,7 +2248,7 @@ c
 
       return
       end
-      subroutine timestamp ( )
+      subroutine timestamp_TN ( )
 
 c*********************************************************************72
 c

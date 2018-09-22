@@ -61,7 +61,7 @@
 	if(Tform.gt.0d0) then
 		call FormAbun(Tform,f_dry,f_wet,COratio,metallicity0,metallicity)
 	else
-		call easy_chem_set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+		call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
    	endif
 
 	COabun=min(molfracs_atoms(3),molfracs_atoms(5))
@@ -604,8 +604,8 @@ c end the loop
 		enddo
 		tot=sum(molfracs_atoms(1:N_atoms))
 		molfracs_atoms=molfracs_atoms/tot
-		call call_easy_chem(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),.false.,f_dry,MMW(i),didcondens(i),fast_chem,includemol)
+		call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
 		write(20,*) P(i),molfracs_atoms(1:N_atoms)
 	enddo
 	close(unit=20)
