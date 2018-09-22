@@ -584,7 +584,7 @@
         else
           stop "*** unknown element "
         endif   
-        print*,'element '//elnam,elnum(NELM)
+c        print*,'element '//elnam,elnum(NELM)
       enddo
 
       NMOLdim = 10000
@@ -596,9 +596,9 @@
         filename = trim(dispol_file(loop))
         if (filename=='') exit
 c        filename = 'data/'//trim(filename)
-        write(*,*)
-        write(*,*) 'reading molecules and kp-data from '
-     &             //trim(filename)//" ..."
+c        write(*,*)
+c        write(*,*) 'reading molecules and kp-data from '
+c     &             //trim(filename)//" ..."
         open(unit=12, file=filename, status='old')
         read(12,*) NMOLdim
         do ii=1,NMOLdim
@@ -659,15 +659,15 @@ c        filename = 'data/'//trim(filename)
             error(ret)= error(i)
             write(line,'(I4,A20,1x,99(I3,1x,A2,1x))')
      &           ret,trim(cmol(ret)),(m_anz(j,ret),cel(j),j=1,iel)
-            print*,trim(line)//"    OVERWRITE" 
+c            print*,trim(line)//"    OVERWRITE" 
           else  
             write(line,'(I4,A20,1x,99(I3,1x,A2,1x))')
      &            i,trim(cmol(i)),(m_anz(j,i),catm(m_kind(j,i)),j=1,iel)
-            if (loop==1) then
-              print*,trim(line)
-            else
-              print*,trim(line)//"    --> NEW" 
-            endif   
+c            if (loop==1) then
+c              print*,trim(line)
+c            else
+c              print*,trim(line)//"    --> NEW" 
+c            endif   
             if (iel==2.and.
      >       ((m_kind(1,i)==el.and.m_anz(1,i)==-1.and.m_anz(2,i)==1).or.
      >        (m_kind(2,i)==el.and.m_anz(2,i)==-1.and.m_anz(1,i)==1))
@@ -684,12 +684,12 @@ c        filename = 'data/'//trim(filename)
       NMOLE = i-1
       allocate(nmol(NMOLE),mmol(NMOLE))
 
-      if (loop>1) then
-        print* 
-        do i=1,NMOLE
-          print*,i,cmol(i),' ->  '//trim(dispol_file(source(i)))
-        enddo
-      endif  
+c      if (loop>1) then
+c        print* 
+c        do i=1,NMOLE
+c          print*,i,cmol(i),' ->  '//trim(dispol_file(source(i)))
+c        enddo
+c      endif  
   
       !open(unit=1,file='chemicals.tex')
       !write(1,*) NMOLE
@@ -717,16 +717,16 @@ c        filename = 'data/'//trim(filename)
         !print*,cmol(i),mmol(i)/amu
       enddo  
 
-      print* 
-      print*,NMOLE,' species'
-      print*,NELM,' elements'
-      print'(99(A4))',(trim(catm(j)),j=1,NELM)
-      print'(99(I4))',elnum(1:NELM)
+c      print* 
+c      print*,NMOLE,' species'
+c      print*,NELM,' elements'
+c      print'(99(A4))',(trim(catm(j)),j=1,NELM)
+c      print'(99(I4))',elnum(1:NELM)
       !print'(99(I4))',H,He,C,N,O,Si,Mg,Fe,Na,Al,S,Ca,Ti,Cl,K,Li,el
-      if (charge) then
-        print'(1x,99(A4))',(trim(cmol(elion(j))),j=1,el-1),'  ',
-     >                     (trim(cmol(elion(j))),j=el+1,NELM)
-      endif  
+c      if (charge) then
+c        print'(1x,99(A4))',(trim(cmol(elion(j))),j=1,el-1),'  ',
+c     >                     (trim(cmol(elion(j))),j=el+1,NELM)
+c      endif  
 
  3000 format(I4," & ",A12," & (",I1,") & ",I1," & ",
      &       5(1pE12.5," & "),"$\pm$",0pF4.2,"\\")
@@ -753,14 +753,14 @@ c        filename = 'data/'//trim(filename)
       character(len=2)  :: name
       logical :: found,allfound
 
-      write(*,*) 
-      write(*,*) "reading DustChem.dat ..."
-      write(*,*) "========================"
+c      write(*,*) 
+c      write(*,*) "reading DustChem.dat ..."
+c      write(*,*) "========================"
       trivial(:)=' '
 
       open(12, file='~/ARCiS/Data/GGchem/DustChem.dat', status='old')
  
-      write(*,*) '--- dust species ---'
+c      write(*,*) '--- dust species ---'
       read(12,1000) zeile
       read(12,1000) zeile
       read(12,*) imax
@@ -838,17 +838,17 @@ c        filename = 'data/'//trim(filename)
         if (allfound) then
           dust_mass(NDUST) = dmass
           dust_vol(NDUST) = dmass/dust_rho(NDUST)
-          write(*,1060) NDUST,dust_nam(NDUST),dust_rho(NDUST),
-     &                  dust_vol(NDUST), (dust_nu(NDUST,j),
-     &                  elnam(dust_el(NDUST,j)),j=1,dust_nel(NDUST))
+c          write(*,1060) NDUST,dust_nam(NDUST),dust_rho(NDUST),
+c     &                  dust_vol(NDUST), (dust_nu(NDUST,j),
+c     &                  elnam(dust_el(NDUST,j)),j=1,dust_nel(NDUST))
           allcond = " "//trim(allcond)//" "//trim(dust_nam(NDUST))
           NDUST = NDUST+1
         endif
       enddo
       NDUST=NDUST-1
-      write(*,*) NDUST," condensed species"
-      write(*,*)
-      write(*,*) '--- involved elements ---'
+c      write(*,*) NDUST," condensed species"
+c      write(*,*)
+c      write(*,*) '--- involved elements ---'
       NEPS=0
       elcode(:)=0
       do i=1,NDUST
@@ -868,14 +868,14 @@ c        filename = 'data/'//trim(filename)
             NEPS = NEPS+1 
             elnr(NEPS) = el
             elcode(el) = NEPS
-            write(*,*) elcode(elnr(NEPS)),' ',name,el
+c            write(*,*) elcode(elnr(NEPS)),' ',name,el
           endif
         enddo
       enddo
 
       Tcorr(:) = -1.d0
       if (model_eqcond) call CHECK_MELTING
-      write(*,*)
+c      write(*,*)
 
       !open(unit=1,file='condensates.tex')
       !do i=1,NDUST
@@ -4301,7 +4301,8 @@ c      endif
       enddo  
       write(12,*) anhges,Tg
       close(12)
-      stop "***  giving up."
+      print*, "***  giving up."
+      return
 
 
       CONTAINS       ! internal functions - not visible to other units 
@@ -5222,7 +5223,8 @@ c      endif
       enddo  
       write(12,*) anhges,Tg
       close(12)
-      stop "***  giving up."
+      print*, "***  giving up."
+      return
 
 
       CONTAINS       ! internal functions - not visible to other units 

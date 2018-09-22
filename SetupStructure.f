@@ -173,7 +173,8 @@ c	if(useDRIFT.and.domakeai) then
 			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
     	endif
 		call output("==================================================================")
-		call output("Computing chemistry using easy_chem by Paul Molliere")
+c		call output("Computing chemistry using easy_chem by Paul Molliere")
+		call output("Computing chemistry using GGchem by Peter Woitke")
 		do i=1,nr
 			call tellertje(i,nr)
 			if(chemtime.gt.maxchemtime.and.domakeai) then
@@ -239,7 +240,8 @@ c					Tc=T(i)
 			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
     	endif
 		call output("==================================================================")
-		call output("Computing chemistry using easy_chem by Paul Molliere")
+c		call output("Computing chemistry using easy_chem by Paul Molliere")
+		call output("Computing chemistry using GGchem by Peter Woitke")
 		do i=1,nr
 			call tellertje(i,nr)
 			if(chemtime.gt.maxchemtime.and.domakeai) then
@@ -1196,16 +1198,20 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	character*10 mol_names(nmol)
 	logical includemol(nmol),didcondens,ini,condensates
 	integer Ncloud
-	real*8 Xcloud(max(Ncloud,1)),MMW
+	real*8 Xcloud(max(Ncloud,1)),MMW,Tg
 	character*500 cloudspecies(max(Ncloud,1)),namecloud
 
-	call call_GGchem(Tin,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates)
+	Tg=min(max(Tin,70d0),30000d0)
+
+c	goto 1
+	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates)
 
 	nabla_ad=2d0/7d0
 
 	return
 
-	call call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,
+1	continue
+	call call_easy_chem(Tg,Pin,mol_abun,mol_names,nmol,ini,condensates,
      &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol)
 
 
