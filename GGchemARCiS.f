@@ -4295,12 +4295,12 @@ c      endif
       return
 
  1000 continue
-      open(unit=12,file='fatal.case')
-      do i=1,nel
-        write(12,'(A2,1x,0pF30.26)') catm(i),12+log10(eps(i))
-      enddo  
-      write(12,*) anhges,Tg
-      close(12)
+c      open(unit=12,file='fatal.case')
+c      do i=1,nel
+c        write(12,'(A2,1x,0pF30.26)') catm(i),12+log10(eps(i))
+c      enddo  
+c      write(12,*) anhges,Tg
+c      close(12)
       print*, "***  giving up."
       return
 
@@ -5217,12 +5217,12 @@ c      endif
       return
 
  1000 continue
-      open(unit=12,file='fatal.case')
-      do i=1,nel
-        write(12,'(A2,1x,0pF30.26)') catm(i),12+log10(eps(i))
-      enddo  
-      write(12,*) anhges,Tg
-      close(12)
+c      open(unit=12,file='fatal.case')
+c      do i=1,nel
+c        write(12,'(A2,1x,0pF30.26)') catm(i),12+log10(eps(i))
+c      enddo  
+c      write(12,*) anhges,Tg
+c      close(12)
       print*, "***  giving up."
       return
 
