@@ -327,6 +327,7 @@ c bug needs to be fixed!!!!!
 	enddo
 c bug needs to be fixed!!!!!
 	COret=Ctot/Otot
+	if(Tform.gt.0d0) COret=COratio
 	call output("C/O: " // dbl2string(COret,'(f8.3)'))
 	call output("[O]: " // dbl2string(log10(Otot/Htot)-log10(0.0004509658/0.9207539305),'(f8.3)'))
 	call output("[C]: " // dbl2string(log10(Ctot/Htot)-log10(0.0002478241/0.9207539305),'(f8.3)'))
