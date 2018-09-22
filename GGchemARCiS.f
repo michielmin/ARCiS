@@ -4111,7 +4111,7 @@ c      endif
             chemiter  = chemiter + it
             from_merk = .false.
             ifatal  = 1
-            verbose = 2             
+c            verbose = 2             
             goto 100        ! try again from scratch before giving up
           endif  
           goto 1000
@@ -5033,7 +5033,7 @@ c      close(12)
             chemiter  = chemiter + it
             from_merk = .false.
             ifatal  = 1
-            verbose = 2             
+c            verbose = 2             
             goto 100        ! try again from scratch before giving up
           endif  
           goto 1000
