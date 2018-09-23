@@ -3901,7 +3901,7 @@ c      endif
         enddo 
         if (verbose>1) print'("corr",99(1pE11.2))',
      >                 pcorr(enew,act_to_all(1:Nact))
-        if (verbose>1) read(*,'(A1)') char
+c        if (verbose>1) read(*,'(A1)') char
       enddo  
 *
 *     ! redo electron density
@@ -4093,7 +4093,7 @@ c      endif
           anmono(i) = MAX(nold/fak,MIN(nold*fak,nold+delp))
         enddo
         if (it>itmax-10) then
-          verbose=2
+c          verbose=2
           do ii=1,Nact
             i = act_to_all(ii) 
             print'(A3,2(1pE12.3))',catm(i),
@@ -4132,7 +4132,7 @@ c            verbose = 2
           Nact = Nact-j
         endif  
         it = it + 1
-        if (verbose.gt.1) read(*,'(a1)') char
+c        if (verbose.gt.1) read(*,'(a1)') char
         if (crit>finish.and.Nact>0) goto 300       ! continue iterating
 *
 *       ! redo rare elements
@@ -4279,7 +4279,7 @@ c     >          Tg,anHges,it,badness
             endif  
             from_merk = .false.
             ansave = anmono
-            verbose=2
+c            verbose=2
             goto 200
           endif
         enddo
@@ -4288,7 +4288,7 @@ c     >          Tg,anHges,it,badness
       if (verbose.gt.0) print '("  ==> smchem used it=",I3,
      &                          " conv=",1pE9.2)',it,crit
 
-      if (verbose.gt.1) read(*,'(a1)') char
+c      if (verbose.gt.1) read(*,'(a1)') char
 
       chemcall = chemcall + 1
       chemiter = chemiter + it
@@ -4806,7 +4806,7 @@ c      close(12)
         enddo 
         if (verbose>1) print'("corr",99(1pE11.2))',
      >                 pcorr(enew,act_to_all(1:Nact))
-        if (verbose>1) read(*,'(A1)') char
+c        if (verbose>1) read(*,'(A1)') char
       enddo  
 *
 *     ! redo electron density
@@ -5015,7 +5015,7 @@ c      close(12)
           anmono(i) = MAX(nold/fak,MIN(nold*fak,nold+delp))
         enddo
         if (it>itmax-10) then
-          verbose=2
+c          verbose=2
           do ii=1,Nact
             i = act_to_all(ii) 
             print'(A3,2(1pE12.3))',catm(i),
@@ -5054,7 +5054,7 @@ c            verbose = 2
           Nact = Nact-j
         endif  
         it = it + 1
-        if (verbose.gt.1) read(*,'(a1)') char
+c        if (verbose.gt.1) read(*,'(a1)') char
         if (crit>finish.and.Nact>0) goto 300       ! continue iterating
 *
 *       ! redo rare elements
@@ -5201,7 +5201,7 @@ c     >          Tg,anHges,it,badness
             endif  
             from_merk = .false.
             ansave = anmono
-            verbose=2
+c            verbose=2
             goto 200
           endif
         enddo
@@ -5210,7 +5210,7 @@ c     >          Tg,anHges,it,badness
       if (verbose.gt.0) print '("  ==> smchem used it=",I3,
      &                          " conv=",1pE9.2)',it,crit
 
-      if (verbose.gt.1) read(*,'(a1)') char
+c      if (verbose.gt.1) read(*,'(a1)') char
 
       chemcall = chemcall + 1
       chemiter = chemiter + it
