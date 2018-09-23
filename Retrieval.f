@@ -1058,7 +1058,7 @@ c			vec(i)=gasdev(idum)
 		enddo
 		call InitDens()
 		call SetupStructure(.false.)
-		if(ioflag) write(35,form) (value(i),i=1,n_ret),COratio,metallicity
+		if(ioflag) write(35,form) (value(i),i=1,n_ret),COratio,metallicity,w
 
 		do i=1,nr
 			if(T(i).gt.Tbest(i)) then
