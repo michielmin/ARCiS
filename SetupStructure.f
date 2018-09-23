@@ -18,6 +18,9 @@
 
 	ini = .TRUE.
 
+	if(Tform.gt.0d0) then
+		call FormAbun(Tform,f_dry,f_wet,COratio,metallicity0,metallicity)
+	endif
 
 	if(PTchemAbun) then
 		call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
