@@ -1815,9 +1815,9 @@ c not entirely correct...
 		call output("Maximum mass:   " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Mjup")
 				case("loggP","loggp")
 					RetPar(i)%x0=log10(Ggrav*(Mplanet*Mjup)/((Rplanet*Rjup)**2))
-					RetPar(i)%xmin=max(0.1,log10(Ggrav*((Mplanet-10d0*dM1)*Mjup)/(((Rplanet+10d0*dR2)*Rjup)**2)))
-					RetPar(i)%xmax=log10(Ggrav*((Mplanet+10d0*dM2)*Mjup)/(((Rplanet-10d0*dR1)*Rjup)**2))
-					if(RetPar(i)%xmin.lt.0.1d0) RetPar(i)%xmin=0.1d0
+					RetPar(i)%xmin=max(0.1,log10(Ggrav*(max(Mplanet-10d0*dM1,1d-6)*Mjup)/(((Rplanet+10d0*dR2)*Rjup)**2)))
+					RetPar(i)%xmax=log10(Ggrav*((Mplanet+10d0*dM2)*Mjup)/((max(Rplanet-10d0*dR1,1d-6)*Rjup)**2))
+					if(.not.RetPar(i)%xmin.gt.0.1d0) RetPar(i)%xmin=0.1d0
 		call output("Minimum logg:   " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 		call output("Maximum logg:   " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
 			end select
