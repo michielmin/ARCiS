@@ -807,6 +807,7 @@ c	enddo
 	maxT=0d0
 	minT=0d0
 	COerr=0d0
+	COret0=COret
 	error=0d0
 	ivar=0
 	imaxT=0
@@ -873,9 +874,9 @@ c			vec(i)=gasdev(idum)
 			value(i)=RetPar(i)%value
 			if(RetPar(i)%logscale) value(i)=log10(value(i))
 		enddo
-		if(ioflag) write(35,form) (value(i),i=1,n_ret),COratio,metallicity
 		call InitDens()
 		call SetupStructure(.false.)
+		if(ioflag) write(35,form) (value(i),i=1,n_ret),COratio,metallicity
 
 		if(k.eq.1) then
 			Tbest(1:nr)=T(1:nr)
@@ -1031,6 +1032,7 @@ c			vec(i)=gasdev(idum)
 	maxT=0d0
 	minT=0d0
 	COerr=0d0
+	COret0=COret
 	error=0d0
 	ivar=0
 	imaxT=0
@@ -1054,9 +1056,9 @@ c			vec(i)=gasdev(idum)
 			value(i)=RetPar(i)%value
 			if(RetPar(i)%logscale) value(i)=log10(value(i))
 		enddo
-		if(ioflag) write(35,form) (value(i),i=1,n_ret),COratio,metallicity
 		call InitDens()
 		call SetupStructure(.false.)
+		if(ioflag) write(35,form) (value(i),i=1,n_ret),COratio,metallicity
 
 		do i=1,nr
 			if(T(i).gt.Tbest(i)) then
