@@ -1712,7 +1712,7 @@ c	linear
 			y1(i1)=0d0
 			tot=0d0
 			do i0=1,nn0
-				w=exp(-abs((xx0(i0)-x1(i1))*R1(i1)*2d0/x1(i1))**expR1(i1))
+				w=exp(-abs((xx0(i0)-x1(i1))*R1(i1)/x1(i1))**expR1(i1))
 				if(i0.eq.1) then
 					w=w*abs(xx0(2)-xx0(1))/2d0
 				else if(i0.eq.nn0) then

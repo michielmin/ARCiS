@@ -312,11 +312,11 @@ C	 create the new empty FITS file
 	character*80 comment,errmessage
 	character*30 errtext
 	integer ig,ilam,iT,iP,imol,i,j,ir,ngF,i1,i2
-	real*8 kappa_mol(nlam,ng,nmol),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random
+	real*8 kappa_mol(ng,nmol,nlam),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random
 	real*8,allocatable :: temp(:),lamF(:)
 
 	if(.not.Ktable(imol)%available) then
-		kappa_mol(1:nlam,1:ng,imol)=0d0
+		kappa_mol(1:ng,imol,1:nlam)=0d0
 		return
 	endif
 
@@ -390,28 +390,28 @@ C	 create the new empty FITS file
 			enddo
 			tot=tot/real(ngF)
 			if(ng.eq.1) then
-				kappa_mol(ilam,1,imol)=tot
+				kappa_mol(1,imol,ilam)=tot
 			else
 				do ig=1,ng
 					j=1+real(ngF-1)*real(ig-1)/real(ng-1)
 					if(j.lt.1) j=1
 					if(j.gt.ngF) j=ngF
-					kappa_mol(ilam,ig,imol)=temp(j)
+					kappa_mol(ig,imol,ilam)=temp(j)
 				enddo
-				call sort(kappa_mol(ilam,1:ng,imol),ng)
+				call sort(kappa_mol(1:ng,imol,ilam),ng)
 				tot2=0d0
 				do ig=1,ng
-					tot2=tot2+kappa_mol(ilam,ig,imol)
+					tot2=tot2+kappa_mol(ig,imol,ilam)
 				enddo
 				tot2=tot2/real(ng)
 				if(tot2.ne.0d0) then
-					kappa_mol(ilam,1:ng,imol)=kappa_mol(ilam,1:ng,imol)*tot/tot2
+					kappa_mol(1:ng,imol,ilam)=kappa_mol(1:ng,imol,ilam)*tot/tot2
 				else
-					kappa_mol(ilam,1:ng,imol)=tot
+					kappa_mol(1:ng,imol,ilam)=tot
 				endif
 			endif
 		else
-			kappa_mol(ilam,1:ng,imol)=0d0
+			kappa_mol(1:ng,imol,ilam)=0d0
 		endif
 	enddo
 !$OMP END DO

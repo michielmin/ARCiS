@@ -21,7 +21,7 @@
 	real*8 kappa(ng),nu1,nu2,tanscale,ll,tot,tot2
 	real*16 kross,kplanck
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime
-	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:)
+	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:),mixrat_tmp(:)
 	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
 	integer n_nu_line,iT
 	integer i,j,ir,k,nl,ig,maxcount
@@ -31,7 +31,8 @@
 	allocate(cont_tot(nlam))
 	allocate(kaver(nlam))
 	allocate(opac_tot(nlam,ng))
-	allocate(kappa_mol(nlam,ng,nmol))
+	allocate(kappa_mol(ng,nmol,nlam))
+	allocate(mixrat_tmp(nmol))
 
 	maxcount=min(nmol,4)
 	n_nu_line=ng*maxcount
@@ -68,6 +69,7 @@
 	do ir=nr,1,-1
 		call tellertje(nr-ir+1,nr)
 		cont_tot=0d0
+		mixrat_tmp(1:nmol)=mixrat_r(ir,1:nmol)
 		do i=1,ncia
 			if(T(ir).lt.CIA(i)%T(1)) then
 				iT=1
@@ -78,16 +80,16 @@
 					if(T(ir).ge.CIA(i)%T(iT).and.T(ir).le.CIA(i)%T(iT+1)) exit
 				enddo
 			endif
-			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*mixrat_r(ir,CIA(i)%imol1)*mixrat_r(ir,CIA(i)%imol2)
+			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*mixrat_tmp(CIA(i)%imol1)*mixrat_tmp(CIA(i)%imol2)
 		enddo
 		do imol=1,nmol
-			kappa_mol(1:nlam,1:ng,imol)=0d0
-			if(mixrat_r(ir,imol).gt.0d0) call ReadOpacityFITS(kappa_mol,imol,ir)
+			kappa_mol(1:ng,imol,1:nlam)=0d0
+			if(mixrat_tmp(imol).gt.0d0) call ReadOpacityFITS(kappa_mol,imol,ir)
 		enddo
 !$OMP PARALLEL IF(nlam.gt.200)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,j,nu1,nu2,k_line,imol,ig,kappa,tot,tot2,count_g)
-!$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_r,ng,ir,kappa_mol,nu_line,cont_tot,freq,Cabs,Csca,opac_tot,Ndens,R,
+!$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,nu_line,cont_tot,freq,Cabs,Csca,opac_tot,Ndens,R,
 !$OMP&        ig_comp,retrieval,domakeai,maxcount)
 		allocate(k_line(n_nu_line))
 		allocate(count_g(nmol,ng))
@@ -98,14 +100,14 @@
 			tot=cont_tot(i)
 			do imol=1,nmol
 				do ig=1,ng
-					tot=tot+kappa_mol(i,ig,imol)*mixrat_r(ir,imol)/real(ng)
+					tot=tot+kappa_mol(ig,imol,i)*mixrat_tmp(imol)/real(ng)
 				enddo
 			enddo
 			count_g=0
 			do j=1,n_nu_line
 				k_line(j)=0d0
 				do imol=1,nmol
-					if(mixrat_r(ir,imol).gt.0d0) then
+					if(mixrat_tmp(imol).gt.0d0) then
 1						if(retrieval.or.domakeai) then
 							ig=ig_comp(imol,j,i)
 						else
@@ -116,7 +118,7 @@
 						else
 							goto 1
 						endif
-						k_line(j)=k_line(j)+kappa_mol(i,ig,imol)*mixrat_r(ir,imol)
+						k_line(j)=k_line(j)+kappa_mol(ig,imol,i)*mixrat_tmp(imol)
 					endif
 				enddo
 			enddo
@@ -131,7 +133,7 @@ c below the wrong way of computing the correlated-k tables
 c	kappa=cont_tot(i)
 c	do imol=1,nmol
 c		do ig=1,ng
-c			kappa(ig)=kappa(ig)+kappa_mol(i,ig,imol)*mixrat_r(ir,imol)
+c			kappa(ig)=kappa(ig)+kappa_mol(ig,imol,i)*mixrat_tmp(imol)
 c		enddo
 c	enddo
 c above the wrong way of computing the correlated-k tables
@@ -183,6 +185,7 @@ c			enddo
 	deallocate(opac_tot)
 	deallocate(kappa_mol)
 	deallocate(nu_line)
+	deallocate(mixrat_tmp)
 
 	return
 	end
