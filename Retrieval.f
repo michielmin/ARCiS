@@ -513,6 +513,7 @@ c	enddo
 	call flush(31)
 
 	if(lnew.lt.bestlike) then
+		i2d=0
 		call WriteStructure()
 		call WriteOutput()
 
@@ -1044,7 +1045,7 @@ c			vec(i)=gasdev(idum)
 		form='("#"' // trim(int2string(n_ret+2,'(i4)')) // 'a19)'
 		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
      &	,(trim(int2string(n_ret+1,'(i4)')) // " COratio"),(trim(int2string(n_ret+2,'(i4)')) // " metallicity")
-		form='(' // int2string(n_ret+2,'(i4)') // 'es19.7)'
+		form='(' // int2string(n_ret+3,'(i4)') // 'es19.7)'
 	endif
 
 	open(unit=40,file=trim(outputdir)//".txt",RECL=6000)
@@ -1693,6 +1694,7 @@ c	linear
 	real*8 x0(n0),y0(n0),x1(n1),y1(n1),R1(n1),expR1(n1),w,tot
 	real*8 xx0(n0+n1),yy0(n0+n1)
 
+	xx0(1:n0)=x0(1:n0)
 	do i=1,n1
 		xx0(n0+i)=x1(i)
 	enddo
