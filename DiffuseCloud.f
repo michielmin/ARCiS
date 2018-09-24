@@ -162,14 +162,27 @@ c C
 		do k=1,N_atoms
 			if(atoms_cloud(iCS,k).gt.0) then
 				f=molfracs_atoms(k)/atoms_cloud(iCS,k)
-				if(f.lt.xv_bot(iCS)) xv_bot(iCS)=f
+				if(f.lt.xv_bot(iCS)) then
+					xv_bot(iCS)=f
+				endif
 			endif
 		enddo
 	enddo
+	
 	do iCS=1,nCS
 		do k=1,N_atoms
 			molfracs_atoms(k)=molfracs_atoms(k)-xv_bot(iCS)*atoms_cloud(iCS,k)
 			if(molfracs_atoms(k).lt.0d0) molfracs_atoms(k)=0d0
+		enddo
+		fmin=1d200
+		do k=1,N_atoms
+			if(atoms_cloud(iCS,k).gt.0) then
+				f=molfracs_atoms(k)/atoms_cloud(iCS,k)
+				if(f.lt.fmin) then
+					fmin=f
+					useatomsink(iCS)=k
+				endif
+			endif
 		enddo
 	enddo
 	molfracs_atoms0=molfracs_atoms
