@@ -660,6 +660,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) maxtau
 		case("specres")
 			read(key%value,*) specres
+		case("specresdust")
+			read(key%value,*) specresdust
 		case("specresfile")
 			read(key%value,*) specresfile
 		case("particledir","dirparticle")
@@ -1074,6 +1076,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	lam1=1d0
 	lam2=15d0
 	specres=10d0
+	specresdust=10d0
 
 	mixrat=0d0
 	includemol=.false.
@@ -1536,6 +1539,25 @@ c				enddo
 			BB(j,i)=Planck(T0,freq(i))
 		enddo
 	enddo
+
+
+	lam0=lam1
+	nlamdust=1
+	do while(lam0.le.lam2)
+		lam0=lam0+lam0/specresdust
+		nlamdust=nlamdust+1
+	enddo
+	
+	allocate(lamdust(nlamdust))
+	
+	i=1
+	lamdust(i)=lam1
+	do while(lamdust(i).le.lam2)
+		i=i+1
+		lamdust(i)=lamdust(i-1)+lamdust(i-1)/specresdust
+	enddo
+	lamdust(nlamdust)=lam2
+	
 
 	return
 	end

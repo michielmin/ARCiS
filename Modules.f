@@ -91,12 +91,12 @@ c===============================================================================
 	integer nT,np,nr,nmol,nlam		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines,ng,ncia,nclouds
 	character*500 outputdir,HITRANdir,HITEMPdir
-	integer idum,maxiter,Nphot0,idum0
+	integer idum,maxiter,Nphot0,idum0,nlamdust
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib
 	logical dochemistry,retrieve_profile,condensates,faircoverage,speclimits,mapCOratio
 	logical,allocatable :: includemol(:),didcondens(:)
-	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP
+	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud,metallicity0
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun
 	logical didcondens_chem,coagulation,resume_multinest
@@ -104,7 +104,7 @@ c===============================================================================
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime,TiScale,f_multinest,tol_multinest
 	logical enhancecarbon,fast_chem,gamma_equal
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet
-	real*8,allocatable :: lam(:),freq(:),dfreq(:)
+	real*8,allocatable :: lam(:),freq(:),dfreq(:),lamdust(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ,nspike,nai
 	integer,allocatable :: niso(:)
