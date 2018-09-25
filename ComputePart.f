@@ -473,15 +473,15 @@ c changed this to mass fractions (11-05-2010)
 c	call output("Computing particle:" // trim(int2string(ii,'(i0.4)')))
 c	call output("Size: " // trim(dbl2string(amin,'(f10.3)')) // " - " // trim(dbl2string(amax,'(f10.3)')) // " micron")
 
-	do j=1,nm
-		write(lnkfile,'(a,a,i0.3,".lnk")') trim(outputdir),trim(input),j
-		open(unit=30,file=lnkfile,RECL=200)
-		write(30,'("# ",a)') trim(filename(j))
-		do i=1,nlamdust
-			write(30,*) lamdust(i)*1d4,e1(j,i),e2(j,i)
-		enddo
-		close(unit=30)
-	enddo
+c	do j=1,nm
+c		write(lnkfile,'(a,a,i0.3,".lnk")') trim(outputdir),trim(input),j
+c		open(unit=30,file=lnkfile,RECL=200)
+c		write(30,'("# ",a)') trim(filename(j))
+c		do i=1,nlamdust
+c			write(30,*) lamdust(i)*1d4,e1(j,i),e2(j,i)
+c		enddo
+c		close(unit=30)
+c	enddo
 
 	if(C%blend) then
 		nm=nm+1
@@ -645,11 +645,11 @@ c		endif
 			e1mie=e1(l,ilam)
 			e2mie=e2(l,ilam)
 			if(Err.eq.1.or.i.eq.1) then
-				if(rmie/lmie.lt.5000d0) then
+				if(rmie/lmie.lt.1000d0) then
 					call MeerhoffMie(rmie,lmie,e1mie,e2mie,csmie,cemie
      &								,Mief11,Mief12,Mief33,Mief34,na)
 				else
-					call MeerhoffMie(rmie,rmie/5000d0,e1mie,e2mie,csmie,cemie
+					call MeerhoffMie(rmie,rmie/1000d0,e1mie,e2mie,csmie,cemie
      &								,Mief11,Mief12,Mief33,Mief34,na)
 				endif
 			endif
