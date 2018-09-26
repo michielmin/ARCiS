@@ -170,6 +170,7 @@ c					if(dy.lt.1d-2*y) dy=1d-2*y
 	allocate(emisR1(nlam))
 	allocate(emisR2(nlam))
 	allocate(demisR(n_ret,nlam))
+	allocate(bestvar(n_ret))
 
 	if(retrievaltype.eq.'MN'.or.retrievaltype.eq.'MultiNest') then
 		call doMultiNest
@@ -211,7 +212,6 @@ c	enddo
 	allocate(dyobs(ny))
 	allocate(specornot(ny))
 	allocate(dvarq(n_ret))
-	allocate(bestvar(n_ret))
 	iy=1
 	do i=1,nobs
 		yobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%y(1:ObsSpec(i)%nlam)
