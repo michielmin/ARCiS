@@ -1733,7 +1733,6 @@ c the nspike parameter removes the n degree spike in the forward direction.
 			endif
 		enddo
 	enddo
-
 	do ilam=1,nlam
 		do is=1,Cloud(ii)%nr
 			Cloud(ii)%F(is,ilam)%IF11=0d0
@@ -1823,23 +1822,22 @@ c not entirely correct...
 			select case(RetPar(i)%keyword)
 				case("Rp","rp","RP")
 					RetPar(i)%x0=Rplanet
-					RetPar(i)%xmin=max(0d0,Rplanet-10d0*dR1)
-					RetPar(i)%xmax=Rplanet+10d0*dR2
-					if(RetPar(i)%xmin.lt.0d0) RetPar(i)%xmin=0d0
+					RetPar(i)%xmin=max(0d0,Rplanet-5d0*dR1)
+					RetPar(i)%xmax=Rplanet+5d0*dR2
+					if(RetPar(i)%xmin*Rjup.lt.0.1d0*Rearth) RetPar(i)%xmin=0.1d0*Rearth/Rjup
 		call output("Minimum radius: " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Rjup")
 		call output("Maximum radius: " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Rjup")
 				case("Mp","mp","MP")
 					RetPar(i)%x0=Mplanet
-					RetPar(i)%xmin=max(0d0,Mplanet-10d0*dM1)
-					RetPar(i)%xmax=Mplanet+10d0*dM2
-					if(RetPar(i)%xmin.lt.0d0) RetPar(i)%xmin=0d0
+					RetPar(i)%xmin=max(0d0,Mplanet-5d0*dM1)
+					RetPar(i)%xmax=Mplanet+5d0*dM2
+					if(RetPar(i)%xmin*Mjup.lt.0.1d0*Mearth) RetPar(i)%xmin=0.1d0*Mearth/Mjup
 		call output("Minimum mass:   " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Mjup")
 		call output("Maximum mass:   " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Mjup")
 				case("loggP","loggp")
 					RetPar(i)%x0=log10(Ggrav*(Mplanet*Mjup)/((Rplanet*Rjup)**2))
-					RetPar(i)%xmin=max(0.1,log10(Ggrav*(max(Mplanet-10d0*dM1,1d-6)*Mjup)/(((Rplanet+10d0*dR2)*Rjup)**2)))
-					RetPar(i)%xmax=log10(Ggrav*((Mplanet+10d0*dM2)*Mjup)/((max(Rplanet-10d0*dR1,1d-6)*Rjup)**2))
-					if(.not.RetPar(i)%xmin.gt.0.1d0) RetPar(i)%xmin=0.1d0
+					RetPar(i)%xmin=max(0.1,log10(Ggrav*(max(Mjup*(Mplanet-5d0*dM1),0.1d0*Mearth))/(((Rplanet+5d0*dR2)*Rjup)**2)))
+					RetPar(i)%xmax=log10(Ggrav*((Mplanet+5d0*dM2)*Mjup)/((max((Rplanet-5d0*dR1)*Rjup,0.1d0*Rearth))**2))
 		call output("Minimum logg:   " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 		call output("Maximum logg:   " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
 			end select

@@ -11,7 +11,7 @@
 	
 	real*8 starttime,stoptime,chemtime
 	chemtime=0d0
-	
+		
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
 	enddo
@@ -143,7 +143,7 @@ c			R(i+1)=sqrt(R(i)*RHill)
 			dens(i)=Ndens(i)*mp*MMW(i)
 			call output("layer" // dbl2string(P(i),'(es10.3E3)') // "escapes to space")
 			modelsucces=.false.
-			if(domakeai.or.retrieval) return
+c			if(domakeai.or.retrieval) return
 		else
 			exit
 		endif
