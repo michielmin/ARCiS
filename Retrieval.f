@@ -1658,7 +1658,7 @@ c	linear
 		else
 			do i0=1,n0-1
 				if(x1(i1).ge.x0(i0).and.x1(i1).le.x0(i0+1)) then
-					y1(i1)=y0(i0)+(y0(i0+1)-y0(i0))*(x1(i1)-x0(i0))/(x0(i0+1)-x0(i0))
+					y1(i1)=y0(i0)+(y0(i0+1)-y0(i0))*(x0(i0+1)-x1(i1))/(x0(i0+1)-x0(i0))
 				endif
 			enddo
 		endif
