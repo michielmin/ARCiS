@@ -425,6 +425,14 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(SiC,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
+
+		i=i+1
+		filename(i)='Water'
+		rho(i)=1.00
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(Water,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		e1(i,1:nlamdust)=e1d(1:nlamdust)
+		e2(i,1:nlamdust)=e2d(1:nlamdust)
 	endif
 			
 	min=dcmplx(1d0,0d0)
@@ -931,6 +939,11 @@ c changed this to mass fractions (11-05-2010)
 		i=i+1
 		filename(i)='SiC'		! Laor & Draine 1993
 		rho(i)=3.22
+		frac(i)=frac(i)/rho(i)
+
+		i=i+1
+		filename(i)='Water'
+		rho(i)=1.00
 		frac(i)=frac(i)/rho(i)
 	endif
 

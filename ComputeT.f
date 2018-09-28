@@ -4,7 +4,7 @@
 	IMPLICIT NONE
 	integer iphase
 	real*8 z,dz,E,tau,Planck,random,v,dx,dy
-	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:),spec(:,:)
+	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:),spec(:,:,:)
 	real*8,allocatable :: specsource(:,:),Eplanck(:,:)
 	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,theta,ct1,ct2,Tc(nr),Ec(nr),EJv(nr),EJvTot(nr)
 	real*8 tot,Lum,tot2,mu0,gamma,Cplanck(nr),Cstar(nr),dTdP_ad,dTdP
@@ -15,7 +15,7 @@
 	type(Mueller),allocatable :: M(:,:)
 	
 	allocate(specsource(nlam,1))
-	allocate(spec(nlam,ng))
+	allocate(spec(nlam,ng,nr))
 	allocate(Ca(nr,nlam,ng))
 	allocate(Ce(nr,nlam,ng))
 	allocate(Cs(nr,nlam))
@@ -27,8 +27,8 @@
 	
 	call output("Temperature computation (in beta phase!!)")
 
-	NphotPlanet=1000
-	NphotStar=10000
+	NphotPlanet=250
+	NphotStar=2500
 
 	docloud0=.false.
 	do i=1,nclouds
@@ -150,6 +150,15 @@ C	call output("Chi2: " // trim(dbl2string(chi2,'(f7.2)')))
 C	call WriteStructure
 C	return
 
+	do ir=1,nr
+		iT=max(1,min(int(T(ir)),nBB))
+		do ilam=1,nlam-1
+			do ig=1,ng
+				spec(ilam,ig,ir)=Ca(ir,ilam,ig)*BB(iT,ilam)
+			enddo
+		enddo
+	enddo
+
 	if(TeffP.gt.0d0) then
 	call output("Internal heating")
 	Lum=0d0
@@ -174,7 +183,7 @@ C	return
 1		call randomdirection(dx,dy,dz)
 		goingup=((x*dx+y*dy+z*dz).gt.0d0)
 		if(.not.goingup) goto 1
-		do while(jr.le.nr)
+		do while(jr.le.nr.or.random(idum).lt.1d-4)
 			call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,
      &			Ce(1:nr,ilam,ig),Ca(1:nr,ilam,ig),Cs(1:nr,ilam),Crw,g(1:nr,ilam),M(1:nr,ilam),dorw,1d0,Eabs,EJv)
 			if(jr.le.nr) then
@@ -187,22 +196,11 @@ C	return
 				enddo
 				jr0=jr
 			endif
-			call increaseT(Tc(jr),T0,Ec(jr),E0*Eabs,CabsL,jr,Eplanck)
-			iT1=Tc(jr)+1
-			if(iT1.gt.nBB-1) iT1=nBB-1
-			iT2=T0+1
-			if(iT1.gt.nBB) iT1=nBB
-			if(iT1.eq.iT2) iT2=iT1+1
-			do ilam=1,nlam-1
-				do ig=1,ng
-					spec(ilam,ig)=Ca(jr,ilam,ig)*abs(BB(iT2,ilam)-BB(iT1,ilam))
-				enddo
-			enddo
-			call emit(spec(1:nlam,1:ng),ng,ilam,ig)
+	Ec(jr)=Ec(jr)+E0*Eabs
+			call emit(spec(1:nlam,1:ng,jr),ng,ilam,ig)
 			call randomdirection(dx,dy,dz)
 			goingup=((x*dx+y*dy+z*dz).gt.0d0)
 			onedge=.false.
-			Tc(jr)=T0
 
 			endif
 		enddo
@@ -224,6 +222,8 @@ C	return
 		call emit(specsource,1,ilam,ig)
 		ig=random(idum)*real(ng)+1
 		call randomdisk(x,y,0d0,R(nr+1))
+	x=0d0
+	y=(1d0-betaT)*R(nr+1)
 		z=sqrt(R(nr+1)**2-x**2-y**2)
 		dz=-1d0
 		dx=0d0
@@ -231,7 +231,7 @@ C	return
 		goingup=.false.
 		onedge=.true.
 		jr=nr
-		do while(jr.le.nr)
+		do while(jr.le.nr.or.random(idum).lt.1d-4)
 			call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,
      &			Ce(1:nr,ilam,ig),Ca(1:nr,ilam,ig),Cs(1:nr,ilam),Crw,g(1:nr,ilam),M(1:nr,ilam),dorw,1d0,Eabs,EJv)
 			if(jr.le.nr) then
@@ -244,22 +244,12 @@ C	return
 				enddo
 				jr0=jr
 			endif
-			call increaseT(Tc(jr),T0,Ec(jr),E0*Eabs,CabsL,jr,Eplanck)
-			iT1=Tc(jr)+1
-			if(iT1.gt.nBB-1) iT1=nBB-1
-			iT2=T0+1
-			if(iT1.gt.nBB) iT1=nBB
-			if(iT1.eq.iT2) iT2=iT1+1
-			do ilam=1,nlam-1
-				do ig=1,ng
-					spec(ilam,ig)=Ca(jr,ilam,ig)*abs(BB(iT2,ilam)-BB(iT1,ilam))
-				enddo
-			enddo
-			call emit(spec(1:nlam,1:ng),ng,ilam,ig)
+	Ec(jr)=Ec(jr)+E0*Eabs
+
+			call emit(spec(1:nlam,1:ng,jr),ng,ilam,ig)
 			call randomdirection(dx,dy,dz)
 			goingup=((x*dx+y*dy+z*dz).gt.0d0)
 			onedge=.false.
-			Tc(jr)=T0
 			endif
 		enddo
 	enddo
@@ -276,11 +266,11 @@ C	return
 		enddo
 		call increaseT(T(ir),T0,EJvTot(ir),0d0,CabsL,ir,Eplanck)
 		chi2=chi2+((T(ir)-min(T0,2900d0))/((min(T0,2900d0)+T(ir))*0.1))**2
-		T(ir)=T0!sqrt(T(ir)*T0)
+		T(ir)=sqrt(T(ir)*T0)
 	enddo
 	chi2=chi2/real(nr)
 	converged=.false.
-	if(chi2.lt.3d0) converged=.true.
+	if(chi2.lt.1d0) converged=.true.
 	call output("Chi2: " // trim(dbl2string(chi2,'(f7.2)')))
 
 	deallocate(specsource)
@@ -342,7 +332,7 @@ c	enddo
 	V=4d0*pi*(R(ir+1)**3-R(ir)**3)/3d0
 
 	E=E+Eabs
-	
+
 	iTmin=1
 
 	iTmax=nBB

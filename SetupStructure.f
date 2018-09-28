@@ -610,6 +610,7 @@ c			write(82,*) P(i), Kzz(i)
 	Cloud(ii)%frac(1:nr,16)=frac(1:nr,10)
 
 	Cloud(ii)%frac(1:nr,17)=0d0
+	Cloud(ii)%frac(1:nr,18)=0d0
 
 	call regridN(filename,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,4,.true.,.false.)
 	call regridN(filename,P*1d6,elabun,nr,2,36,7,4,.true.,.true.)
@@ -685,11 +686,6 @@ c			write(82,*) P(i), Kzz(i)
 			call DiffuseCloud(ii)
 			Cloud(ii)%rv=Cloud(ii)%rv*1d4
 			Cloud(ii)%sigma=1d-10
-c			Cloud(ii)%frac(1:nr,1:17)=1d-10
-c 10% iron
-c			Cloud(ii)%frac(1:nr,9)=0.1d0
-c 90% MgSiO3
-c			Cloud(ii)%frac(1:nr,13:15)=0.9d0/3d0
 			call output("Computing inhomogeneous cloud particles")
 
 			call SetupPartCloud(ii)
@@ -711,7 +707,7 @@ c			Cloud(ii)%frac(1:nr,13:15)=0.9d0/3d0
 			call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,11,1,3,.false.,.true.)
 			Cloud(ii)%rv=Cloud(ii)%rv*1d4
 			Cloud(ii)%sigma=1d-10
-			Cloud(ii)%frac(1:nr,1:17)=1d-10
+			Cloud(ii)%frac(1:nr,1:18)=1d-10
 c 10% iron
 			Cloud(ii)%frac(1:nr,9)=0.1d0
 c 90% MgSiO3
@@ -957,7 +953,9 @@ c use Ackerman & Marley 2001 cloud computation
 		atoms(i,6)=min(molfracs_atoms(6),molfracs_atoms(8))/molfracs_atoms(9)
 		atoms(i,8)=min(molfracs_atoms(6),molfracs_atoms(8))/molfracs_atoms(9)
 		atoms(i,7)=molfracs_atoms(7)/molfracs_atoms(9)
-		atoms(i,5)=atoms(i,6)+atoms(i,7)+atoms(i,8)+2d0
+		atoms(i,13)=molfracs_atoms(13)/molfracs_atoms(9)
+		atoms(i,14)=molfracs_atoms(14)/molfracs_atoms(9)
+		atoms(i,5)=atoms(i,6)+atoms(i,7)+atoms(i,8)+atoms(i,14)+atoms(i,13)+2d0
 		Tmax(i)=1700d0
 c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),atoms(i,7),atoms(i,5)
 	i=i+1

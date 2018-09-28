@@ -86,7 +86,7 @@ c terms of use
 	call SetupStructure(computeopac)
 	if(domakeai.and..not.modelsucces) return
 	if(computeopac) call SetupOpacities()
-	if(computeT) then
+	if(computeT.and.computeopac) then
 		nTiter=0
 		do while(.not.Tconverged.and.nTiter.lt.maxiter)
 			call DoComputeT(Tconverged)

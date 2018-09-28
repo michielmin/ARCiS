@@ -45,7 +45,7 @@
 	w_atoms(17) = 55.845 		!'Fe'
 	w_atoms(18) = 58.6934 		!'Ni'
 	
-	nCS=9
+	nCS=10
 	allocate(xv_bot(nCS))
 	allocate(mu(nCS))
 	allocate(ATP(nCS))
@@ -98,7 +98,9 @@ c Silicates
 	atoms_cloud(i,6)=min(molfracs_atoms(6),molfracs_atoms(8))/molfracs_atoms(9)
 	atoms_cloud(i,8)=min(molfracs_atoms(6),molfracs_atoms(8))/molfracs_atoms(9)
 	atoms_cloud(i,7)=molfracs_atoms(7)/molfracs_atoms(9)
-	atoms_cloud(i,5)=atoms_cloud(i,6)+atoms_cloud(i,7)+atoms_cloud(i,8)+2d0
+	atoms_cloud(i,13)=molfracs_atoms(13)/molfracs_atoms(9)
+	atoms_cloud(i,14)=molfracs_atoms(14)/molfracs_atoms(9)
+	atoms_cloud(i,5)=atoms_cloud(i,6)+atoms_cloud(i,7)+atoms_cloud(i,8)+atoms_cloud(i,14)+atoms_cloud(i,13)+2d0
 	rhodust(i)=3.0d0
 c	write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms_cloud(i,8),atoms_cloud(i,6),atoms_cloud(i,7),atoms_cloud(i,5)
 c SiO2
@@ -117,6 +119,14 @@ c Al2O3
 	atoms_cloud(i,5)=3
 	rhodust(i)=4.0d0
 	useatomsink(i)=8
+c H2O
+	i=i+1
+	ATP(i)=2827.7
+	BTP(i)=7.7205
+	atoms_cloud(i,1)=2
+	atoms_cloud(i,5)=1
+	rhodust(i)=1.0d0
+	useatomsink(i)=5
 c FeS
 	i=i+1
 	ATP(i)=21542.
@@ -578,24 +588,25 @@ c end the loop
 	do i=1,nr
 		cloud_dens(i,ii)=0d0
 		Cloud(ii)%rv(i)=0d0
-		Cloud(ii)%frac(i,1:17)=1d-200
+		Cloud(ii)%frac(i,1:18)=1d-200
 		do j=1,nr_cloud
 			do iCS=1,nCS
 				cloud_dens(i,ii)=cloud_dens(i,ii)+xc(iCS,k)*Clouddens(k)/real(nr_cloud)
 			enddo
 			Cloud(ii)%rv(i)=Cloud(ii)%rv(i)+rpart(k)/real(nr_cloud)
 			Cloud(ii)%frac(i,1:3)=Cloud(ii)%frac(i,1:3)+xc(1,k)/3d0		! TiO
-			Cloud(ii)%frac(i,9)=Cloud(ii)%frac(i,9)+xc(6,k)+xc(6,k)		! Fe + FeS
+			Cloud(ii)%frac(i,9)=Cloud(ii)%frac(i,9)+xc(7,k)+xc(8,k)		! Fe + FeS
 			Cloud(ii)%frac(i,10)=Cloud(ii)%frac(i,10)+xc(5,k)			! Al2O3
 			Cloud(ii)%frac(i,13:15)=Cloud(ii)%frac(i,13:15)+xc(3,k)/3d0	! Silicates
 			Cloud(ii)%frac(i,8)=Cloud(ii)%frac(i,8)+xc(4,k)				! SiO2
-			Cloud(ii)%frac(i,16)=Cloud(ii)%frac(i,16)+xc(9,k)			! C
-			Cloud(ii)%frac(i,17)=Cloud(ii)%frac(i,17)+xc(8,k)			! SiC			
+			Cloud(ii)%frac(i,16)=Cloud(ii)%frac(i,16)+xc(10,k)			! C
+			Cloud(ii)%frac(i,17)=Cloud(ii)%frac(i,17)+xc(9,k)			! SiC			
+			Cloud(ii)%frac(i,18)=Cloud(ii)%frac(i,18)+xc(6,k)			! H2O			
 			k=k+1
 			if(k.gt.nnr) k=nnr
 		enddo
-		tot=sum(Cloud(ii)%frac(i,1:17))
-		Cloud(ii)%frac(i,1:17)=Cloud(ii)%frac(i,1:17)/tot
+		tot=sum(Cloud(ii)%frac(i,1:18))
+		Cloud(ii)%frac(i,1:18)=Cloud(ii)%frac(i,1:18)/tot
 	enddo
 
 	open(unit=20,file='atoms.dat',RECL=6000)
