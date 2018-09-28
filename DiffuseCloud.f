@@ -464,9 +464,6 @@ c equations for material
 		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)/m_nuc
 		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))-Sc(i)*densv(iCS)/mpart(i)
 		x(j)=0d0
-		if(useatomsink(iCS).ne.0) then
-			x(j)=atomsink(useatomsink(iCS),i)*mu(iCS)/(atoms_cloud(iCS,useatomsink(iCS)))
-		endif
 
 		j=j+1
 
