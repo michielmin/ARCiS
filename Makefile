@@ -49,7 +49,7 @@ endif
 LIBS_FITS		= -lcfitsio
 
 ifeq ($(shell uname),Linux)
-  FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -diag-disable vec
+  FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -diag-disable vec -I$(HOME)/include
   LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) Version.f
   LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) -lmultinest
 else
