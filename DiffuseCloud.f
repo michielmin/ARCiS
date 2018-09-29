@@ -560,7 +560,7 @@ c equations for material
 		if(tot.gt.0d0) then
 			rho_av(i)=sum(xc(1:nCS,i))/tot
 		else
-			rho_av(i)=sum(rhodust(1:nCS))/real(ndust)
+			rho_av(i)=sum(rhodust(1:nCS))/real(nCS)
 		endif
 		if(xn(i).gt.0d0) then
 			tot=sum(xc(1:nCS,i))

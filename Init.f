@@ -392,6 +392,7 @@ c==============================================================================
 	type(SettingKey) keyret
 	integer i,j,omp_get_max_threads,omp_get_thread_num
 	real*8 tot,tot2,theta,Planck
+	real*8,allocatable :: var(:),dvar(:)
 	character*1000 line
 
 	allocate(key)
@@ -576,7 +577,15 @@ c	condensates=(condensates.or.cloudcompute)
 
 	if(dochemistry) call init_GGchem()
 
-			
+	if(iWolk.gt.0) then
+		open(unit=50,file=trim(outputdir) // "/Wolk.dat",RECL=6000)
+		allocate(var(n_ret),dvar(n_ret))
+		do i=1,iWolk
+			read(50,*) j,var(1:n_ret)
+		enddo
+		call MapRetrievalMN(var,dvar)
+		close(unit=50)
+	endif
 	call output("==================================================================")
 	
 	return
@@ -826,6 +835,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadPlanetName
 		case("i2d")
 			read(key%value,*) i2d
+		case("iwolk")
+			read(key%value,*) iWolk
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -1058,6 +1069,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	idum0=42
 
 	n2d=0
+	iWolk=0
 	
 	particledir='./Particles/'
 
