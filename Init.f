@@ -801,6 +801,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) f_dry
 		case("fwet","f_wet")
 			read(key%value,*) f_wet
+		case("scalefe","scale_fe","f_fe")
+			read(key%value,*) scale_fe
 		case("tchem")
 			read(key%value,*) Tchem
 		case("pchem")
@@ -1131,6 +1133,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Pform=1d0
 	f_dry=0d0
 	f_wet=0d0
+	scale_fe=1d0
 	
 	r_nuc=1d-3
 	

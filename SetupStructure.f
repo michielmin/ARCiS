@@ -19,7 +19,7 @@
 	ini = .TRUE.
 
 	if(Tform.gt.0d0) then
-		call FormAbun(Tform,f_dry,f_wet,COratio,metallicity0,metallicity)
+		call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
 	endif
 
 	if(PTchemAbun) then
@@ -172,7 +172,7 @@ c	if(useDRIFT.and.domakeai) then
 	if(dochemistry.and.j.eq.1) then
 	if(compute_mixrat) then
 		if(Tform.gt.0d0) then
-			call FormAbun(Tform,f_dry,f_wet,COratio,metallicity0,metallicity)
+			call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
 		else
 			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
     	endif
@@ -239,7 +239,7 @@ c					Tc=T(i)
 	if(compute_mixrat) then
 		ini=.true.
 		if(Tform.gt.0d0) then
-			call FormAbun(Tform,f_dry,f_wet,COratio,metallicity0,metallicity)
+			call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
 		else
 			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
     	endif
@@ -505,7 +505,7 @@ c bug needs to be fixed!!!!!
 	write(25,'("#Elemental abundances")')
   	ini=.true.
 	if(Tform.gt.0d0) then
-		call FormAbun(Tform,f_dry,f_wet,COratio,metallicity0,metallicity)
+		call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
 	else
 		call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
    	endif
@@ -628,7 +628,7 @@ c			write(82,*) P(i), Kzz(i)
 			ini=.true.
 			if(cloud_dens(i,ii).lt.1d-25) then
 				if(Tform.gt.0d0) then
-					call FormAbun(Tform,f_dry,f_wet,COratio,metallicity0,metallicity)
+					call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
 				else
 					call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		    	endif
@@ -873,14 +873,14 @@ c use Ackerman & Marley 2001 cloud computation
 	end
 	
 
-	subroutine FormAbun(T,f_dry,f_wet,COratio,metallicity0,metallicity)
+	subroutine FormAbun(T,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
 	use AtomsModule
 	use OutputModule
 	IMPLICIT NONE
 	character*10 species(20)
 	real*8 sil_atoms(N_atoms),tot_atoms(N_atoms),COratio,metallicity
 	real*8 Tmax(20),abun(20),max,maxf(20),T,f_dry,f_wet,metallicity0,tot,atoms(20,N_atoms)
-	real*8 dry_atoms(N_atoms),wet_atoms(N_atoms)
+	real*8 dry_atoms(N_atoms),wet_atoms(N_atoms),scale_fe
 	integer limit(20,N_atoms),nspecies,i,j,k
 	character*100 temp,filename
 	logical molecule(20)
@@ -1029,6 +1029,7 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 
 	tot_atoms=gas_atoms+f_dry*dry_atoms+f_wet*wet_atoms
 	tot_atoms(1:2)=tot_atoms(1:2)*10d0**-metallicity0
+	tot_atoms(17:18)=tot_atoms(17:18)*scale_fe
 	tot_atoms=tot_atoms/sum(tot_atoms(1:N_atoms))
 
 	COratio=tot_atoms(3)/tot_atoms(5)

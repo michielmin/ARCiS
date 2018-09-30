@@ -59,7 +59,7 @@
 	quadratic=.false.
 
 	if(Tform.gt.0d0) then
-		call FormAbun(Tform,f_dry,f_wet,COratio,metallicity0,metallicity)
+		call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
 	else
 		call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
    	endif
@@ -305,12 +305,8 @@ c start the loop
 	do i=1,nnr
 		cs=sqrt(kb*CloudT(i)/(2.3*mp))
 		vth(i)=sqrt(8d0*kb*CloudT(i)/(pi*2.3*mp))
-		vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*mutot*mp))
 		vsed(i)=-sqrt(pi)*rpart(i)*rho_av(i)*Ggrav*Mplanet/(2d0*Clouddens(i)*vth(i)*CloudR(i)**2)
 		mpart(i)=rho_av(i)*4d0*pi*rpart(i)**3/3d0
-
-		Sc(i)=min(vthv(i)*rpart(i),kb*CloudT(i)*sqrt(8d0*kb*CloudT(i)/(pi*2.3*mp))/(3d0*CloudP(i)*1d6*8e-15))*4d0*pi*rpart(i)*Clouddens(i)
-		Sc(i)=fstick*Sc(i)
 	enddo
 
 	do i=1,nnr
@@ -387,7 +383,7 @@ c coagulation
 			vmol=0.5d0*lmfp*vth(i)
 			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
 
-c			tcoaginv=npart*pi*rpart(i)**2*abs(vsed(i))
+c			tcoaginv=npart*pi*(2d0*rpart(i))**2*abs(vsed(i))
 c rewritten for better convergence
 			tcoaginv=sqrt(pi)*3d0*sum(xc(1:nCS,i))*Ggrav*Mplanet/(8d0*vth(i)*CloudR(i)**2)
 
@@ -408,7 +404,7 @@ c rewritten for better convergence
 	dz=CloudR(i)-CloudR(i-1)
 	An(1,i)=Kp/dz-vsed(i)
 	An(1,i-1)=-Kp/dz
-	x(1)=-Mn_top/Clouddens(i)
+	x(1)=0d0!-Mn_top/Clouddens(i)
 	i=1
 	An(2,i)=1d0
 	x(2)=0d0
@@ -421,10 +417,16 @@ c rewritten for better convergence
 	enddo
 	xn(1:nnr)=x(1:nnr)
 
-
 	atomsink=0d0
 
 	do iCS=1,nCS
+
+	do i=1,nnr
+		cs=sqrt(kb*CloudT(i)/(2.3*mp))
+		vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*mu(iCS)*mp))
+		Sc(i)=min(vthv(i)*rpart(i),kb*CloudT(i)*sqrt(8d0*kb*CloudT(i)/(pi*2.3*mp))/(3d0*CloudP(i)*1d6*8e-15))*4d0*pi*rpart(i)*Clouddens(i)
+		Sc(i)=fstick*Sc(i)
+	enddo
 
 c equations for material
 	A=0d0
@@ -464,6 +466,9 @@ c equations for material
 		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)/m_nuc
 		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))-Sc(i)*densv(iCS)/mpart(i)
 		x(j)=0d0
+c		if(useatomsink(iCS).ne.0) then
+c			x(j)=atomsink(useatomsink(iCS),i)*mu(iCS)/(atoms_cloud(iCS,useatomsink(iCS)))
+c		endif
 
 		j=j+1
 
@@ -505,7 +510,7 @@ c equations for material
 	j=j+1
 	A(j,ixc(iCS,i))=Kp/dz-vsed(i)
 	A(j,ixc(iCS,i-1))=-Kp/dz
-	x(j)=-Mc_top/Clouddens(i)
+	x(j)=0d0!-Mc_top/Clouddens(i)
 
 	j=j+1
 	A(j,ixv(iCS,i))=Kc/dz
@@ -553,19 +558,19 @@ c equations for material
 	close(unit=20)
 
 	do i=1,nnr
-		tot=0d0
+		tot=xn(i)/4d0
 		do iCS=1,nCS
 			tot=tot+xc(iCS,i)/rhodust(iCS)
 		enddo
 		if(tot.gt.0d0) then
-			rho_av(i)=sum(xc(1:nCS,i))/tot
+			rho_av(i)=(sum(xc(1:nCS,i))+xn(i))/tot
 		else
 			rho_av(i)=sum(rhodust(1:nCS))/real(nCS)
 		endif
 		if(xn(i).gt.0d0) then
-			tot=sum(xc(1:nCS,i))
+			tot=sum(xc(1:nCS,i))+xn(i)
 			rr=(3d0*(tot*m_nuc/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
-			if(rr.lt.r_nuc) rr=r_nuc
+			if(.not.rr.gt.r_nuc) rr=r_nuc
 		else
 			rr=r_nuc
 		endif
@@ -596,13 +601,13 @@ c end the loop
 			enddo
 			Cloud(ii)%rv(i)=Cloud(ii)%rv(i)+rpart(k)/real(nr_cloud)
 			Cloud(ii)%frac(i,1:3)=Cloud(ii)%frac(i,1:3)+xc(1,k)/3d0		! TiO
-			Cloud(ii)%frac(i,9)=Cloud(ii)%frac(i,9)+xc(7,k)+xc(8,k)		! Fe + FeS
-			Cloud(ii)%frac(i,10)=Cloud(ii)%frac(i,10)+xc(5,k)			! Al2O3
 			Cloud(ii)%frac(i,13:15)=Cloud(ii)%frac(i,13:15)+xc(3,k)/3d0	! Silicates
 			Cloud(ii)%frac(i,8)=Cloud(ii)%frac(i,8)+xc(4,k)				! SiO2
-			Cloud(ii)%frac(i,16)=Cloud(ii)%frac(i,16)+xc(10,k)			! C
-			Cloud(ii)%frac(i,17)=Cloud(ii)%frac(i,17)+xc(9,k)			! SiC			
+			Cloud(ii)%frac(i,10)=Cloud(ii)%frac(i,10)+xc(5,k)			! Al2O3
 			Cloud(ii)%frac(i,18)=Cloud(ii)%frac(i,18)+xc(6,k)			! H2O			
+			Cloud(ii)%frac(i,9)=Cloud(ii)%frac(i,9)+xc(7,k)+xc(8,k)		! Fe + FeS
+			Cloud(ii)%frac(i,17)=Cloud(ii)%frac(i,17)+xc(9,k)			! SiC			
+			Cloud(ii)%frac(i,16)=Cloud(ii)%frac(i,16)+xc(10,k)			! C
 			k=k+1
 			if(k.gt.nnr) k=nnr
 		enddo
