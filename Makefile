@@ -25,7 +25,11 @@ endif
 # enforce multi core compilation with:
 # cl> make multi=true
 ifeq ($(multi),true)
-	MULTICORE = -openmp -fp-model strict -DUSE_OPENMP
+	ifeq ($(gfort),true)
+		MULTICORE = -openmp -DUSE_OPENMP
+	else
+		MULTICORE = -openmp -fp-model strict -DUSE_OPENMP
+	endif
 	ifeq ($(debug),true)
   		MULTICORE = -openmp -DUSE_OPENMP
 	endif
@@ -37,7 +41,7 @@ endif
 
 # Platform specific compilation options
 ifeq ($(gfort),true)
-  FLAG_ALL      = -O3 -g $(DEBUGGING) $(MULTICORE) -lgfortran -I/usr/local/modules
+  FLAG_ALL      = -O5 -g $(DEBUGGING) $(MULTICORE) -lgfortran -I$(HOME)/include
   FLAG_LINUX    = -cpp
   FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else
@@ -50,12 +54,12 @@ LIBS_FITS		= -lcfitsio
 
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -diag-disable vec 
-  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) Version.f -I$(HOME)/include
-  LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) -lmultinest
+  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -I$(HOME)/include
+  LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) -lmultinest Version.f 
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
-  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) Version.f
-  LIBS    =  -L/usr/local/lib $(LIBS_FITS) -lmultinest
+  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
+  LIBS    =  -L/usr/local/lib $(LIBS_FITS) -lmultinest Version.f
 endif
 
 
@@ -110,7 +114,8 @@ OBJS	= Modules.o \
 		amoeba.o \
 		GGchemARCiS.o \
 		GGchem_linpack_q.o \
-		GGchem_is_nan.o
+		GGchem_is_nan.o \
+		PostEqualWeights.o
 
 # program name and install location
 PROGRAM       = ARCiS
@@ -127,13 +132,13 @@ install:	$(PROGRAM)
 .SUFFIXES : .o .f .f90 .F
 
 .f.o:
-	$(FC) $(LDFLAGS) -c $<
+	$(FC) $(LDFLAGS) -c $< -o $@ 
 
 .f90.o:
-	$(FC) $(LDFLAGS) -c $<
+	$(FC) $(LDFLAGS) -c $< -o $@ 
 
 .F.o:
-	$(FC) $(LDFLAGS) -c $<
+	$(FC) $(LDFLAGS) -c $< -o $@ 
 
 $(PROGRAM):     version  $(OBJS)
 		$(LINKER) $(LDFLAGS) $(OBJS) $(LIBS) -o $(PROGRAM)

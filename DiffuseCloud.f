@@ -320,8 +320,10 @@ c start the loop
 			if(quadratic) then
 			f1=(CloudR(i-1)**2-CloudR(i)**2)/(CloudR(i+1)**2-CloudR(i)**2)
 			f2=(CloudR(i-1)-CloudR(i))/(CloudR(i+1)-CloudR(i))
-			af=((Clouddens(i-1)-Clouddens(i))-f2*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)**2-CloudR(i)**2)-f2*(CloudR(i+1)**2-CloudR(i)**2))
-			bf=((Clouddens(i-1)-Clouddens(i))-f1*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)-CloudR(i))-f1*(CloudR(i+1)-CloudR(i)))
+			af=((Clouddens(i-1)-Clouddens(i))-f2*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)**2-CloudR(i)**2)-
+     &					f2*(CloudR(i+1)**2-CloudR(i)**2))
+			bf=((Clouddens(i-1)-Clouddens(i))-f1*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)-CloudR(i))-
+     &					f1*(CloudR(i+1)-CloudR(i)))
 			drho(i)=2d0*af*CloudR(i)+bf
 			af=((vsed(i-1)*Clouddens(i-1)-vsed(i)*Clouddens(i))-f2*(vsed(i+1)*Clouddens(i+1)-vsed(i)*Clouddens(i)))/
      &				((CloudR(i-1)**2-CloudR(i)**2)-f2*(CloudR(i+1)**2-CloudR(i)**2))
@@ -424,7 +426,8 @@ c rewritten for better convergence
 	do i=1,nnr
 		cs=sqrt(kb*CloudT(i)/(2.3*mp))
 		vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*mu(iCS)*mp))
-		Sc(i)=min(vthv(i)*rpart(i),kb*CloudT(i)*sqrt(8d0*kb*CloudT(i)/(pi*2.3*mp))/(3d0*CloudP(i)*1d6*8e-15))*4d0*pi*rpart(i)*Clouddens(i)
+		Sc(i)=min(vthv(i)*rpart(i),kb*CloudT(i)*sqrt(8d0*kb*CloudT(i)/(pi*2.3*mp))/(3d0*CloudP(i)*1d6*8e-15))
+     &				*4d0*pi*rpart(i)*Clouddens(i)
 		Sc(i)=fstick*Sc(i)
 	enddo
 
@@ -558,17 +561,17 @@ c		endif
 	close(unit=20)
 
 	do i=1,nnr
-		tot=xn(i)/4d0
+		tot=0d0
 		do iCS=1,nCS
 			tot=tot+xc(iCS,i)/rhodust(iCS)
 		enddo
 		if(tot.gt.0d0) then
-			rho_av(i)=(sum(xc(1:nCS,i))+xn(i))/tot
+			rho_av(i)=sum(xc(1:nCS,i))/tot
 		else
 			rho_av(i)=sum(rhodust(1:nCS))/real(nCS)
 		endif
 		if(xn(i).gt.0d0) then
-			tot=sum(xc(1:nCS,i))+xn(i)
+			tot=sum(xc(1:nCS,i))
 			rr=(3d0*(tot*m_nuc/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
 			if(.not.rr.gt.r_nuc) rr=r_nuc
 		else

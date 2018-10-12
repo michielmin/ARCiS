@@ -44,6 +44,8 @@ c terms of use
 		endif
 		call SetupOpacities()
 		call WriteOpacityFITS()
+	else if(dopostequalweights) then
+		call PostEqualWeights()
 	else if(domakeai) then
 		call MakeAI()
 	else if(retrieval) then
@@ -69,19 +71,15 @@ c terms of use
 	logical Tconverged
 	integer nTiter
 	real*8 starttime,stoptime,starttime_w,stoptime_w,omp_get_wtime
-	logical,intent(in),optional :: recomputeopacities
+	logical recomputeopacities
 	logical computeopac
 	
-	if(present(recomputeopacities)) then
-		computeopac=recomputeopacities
-	else
-		computeopac=.true.
-	endif
+	computeopac=recomputeopacities
 
 	call cpu_time(starttime)
 #if USE_OPENMP
 	starttime_w=omp_get_wtime()
-#ENDIF
+#endif
 	Tconverged=.false.
 	call SetupStructure(computeopac)
 	if(domakeai.and..not.modelsucces) return
@@ -101,7 +99,7 @@ c terms of use
 #if USE_OPENMP
 	stoptime_w=omp_get_wtime()
 	call output("Walltime:            " // trim(dbl2string((stoptime_w-starttime_w),'(f10.2)')) // " s")
-#ENDIF
+#endif
 	call Raytrace()
 	call cpu_time(stoptime)
 	call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")

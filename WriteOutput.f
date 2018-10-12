@@ -259,7 +259,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=6000)
 	write(30,'("# transit time       : ",es19.7E3, "sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
-	write(30,'("# number of transits : ",i)') instr_ntrans(i_instr)
+	write(30,'("# number of transits : ",i4)') instr_ntrans(i_instr)
 	write(30,'("# integration time   : ",es19.7E3,"hours")') 
      &		2d0*(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
 	form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
@@ -355,7 +355,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	subroutine ARIELspecres(lam,R,Rexp)
 	IMPLICIT NONE
 	integer nlam,j
-	data(nlam=103)
+	parameter(nlam=103)
 	real*8 lam(*),R(*),Rexp(*)
 	real*8 l0(         103),R0(         103),e0(         103)
 	data (l0(j),j=1,         103) /
@@ -435,7 +435,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	subroutine JWSTspecres(lam,R,Rexp)
 	IMPLICIT NONE
 	integer nlam,j
-	data(nlam=470)
+	parameter(nlam=470)
 	real*8 lam(*),R(*),Rexp(*)
 	real*8 l0(         470),R0(         470),e0(         470)
 	data (l0(j),j=1,         470) /
@@ -732,7 +732,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	subroutine MIRIspecres(lam,R,Rexp)
 	IMPLICIT NONE
 	integer nlam,j
-	data(nlam=308)
+	parameter(nlam=308)
 	real*8 lam(*),R(*),Rexp(*)
 	real*8 l0(         308),R0(         308),e0(         308)
 	data (l0(j),j=1,         308) /
@@ -933,7 +933,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	subroutine NIRSPECspecres(lam,R,Rexp)
 	IMPLICIT NONE
 	integer nlam,j
-	data(nlam=162)
+	parameter(nlam=162)
 	real*8 lam(*),R(*),Rexp(*)
 	real*8 l0(         162),R0(         162),e0(         162)
 	data (l0(j),j=1,         162) /
@@ -1047,7 +1047,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	subroutine WFC3specres(lam,R,Rexp)
 	IMPLICIT NONE
 	integer nlam,j
-	data(nlam=          13)
+	parameter(nlam=          13)
 	real*8 lam(*),R(*),Rexp(*)
 	real*8 l0(          13),R0(          13),e0(          13)
 	data (l0(j),j=1,          13) /

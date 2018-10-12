@@ -377,7 +377,7 @@ c				creep mutation
 	do i=1,npop
 		mate(i)=real(npop+1-rank(i))
 		if(rank(i).eq.2) jbest=i
-		if(rank(i)-npop/2) jmedian=i
+		if(rank(i)-npop/2.ne.0) jmedian=i
 	enddo
 	mate(1:npop)=mate(1:npop)/sum(mate(1:npop))
 

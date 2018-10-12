@@ -1446,7 +1446,7 @@ c      write(*,*)
         ! ***  select independent elements  ***
         !--------------------------------------
         Nind = 1
-        Iabund(1) = 9.E+99
+        Iabund(1) = 9.D+99
         e_act(:) = .false.
         do i=1,NDUST
           if (.not.active(i)) cycle

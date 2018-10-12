@@ -1747,7 +1747,7 @@ c	linear
 	call sleep(10)
 	goto 98
 100	continue
-	write(20,'("Model ",i)') imodel
+	write(20,'("Model ",i7)') imodel
 	write(20,'("chi2=",f14.6)') chi2
 	do i=1,n_ret
 		if(RetPar(i)%logscale) then

@@ -291,7 +291,7 @@ c changed this to mass fractions (11-05-2010)
 		allocate(nr0(MAXMAT,ns))
 		allocate(f(nf))
 		allocate(wf(nf))
-		nm=17
+		nm=18
 		i=0
 		allocate(e1d(nlamdust))
 		allocate(e2d(nlamdust))
@@ -741,7 +741,7 @@ c	C%F(isize,ilam)%F44(1:180)=f44(ilam,1:180)/csca0
 	call regridarray(lamdust,Kabs,nlamdust,lam,C%Kabs(isize,1:nlam),nlam)
 	call regridarray(lamdust,Kext,nlamdust,lam,C%Kext(isize,1:nlam),nlam)
 	call regridarray(lamdust,Ksca,nlamdust,lam,C%Ksca(isize,1:nlam),nlam)
-	if(scattering.or..not.retrieval) then
+	if(scattering) then
 		do i=1,180
 			call regridarray(lamdust,F11(1:nlamdust,i),nlamdust,lam,F11_HR(1:nlam),nlam)
 			call regridarray(lamdust,F12(1:nlamdust,i),nlamdust,lam,F12_HR(1:nlam),nlam)
@@ -758,7 +758,19 @@ c	C%F(isize,ilam)%F44(1:180)=f44(ilam,1:180)/csca0
 				C%F(isize,ilam)%F44(i)=F44_HR(ilam)
 			enddo
 		enddo
+	else
+		do i=1,180
+			do ilam=1,nlam
+				C%F(isize,ilam)%F11(i)=1d0
+				C%F(isize,ilam)%F12(i)=0d0
+				C%F(isize,ilam)%F22(i)=1d0
+				C%F(isize,ilam)%F33(i)=1d0
+				C%F(isize,ilam)%F34(i)=0d0
+				C%F(isize,ilam)%F44(i)=1d0
+			enddo
+		enddo
 	endif
+
 
 	if(C%standard.eq.'FILE') then
 		open(unit=30,file=input,RECL=5000)
@@ -859,7 +871,7 @@ c changed this to mass fractions (11-05-2010)
 		C%Blend=.true.
 		nf=20
 		if(maxf.eq.0e0) nf=1
-		nm=16
+		nm=18
 		i=0
 		frac(1:nm)=C%frac(isize,1:nm)
 		i=i+1

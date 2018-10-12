@@ -398,6 +398,8 @@ c==============================================================================
 	allocate(key)
 	first => key
 
+	n2d=0
+
 	call GetKeywords(key)
 c Count the number of zones, particles, and stars
 c allocate the arrays
@@ -816,6 +818,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			Pform=-Pform
 		case("makeai")
 			read(key%value,*) domakeai
+		case("pew","postequalweights")
+			read(key%value,*) dopostequalweights
 		case("mapcoratio")
 			read(key%value,*) mapCOratio
 		case("nai")
@@ -1070,7 +1074,6 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	idum0=42
 
-	n2d=0
 	iWolk=0
 	
 	particledir='./Particles/'
@@ -1145,6 +1148,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 
 	domakeai=.false.
 	nai=1000
+	dopostequalweights=.false.
 
 	computecontrib=.false.
 	

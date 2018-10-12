@@ -102,7 +102,7 @@ c===============================================================================
 	logical didcondens_chem,coagulation,resume_multinest
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime,TiScale,f_multinest,tol_multinest
-	logical enhancecarbon,fast_chem,gamma_equal
+	logical enhancecarbon,fast_chem,gamma_equal,dopostequalweights
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),lamdust(:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
