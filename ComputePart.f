@@ -1313,7 +1313,7 @@ c	call ftpkye(unit,'a3',real(a3),8,'[micron^3]',status)
 	naxes(3)=180
 	nelements=naxes(1)*naxes(2)*naxes(3)
 
-	if(scattering.or..not.retrieval) then
+	if(scattering) then
 
 	allocate(array(nlam,6,180))
 

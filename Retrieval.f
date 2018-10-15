@@ -231,7 +231,7 @@ c	enddo
 	dvarq=0.02d0
 
 	jj=0
-c	goto 2	! skip the amoeba step
+	if(retrievaltype.eq.'OE'.or.retrievaltype.eq.'oe') goto 2	! skip the amoeba step
 1	continue
 	jj=jj+1
 

@@ -376,11 +376,31 @@ c bug needs to be fixed!!!!!
 	subroutine ComputeParamT(x)
 	use GlobalSetup
 	IMPLICIT NONE
-	real*8 x(nr),tau,Tirr,eta,expint,dlnT,dlnP
+	real*8 x(nr),tau,Tirr,eta,expint,dlnT,dlnP,beta_used,max
 	integer i
 
+	beta_used=betaT
+	if(i2d.ne.0) then
+		if(i2d.eq.1) then
+			call ComputeBeta(90d0,twind,beta_used)
+		else if(i2d.eq.2) then
+			call ComputeBeta(270d0,twind,beta_used)
+		else if(i2d.eq.3) then
+c			max=0d0
+c			do i=0,90
+c				call ComputeBeta(real(i)*1d0,twind,beta_used)
+c				if(beta_used.gt.max) max=beta_used
+c			enddo
+c			beta_used=max
+			call ComputeBeta(0d0,twind,beta_used)
+		else if(i2d.eq.4) then
+			call ComputeBeta(180d0,twind,beta_used)
+		endif
+		beta_used=beta_used*betaT
+	endif
+
 	tau=0d0
-	Tirr=betaT*sqrt(Rstar/(2d0*Dplanet))*Tstar
+	Tirr=beta_used*sqrt(Rstar/(2d0*Dplanet))*Tstar
 	do i=nr,1,-1
 		tau=kappaT*1d6*P(i)/grav(i)
 		if(tau.lt.0d0) tau=0d0
@@ -1222,3 +1242,46 @@ c	goto 1
 	return
 	end
 
+
+
+	subroutine ComputeBeta(theta,t,beta)
+	IMPLICIT NONE
+	integer n
+	real*8 pi
+	parameter(n=1000)
+	parameter(pi=3.1415926536)
+	real*8 theta,t,beta,b(n),b0(n),th(n),diff,tot,tot0
+	integer i,j
+
+	tot=0d0
+	tot0=0d0
+	b=0d0
+	do i=1,n
+		th(i)=2d0*pi*real(i-1)/real(n)
+		b0(i)=cos(th(i))
+		if(b0(i).lt.0d0) b0(i)=0d0
+		tot0=tot0+b0(i)
+	enddo
+	do i=1,n
+		do j=1,n
+			diff=(th(i)-th(j))
+			if(diff.lt.0d0) diff=diff+2d0*pi
+			diff=diff*t/(2d0*pi)
+			b(i)=b(i)+b0(j)*exp(-diff)
+		enddo
+		tot=tot+b(i)
+	enddo
+	b=b*tot0/tot
+
+	beta=0d0
+	do i=1,n
+		diff=(theta*pi/180d0-th(i))
+		if(diff.lt.0d0) diff=diff+2d0*pi
+		diff=diff*t/(2d0*pi)
+		beta=beta+b0(i)*exp(-diff)
+	enddo
+	beta=beta*tot0/tot
+
+	return
+	end
+	

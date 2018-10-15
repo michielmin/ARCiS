@@ -701,6 +701,9 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) alphaT
 		case("beta","betat")
 			read(key%value,*) betaT
+		case("tmix","twind")
+			read(key%value,*) twind
+			if(twind.gt.0d0) n2d=max(2,n2d)
 		case("partprofile","par_tprofile")
 			read(key%value,*) par_tprofile
 		case("ng")
@@ -841,6 +844,9 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadPlanetName
 		case("i2d")
 			read(key%value,*) i2d
+		case("n2d")
+			read(key%value,*) i
+			n2d=max(i,n2d)
 		case("iwolk")
 			read(key%value,*) iWolk
 		case default
@@ -1114,6 +1120,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Psimplecloud=1d9
 	coagulation=.true.
 	singlecloud=.false.
+	
+	twind=0d0
 	
 	PRplanet=10d0
 
