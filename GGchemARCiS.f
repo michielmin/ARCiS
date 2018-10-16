@@ -4853,7 +4853,7 @@ c        if (verbose>1) read(*,'(A1)') char
         do i=1,nml
           if (g(i)>1.d+300) then
             print'("huge kp",A12,0pF11.3,1pE12.3E4)',cmol(i),Tg,g(i)
-            stop
+c            stop
           endif  
           pmol = g(i)
           do j=1,m_kind(0,i)
@@ -5832,7 +5832,7 @@ c      close(12)
       real*8 :: Tg,nHges
 
       real(kind=qp) :: eps(NELEM),Sat(NDUST),eldust(NDUST),tot
-	logical condensates
+	logical condensates,merk
 
 	model_eqcond=condensates
 	eps=1d-50
@@ -5861,25 +5861,24 @@ c      write(*,'("C/O =",0pF6.3)') eps(C)/eps(O)
 	nHges = p*mu/(bk*Tg)/muH
 
 	verbose=0
+	merk=.false.
 *     ------------------------------------------------------------------
       if (model_eqcond) call EQUIL_COND(nHges,Tg,eps,Sat,eldust,verbose)
-      call GGCHEM(nHges,Tg,eps,.false.,verbose)
+      call GGCHEM(nHges,Tg,eps,merk,verbose)
 *     ------------------------------------------------------------------
 
 	tot=sum(nmol(1:NMOLE))+sum(nat(1:NELEM))
-	nmol=nmol/tot
-	nat=nat/tot
 	mol_abuns_in=0d0
 	do j=1,n_mol_in
 		call To_upper_ARCiS(mol_names_in(j),uppername)
 		do i=1,NMOLE
 			if(uppername.eq.cmol(i)) then
-				mol_abuns_in(j)=mol_abuns_in(j)+nmol(i)
+				mol_abuns_in(j)=mol_abuns_in(j)+nmol(i)/tot
 			endif
 		enddo
 		do i=1,NELEM
 			if(mol_names_in(j).eq.elnam(i)) then
-				mol_abuns_in(j)=mol_abuns_in(j)+nat(i)
+				mol_abuns_in(j)=mol_abuns_in(j)+nat(i)/tot
 			endif
 		enddo
 	enddo

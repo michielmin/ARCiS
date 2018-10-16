@@ -583,9 +583,9 @@ c	condensates=(condensates.or.cloudcompute)
 		open(unit=50,file=trim(outputdir) // "/Wolk.dat",RECL=6000)
 		allocate(var(n_ret),dvar(n_ret))
 		do i=1,iWolk
-			read(50,*) j,var(1:n_ret)
+			read(50,*) j,tot,var(1:n_ret)
 		enddo
-		call MapRetrievalMN(var,dvar)
+		call MapRetrieval(var,dvar)
 		close(unit=50)
 	endif
 	call output("==================================================================")
