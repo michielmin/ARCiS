@@ -5885,10 +5885,10 @@ c      write(*,'("C/O =",0pF6.3)') eps(C)/eps(O)
 
 	MMW=0d0
 	do i=1,NMOLE
-		MMW=MMW+nmol(i)*mmol(i)
+		MMW=MMW+nmol(i)*mmol(i)/tot
 	enddo
 	do i=1,NELEM
-		MMW=MMW+nat(i)*mass(i)
+		MMW=MMW+nat(i)*mass(i)/tot
 	enddo
 	MMW=MMW/amu
 	
