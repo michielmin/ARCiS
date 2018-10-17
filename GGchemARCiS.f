@@ -6,7 +6,18 @@
       logical :: model_eqcond,model_pconst
       logical :: useDataBase,remove_condensates
       real*8  :: Tfast,Tmin,Tmax,pmin,pmax,nHmin,nHmax
+
       end
+
+	module upper_interface
+	interface
+      function upper(strIn) result(strOut)
+      character(len=*),intent(in) :: strIn
+      character(len=len(strIn)) :: strOut
+	  end function
+	end interface
+
+	end
 
 ************************************************************************
       module DUST_DATA
@@ -515,10 +526,11 @@
      &    Ti,V,Cr,Mn,Fe,Co,Ni,Cu,Zn,Ga,Ge,As,Se,Br,Kr,Rb,Sr,Y,Zr,W
       use DUST_DATA,ONLY: mass,mel,amu
       use EXCHANGE,ONLY: nmol,mmol
+      use upper_interface
       implicit none
       integer :: loop,i,ii,j,iel,e,smax,ret
       character(len=2) :: cel(40),elnam
-      character(len=20) :: molname,upper,leer='                    '
+      character(len=20) :: molname,leer='                    '
       character(len=200) :: line,filename
       logical :: found,charged
       real*8 :: fiterr
@@ -2701,10 +2713,11 @@ c      endif
      &    Ti,V,Cr,Mn,Fe,Co,Ni,Cu,Zn,Ga,Ge,As,Se,Br,Kr,Rb,Sr,Y,Zr,W
       use DUST_DATA,ONLY: mass,mel,amu
       use EXCHANGE,ONLY: nmol,mmol
+      use upper_interface
       implicit none
       integer :: loop,i,ii,j,iel,e,smax,ret
       character(len=2) :: cel(40),elnam
-      character(len=20) :: molname,upper,leer='                    '
+      character(len=20) :: molname,leer='                    '
       character(len=200) :: line,filename
       logical :: found,charged
       real*8 :: fiterr
@@ -5321,6 +5334,7 @@ c      close(12)
       use DUST_DATA,ONLY: NELEM,NDUST,bk,atm,rgas,bar,fit,cfit,
      &                    dust_nam,dust_nel,dust_el,dust_nu,elnam,
      &                    is_liquid,Tcorr
+      use upper_interface
       implicit none
       integer,parameter  :: qp = selected_real_kind ( 33, 4931 )
       real*8,intent(in) :: T
@@ -5332,7 +5346,7 @@ c      close(12)
       real(kind=qp) :: T1,T2,T3,TC,kT,RT,dG,lbruch,pst,psat,dGRT
       real(kind=qp) :: a(0:4),term,n1
       integer :: i,j,l,STINDEX,el,imol,imol1,imol2
-      character(len=20) :: search,upper,leer='                    '
+      character(len=20) :: search,leer='                    '
 
 
       T1  = MAX(T,100.Q0)
