@@ -259,7 +259,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=6000)
 	write(30,'("# transit time       : ",es19.7E3, "sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
-	write(30,'("# number of transits : ",i4)') instr_ntrans(i_instr)
+	write(30,'("# number of transits : ",es19.7E3)') instr_ntrans(i_instr)
 	write(30,'("# integration time   : ",es19.7E3,"hours")') 
      &		2d0*(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
 	form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
