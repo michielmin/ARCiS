@@ -308,7 +308,7 @@ c find H2-H2 cia file
 			if(existh2h2) then
 				ncia0=ncia0+1
 			else
-				h2h2file=trim(homedir) // '/CIA/H2-H2_2011.cia'
+				h2h2file=trim(homedir) // '/ARCiS/Data/CIA/H2-H2_2011.cia'
 				inquire(file=h2h2file,exist=existh2h2)
 				if(existh2h2) then
 					ncia0=ncia0+1
@@ -326,7 +326,7 @@ c find H2-He cia file
 			if(existh2he) then
 				ncia0=ncia0+1
 			else
-				h2hefile=trim(homedir) // '/CIA/H2-He_2011.cia'
+				h2hefile=trim(homedir) // '/ARCiS/Data/CIA/H2-He_2011.cia'
 				inquire(file=h2hefile,exist=existh2he)
 				if(existh2he) then
 					ncia0=ncia0+1
