@@ -8,6 +8,37 @@
       real*8  :: Tfast,Tmin,Tmax,pmin,pmax,nHmin,nHmax
       end
 
+
+      module upper_module
+ 	contains
+       function upper(strIn) result(strOut)
+      implicit none
+      character(len=*),intent(in) :: strIn
+      character(len=len(strIn)) :: strOut
+      integer :: i,j,l
+      logical :: change
+
+      change = .true.
+      l = len(strIn)
+      do i=1,l
+        if (i<l-4) then 
+          if (strIn(i:i+4)=='trans') change=.false. 
+        endif  
+        if (i<l-2) then 
+          if (strIn(i:i+2)=='cis'  ) change=.false. 
+        endif  
+        j = iachar(strIn(i:i))
+        if (j>= iachar("a") .and. j<=iachar("z") .and. change) then
+          strOut(i:i) = achar(iachar(strIn(i:i))-32)
+        else
+          strOut(i:i) = strIn(i:i)
+        end if
+      enddo
+
+      end
+      
+      end
+
 ************************************************************************
       module DUST_DATA
 ************************************************************************
@@ -515,10 +546,11 @@
      &    Ti,V,Cr,Mn,Fe,Co,Ni,Cu,Zn,Ga,Ge,As,Se,Br,Kr,Rb,Sr,Y,Zr,W
       use DUST_DATA,ONLY: mass,mel,amu
       use EXCHANGE,ONLY: nmol,mmol
+      use upper_module
       implicit none
       integer :: loop,i,ii,j,iel,e,smax,ret
       character(len=2) :: cel(40),elnam
-      character(len=20) :: molname,upper,leer='                    '
+      character(len=20) :: molname,leer='                    '
       character(len=200) :: line,filename
       logical :: found,charged
       real*8 :: fiterr
@@ -2701,10 +2733,11 @@ c      endif
      &    Ti,V,Cr,Mn,Fe,Co,Ni,Cu,Zn,Ga,Ge,As,Se,Br,Kr,Rb,Sr,Y,Zr,W
       use DUST_DATA,ONLY: mass,mel,amu
       use EXCHANGE,ONLY: nmol,mmol
+      use upper_module
       implicit none
       integer :: loop,i,ii,j,iel,e,smax,ret
       character(len=2) :: cel(40),elnam
-      character(len=20) :: molname,upper,leer='                    '
+      character(len=20) :: molname,leer='                    '
       character(len=200) :: line,filename
       logical :: found,charged
       real*8 :: fiterr
@@ -5321,6 +5354,7 @@ c      close(12)
       use DUST_DATA,ONLY: NELEM,NDUST,bk,atm,rgas,bar,fit,cfit,
      &                    dust_nam,dust_nel,dust_el,dust_nu,elnam,
      &                    is_liquid,Tcorr
+      use upper_module
       implicit none
       integer,parameter  :: qp = selected_real_kind ( 33, 4931 )
       real*8,intent(in) :: T
@@ -5332,7 +5366,7 @@ c      close(12)
       real(kind=qp) :: T1,T2,T3,TC,kT,RT,dG,lbruch,pst,psat,dGRT
       real(kind=qp) :: a(0:4),term,n1
       integer :: i,j,l,STINDEX,el,imol,imol1,imol2
-      character(len=20) :: search,upper,leer='                    '
+      character(len=20) :: search,leer='                    '
 
 
       T1  = MAX(T,100.Q0)
@@ -5559,33 +5593,6 @@ c      close(12)
 
       RETURN
       end
-      function upper(strIn) result(strOut)
-      implicit none
-      character(len=*),intent(in) :: strIn
-      character(len=len(strIn)) :: strOut
-      integer :: i,j,l
-      logical :: change
-
-      change = .true.
-      l = len(strIn)
-      do i=1,l
-        if (i<l-4) then 
-          if (strIn(i:i+4)=='trans') change=.false. 
-        endif  
-        if (i<l-2) then 
-          if (strIn(i:i+2)=='cis'  ) change=.false. 
-        endif  
-        j = iachar(strIn(i:i))
-        if (j>= iachar("a") .and. j<=iachar("z") .and. change) then
-          strOut(i:i) = achar(iachar(strIn(i:i))-32)
-        else
-          strOut(i:i) = strIn(i:i)
-        end if
-      enddo
-
-      end
-
-
 
 
 

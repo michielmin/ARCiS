@@ -1,0 +1,61 @@
+H2=0.85
+He=0.15
+H2O=1d-4
+CO2=1d-4
+CO=1d-4
+CH4=1d-4
+NH3=1d-4
+SiO=1d-4
+Na=1d-4
+K=1d-4
+
+Pp=10d0
+
+planetname=WASP-017b
+
+distance=19.3
+
+chemistry=.true.
+condensates=.false.
+COratio =  0.55
+metallicity =  2.0562344E-01
+
+pmin=1d-7
+pmax=1d+3
+
+nr=25
+
+lmin=0.25d0
+lmax=5.0d0
+
+specres=150
+
+cia=.true.
+
+compute=.false.
+
+scattering=.false.
+scattstar=.false.
+
+cloud1:nsubgrains=1
+cloud1:fmax=0d0
+cloud1:standard='DRIFT'
+cloud1:species='DRIFT'
+cloud1:coverage=1d0
+cloud1:Sigmadot=1d-17
+cloud1:dP=10d0
+cloud1:coverage=1d0
+cloud1:Kzz =  2E+06
+cloud1:Sigmadot =  2.3637590E-17
+cloud1:P =  5.2049144E-04
+
+useDRIFT=.true.
+cloudcompute=.true.
+
+par_tprofile=.true.
+
+gammaT =  4.8279612E-01
+betaT =  7.5663718E-01
+kappa =  1.3965331E-01
+TeffP =  1.6729263E+01
+

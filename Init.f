@@ -1257,7 +1257,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	compute_opac=.true.
 	
 	opacitymode=.false.
-	opacitydir='Opacities'
+	opacitydir=trim(homedir) // '/ARCiS/Data/Opacities'
 
 	nTom=100
 	nPom=50
