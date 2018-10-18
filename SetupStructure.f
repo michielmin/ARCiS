@@ -719,13 +719,13 @@ c			write(82,*) P(i), Kzz(i)
 			enddo
 			close(unit=25)
 		else if(Cloud(ii)%file.ne.' ') then
-			call regridN(Cloud(ii)%file,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,3,.false.,.false.)
+			call regridN(Cloud(ii)%file,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,4,.false.,.false.)
 			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
 			if(.not.allocated(Cloud(ii)%rv)) then
 				allocate(Cloud(ii)%rv(nr))
 				allocate(Cloud(ii)%sigma(nr))
 			endif
-			call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,11,1,3,.false.,.true.)
+			call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,12,1,4,.false.,.true.)
 			Cloud(ii)%rv=Cloud(ii)%rv*1d4
 			Cloud(ii)%sigma=1d-10
 			Cloud(ii)%frac(1:nr,1:18)=1d-10
