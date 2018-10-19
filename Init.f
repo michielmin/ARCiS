@@ -736,6 +736,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) TeffP
 		case("maxiter")
 			read(key%value,*) maxiter
+		case("epsiter")
+			read(key%value,*) epsiter
 		case("chemistry")
 			read(key%value,*) dochemistry
 		case("fastchem","fast_chem")
@@ -1280,6 +1282,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	maxTprofile=1d6
 	
 	maxiter=6
+	epsiter=1d-2
 	
 	maxchemtime=1d200
 	

@@ -784,13 +784,15 @@ c      endif
       character(len=100) :: trivial(NDUSTmax),tmp
       character(len=2)  :: name
       logical :: found,allfound
+	character*100 homedir
+	call getenv('HOME',homedir) 
 
 c      write(*,*) 
 c      write(*,*) "reading DustChem.dat ..."
 c      write(*,*) "========================"
       trivial(:)=' '
 
-      open(12, file='~/ARCiS/Data/GGchem/DustChem.dat', status='old')
+      open(12, file=trim(homedir) // '/ARCiS/Data/GGchem/DustChem.dat', status='old')
  
 c      write(*,*) '--- dust species ---'
       read(12,1000) zeile
@@ -5634,13 +5636,15 @@ c      close(12)
       character(len=10) :: source(4)
       character(len=200) :: line
       logical :: found
+	character*100 homedir
+	call getenv('HOME',homedir) 
 
       !-------------------------
       ! ***  default values  ***
       !-------------------------
-      dispol_file(1) = '~/ARCiS/Data/GGchem/dispol_BarklemCollet.dat'
-      dispol_file(2) = '~/ARCiS/Data/GGchem/dispol_StockKitzmann_withoutTsuji.dat'
-      dispol_file(3) = '~/ARCiS/Data/GGchem/dispol_WoitkeRefit.dat'
+      dispol_file(1) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_BarklemCollet.dat'
+      dispol_file(2) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_StockKitzmann_withoutTsuji.dat'
+      dispol_file(3) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_WoitkeRefit.dat'
       dispol_file(4) = ''
       elements     = 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V el'
       abund_pick   = 3
