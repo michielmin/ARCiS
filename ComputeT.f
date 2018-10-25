@@ -1,11 +1,17 @@
-	subroutine DoComputeT(converged)
+	module modComputeT
+	IMPLICIT NONE
+	real*8,allocatable :: CrV_prev(:),CrT_prev(:)
+	end module modComputeT
+	
+	subroutine DoComputeT(converged,nTiter)
 	use GlobalSetup
 	use Constants
+	use modComputeT
 	IMPLICIT NONE
-	integer iphase
-	real*8 tau,Planck
+	integer iphase,nTiter
+	real*8 tau,Planck,CrV(nr),CrT(nr)
 	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:)
-	real*8 tot,tot2,tot3,chi2,CrV(nr),CrT(nr),must,gamma,dP,Tirr,T0,must_i
+	real*8 tot,tot2,tot3,chi2,must,gamma,dP,Tirr,T0,must_i
 	integer ir,ilam,ig,i,iT
 	logical docloud0(max(nclouds,1)),converged
 	type(Mueller),allocatable :: M(:,:)
@@ -15,6 +21,7 @@
 	allocate(Cs(nr,nlam))
 	allocate(g(nr,nlam))
 	allocate(M(nr,nlam))
+	if(.not.allocated(CrV_prev)) allocate(CrV_prev(nr),CrT_prev(nr))
 	
 	call output("Temperature computation (in beta phase!!)")
 
@@ -61,6 +68,11 @@
 		CrV(ir)=tot3/CrV(ir)
 	enddo
 
+	if(nTiter.ne.0) then
+		CrV=sqrt(CrV*CrV_prev)*0.99+CrV*0.01
+		CrT=sqrt(CrT*CrT_prev)*0.99+CrT*0.01
+	endif
+
 	chi2=0d0
 	must=betaT
 	if(i2d.ne.0) then
@@ -97,12 +109,15 @@
 		T0=T0/100d0
      	T0=T0**0.25
 		chi2=chi2+((T(ir)-min(T0,2900d0))/((min(T0,2900d0)+T(ir))*epsiter))**2
-		T(ir)=T(ir)*0.8+T0*0.2
+		T(ir)=T(ir)*0.5+T0*0.5
 	enddo
 	chi2=chi2/real(nr)
 	converged=.false.
 	if(chi2.lt.1d0) converged=.true.
 	call output("Chi2: " // trim(dbl2string(chi2,'(f7.2)')))
+
+	CrV_prev=CrV
+	CrT_prev=CrT
 
 	deallocate(Ca)
 	deallocate(Ce)

@@ -87,7 +87,7 @@ c terms of use
 	if(computeT.and.computeopac) then
 		nTiter=0
 		do while(.not.Tconverged.and.nTiter.lt.maxiter)
-			call DoComputeT(Tconverged)
+			call DoComputeT(Tconverged,nTiter)
 			par_tprofile=.false.
 			call SetupStructure(.true.)
 			call SetupOpacities()
