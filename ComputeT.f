@@ -8,10 +8,10 @@
 	use Constants
 	use modComputeT
 	IMPLICIT NONE
-	integer iphase,nTiter
-	real*8 tau,Planck,CrV(nr),CrT(nr)
+	integer iphase,nTiter,iter
+	real*8 tau_V,tau_T,Planck,CrV(nr),CrT(nr),f
 	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:)
-	real*8 tot,tot2,tot3,chi2,must,gamma,dP,Tirr,T0,must_i
+	real*8 tot,tot2,tot3,chi2,must,gamma,dP,Tirr,T0(nr),must_i
 	integer ir,ilam,ig,i,iT
 	logical docloud0(max(nclouds,1)),converged
 	type(Mueller),allocatable :: M(:,:)
@@ -38,8 +38,13 @@
 			enddo
 		enddo
 	enddo
+
+	T0(1:nr)=T(1:nr)
+	
+	do iter=1,5
+
 	do ir=1,nr
-		iT=T(ir)+1
+		iT=T0(ir)+1
 		if(iT.gt.nBB-1) iT=nBB-1
 		CrT(ir)=0d0
 		tot2=0d0
@@ -67,10 +72,12 @@
 		CrT(ir)=tot2/CrT(ir)
 		CrV(ir)=tot3/CrV(ir)
 	enddo
+	CrT=CrT/dens
+	CrV=CrV/dens
 
 	if(nTiter.ne.0) then
-		CrV=sqrt(CrV*CrV_prev)*0.99+CrV*0.01
-		CrT=sqrt(CrT*CrT_prev)*0.99+CrT*0.01
+		CrV=sqrt(CrV*CrV_prev)
+		CrT=sqrt(CrT*CrT_prev)
 	endif
 
 	chi2=0d0
@@ -88,9 +95,9 @@
 		must=must*betaT
 	endif
 
-	tau=0d0
 	Tirr=sqrt(Rstar/Dplanet)*Tstar
-	tau=0d0
+	tau_V=0d0
+	tau_T=0d0
 	do ir=nr,1,-1
 		if(ir.eq.nr) then
 			dP=P(ir)
@@ -98,20 +105,33 @@
 			dP=abs(P(ir+1)-P(ir))
 		endif
 		dP=dP/100d0
-		T0=0d0
+		T0(ir)=0d0
 		gamma=CrV(ir)/CrT(ir)
-		must_i=1d0/sqrt(3d0)
 		do i=1,100
-			tau=tau+CrT(ir)*1d6*dP/grav(ir)
-			T0=T0+3d0*TeffP**4*(2d0/3d0+tau)/4d0+
-     &		3d0*Tirr**4*must*(2d0/3d0+must/gamma+(gamma/(3d0*must)-must/gamma)*exp(-gamma*tau/must))/4d0
+			tau_V=tau_V+CrV(ir)*1d6*dP/grav(ir)
+			tau_T=tau_T+CrT(ir)*1d6*dP/grav(ir)
+			gamma=tau_V/tau_T
+			T0(ir)=T0(ir)+3d0*TeffP**4*(2d0/3d0+tau_T)/4d0+
+     &		3d0*Tirr**4*must*(2d0/3d0+must/gamma+(gamma/(3d0*must)-must/gamma)*exp(-tau_V/must))/4d0
 		enddo
-		T0=T0/100d0
-     	T0=T0**0.25
-		chi2=chi2+((T(ir)-min(T0,2900d0))/((min(T0,2900d0)+T(ir))*epsiter))**2
-		T(ir)=T(ir)*0.5+T0*0.5
+		T0(ir)=T0(ir)/100d0
+		T0(ir)=T0(ir)**0.25
+	enddo
+	
+	enddo
+
+	chi2=0d0
+	do ir=1,nr
+		chi2=chi2+((min(T(ir),2900d0)-min(T0(ir),2900d0))/((min(T0(ir),2900d0)+min(T(ir),2900d0))*epsiter))**2
+		f=real(nTiter)/real(maxiter)
+		if(nTiter.ne.0) then
+			T(ir)=T(ir)**(1d0-f)*T0(ir)**f
+		else
+			T(ir)=T0(ir)
+		endif
 	enddo
 	chi2=chi2/real(nr)
+
 	converged=.false.
 	if(chi2.lt.1d0) converged=.true.
 	call output("Chi2: " // trim(dbl2string(chi2,'(f7.2)')))
