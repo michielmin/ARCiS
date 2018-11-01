@@ -1,6 +1,8 @@
 	module modComputeT
 	IMPLICIT NONE
 	real*8,allocatable :: CrV_prev(:),CrT_prev(:)
+	real*8,allocatable :: Taverage(:)
+	integer iaverage
 	end module modComputeT
 	
 	subroutine DoComputeT(converged,nTiter)
@@ -22,9 +24,20 @@
 	allocate(Cs(nr,nlam))
 	allocate(g(nr,nlam))
 	allocate(M(nr,nlam))
-	if(.not.allocated(CrV_prev)) allocate(CrV_prev(nr),CrT_prev(nr))
+	if(.not.allocated(CrV_prev)) allocate(CrV_prev(nr),CrT_prev(nr),Taverage(nr))
 	
 	call output("Temperature computation (in beta phase!!)")
+
+	if(nTiter.eq.maxiter.and.iaverage.gt.0) then
+		T=Taverage/real(iaverage)
+		call WriteStructure
+		return
+	endif
+
+	if(nTiter.eq.maxiter/2) then
+		iaverage=0
+		Taverage=0d0
+	endif
 
 	docloud0=.false.
 	if(nTiter.ne.0) then
@@ -137,11 +150,16 @@
 	chi2=chi2/real(nr)
 
 	converged=.false.
-	if(chi2.lt.1d0) converged=.true.
+c	if(chi2.lt.1d0) converged=.true.
 	call output("Chi2: " // trim(dbl2string(chi2,'(f7.2)')))
 
 	CrV_prev=CrV
 	CrT_prev=CrT
+
+	if(nTiter.ge.maxiter/2) then
+		iaverage=iaverage+1
+		Taverage=Taverage+T0
+	endif
 
 	deallocate(Ca)
 	deallocate(Ce)
