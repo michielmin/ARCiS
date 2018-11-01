@@ -67,9 +67,10 @@ endif
 OBJS	= Modules.o \
 		InputOutput.o \
 		Main.o \
-		Init.o \
 		easy_chem_extra.o \
 		easy_chem.o \
+		DiffuseCloud.o \
+		Init.o \
 		SetupStructure.o \
 		SetupOpacities.o \
 		Raytrace.o \
@@ -106,7 +107,6 @@ OBJS	= Modules.o \
 		dlsei.o \
 		Lapack.o \
 		writeFITS.o \
-		DiffuseCloud.o \
 		params_multinest.o \
 		MultiNestARCiS.o \
 		mrqmin.o \

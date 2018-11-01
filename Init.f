@@ -597,6 +597,7 @@ c	condensates=(condensates.or.cloudcompute)
 	subroutine ReadAndSetKey(key)
 	use GlobalSetup
 	use ReadKeywords
+	use CloudModule
 	IMPLICIT NONE
 	type(SettingKey) key
 	integer i
@@ -607,6 +608,9 @@ c	condensates=(condensates.or.cloudcompute)
 		case("nr")
 c is already set in CountStuff
 c			read(key%value,*) nr
+		case("nrcloud","nrhr")
+			read(key%value,*) nr_cloud
+			nr_cloud=max(1,nr_cloud/nr)
 		case("mp")
 			Mp_from_logg=.false.
 			read(key%value,*) Mplanet
@@ -995,12 +999,12 @@ c	endif
 		endif
 	endif
 
-	if(retrieval) then
-		do i=1,nr
-			if(T0(i).gt.Tmax) T0(i)=Tmax
-			if(T0(i).lt.Tmin) T0(i)=Tmin
-		enddo
-	endif
+c	if(retrieval) then
+c		do i=1,nr
+c			if(T0(i).gt.Tmax) T0(i)=Tmax
+c			if(T0(i).lt.Tmin) T0(i)=Tmin
+c		enddo
+c	endif
 
 	do i=1,nr
 		T(i)=T0(nr+1-i)
@@ -1076,6 +1080,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	subroutine SetDefaults()
 	use GlobalSetup
 	use Constants
+	use CloudModule
 	IMPLICIT NONE
 	integer i
 	character*100 homedir
@@ -1164,6 +1169,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	instrument="ARIEL"
 	instr_ntrans=1d0
+
+	nr_cloud=10
 
 	do i=1,nclouds
 		Cloud(i)%P=1d-4

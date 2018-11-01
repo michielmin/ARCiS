@@ -72,7 +72,7 @@ c terms of use
 	integer nTiter
 	real*8 starttime,stoptime,starttime_w,stoptime_w,omp_get_wtime
 	logical recomputeopacities
-	logical computeopac
+	logical computeopac,temp
 	
 	computeopac=recomputeopacities
 
@@ -86,6 +86,7 @@ c terms of use
 	if(computeopac) call SetupOpacities()
 	if(computeT.and.computeopac) then
 		nTiter=0
+		temp=par_tprofile
 		do while(.not.Tconverged.and.nTiter.lt.maxiter)
 			call DoComputeT(Tconverged,nTiter)
 			par_tprofile=.false.
@@ -93,6 +94,7 @@ c terms of use
 			call SetupOpacities()
 			nTiter=nTiter+1
 		enddo
+		par_tprofile=temp
 	endif
 	call cpu_time(stoptime)
 	call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")

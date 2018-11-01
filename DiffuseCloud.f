@@ -1,7 +1,14 @@
+	module CloudModule
+	IMPLICIT NONE
+	integer nr_cloud
+	real*8,allocatable :: CloudP(:),CloudT(:),CloudR(:),Clouddens(:)
+	end module
+
 	subroutine DiffuseCloud(ii)
 	use GlobalSetup
 	use Constants
 	use AtomsModule
+	use CloudModule
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),xtot(:),vth(:),vthv(:)
 	real*8,allocatable :: Sc(:),Sn(:),rpart(:),mpart(:),atomsink(:,:)
@@ -16,13 +23,19 @@
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin
 	logical quadratic,ini
 	character*500 cloudspecies(max(nclouds,1))
-	integer nr_cloud,nnr
-	parameter(nr_cloud=10)
-	real*8 CloudP((nr-1)*nr_cloud+1),CloudT((nr-1)*nr_cloud+1),CloudR((nr-1)*nr_cloud+1),Clouddens((nr-1)*nr_cloud+1)
+	integer nnr
 
 	real*8 Mc_top,Mn_top,IDP_dens,IDP_rad,fact
 	integer nCS,iCS
 	integer,allocatable :: useatomsink(:)
+
+	nnr=(nr-1)*nr_cloud+1
+	if(.not.allocated(CloudP)) then
+		allocate(CloudP(nnr))
+		allocate(CloudT(nnr))
+		allocate(CloudR(nnr))
+		allocate(Clouddens(nnr))
+	endif
 
 	niter=40
 
@@ -223,8 +236,6 @@ c C
 	Kp=K
 
 	m_nuc=4d0*pi*r_nuc**3*6d0/3d0
-
-	nnr=(nr-1)*nr_cloud+1
 
 	allocate(rpart(nnr))
 	allocate(mpart(nnr))

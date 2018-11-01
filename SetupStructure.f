@@ -22,12 +22,15 @@
 		call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
 	endif
 
+	nabla_ad=2d0/7d0
+
 	if(PTchemAbun) then
 		call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		call call_chemistry(Tchem,Pchem,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW_form,didcondens_chem,includemol)
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(1),MMW_form,didcondens_chem,includemol)
 		do i=2,nr
 			mixrat_r(i,1:nmol)=mixrat_r(1,1:nmol)
+			nabla_ad(i)=nabla_ad(1)
 		enddo
 		mixrat(1:nmol)=mixrat_r(1,1:nmol)		
    	endif

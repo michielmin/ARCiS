@@ -7,6 +7,7 @@
 	use GlobalSetup
 	use Constants
 	use modComputeT
+	use CloudModule
 	IMPLICIT NONE
 	integer iphase,nTiter,iter
 	real*8 tau_V,tau_T,Planck,CrV(nr),CrT(nr),f
@@ -26,9 +27,11 @@
 	call output("Temperature computation (in beta phase!!)")
 
 	docloud0=.false.
-	do i=1,nclouds
-		if(Cloud(i)%coverage.gt.0.5) docloud0(i)=.true.
-	enddo
+	if(nTiter.ne.0) then
+		do i=1,nclouds
+			if(Cloud(i)%coverage.gt.0.5) docloud0(i)=.true.
+		enddo
+	endif
 
 	do ilam=1,nlam
 		do ig=1,ng
@@ -76,8 +79,9 @@
 	CrV=CrV/dens
 
 	if(nTiter.ne.0) then
-		CrV=sqrt(CrV*CrV_prev)
-		CrT=sqrt(CrT*CrT_prev)
+		f=max(0.5e0,real(nTiter)/real(maxiter))
+		CrV=CrV**f*CrV_prev**(1d0-f)
+		CrT=CrT**f*CrT_prev**(1d0-f)
 	endif
 
 	chi2=0d0
@@ -123,7 +127,7 @@
 	chi2=0d0
 	do ir=1,nr
 		chi2=chi2+((min(T(ir),2900d0)-min(T0(ir),2900d0))/((min(T0(ir),2900d0)+min(T(ir),2900d0))*epsiter))**2
-		f=real(nTiter)/real(maxiter)
+		f=max(0.5e0,real(nTiter)/real(maxiter))
 		if(nTiter.ne.0) then
 			T(ir)=T(ir)**(1d0-f)*T0(ir)**f
 		else
