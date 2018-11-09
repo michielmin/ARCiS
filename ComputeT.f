@@ -1,43 +1,28 @@
-	module modComputeT
-	IMPLICIT NONE
-	real*8,allocatable :: CrV_prev(:),CrT_prev(:)
-	real*8,allocatable :: Taverage(:)
-	integer iaverage
-	end module modComputeT
-	
 	subroutine DoComputeT(converged,nTiter)
 	use GlobalSetup
 	use Constants
-	use modComputeT
 	use CloudModule
 	IMPLICIT NONE
 	integer iphase,nTiter,iter
-	real*8 tau_V,tau_T,Planck,CrV(nr),CrT(nr),f
-	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:)
-	real*8 tot,tot2,tot3,chi2,must,gamma,dP,Tirr,T0(nr),must_i
-	integer ir,ilam,ig,i,iT
+	real*8 Planck,Pb(nr+1),f,dtau,expint,cp
+	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:),Tr(:,:,:)
+	real*8,allocatable :: Fl(:,:,:,:),Ff(:,:),Pl(:)
+	real*8 tot,tot2,tot3,must,tstep,deltaF,err
+	integer ir,ilam,ig,i
 	logical docloud0(max(nclouds,1)),converged
 	type(Mueller),allocatable :: M(:,:)
 	
+	allocate(Tr(nr,nlam,ng))
+	allocate(Fl(2,nr+1,nlam,ng))
 	allocate(Ca(nr,nlam,ng))
 	allocate(Ce(nr,nlam,ng))
 	allocate(Cs(nr,nlam))
 	allocate(g(nr,nlam))
 	allocate(M(nr,nlam))
-	if(.not.allocated(CrV_prev)) allocate(CrV_prev(nr),CrT_prev(nr),Taverage(nr))
+	allocate(Ff(2,nr+1))
+	allocate(Pl(nr))
 	
 	call output("Temperature computation (in beta phase!!)")
-
-	if(nTiter.eq.maxiter.and.iaverage.gt.0) then
-		T=Taverage/real(iaverage)
-		call WriteStructure
-		return
-	endif
-
-	if(nTiter.eq.maxiter/2) then
-		iaverage=0
-		Taverage=0d0
-	endif
 
 	docloud0=.false.
 	if(nTiter.ne.0) then
@@ -50,22 +35,20 @@
 		do ig=1,ng
 			do ir=1,nr
 				call Crossections(ir,ilam,ig,Ca(ir,ilam,ig),Cs(ir,ilam),docloud0)
+				Ca(ir,ilam,ig)=Ca(ir,ilam,ig)/dens(ir)
+				Cs(ir,ilam)=Cs(ir,ilam)/dens(ir)
 				Ce(ir,ilam,ig)=Ca(ir,ilam,ig)+Cs(ir,ilam)
 			enddo
 		enddo
 	enddo
 
-	T0(1:nr)=T(1:nr)
-	
-	do iter=1,5
+	Pb(1)=P(1)
+	do i=2,nr
+		Pb(i)=sqrt(P(i-1)*P(i))
+	enddo
+	Pb(nr+1)=P(nr)
 
 	do ir=1,nr
-		iT=T0(ir)+1
-		if(iT.gt.nBB-1) iT=nBB-1
-		CrT(ir)=0d0
-		tot2=0d0
-		CrV(ir)=0d0
-		tot3=0d0
 		do ilam=1,nlam-1
 			call GetMatrix(ir,ilam,M(ir,ilam),docloud0)
 			g(ir,ilam)=0d0
@@ -75,29 +58,22 @@
 				tot=tot+M(ir,ilam)%F11(iphase)*sintheta(iphase)
 			enddo
 			g(ir,ilam)=g(ir,ilam)/tot
-			do ig=1,ng
-				CrT(ir)=CrT(ir)+dfreq(ilam)*BB(iT,ilam)
-     &				/(Ca(ir,ilam,ig)+Cs(ir,ilam)*(1d0-g(ir,ilam)))
-				tot2=tot2+dfreq(ilam)*BB(iT,ilam)
+		enddo
+	enddo
 
-				CrV(ir)=CrV(ir)+dfreq(ilam)*Fstar(ilam)
-     &				/(Ca(ir,ilam,ig)+Cs(ir,ilam)*(1d0-g(ir,ilam)))
-				tot3=tot3+dfreq(ilam)*Fstar(ilam)
+	do ir=1,nr
+		do ilam=1,nlam-1
+			do ig=1,ng
+				dtau=abs(Pb(ir+1)-Pb(ir))*1d6*(Ca(ir,ilam,ig)+Cs(ir,ilam)*(1d0-g(ir,ilam)))/grav(ir)
+				if(dtau.gt.0d0) then
+					Tr(ir,ilam,ig)=(1d0-dtau)*exp(-dtau)+dtau**2*expint(1,dtau)
+				else
+					Tr(ir,ilam,ig)=1d0
+				endif
 			enddo
 		enddo
-		CrT(ir)=tot2/CrT(ir)
-		CrV(ir)=tot3/CrV(ir)
 	enddo
-	CrT=CrT/dens
-	CrV=CrV/dens
-
-	if(nTiter.ne.0) then
-		f=max(0.5e0,real(nTiter)/real(maxiter))
-		CrV=CrV**f*CrV_prev**(1d0-f)
-		CrT=CrT**f*CrT_prev**(1d0-f)
-	endif
-
-	chi2=0d0
+	
 	must=betaT
 	if(i2d.ne.0) then
 		if(i2d.eq.1) then
@@ -112,60 +88,61 @@
 		must=must*betaT
 	endif
 
-	Tirr=sqrt(Rstar/Dplanet)*Tstar
-	tau_V=0d0
-	tau_T=0d0
-	do ir=nr,1,-1
-		if(ir.eq.nr) then
-			dP=P(ir)
-		else
-			dP=abs(P(ir+1)-P(ir))
-		endif
-		dP=dP/100d0
-		T0(ir)=0d0
-		gamma=CrV(ir)/CrT(ir)
-		do i=1,100
-			tau_V=tau_V+CrV(ir)*1d6*dP/grav(ir)
-			tau_T=tau_T+CrT(ir)*1d6*dP/grav(ir)
-			gamma=tau_V/tau_T
-			T0(ir)=T0(ir)+3d0*TeffP**4*(2d0/3d0+tau_T)/4d0+
-     &		3d0*Tirr**4*must*(2d0/3d0+must/gamma+(gamma/(3d0*must)-must/gamma)*exp(-tau_V/must))/4d0
+	do iter=1,100
+
+	Fl=0d0
+
+	do ilam=1,nlam-1
+		Fl(2,1,ilam,1:ng)=pi*Planck(max(3d0,TeffP),freq(ilam))
+		do ir=2,nr+1
+			Pl(ir-1)=Planck(T(ir-1),freq(ilam))
+			do ig=1,ng
+				Fl(2,ir,ilam,ig)=Tr(ir-1,ilam,ig)*Fl(2,ir-1,ilam,ig)+pi*Pl(ir-1)*(1d0-Tr(ir-1,ilam,ig))
+			enddo
 		enddo
-		T0(ir)=T0(ir)/100d0
-		T0(ir)=T0(ir)**0.25
+		Fl(1,nr+1,ilam,1:ng)=must*Fstar(ilam)/Dplanet**2
+		do ir=nr,1,-1
+			do ig=1,ng
+				Fl(1,ir,ilam,ig)=Tr(ir,ilam,ig)*Fl(1,ir+1,ilam,ig)+pi*Pl(ir)*(1d0-Tr(ir,ilam,ig))
+			enddo
+		enddo
+	enddo
+	do ir=1,nr+1
+		Ff(1,ir)=0d0
+		Ff(2,ir)=0d0
+		do ilam=1,nlam-1
+			do ig=1,ng
+				Ff(1,ir)=Ff(1,ir)+dfreq(ilam)*Fl(1,ir,ilam,ig)/real(ng)
+				Ff(2,ir)=Ff(2,ir)+dfreq(ilam)*Fl(2,ir,ilam,ig)/real(ng)
+			enddo
+		enddo
 	enddo
 	
-	enddo
-
-	chi2=0d0
+c	converged=.true.
 	do ir=1,nr
-		chi2=chi2+((min(T(ir),2900d0)-min(T0(ir),2900d0))/((min(T0(ir),2900d0)+min(T(ir),2900d0))*epsiter))**2
-		f=max(0.5e0,real(nTiter)/real(maxiter))
-		if(nTiter.ne.0) then
-			T(ir)=T(ir)**(1d0-f)*T0(ir)**f
-		else
-			T(ir)=T0(ir)
-		endif
+		cp=3.5*kb/(mp*MMW(ir))
+		tstep=cp*P(ir)/(sigma*grav(ir)*T(ir)**3)
+		deltaF=((Ff(2,ir+1)-Ff(1,ir+1))-(Ff(2,ir)-Ff(1,ir)))/abs(R(ir+1)-R(ir))
+		tstep=tstep*1d5/(abs(deltaF)**0.9)
+		T(ir)=T(ir)-deltaF*tstep/(dens(ir)*cp)
+		if(.not.T(ir).gt.3d0) T(ir)=3d0
+		err=((Ff(2,ir+1)-Ff(1,ir+1))-(Ff(2,ir)-Ff(1,ir)))/(sigma*T(ir)**4)
 	enddo
-	chi2=chi2/real(nr)
+c	if(converged) exit
+
+	enddo
 
 	converged=.false.
-c	if(chi2.lt.1d0) converged=.true.
-	call output("Chi2: " // trim(dbl2string(chi2,'(f7.2)')))
 
-	CrV_prev=CrV
-	CrT_prev=CrT
-
-	if(nTiter.ge.maxiter/2) then
-		iaverage=iaverage+1
-		Taverage=Taverage+T0
-	endif
-
+	deallocate(Tr)
+	deallocate(Fl)
 	deallocate(Ca)
 	deallocate(Ce)
 	deallocate(Cs)
 	deallocate(g)
 	deallocate(M)
+	deallocate(Ff)
+	deallocate(Pl)
 
 	call WriteStructure
 
