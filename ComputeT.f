@@ -135,8 +135,8 @@
 		tstep=cp*P(ir)/(sigma*grav(ir)*T(ir)**3)
 		deltaF=((Ff(2,ir+1)-Ff(1,ir+1))-(Ff(2,ir)-Ff(1,ir)))/abs(R(ir+1)-R(ir))
 		tstep=tstep*1d5/(abs(deltaF)**0.9)
-		T0(ir)=T0(ir)-deltaF*tstep/(dens(ir)*cp)
-		if(.not.T0(ir).gt.3d0) T0(ir)=3d0
+		T(ir)=T(ir)-deltaF*tstep/(dens(ir)*cp)
+		if(.not.T(ir).gt.3d0) T(ir)=3d0
 		err=((Ff(2,ir+1)-Ff(1,ir+1))-(Ff(2,ir)-Ff(1,ir)))/(sigma*T(ir)**4)
 	enddo
 
@@ -147,9 +147,7 @@
 		chi2=chi2+((min(T(ir),2900d0)-min(T0(ir),2900d0))/((min(T0(ir),2900d0)+min(T(ir),2900d0))*epsiter))**2
 		f=max(0.5e0,real(nTiter)/real(maxiter))
 		if(nTiter.ne.0) then
-			T(ir)=T(ir)**(1d0-f)*T0(ir)**f
-		else
-			T(ir)=T0(ir)
+			T(ir)=T0(ir)**(1d0-f)*T(ir)**f
 		endif
 	enddo
 	chi2=chi2/real(nr)
