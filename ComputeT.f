@@ -6,13 +6,14 @@
 	integer iphase,nTiter,iter
 	real*8 Planck,Pb(nr+1),f,dtau,expint,cp
 	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:),Tr(:,:,:)
-	real*8,allocatable :: Fl(:,:,:,:),Ff(:,:),Pl(:,:)
+	real*8,allocatable :: Fl(:,:,:,:),Ff(:,:),Pl(:,:),T0(:)
 	real*8 tot,tot2,tot3,must,tstep,deltaF,err
 	integer ir,ilam,ig,i
 	logical docloud0(max(nclouds,1)),converged
 	type(Mueller),allocatable :: M(:,:)
 	
 	allocate(Tr(nr,nlam,ng))
+	allocate(T0(nr))
 	allocate(Fl(2,nr+1,nlam,ng))
 	allocate(Ca(nr,nlam,ng))
 	allocate(Ce(nr,nlam,ng))
@@ -30,6 +31,8 @@
 			if(Cloud(i)%coverage.gt.0.5) docloud0(i)=.true.
 		enddo
 	endif
+
+	T0=T
 
 	do ilam=1,nlam
 		do ig=1,ng
@@ -127,19 +130,29 @@
 		enddo
 	enddo
 	
-c	converged=.true.
 	do ir=1,nr
 		cp=3.5*kb/(mp*MMW(ir))
 		tstep=cp*P(ir)/(sigma*grav(ir)*T(ir)**3)
 		deltaF=((Ff(2,ir+1)-Ff(1,ir+1))-(Ff(2,ir)-Ff(1,ir)))/abs(R(ir+1)-R(ir))
 		tstep=tstep*1d5/(abs(deltaF)**0.9)
-		T(ir)=T(ir)-deltaF*tstep/(dens(ir)*cp)
-		if(.not.T(ir).gt.3d0) T(ir)=3d0
+		T0(ir)=T0(ir)-deltaF*tstep/(dens(ir)*cp)
+		if(.not.T0(ir).gt.3d0) T0(ir)=3d0
 		err=((Ff(2,ir+1)-Ff(1,ir+1))-(Ff(2,ir)-Ff(1,ir)))/(sigma*T(ir)**4)
 	enddo
-c	if(converged) exit
 
 	enddo
+
+	chi2=0d0
+	do ir=1,nr
+		chi2=chi2+((min(T(ir),2900d0)-min(T0(ir),2900d0))/((min(T0(ir),2900d0)+min(T(ir),2900d0))*epsiter))**2
+		f=max(0.5e0,real(nTiter)/real(maxiter))
+		if(nTiter.ne.0) then
+			T(ir)=T(ir)**(1d0-f)*T0(ir)**f
+		else
+			T(ir)=T0(ir)
+		endif
+	enddo
+	chi2=chi2/real(nr)
 
 	converged=.false.
 
