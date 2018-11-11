@@ -6,7 +6,7 @@
 	integer iphase,nTiter,iter
 	real*8 Planck,Pb(nr+1),f,dtau,expint,cp
 	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:),Tr(:,:,:)
-	real*8,allocatable :: Fl(:,:,:,:),Ff(:,:),Pl(:)
+	real*8,allocatable :: Fl(:,:,:,:),Ff(:,:),Pl(:,:)
 	real*8 tot,tot2,tot3,must,tstep,deltaF,err
 	integer ir,ilam,ig,i
 	logical docloud0(max(nclouds,1)),converged
@@ -20,7 +20,7 @@
 	allocate(g(nr,nlam))
 	allocate(M(nr,nlam))
 	allocate(Ff(2,nr+1))
-	allocate(Pl(nr))
+	allocate(Pl(nr,nlam))
 	
 	call output("Temperature computation (in beta phase!!)")
 
@@ -92,18 +92,27 @@
 
 	Fl=0d0
 
-	do ilam=1,nlam-1
-		Fl(2,1,ilam,1:ng)=pi*Planck(max(3d0,TeffP),freq(ilam))
-		do ir=2,nr+1
-			Pl(ir-1)=Planck(T(ir-1),freq(ilam))
-			do ig=1,ng
-				Fl(2,ir,ilam,ig)=Tr(ir-1,ilam,ig)*Fl(2,ir-1,ilam,ig)+pi*Pl(ir-1)*(1d0-Tr(ir-1,ilam,ig))
-			enddo
+	do ir=1,nr
+		tot=0d0
+		do ilam=1,nlam-1
+			Pl(ir,ilam)=Planck(T(ir),freq(ilam))
+			tot=tot+Pl(ir,ilam)*dfreq(ilam)
 		enddo
+		tot=tot*pi*clight
+ 		Pl(ir,1:nlam)=Pl(ir,1:nlam)*sigma*T(ir)**4/tot
+	enddo
+
+	do ilam=1,nlam-1
 		Fl(1,nr+1,ilam,1:ng)=must*Fstar(ilam)/Dplanet**2
 		do ir=nr,1,-1
 			do ig=1,ng
-				Fl(1,ir,ilam,ig)=Tr(ir,ilam,ig)*Fl(1,ir+1,ilam,ig)+pi*Pl(ir)*(1d0-Tr(ir,ilam,ig))
+				Fl(1,ir,ilam,ig)=Tr(ir,ilam,ig)*Fl(1,ir+1,ilam,ig)+pi*Pl(ir,ilam)*(1d0-Tr(ir,ilam,ig))
+			enddo
+		enddo
+		Fl(2,1,ilam,1:ng)=Fl(1,1,ilam,1:ng)+pi*Planck(max(3d0,TeffP),freq(ilam))
+		do ir=2,nr+1
+			do ig=1,ng
+				Fl(2,ir,ilam,ig)=Tr(ir-1,ilam,ig)*Fl(2,ir-1,ilam,ig)+pi*Pl(ir-1,ilam)*(1d0-Tr(ir-1,ilam,ig))
 			enddo
 		enddo
 	enddo
