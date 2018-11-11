@@ -7,7 +7,7 @@
 	real*8 Planck,Pb(nr+1),f,dtau,expint,cp
 	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:),Tr(:,:,:)
 	real*8,allocatable :: Fl(:,:,:,:),Ff(:,:),Pl(:,:),T0(:)
-	real*8 tot,tot2,tot3,must,tstep,deltaF,err
+	real*8 tot,tot2,tot3,must,tstep,deltaF,err,chi2
 	integer ir,ilam,ig,i
 	logical docloud0(max(nclouds,1)),converged
 	type(Mueller),allocatable :: M(:,:)
