@@ -18,12 +18,7 @@
 	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i
 	integer ir,ilam,ig,i,iT,niter
 	logical docloud0(max(nclouds,1)),converged
-	type(Mueller) M
-	
-c	call MCDoComputeT(converged)
-c	converged=.false.
-c	return
-	
+	type(Mueller) M	
 	
 	if(.not.allocated(CrV_prev)) allocate(CrV_prev(nr),CrT_prev(nr),Taverage(nr))
 

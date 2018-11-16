@@ -371,6 +371,8 @@ c	enddo
 	do i=1,nvars
 		ii=0
 3		ii=ii+1
+		if(dvarq(i).gt.0.1d0) dvarq(i)=0.1d0
+		if(dvarq(i).lt.1d-5) dvarq(i)=1d-5
 		var1=var
 		dd=gasdev(idum)
 		var1(i)=var(i)+dd*dvarq(i)
