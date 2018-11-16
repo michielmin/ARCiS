@@ -225,7 +225,7 @@ c C
 			if(densv(iCS).gt.dens(i)*xv_bot(iCS)) cloudsform=.true.
 		enddo
 	enddo
-	if(.not.cloudsform.or.(computeT.and.nTiter.lt.maxiter/2d0)) then
+	if(.not.cloudsform.or.(computeT.and.nTiter.lt.min(2,maxiter/2))) then
 		cloud_dens=0d0
 		do i=1,nr
 			Cloud(ii)%rv(i)=r_nuc

@@ -387,12 +387,13 @@ c	enddo
 			demis(i,j)=(emis1(j)-emis0(j))/(var1(i)-var(i))
 			demisR(i,j)=(emisR1(j)-emisR0(j))/(var1(i)-var(i))
 		enddo
-		if(abs(chi2_0-chi2_1).lt.1d-4.and.ii.lt.3.and.dvarq(i).lt.0.02d0) then
+		if(abs(chi2_0-chi2_1).lt.1d-4.and.ii.lt.3.and.dd*dvarq(i).lt.0.5d0) then
 			dvarq(i)=dvarq(i)*5d0
+			if(dvarq(i).gt.0.5d0) dvarq(i)=0.5d0
 			goto 3
 		endif
 		dvarq(i)=sqrt(dvarq(i)*(0.2d0*abs(var1(i)-var(i))*chi2_0/abs(chi2_0-chi2_1)))
-		if(dvarq(i).gt.0.1d0) dvarq(i)=0.1d0
+		if(dvarq(i).gt.0.5d0) dvarq(i)=0.5d0
 		if(dvarq(i).lt.1d-5) dvarq(i)=1d-5
 		if(abs(chi2_0-chi2_1).gt.(chi2_0/2d0).and.ii.lt.3) goto 3
 	enddo
