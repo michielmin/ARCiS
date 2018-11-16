@@ -89,7 +89,7 @@ c===============================================================================
 	parameter(nangle_Jscat=60)
 	real*8,allocatable :: Jscat(:,:)						! radius, angle
 	integer nT,np,nr,nmol,nlam		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
-	integer nlines,ng,ncia,nclouds
+	integer nlines,ng,ncia,nclouds,nTiter
 	character*500 outputdir,HITRANdir,HITEMPdir
 	integer idum,maxiter,Nphot0,idum0,nlamdust,iWolk
 !$OMP THREADPRIVATE(idum)

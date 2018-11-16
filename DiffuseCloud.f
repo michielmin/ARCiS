@@ -2,6 +2,9 @@
 	IMPLICIT NONE
 	integer nr_cloud
 	real*8,allocatable :: CloudP(:),CloudT(:),CloudR(:),Clouddens(:)
+	real*8,allocatable :: ATP(:),BTP(:),rhodust(:),atoms_cloud(:,:),maxT(:),mu(:),xv_bot(:)
+	integer nCS
+
 	end module
 
 	subroutine DiffuseCloud(ii)
@@ -12,21 +15,20 @@
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),xtot(:),vth(:),vthv(:)
 	real*8,allocatable :: Sc(:),Sn(:),rpart(:),mpart(:),atomsink(:,:)
-	real*8,allocatable :: An(:,:),y(:,:),xv(:,:),xn(:),xc(:,:),A(:,:),mu(:)
-	real*8,allocatable :: drho(:),drhovsed(:),tcinv(:),rho_av(:),rhodust(:)
-	real*8,allocatable :: ATP(:),BTP(:),densv(:),xv_bot(:),atoms_cloud(:,:),maxT(:)
+	real*8,allocatable :: An(:,:),y(:,:),xv(:,:),xn(:),xc(:,:),A(:,:)
+	real*8,allocatable :: drho(:),drhovsed(:),tcinv(:),rho_av(:),densv(:)
 	real*8 K,dz,z12,z13,z12_2,z13_2,g,rr,Kc,Kp,mutot,npart,tot,lambda
 	integer info,i,j,iter,NN,NRHS,niter,ii
-	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f
+	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr)
 	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin
-	logical quadratic,ini
+	logical quadratic,ini,Tconverged,cloudsform
 	character*500 cloudspecies(max(nclouds,1))
 	integer nnr
 
 	real*8 Mc_top,Mn_top,IDP_dens,IDP_rad,fact
-	integer nCS,iCS
+	integer iCS
 	integer,allocatable :: useatomsink(:)
 
 	nnr=(nr-1)*nr_cloud+1
@@ -36,6 +38,8 @@
 		allocate(CloudR(nnr))
 		allocate(Clouddens(nnr))
 	endif
+
+	T0=T
 
 	niter=40
 
@@ -59,15 +63,18 @@
 	w_atoms(18) = 58.6934 		!'Ni'
 	
 	nCS=10
-	allocate(xv_bot(nCS))
-	allocate(mu(nCS))
-	allocate(ATP(nCS))
-	allocate(BTP(nCS))
-	allocate(maxT(nCS))
 	allocate(densv(nCS))
-	allocate(rhodust(nCS))
-	allocate(atoms_cloud(nCS,N_atoms))
 	allocate(useatomsink(nCS))
+
+	if(.not.allocated(ATP)) then
+		allocate(ATP(nCS))
+		allocate(BTP(nCS))
+		allocate(rhodust(nCS))
+		allocate(atoms_cloud(nCS,N_atoms))
+		allocate(maxT(nCS))
+		allocate(xv_bot(nCS))
+		allocate(mu(nCS))
+	endif
 
 	quadratic=.false.
 
@@ -210,6 +217,22 @@ c C
 	enddo
 	molfracs_atoms0=molfracs_atoms
 	xv_bot=xv_bot*mu/mutot
+
+	cloudsform=.false.
+	do i=1,nr
+		densv=10d0**(BTP-ATP/T(i)-log10(T(i)))
+		do iCS=1,nCS
+			if(densv(iCS).gt.dens(i)*xv_bot(iCS)) cloudsform=.true.
+		enddo
+	enddo
+	if(.not.cloudsform.or.(computeT.and.nTiter.lt.maxiter/2d0)) then
+		cloud_dens=0d0
+		do i=1,nr
+			Cloud(ii)%rv(i)=r_nuc
+			Cloud(ii)%frac(i,1:18)=1d0/18d0
+		enddo
+		return
+	endif
 
 	IDP_dens=0d0
 	IDP_rad=0.01d0*micron
@@ -591,6 +614,31 @@ c		endif
 		rpart(i)=sqrt(rr*rpart(i))
 	enddo
 
+	if(computeT.and.nTiter.gt.0) then
+		k=1
+		do i=1,nr
+			cloud_dens(i,ii)=0d0
+			do j=1,nr_cloud
+				do iCS=1,nCS
+					cloud_dens(i,ii)=cloud_dens(i,ii)+xc(iCS,k)*Clouddens(k)/real(nr_cloud)
+				enddo
+				k=k+1
+				if(k.gt.nnr) k=nnr
+			enddo
+		enddo
+		call DoComputeT(Tconverged,0.5d0)
+c		call DoComputeTfluxes(Tconverged,50,0.5d0)
+		k=1
+		do i=1,nr-1
+			do j=1,nr_cloud
+				CloudT(k)=10d0**(log10(T(i))+log10(T(i+1)/T(i))*real(j-1)/real(nr_cloud))
+				k=k+1
+				if(k.gt.nnr) k=nnr
+			enddo
+		enddo
+		CloudT(k)=T(nr)
+	endif
+
 	enddo
 c end the loop
 
@@ -629,6 +677,8 @@ c end the loop
 		Cloud(ii)%frac(i,1:18)=Cloud(ii)%frac(i,1:18)/tot
 	enddo
 
+c	T=T0
+
 	open(unit=20,file='atoms.dat',RECL=6000)
 	ini=.true.
 	do i=1,nr
@@ -654,14 +704,7 @@ c end the loop
 	enddo
 	close(unit=20)
 
-	deallocate(xv_bot)
-	deallocate(mu)
-	deallocate(ATP)
-	deallocate(BTP)
-	deallocate(maxT)
 	deallocate(densv)
-	deallocate(rhodust)
-	deallocate(atoms_cloud)
 	deallocate(useatomsink)
 	deallocate(rpart)
 	deallocate(mpart)

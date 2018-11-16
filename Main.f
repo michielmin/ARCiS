@@ -69,7 +69,6 @@ c terms of use
 	use GlobalSetup
 	IMPLICIT NONE
 	logical Tconverged
-	integer nTiter
 	real*8 starttime,stoptime,starttime_w,stoptime_w,omp_get_wtime
 	logical recomputeopacities
 	logical computeopac,temp
@@ -88,7 +87,19 @@ c terms of use
 		nTiter=0
 		temp=par_tprofile
 		do while(.not.Tconverged.and.nTiter.lt.maxiter)
-			call DoComputeT(Tconverged,nTiter)
+			call output("Temperature computation (in beta phase!!)")
+			if(nTiter.eq.0) then
+				call DoComputeT(Tconverged,1d0)
+			else
+				call DoComputeT(Tconverged,0.5d0)
+			endif
+
+c			if(nTiter.eq.0) then
+c				call DoComputeTfluxes(Tconverged,10000,1d0)
+c			else
+c				call DoComputeTfluxes(Tconverged,100,0.5d0)
+c			endif
+
 			par_tprofile=.false.
 			call SetupStructure(.true.)
 			call SetupOpacities()

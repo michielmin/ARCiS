@@ -253,7 +253,7 @@ c		enddo
 	rr=x**2+y**2+z**2
 	rho=sqrt(rr)
 	if(dorw(jr)) then
-		if(RandomWalk(x,y,z,dx,dy,dz,rho,E,Cs(jr),Ce(jr),Crw(jr),g(jr),jr,nscat,absorbed,0.5d0,Eabs,EJv(jr))) goto 1
+		if(RandomWalk(x,y,z,dx,dy,dz,rho,E,Cs(jr),Ce(jr),Crw(jr),g(jr),jr,nscat,absorbed,powstop,Eabs,EJv(jr))) goto 1
 	endif
 	R1=R(jr)**2
 	R2=R(jr+1)**2
@@ -315,12 +315,16 @@ c		enddo
 	EJv(jr)=EJv(jr)+tau*(1d0-albedo)
 
 	fstop=max(1d0-albedo**powstop,1d-4)
-	if(random(idum).lt.fstop) return
+	if(random(idum).lt.fstop.and.powstop.gt.0d0) return
 
+	if(powstop.gt.0d0) then
+		E=E*albedo/(1d0-fstop)
+	else
+		return
+	endif
 	call scattangle(M(jr),dx,dy,dz)
 	nscat=nscat+1
 	onedge=.false.
-	E=E*albedo/(1d0-fstop)
 	goto 1
 
 	return
@@ -631,7 +635,8 @@ c-----------------------------------------------------------------------
 
 	albedo=Cs/Ce
 	fstop=max(1d0-albedo**powstop,1d-4)
-	E=E*(albedo/(1d0-fstop))**v
+	if(powstop.le.0d0) fstop=0d0
+	if(powstop.gt.0d0) E=E*(albedo/(1d0-fstop))**v
 
 	fstop=1d0-(1d0-fstop)**v
 	absorbed=.false.
