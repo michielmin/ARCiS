@@ -281,7 +281,7 @@ c			enddo
 !$OMP& SHARED(nlam,freq,ir,nu_line,k_line,n_nu_line,cont_tot,Cabs,Csca,opac_tot,Ndens,R,ng,nclouds,cloud_dens,Cloud)
 !$OMP DO
 		do i=1,nlam-1
-			call tellertje(i+1,nlam+1)
+c			call tellertje(i+1,nlam+1)
 			nu1=freq(i+1)
 			nu2=freq(i)
 			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cont_tot(i))
@@ -362,7 +362,7 @@ c			enddo
 !$OMP&     L_do,L_S,L_S0,L_freq,L_imol,L_iiso,L_Elow)
 !$OMP DO
 	do i=1,nlines
-		call tellertje(i+1,nlines+2)
+c		call tellertje(i+1,nlines+2)
 		L_do(i)=.false.
 		if((L_freq(i)).gt.nu1.and.(L_freq(i)).lt.nu2) then
 			L_do(i)=.true.
@@ -606,7 +606,7 @@ c	if(NV0.gt.25000) NV0=25000
 	kline_omp=0d0
 !$OMP DO SCHEDULE (STATIC,1)
 	do i=1,nlines
-		call tellertje(i+1,nlines+2)
+c		call tellertje(i+1,nlines+2)
 		if(L_do(i)) then
 			imol=L_imol(i)
 			A=L_S(i)

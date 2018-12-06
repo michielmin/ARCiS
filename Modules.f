@@ -242,7 +242,7 @@ cPoints for the temperature structure
 		character*10 type
 		real*8,allocatable :: lam(:),y(:),dy(:),R(:),Rexp(:),model(:),modelbest(:),model0(:)
 		real*8 beta,scale
-		integer nlam
+		integer nlam,i2d
 		logical spec
 	end type ObservedSpec
 	type(ObservedSpec),allocatable :: ObsSpec(:)

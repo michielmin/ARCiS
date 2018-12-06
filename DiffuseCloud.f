@@ -3,7 +3,8 @@
 	integer nr_cloud
 	real*8,allocatable :: CloudP(:),CloudT(:),CloudR(:),Clouddens(:)
 	real*8,allocatable :: ATP(:),BTP(:),rhodust(:),atoms_cloud(:,:),maxT(:),mu(:),xv_bot(:)
-	integer nCS
+	character*25,allocatable :: CSname(:)
+	integer nCS,nnr
 
 	end module
 
@@ -24,8 +25,7 @@
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin
 	logical quadratic,ini,Tconverged,cloudsform
-	character*500 cloudspecies(max(nclouds,1))
-	integer nnr
+	character*500 cloudspecies(max(nclouds,1)),form
 
 	real*8 Mc_top,Mn_top,IDP_dens,IDP_rad,fact
 	integer iCS
@@ -74,6 +74,7 @@
 		allocate(maxT(nCS))
 		allocate(xv_bot(nCS))
 		allocate(mu(nCS))
+		allocate(CSname(nCS))
 	endif
 
 	quadratic=.false.
@@ -98,6 +99,7 @@
 	i=0
 c TiO2
 	i=i+1
+	CSname(i)='TiO2'
 	ATP(i)=40720.	! Al2O3 for now
 	BTP(i)=18.479
 	atoms_cloud(i,15)=1
@@ -105,6 +107,7 @@ c TiO2
 	rhodust(i)=7.0d0	! moet ik nog checken
 c VO
 	i=i+1
+	CSname(i)='VO'
 	ATP(i)=40720.	! Al2O3 for now
 	BTP(i)=18.479
 	atoms_cloud(i,16)=1
@@ -122,9 +125,10 @@ c Silicates
 	atoms_cloud(i,14)=molfracs_atoms(14)/molfracs_atoms(9)
 	atoms_cloud(i,5)=atoms_cloud(i,6)+atoms_cloud(i,7)+atoms_cloud(i,8)+atoms_cloud(i,14)+atoms_cloud(i,13)+2d0
 	rhodust(i)=3.0d0
-c	write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms_cloud(i,8),atoms_cloud(i,6),atoms_cloud(i,7),atoms_cloud(i,5)
+	write(CSname(i),'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms_cloud(i,8),atoms_cloud(i,6),atoms_cloud(i,7),atoms_cloud(i,5)
 c SiO2
 	i=i+1
+	CSname(i)='SiO2'
 	ATP(i)=30478.	! MgSiO3 for now
 	BTP(i)=14.898
 	atoms_cloud(i,9)=1
@@ -133,6 +137,7 @@ c SiO2
 	useatomsink(i)=9
 c Al2O3
 	i=i+1
+	CSname(i)='Al2O3'
 	ATP(i)=40720.
 	BTP(i)=18.479
 	atoms_cloud(i,8)=2
@@ -141,6 +146,7 @@ c Al2O3
 	useatomsink(i)=8
 c H2O
 	i=i+1
+	CSname(i)='H2O'
 	ATP(i)=2827.7
 	BTP(i)=7.7205
 	atoms_cloud(i,1)=2
@@ -149,6 +155,7 @@ c H2O
 	useatomsink(i)=5
 c FeS
 	i=i+1
+	CSname(i)='FeS'
 	ATP(i)=21542.
 	BTP(i)=6.6715
 	atoms_cloud(i,17)=1
@@ -157,6 +164,7 @@ c FeS
 	maxT(i)=680d0
 c Fe
 	i=i+1
+	CSname(i)='Fe'
 	ATP(i)=21542.
 	BTP(i)=6.6715
 	atoms_cloud(i,17)=1
@@ -164,6 +172,7 @@ c Fe
 	useatomsink(i)=17
 c SiC
 	i=i+1
+	CSname(i)='SiC'
 	ATP(i)=40720.	! for now equal to Al2O3
 	BTP(i)=18.479
 	atoms_cloud(i,9)=1
@@ -171,6 +180,7 @@ c SiC
 	rhodust(i)=2.5d0
 c C
 	i=i+1
+	CSname(i)='C'
 	ATP(i)=21542.	! for now equal to Fe
 	BTP(i)=6.6715
 	atoms_cloud(i,3)=1
@@ -584,15 +594,15 @@ c		endif
 	enddo
 
 
-	open(unit=20,file='output.dat',RECL=1000)
-	do i=1,nnr
-		densv=10d0**(BTP-ATP/CloudT(i)-log10(CloudT(i)))
-		do iCS=1,nCS
-			if(cloudT(i).gt.maxT(iCS)) densv(iCS)=densv(iCS)+10d0**(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0)-log10(CloudT(i)*10d0))
-		enddo
-		write(20,*) CloudP(i),Clouddens(i),xn(i),xc(1:nCS,i),rpart(i),CloudT(i),(xv(iCS,i)*Clouddens(i)/densv(iCS),iCS=1,nCS)
-	enddo
-	close(unit=20)
+c	open(unit=20,file='output.dat',RECL=1000)
+c	do i=1,nnr
+c		densv=10d0**(BTP-ATP/CloudT(i)-log10(CloudT(i)))
+c		do iCS=1,nCS
+c			if(cloudT(i).gt.maxT(iCS)) densv(iCS)=densv(iCS)+10d0**(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0)-log10(CloudT(i)*10d0))
+c		enddo
+c		write(20,*) CloudP(i),Clouddens(i),xn(i),xc(1:nCS,i),rpart(i),CloudT(i),(xv(iCS,i)*Clouddens(i)/densv(iCS),iCS=1,nCS)
+c	enddo
+c	close(unit=20)
 
 	do i=1,nnr
 		tot=0d0
@@ -627,7 +637,6 @@ c		endif
 			enddo
 		enddo
 		call DoComputeT(Tconverged,0.5d0)
-c		call DoComputeTfluxes(Tconverged,50,0.5d0)
 		k=1
 		do i=1,nr-1
 			do j=1,nr_cloud
@@ -642,13 +651,16 @@ c		call DoComputeTfluxes(Tconverged,50,0.5d0)
 	enddo
 c end the loop
 
-	open(unit=20,file='output.dat',RECL=1000)
+	open(unit=20,file=trim(outputdir) // '/cloudstructure.dat',RECL=1000)
+	form='("#",a18,a19,a19,' // trim(int2string(nCS,'(i4)')) // 'a23,a19,a19)'
+	write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"r[micron]","T[K]"
+	form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3)'
 	do i=1,nnr
 		densv=10d0**(BTP-ATP/CloudT(i)-log10(CloudT(i)))
 		do iCS=1,nCS
 			if(cloudT(i).gt.maxT(iCS)) densv(iCS)=densv(iCS)+10d0**(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0)-log10(CloudT(i)*10d0))
 		enddo
-		write(20,*) CloudP(i),Clouddens(i),xn(i),xc(1:nCS,i),rpart(i),CloudT(i),(xv(iCS,i)*Clouddens(i)/densv(iCS),iCS=1,nCS)
+		write(20,form) CloudP(i),Clouddens(i),xn(i),xc(1:nCS,i),rpart(i),CloudT(i)
 	enddo
 	close(unit=20)
 
@@ -677,9 +689,11 @@ c end the loop
 		Cloud(ii)%frac(i,1:18)=Cloud(ii)%frac(i,1:18)/tot
 	enddo
 
-c	T=T0
+	call ComputeTevap
 
-	open(unit=20,file='atoms.dat',RECL=6000)
+	T=T0
+
+	open(unit=20,file=trim(outputdir) // '/atoms.dat',RECL=6000)
 	ini=.true.
 	do i=1,nr
 		call tellertje(i,nr)

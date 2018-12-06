@@ -423,7 +423,7 @@ c	enddo
 	use RetrievalMod
 	IMPLICIT NONE
 	integer nvars,i,j,nlamtot,ny,k,maxspec
-	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars)
+	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars),spectemp(nlam),specsave(nobs,nlam)
 	real*8,allocatable :: spec(:),allspec(:,:)
 	logical recomputeopac
 	real*16 x
@@ -478,19 +478,24 @@ c	enddo
 	
 	do i=1,nobs
 		allocate(spec(ObsSpec(i)%nlam))
-		call RemapObs(i,spec)
-		select case(ObsSpec(i)%type)
-			case("trans","transmission","transC")
-				if(i2d.eq.0) then
-					allspec(i,1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
-				else if(i2d.le.2) then
-					allspec(i,1:ObsSpec(i)%nlam)=allspec(i,1:ObsSpec(i)%nlam)+spec(1:ObsSpec(i)%nlam)/2d0
-				endif
-			case("emis","emisR","emission","emisa","emisr")
-				if(i2d.eq.0.or.i2d.eq.3) then
-					allspec(i,1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
-				endif
-		end select		
+		call RemapObs(i,spec,spectemp)
+		if(ObsSpec(i)%i2d.eq.i2d) then
+			allspec(i,1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
+			specsave(i,1:nlam)=spectemp(1:nlam)
+		endif
+
+c		select case(ObsSpec(i)%type)
+c			case("trans","transmission","transC")
+c				if(i2d.eq.0) then
+c					allspec(i,1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
+c				else if(i2d.le.2) then
+c					allspec(i,1:ObsSpec(i)%nlam)=allspec(i,1:ObsSpec(i)%nlam)+spec(1:ObsSpec(i)%nlam)/2d0
+c				endif
+c			case("emis","emisR","emission","emisa","emisr")
+c				if(i2d.eq.0.or.i2d.eq.3) then
+c					allspec(i,1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
+c				endif
+c		end select		
 		deallocate(spec)
 	enddo
 	i2d=i2d+1
@@ -526,6 +531,11 @@ c	enddo
 					open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),RECL=1000)
 					do j=1,ObsSpec(i)%nlam
 						write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
+					enddo
+					close(unit=20)
+					open(unit=20,file=trim(outputdir) // "fullobs" // trim(int2string(i,'(i0.3)')),RECL=1000)
+					do j=1,nlam
+						write(20,*) lam(j)*1d4,specsave(i,j)
 					enddo
 					close(unit=20)
 			end select
@@ -1311,12 +1321,12 @@ c			vec(i)=gasdev(idum)
 
 
 
-	subroutine RemapObs(i,spec)
+	subroutine RemapObs(i,spec,specsave)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
 	integer i,j,k
-	real*8 spec(*),x
+	real*8 spec(*),x,specsave(*)
 	real*8 lamobs(nlam-1)
 	real*8 eta,Tirr,tau,expint
 
@@ -1325,24 +1335,19 @@ c			vec(i)=gasdev(idum)
 	enddo
 	select case(ObsSpec(i)%type)
 		case("trans","transmission","transC")
-c			call regridarray(lamobs,obsA(0,1:nlam-1)/(pi*Rstar**2),nlam-1,
-c     &					ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
-			call regridspecres(lamobs,obsA(0,1:nlam-1)/(pi*Rstar**2),nlam-1,
+			specsave(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+			call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
      		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
 		case("emisr","emisR")
-c			call regridarray(lamobs,flux(0,1:nlam-1)/(Fstar(1:nlam-1)*1d23/distance**2),
-c     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
-c			call regridspecres(lamobs,flux(0,1:nlam-1)/(Fstar(1:nlam-1)*1d23/distance**2),
-c     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
-			call regridspecres(lamobs,(phase(1,0,1:nlam-1)+flux(0,1:nlam-1))/(Fstar(1:nlam-1)*1d23/distance**2),
-     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
+			specsave(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
+			call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
+     &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
      		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
 		case("emisa","emis","emission")
-c			call regridarray(lamobs,flux(0,1:nlam-1),
-c     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
-			call regridspecres(lamobs,phase(1,0,1:nlam-1)+flux(0,1:nlam-1),
-     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
+			specsave(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
+			call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
+     &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
      		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
 			spec(1:ObsSpec(i)%nlam)=log(spec(1:ObsSpec(i)%nlam))
 		case("tprofile")
@@ -1375,7 +1380,7 @@ c     &					nlam-1,ObsSpec(i)%lam,spec,ObsSpec(i)%nlam)
 	use Constants
 	IMPLICIT NONE
 	integer nvars,nobs0,i,j,imodel
-	real*8 var(nvars),chi2obs(nobs0),error(2,n_ret)
+	real*8 var(nvars),chi2obs(nobs0),error(2,n_ret),specsave(nobs,nlam)
 	real*8,allocatable :: spec(:)
 	real*8,intent(in),optional :: error0(2,n_ret)
 	logical recomputeopac
@@ -1396,7 +1401,7 @@ c	print*,imodel,(trim(dbl2string(RetPar(i)%value,'(es18.7)')),i=1,n_ret)
 	ComputeChi2=0d0
 	do i=1,nobs
 		allocate(spec(ObsSpec(i)%nlam))
-		call RemapObs(i,spec)
+		call RemapObs(i,spec,specsave(i,1:nlam))
 		chi2obs(i)=0d0
 		do j=1,ObsSpec(i)%nlam
 			chi2obs(i)=chi2obs(i)+((spec(j)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2

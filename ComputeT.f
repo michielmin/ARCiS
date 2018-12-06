@@ -19,6 +19,10 @@
 	integer ir,ilam,ig,i,iT,niter
 	logical docloud0(max(nclouds,1)),converged
 	type(Mueller) M	
+
+c	call MCDoComputeT(converged)
+c	converged=.false.
+c	return
 	
 	if(.not.allocated(CrV_prev)) allocate(CrV_prev(nr),CrT_prev(nr),Taverage(nr))
 
@@ -147,8 +151,17 @@
 	enddo
 
 	open(unit=35,file=trim(outputdir) // "/RosselandOpacity.dat",RECL=1000)
-	do ir=1,nr
-		write(35,*) P(ir),CrV(ir),CrT(ir)
+	tau_V=0d0
+	tau_T=0d0
+	do ir=nr,1,-1
+		if(ir.eq.nr) then
+			dP=P(ir)
+		else
+			dP=abs(P(ir+1)-P(ir))
+		endif
+		tau_V=tau_V+CrV(ir)*1d6*dP/grav(ir)
+		tau_T=tau_T+CrT(ir)*1d6*dP/grav(ir)
+		write(35,*) P(ir),CrV(ir),CrT(ir),tau_V,tau_T
 	enddo
 	close(unit=35)
 
@@ -485,6 +498,47 @@ c		if(abs(deltaT).gt.(T(ir)*0.1d0)) deltaT=min(deltaT,deltaT*min(100d0,T(ir))*0.
 
 
 
+	subroutine ComputeTevap()
+	use GlobalSetup
+	use Constants
+	use CloudModule
+	use AtomsModule
+	IMPLICIT NONE
+	real*8 dens0(nCS),densv(nCS),Tmini(nCS),Tmaxi(nCS),T0(nCS)
+	integer ir,iCS,iter
+	character*500 form
+	
+	open(unit=36,file=trim(outputdir) // "/Tevap.dat",RECL=1000)
+	form='("#",a18,' // trim(int2string(nCS,'(i4)')) // 'a23,a19)'
+	write(36,form) "P[bar]",CSname(1:nCS),"T[K]"
+	form='(es19.7E3,' // trim(int2string(nCS,'(i4)')) // 'es23.7E3,es19.7E3)'
+	
+	do ir=1,nnr
+		Tmini=3d0
+		Tmaxi=3d5
+		dens0=xv_bot*Clouddens(ir)
+		do iter=1,1000
+			T0=(Tmini+Tmaxi)/2d0
+			densv=10d0**(BTP-ATP/T0-log10(T0))
+			do iCS=1,nCS
+				if(densv(iCS).gt.dens0(iCS)) then
+					Tmaxi(iCS)=T0(iCS)
+				else
+					Tmini(iCS)=T0(iCS)
+				endif
+			enddo
+		enddo
+		write(36,form) CloudP(ir),T0(1:nCS)
+	enddo
+
+	close(unit=36)
+
+	return
+	end
+
+
+
+
 
 
 
@@ -528,11 +582,12 @@ c		if(abs(deltaT).gt.(T(ir)*0.1d0)) deltaT=min(deltaT,deltaT*min(100d0,T(ir))*0.
 	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:),spec(:,:,:)
 	real*8,allocatable :: specsource(:,:),Eplanck(:,:)
 	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,theta,ct1,ct2,Tc(nr),Ec(nr),EJv(nr),EJvTot(nr)
-	real*8 tot,Lum,tot2,mu0,gamma,Cplanck(nr),Cstar(nr),dTdP_ad,dTdP,albedo
-	real*8 CabsL(nlam),Ca0,Cs0,T0,E0,Eabs,chi2,CabsLG(nlam,ng),Crw(nr),nabla,rho,scale
+	real*8 tot,Lum,tot2,mu0,gamma,Cplanck(nr),Cstar(nr),dTdP_ad,dTdP,albedo,Tmini,Tmaxi
+	real*8 CabsL(nlam),Ca0,Cs0,T0,E0,Eabs,chi2,CabsLG(nlam,ng),Crw(nr),nabla,rho,scale,Pl
 	integer iphot,ir,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,jr,ir0,jr0
 	integer iT1,iT2,iT,i
-	logical docloud0(max(nclouds,1)),goingup,onedge,dorw(nr),converged
+	logical docloud0(max(nclouds,1)),goingup,onedge,dorw(nr),converged,RandomWalkT
+	external RandomWalkT
 	type(Mueller),allocatable :: M(:,:)
 	
 	allocate(specsource(nlam,1))
@@ -548,8 +603,8 @@ c		if(abs(deltaT).gt.(T(ir)*0.1d0)) deltaT=min(deltaT,deltaT*min(100d0,T(ir))*0.
 	
 	call output("Temperature computation (in beta phase!!)")
 
-	NphotPlanet=250
-	NphotStar=2500
+	NphotPlanet=2500
+	NphotStar=10000
 
 	docloud0=.false.
 	do i=1,nclouds
@@ -567,73 +622,6 @@ c		if(abs(deltaT).gt.(T(ir)*0.1d0)) deltaT=min(deltaT,deltaT*min(100d0,T(ir))*0.
 			enddo
 		enddo
 	enddo
-	do ilam=1,nlam-1
-		do ig=1,ng
-			tau=0d0
-			do ir=nr,2,-1
-				tau=tau+Ce(ir,ilam,ig)*(R(ir+1)-R(ir))
-				if(tau.gt.1d0) exit
-			enddo
-			if(ir.lt.ir0) ir0=ir
-		enddo
-	enddo
-	ir0=1
-	do ir=1,nr
-		iT=T(ir)+1
-		if(iT.gt.nBB-1) iT=nBB-1
-		Crw(ir)=0d0
-		tot2=0d0
-		do ilam=1,nlam-1
-			call GetMatrix(ir,ilam,M(ir,ilam),docloud0)
-			g(ir,ilam)=0d0
-			tot=0d0
-			do iphase=1,180
-				g(ir,ilam)=g(ir,ilam)+M(ir,ilam)%F11(iphase)*costheta(iphase)*sintheta(iphase)
-				tot=tot+M(ir,ilam)%F11(iphase)*sintheta(iphase)
-			enddo
-			g(ir,ilam)=g(ir,ilam)/tot
-			do ig=1,ng
-				Crw(ir)=Crw(ir)+dfreq(ilam)*(BB(iT+1,ilam)-BB(iT,ilam))
-     &				/(Ca(ir,ilam,ig)+Cs(ir,ilam)*(1d0-g(ir,ilam)))
-				tot2=tot2+dfreq(ilam)*(BB(iT+1,ilam)-BB(iT,ilam))
-			enddo
-		enddo
-		Crw(ir)=tot2/Crw(ir)
-	enddo
-
-	do ir=1,nr
-		iT=T(ir)+1
-		if(iT.gt.nBB-1) iT=nBB-1
-		CPlanck(ir)=0d0
-		tot2=0d0
-		do ilam=1,nlam-1
-			do ig=1,ng
-				CPlanck(ir)=CPlanck(ir)+dfreq(ilam)*BB(iT,ilam)*(Ca(ir,ilam,ig)+Cs(ir,ilam)*(1d0-g(ir,ilam)))
-				tot2=tot2+dfreq(ilam)*BB(iT,ilam)
-			enddo
-		enddo
-		CPlanck(ir)=CPlanck(ir)/tot2
-		if(CPlanck(ir).gt.(3.5d0/Hp(ir))) then
-			scale=3.5d0/(CPlanck(ir)*Hp(ir))
-			Ce(ir,1:nlam,1:ng)=Ce(ir,1:nlam,1:ng)*scale
-			Ca(ir,1:nlam,1:ng)=Ca(ir,1:nlam,1:ng)*scale
-			Cs(ir,1:nlam)=Cs(ir,1:nlam)*scale
-			Crw(ir)=Crw(ir)*scale
-			CPlanck(ir)=CPlanck(ir)*scale
-		endif
-		dorw(ir)=.false.
-		if((R(ir+1)-R(ir))*Crw(ir).gt.factRW) dorw(ir)=.true.		
-
-		Cstar(ir)=0d0
-		tot2=0d0
-		do ilam=1,nlam-1
-			do ig=1,ng
-				Cstar(ir)=Cstar(ir)+dfreq(ilam)*Fstar(ilam)*(Ca(ir,ilam,ig)+Cs(ir,ilam)*(1d0-g(ir,ilam)))
-				tot2=tot2+dfreq(ilam)*Fstar(ilam)
-			enddo
-		enddo
-		Cstar(ir)=Cstar(ir)/tot2
-	enddo
 
 	Tc=2.7d0
 	Ec=0d0
@@ -642,26 +630,58 @@ c		if(abs(deltaT).gt.(T(ir)*0.1d0)) deltaT=min(deltaT,deltaT*min(100d0,T(ir))*0.
 	jr0=0
 
 	do ir=1,nr
-		iT=max(1,min(int(T(ir)),nBB))
-		do ilam=1,nlam-1
+		Crw(ir)=0d0
+		tot=0d0
+		do ilam=1,nlam-2
+			Pl=Planck(T(ir),freq(ilam))
 			do ig=1,ng
-				spec(ilam,ig,ir)=Ca(ir,ilam,ig)*BB(iT,ilam)
+				Crw(ir)=Crw(ir)+dfreq(ilam)*Pl/Ce(ir,ilam,ig)
+				tot=tot+dfreq(ilam)*Pl
+			enddo
+		enddo
+		Crw(ir)=tot/Crw(ir)
+	enddo
+
+	do ir=1,nr
+		dorw(ir)=((R(ir+1)-R(ir))*Crw(ir).gt.factRW)		
+	enddo
+
+	do ir=1,nr
+		do ilam=1,nlam-1
+			tot=Planck(T(ir),freq(ilam))
+			do ig=1,ng
+				spec(ilam,ig,ir)=Ca(ir,ilam,ig)*tot
 			enddo
 		enddo
 	enddo
 
 	if(TeffP.gt.0d0) then
 	call output("Internal heating")
-	Lum=0d0
 	EJv=0d0
+	Lum=0d0
 	do ilam=1,nlam-1
-		specsource(ilam,1)=Planck(TeffP,freq(ilam))*4d0*pi*R(1)**2
+		specsource(ilam,1)=Planck(max(TeffP,3d0),freq(ilam))
 		Lum=Lum+dfreq(ilam)*specsource(ilam,1)
+	enddo
+	Lum=Lum*pi*clight
+	if(Lum.eq.0d0) then
+		specsource(1:nlam-1,1)=0d0
+	else
+		specsource(1:nlam-1,1)=specsource(1:nlam-1,1)*sigma*max(TeffP,3d0)**4/Lum
+	endif
+	Lum=0d0
+	do ilam=1,nlam-1
+		Lum=Lum+specsource(ilam,1)*dfreq(ilam)
 	enddo
 	Nphot=NphotPlanet
 	E0=Lum/real(Nphot)
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(iphot,ilam,ig,x,y,z,jr,onedge,dx,dy,dz,goingup,v,jrnext,tau,tau_v,albedo)
+!$OMP& SHARED(Nphot,R,nr,Ce,Cs,EJv,spec,ng,nlam,betaT,specsource,Crw,dorw)
+!$OMP DO SCHEDULE (STATIC,1)
 	do iphot=1,Nphot
-		call tellertje(iphot,Nphot)
+c		call tellertje(iphot,Nphot)
 		call emit(specsource,1,ilam,ig)
 		ig=random(idum)*real(ng)+1
 		call randomdirection(x,y,z)
@@ -671,16 +691,16 @@ c		if(abs(deltaT).gt.(T(ir)*0.1d0)) deltaT=min(deltaT,deltaT*min(100d0,T(ir))*0.
 		jr=1
 		onedge=.true.
 1		call randomdirection(dx,dy,dz)
-		goingup=((x*dx+y*dy+z*dz).gt.0d0)
+		goingup=(dz.gt.0d0)
 		if(.not.goingup) goto 1
+		tau=-log(random(idum))
 		do while(jr.le.nr)
-2			tau=-log(random(idum))
 			if(goingup) then
-				v=(R(i+1)-z)/dz
-				jrnext=i+1
+				v=(R(jr+1)-z)/dz
+				jrnext=jr+1
 			else
-				v=(z-R(i))/dz
-				jrnext=i-1
+				v=(R(jr)-z)/dz
+				jrnext=jr-1
 			endif
 
 			tau_v=v*Ce(jr,ilam,ig)
@@ -708,53 +728,108 @@ c		if(abs(deltaT).gt.(T(ir)*0.1d0)) deltaT=min(deltaT,deltaT*min(100d0,T(ir))*0.
 				if(random(idum).gt.albedo) then
 					call emit(spec(1:nlam,1:ng,jr),ng,ilam,ig)
 				endif
-				goingup=((x*dx+y*dy+z*dz).gt.0d0)
+				if(dorw(jr)) then
+					do while(RandomWalkT(x,y,z,dx,dy,dz,Crw(jr),jr,EJv(jr)))
+					enddo
+				endif
+				tau=-log(random(idum))
+				goingup=(dz.gt.0d0)
 				onedge=.false.
 			endif
 		enddo
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 	EJvTot=EJvTot+EJv*E0
 	endif
 
 	call output("Stellar heating")
-	Lum=0d0
 	EJv=0d0
+	Lum=0d0
 	do ilam=1,nlam-1
-		specsource(ilam,1)=Fstar(ilam)*R(nr+1)**2/Dplanet**2
-		Lum=Lum+dfreq(ilam)*specsource(ilam,1)
+		specsource(ilam,1)=Planck(Tstar,freq(ilam))
+		Lum=Lum+specsource(ilam,1)*dfreq(ilam)
+	enddo
+	Lum=Lum*pi*clight
+	if(Lum.eq.0d0) then
+		specsource(1:nlam-1,1)=0d0
+	else
+		specsource(1:nlam-1,1)=specsource(1:nlam-1,1)*sigma*Tstar**4/Lum
+		specsource(1:nlam-1,1)=specsource(1:nlam-1,1)*betaT*(Rstar/Dplanet)**2
+	endif
+	Lum=0d0
+	do ilam=1,nlam-1
+		Lum=Lum+specsource(ilam,1)*dfreq(ilam)
 	enddo
 	Nphot=NphotStar
 	E0=Lum/real(Nphot)
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(iphot,ilam,ig,x,y,z,jr,onedge,dx,dy,dz,goingup,v,jrnext,tau,tau_v,albedo)
+!$OMP& SHARED(Nphot,R,nr,Ce,Cs,EJv,spec,ng,nlam,betaT,specsource,Crw,dorw)
+!$OMP DO SCHEDULE (STATIC,1)
 	do iphot=1,Nphot
-		call tellertje(iphot,Nphot)
+c		call tellertje(iphot,Nphot)
 		call emit(specsource,1,ilam,ig)
 		ig=random(idum)*real(ng)+1
-		call randomdisk(x,y,0d0,R(nr+1))
-	x=0d0
-	y=(1d0-betaT)*R(nr+1)
-		z=sqrt(R(nr+1)**2-x**2-y**2)
-		dz=-1d0
-		dx=0d0
+		x=0d0
+		y=0d0
+		z=R(nr+1)
+		dz=-1d0*betaT
+		dx=sqrt(1d0-dz**2)
 		dy=0d0
 		goingup=.false.
 		onedge=.true.
 		jr=nr
+		tau=-log(random(idum))
 		do while(jr.le.nr)
-			call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,
-     &			Ce(1:nr,ilam,ig),Ca(1:nr,ilam,ig),Cs(1:nr,ilam),Crw,g(1:nr,ilam),M(1:nr,ilam),dorw,-1d0,Eabs,EJv)
-			if(jr.le.nr) then
-			if(jr.ne.jr0) then
-				jr0=jr
+			if(goingup) then
+				v=(R(jr+1)-z)/dz
+				jrnext=jr+1
+			else
+				v=(R(jr)-z)/dz
+				jrnext=jr-1
 			endif
-	Ec(jr)=Ec(jr)+E0*Eabs
 
-			call emit(spec(1:nlam,1:ng,jr),ng,ilam,ig)
-			call randomdirection(dx,dy,dz)
-			goingup=((x*dx+y*dy+z*dz).gt.0d0)
-			onedge=.false.
+			tau_v=v*Ce(jr,ilam,ig)
+			albedo=Cs(jr,ilam)/Ce(jr,ilam,ig)
+			if(tau_v.lt.tau) then
+				x=x+v*dx
+				y=y+v*dy
+				z=z+v*dz
+				tau=tau-tau_v
+				EJv(jr)=EJv(jr)+tau_v*(1d0-albedo)
+				jr=jrnext
+				if(jr.lt.1) then
+					jr=1
+					dz=-dz
+					goingup=.true.
+				endif
+				onedge=.true.
+			else
+				v=tau/Ce(jr,ilam,ig)
+				x=x+v*dx
+				y=y+v*dy
+				z=z+v*dz
+				EJv(jr)=EJv(jr)+tau*(1d0-albedo)
+				call randomdirection(dx,dy,dz)
+				if(random(idum).gt.albedo) then
+					call emit(spec(1:nlam,1:ng,jr),ng,ilam,ig)
+				endif
+				if(dorw(jr)) then
+					do while(RandomWalkT(x,y,z,dx,dy,dz,Crw(jr),jr,EJv(jr)))
+					enddo
+				endif
+				tau=-log(random(idum))
+				goingup=(dz.gt.0d0)
+				onedge=.false.
 			endif
 		enddo
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 	EJvTot=EJvTot+EJv*E0
 
 
@@ -767,7 +842,36 @@ c		if(abs(deltaT).gt.(T(ir)*0.1d0)) deltaT=min(deltaT,deltaT*min(100d0,T(ir))*0.
 				CabsL(ilam)=CabsL(ilam)+Ca(ir,ilam,ig)/real(ng)
 			enddo
 		enddo
-		call increaseT(T(ir),T0,EJvTot(ir),0d0,CabsL,ir,Eplanck)
+
+		Tmaxi=20000d0
+		Tmini=3d0
+		T0=T(ir)
+		do i=1,20
+			Lum=0d0
+			tot=0d0
+			do ilam=1,nlam-1
+				specsource(ilam,1)=Planck(T0,freq(ilam))
+				tot=tot+specsource(ilam,1)*dfreq(ilam)
+				do ig=1,ng
+					Lum=Lum+specsource(ilam,1)*dfreq(ilam)*Ca(ir,ilam,ig)/real(ng)
+				enddo
+			enddo
+			tot=tot*pi*clight
+			if(tot.eq.0d0) then
+ 				Lum=0d0
+ 			else
+	 			Lum=Lum*sigma*T0**4/tot
+			endif
+			Lum=Lum*(R(ir+1)-R(ir))
+			if(Lum.lt.EjvTot(ir)) then
+				Tmini=T0
+				T0=(T0+Tmaxi)/2d0
+			else
+				Tmaxi=T0
+				T0=(T0+Tmini)/2d0
+			endif
+		enddo
+
 		if(abs(T(ir)-T0)/(T(ir)+T0).gt.epsiter) converged=.false.
 		chi2=chi2+((T(ir)-min(T0,2900d0))/((min(T0,2900d0)+T(ir))*0.1))**2
 		T(ir)=sqrt(T(ir)*T0)

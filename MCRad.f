@@ -662,6 +662,56 @@ c-----------------------------------------------------------------------
 	
 
 
+	logical function RandomWalkT(x,y,z,dx,dy,dz,Crw,jr,EJv)
+	use GlobalSetup
+	use Constants
+	use RandomWalkModule
+	IMPLICIT NONE
+	real*8 dmin,v,ry,random,lr,x,y,z,dx,dy,dz,Crw,Kappa
+	real*8 d1,d2,EJv
+	integer i,jr,iy,jr1,jr2
+
+	RandomWalkT=.false.
+
+	lr=1d0/Crw
+
+	jr1=jr-1
+	if(jr1.lt.1) jr1=1
+	jr2=jr+2
+	if(jr2.gt.nr+1) jr2=nr+1
+
+	d1=abs(z-R(jr1))
+	d2=abs(z-R(jr2))
+	dmin=d2
+	if(d1.lt.dmin.and.jr.ne.1) dmin=d1
+
+	if(dmin.le.factRW*lr) return
+
+	RandomWalkT=.true.
+
+	ry=random(idum)
+	iy=1
+	call hunt(phi,NY,ry,iy)
+
+	v=-3d0*log(yy(iy))*dmin**2/(lr**2*pi**2)
+
+	call randomdirection(dx,dy,dz)
+	x=x+dmin*dx
+	y=y+dmin*dy
+	z=z+dmin*dz
+
+	if(z.lt.R(1)) z=2d0*R(1)-z
+	do jr=1,nr
+		if(z.gt.R(jr).and.z.le.(R(jr+1))) exit
+	enddo
+
+	EJv=EJv+v
+
+	return
+	end
+	
+
+
 
 	subroutine InitRandomWalk()
 	use RandomWalkModule

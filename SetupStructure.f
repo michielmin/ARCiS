@@ -1256,6 +1256,11 @@ c	goto 1
 	real*8 theta,t,beta,b(n),b0(n),th(n),diff,tot,tot0
 	integer i,j
 
+	if(t.lt.0d0) then
+		beta=1d0
+		return
+	endif
+
 	tot=0d0
 	tot0=0d0
 	b=0d0

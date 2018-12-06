@@ -1128,7 +1128,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	coagulation=.true.
 	singlecloud=.false.
 	
-	twind=0d0
+	twind=-1d0
 	
 	PRplanet=10d0
 
@@ -1227,6 +1227,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 		ObsSpec(i)%beta=-1d0
 		ObsSpec(i)%scale=-1d-1
 		ObsSpec(i)%spec=.true.
+		ObsSpec(i)%i2d=0
 	enddo
 
 	computeT=.false.
@@ -1453,6 +1454,9 @@ c				enddo
 			read(key%value,*) ObsSpec(i)%beta
 		case("scale")
 			read(key%value,*) ObsSpec(i)%scale
+		case("i2d")
+			read(key%value,*) ObsSpec(i)%i2d
+			if(ObsSpec(i)%i2d.gt.n2d) n2d=ObsSpec(i)%i2d
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
