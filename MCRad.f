@@ -309,7 +309,7 @@ c		enddo
 			call reflectsurface(x,y,z,dx,dy,dz)
 			goingup=.true.
 			nscat=nscat+1
-			do while(P(jr).gt.Psimplecloud.or.jr.ge.nr)
+			do while(P(jr).gt.Psimplecloud.and.jr.lt.nr)
 				jr=jr+1
 			enddo
 			rr=sqrt(x**2+y**2+z**2)
