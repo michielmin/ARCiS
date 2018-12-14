@@ -17,9 +17,9 @@
 	real*8,allocatable :: x(:),vsed(:),xtot(:),vth(:),vthv(:)
 	real*8,allocatable :: Sc(:),Sn(:),rpart(:),mpart(:),atomsink(:,:)
 	real*8,allocatable :: An(:,:),y(:,:),xv(:,:),xn(:),xc(:,:),A(:,:)
-	real*8,allocatable :: drho(:),drhovsed(:),tcinv(:),rho_av(:),densv(:)
-	real*8 K,dz,z12,z13,z12_2,z13_2,g,rr,Kc,Kp,mutot,npart,tot,lambda
-	integer info,i,j,iter,NN,NRHS,niter,ii
+	real*8,allocatable :: drho(:),drhovsed(:),tcinv(:),rho_av(:),densv(:),Kd(:)
+	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda
+	integer info,i,j,iter,NN,NRHS,niter,ii,k
 	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr)
 	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:)
@@ -38,6 +38,7 @@
 		allocate(CloudR(nnr))
 		allocate(Clouddens(nnr))
 	endif
+	allocate(Kd(nnr))
 
 	T0=T
 
@@ -262,12 +263,9 @@ c C
 
 	eps=1d-3
 
-	K=Cloud(ii)%Kzz
+	Kd=Cloud(ii)%Kzz*Clouddens**Cloud(ii)%Kzz_pow
 	Sigmadot=Cloud(ii)%Sigmadot
 	
-	Kc=K
-	Kp=K
-
 	m_nuc=4d0*pi*r_nuc**3*6d0/3d0
 
 	allocate(rpart(nnr))
@@ -404,20 +402,20 @@ c equations for Nuclii
 		af=1d0/((CloudR(i-1)**2-CloudR(i)**2)-f2*(CloudR(i+1)**2-CloudR(i)**2))
 		bf=1d0/((CloudR(i-1)-CloudR(i))-f1*(CloudR(i+1)-CloudR(i)))
 
-		An(j,i-1)=An(j,i-1)+(2d0*af*CloudR(i)+bf)*(-Clouddens(i)*vsed(i)+Kp*drho(i))
-		An(j,i+1)=An(j,i+1)-(2d0*af*f2*CloudR(i)+bf*f1)*(-Clouddens(i)*vsed(i)+Kp*drho(i))
-		An(j,i)=An(j,i)+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(-Clouddens(i)*vsed(i)+Kp*drho(i))
+		An(j,i-1)=An(j,i-1)+(2d0*af*CloudR(i)+bf)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+		An(j,i+1)=An(j,i+1)-(2d0*af*f2*CloudR(i)+bf*f1)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+		An(j,i)=An(j,i)+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
 
-		An(j,i-1)=An(j,i-1)+2d0*af*Clouddens(i)*Kp
-		An(j,i+1)=An(j,i+1)-2d0*f2*af*Clouddens(i)*Kp
-		An(j,i)=An(j,i)+2d0*(f2-1d0)*af*Clouddens(i)*Kp
+		An(j,i-1)=An(j,i-1)+2d0*af*Clouddens(i)*Kd(i)
+		An(j,i+1)=An(j,i+1)-2d0*f2*af*Clouddens(i)*Kd(i)
+		An(j,i)=An(j,i)+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
 		else
-		An(j,i+1)=An(j,i+1)+(-Clouddens(i)*vsed(i)+Kp*drho(i))/dz
-		An(j,i-1)=An(j,i-1)-(-Clouddens(i)*vsed(i)+Kp*drho(i))/dz
+		An(j,i+1)=An(j,i+1)+(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
+		An(j,i-1)=An(j,i-1)-(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
 
-		An(j,i+1)=An(j,i+1)+2d0*Clouddens(i)*Kp/(dz*(CloudR(i+1)-CloudR(i)))
-		An(j,i-1)=An(j,i-1)+2d0*Clouddens(i)*Kp/(dz*(CloudR(i)-CloudR(i-1)))
-		An(j,i)=An(j,i)-2d0*Clouddens(i)*Kp*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
+		An(j,i+1)=An(j,i+1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
+		An(j,i-1)=An(j,i-1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
+		An(j,i)=An(j,i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 		endif
 
 		x(j)=-Sn(i)
@@ -448,8 +446,8 @@ c rewritten for better convergence
 	enddo
 	i=nnr
 	dz=CloudR(i)-CloudR(i-1)
-	An(1,i)=Kp/dz-vsed(i)
-	An(1,i-1)=-Kp/dz
+	An(1,i)=Kd(i)/dz-vsed(i)
+	An(1,i-1)=-Kd(i)/dz
 	x(1)=0d0!-Mn_top/Clouddens(i)
 	i=1
 	An(2,i)=1d0
@@ -494,20 +492,20 @@ c equations for material
 		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))-drhovsed(i)
 
 		if(quadratic) then
-		A(j,ixc(iCS,i-1))=A(j,ixc(iCS,i-1))+(2d0*af*CloudR(i)+bf)*(-Clouddens(i)*vsed(i)+Kp*drho(i))
-		A(j,ixc(iCS,i+1))=A(j,ixc(iCS,i+1))-(2d0*af*f2*CloudR(i)+bf*f1)*(-Clouddens(i)*vsed(i)+Kp*drho(i))
-		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(-Clouddens(i)*vsed(i)+Kp*drho(i))
+		A(j,ixc(iCS,i-1))=A(j,ixc(iCS,i-1))+(2d0*af*CloudR(i)+bf)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+		A(j,ixc(iCS,i+1))=A(j,ixc(iCS,i+1))-(2d0*af*f2*CloudR(i)+bf*f1)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
 
-		A(j,ixc(iCS,i-1))=A(j,ixc(iCS,i-1))+2d0*af*Clouddens(i)*Kp
-		A(j,ixc(iCS,i+1))=A(j,ixc(iCS,i+1))-2d0*f2*af*Clouddens(i)*Kp
-		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))+2d0*(f2-1d0)*af*Clouddens(i)*Kp
+		A(j,ixc(iCS,i-1))=A(j,ixc(iCS,i-1))+2d0*af*Clouddens(i)*Kd(i)
+		A(j,ixc(iCS,i+1))=A(j,ixc(iCS,i+1))-2d0*f2*af*Clouddens(i)*Kd(i)
+		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
 		else
-		A(j,ixc(iCS,i+1))=A(j,ixc(iCS,i+1))+(-Clouddens(i)*vsed(i)+Kc*drho(i))/dz
-		A(j,ixc(iCS,i-1))=A(j,ixc(iCS,i-1))-(-Clouddens(i)*vsed(i)+Kc*drho(i))/dz
+		A(j,ixc(iCS,i+1))=A(j,ixc(iCS,i+1))+(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
+		A(j,ixc(iCS,i-1))=A(j,ixc(iCS,i-1))-(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
 
-		A(j,ixc(iCS,i+1))=A(j,ixc(iCS,i+1))+2d0*Clouddens(i)*Kc/(dz*(CloudR(i+1)-CloudR(i)))
-		A(j,ixc(iCS,i-1))=A(j,ixc(iCS,i-1))+2d0*Clouddens(i)*Kp/(dz*(CloudR(i)-CloudR(i-1)))
-		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))-2d0*Clouddens(i)*Kp*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
+		A(j,ixc(iCS,i+1))=A(j,ixc(iCS,i+1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
+		A(j,ixc(iCS,i-1))=A(j,ixc(iCS,i-1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
+		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 		endif
 
 		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)/m_nuc
@@ -520,20 +518,20 @@ c		endif
 		j=j+1
 
 		if(quadratic) then
-		A(j,ixv(iCS,i-1))=A(j,ixv(iCS,i-1))+(2d0*af*CloudR(i)+bf)*(Kc*drho(i))
-		A(j,ixv(iCS,i+1))=A(j,ixv(iCS,i+1))-(2d0*af*f2*CloudR(i)+bf*f1)*(Kc*drho(i))
-		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(Kc*drho(i))
+		A(j,ixv(iCS,i-1))=A(j,ixv(iCS,i-1))+(2d0*af*CloudR(i)+bf)*(Kd(i)*drho(i))
+		A(j,ixv(iCS,i+1))=A(j,ixv(iCS,i+1))-(2d0*af*f2*CloudR(i)+bf*f1)*(Kd(i)*drho(i))
+		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(Kd(i)*drho(i))
 
-		A(j,ixv(iCS,i-1))=A(j,ixv(iCS,i-1))+2d0*af*Clouddens(i)*Kc
-		A(j,ixv(iCS,i+1))=A(j,ixv(iCS,i+1))-2d0*f2*af*Clouddens(i)*Kc
-		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))+2d0*(f2-1d0)*af*Clouddens(i)*Kc
+		A(j,ixv(iCS,i-1))=A(j,ixv(iCS,i-1))+2d0*af*Clouddens(i)*Kd(i)
+		A(j,ixv(iCS,i+1))=A(j,ixv(iCS,i+1))-2d0*f2*af*Clouddens(i)*Kd(i)
+		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
 		else
-		A(j,ixv(iCS,i+1))=A(j,ixv(iCS,i+1))+(Kc*drho(i))/dz
-		A(j,ixv(iCS,i-1))=A(j,ixv(iCS,i-1))-(Kc*drho(i))/dz
+		A(j,ixv(iCS,i+1))=A(j,ixv(iCS,i+1))+(Kd(i)*drho(i))/dz
+		A(j,ixv(iCS,i-1))=A(j,ixv(iCS,i-1))-(Kd(i)*drho(i))/dz
 
-		A(j,ixv(iCS,i+1))=A(j,ixv(iCS,i+1))+2d0*Clouddens(i)*Kc/(dz*(CloudR(i+1)-CloudR(i)))
-		A(j,ixv(iCS,i-1))=A(j,ixv(iCS,i-1))+2d0*Clouddens(i)*Kc/(dz*(CloudR(i)-CloudR(i-1)))
-		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))-2d0*Clouddens(i)*Kc*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))		
+		A(j,ixv(iCS,i+1))=A(j,ixv(iCS,i+1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
+		A(j,ixv(iCS,i-1))=A(j,ixv(iCS,i-1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
+		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))		
 		endif
 
 		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))-Sc(i)*xn(i)*Clouddens(i)/m_nuc
@@ -555,13 +553,13 @@ c		endif
 	i=nnr
 	dz=CloudR(i)-CloudR(i-1)
 	j=j+1
-	A(j,ixc(iCS,i))=Kp/dz-vsed(i)
-	A(j,ixc(iCS,i-1))=-Kp/dz
+	A(j,ixc(iCS,i))=Kd(i)/dz-vsed(i)
+	A(j,ixc(iCS,i-1))=-Kd(i)/dz
 	x(j)=0d0!-Mc_top/Clouddens(i)
 
 	j=j+1
-	A(j,ixv(iCS,i))=Kc/dz
-	A(j,ixv(iCS,i-1))=-Kc/dz
+	A(j,ixv(iCS,i))=Kd(i)/dz
+	A(j,ixv(iCS,i-1))=-Kd(i)/dz
 	x(j)=0d0!Mc_top/Clouddens(i)
 
 	NRHS=1

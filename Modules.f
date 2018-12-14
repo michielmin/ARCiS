@@ -218,7 +218,7 @@ c===============================================================================
 		character*20 standard,ptype
 		character*500 species
 		integer nr,nsubgrains
-		real*8 tmix,betamix,Kzz,Kscale,Sigmadot
+		real*8 tmix,betamix,Kzz,Kscale,Sigmadot,Kzz_pow
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 
@@ -230,7 +230,7 @@ cPoints for the temperature structure
 	type RetrievalPar
 		character*500 keyword
 		real*8 xmin,xmax,x0,dx,value,error1,error2
-		logical logscale,squarescale,opacitycomp
+		logical logscale,squarescale,opacitycomp,increase
 		integer n
 	end type RetrievalPar
 

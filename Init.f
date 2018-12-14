@@ -1201,6 +1201,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%betamix=2.2
 		Cloud(i)%Kscale=1d0
 		Cloud(i)%Kzz=1d8
+		Cloud(i)%Kzz_pow=0d0
 		Cloud(i)%Sigmadot=1d-17
 	enddo
 	cloudcompute=.false.
@@ -1214,6 +1215,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 		RetPar(i)%logscale=.false.
 		RetPar(i)%squarescale=.false.
 		RetPar(i)%opacitycomp=.true.
+		RetPar(i)%increase=.false.
 	enddo
 	npop=30
 	ngen=0
@@ -1428,6 +1430,11 @@ c				enddo
 			read(key%value,*) RetPar(i)%opacitycomp
 			do j=1,RetPar(i)%n
 				RetPar(i+j-1)%opacitycomp=RetPar(i)%opacitycomp
+			enddo
+		case("increase")
+			read(key%value,*) RetPar(i)%increase
+			do j=1,RetPar(i)%n
+				RetPar(i+j-1)%increase=RetPar(i)%increase
 			enddo
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
@@ -1679,6 +1686,8 @@ c				enddo
 			Cloud(j)%Kzzfile=trim(key%value)
 		case("kzz","k")
 			read(key%value,*) Cloud(j)%Kzz
+		case("kzz_pow","k_pow")
+			read(key%value,*) Cloud(j)%Kzz_pow
 		case("kscale")
 			read(key%value,*) Cloud(j)%Kscale
 		case("sigmadot","nucleation")

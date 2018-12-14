@@ -1434,6 +1434,9 @@ c	print*,imodel,(trim(dbl2string(RetPar(i)%value,'(es18.7)')),i=1,n_ret)
 	do k=1,2
 
 	do i=1,n_ret
+		if(i.gt.1.and.RetPar(i)%increase) then
+			RetPar(i)%xmin=RetPar(i-1)%value
+		endif
 		if(RetPar(i)%keyword(1:6).eq.'tvalue') then
 			read(RetPar(i)%keyword(7:len_trim(RetPar(i)%keyword)),*) j
 			xx=10d0**(log10(TP0)+dTP*log10(P(j)))
@@ -1583,6 +1586,9 @@ c	linear, square
 	real*8 var(n_ret),x,xx
 
 	do i=1,n_ret
+		if(i.gt.1.and.RetPar(i)%increase) then
+			RetPar(i)%xmin=RetPar(i-1)%value
+		endif
 		if(RetPar(i)%keyword(1:6).eq.'tvalue') then
 			read(RetPar(i)%keyword(7:len_trim(RetPar(i)%keyword)),*) j
 			xx=10d0**(log10(TP0)+dTP*log10(P(j)))
