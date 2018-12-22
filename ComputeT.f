@@ -476,12 +476,12 @@ c		if(abs(deltaT).gt.(T(ir)*0.1d0)) deltaT=min(deltaT,deltaT*min(100d0,T(ir))*0.
 	real*8 T0,densv(nCS),fmax,f
 	integer ir,iCS,iCS0
 	
-	densv=10d0**(BTP-ATP/T0-log10(T0))
+	densv=(mu*mp/(kb*T0))*exp(BTP-ATP/T0)
 	fmax=-1d200
 	iCS0=1
 	do iCS=1,nCS
 		if(xv_bot(iCS).gt.0d0) then
-			if(T0.gt.maxT(iCS)) densv(iCS)=densv(iCS)+10d0**(BTP(iCS)-ATP(iCS)/(T0*10d0)-log10(T0*10d0))
+			if(T0.gt.maxT(iCS)) densv(iCS)=densv(iCS)+(mu(iCS)*mp/(kb*T0*10d0))*exp(BTP(iCS)-ATP(iCS)/(T0*10d0))
 			f=xv_bot(iCS)*(1d0-densv(iCS)/(xv_bot(iCS)*dens(ir)))
 			if(f.gt.fmax) then
 				iCS0=iCS
@@ -519,7 +519,7 @@ c		if(abs(deltaT).gt.(T(ir)*0.1d0)) deltaT=min(deltaT,deltaT*min(100d0,T(ir))*0.
 		dens0=xv_bot*Clouddens(ir)
 		do iter=1,1000
 			T0=(Tmini+Tmaxi)/2d0
-			densv=10d0**(BTP-ATP/T0-log10(T0))
+			densv=(mu*mp/(kb*T0))*exp(BTP-ATP/T0)
 			do iCS=1,nCS
 				if(densv(iCS).gt.dens0(iCS)) then
 					Tmaxi(iCS)=T0(iCS)

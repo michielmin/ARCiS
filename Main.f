@@ -86,7 +86,7 @@ c terms of use
 	if(computeT.and.computeopac) then
 		nTiter=0
 		temp=par_tprofile
-		do while(.not.Tconverged.and.nTiter.lt.maxiter)
+		do while(.not.Tconverged.and.nTiter.le.maxiter)
 			call output("Temperature computation (in beta phase!!)")
 			if(nTiter.eq.0) then
 				call DoComputeT(Tconverged,1d0)
