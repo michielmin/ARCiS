@@ -9,7 +9,7 @@
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
 	
-	real*8 starttime,stoptime,chemtime
+	real*8 starttime,stoptime,chemtime,NOratio,SiOratio,Zout
 	chemtime=0d0
 		
 	do i=1,nclouds
@@ -18,10 +18,7 @@
 
 	ini = .TRUE.
 
-	if(Tform.gt.0d0) then
-		call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
-	endif
-
+	call SetAbun
 	nabla_ad=2d0/7d0
 
 	if(PTchemAbun) then
@@ -174,11 +171,7 @@ c	if(useDRIFT.and.domakeai) then
 
 	if(dochemistry.and.j.eq.1) then
 	if(compute_mixrat) then
-		if(Tform.gt.0d0) then
-			call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
-		else
-			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
-    	endif
+		call SetAbun
 		call output("==================================================================")
 c		call output("Computing chemistry using easy_chem by Paul Molliere")
 		call output("Computing chemistry using GGchem by Peter Woitke")
@@ -241,11 +234,7 @@ c					Tc=T(i)
 	if(dochemistry.and..false.) then
 	if(compute_mixrat) then
 		ini=.true.
-		if(Tform.gt.0d0) then
-			call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
-		else
-			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
-    	endif
+		call SetAbun
 		call output("==================================================================")
 c		call output("Computing chemistry using easy_chem by Paul Molliere")
 		call output("Computing chemistry using GGchem by Peter Woitke")
@@ -516,7 +505,7 @@ c			beta_used=max
 	IMPLICIT NONE
 	integer i,ii,j
 	real*8 tmix,frac(nr,10),temp(nr,3)
-	real*8 elabun(nr,7),MMW_form,Kzz(nr),Nmfp
+	real*8 elabun(nr,7),MMW_form,Kzz(nr),Nmfp,NOratio,SiOratio,Zout
 	character*500 command
 	character*500 filename
 	logical ini
@@ -527,11 +516,7 @@ c			beta_used=max
 	open(unit=25,file=trim(outputdir) // 'SPARCtoDRIFT_CO11.dat',RECL=1000)
 	write(25,'("#Elemental abundances")')
   	ini=.true.
-	if(Tform.gt.0d0) then
-		call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
-	else
-		call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
-   	endif
+	call SetAbun
 	do i=1,18
 		write(25,'(se18.6E3,"   ",a5)') molfracs_atoms(i),names_atoms(i)
 	enddo
@@ -650,11 +635,7 @@ c			write(82,*) P(i), Kzz(i)
 			call tellertje(i,nr)
 			ini=.true.
 			if(cloud_dens(i,ii).lt.1d-25) then
-				if(Tform.gt.0d0) then
-					call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
-				else
-					call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
-		    	endif
+				call SetAbun
 			else
 				call set_molfracs_atoms_elabun(COratio,metallicity,elabun(i,1:7))
 			endif
@@ -894,6 +875,34 @@ c use Ackerman & Marley 2001 cloud computation
 
 	return
 	end
+	
+	
+	subroutine SetAbun()
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 NOratio,SiOratio,Zout
+
+	if(trend_compute) then
+		idum=idum0
+		call TrendCompute(Mplanet/Mjup,Rplanet/Rjup,sqrt(Rstar/(2d0*Dplanet))*Tstar,Tstar,metallicity0,idum,
+     &			COratio,NOratio,SiOratio,Zout)
+		call output("Trend computed C/O:  " // dbl2string(COratio,'(es10.4)'))
+		call output("Trend computed N/O:  " // dbl2string(NOratio,'(es10.4)'))
+		call output("Trend computed Si/O: " // dbl2string(SiOratio,'(es10.4)'))
+		call output("Trend computed [Z]:  " // dbl2string(Zout,'(es10.3)'))
+	else
+		if(Tform.gt.0d0) then
+			call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
+		else
+			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+		endif
+	endif
+	
+	
+	return
+	end
+	
 	
 
 	subroutine FormAbun(T,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)

@@ -157,7 +157,7 @@ c===============================================================================
      &				 0,0,0,0,0 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt,n_instr
-	logical HITEMP,opacitymode,compute_opac,Mp_from_logg
+	logical HITEMP,opacitymode,compute_opac,Mp_from_logg,trend_compute
 	integer nPom,nTom
 	character*500 opacitydir,specresfile,starfile
 	character*20,allocatable :: instrument(:)

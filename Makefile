@@ -69,6 +69,7 @@ OBJS	= Modules.o \
 		Main.o \
 		easy_chem_extra.o \
 		easy_chem.o \
+		ComputeT.o \
 		DiffuseCloud.o \
 		Init.o \
 		SetupStructure.o \
@@ -99,7 +100,6 @@ OBJS	= Modules.o \
 		KuruczData.o \
 		MCRad.o \
 		OpacityFITS.o \
-		ComputeT.o \
 		polyPartition.o \
 		Retrieval.o \
 		Genetic.o \
@@ -115,7 +115,8 @@ OBJS	= Modules.o \
 		GGchemARCiS.o \
 		GGchem_linpack_q.o \
 		GGchem_is_nan.o \
-		PostEqualWeights.o
+		PostEqualWeights.o \
+		TrendCompute.o
 
 # program name and install location
 PROGRAM       = ARCiS

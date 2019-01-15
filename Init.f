@@ -848,6 +848,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		case("planetname")
 			read(key%value,*) planetname
 			call ReadPlanetName
+		case("trend_compute","dotrend")
+			read(key%value,*) trend_compute
 		case("i2d")
 			read(key%value,*) i2d
 		case("n2d")
@@ -1107,6 +1109,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	lam2=15d0
 	specres=10d0
 	specresdust=10d0
+	
+	trend_compute=.false.
 
 	mixrat=0d0
 	includemol=.false.
@@ -1844,6 +1848,7 @@ c not entirely correct...
 	real*8 x,dR1,dR2,dM1,dM2
 	character*100 name,namestar
 	integer i
+	character*10 Zc
 
 	i=len_trim(planetname)
 	if(planetname(i:i).eq.'b') then
@@ -1853,7 +1858,12 @@ c not entirely correct...
 	
 	open(unit=72,file=planetparameterfile,RECL=6000)
 	read(72,*)
-1	read(72,*,end=2) name,Tstar,x,x,metallicity,x,x,Mstar,x,x,Rstar,x,x,logg,x,x,x,x,x,x,x,x,x,Dplanet,x,x,Mplanet,dM1,dM2,Rplanet,dR1,dR2
+1	read(72,*,end=2) name,Tstar,x,x,Zc,x,x,Mstar,x,x,Rstar,x,x,logg,x,x,x,x,x,x,x,x,x,Dplanet,x,x,Mplanet,dM1,dM2,Rplanet,dR1,dR2
+	if(Zc.eq.'-1') then
+		metallicity=0d0
+	else
+		read(Zc,*) metallicity
+	endif
 	i=len_trim(name)
 	if(name(i:i).eq.'b') then
 		name(i:i)=' '
