@@ -99,7 +99,7 @@ c===============================================================================
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust,twind,epsiter
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud,metallicity0
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun
-	logical didcondens_chem,coagulation,resume_multinest
+	logical didcondens_chem,coagulation,resume_multinest,doMCcompute
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime,TiScale,f_multinest,tol_multinest
 	logical enhancecarbon,fast_chem,gamma_equal,dopostequalweights
@@ -253,5 +253,48 @@ cPoints for the temperature structure
 	end module GlobalSetup
 	
 
+	module modComputeT
+	IMPLICIT NONE
+	real*8,allocatable :: CrV_prev(:),CrT_prev(:)
+	real*8,allocatable :: Taverage(:)
+	integer iaverage
+	end module modComputeT
+	
+
+
+	module CloudModule
+	IMPLICIT NONE
+	integer nr_cloud
+	real*8,allocatable :: CloudP(:),CloudT(:),CloudR(:),Clouddens(:),CSnmol(:)
+	real*8,allocatable :: ATP(:),BTP(:),rhodust(:),atoms_cloud(:,:),maxT(:),mu(:),xv_bot(:)
+	character*25,allocatable :: CSname(:)
+	integer nCS,nnr
+	logical,allocatable :: ice(:)
+
+	end module
+
+
+
+	module RetrievalMod
+	implicit none
+	integer imodel
+	real*8 bestlike,chi2_0
+	real*8,allocatable :: dvarq(:),bestvar(:)
+	real*8,allocatable :: obsA0(:),obsA1(:),obsA2(:),dobsA(:,:)
+	real*8,allocatable :: emis0(:),emis1(:),emis2(:),demis(:,:)
+	real*8,allocatable :: emisR0(:),emisR1(:),emisR2(:),demisR(:,:)
+	end module RetrievalMod
+
+
+
+
+	module RandomWalkModule
+	IMPLICIT NONE
+	integer NY
+	parameter(NY=1000)
+	real*8 phi(NY),yy(NY)
+	end module RandomWalkModule
+
+	
 
 

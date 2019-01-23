@@ -1,14 +1,3 @@
-	module CloudModule
-	IMPLICIT NONE
-	integer nr_cloud
-	real*8,allocatable :: CloudP(:),CloudT(:),CloudR(:),Clouddens(:),CSnmol(:)
-	real*8,allocatable :: ATP(:),BTP(:),rhodust(:),atoms_cloud(:,:),maxT(:),mu(:),xv_bot(:)
-	character*25,allocatable :: CSname(:)
-	integer nCS,nnr
-	logical,allocatable :: ice(:)
-
-	end module
-
 	subroutine DiffuseCloud(ii)
 	use GlobalSetup
 	use Constants
@@ -44,7 +33,7 @@
 
 	T0=T
 	allocate(CrV_prev0(nr),CrT_prev0(nr))
-	if(computeT.and.nTiter.lt.maxiter.and.nTiter.gt.0) then
+	if(allocated(CrV_prev)) then
 		CrV_prev0=CrV_prev
 		CrT_prev0=CrT_prev
 	endif
@@ -613,7 +602,7 @@ c equations for material
 		rpart(i)=sqrt(rr*rpart(i))
 	enddo
 
-	if(computeT.and.nTiter.lt.maxiter.and.nTiter.gt.0) then
+	if(computeT.and.nTiter.lt.maxiter.and.nTiter.gt.0.and..false.) then
 		k=1
 		do i=1,nr
 			cloud_dens(i,ii)=0d0

@@ -770,6 +770,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) nspike
 		case("nphot")
 			read(key%value,*) Nphot0
+		case("domccompute","mccompute","mccomputet")
+			read(key%value,*) doMCcompute
 		case("point")
 			call ReadPoint(key)
 		case("retpar","fitpar")
@@ -1237,6 +1239,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	enddo
 
 	computeT=.false.
+	doMCcompute=.true.
 	TeffP=600d0
 	outputopacity=.false.
 
@@ -1553,7 +1556,7 @@ c				enddo
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 lam0,T0,Planck
+	real*8 lam0,T0,Planck,tot
 	integer i,j
 	
 	lam0=lam1
@@ -1587,9 +1590,12 @@ c				enddo
 
 	do j=1,nBB
 		T0=real(j)
+		tot=0d0
 		do i=1,nlam-1
 			BB(j,i)=Planck(T0,freq(i))
+			tot=tot+dfreq(i)*BB(j,i)
 		enddo
+		BB(j,i)=BB(j,i)*((2d0*(pi*kb*T0)**4)/(15d0*hplanck**3*clight**3))/tot
 	enddo
 
 

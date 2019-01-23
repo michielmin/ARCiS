@@ -116,7 +116,8 @@ OBJS	= Modules.o \
 		GGchem_linpack_q.o \
 		GGchem_is_nan.o \
 		PostEqualWeights.o \
-		TrendCompute.o
+		TrendCompute.o \
+		MCComputeT.o
 
 # program name and install location
 PROGRAM       = ARCiS
@@ -146,5 +147,8 @@ $(PROGRAM):     version  $(OBJS)
 
 # recompile everything if Modules.f has changed 
 $(OBJS):	Modules.f
+
+# recompile everything if InputOutput.f has changed 
+$(OBJS):	InputOutput.f
 
 

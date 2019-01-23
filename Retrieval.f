@@ -1,15 +1,3 @@
-	module RetrievalMod
-	implicit none
-	integer imodel
-	real*8 bestlike,chi2_0
-	real*8,allocatable :: dvarq(:),bestvar(:)
-	real*8,allocatable :: obsA0(:),obsA1(:),obsA2(:),dobsA(:,:)
-	real*8,allocatable :: emis0(:),emis1(:),emis2(:),demis(:,:)
-	real*8,allocatable :: emisR0(:),emisR1(:),emisR2(:),demisR(:,:)
-	end module RetrievalMod
-
-
-
 	subroutine ReadObs()
 	use GlobalSetup
 	IMPLICIT NONE
