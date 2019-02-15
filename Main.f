@@ -87,8 +87,10 @@ c terms of use
 		nTiter=0
 		temp=par_tprofile
 		do while(.not.Tconverged.and.nTiter.le.maxiter)
-			call output("Temperature computation (in beta phase!!)")
+			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " // trim(int2string(maxiter,'(i3)')) // ")")
 			f=1d0/real(nTiter+1)
+			f=1d0
+			if(nTiter.ge.2) f=0.5
 			call DoComputeT(Tconverged,f)
 			par_tprofile=.false.
 			call SetupStructure(.true.)

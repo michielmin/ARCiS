@@ -129,8 +129,8 @@
 		RHill=(Dplanet*(Mtot/(3d0*Mstar))**(1d0/3d0))
 		if(R(i+1).gt.RHill) then
 			call output("layer" // dbl2string(P(i),'(es10.3E3)') // "is beyond the Hill Sphere")
-c			print*,'adjusting radius'
-c			R(i+1)=sqrt(R(i)*RHill)
+			print*,'adjusting radius'
+			R(i+1)=sqrt(R(i)*RHill)
 		endif
 		Mtot=Mtot+dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
 		grav(i)=Ggrav*Mtot/(R(i)*R(i+1))

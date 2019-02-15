@@ -38,6 +38,10 @@
 	parameter(abun_in_name=2)
 	real*8 Kabs(nlamdust),Ksca(nlamdust),Kext(nlamdust)
 	real*8 F11_HR(nlam),F12_HR(nlam),F22_HR(nlam),F33_HR(nlam),F34_HR(nlam),F44_HR(nlam)
+	logical fcomputed
+	real*8 csmie_fcomp,cemie_fcomp
+	real*8,allocatable :: Mief11_fcomp(:),Mief12_fcomp(:)
+	real*8,allocatable :: Mief33_fcomp(:),Mief34_fcomp(:)
 
 	write(tmp,'("mkdir -p ",a)') outputdir(1:len_trim(outputdir)-1)
 	call system(tmp)
@@ -59,6 +63,10 @@
 	allocate(Mief33(na))
 	allocate(Mief34(na))
 	allocate(Mief44(na))
+	allocate(Mief11_fcomp(na))
+	allocate(Mief12_fcomp(na))
+	allocate(Mief33_fcomp(na))
+	allocate(Mief34_fcomp(na))
 	allocate(mu0(na))
 	allocate(M1(na,2))
 	allocate(M2(na,2))
@@ -447,49 +455,6 @@ c changed this to mass fractions (11-05-2010)
 		frac=1d0/real(nm)
 	endif
 
-	partfile=trim(particledir) // "/particle" 
-	if(abun_in_name.gt.0) then
-		partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*C%rv(isize),'(es8.2)'))
-		do i=1,nm
-			select case(abun_in_name)
-				case(1)
-					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f3.1)'))
-				case(2)
-					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f4.2)'))
-				case(3)
-					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f5.3)'))
-				case(4)
-					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f6.4)'))
-				case default
-					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f7.5)'))
-			end select
-		enddo
-	else
-		partfile=trim(partfile) // trim(int2string(ii,'(i0.4)')) // "_" // trim(int2string(isize,'(i0.4)'))
-	endif
-	partfile=trim(partfile) // ".fits.gz"
-
-	inquire(file=partfile,exist=truefalse)
-	if(truefalse) then
-		if(checkparticlefile(partfile,amin,amax,dble(pow),ns,C%fmax,C%blend,C%porosity,frac,rho,nm,
-     &					filename,(abun_in_name.le.0))) then
-			call ReadParticleFits(partfile,C,isize)
-			goto 300
-		endif
-	endif
-	
-c	call output("Computing particle:" // trim(int2string(ii,'(i0.4)')))
-c	call output("Size: " // trim(dbl2string(amin,'(f10.3)')) // " - " // trim(dbl2string(amax,'(f10.3)')) // " micron")
-
-c	do j=1,nm
-c		write(lnkfile,'(a,a,i0.3,".lnk")') trim(outputdir),trim(input),j
-c		open(unit=30,file=lnkfile,RECL=200)
-c		write(30,'("# ",a)') trim(filename(j))
-c		do i=1,nlamdust
-c			write(30,*) lamdust(i)*1d4,e1(j,i),e2(j,i)
-c		enddo
-c		close(unit=30)
-c	enddo
 
 	if(C%blend) then
 		nm=nm+1
@@ -510,12 +475,6 @@ c	enddo
 		rho(1)=rho_av
 		nm=1
 		frac(1)=1d0
-		write(lnkfile,'(a,a,".lnk")') trim(outputdir),trim(input)
-		open(unit=30,file=lnkfile,RECL=200)
-		do i=1,nlamdust
-			write(30,*) lamdust(i)*1d4,e1(1,i),e2(1,i)
-		enddo
-		close(unit=30)
 	endif
 
 
@@ -612,6 +571,7 @@ c				if(r0(1).gt.amax) r0(1)=amax
 	Err=0
 	spheres=0
 	toolarge=0
+	fcomputed=.false.
 	do i=1,nf
 		rad=r1/(1d0-f(i))**(1d0/3d0)
 		m=dcmplx(e1(l,ilam),-e2(l,ilam))
@@ -996,6 +956,10 @@ c	endif
 	deallocate(Mief33)
 	deallocate(Mief34)
 	deallocate(Mief44)
+	deallocate(Mief11_fcomp)
+	deallocate(Mief12_fcomp)
+	deallocate(Mief33_fcomp)
+	deallocate(Mief34_fcomp)
 	deallocate(mu0)
 	deallocate(M1)
 	deallocate(M2)

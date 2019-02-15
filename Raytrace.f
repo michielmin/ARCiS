@@ -6,7 +6,7 @@
 	real*8 Ca,Cs,BBr(nr),tot,contr
 	integer icloud,isize
 	real*8,allocatable :: rtrace(:),phase0(:),ptrace(:)
-	real*8,allocatable :: obsA_contr(:,:),flux_contr(:,:),fluxg_contr(:),fact_contr(:),Ag_contr(:)
+	real*8,allocatable :: fluxg_contr(:),fact_contr(:),Ag_contr(:)
 	integer irc
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig,nsub,j,k
 	logical in
@@ -50,7 +50,7 @@
 		Ctot=0d0
 		Htot=0d0
 		do ir=nr,2,-1
-			Ca=sum(Cabs(ir,ilam,1:ng))*Ndens(ir)/real(ng)
+			Ca=sum(wgg(1:ng)*Cabs(ir,ilam,1:ng))*Ndens(ir)
 			Cs=Csca(ir,ilam)*Ndens(ir)
 			do icloud=1,nclouds
 				if(docloud(icc,icloud)) then
@@ -237,8 +237,10 @@
 
 
 
-	allocate(flux_contr(nr,nlam))
-	allocate(obsA_contr(nr,nlam))
+	if(.not.allocated(flux_contr)) then
+		allocate(flux_contr(nr,nlam))
+		allocate(obsA_contr(nr,nlam))
+	endif
 	Ocolumn=0d0
 	Ccolumn=0d0
 	Hcolumn=0d0
@@ -249,7 +251,7 @@
 !$OMP&         Ca,Cs,icloud,isize,BBr,Otot,Ctot,Htot,imol,irc,contr,fact_contr,fluxg_contr,Ag_contr)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
 !$OMP&			cloud_dens,useDRIFT,Psimplecloud,P,flux_contr,obsA_contr,irtrace,dtrace,nirtrace,
-!$OMP&			Ocolumn,Ccolumn,Hcolumn,nmol,Oatoms,Catoms,Hatoms,mixrat_r,includemol,computecontrib)
+!$OMP&			Ocolumn,Ccolumn,Hcolumn,nmol,Oatoms,Catoms,Hatoms,mixrat_r,includemol,computecontrib,wgg)
 	allocate(fact_contr(nr))
 	allocate(fluxg_contr(nr))
 	allocate(Ag_contr(nr))
@@ -336,16 +338,16 @@ c		call tellertje(ilam+1,nlam+1)
 						Ag_contr=Ag_contr+A*(1d0-fact_contr)
 					endif
 				enddo
-				flux(0,ilam)=flux(0,ilam)+cloudfrac(icc)*fluxg/real(ng)
-				obsA(0,ilam)=obsA(0,ilam)+cloudfrac(icc)*Ag/real(ng)
+				flux(0,ilam)=flux(0,ilam)+cloudfrac(icc)*fluxg*wgg(ig)
+				obsA(0,ilam)=obsA(0,ilam)+cloudfrac(icc)*Ag*wgg(ig)
 				if(computecontrib) then
 					do irc=1,nr
-						flux_contr(irc,ilam)=flux_contr(irc,ilam)+cloudfrac(icc)*fluxg_contr(irc)/real(ng)
-						obsA_contr(irc,ilam)=obsA_contr(irc,ilam)+cloudfrac(icc)*Ag_contr(irc)/real(ng)
+						flux_contr(irc,ilam)=flux_contr(irc,ilam)+cloudfrac(icc)*fluxg_contr(irc)*wgg(ig)
+						obsA_contr(irc,ilam)=obsA_contr(irc,ilam)+cloudfrac(icc)*Ag_contr(irc)*wgg(ig)
 					enddo
 				endif
-				flux(icc,ilam)=flux(icc,ilam)+fluxg/real(ng)
-				obsA(icc,ilam)=obsA(icc,ilam)+Ag/real(ng)
+				flux(icc,ilam)=flux(icc,ilam)+fluxg*wgg(ig)
+				obsA(icc,ilam)=obsA(icc,ilam)+Ag*wgg(ig)
 			endif
 			enddo
 		enddo
@@ -372,8 +374,8 @@ c		call tellertje(ilam+1,nlam+1)
 			else
 				dP=log10(P(irc-1)/P(irc+1))
 			endif
-			flux_contr(irc,1:nlam)=(flux(0,1:nlam)-flux_contr(irc,1:nlam))/dP
-			obsA_contr(irc,1:nlam)=(obsA(0,1:nlam)-obsA_contr(irc,1:nlam))/dP
+			flux_contr(irc,1:nlam)=abs(flux(0,1:nlam)-flux_contr(irc,1:nlam))/dP
+			obsA_contr(irc,1:nlam)=abs(obsA(0,1:nlam)-obsA_contr(irc,1:nlam))/dP
 		enddo
 		do ilam=1,nlam
 			tot=sum(flux_contr(1:nr,ilam))
@@ -401,9 +403,6 @@ c	close(unit=44)
 	deallocate(rtrace)
 	deallocate(ptrace)
 
-	deallocate(flux_contr)
-	deallocate(obsA_contr)
-	
 	return
 	end
 	

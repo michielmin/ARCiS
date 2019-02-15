@@ -83,7 +83,7 @@ c		ct2=1d0-2d0*real(iphase)/real(nphase)
 			goingup=((x*dx+y*dy+z*dz).gt.0d0)
 			call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,0.5d0,Eabs,EJv)
 			if(jr.gt.nr.and.nscat.gt.0) then
-				fluxg=fluxg+E*E0/real(ng)
+				fluxg=fluxg+E*E0*wgg(ig)
 			endif
 		enddo
 
@@ -172,7 +172,7 @@ c		enddo
 					iphase=real(nphase)*(acos(dz)/pi)+1
 					if(iphase.lt.1) iphase=1
 					if(iphase.gt.nphase) iphase=nphase
-					phase0(iphase)=phase0(iphase)+wphase(iphase)*E*E0/real(ng)
+					phase0(iphase)=phase0(iphase)+wphase(iphase)*E*E0*wgg(ig)
 				endif
 			enddo
 		enddo

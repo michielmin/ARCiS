@@ -6,11 +6,11 @@
 	character*500 filename
 	character*6000 form
 	real*8,allocatable :: theta(:)
-	real*8 Fp1,Fp2,ApAs
+	real*8 Fp1,Fp2,ApAs,wr(nr)
 	logical,allocatable :: docloud0(:,:)
 	real*8,allocatable :: spec(:,:),specR(:),lamR(:),specRexp(:),specErr(:),Fstar_obs(:)
-	real*8 x,specres_obs,expspecres_obs,gasdev,tot,Dmirror,f_phot,noisefloor
-	integer ilam,j,nj,nlamR,i_instr
+	real*8 x,specres_obs,expspecres_obs,gasdev,tot,Dmirror,f_phot,noisefloor,molweight(nmol),Tweight,Pweight
+	integer ilam,j,nj,nlamR,i_instr,k,ir
 	character*1000 line
 	character*10 side
 	
@@ -203,8 +203,8 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			allocate(specRexp(nlamR))
 			call ARIELspecres(lamR,specR,specRexp)
 			Dmirror=1d0
-			f_phot=0.5d0
-			noisefloor=10d-6
+			f_phot=1d0/1.3d0
+			noisefloor=2d-6
 		case("JWST")
 			nlamR=470
 			allocate(lamR(nlamR))
@@ -248,12 +248,141 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	call regridspecres(lam,Fstar(1:nlam-1),nlam-1,
      &						lamR,Fstar_obs(1:nlamR),specR,specRexp,nlamR)
 	do i=1,nlamR
-		tot=1.51d7*(Fstar_obs(i)*1d23/distance**2)*(pi*(Dmirror/2d0)**2)
+		tot=1.51d7*(Fstar_obs(i)*1d23/distance**2)
+		tot=tot*(pi*(Dmirror/2d0)**2)
 		tot=tot*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
-		tot=tot*instr_ntrans(i_instr)*f_phot/specR(i)
+		tot=tot*max(1d0,instr_ntrans(i_instr))*f_phot/specR(i)
 		specErr(i)=1d0/sqrt(tot)
 		if(specErr(i).lt.noisefloor) specErr(i)=noisefloor
 	enddo
+
+	if(computecontrib) then
+		molweight=0d0
+		Tweight=0d0
+		Pweight=0d0
+		tot=0d0
+		do ir=1,nr
+			wr(ir)=0d0
+			if(sum(obsA_contr(ir,1:nlam-1)).gt.0d0) then
+				call regridspecres(lam,obsA_contr(ir,1:nlam-1),nlam-1,lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
+				do j=1,nlamR
+					x=(spec(1,j)/specErr(j))**2
+					tot=tot+x
+					wr(ir)=wr(ir)+x
+					Tweight=Tweight+x*T(ir)
+					Pweight=Pweight+x*P(ir)
+					do i=1,nmol
+						molweight(i)=molweight(i)+x*mixrat_r(ir,i)
+					enddo
+				enddo
+			endif
+		enddo
+		wr=wr/sum(wr)
+		Tweight=Tweight/tot
+		Pweight=Pweight/tot
+		molweight=molweight/tot
+		call output("T average : " // dbl2string(Tweight,'(es10.3)'))
+		call output("P average : " // dbl2string(Pweight,'(es10.3)'))
+		do i=1,nmol
+			if(includemol(i)) then
+				call output(molname(i) // ": " // dbl2string(molweight(i),'(es10.3)'))
+			endif
+		enddo
+		filename=trim(outputdir) // "contr_trans_" // trim(instrument(i_instr)) // trim(side)
+		open(unit=30,file=filename,RECL=1000)
+		write(30,'("#",a13,f10.3)') "T average ",Tweight
+		write(30,'("#",a13,es10.3)') "P average ",Pweight
+		do i=1,nmol
+			if(includemol(i)) then
+				write(30,'("#",a13,es10.3)') molname(i),molweight(i)
+			endif
+		enddo
+		do ir=1,nr
+			write(30,*) P(ir),wr(ir)
+		enddo
+		close(unit=30)
+
+
+
+		molweight=0d0
+		Tweight=0d0
+		Pweight=0d0
+		tot=0d0
+		do ir=1,nr
+			wr(ir)=0d0
+			if(sum(obsA_contr(ir,1:nlam-1)).gt.0d0) then
+				call regridspecres(lam,flux_contr(ir,1:nlam-1),nlam-1,lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
+				do j=1,nlamR
+					x=(spec(1,j)/specErr(j))**2
+					tot=tot+x
+					wr(ir)=wr(ir)+x
+					Tweight=Tweight+x*T(ir)
+					Pweight=Pweight+x*P(ir)
+					do i=1,nmol
+						molweight(i)=molweight(i)+x*mixrat_r(ir,i)
+					enddo
+				enddo
+			endif
+		enddo
+		wr=wr/sum(wr)
+		Tweight=Tweight/tot
+		Pweight=Pweight/tot
+		molweight=molweight/tot
+		call output("T average : " // dbl2string(Tweight,'(es10.3)'))
+		call output("P average : " // dbl2string(Pweight,'(es10.3)'))
+		do i=1,nmol
+			if(includemol(i)) then
+				call output(molname(i) // ": " // dbl2string(molweight(i),'(es10.3)'))
+			endif
+		enddo
+		filename=trim(outputdir) // "contr_emisR_" // trim(instrument(i_instr)) // trim(side)
+		open(unit=30,file=filename,RECL=1000)
+		write(30,'("#",a13,f10.3)') "T average ",Tweight
+		write(30,'("#",a13,es10.3)') "P average ",Pweight
+		do i=1,nmol
+			if(includemol(i)) then
+				write(30,'("#",a13,es10.3)') molname(i),molweight(i)
+			endif
+		enddo
+		do ir=1,nr
+			write(30,*) P(ir),wr(ir)
+		enddo
+		close(unit=30)
+	endif
+
+	filename=trim(outputdir) // "obs_trans_" // trim(instrument(i_instr)) // trim(side)
+	call output("Writing spectrum to: " // trim(filename))
+	open(unit=30,file=filename,RECL=1000)
+	write(30,'("# transit time       : ",f10.3," sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
+	write(30,'("# number of transits : ",f10.3)') instr_ntrans(i_instr)
+	write(30,'("# integration time   : ",f10.3," hours")') 
+     &			(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
+	write(30,'("#",a13,3a19)') "lambda [mu]","Rp^2/Rstar^2","error"
+	form='(f14.6,4es19.7E3)'
+	call regridspecres(lam,obsA(0,1:nlam-1),nlam-1,
+     &					lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
+	spec=spec/(pi*Rstar**2)
+
+	k=1
+	if(instr_ntrans(i_instr).lt.1d0) then
+		do ir=1,nr
+			if(P(ir).gt.1d0.and.P(ir+1).le.1d0) exit
+		enddo
+		x=(sqrt(Rstar/(2d0*Dplanet))*Tstar*kb)/((Ggrav*Mplanet/(Rplanet**2))*mp*2.3d0)
+		do i=1,nlamR
+			do while((sqrt(real(k))*(5d0*x*Rplanet/(Rstar**2))/specErr(i)).lt.(7d0*0.9d0))
+				k=k+1
+			enddo
+		enddo
+		call output("assuming " // trim(int2string(k)) // " orbits")
+	endif
+	do i=1,nlamR
+		spec(1,i)=spec(1,i)+gasdev(idum)*specErr(i)/sqrt(real(k))
+	enddo
+	do i=1,nlamR
+		write(30,form) lamR(i)/micron,spec(1,i),specErr(i)/sqrt(real(k)),specR(i),specRexp(i)
+	enddo
+	close(unit=30)
 
 	filename=trim(outputdir) // "obs_emisR_" // trim(instrument(i_instr)) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
@@ -275,32 +404,11 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	do j=1,nphase
 		spec(j,1:nlamR)=spec(j,1:nlamR)/(Fstar_obs(1:nlamR)*1d23/distance**2)
 		do i=1,nlamR
-			spec(j,i)=spec(j,i)+gasdev(idum)*specErr(i)
+			spec(j,i)=spec(j,i)+gasdev(idum)*specErr(i)/sqrt(real(k))
 		enddo
 	enddo
 	do i=1,nlamR
-		write(30,form) lamR(i)/micron,spec(1,i),specErr(i),specR(i),specRexp(i)
-	enddo
-	close(unit=30)
-
-	filename=trim(outputdir) // "obs_trans_" // trim(instrument(i_instr)) // trim(side)
-	call output("Writing spectrum to: " // trim(filename))
-	open(unit=30,file=filename,RECL=1000)
-	write(30,'("# transit time       : ",f10.3," sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
-	write(30,'("# number of transits : ",f10.3)') instr_ntrans(i_instr)
-	write(30,'("# integration time   : ",f10.3," hours")') 
-     &			(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
-	write(30,'("#",a13,3a19)') "lambda [mu]","Rp^2/Rstar^2","error"
-	form='(f14.6,4es19.7E3)'
-	call regridspecres(lam,obsA(0,1:nlam-1),nlam-1,
-     &					lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
-	spec=spec/(pi*Rstar**2)
-
-	do i=1,nlamR
-		spec(1,i)=spec(1,i)+gasdev(idum)*specErr(i)
-	enddo
-	do i=1,nlamR
-		write(30,form) lamR(i)/micron,spec(1,i),specErr(i),specR(i),specRexp(i)
+		write(30,form) lamR(i)/micron,spec(1,i),specErr(i)/sqrt(real(k)),specR(i),specRexp(i)
 	enddo
 	close(unit=30)
 
@@ -350,40 +458,38 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	return
 	end
 
-
-
 	subroutine ARIELspecres(lam,R,Rexp)
 	IMPLICIT NONE
 	integer nlam,j
-	parameter(nlam=103)
+	data(nlam=         103)
 	real*8 lam(*),R(*),Rexp(*)
 	real*8 l0(         103),R0(         103),e0(         103)
 	data (l0(j),j=1,         103) /
-     &  0.52500E+00, 0.90000E+00, 0.11250E+01, 0.12500E+01, 0.13750E+01, 
-     &  0.15125E+01, 0.16638E+01, 0.18301E+01, 0.19500E+01, 0.19695E+01, 
-     &  0.19892E+01, 0.20091E+01, 0.20292E+01, 0.20495E+01, 0.20700E+01, 
-     &  0.20907E+01, 0.21116E+01, 0.21327E+01, 0.21540E+01, 0.21755E+01, 
-     &  0.21973E+01, 0.22193E+01, 0.22415E+01, 0.22639E+01, 0.22865E+01, 
-     &  0.23094E+01, 0.23325E+01, 0.23558E+01, 0.23794E+01, 0.24032E+01, 
-     &  0.24272E+01, 0.24515E+01, 0.24760E+01, 0.25007E+01, 0.25257E+01, 
-     &  0.25510E+01, 0.25765E+01, 0.26023E+01, 0.26283E+01, 0.26546E+01, 
-     &  0.26811E+01, 0.27079E+01, 0.27350E+01, 0.27624E+01, 0.27900E+01, 
-     &  0.28179E+01, 0.28461E+01, 0.28745E+01, 0.29033E+01, 0.29323E+01, 
-     &  0.29616E+01, 0.29913E+01, 0.30212E+01, 0.30514E+01, 0.30819E+01, 
-     &  0.31127E+01, 0.31438E+01, 0.31753E+01, 0.32070E+01, 0.32391E+01, 
-     &  0.32715E+01, 0.33042E+01, 0.33373E+01, 0.33706E+01, 0.34043E+01, 
-     &  0.34384E+01, 0.34728E+01, 0.35075E+01, 0.35426E+01, 0.35780E+01, 
-     &  0.36138E+01, 0.36499E+01, 0.36864E+01, 0.37233E+01, 0.37605E+01, 
-     &  0.37981E+01, 0.38361E+01, 0.38744E+01, 0.39132E+01, 0.39523E+01, 
-     &  0.40709E+01, 0.41930E+01, 0.43188E+01, 0.44484E+01, 0.45818E+01, 
-     &  0.47193E+01, 0.48609E+01, 0.50067E+01, 0.51569E+01, 0.53116E+01, 
-     &  0.54709E+01, 0.56351E+01, 0.58041E+01, 0.59782E+01, 0.61576E+01, 
-     &  0.63423E+01, 0.65326E+01, 0.67286E+01, 0.69304E+01, 0.71383E+01, 
-     &  0.73525E+01, 0.75731E+01, 0.78003E+01 /
+     &  0.55000E+00, 0.70000E+00, 0.95000E+00, 0.11367E+01, 0.12124E+01, 
+     &  0.12933E+01, 0.13795E+01, 0.14715E+01, 0.15696E+01, 0.16742E+01, 
+     &  0.17858E+01, 0.19049E+01, 0.19598E+01, 0.19793E+01, 0.19991E+01, 
+     &  0.20191E+01, 0.20393E+01, 0.20597E+01, 0.20803E+01, 0.21011E+01, 
+     &  0.21221E+01, 0.21433E+01, 0.21648E+01, 0.21864E+01, 0.22083E+01, 
+     &  0.22304E+01, 0.22527E+01, 0.22752E+01, 0.22980E+01, 0.23209E+01, 
+     &  0.23442E+01, 0.23676E+01, 0.23913E+01, 0.24152E+01, 0.24393E+01, 
+     &  0.24637E+01, 0.24884E+01, 0.25132E+01, 0.25384E+01, 0.25638E+01, 
+     &  0.25894E+01, 0.26153E+01, 0.26414E+01, 0.26679E+01, 0.26945E+01, 
+     &  0.27215E+01, 0.27487E+01, 0.27762E+01, 0.28039E+01, 0.28320E+01, 
+     &  0.28603E+01, 0.28889E+01, 0.29178E+01, 0.29470E+01, 0.29764E+01, 
+     &  0.30062E+01, 0.30363E+01, 0.30666E+01, 0.30973E+01, 0.31283E+01, 
+     &  0.31596E+01, 0.31912E+01, 0.32231E+01, 0.32553E+01, 0.32879E+01, 
+     &  0.33207E+01, 0.33539E+01, 0.33875E+01, 0.34214E+01, 0.34556E+01, 
+     &  0.34901E+01, 0.35250E+01, 0.35603E+01, 0.35959E+01, 0.36318E+01, 
+     &  0.36682E+01, 0.37048E+01, 0.37419E+01, 0.37793E+01, 0.38171E+01, 
+     &  0.38553E+01, 0.38938E+01, 0.39650E+01, 0.40972E+01, 0.42337E+01, 
+     &  0.43749E+01, 0.45207E+01, 0.46714E+01, 0.48271E+01, 0.49880E+01, 
+     &  0.51543E+01, 0.53261E+01, 0.55036E+01, 0.56871E+01, 0.58766E+01, 
+     &  0.60725E+01, 0.62749E+01, 0.64841E+01, 0.67002E+01, 0.69236E+01, 
+     &  0.71544E+01, 0.73928E+01, 0.76393E+01 /
 	data (R0(j),j=1,         103) /
-     &  0.10500E+02, 0.45000E+01, 0.33500E+02, 0.33500E+02, 0.33500E+02, 
-     &  0.33500E+02, 0.33500E+02, 0.33500E+02, 0.33500E+02, 0.33500E+02, 
-     &  0.33500E+02, 0.10000E+03, 0.10000E+03, 0.10000E+03, 0.10000E+03, 
+     &  0.55000E+01, 0.35000E+01, 0.31650E+01, 0.15000E+02, 0.15000E+02, 
+     &  0.15000E+02, 0.15000E+02, 0.15000E+02, 0.15000E+02, 0.15000E+02, 
+     &  0.15000E+02, 0.15000E+02, 0.10000E+03, 0.10000E+03, 0.10000E+03, 
      &  0.10000E+03, 0.10000E+03, 0.10000E+03, 0.10000E+03, 0.10000E+03, 
      &  0.10000E+03, 0.10000E+03, 0.10000E+03, 0.10000E+03, 0.10000E+03, 
      &  0.10000E+03, 0.10000E+03, 0.10000E+03, 0.10000E+03, 0.10000E+03, 
@@ -397,15 +503,15 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
      &  0.10000E+03, 0.10000E+03, 0.10000E+03, 0.10000E+03, 0.10000E+03, 
      &  0.10000E+03, 0.10000E+03, 0.10000E+03, 0.10000E+03, 0.10000E+03, 
      &  0.10000E+03, 0.10000E+03, 0.10000E+03, 0.10000E+03, 0.10000E+03, 
-     &  0.10000E+03, 0.30000E+02, 0.30000E+02, 0.30000E+02, 0.30000E+02, 
+     &  0.10000E+03, 0.10000E+03, 0.30000E+02, 0.30000E+02, 0.30000E+02, 
      &  0.30000E+02, 0.30000E+02, 0.30000E+02, 0.30000E+02, 0.30000E+02, 
      &  0.30000E+02, 0.30000E+02, 0.30000E+02, 0.30000E+02, 0.30000E+02, 
      &  0.30000E+02, 0.30000E+02, 0.30000E+02, 0.30000E+02, 0.30000E+02, 
      &  0.30000E+02, 0.30000E+02, 0.30000E+02 /
 	data (e0(j),j=1,         103) /
-     &  1.00000E+01, 1.00000E+01, 0.20000E+01, 0.20000E+01, 0.20000E+01, 
-     &  0.20000E+01, 0.20000E+01, 0.20000E+01, 0.20000E+01, 0.20000E+01, 
-     &  0.20000E+01, 0.20000E+01, 0.20000E+01, 0.20000E+01, 0.20000E+01, 
+     &  0.20000E+02, 0.20000E+02, 0.20000E+02, 0.10000E+02, 0.10000E+02, 
+     &  0.10000E+02, 0.10000E+02, 0.10000E+02, 0.10000E+02, 0.10000E+02, 
+     &  0.10000E+02, 0.10000E+02, 0.20000E+01, 0.20000E+01, 0.20000E+01, 
      &  0.20000E+01, 0.20000E+01, 0.20000E+01, 0.20000E+01, 0.20000E+01, 
      &  0.20000E+01, 0.20000E+01, 0.20000E+01, 0.20000E+01, 0.20000E+01, 
      &  0.20000E+01, 0.20000E+01, 0.20000E+01, 0.20000E+01, 0.20000E+01, 
@@ -429,8 +535,6 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	Rexp(1:nlam)=e0(1:nlam)
 	return
 	end
-
-
 
 	subroutine JWSTspecres(lam,R,Rexp)
 	IMPLICIT NONE
@@ -1063,7 +1167,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
      &  0.20000E+01, 0.20000E+01, 0.20000E+01, 0.20000E+01, 0.20000E+01, 
      &  0.20000E+01, 0.20000E+01, 0.20000E+01 /
 	lam(1:nlam)=l0(1:nlam)/1d4
-	R(1:nlam)=R0(1:nlam)
+	R(1:nlam)=R0(1:nlam)/2d0
 	Rexp(1:nlam)=e0(1:nlam)
 	return
 	end

@@ -20,12 +20,12 @@
 	integer imol
 	real*8 kappa(ng),nu1,nu2,tanscale,ll,tot,tot2
 	real*16 kross,kplanck
-	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime
-	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:),mixrat_tmp(:)
+	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime,cwg(ng),w1
+	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:),mixrat_tmp(:),w_line(:)
 	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
 	integer n_nu_line,iT
-	integer i,j,ir,k,nl,ig,maxcount
-	integer,allocatable :: inu1(:),inu2(:),count_g(:,:)
+	integer i,j,ir,k,nl,ig
+	integer,allocatable :: inu1(:),inu2(:)
 	character*500 filename
 
 	allocate(cont_tot(nlam))
@@ -34,29 +34,29 @@
 	allocate(kappa_mol(ng,nmol,nlam))
 	allocate(mixrat_tmp(nmol))
 
-	maxcount=min(nmol,4)
-	n_nu_line=ng*maxcount
+	n_nu_line=ng*min(nmol,4)
 	
 	allocate(nu_line(n_nu_line))
 
+	cwg(1)=wgg(1)
+	do ig=2,ng
+		cwg(ig)=wgg(ig)+cwg(ig-1)
+	enddo
+	cwg(1:ng)=cwg(1:ng)/cwg(ng)
+
 	if(.not.allocated(ig_comp).and.(retrieval.or.domakeai)) then
 		allocate(ig_comp(nmol,n_nu_line,nlam))
-		allocate(count_g(nmol,ng))
+		allocate(rr_comp(nmol,n_nu_line,nlam))
 		do i=1,nlam
-			count_g=0
 			do j=1,n_nu_line
 				do imol=1,nmol
-2					ig_comp(imol,j,i)=random(idum)*real(ng)+1
-					ig=ig_comp(imol,j,i)
-					if(count_g(imol,ig).lt.maxcount) then
-						count_g(imol,ig)=count_g(imol,ig)+1
-					else
-						goto 2
-					endif
+					rr=random(idum)
+					call hunt(cwg,ng,rr,ig)
+					ig_comp(imol,j,i)=ig
+					rr_comp(imol,j,i)=rr
 				enddo
 			enddo
 		enddo
-		deallocate(count_g)
 	endif
 	
 	opac_tot=0d0
@@ -88,66 +88,48 @@
 		enddo
 !$OMP PARALLEL IF(nlam.gt.200)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,j,nu1,nu2,k_line,imol,ig,kappa,tot,tot2,count_g)
+!$OMP& PRIVATE(i,j,nu1,nu2,k_line,imol,ig,kappa,tot,tot2,rr,w_line,w1)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,nu_line,cont_tot,freq,Cabs,Csca,opac_tot,Ndens,R,
-!$OMP&        ig_comp,retrieval,domakeai,maxcount)
+!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,cwg,rr_comp)
 		allocate(k_line(n_nu_line))
-		allocate(count_g(nmol,ng))
 !$OMP DO
 		do i=1,nlam-1
-			nu1=-1d0
-			nu2=2d0
-			tot=cont_tot(i)
-			do imol=1,nmol
-				do ig=1,ng
-					tot=tot+kappa_mol(ig,imol,i)*mixrat_tmp(imol)/real(ng)
-				enddo
-			enddo
-			count_g=0
 			do j=1,n_nu_line
 				k_line(j)=0d0
 				do imol=1,nmol
 					if(mixrat_tmp(imol).gt.0d0) then
-1						if(retrieval.or.domakeai) then
+						if(retrieval.or.domakeai) then
 							ig=ig_comp(imol,j,i)
+							rr=rr_comp(imol,j,i)
 						else
-							ig=random(idum)*real(ng)+1
+							rr=random(idum)
+							call hunt(cwg,ng,rr,ig)
 						endif
-						if(count_g(imol,ig).lt.maxcount) then
-							count_g(imol,ig)=count_g(imol,ig)+1
+						if(ig.eq.0) then
+							k_line(j)=k_line(j)+kappa_mol(1,imol,i)*mixrat_tmp(imol)
 						else
-							goto 1
+							w1=(rr-cwg(ig+1))/(cwg(ig)-cwg(ig+1))
+							k_line(j)=k_line(j)+(kappa_mol(ig,imol,i)*w1+kappa_mol(ig+1,imol,i)*(1d0-w1))*mixrat_tmp(imol)
 						endif
-						k_line(j)=k_line(j)+kappa_mol(ig,imol,i)*mixrat_tmp(imol)
 					endif
 				enddo
 			enddo
-			call ComputeKtable(ir,nu1,nu2,nu_line,k_line,n_nu_line,kappa,cont_tot(i))
-			tot2=0d0
+			call sort(k_line,n_nu_line)
 			do ig=1,ng
-				tot2=tot2+kappa(ig)/real(ng)
+				j=real(n_nu_line)*gg(ig)+1
+				kappa(ig)=k_line(j)
 			enddo
-			if(tot2.gt.0d0) kappa=kappa*tot/tot2
-
-c below the wrong way of computing the correlated-k tables
-c	kappa=cont_tot(i)
-c	do imol=1,nmol
-c		do ig=1,ng
-c			kappa(ig)=kappa(ig)+kappa_mol(ig,imol,i)*mixrat_tmp(imol)
-c		enddo
-c	enddo
-c above the wrong way of computing the correlated-k tables
+			kappa=kappa+cont_tot(i)
 	
 			Cabs(ir,i,1:ng)=kappa(1:ng)
 			call RayleighScattering(Csca(ir,i),ir,i)
-c			do j=1,ng
-c				if(Cabs(ir,i,j).lt.Csca(ir,i)*1d-4) Cabs(ir,i,j)=Csca(ir,i)*1d-4 
-c			enddo
+			do ig=1,ng
+				if(Cabs(ir,i,ig).lt.1d-6*Csca(ir,i)) Cabs(ir,i,ig)=1d-6*Csca(ir,i)
+			enddo
 			opac_tot(i,1:ng)=opac_tot(i,1:ng)+(Cabs(ir,i,1:ng)+Csca(ir,i))*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
 !$OMP END DO
 		deallocate(k_line)
-		deallocate(count_g)
 !$OMP FLUSH
 !$OMP END PARALLEL
 		if(outputopacity) then
@@ -155,7 +137,7 @@ c			enddo
 			do i=1,nlam-1
 				kaver(i)=0d0
 				do j=1,ng
-					kaver(i)=kaver(i)+Cabs(ir,i,j)/real(ng)
+					kaver(i)=kaver(i)+wgg(ig)*Cabs(ir,i,j)
 				enddo
 			enddo
 			call WriteOpacity(ir,"aver",freq,kaver(1:nlam-1),nlam-1,1)
@@ -166,7 +148,7 @@ c			enddo
 	open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
 	write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
 	do i=1,nlam-1
-		write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
+		write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng)*wgg(1:ng))
 	enddo
 	close(unit=30)
 	
@@ -300,7 +282,7 @@ c			enddo
 			do i=1,nlam-1
 				kaver(i)=0d0
 				do j=1,ng
-					kaver(i)=kaver(i)+Cabs(ir,i,j)/real(ng)
+					kaver(i)=kaver(i)+Cabs(ir,i,j)*wgg(j)
 				enddo
 			enddo
 			call WriteOpacity(ir,"aver",freq,kaver(1:nlam-1),nlam-1,1)
@@ -311,7 +293,7 @@ c			enddo
 		open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
 		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
 		do i=1,nlam-1
-			write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng))/real(ng)
+			write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng)*wgg(1:ng))
 		enddo
 		close(unit=30)
 
@@ -736,17 +718,17 @@ c For other than H2 from Sneep & Ubachs (2005)
 
 			s1 = c1*bb1
 			s2 = c2*bb2
-			kplanck = kplanck + ABS(nu1-nu2)*0.5*(s1+s2)
+			kplanck = kplanck + wgg(ig)*ABS(nu1-nu2)*0.5*(s1+s2)
 			s1 = bb1
 			s2 = bb2
-			tplanck = tplanck + ABS(nu1-nu2)*0.5*(s1+s2)
+			tplanck = tplanck + wgg(ig)*ABS(nu1-nu2)*0.5*(s1+s2)
 
 			s1 = dbb1/c1
 			s2 = dbb2/c2
-			kross = kross + ABS(nu1-nu2)*0.5*(s1+s2)
+			kross = kross + wgg(ig)*ABS(nu1-nu2)*0.5*(s1+s2)
 			s1 = dbb1
 			s2 = dbb2
-			tross = tross + ABS(nu1-nu2)*0.5*(s1+s2)
+			tross = tross + wgg(ig)*ABS(nu1-nu2)*0.5*(s1+s2)
 		enddo
 	enddo
 	kross=tross/kross

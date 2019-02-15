@@ -418,7 +418,9 @@ c allocate the arrays
 		key => key%next
 	enddo
 
+	if(randomseed) call system_clock(idum0)
 	idum=-idum0
+	
 #ifdef USE_OPENMP
 	j=omp_get_max_threads()
 !$OMP PARALLEL IF(.true.)
@@ -460,6 +462,11 @@ c allocate the arrays
 
 c	condensates=(condensates.or.cloudcompute)
 
+	if(specresdust.gt.specres) specresdust=specres
+
+	allocate(gg(ng),wgg(ng))
+	call gauleg(0d0,1d0,gg,wgg,ng)
+	
 	call InitFreq()
 
 	if(nphase.le.0) then
@@ -678,9 +685,9 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		case("specresdust")
 			read(key%value,*) specresdust
 		case("specresfile")
-			read(key%value,*) specresfile
+			specresfile=trim(key%value)
 		case("particledir","dirparticle")
-			read(key%value,*) particledir
+			particledir=trim(key%value)
 		case("tpfile")
 			TPfile=key%value
 		case("mixratfile")
@@ -839,6 +846,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) maxchemtime
 		case("idum","seed")
 			read(key%value,*) idum0
+		case("randomseed")
+			read(key%value,*) randomseed
 		case("fcloud")
 			read(key%value,*) fcloud_default
 		case("singlecloud","exactcoverage")
@@ -846,7 +855,7 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		case("coagulation")
 			read(key%value,*) coagulation
 		case("parameterfile","planetparameterfile")
-			read(key%value,*) planetparameterfile
+			planetparameterfile=trim(key%value)
 		case("planetname")
 			read(key%value,*) planetname
 			call ReadPlanetName
@@ -1090,6 +1099,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	character*100 homedir
 	
 	idum0=42
+	randomseed=.true.
 
 	iWolk=0
 	
@@ -1155,8 +1165,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 
 	Tform=-10d0
 	Pform=1d0
-	f_dry=0d0
-	f_wet=0d0
+	f_dry=1d0
+	f_wet=1d0
 	scale_fe=1d0
 	
 	r_nuc=1d-3
@@ -1289,7 +1299,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	gammaT1=1.58e-1
 	gammaT2=1.58e-1
 	gamma_equal=.true.
-	kappaT=3d-2
+	kappaT=3d-4
 	betaT=1d0
 	alphaT=1d0
 	
@@ -1847,6 +1857,127 @@ c not entirely correct...
 	
 	
 	
+	subroutine ReadPlanetNameCSV()
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 x,dR1,dR2,dM1,dM2
+	character*100 name,namestar
+	integer i,n
+	character*10 Zc
+	character*1000 line,key(100),value(100)
+
+	open(unit=72,file=planetparameterfile,RECL=6000)
+	read(72,'(a1000)') line
+	call getkeys(line,key,n)
+
+1	read(72,'(a1000)',end=2) line
+	call getkeys(line,value,n)
+	do i=1,n
+		if(value(i).ne.' ') then
+			select case(key(i))
+				case('Planet_Name')
+					name=trim(value(i))
+				case('Star_Temperature_[K]')
+					read(value(i),*) Tstar
+				case('Star_Metallicity')
+					read(value(i),*) Zc
+				case('Star_Mass_[Ms]')
+					read(value(i),*) Mstar
+				case('Star_Radius_[Rs]')
+					read(value(i),*) Rstar
+				case('Star_Distance_[pc]')
+					read(value(i),*) Distance
+				case('Planet_Semi-major_Axis_[m]')
+					read(value(i),*) Dplanet
+					Dplanet=Dplanet*1d2/AU
+				case('Planet_Mass_[Me]')
+					read(value(i),*) Mplanet
+					Mplanet=Mplanet*Mearth/MJup
+				case('Planet_Radius_[Re]')
+					read(value(i),*) Rplanet
+					Rplanet=Rplanet*Rearth/RJup
+			end select
+		endif
+		logg=log10(Ggrav*(Mstar*Msun)/((Rstar*Rsun)**2))
+	enddo
+	if(trim(name).eq.trim(planetname)) then
+		close(unit=72)
+		call output("Stellar mass:     " // dbl2string(Mstar,'(f7.2)') // "Msun")
+		call output("Stellar T:        " // dbl2string(Tstar,'(f7.2)') // "K")
+		call output("Stellar radius:   " // dbl2string(Rstar,'(f7.2)') // "Rsun")
+		call output("Stellar logg:     " // dbl2string(logg,'(f7.2)'))
+		call output("Stellar distance: " // dbl2string(Distance,'(f7.2)') // "pc")
+		call output("Metallicity:      " // dbl2string(metallicity,'(f7.2)'))
+		call output("Planet orbit:     " // dbl2string(Dplanet,'(f7.4)') // "AU")
+		call output("Planet radius:    " // dbl2string(Rplanet,'(f7.2)') // "Rjup")
+		call output("Planet mass:      " // dbl2string(Mplanet,'(f7.2)') // "Mjup")
+		dR1=Rplanet*0.1
+		dR2=Rplanet*0.1
+		dM1=Mplanet*0.1
+		dM2=Mplanet*0.2
+		do i=1,n_ret
+			select case(RetPar(i)%keyword)
+				case("Rp","rp","RP")
+					RetPar(i)%x0=Rplanet
+					RetPar(i)%xmin=max(0d0,Rplanet-5d0*dR1)
+					RetPar(i)%xmax=Rplanet+5d0*dR2
+					if(RetPar(i)%xmin*Rjup.lt.0.1d0*Rearth) RetPar(i)%xmin=0.1d0*Rearth/Rjup
+		call output("Minimum radius: " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Rjup")
+		call output("Maximum radius: " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Rjup")
+				case("Mp","mp","MP")
+					RetPar(i)%x0=Mplanet
+					RetPar(i)%xmin=max(0d0,Mplanet-5d0*dM1)
+					RetPar(i)%xmax=Mplanet+5d0*dM2
+					if(RetPar(i)%xmin*Mjup.lt.0.1d0*Mearth) RetPar(i)%xmin=0.1d0*Mearth/Mjup
+		call output("Minimum mass:   " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Mjup")
+		call output("Maximum mass:   " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Mjup")
+				case("loggP","loggp")
+					RetPar(i)%x0=log10(Ggrav*(Mplanet*Mjup)/((Rplanet*Rjup)**2))
+					RetPar(i)%xmin=max(0.1,log10(Ggrav*(max(Mjup*(Mplanet-5d0*dM1),0.1d0*Mearth))/(((Rplanet+5d0*dR2)*Rjup)**2)))
+					RetPar(i)%xmax=log10(Ggrav*((Mplanet+5d0*dM2)*Mjup)/((max((Rplanet-5d0*dR1)*Rjup,0.1d0*Rearth))**2))
+		call output("Minimum logg:   " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
+		call output("Maximum logg:   " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
+			end select
+		enddo
+		return
+	endif
+	goto 1
+2	close(unit=72)
+	call output("Planet not found: " // trim(planetname))
+	stop
+	
+	return
+	end
+	
+	
+	
+	subroutine getkeys(line,key,n)
+	character*1000 line
+	character*1000 key(100)
+	integer icomma,i,l,n,j
+
+	icomma=1
+	l=0
+	i=1
+	do while(icomma.ne.0)
+		icomma=index(line(l+1:1000),',')
+		if(icomma.ne.0) then
+			key(i)=line(l+1:l+icomma-1)
+			do j=1,icomma-1
+				if(key(i)(j:j).eq.' ') key(i)(j:j)='_'
+			enddo
+			i=i+1
+			l=l+icomma
+		endif
+	enddo
+	n=i-1
+	
+	return
+	end
+
+	
+	
 	subroutine ReadPlanetName()
 	use GlobalSetup
 	use Constants
@@ -1856,11 +1987,18 @@ c not entirely correct...
 	integer i
 	character*10 Zc
 
+	print*,trim(planetname)
+
+	i=len_trim(planetparameterfile)
+	if(planetparameterfile(i-3:i).eq.'.csv') then
+		call ReadPlanetNameCSV()
+		return
+	endif
+
 	i=len_trim(planetname)
 	if(planetname(i:i).eq.'b') then
 		planetname(i:i)=' '
 	endif
-	print*,trim(planetname)
 	
 	open(unit=72,file=planetparameterfile,RECL=6000)
 	read(72,*)

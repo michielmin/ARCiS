@@ -24,7 +24,7 @@ c	parameter(Ggrav=6.6725985d-8) ! in cm^3/g/s^2
 	parameter(Rearth=6.3781d8)
 	parameter(Rjup=6.9911e9)
 c	parameter(Rjup=7.1492d9)
-	parameter(year=24d0*60d0*60d0*265.25d0)
+	parameter(year=24d0*60d0*60d0*365.25d0)
 	parameter(micron=1d-4)
 	parameter(Rgas=8.3144621e7)
 	parameter(Avogadro=6.022136736e23)
@@ -94,7 +94,7 @@ c===============================================================================
 	integer idum,maxiter,Nphot0,idum0,nlamdust,iWolk
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib
-	logical dochemistry,retrieve_profile,condensates,faircoverage,speclimits,mapCOratio
+	logical dochemistry,retrieve_profile,condensates,faircoverage,speclimits,mapCOratio,randomseed
 	logical,allocatable :: includemol(:),didcondens(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust,twind,epsiter
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud,metallicity0
@@ -105,6 +105,7 @@ c===============================================================================
 	logical enhancecarbon,fast_chem,gamma_equal,dopostequalweights
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),lamdust(:)
+	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ,nspike,nai
 	integer,allocatable :: niso(:)
@@ -185,6 +186,7 @@ c===============================================================================
 	logical,allocatable,dimension(:) :: L_do
 	
 	integer,allocatable :: ig_comp(:,:,:)
+	real*8,allocatable :: rr_comp(:,:,:)
 
 	type CIA_pair
 		character*20 name

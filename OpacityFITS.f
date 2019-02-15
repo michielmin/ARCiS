@@ -191,7 +191,8 @@ C	 create the new empty FITS file
 	IMPLICIT NONE
 	
 	type databaseKtable
-		real*8,allocatable :: ktable(:,:,:,:)
+		real*8,allocatable :: ktable(:,:,:,:),P(:),T(:)
+		real*8,allocatable :: g(:),wg(:)
 		integer nlam,nP,nT,ng
 		real*8 lam1,lam2,P1,P2,T1,T2
 		logical available
@@ -216,6 +217,7 @@ C	 create the new empty FITS file
 	integer naxes(4)
 	character*500 filename
 	integer ig,ilam,iT,iP,imol,i,j
+	integer*4 hdutype
 
 	if(.not.allocated(Ktable)) allocate(Ktable(nmol))
 
@@ -263,6 +265,12 @@ C	 create the new empty FITS file
 
 	firstpix=1
 
+	if(.not.allocated(Ktable(imol)%g)) then
+		allocate(Ktable(imol)%g(Ktable(imol)%ng))
+		allocate(Ktable(imol)%wg(Ktable(imol)%ng))
+		call gauleg(0d0,1d0,Ktable(imol)%g,Ktable(imol)%wg,Ktable(imol)%ng)
+	endif
+
 	!------------------------------------------------------------------------
 	! HDU0 : opacities
 	!------------------------------------------------------------------------
@@ -279,6 +287,39 @@ C	 create the new empty FITS file
 	if(.not.allocated(Ktable(imol)%ktable)) allocate(Ktable(imol)%ktable(naxes(1),naxes(2),naxes(3),naxes(4)))
 
 	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktable(imol)%ktable,anynull,status)
+
+	!------------------------------------------------------------------------
+	! HDU 1: temperature
+	!------------------------------------------------------------------------
+	!  move to next hdu
+	call ftmrhd(unit,1,hdutype,status)	
+
+	! Check dimensions
+	call ftgknj(unit,'NAXIS',1,3,naxes,nfound,status)
+
+	npixels=naxes(1)
+
+	! read_image
+
+	if(.not.allocated(Ktable(imol)%T)) allocate(Ktable(imol)%T(Ktable(imol)%nT))
+	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktable(imol)%T,anynull,status)
+
+	!------------------------------------------------------------------------
+	! HDU 2: pressure
+	!------------------------------------------------------------------------
+	!  move to next hdu
+	call ftmrhd(unit,1,hdutype,status)	
+
+	! Check dimensions
+	call ftgknj(unit,'NAXIS',1,3,naxes,nfound,status)
+
+	npixels=naxes(1)
+
+	! read_image
+
+	if(.not.allocated(Ktable(imol)%P)) allocate(Ktable(imol)%P(Ktable(imol)%nP))
+	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktable(imol)%P,anynull,status)
+
    				 
 	!  Close the file and free the unit number.
 	call ftclos(unit, status)
@@ -298,7 +339,6 @@ C	 create the new empty FITS file
 	   end do
 	endif
 
-
 	return
 
 	end
@@ -312,8 +352,8 @@ C	 create the new empty FITS file
 	character*80 comment,errmessage
 	character*30 errtext
 	integer ig,ilam,iT,iP,imol,i,j,ir,ngF,i1,i2
-	real*8 kappa_mol(ng,nmol,nlam),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random
-	real*8,allocatable :: temp(:),lamF(:)
+	real*8 kappa_mol(ng,nmol,nlam),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random,w1
+	real*8,allocatable :: temp(:),lamF(:),wtemp(:)
 
 	if(.not.Ktable(imol)%available) then
 		kappa_mol(1:ng,imol,1:nlam)=0d0
@@ -327,42 +367,44 @@ C	 create the new empty FITS file
      &			log10(Ktable(imol)%lam2/Ktable(imol)%lam1)*real(ilam-1)/real(Ktable(imol)%nlam-1))
 	enddo
 
-	iP=(log10(P(ir)/Ktable(imol)%P1)/log10(Ktable(imol)%P2/Ktable(imol)%P1))*real(Ktable(imol)%nP-1)+1d0
-	if(iP.lt.1) then
+	if(P(ir).lt.Ktable(imol)%P1) then
 		iP=1
 		wP1=1d0
 		wP2=0d0
-	else if(iP.ge.Ktable(imol)%nP) then
+	else if(P(ir).gt.Ktable(imol)%P2) then
 		iP=Ktable(imol)%nP-1
 		wP1=0d0
 		wP2=1d0
 	else
-		x1=10d0**(log10(Ktable(imol)%P1)+log10(Ktable(imol)%P2/Ktable(imol)%P1)*real(iP-1)/real(Ktable(imol)%nP-1))
-		x2=10d0**(log10(Ktable(imol)%P1)+log10(Ktable(imol)%P2/Ktable(imol)%P1)*real(iP)/real(Ktable(imol)%nP-1))
-		wP1=1d0-log10(P(ir)/x1)/log10(x2/x1)
+		do iP=1,Ktable(imol)%nP
+			if(P(ir).ge.Ktable(imol)%P(iP).and.P(ir).lt.Ktable(imol)%P(iP+1)) exit
+		enddo
+		wP1=1d0-log10(P(ir)/Ktable(imol)%P(iP))/log10(Ktable(imol)%P(iP+1)/Ktable(imol)%P(iP))
 		wP2=1d0-wP1
 	endif
-	iT=(log10(T(ir)/Ktable(imol)%T1)/log10(Ktable(imol)%T2/Ktable(imol)%T1))*real(Ktable(imol)%nT-1)+1d0
-	if(iT.lt.1) then
+
+	if(T(ir).lt.Ktable(imol)%T1) then
 		iT=1
 		wT1=1d0
 		wT2=0d0
-	else if(iT.ge.Ktable(imol)%nT) then
+	else if(T(ir).gt.Ktable(imol)%T2) then
 		iT=Ktable(imol)%nT-1
 		wT1=0d0
 		wT2=1d0
 	else
-		x1=10d0**(log10(Ktable(imol)%T1)+log10(Ktable(imol)%T2/Ktable(imol)%T1)*real(iT-1)/real(Ktable(imol)%nT-1))
-		x2=10d0**(log10(Ktable(imol)%T1)+log10(Ktable(imol)%T2/Ktable(imol)%T1)*real(iT)/real(Ktable(imol)%nT-1))
-		wT1=1d0-log10(T(ir)/x1)/log10(x2/x1)
+		do iT=1,Ktable(imol)%nT
+			if(T(ir).ge.Ktable(imol)%T(iT).and.T(ir).lt.Ktable(imol)%T(iT+1)) exit
+		enddo
+		wT1=1d0-log10(T(ir)/Ktable(imol)%T(iT))/log10(Ktable(imol)%T(iT+1)/Ktable(imol)%T(iT))
 		wT2=1d0-wT1
 	endif
  
 !$OMP PARALLEL IF(nlam.gt.200)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2)
-!$OMP& SHARED(nlam,Ktable,lam,lamF,wT1,wT2,wP1,wP2,kappa_mol,imol,iT,iP,ng)
+!$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,w1)
+!$OMP& SHARED(nlam,Ktable,lam,lamF,wT1,wT2,wP1,wP2,kappa_mol,imol,iT,iP,ng,gg,wgg)
 	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam))
+	allocate(wtemp(Ktable(imol)%ng*Ktable(imol)%nlam))
 !$OMP DO
 	do ilam=1,nlam-1
 		i1=0
@@ -381,29 +423,35 @@ C	 create the new empty FITS file
      &						  Ktable(imol)%ktable(i,ig,iT+1,iP)*wT2*wP1+
      &						  Ktable(imol)%ktable(i,ig,iT,iP+1)*wT1*wP2+
      &						  Ktable(imol)%ktable(i,ig,iT+1,iP+1)*wT2*wP2
+					wtemp(ngF)=Ktable(imol)%wg(ig)
 				enddo
 			enddo
-			call sort(temp,ngF)
 			tot=0d0
 			do ig=1,ngF
-				tot=tot+temp(ig)
+				tot=tot+temp(ig)*wtemp(ig)
 			enddo
-			tot=tot/real(ngF)
+			tot=tot/sum(wtemp(1:ngF))
+			call sortw(temp,wtemp,ngF)
 			if(ng.eq.1) then
 				kappa_mol(1,imol,ilam)=tot
 			else
-				do ig=1,ng
-					j=1+real(ngF-1)*real(ig-1)/real(ng-1)
-					if(j.lt.1) j=1
-					if(j.gt.ngF) j=ngF
-					kappa_mol(ig,imol,ilam)=temp(j)
+				do ig=2,ngF
+					wtemp(ig)=wtemp(ig)+wtemp(ig-1)
 				enddo
-				call sort(kappa_mol(1:ng,imol,ilam),ng)
+				wtemp(1:ngF)=wtemp(1:ngF)/wtemp(ngF)
+				do ig=1,ng
+					call hunt(wtemp,ngF,gg(ig),j)
+					if(j.eq.0) then
+						kappa_mol(ig,imol,ilam)=temp(1)
+					else
+						w1=(gg(ig)-wtemp(j+1))/(wtemp(j)-wtemp(j+1))
+						kappa_mol(ig,imol,ilam)=temp(j)*w1+temp(j+1)*(1d0-w1)
+					endif
+				enddo
 				tot2=0d0
 				do ig=1,ng
-					tot2=tot2+kappa_mol(ig,imol,ilam)
+					tot2=tot2+wgg(ig)*kappa_mol(ig,imol,ilam)
 				enddo
-				tot2=tot2/real(ng)
 				if(tot2.ne.0d0) then
 					kappa_mol(1:ng,imol,ilam)=kappa_mol(1:ng,imol,ilam)*tot/tot2
 				else
@@ -416,6 +464,7 @@ C	 create the new empty FITS file
 	enddo
 !$OMP END DO
 	deallocate(temp)
+	deallocate(wtemp)
 !$OMP FLUSH
 !$OMP END PARALLEL
 

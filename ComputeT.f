@@ -18,7 +18,11 @@
 		converged=.false.
 		return
 	endif
-		
+
+c!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+c below this still has to be corrected for gaussian sampling in g  !!!
+c!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	
 	if(.not.allocated(CrV_prev)) allocate(CrV_prev(nr),CrT_prev(nr),Taverage(nr))
 
 	allocate(Ce(nr,nlam,ng))
@@ -133,14 +137,14 @@
 
 		if(.not.T0(ir).gt.3d0) T0(ir)=3d0
 
-c		if(ir.lt.nr) then
-c			dlnP=log(P(ir+1)/P(ir))
-c			dlnT=log(T0(ir+1)/T0(ir))
-c			if((dlnT/dlnP).gt.nabla_ad(ir)) then
-c				dlnT=(nabla_ad(ir))*dlnP
-c				T0(ir)=T0(ir+1)/exp(dlnT)
-c			endif
-c		endif
+		if(ir.lt.nr) then
+			dlnP=log(P(ir+1)/P(ir))
+			dlnT=log(T0(ir+1)/T0(ir))
+			if((dlnT/dlnP).gt.nabla_ad(ir)) then
+				dlnT=(nabla_ad(ir))*dlnP
+				T0(ir)=T0(ir+1)/exp(dlnT)
+			endif
+		endif
 	enddo
 	
 	enddo

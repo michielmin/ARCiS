@@ -728,8 +728,6 @@ c correction for SiC
 		enddo
 		molfracs_atoms(3)=molfracs_atoms(3)+COabun
 		molfracs_atoms(5)=molfracs_atoms(5)+COabun
-		tot=sum(molfracs_atoms(1:N_atoms))
-		molfracs_atoms=molfracs_atoms/tot
 		do j=1,N_atoms
 			if(.not.molfracs_atoms(j).gt.1d-10) molfracs_atoms(j)=1d-10
 		enddo
