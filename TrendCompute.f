@@ -1,4 +1,4 @@
-	subroutine TrendCompute(Mp,Rp,Tp,Tstar,Zstar,idum,COratio,NOratio,SiOratio,Z)
+	subroutine TrendCompute(Mp,Rp,Tp,Tstar,Zstar,idum,COratio,NOratio,SiOratio,Z,TiScale)
 c	Mp,Rp,Tp,Zstar,idum				are input
 c	COratio,NOratio,SiOratio,Z		are output
 c	molfracs_atoms 					is set
@@ -19,15 +19,28 @@ c	molfracs_atoms 					is set
 	fdry=1d0
 	fwet=1d0
 
+c ========================================================================================
+c This is for now: no trend inserted, just solar composition
+c ========================================================================================
+		TiScale=1d0
+		if(Tp.lt.1800d0) TiScale=1d-8
+
+		call set_molfracs_atoms(COratio0,Z,TiScale,enhancecarbon)
+
+		COratio= molfracs_atoms(3)/molfracs_atoms(5)
+		NOratio= molfracs_atoms(4)/molfracs_atoms(5)
+		SiOratio=molfracs_atoms(9)/molfracs_atoms(5)
+
+		return
+c ========================================================================================
+c ========================================================================================
+
 	COratio=min(COratio0*max(0.5d0,Mp**0.25),1d0)
 	Z=Zstar-1d0+min(3d0,(0.75*Rp/Mp)*(1d0/(1d0+exp(-(Tstar-1000d0)/1000d0))))
 	fdry=min(1d0,1d0/Mp**0.25)*min(Rp/Mp,1d0)**0.25
 	fwet=min(1d0,1d0/Mp**0.25)
 	Nscale=(2d0/(1d0+exp((Tp+gasdev(idum)*50d0-750d0)/500d0)))
 
-	TiScale=1d0
-	if(Tp.gt.1800d0) TiScale=0d0
-	
 	Z=Z+gasdev(idum)*0.05d0
 	fdry=max(min(fdry*(1d0+gasdev(idum)*0.05),1d0),0d0)
 	fwet=max(min(fwet*(1d0+gasdev(idum)*0.05),1d0),0d0)

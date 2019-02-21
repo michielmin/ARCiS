@@ -22,9 +22,9 @@
 	real*16 kross,kplanck
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime,cwg(ng),w1
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:),mixrat_tmp(:),w_line(:)
-	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
+	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:),ktemp(:)
 	integer n_nu_line,iT
-	integer i,j,ir,k,nl,ig
+	integer i,j,ir,k,nl,ig,ig_c
 	integer,allocatable :: inu1(:),inu2(:)
 	character*500 filename
 
@@ -34,7 +34,11 @@
 	allocate(kappa_mol(ng,nmol,nlam))
 	allocate(mixrat_tmp(nmol))
 
-	n_nu_line=ng*min(nmol,4)
+	j=0
+	do i=1,nmol
+		if(includemol(i)) j=j+1
+	enddo
+	n_nu_line=ng*min(j,4)
 	
 	allocate(nu_line(n_nu_line))
 
@@ -44,18 +48,13 @@
 	enddo
 	cwg(1:ng)=cwg(1:ng)/cwg(ng)
 
-	if(.not.allocated(ig_comp).and.(retrieval.or.domakeai)) then
-		allocate(ig_comp(nmol,n_nu_line,nlam))
-		allocate(rr_comp(nmol,n_nu_line,nlam))
-		do i=1,nlam
-			do j=1,n_nu_line
-				do imol=1,nmol
-					rr=random(idum)
-					call hunt(cwg,ng,rr,ig)
-					ig_comp(imol,j,i)=ig
-					rr_comp(imol,j,i)=rr
-				enddo
-			enddo
+	if(.not.allocated(ig_comp)) then
+		ng_comp=1d6
+		allocate(ig_comp(ng_comp))
+		do i=1,ng_comp
+			rr=random(idum)
+			call hunt(cwg,ng,rr,ig)
+			ig_comp(i)=ig+1
 		enddo
 	endif
 	
@@ -88,31 +87,24 @@
 		enddo
 !$OMP PARALLEL IF(nlam.gt.200)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,j,nu1,nu2,k_line,imol,ig,kappa,tot,tot2,rr,w_line,w1)
-!$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,nu_line,cont_tot,freq,Cabs,Csca,opac_tot,Ndens,R,
-!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,cwg,rr_comp)
+!$OMP& PRIVATE(i,j,k_line,imol,ig,kappa,ktemp,ig_c)
+!$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,
+!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,cwg,ng_comp)
 		allocate(k_line(n_nu_line))
+		allocate(ktemp(ng))
 !$OMP DO
 		do i=1,nlam-1
-			do j=1,n_nu_line
-				k_line(j)=0d0
-				do imol=1,nmol
-					if(mixrat_tmp(imol).gt.0d0) then
-						if(retrieval.or.domakeai) then
-							ig=ig_comp(imol,j,i)
-							rr=rr_comp(imol,j,i)
-						else
-							rr=random(idum)
-							call hunt(cwg,ng,rr,ig)
-						endif
-						if(ig.eq.0) then
-							k_line(j)=k_line(j)+kappa_mol(1,imol,i)*mixrat_tmp(imol)
-						else
-							w1=(rr-cwg(ig+1))/(cwg(ig)-cwg(ig+1))
-							k_line(j)=k_line(j)+(kappa_mol(ig,imol,i)*w1+kappa_mol(ig+1,imol,i)*(1d0-w1))*mixrat_tmp(imol)
-						endif
-					endif
-				enddo
+			ig_c=(ng_comp-n_nu_line*nmol)*random(idum)+1
+			k_line=0d0
+			do imol=1,nmol
+				if(mixrat_tmp(imol).gt.0d0) then
+					ktemp(1:ng)=kappa_mol(1:ng,imol,i)
+					do j=1,n_nu_line
+						ig=ig_comp(ig_c)
+						ig_c=ig_c+1
+						k_line(j)=k_line(j)+ktemp(ig)*mixrat_tmp(imol)
+					enddo
+				endif
 			enddo
 			call sort(k_line,n_nu_line)
 			do ig=1,ng
@@ -129,7 +121,7 @@
 			opac_tot(i,1:ng)=opac_tot(i,1:ng)+(Cabs(ir,i,1:ng)+Csca(ir,i))*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
 !$OMP END DO
-		deallocate(k_line)
+		deallocate(k_line,ktemp)
 !$OMP FLUSH
 !$OMP END PARALLEL
 		if(outputopacity) then
@@ -682,7 +674,7 @@ c For other than H2 from Sneep & Ubachs (2005)
 			end select
 		endif
 	enddo
-	Cs=Cs+mixratHaze*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4)
+	Cs=Cs+mixratHaze*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4+kappaHaze*2d0*mp)*exp(-(abs(log10(P(ir)/PHaze))/log10(dPHaze))**2/2d0)
 
 	return
 	end

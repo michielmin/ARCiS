@@ -727,6 +727,12 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadCloud(key)
 		case("mixrathaze","haze")
 			read(key%value,*) mixratHaze
+		case("phaze")
+			read(key%value,*) PHaze
+		case("dphaze")
+			read(key%value,*) dPHaze
+		case("kappahaze")
+			read(key%value,*) kappaHaze
 		case("scattering")
 			read(key%value,*) scattering
 		case("scattstar","starscatt")
@@ -1140,6 +1146,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 	enhancecarbon=.false.
 	mixP=0d0
 	mixratHaze=0d0
+	PHaze=1d0
+	dPHaze=1d6
+	kappaHaze=0d0
 	Psimplecloud=1d9
 	coagulation=.true.
 	singlecloud=.false.
@@ -1499,7 +1508,7 @@ c				enddo
 	
 	select case(key%key2)
 		case("name")
-			read(key%value,*) instrument(i)
+			instrument(i)=key%value
 		case("ntrans")
 			read(key%value,*) instr_ntrans(i)
 		case default
@@ -1912,6 +1921,7 @@ c not entirely correct...
 		call output("Planet orbit:     " // dbl2string(Dplanet,'(f7.4)') // "AU")
 		call output("Planet radius:    " // dbl2string(Rplanet,'(f7.2)') // "Rjup")
 		call output("Planet mass:      " // dbl2string(Mplanet,'(f7.2)') // "Mjup")
+		call output("Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f7.2)') // "K")
 		dR1=Rplanet*0.1
 		dR2=Rplanet*0.1
 		dM1=Mplanet*0.1
@@ -2022,6 +2032,7 @@ c not entirely correct...
 		call output("Planet orbit:   " // dbl2string(Dplanet,'(f7.4)') // "AU")
 		call output("Planet radius:  " // dbl2string(Rplanet,'(f7.2)') // "Rjup")
 		call output("Planet mass:    " // dbl2string(Mplanet,'(f7.2)') // "Mjup")
+		call output("Blackbody T:    " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f7.2)') // "K")
 		do i=1,n_ret
 			select case(RetPar(i)%keyword)
 				case("Rp","rp","RP")

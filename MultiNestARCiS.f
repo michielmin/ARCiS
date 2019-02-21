@@ -23,6 +23,8 @@
 	integer context							!not required by MultiNest, any additional information user wants to pass
 	integer i1,i2
 
+	return
+
 	if(n2d.eq.0) then
 		i1=0
 		i2=0

@@ -101,7 +101,8 @@ c===============================================================================
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun
 	logical didcondens_chem,coagulation,resume_multinest,doMCcompute
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname
-	real*8 metallicity,COratio,PQ,mixP,PRplanet,mixratHaze,maxchemtime,TiScale,f_multinest,tol_multinest
+	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
+	real*8 mixratHaze,PHaze,dPHaze,kappaHaze
 	logical enhancecarbon,fast_chem,gamma_equal,dopostequalweights
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),lamdust(:)
@@ -161,7 +162,7 @@ c===============================================================================
 	logical HITEMP,opacitymode,compute_opac,Mp_from_logg,trend_compute
 	integer nPom,nTom
 	character*500 opacitydir,specresfile,starfile
-	character*20,allocatable :: instrument(:)
+	character*500,allocatable :: instrument(:)
 	real*8,allocatable :: instr_ntrans(:)
 	real*8 Tmin,Tmax,minTprofile,maxTprofile,fcloud_default,chimax,r_nuc
 	real*8 sintheta(360),costheta(360)
@@ -185,8 +186,8 @@ c===============================================================================
 	real*8,allocatable,dimension(:) :: L_gu,L_gl,L_Saver
 	logical,allocatable,dimension(:) :: L_do
 	
-	integer,allocatable :: ig_comp(:,:,:)
-	real*8,allocatable :: rr_comp(:,:,:)
+	integer,allocatable :: ig_comp(:)
+	integer ng_comp
 
 	type CIA_pair
 		character*20 name

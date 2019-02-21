@@ -212,11 +212,12 @@ C	 create the new empty FITS file
 	integer status,stat2,stat3,readwrite,unit,blocksize,nfound,group
 	integer firstpix,nbuffer,npixels
 	integer istat,stat4,tmp_int,stat5,stat6
-	real*8  nullval
+	real*8  nullval,tot2,w1,ww
+	real*8,allocatable :: lamF(:),Ktemp(:,:,:,:),temp(:,:,:),wtemp(:),tot(:,:)
 	logical anynull
 	integer naxes(4)
 	character*500 filename
-	integer ig,ilam,iT,iP,imol,i,j
+	integer ig,ilam,iT,iP,imol,i,j,i1,i2,ngF
 	integer*4 hdutype
 
 	if(.not.allocated(Ktable)) allocate(Ktable(nmol))
@@ -284,9 +285,98 @@ C	 create the new empty FITS file
 	naxes(3)=Ktable(imol)%nT
 	naxes(4)=Ktable(imol)%nP
 	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-	if(.not.allocated(Ktable(imol)%ktable)) allocate(Ktable(imol)%ktable(naxes(1),naxes(2),naxes(3),naxes(4)))
+	if(.not.allocated(Ktable(imol)%ktable)) allocate(Ktable(imol)%ktable(nlam,ng,naxes(3),naxes(4)))
+	allocate(Ktemp(naxes(1),naxes(2),naxes(3),naxes(4)))
 
-	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktable(imol)%ktable,anynull,status)
+	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktemp,anynull,status)
+
+	allocate(lamF(Ktable(imol)%nlam+1))
+
+	do ilam=1,Ktable(imol)%nlam+1
+		lamF(ilam)=10d0**(log10(Ktable(imol)%lam1)+
+     &			log10(Ktable(imol)%lam2/Ktable(imol)%lam1)*real(ilam-1)/real(Ktable(imol)%nlam))
+	enddo
+
+!$OMP PARALLEL IF(nlam.gt.200)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,ww,w1,iT,iP)
+!$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp)
+	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam,Ktable(imol)%nT,Ktable(imol)%nP))
+	allocate(wtemp(Ktable(imol)%ng*Ktable(imol)%nlam))
+	allocate(tot(Ktable(imol)%nT,Ktable(imol)%nP))
+!$OMP DO
+	do ilam=1,nlam-1
+		i1=0
+		i2=0
+		do i=1,Ktable(imol)%nlam
+			if(lam(ilam).ge.lamF(i).and.lam(ilam).lt.lamF(i+1)) i1=i
+			if(lam(ilam+1).ge.lamF(i).and.lam(ilam+1).lt.lamF(i+1)) i2=i
+		enddo
+		if(i1.gt.0.and.i2.gt.0) then
+			ngF=0
+			do i=i1,i2
+				if(i1.eq.i2) then
+					ww=1d0
+				else if(i.eq.i1) then
+					ww=abs(lam(ilam)-lamF(i+1))
+				else if(i.eq.i2) then
+					ww=abs(lam(ilam)-lamF(i))
+				else
+					ww=abs(lamF(i)-lamF(i+1))
+				endif
+				do ig=1,Ktable(imol)%ng
+					ngF=ngF+1
+					temp(ngF,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=Ktemp(i,ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)
+					wtemp(ngF)=ww*Ktable(imol)%wg(ig)
+				enddo
+			enddo
+			tot=0d0
+			do ig=1,ngF
+				tot(1:Ktable(imol)%nT,1:Ktable(imol)%nP)=tot(1:Ktable(imol)%nT,1:Ktable(imol)%nP)+temp(ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)*wtemp(ig)
+			enddo
+			tot=tot/sum(wtemp(1:ngF))
+			call sortw(temp,wtemp,ngF)
+			if(ng.eq.1) then
+				Ktable(imol)%ktable(ilam,1,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=tot(1:Ktable(imol)%nT,1:Ktable(imol)%nP)
+			else
+				do ig=2,ngF
+					wtemp(ig)=wtemp(ig)+wtemp(ig-1)
+				enddo
+				wtemp(1:ngF)=wtemp(1:ngF)/wtemp(ngF)
+				do ig=1,ng
+					call hunt(wtemp,ngF,gg(ig),j)
+					if(j.eq.0) then
+						Ktable(imol)%ktable(ilam,ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=temp(1,1:Ktable(imol)%nT,1:Ktable(imol)%nP)
+					else
+						w1=(gg(ig)-wtemp(j+1))/(wtemp(j)-wtemp(j+1))
+						Ktable(imol)%ktable(ilam,ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=temp(j,1:Ktable(imol)%nT,1:Ktable(imol)%nP)*w1+temp(j+1,1:Ktable(imol)%nT,1:Ktable(imol)%nP)*(1d0-w1)
+					endif
+				enddo
+				do iT=1,Ktable(imol)%nT
+				do iP=1,Ktable(imol)%nP
+					tot2=0d0
+					do ig=1,ng
+						tot2=tot2+wgg(ig)*Ktable(imol)%ktable(ilam,ig,iT,iP)
+					enddo
+					if(tot2.ne.0d0) then
+						Ktable(imol)%ktable(ilam,1:ng,iT,iP)=Ktable(imol)%ktable(ilam,1:ng,iT,iP)*tot(iT,iP)/tot2
+					else
+						Ktable(imol)%ktable(ilam,1:ng,iT,iP)=tot(iT,iP)
+					endif
+				enddo
+				enddo
+			endif
+		else
+			Ktable(imol)%ktable(ilam,1:ng,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=0d0
+		endif
+	enddo
+!$OMP END DO
+	deallocate(temp)
+	deallocate(wtemp)
+	deallocate(tot)
+!$OMP FLUSH
+!$OMP END PARALLEL
+	deallocate(Ktemp,lamF)
 
 	!------------------------------------------------------------------------
 	! HDU 1: temperature
@@ -352,20 +442,13 @@ C	 create the new empty FITS file
 	character*80 comment,errmessage
 	character*30 errtext
 	integer ig,ilam,iT,iP,imol,i,j,ir,ngF,i1,i2
-	real*8 kappa_mol(ng,nmol,nlam),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random,w1
-	real*8,allocatable :: temp(:),lamF(:),wtemp(:)
+	real*8 kappa_mol(ng,nmol,nlam),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random,w1,ww
+	real*8,allocatable :: temp(:),wtemp(:)
 
 	if(.not.Ktable(imol)%available) then
 		kappa_mol(1:ng,imol,1:nlam)=0d0
 		return
 	endif
-
-	allocate(lamF(Ktable(imol)%nlam))
-
-	do ilam=1,Ktable(imol)%nlam
-		lamF(ilam)=10d0**(log10(Ktable(imol)%lam1)+
-     &			log10(Ktable(imol)%lam2/Ktable(imol)%lam1)*real(ilam-1)/real(Ktable(imol)%nlam-1))
-	enddo
 
 	if(P(ir).lt.Ktable(imol)%P1) then
 		iP=1
@@ -399,76 +482,14 @@ C	 create the new empty FITS file
 		wT2=1d0-wT1
 	endif
  
-!$OMP PARALLEL IF(nlam.gt.200)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,w1)
-!$OMP& SHARED(nlam,Ktable,lam,lamF,wT1,wT2,wP1,wP2,kappa_mol,imol,iT,iP,ng,gg,wgg)
-	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam))
-	allocate(wtemp(Ktable(imol)%ng*Ktable(imol)%nlam))
-!$OMP DO
 	do ilam=1,nlam-1
-		i1=0
-		i2=0
-		do i=2,Ktable(imol)%nlam-1
-			if(lam(ilam).le.lamF(i).and.lam(ilam).gt.lamF(i-1)) i1=i
-			if(lam(ilam+1).ge.lamF(i).and.lam(ilam+1).lt.lamF(i+1)) i2=i
+		do ig=1,ng
+			kappa_mol(ig,imol,ilam)=Ktable(imol)%ktable(ilam,ig,iT,iP)*wT1*wP1+
+     &						  Ktable(imol)%ktable(ilam,ig,iT+1,iP)*wT2*wP1+
+     &						  Ktable(imol)%ktable(ilam,ig,iT,iP+1)*wT1*wP2+
+     &						  Ktable(imol)%ktable(ilam,ig,iT+1,iP+1)*wT2*wP2
 		enddo
-		if(i1.ge.i2) i2=i1+1
-		if(i1.gt.0) then
-			ngF=0
-			do i=i1,i2-1
-				do ig=1,Ktable(imol)%ng
-					ngF=ngF+1
-					temp(ngF)=Ktable(imol)%ktable(i,ig,iT,iP)*wT1*wP1+
-     &						  Ktable(imol)%ktable(i,ig,iT+1,iP)*wT2*wP1+
-     &						  Ktable(imol)%ktable(i,ig,iT,iP+1)*wT1*wP2+
-     &						  Ktable(imol)%ktable(i,ig,iT+1,iP+1)*wT2*wP2
-					wtemp(ngF)=Ktable(imol)%wg(ig)
-				enddo
-			enddo
-			tot=0d0
-			do ig=1,ngF
-				tot=tot+temp(ig)*wtemp(ig)
-			enddo
-			tot=tot/sum(wtemp(1:ngF))
-			call sortw(temp,wtemp,ngF)
-			if(ng.eq.1) then
-				kappa_mol(1,imol,ilam)=tot
-			else
-				do ig=2,ngF
-					wtemp(ig)=wtemp(ig)+wtemp(ig-1)
-				enddo
-				wtemp(1:ngF)=wtemp(1:ngF)/wtemp(ngF)
-				do ig=1,ng
-					call hunt(wtemp,ngF,gg(ig),j)
-					if(j.eq.0) then
-						kappa_mol(ig,imol,ilam)=temp(1)
-					else
-						w1=(gg(ig)-wtemp(j+1))/(wtemp(j)-wtemp(j+1))
-						kappa_mol(ig,imol,ilam)=temp(j)*w1+temp(j+1)*(1d0-w1)
-					endif
-				enddo
-				tot2=0d0
-				do ig=1,ng
-					tot2=tot2+wgg(ig)*kappa_mol(ig,imol,ilam)
-				enddo
-				if(tot2.ne.0d0) then
-					kappa_mol(1:ng,imol,ilam)=kappa_mol(1:ng,imol,ilam)*tot/tot2
-				else
-					kappa_mol(1:ng,imol,ilam)=tot
-				endif
-			endif
-		else
-			kappa_mol(1:ng,imol,ilam)=0d0
-		endif
 	enddo
-!$OMP END DO
-	deallocate(temp)
-	deallocate(wtemp)
-!$OMP FLUSH
-!$OMP END PARALLEL
-
-	deallocate(lamF)
 
 	return
 	end

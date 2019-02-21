@@ -13,16 +13,12 @@
 	logical docloud0(max(nclouds,1)),converged
 	type(Mueller) M	
 
-	if(doMCcompute) then
+	if(doMCcompute.and.nTiter.gt.0) then
 		call MCDoComputeT(converged,f)
 		converged=.false.
 		return
 	endif
 
-c!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-c below this still has to be corrected for gaussian sampling in g  !!!
-c!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	
 	if(.not.allocated(CrV_prev)) allocate(CrV_prev(nr),CrT_prev(nr),Taverage(nr))
 
 	allocate(Ce(nr,nlam,ng))
@@ -91,14 +87,14 @@ c!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		tot4=0d0
 		do ilam=1,nlam-2
 			do ig=1,ng
-				CrT(ir)=CrT(ir)+dfreq(ilam)*BB(iT,ilam)/Ca(ir,ilam,ig)
-				tot2=tot2+dfreq(ilam)*BB(iT,ilam)
+				CrT(ir)=CrT(ir)+wgg(ig)*dfreq(ilam)*BB(iT,ilam)/Ca(ir,ilam,ig)
+				tot2=tot2+wgg(ig)*dfreq(ilam)*BB(iT,ilam)
 
-				CrV(ir)=CrV(ir)+dfreq(ilam)*Fstar(ilam)/Ca(ir,ilam,ig)
-				tot3=tot3+dfreq(ilam)*Fstar(ilam)
+				CrV(ir)=CrV(ir)+wgg(ig)*dfreq(ilam)*Fstar(ilam)/Ca(ir,ilam,ig)
+				tot3=tot3+wgg(ig)*dfreq(ilam)*Fstar(ilam)
 
-				CrVe(ir)=CrVe(ir)+dfreq(ilam)*Fstar(ilam)/Ce(ir,ilam,ig)
-				tot4=tot4+dfreq(ilam)*Fstar(ilam)
+				CrVe(ir)=CrVe(ir)+wgg(ig)*dfreq(ilam)*Fstar(ilam)/Ce(ir,ilam,ig)
+				tot4=tot4+wgg(ig)*dfreq(ilam)*Fstar(ilam)
 			enddo
 		enddo
 		CrT(ir)=tot2/CrT(ir)
@@ -130,7 +126,7 @@ c!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			tau_T=tau_T+CrT(ir)*1d6*dP/grav(ir)
 			gamma=tau_V/tau_T
 			T0(ir)=T0(ir)+3d0*TeffP**4*(2d0/3d0+tau_T)/4d0+
-     &	3d0*Tirr**4*(must*2d0/3d0+must**2/gamma+(gamma/3d0-must**2/gamma)*exp(-tau_V/must))/4d0
+     &	3d0*Tirr**4*must*(2d0/3d0+1d0/(sqrt(3d0)*gamma)+(gamma/sqrt(3d0)-1d0/(sqrt(3d0)*gamma))*exp(-tau_T*gamma*sqrt(3d0)))/4d0
 		enddo
 		T0(ir)=T0(ir)/100d0
 		T0(ir)=T0(ir)**0.25

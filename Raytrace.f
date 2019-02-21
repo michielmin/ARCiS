@@ -189,6 +189,11 @@
 	allocate(dtrace(nrtrace,nr*2))
 	allocate(irtrace(nrtrace,nr*2))
 	allocate(nirtrace(nrtrace))
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,rr,ir,k,si,xx1,in,xx2,d,ir_next)
+!$OMP& SHARED(nrtrace,rtrace,R,dtrace,irtrace,nirtrace,nr)
+!$OMP DO SCHEDULE(STATIC,1)
 	do i=1,nrtrace-1
 		rr=sqrt(rtrace(i)*rtrace(i+1))
 		ir=nr
@@ -234,6 +239,9 @@
 		endif
 		nirtrace(i)=k
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 
 
 
@@ -317,7 +325,7 @@ c		call tellertje(ilam+1,nlam+1)
 						enddo
 					endif
 					if(k.lt.nirtrace(i)) ir_next=irtrace(i,k+1)
-					if(ir_next.le.0) exit
+					if(ir_next.le.0.or.tautot.ge.maxtau) exit
 
 					enddo
 
@@ -385,17 +393,6 @@ c		call tellertje(ilam+1,nlam+1)
 		enddo
 		call writeContribution(filename,P,lam,obsA_contr,flux_contr,nr,nlam)
 	endif
-
-c	open(unit=44,file=trim(outputdir) // "COcolumns",RECL=6000)
-c	do ilam=1,nlam
-c		write(44,*) lam(ilam)*1e4,(Ccolumn(1,ilam,icc)/Ocolumn(1,ilam,icc),icc=1,ncc),
-c     &							  (Ccolumn(2,ilam,icc)/Ocolumn(2,ilam,icc),icc=1,ncc),
-c     &							  (Ccolumn(1,ilam,icc)/Hcolumn(1,ilam,icc),icc=1,ncc),
-c     &							  (Ccolumn(2,ilam,icc)/Hcolumn(2,ilam,icc),icc=1,ncc),
-c     &							  (Ocolumn(1,ilam,icc)/Hcolumn(1,ilam,icc),icc=1,ncc),
-c     &							  (Ocolumn(2,ilam,icc)/Hcolumn(2,ilam,icc),icc=1,ncc)
-c	enddo
-c	close(unit=44)
 
 	flux=flux*1d23/distance**2
 	phase=phase*1d23/distance**2

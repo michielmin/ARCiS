@@ -46,7 +46,7 @@
 
 	if(compute_mixrat) nabla_ad=2d0/7d0
 	grav=Ggrav*Mplanet/(Rplanet)**2
-	if(par_tprofile) call ComputeParamT(T)
+	if(par_tprofile.or.(computeT.and.nTiter.eq.0)) call ComputeParamT(T)
 
 	Rscale=1d0
 
@@ -129,7 +129,6 @@
 		RHill=(Dplanet*(Mtot/(3d0*Mstar))**(1d0/3d0))
 		if(R(i+1).gt.RHill) then
 			call output("layer" // dbl2string(P(i),'(es10.3E3)') // "is beyond the Hill Sphere")
-			print*,'adjusting radius'
 			R(i+1)=sqrt(R(i)*RHill)
 		endif
 		Mtot=Mtot+dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
@@ -150,7 +149,7 @@ c			if(domakeai.or.retrieval) return
 		endif
 	enddo
 
-	if(par_tprofile) call ComputeParamT(T)
+	if(par_tprofile.or.(computeT.and.nTiter.eq.0)) call ComputeParamT(T)
 	do i=1,nr
 		if(T(i).gt.maxTprofile) T(i)=maxTprofile
 		if(T(i).lt.3d0) T(i)=3d0
@@ -886,7 +885,7 @@ c use Ackerman & Marley 2001 cloud computation
 	if(trend_compute) then
 		idum=idum0
 		call TrendCompute(Mplanet/Mjup,Rplanet/Rjup,sqrt(Rstar/(2d0*Dplanet))*Tstar,Tstar,metallicity0,idum,
-     &			COratio,NOratio,SiOratio,Zout)
+     &			COratio,NOratio,SiOratio,Zout,TiScale)
 		call output("Trend computed C/O:  " // dbl2string(COratio,'(es10.4)'))
 		call output("Trend computed N/O:  " // dbl2string(NOratio,'(es10.4)'))
 		call output("Trend computed Si/O: " // dbl2string(SiOratio,'(es10.4)'))
@@ -1141,6 +1140,7 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	endif
 	
 	molfracs_atoms(15)=molfracs_atoms(15)*TiScale
+	molfracs_atoms(16)=molfracs_atoms(16)*TiScale
 
 	tot=sum(molfracs_atoms(1:N_atoms))
 	molfracs_atoms=molfracs_atoms/tot
