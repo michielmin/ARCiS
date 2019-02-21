@@ -1277,6 +1277,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	call getkeys(line,value,n)
 	if(value(1).eq.' ') goto 5
 	ilam=ilam+1
+	specErr(ilam)=-1d0
 	do i=1,n
 		if(value(i).ne.' ') then
 			select case(key(i))
@@ -1288,10 +1289,12 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 					read(value(i),*) TRSignal
 				case('TRSNR')
 					read(value(i),*) TRSNR
+				case('NoiseOnTransitFloorStack')
+					read(value(i),*) specErr(ilam)
 			end select
 		endif
 	enddo
-	specErr(ilam)=TRSignal/TRSNR
+	if(specErr(ilam).le.0d0) specErr(ilam)=TRSignal/TRSNR
 	specR(ilam)=lamR(ilam)/(2d0*specR(ilam))
 	lamR(ilam)=1d-4*lamR(ilam)
 	goto 5
