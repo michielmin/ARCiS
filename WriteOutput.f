@@ -1270,7 +1270,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	read(20,*)
 4	read(20,'(a1000)',end=6) line
 	call getkeys(line,key,n)
-	if(line(1:1).eq.' '.or.key(1)(1:1).eq.'#') goto 4
+	if(line(1:1).eq.' '.or.line(1:1).eq.'#') goto 4
 
 	ilam=0
 5	read(20,'(a1000)',end=6) line
@@ -1295,7 +1295,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		endif
 	enddo
 	if(specErr(ilam).le.0d0) specErr(ilam)=TRSignal/TRSNR
-	specR(ilam)=lamR(ilam)/(2d0*specR(ilam))
+	specR(ilam)=lamR(ilam)/(specR(ilam))
 	lamR(ilam)=1d-4*lamR(ilam)
 	goto 5
 6	close(unit=20)

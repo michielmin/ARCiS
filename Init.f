@@ -1979,6 +1979,12 @@ c not entirely correct...
 			enddo
 			i=i+1
 			l=l+icomma
+		else
+			key(i)=trim(line(l+1:1000))
+			do j=1,len_trim(key(i))
+				if(key(i)(j:j).eq.' ') key(i)(j:j)='_'
+			enddo
+			i=i+1
 		endif
 	enddo
 	n=i-1

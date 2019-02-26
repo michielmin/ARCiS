@@ -5,10 +5,10 @@
 	integer iphase
 	real*8 z,dz,E,tau,Planck,random,v,dx,dy,f
 	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:),spec(:,:,:),EJv_omp(:),EJv2_omp(:)
-	real*8,allocatable :: specsource_star(:),specsource_planet(:),EJv_phot(:)
+	real*8,allocatable :: specsource_star(:),specsource_planet(:),EJv_phot(:),CabsL(:)
 	real*8 tau_v,x,y,EJv(nr),E0_star,E0_planet,EJv2(nr),dEJv(nr)
 	real*8 tot,Lum,tot2,Cplanck(nr),dTdP_ad,dTdP,must,Eprev(nr),rr,cwg(ng),dT0(nr)
-	real*8 CabsL(nlam),T0(nr),E0,chi2,nabla,scale,Crw(nr),Cpl(nr),dlnT,dlnP,kapmax
+	real*8 T0(nr),E0,chi2,nabla,scale,Crw(nr),Cpl(nr),dlnT,dlnP,kapmax
 	integer iphot,ir,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,jr,jr0
 	integer iT1,iT2,iT,i,icount,iopenmp0,omp_get_thread_num,iter,niter
 	logical docloud0(max(nclouds,1)),goingup,onedge,converged,dorw(nr),RandomWalkT
@@ -251,10 +251,17 @@
 	EJv2(1:nr)=EJv2(1:nr)+EJv2_omp(1:nr)
 !$OMP END CRITICAL
 	deallocate(EJv_omp)
+	deallocate(EJv2_omp)
+	deallocate(EJv_phot)
 !$OMP FLUSH
 !$OMP END PARALLEL
 
-	chi2=0d0
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(CabsL,ir,ilam,ig,E0)
+!$OMP& SHARED(nr,nlam,ng,wgg,EJv,Eprev,iter,niter,T,T0,Ca)
+	allocate(CabsL(nlam))
+!$OMP DO
 	do ir=nr,1,-1
 		CabsL=0d0
 		do ilam=1,nlam-1
@@ -265,6 +272,10 @@
 		E0=EJv(ir)/real(niter)+Eprev(ir)*(1d0-real(iter)/real(niter))
 		call increaseT(T(ir),T0(ir),E0,CabsL,ir)
 	enddo
+!$OMP END DO
+	deallocate(CabsL)
+!$OMP FLUSH
+!$OMP END PARALLEL
 
 	do ir=nr-1,1,-1
 		dlnP=log(P(ir+1)/P(ir))

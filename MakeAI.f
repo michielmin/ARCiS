@@ -19,11 +19,11 @@
 		write(outputdir,'(a,"model",i0.6,"/")') trim(outputdir0),i
 		write(command,'("mkdir -p ",a)') trim(outputdir)
 		call system(command)
-		inquire(file=trim(outputdir) // "emis",exist=exist)
+		inquire(file=trim(outputdir) // "parameters",exist=exist)
 		if(.not.exist) then
 			call MapRetrieval(var,dvar)
 			if(mapCOratio.and..not.dochemistry) call DoMapCOratio()
-			call WriteRetrieval(i,chi2,var,var,dvar)
+			call WriteAI(i,var)
 			call InitDens()
 			call CheckPlanet(saneplanet)
 			if(.not.saneplanet) then
@@ -62,7 +62,7 @@ c			call SetOutputMode(.false.)
 			endif
 			if(modelsucces) then
 				call SetOutputMode(.true.)
-				call WriteRetrieval(i,chi2,var,var,dvar)
+				call WriteAI(i,var)
 				call WriteStructure()
 				call WriteOutput()
 			else
@@ -195,4 +195,56 @@ c		f=f/tot
 	
 	return
 	end
+
+
+
+	subroutine WriteAI(imodel,var)
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 var(n_ret),error(2,n_ret)
+	integer i,imodel,j
+	character*500 command
+
+	call MapRetrieval(var,error)
+
+98	open(unit=20,file=trim(outputdir) // "parameters",RECL=1000,ERR=99)
+	goto 100
+99	write(command,'("mkdir -p ",a)') trim(outputdir)
+	call system(command)
+	call sleep(10)
+	goto 98
+100	continue
+	write(20,'("Model ",i7)') imodel
+	do i=1,n_ret
+		if(RetPar(i)%logscale) then
+c	log
+			write(20,'(a15," = ",es14.7)') trim(RetPar(i)%keyword),RetPar(i)%value
+ 		else
+c	linear/squared
+			write(20,'(a15," = ",es14.7)') trim(RetPar(i)%keyword),RetPar(i)%value
+		endif
+	enddo
+	if(.not.dochemistry) then
+		write(20,'(a15," = ",es14.7)') 'COratio',COret
+	endif
+	if(Tform.gt.0d0) then
+		if(domakeai.and..not.retrieval) then
+			write(20,'(a15," = ",es14.7)') 'Tform',Tform
+			write(20,'(a15," = ",es14.7)') 'f_dry',f_dry
+			write(20,'(a15," = ",es14.7)') 'f_wet',f_wet
+		endif
+		write(20,'(a15," = ",es14.7)') 'COratio',COratio
+		write(20,'(a15," = ",es14.7)') 'metallicity',metallicity
+	endif
+	if(mapCOratio) then
+		do i=1,nmol
+			if(mixrat_r(1,i).gt.0d0) write(20,'(a15," = ",es14.7)') trim(molname(i)),mixrat_r(1,i)
+		enddo
+	endif
+
+	close(unit=20)
+
+	return
+	end
+
 		
