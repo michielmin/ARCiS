@@ -191,6 +191,7 @@
 	EJv2_omp=0d0
 	allocate(EJv_phot(nr))
 !$OMP DO
+!$OMP& SCHEDULE(DYNAMIC, 1)
 	do iphot=1,Nphot
 		EJv_phot=0d0
 		if(iphot.le.NphotPlanet.and.TeffP.gt.0d0) then

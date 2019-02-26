@@ -52,26 +52,8 @@
 	na=180
 	lnkloglog=.true.
 
-	call AllocateDMiLay
-
 	allocate(e1(MAXMAT,nlamdust))
 	allocate(e2(MAXMAT,nlamdust))
-
-	allocate(Mief11(na))
-	allocate(Mief12(na))
-	allocate(Mief22(na))
-	allocate(Mief33(na))
-	allocate(Mief34(na))
-	allocate(Mief44(na))
-	allocate(Mief11_fcomp(na))
-	allocate(Mief12_fcomp(na))
-	allocate(Mief33_fcomp(na))
-	allocate(Mief34_fcomp(na))
-	allocate(mu0(na))
-	allocate(M1(na,2))
-	allocate(M2(na,2))
-	allocate(S21(na,2))
-	allocate(D21(na,2))
 
 	allocate(frac(MAXMAT))
 	allocate(rho(MAXMAT))
@@ -499,28 +481,12 @@ c changed this to mass fractions (11-05-2010)
 		wf(1)=1d0
 	endif
 
-	do ilam=1,nlamdust
-c	call tellertje(ilam,nlamdust)
-	csca0=0d0
-	cabs0=0d0
-	cext0=0d0
-	Mass=0d0
-	Vol=0d0
-	Ntot=0d0
-
-	do i=1,na/2
-		theta=(real(i)-0.5)/real(na/2)*3.1415926536/2d0
-		mu0(i)=cos(theta)
-	enddo
-
 	do l=1,nm
 		if(C%standard.eq.'DRIFT') then
 			j=0
 			if(C%sigma(isize).le.1d-3.or.ns.eq.1) then
 				ns=1
 				r0(1)=C%rv(isize)
-c				if(r0(1).lt.amin) r0(1)=amin
-c				if(r0(1).gt.amax) r0(1)=amax
 				nr0(l,1)=1d0
 				tot=r0(1)**3
 			else
@@ -563,6 +529,45 @@ c				if(r0(1).gt.amax) r0(1)=amax
 			C%rv(isize)=sqrt(C%rv(isize))
 		endif
 	enddo
+	allocate(mu0(na))
+	do i=1,na/2
+		theta=(real(i)-0.5)/real(na/2)*3.1415926536/2d0
+		mu0(i)=cos(theta)
+	enddo
+
+
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ilam,csca0,cabs0,cext0,Mass,Vol,theta,i,l,tot,k,Err,spheres,toolarge,
+!$OMP&         rad,wvno,m,r1,rcore,qext,qsca,qbs,gqsc,rmie,lmie,e1mie,e2mie,
+!$OMP&         csmie,cemie,MieF11,MieF12,MieF33,MieF34,Mief22,Mief44,tot2,j,Ntot,fcomputed,
+!$OMP&         MieF11_fcomp,MieF12_fcomp,MieF33_fcomp,MieF34_fcomp,M1,M2,S21,D21)
+!$OMP& SHARED(C,nlamdust,na,nm,ns,frac,minlog,maxlog,f,mu0,e1,e2,wf,min,isize,
+!$OMP&        rho_av,pow,lamdust,meth,rho,nf,r0,nr0,Kabs,Ksca,Kext,F11,F12,F22,F33,F34,F44)
+	allocate(Mief11(na))
+	allocate(Mief12(na))
+	allocate(Mief22(na))
+	allocate(Mief33(na))
+	allocate(Mief34(na))
+	allocate(Mief44(na))
+	allocate(Mief11_fcomp(na))
+	allocate(Mief12_fcomp(na))
+	allocate(Mief33_fcomp(na))
+	allocate(Mief34_fcomp(na))
+	allocate(M1(na,2))
+	allocate(M2(na,2))
+	allocate(S21(na,2))
+	allocate(D21(na,2))
+	call AllocateDMiLay
+!$OMP DO
+!$OMP& SCHEDULE(DYNAMIC, 1)
+	do ilam=1,nlamdust
+	csca0=0d0
+	cabs0=0d0
+	cext0=0d0
+	Mass=0d0
+	Vol=0d0
+	Ntot=0d0
 
 	do l=1,nm
 	if(frac(l).eq.0d0) goto 10
@@ -676,15 +681,6 @@ c	make sure the scattering matrix is properly normalized by adjusting the forwar
 	C%M(isize)=Mass*(1d-4)**3/Ntot
 	C%rho=Mass/Vol
 	rho_av=Mass/Vol
-c	C%Kabs(isize,ilam)=1d4*cabs0/Mass
-c	C%Ksca(isize,ilam)=1d4*csca0/Mass
-c	C%Kext(isize,ilam)=1d4*cext0/Mass
-c	C%F(isize,ilam)%F11(1:180)=f11(ilam,1:180)/csca0
-c	C%F(isize,ilam)%F12(1:180)=f12(ilam,1:180)/csca0
-c	C%F(isize,ilam)%F22(1:180)=f22(ilam,1:180)/csca0
-c	C%F(isize,ilam)%F33(1:180)=f33(ilam,1:180)/csca0
-c	C%F(isize,ilam)%F34(1:180)=f34(ilam,1:180)/csca0
-c	C%F(isize,ilam)%F44(1:180)=f44(ilam,1:180)/csca0
 
 	Kabs(ilam)=1d4*cabs0/Mass
 	Ksca(ilam)=1d4*csca0/Mass
@@ -697,6 +693,25 @@ c	C%F(isize,ilam)%F44(1:180)=f44(ilam,1:180)/csca0
 	F44(ilam,1:180)=f44(ilam,1:180)/csca0
 
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+	deallocate(Mief11)
+	deallocate(Mief12)
+	deallocate(Mief22)
+	deallocate(Mief33)
+	deallocate(Mief34)
+	deallocate(Mief44)
+	deallocate(Mief11_fcomp)
+	deallocate(Mief12_fcomp)
+	deallocate(Mief33_fcomp)
+	deallocate(Mief34_fcomp)
+	deallocate(M1)
+	deallocate(M2)
+	deallocate(S21)
+	deallocate(D21)
+	call DeallocateDMiLay
+!$OMP END PARALLEL
+	deallocate(mu0)
 
 	call regridarray(lamdust,Kabs,nlamdust,lam,C%Kabs(isize,1:nlam),nlam)
 	call regridarray(lamdust,Kext,nlamdust,lam,C%Kext(isize,1:nlam),nlam)
@@ -949,22 +964,6 @@ c	endif
 
 	deallocate(e1)
 	deallocate(e2)
-	
-	deallocate(Mief11)
-	deallocate(Mief12)
-	deallocate(Mief22)
-	deallocate(Mief33)
-	deallocate(Mief34)
-	deallocate(Mief44)
-	deallocate(Mief11_fcomp)
-	deallocate(Mief12_fcomp)
-	deallocate(Mief33_fcomp)
-	deallocate(Mief34_fcomp)
-	deallocate(mu0)
-	deallocate(M1)
-	deallocate(M2)
-	deallocate(S21)
-	deallocate(D21)
 
 	deallocate(frac)
 	deallocate(rho)
@@ -975,7 +974,6 @@ c	endif
 	deallocate(f34)
 	deallocate(f44)
 
-	call DeallocateDMiLay
 
 	return
 	end
@@ -1477,6 +1475,7 @@ c-----------------------------------------------------------------------
 	PARAMETER (LL = 200000)
 
 	double complex,allocatable :: W(:,:),acap(:)
+!$OMP THREADPRIVATE(W,acap)
 	
 	end module ArraysDMiLay
 
@@ -1601,6 +1600,7 @@ c     ..
 c     .. Save statement ..
 
       SAVE  PINUM, PASS1
+!$OMP THREADPRIVATE(PINUM, PASS1)
 c     ..
 c     .. Data statements ..
 
@@ -1983,6 +1983,7 @@ c     ..
 c     .. Save statement ..
 
       SAVE      MAXMSG, NUMMSG, MSGLIM
+!$OMP THREADPRIVATE(MAXMSG, NUMMSG, MSGLIM)
 c     ..
 c     .. Data statements ..
 
@@ -2043,6 +2044,7 @@ c     ..
 c     .. Save statement ..
 
       SAVE      NUMMSG, MAXMSG
+!$OMP THREADPRIVATE(NUMMSG, MAXMSG)
 c     ..
 c     .. Data statements ..
 
