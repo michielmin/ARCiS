@@ -34,7 +34,7 @@
 			endif
 			call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
 			Fstar=Fstar*pi*Rstar**2
-c			call SetOutputMode(.false.)
+			call SetOutputMode(.false.)
 			call ComputeModel(.true.)
 			if(PTchemAbun) then
 				do k=1,n_ret
