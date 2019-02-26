@@ -7,13 +7,14 @@
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),xtot(:),vth(:),vthv(:)
 	real*8,allocatable :: Sc(:),Sn(:),rpart(:),mpart(:),xMgO(:)
-	real*8,allocatable :: An(:,:),y(:,:),xv(:,:),xn(:),xc(:,:),A(:,:)
+	real*8,allocatable :: An(:,:),y(:,:),xv(:,:),xn(:),xc(:,:)
+	real*8,allocatable :: Aomp(:,:),xomp(:)
 	real*8,allocatable :: drho(:),drhovsed(:),tcinv(:),rho_av(:),densv(:),Kd(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda
 	integer info,i,j,iter,NN,NRHS,niter,ii,k
 	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm
 	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn
-	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:)
+	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),IWORKomp(:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin
 	logical quadratic,ini,Tconverged,cloudsform
 	character*500 cloudspecies(max(nclouds,1)),form
@@ -38,7 +39,7 @@
 		CrT_prev0=CrT_prev
 	endif
 
-	niter=40
+	niter=20
 
 	w_atoms(1) = 1.00794		!'H'
 	w_atoms(2) = 4.002602		!'He'
@@ -280,10 +281,8 @@ c	atoms_cloud(i,3)=1
 	allocate(mpart(nnr))
 	allocate(rho_av(nnr))
 	allocate(y(nnr,5))
-	allocate(Sc(nnr))
 	allocate(Sn(nnr))
 	allocate(vth(nnr))
-	allocate(vthv(nnr))
 	allocate(drho(nnr))
 	allocate(drhovsed(nnr))
 	allocate(xv(nCS,nnr))
@@ -332,7 +331,6 @@ c	atoms_cloud(i,3)=1
 	NN=2*nnr
 	allocate(x(NN))
 	allocate(IWORK(10*NN*NN))
-	allocate(A(NN,NN))
 
 	allocate(An(nnr,nnr))
 
@@ -468,6 +466,25 @@ c rewritten for better convergence
 	enddo
 	xn(1:nnr)=x(1:nnr)
 
+	do i=1,nnr
+		if(xn(i).lt.0d0) xn(i)=0d0
+	enddo
+
+
+
+
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(Sc,vthv,cs,Aomp,xomp,IWORKomp,iCS,i,j,dz,f1,f2,af,bf,NRHS,INFO)
+!$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,ATP,BTP,maxT,drhovsed,Kd,xn,
+!$OMP&		NN,rpart,ixc,quadratic,vsed,drho,ixv,m_nuc,mpart,xv_bot,xc,xv)
+	allocate(vthv(nnr))
+	allocate(Sc(nnr))
+	allocate(xomp(NN))
+	allocate(IWORKomp(10*NN*NN))
+	allocate(Aomp(NN,NN))
+!$OMP DO
+!$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=1,nCS
 
 	do i=1,nnr
@@ -479,8 +496,8 @@ c rewritten for better convergence
 	enddo
 
 c equations for material
-	A=0d0
-	x=0d0
+	Aomp=0d0
+	xomp=0d0
 	j=0
 	do i=2,nnr-1
 		dz=CloudR(i+1)-CloudR(i-1)
@@ -494,92 +511,100 @@ c equations for material
 
 		j=j+1
 
-		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))-drhovsed(i)
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-drhovsed(i)
 
 		if(quadratic) then
-		A(j,ixc(iCS,i-1))=A(j,ixc(iCS,i-1))+(2d0*af*CloudR(i)+bf)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
-		A(j,ixc(iCS,i+1))=A(j,ixc(iCS,i+1))-(2d0*af*f2*CloudR(i)+bf*f1)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
-		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))+(2d0*af*CloudR(i)+bf)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))-(2d0*af*f2*CloudR(i)+bf*f1)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
 
-		A(j,ixc(iCS,i-1))=A(j,ixc(iCS,i-1))+2d0*af*Clouddens(i)*Kd(i)
-		A(j,ixc(iCS,i+1))=A(j,ixc(iCS,i+1))-2d0*f2*af*Clouddens(i)*Kd(i)
-		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
+		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))+2d0*af*Clouddens(i)*Kd(i)
+		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))-2d0*f2*af*Clouddens(i)*Kd(i)
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
 		else
-		A(j,ixc(iCS,i+1))=A(j,ixc(iCS,i+1))+(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
-		A(j,ixc(iCS,i-1))=A(j,ixc(iCS,i-1))-(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
+		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))+(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
+		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))-(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
 
-		A(j,ixc(iCS,i+1))=A(j,ixc(iCS,i+1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
-		A(j,ixc(iCS,i-1))=A(j,ixc(iCS,i-1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
-		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
+		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
+		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 		endif
 
-		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)/m_nuc
-		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))-Sc(i)*densv(iCS)/mpart(i)
-		x(j)=0d0
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)/m_nuc
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Sc(i)*densv(iCS)/mpart(i)
+		xomp(j)=0d0
 
 		j=j+1
 
 		if(quadratic) then
-		A(j,ixv(iCS,i-1))=A(j,ixv(iCS,i-1))+(2d0*af*CloudR(i)+bf)*(Kd(i)*drho(i))
-		A(j,ixv(iCS,i+1))=A(j,ixv(iCS,i+1))-(2d0*af*f2*CloudR(i)+bf*f1)*(Kd(i)*drho(i))
-		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(Kd(i)*drho(i))
+		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))+(2d0*af*CloudR(i)+bf)*(Kd(i)*drho(i))
+		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))-(2d0*af*f2*CloudR(i)+bf*f1)*(Kd(i)*drho(i))
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(Kd(i)*drho(i))
 
-		A(j,ixv(iCS,i-1))=A(j,ixv(iCS,i-1))+2d0*af*Clouddens(i)*Kd(i)
-		A(j,ixv(iCS,i+1))=A(j,ixv(iCS,i+1))-2d0*f2*af*Clouddens(i)*Kd(i)
-		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
+		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))+2d0*af*Clouddens(i)*Kd(i)
+		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))-2d0*f2*af*Clouddens(i)*Kd(i)
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
 		else
-		A(j,ixv(iCS,i+1))=A(j,ixv(iCS,i+1))+(Kd(i)*drho(i))/dz
-		A(j,ixv(iCS,i-1))=A(j,ixv(iCS,i-1))-(Kd(i)*drho(i))/dz
+		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))+(Kd(i)*drho(i))/dz
+		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))-(Kd(i)*drho(i))/dz
 
-		A(j,ixv(iCS,i+1))=A(j,ixv(iCS,i+1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
-		A(j,ixv(iCS,i-1))=A(j,ixv(iCS,i-1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
-		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))		
+		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
+		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))		
 		endif
 
-		A(j,ixv(iCS,i))=A(j,ixv(iCS,i))-Sc(i)*xn(i)*Clouddens(i)/m_nuc
-		A(j,ixc(iCS,i))=A(j,ixc(iCS,i))+Sc(i)*densv(iCS)/mpart(i)
-		x(j)=0d0
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-Sc(i)*xn(i)*Clouddens(i)/m_nuc
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Sc(i)*densv(iCS)/mpart(i)
+		xomp(j)=0d0
 	enddo
 	i=1
 	j=j+1
-	A(j,ixc(iCS,i))=1d0
-	x(j)=0d0
+	Aomp(j,ixc(iCS,i))=1d0
+	xomp(j)=0d0
 
 	j=j+1
-	A(j,ixv(iCS,i))=1d0
-	x(j)=xv_bot(iCS)
+	Aomp(j,ixv(iCS,i))=1d0
+	xomp(j)=xv_bot(iCS)
 
 	i=nnr
 	dz=CloudR(i)-CloudR(i-1)
 	j=j+1
-	A(j,ixc(iCS,i))=Kd(i)/dz-vsed(i)
-	A(j,ixc(iCS,i-1))=-Kd(i)/dz
-	x(j)=0d0!-Mc_top/Clouddens(i)
+	Aomp(j,ixc(iCS,i))=Kd(i)/dz-vsed(i)
+	Aomp(j,ixc(iCS,i-1))=-Kd(i)/dz
+	xomp(j)=0d0!-Mc_top/Clouddens(i)
 
 	j=j+1
-	A(j,ixv(iCS,i))=Kd(i)/dz
-	A(j,ixv(iCS,i-1))=-Kd(i)/dz
-	x(j)=0d0!Mc_top/Clouddens(i)
+	Aomp(j,ixv(iCS,i))=Kd(i)/dz
+	Aomp(j,ixv(iCS,i-1))=-Kd(i)/dz
+	xomp(j)=0d0!Mc_top/Clouddens(i)
 
 	NRHS=1
-	call DGESV( NN, NRHS, A(1:NN,1:NN), NN, IWORK, x, NN, info )
+	call DGESV( NN, NRHS, Aomp, NN, IWORKomp, xomp, NN, info )
 
 	do i=1,NN
-		if(.not.x(i).gt.1d-200) x(i)=1d-200
+		if(.not.xomp(i).gt.1d-200) xomp(i)=1d-200
 	enddo
 
 	do i=1,nnr
-		xc(iCS,i)=x(ixc(iCS,i))
-		xv(iCS,i)=x(ixv(iCS,i))
+		xc(iCS,i)=xomp(ixc(iCS,i))
+		xv(iCS,i)=xomp(ixv(iCS,i))
 	enddo
 
 	do i=1,nnr
 		if(xc(iCS,i).lt.0d0) xc(iCS,i)=0d0
 		if(xv(iCS,i).lt.0d0) xv(iCS,i)=0d0
-		if(xn(i).lt.0d0) xn(i)=0d0
 	enddo
 
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+	deallocate(vthv)
+	deallocate(Sc)
+	deallocate(xomp)
+	deallocate(IWORKomp)
+	deallocate(Aomp)
+!$OMP END PARALLEL
+
 
 
 	do i=1,nnr
@@ -744,10 +769,8 @@ c correction for SiC
 	deallocate(mpart)
 	deallocate(rho_av)
 	deallocate(y)
-	deallocate(Sc)
 	deallocate(Sn)
 	deallocate(vth)
-	deallocate(vthv)
 	deallocate(drho)
 	deallocate(drhovsed)
 	deallocate(xv)
@@ -759,7 +782,6 @@ c correction for SiC
 	deallocate(ixc)
 	deallocate(x)
 	deallocate(IWORK)
-	deallocate(A)
 	deallocate(An)
 
 	return

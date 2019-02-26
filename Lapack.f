@@ -12445,6 +12445,7 @@ c
 *     .. Save statement ..
       SAVE               FIRST, EPS, SFMIN, BASE, T, RND, EMIN, RMIN,
      $                   EMAX, RMAX, PREC
+!$OMP THREADPRIVATE(FIRST, EPS, SFMIN, BASE, T, RND, EMIN, RMIN, EMAX, RMAX, PREC)
 *     ..
 *     .. Data statements ..
       DATA               FIRST / .TRUE. /
@@ -12571,6 +12572,7 @@ c
 *     ..
 *     .. Save statement ..
       SAVE               FIRST, LIEEE1, LBETA, LRND, LT
+!$OMP THREADPRIVATE(FIRST, LIEEE1, LBETA, LRND, LT)
 *     ..
 *     .. Data statements ..
       DATA               FIRST / .TRUE. /
@@ -12780,6 +12782,7 @@ c
 *     .. Save statement ..
       SAVE               FIRST, IWARN, LBETA, LEMAX, LEMIN, LEPS, LRMAX,
      $                   LRMIN, LT
+!$OMP THREADPRIVATE(FIRST, IWARN, LBETA, LEMAX, LEMIN, LEPS, LRMAX, LRMIN, LT)
 *     ..
 *     .. Data statements ..
       DATA               FIRST / .TRUE. / , IWARN / .FALSE. /
