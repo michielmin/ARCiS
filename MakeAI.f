@@ -8,6 +8,7 @@
 	logical exist,saneplanet
 	
 	write(outputdir0,'(a)') trim(outputdir)
+
 	do i=1,nai
 		call output("Model number: " // int2string(i,'(i0.6)'))
 1		chi2=0d0
@@ -74,7 +75,7 @@
 		else
 			chi2=random(idum)
 		endif
-	enddo		
+	enddo
 	
 	return
 	end
@@ -85,13 +86,16 @@
 	use Constants
 	IMPLICIT NONE
 	logical saneplanet
-	real*8 RHill
+	real*8 RHill,SH,Tirr
 	integer i
 
 	saneplanet=.true.
 	RHill=(Dplanet*(Mplanet/(3d0*Mstar))**(1d0/3d0))
 	if(Rplanet.gt.RHill) saneplanet=.false.
 	
+	SH=(sqrt(Rstar/(2d0*Dplanet))*Tstar*kb)/((Ggrav*Mplanet/(Rplanet**2))*mp*2.3d0)
+	if(SH.gt.Rplanet/5d0) saneplanet=.false.
+
 c	call SetupStructure(.true.)
 c	do i=1,nr
 c		if(T(i).le.Tmin) saneplanet=.false.
