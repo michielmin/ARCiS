@@ -165,7 +165,7 @@
 	endif
 
 	if(Nphot.eq.0) then
-		T=2.7d0
+		T=70d0
 		return
 	endif
 
@@ -234,9 +234,9 @@
 			jr=nr
 			E0=E0_star
 		endif
-		do while((jr.le.nr.and.jr.ge.1).and.random(idum).gt.1d-8)
+		do while((jr.le.nr.and.jr.ge.1))
 1			continue
-			if((dorw(jr).and.jr.lt.nr).and.random(idum).gt.1d-8) then
+			if((dorw(jr).and.jr.lt.nr)) then
 				if(RandomWalkT(x,y,z,dx,dy,dz,E0,Crw,Cpl,jr,EJv_phot,dorw)) goto 1
 			endif
 			call travelcomputeT(x,y,z,dx,dy,dz,E0,jr,onedge,goingup,
@@ -313,6 +313,13 @@
 			if(ir.lt.nr) then
 				T0(ir)=T0(ir+1)
 			endif
+		endif
+		if(.not.dT0(ir).gt.2d0) then
+			dT0(ir)=2d0
+		endif
+		if(.not.T0(ir).gt.70d0) then
+			T0(ir)=70d0
+			dT0(ir)=max(dT0(ir),70d0)
 		endif
 	enddo
 	call Smooth(T0,dT0,T0,nr,idum)

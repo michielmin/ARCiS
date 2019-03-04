@@ -1912,16 +1912,30 @@ c not entirely correct...
 	enddo
 	if(trim(name).eq.trim(planetname)) then
 		close(unit=72)
-		call output("Stellar mass:     " // dbl2string(Mstar,'(f7.2)') // "Msun")
-		call output("Stellar T:        " // dbl2string(Tstar,'(f7.2)') // "K")
-		call output("Stellar radius:   " // dbl2string(Rstar,'(f7.2)') // "Rsun")
-		call output("Stellar logg:     " // dbl2string(logg,'(f7.2)'))
-		call output("Stellar distance: " // dbl2string(Distance,'(f7.2)') // "pc")
-		call output("Metallicity:      " // dbl2string(metallicity,'(f7.2)'))
+		call output("Stellar mass:     " // dbl2string(Mstar,'(f9.4)') // "Msun")
+		call output("Stellar T:        " // dbl2string(Tstar,'(f9.4)') // "K")
+		call output("Stellar radius:   " // dbl2string(Rstar,'(f9.4)') // "Rsun")
+		call output("Stellar logg:     " // dbl2string(logg,'(f9.4)'))
+		call output("Stellar distance: " // dbl2string(Distance,'(f9.4)') // "pc")
+		call output("Metallicity:      " // dbl2string(metallicity,'(f9.4)'))
 		call output("Planet orbit:     " // dbl2string(Dplanet,'(f7.4)') // "AU")
-		call output("Planet radius:    " // dbl2string(Rplanet,'(f7.2)') // "Rjup")
-		call output("Planet mass:      " // dbl2string(Mplanet,'(f7.2)') // "Mjup")
-		call output("Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f7.2)') // "K")
+		call output("Planet radius:    " // dbl2string(Rplanet,'(f9.4)') // "Rjup")
+		call output("Planet mass:      " // dbl2string(Mplanet,'(f9.4)') // "Mjup")
+		call output("Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K")
+			
+		open(unit=73,file=trim(outputdir) // "ListParameters",RECL=1000)
+		write(73,'(a)') "Stellar mass:     " // dbl2string(Mstar,'(f9.4)') // "Msun"
+		write(73,'(a)') "Stellar T:        " // dbl2string(Tstar,'(f9.4)') // "K"
+		write(73,'(a)') "Stellar radius:   " // dbl2string(Rstar,'(f9.4)') // "Rsun"
+		write(73,'(a)') "Stellar logg:     " // dbl2string(logg,'(f9.4)')
+		write(73,'(a)') "Stellar distance: " // dbl2string(Distance,'(f9.4)') // "pc"
+		write(73,'(a)') "Metallicity:      " // dbl2string(metallicity,'(f9.4)')
+		write(73,'(a)') "Planet orbit:     " // dbl2string(Dplanet,'(f9.4)') // "AU"
+		write(73,'(a)') "Planet radius:    " // dbl2string(Rplanet,'(f9.4)') // "Rjup"
+		write(73,'(a)') "Planet mass:      " // dbl2string(Mplanet,'(f9.4)') // "Mjup"
+		write(73,'(a)') "Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K"
+		close(unit=73)
+
 		dR1=Rplanet*0.1
 		dR2=Rplanet*0.1
 		dM1=Mplanet*0.1
@@ -1950,6 +1964,7 @@ c not entirely correct...
 		call output("Maximum logg:   " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
 			end select
 		enddo
+	stop
 		return
 	endif
 	goto 1
@@ -2030,15 +2045,29 @@ c not entirely correct...
 	endif
 	if(trim(planetname).eq.trim(name)) then	
 		close(unit=72)
-		call output("Stellar mass:   " // dbl2string(Mstar,'(f7.2)') // "Msun")
-		call output("Stellar T:      " // dbl2string(Tstar,'(f7.2)') // "K")
-		call output("Stellar radius: " // dbl2string(Rstar,'(f7.2)') // "Rsun")
-		call output("Stellar logg:   " // dbl2string(logg,'(f7.2)'))
-		call output("Metallicity:    " // dbl2string(metallicity,'(f7.2)'))
+		call output("Stellar mass:   " // dbl2string(Mstar,'(f9.4)') // "Msun")
+		call output("Stellar T:      " // dbl2string(Tstar,'(f9.4)') // "K")
+		call output("Stellar radius: " // dbl2string(Rstar,'(f9.4)') // "Rsun")
+		call output("Stellar logg:   " // dbl2string(logg,'(f9.4)'))
+		call output("Metallicity:    " // dbl2string(metallicity,'(f9.4)'))
 		call output("Planet orbit:   " // dbl2string(Dplanet,'(f7.4)') // "AU")
-		call output("Planet radius:  " // dbl2string(Rplanet,'(f7.2)') // "Rjup")
-		call output("Planet mass:    " // dbl2string(Mplanet,'(f7.2)') // "Mjup")
-		call output("Blackbody T:    " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f7.2)') // "K")
+		call output("Planet radius:  " // dbl2string(Rplanet,'(f9.4)') // "Rjup")
+		call output("Planet mass:    " // dbl2string(Mplanet,'(f9.4)') // "Mjup")
+		call output("Blackbody T:    " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K")
+
+		open(unit=73,file=trim(outputdir) // "ListParameters",RECL=1000)
+		write(73,'(a)') "Stellar mass:     " // dbl2string(Mstar,'(f9.4)') // "Msun"
+		write(73,'(a)') "Stellar T:        " // dbl2string(Tstar,'(f9.4)') // "K"
+		write(73,'(a)') "Stellar radius:   " // dbl2string(Rstar,'(f9.4)') // "Rsun"
+		write(73,'(a)') "Stellar logg:     " // dbl2string(logg,'(f9.4)')
+		write(73,'(a)') "Stellar distance: " // dbl2string(Distance,'(f9.4)') // "pc"
+		write(73,'(a)') "Metallicity:      " // dbl2string(metallicity,'(f9.4)')
+		write(73,'(a)') "Planet orbit:     " // dbl2string(Dplanet,'(f9.4)') // "AU"
+		write(73,'(a)') "Planet radius:    " // dbl2string(Rplanet,'(f9.4)') // "Rjup"
+		write(73,'(a)') "Planet mass:      " // dbl2string(Mplanet,'(f9.4)') // "Mjup"
+		write(73,'(a)') "Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K"
+		close(unit=73)
+
 		do i=1,n_ret
 			select case(RetPar(i)%keyword)
 				case("Rp","rp","RP")
