@@ -11,16 +11,17 @@
 
 	do i=1,nai
 		call output("Model number: " // int2string(i,'(i0.6)'))
+		write(outputdir,'(a,"model",i0.6,"/")') trim(outputdir0),i
+		write(command,'("mkdir -p ",a)') trim(outputdir)
+		call system(command)
+		inquire(file=trim(outputdir) // "parameters",exist=exist)
+
 1		chi2=0d0
 		modelsucces=.true.
 		do j=1,n_ret
 			var(j)=random(idum)
 		enddo
 
-		write(outputdir,'(a,"model",i0.6,"/")') trim(outputdir0),i
-		write(command,'("mkdir -p ",a)') trim(outputdir)
-		call system(command)
-		inquire(file=trim(outputdir) // "parameters",exist=exist)
 		if(.not.exist) then
 			call MapRetrieval(var,dvar)
 			if(mapCOratio.and..not.dochemistry) call DoMapCOratio()
