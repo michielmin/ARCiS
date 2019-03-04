@@ -6,6 +6,7 @@
 	real*8 z,dz,E,tau,Planck,random,v,dx,dy,f
 	real*8,allocatable :: Ca(:,:,:),Cs(:,:),Ce(:,:,:),g(:,:),spec(:,:,:),EJv_omp(:),EJv2_omp(:)
 	real*8,allocatable :: specsource_star(:),specsource_planet(:),EJv_phot(:),CabsL(:)
+	real*8,allocatable :: specsource_star_omp(:),specsource_planet_omp(:),spec_omp(:,:,:)
 	real*8 tau_v,x,y,EJv(nr),E0_star,E0_planet,EJv2(nr),dEJv(nr)
 	real*8 tot,Lum,tot2,Cplanck(nr),dTdP_ad,dTdP,must,Eprev(nr),rr,cwg(ng),dT0(nr)
 	real*8 T0(nr),E0,chi2,nabla,scale,Crw(nr),Cpl(nr),dlnT,dlnP,kapmax
@@ -182,14 +183,21 @@
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(iphot,x,y,z,dx,dy,dz,goingup,E0,jr,ilam,ig,onedge,EJv_omp,icount,rr,jr0,EJv_phot,EJv2_omp)
-!$OMP& SHARED(Nphot,NphotPlanet,TeffP,specsource_planet,specsource_star,must,ng,nlam,nr,Crw,Cpl,Ce,Ca,Cs,g,M,EJv,spec,
-!$OMP& 	dorw,E0_planet,E0_star,R,iopenmp0,niter,iter,cwg,EJv2)
+!$OMP& PRIVATE(iphot,x,y,z,dx,dy,dz,goingup,E0,jr,ilam,ig,onedge,EJv_omp,icount,rr,jr0,EJv_phot,EJv2_omp,
+!$OMP&		specsource_planet_omp,specsource_star_omp,spec_omp)
+!$OMP& SHARED(EJv,EJv2,M,Nphot,NphotPlanet,TeffP,specsource_planet,specsource_star,must,ng,nlam,nr,Crw,Cpl,Ce,Ca,Cs,g,
+!$OMP& 	dorw,E0_planet,E0_star,R,niter,iter,cwg,spec)
 	allocate(EJv_omp(nr))
 	EJv_omp=0d0
 	allocate(EJv2_omp(nr))
 	EJv2_omp=0d0
 	allocate(EJv_phot(nr))
+	allocate(specsource_star_omp(nlam-1))
+	allocate(specsource_planet_omp(nlam-1))
+	allocate(spec_omp(nlam-1,ng,nr))
+	specsource_star_omp=specsource_star
+	specsource_planet_omp=specsource_planet
+	spec=spec
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iphot=1,Nphot
@@ -254,6 +262,9 @@
 	deallocate(EJv_omp)
 	deallocate(EJv2_omp)
 	deallocate(EJv_phot)
+	deallocate(specsource_star_omp)
+	deallocate(specsource_planet_omp)
+	deallocate(spec_omp)
 !$OMP FLUSH
 !$OMP END PARALLEL
 

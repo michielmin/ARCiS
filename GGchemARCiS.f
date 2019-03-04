@@ -2185,7 +2185,7 @@ c      write(*,*)
         qual = SQUAL(Sat0,active)
         print'("it=",I4," qual=",1pE13.4E4)',it,qual
         if (qual<1.Q-20) exit
-        if (verbose>0) read(*,'(a1)') char1
+c        if (verbose>0) read(*,'(a1)') char1
 
       enddo  
       Sat = Sat0

@@ -80,11 +80,11 @@ c terms of use
 	starttime_w=omp_get_wtime()
 #endif
 	Tconverged=.false.
+	nTiter=0
 	call SetupStructure(computeopac)
 	if(domakeai.and..not.modelsucces) return
 	if(computeopac) call SetupOpacities()
 	if(computeT.and.computeopac) then
-		nTiter=0
 		temp=par_tprofile
 		do while(.not.Tconverged.and.nTiter.le.maxiter)
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " // trim(int2string(maxiter,'(i3)')) // ")")
