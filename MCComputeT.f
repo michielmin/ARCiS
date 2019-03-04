@@ -234,9 +234,9 @@
 			jr=nr
 			E0=E0_star
 		endif
-		do while((jr.le.nr.and.jr.ge.1))
+		do while((jr.le.nr.and.jr.ge.1).and.random(idum).gt.1d-8)
 1			continue
-			if((dorw(jr).and.jr.lt.nr)) then
+            if((dorw(jr).and.jr.lt.nr).and.random(idum).gt.1d-8) then
 				if(RandomWalkT(x,y,z,dx,dy,dz,E0,Crw,Cpl,jr,EJv_phot,dorw)) goto 1
 			endif
 			call travelcomputeT(x,y,z,dx,dy,dz,E0,jr,onedge,goingup,
