@@ -60,7 +60,7 @@
 		do imol=1,nmol
 			if(mixrat_r(i,imol).gt.0d0) tot=tot+mixrat_r(i,imol)
 		enddo
-		mixrat_r(i,1:nmol)=mixrat_r(i,1:nmol)/tot
+		if(tot.gt.0d0) mixrat_r(i,1:nmol)=mixrat_r(i,1:nmol)/tot
 	enddo
 	endif
 
@@ -1233,7 +1233,7 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	real*8 Tin,Pin,mol_abun(nmol),nabla_ad
 	character*10 mol_names(nmol)
 	logical includemol(nmol),didcondens,ini,condensates
-	integer Ncloud
+	integer Ncloud,i
 	real*8 Xcloud(max(Ncloud,1)),MMW,Tg
 	character*500 cloudspecies(max(Ncloud,1)),namecloud
 
@@ -1241,6 +1241,10 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 
 c	goto 1
 	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates)
+
+	do i=1,nmol
+		if(.not.mol_abun(i).gt.0d0) mol_abun(i)=0d0
+	enddo
 
 	nabla_ad=2d0/7d0
 
