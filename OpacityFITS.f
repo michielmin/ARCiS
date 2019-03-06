@@ -516,7 +516,7 @@ C	 create the new empty FITS file
 	real*8 kappa_mol(ng,nmol,nlam),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random,w1,ww
 	real*8,allocatable :: temp(:),wtemp(:)
 
-	if(.not.Ktable(imol)%available) then
+	if(.not.Ktable(imol)%available.or..not.includemol(imol)) then
 		kappa_mol(1:ng,imol,1:nlam)=0d0
 		return
 	endif
