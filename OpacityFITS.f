@@ -231,9 +231,7 @@ C	 create the new empty FITS file
 	filename=trim(opacitydir) // "opacity"
 	filename=trim(filename) // "_" // trim(molname(imol))
 	filename=trim(filename) // ".fits"
-	print*,unit,trim(filename),readwrite,blocksize,status
 	call ftopen(unit,trim(filename),readwrite,blocksize,status)
-	print*,unit,trim(filename),readwrite,blocksize,status
 	if (status /= 0) then
 		filename=trim(opacitydir) // "opacity"
 		filename=trim(filename) // "_" // trim(molname(imol))
