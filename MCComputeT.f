@@ -56,6 +56,8 @@
 		do ig=1,ng
 			do ir=1,nr
 				call Crossections(ir,ilam,ig,Ca(ir,ilam,ig),Cs(ir,ilam),docloud0)
+				if(.not.Ca(ir,ilam,ig).gt.0d0) Ca(ir,ilam,ig)=0d0
+				if(.not.Cs(ir,ilam).gt.0d0) Cs(ir,ilam)=0d0
 				Ce(ir,ilam,ig)=Ca(ir,ilam,ig)+Cs(ir,ilam)
 			enddo
 		enddo
