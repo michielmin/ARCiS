@@ -332,7 +332,8 @@ C	 create the new empty FITS file
 			enddo
 			tot=0d0
 			do ig=1,ngF
-				tot(1:Ktable(imol)%nT,1:Ktable(imol)%nP)=tot(1:Ktable(imol)%nT,1:Ktable(imol)%nP)+temp(ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)*wtemp(ig)
+				tot(1:Ktable(imol)%nT,1:Ktable(imol)%nP)=tot(1:Ktable(imol)%nT,1:Ktable(imol)%nP)
+     &					+temp(ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)*wtemp(ig)
 			enddo
 			tot=tot/sum(wtemp(1:ngF))
 			call sortw(temp,wtemp,ngF)
@@ -346,10 +347,12 @@ C	 create the new empty FITS file
 				do ig=1,ng
 					call hunt(wtemp,ngF,gg(ig),j)
 					if(j.eq.0) then
-						Ktable(imol)%ktable(ilam,ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=temp(1,1:Ktable(imol)%nT,1:Ktable(imol)%nP)
+						Ktable(imol)%ktable(ilam,ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=
+     &			temp(1,1:Ktable(imol)%nT,1:Ktable(imol)%nP)
 					else
 						w1=(gg(ig)-wtemp(j+1))/(wtemp(j)-wtemp(j+1))
-						Ktable(imol)%ktable(ilam,ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=temp(j,1:Ktable(imol)%nT,1:Ktable(imol)%nP)*w1+temp(j+1,1:Ktable(imol)%nT,1:Ktable(imol)%nP)*(1d0-w1)
+						Ktable(imol)%ktable(ilam,ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=
+     &			temp(j,1:Ktable(imol)%nT,1:Ktable(imol)%nP)*w1+temp(j+1,1:Ktable(imol)%nT,1:Ktable(imol)%nP)*(1d0-w1)
 					endif
 				enddo
 				do iT=1,Ktable(imol)%nT

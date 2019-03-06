@@ -166,7 +166,8 @@ c start the loop
 		vsed(i)=-sqrt(pi)*rpart(i)*rhodust*Ggrav*Mplanet/(2d0*Clouddens(i)*vth(i)*CloudR(i)**2)
 		mpart(i)=rhodust*4d0*pi*rpart(i)**3/3d0
 
-		Sc(i)=min(vthv(i)*rpart(i),kb*CloudT(i)*sqrt(8d0*kb*CloudT(i)/(pi*2.3*mp))/(3d0*CloudP(i)*1d6*8e-15))*4d0*pi*rpart(i)*Clouddens(i)
+		Sc(i)=min(vthv(i)*rpart(i),kb*CloudT(i)*sqrt(8d0*kb*CloudT(i)/(pi*2.3*mp))/(3d0*CloudP(i)*1d6*8e-15))
+     &					*4d0*pi*rpart(i)*Clouddens(i)
 		Sc(i)=fstick*Sc(i)
 	enddo
 
@@ -181,8 +182,10 @@ c start the loop
 			if(quadratic) then
 			f1=(CloudR(i-1)**2-CloudR(i)**2)/(CloudR(i+1)**2-CloudR(i)**2)
 			f2=(CloudR(i-1)-CloudR(i))/(CloudR(i+1)-CloudR(i))
-			af=((Clouddens(i-1)-Clouddens(i))-f2*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)**2-CloudR(i)**2)-f2*(CloudR(i+1)**2-CloudR(i)**2))
-			bf=((Clouddens(i-1)-Clouddens(i))-f1*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)-CloudR(i))-f1*(CloudR(i+1)-CloudR(i)))
+			af=((Clouddens(i-1)-Clouddens(i))-f2*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)**2-CloudR(i)**2)
+     &				-f2*(CloudR(i+1)**2-CloudR(i)**2))
+			bf=((Clouddens(i-1)-Clouddens(i))-f1*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)-CloudR(i))
+     &				-f1*(CloudR(i+1)-CloudR(i)))
 			drho(i)=2d0*af*CloudR(i)+bf
 			af=((vsed(i-1)*Clouddens(i-1)-vsed(i)*Clouddens(i))-f2*(vsed(i+1)*Clouddens(i+1)-vsed(i)*Clouddens(i)))/
      &				((CloudR(i-1)**2-CloudR(i)**2)-f2*(CloudR(i+1)**2-CloudR(i)**2))

@@ -142,7 +142,8 @@ c	atoms_cloud(i,8)=min(molfracs_atoms(6),molfracs_atoms(8))/molfracs_atoms(9)
 c	atoms_cloud(i,13)=molfracs_atoms(13)/molfracs_atoms(9)
 c	atoms_cloud(i,14)=molfracs_atoms(14)/molfracs_atoms(9)
 	atoms_cloud(i,5)=atoms_cloud(i,6)+atoms_cloud(i,7)+atoms_cloud(i,8)+atoms_cloud(i,14)+atoms_cloud(i,13)+2d0
-c	write(CSname(i),'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms_cloud(i,8),atoms_cloud(i,6),atoms_cloud(i,7),atoms_cloud(i,5)
+c	write(CSname(i),'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms_cloud(i,8),atoms_cloud(i,6),atoms_cloud(i,7)
+c     &				,atoms_cloud(i,5)
 	write(CSname(i),'("Mg",f3.1,"SiO",f3.1)') atoms_cloud(i,7),atoms_cloud(i,5)
 	atoms_cloud(i,9)=0
 	atoms_cloud(i,5)=atoms_cloud(i,5)-2

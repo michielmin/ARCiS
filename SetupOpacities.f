@@ -674,7 +674,8 @@ c For other than H2 from Sneep & Ubachs (2005)
 			end select
 		endif
 	enddo
-	Cs=Cs+mixratHaze*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4+kappaHaze*2d0*mp)*exp(-(abs(log10(P(ir)/PHaze))/log10(dPHaze))**2/2d0)
+	Cs=Cs+mixratHaze*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4+kappaHaze*2d0*mp)*exp(-(abs(log10(P(ir)/PHaze))
+     &					/log10(dPHaze))**2/2d0)
 
 	return
 	end

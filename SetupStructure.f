@@ -270,8 +270,8 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
 				Tc=max(min(T(i),3000d0),100d0)
 					Tc=T(i)
 				call cpu_time(starttime)
-				if(cloudcompute) call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
+				if(cloudcompute) call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,
+     &				cloudspecies,XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
 				call cpu_time(stoptime)
 				chemtime=chemtime+stoptime-starttime
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
@@ -775,7 +775,8 @@ c use Ackerman & Marley 2001 cloud computation
 				if(Cloud(ii)%haze) then
 					Xc=Cloud(ii)%fcond*XeqCloud(i,ii)
 				else
-					Xc=(Xc1+(XeqCloud(i,ii)-XeqCloud(i-1,ii))/real(nsubr))/(1d0-Cloud(ii)%frain*((P(i)-P(i-1))/real(nsubr))/(lambdaC*P(i)))
+					Xc=(Xc1+(XeqCloud(i,ii)-XeqCloud(i-1,ii))/real(nsubr))/(1d0-Cloud(ii)%frain*((P(i)-P(i-1))
+     &						/real(nsubr))/(lambdaC*P(i)))
 				endif
 				if(Xc.le.0d0.and.cl) then
 					cloud_dens(i,ii)=0d0
