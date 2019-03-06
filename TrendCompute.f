@@ -4,7 +4,8 @@ c	COratio,NOratio,SiOratio,Z		are output
 c	molfracs_atoms 					is set
 	use AtomsModule
 	IMPLICIT NONE
-	real*8 COratio,Z,TiScale,enhancecarbon,fdry,fwet,Z0,COratio0
+	real*8 COratio,Z,TiScale,fdry,fwet,Z0,COratio0
+	logical enhancecarbon
 	real*8 NOratio,SiOratio
 	integer i,idum,N
 	real*8 Mp,Rp,Zstar,gasdev,Tp,random,Nscale,Tstar
