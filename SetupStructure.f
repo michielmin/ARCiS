@@ -1060,7 +1060,7 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	wet_atoms=solid_atoms-dry_atoms
 
 	tot_atoms=gas_atoms+f_dry*dry_atoms+f_wet*wet_atoms
-	tot_atoms(1:2)=tot_atoms(1:2)*10d0**-metallicity0
+	tot_atoms(1:2)=tot_atoms(1:2)*10d0**(-metallicity0)
 	tot_atoms(17:18)=tot_atoms(17:18)*scale_fe
 	tot_atoms=tot_atoms/sum(tot_atoms(1:N_atoms))
 
