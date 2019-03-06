@@ -553,7 +553,6 @@ c	condensates=(condensates.or.cloudcompute)
 		call ReadData()
 	else
 		do i=1,nmol
-			print*,i
 			if(includemol(i)) call InitReadOpacityFITS(i)
 		enddo
 	endif

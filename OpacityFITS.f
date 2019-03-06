@@ -228,11 +228,12 @@ C	 create the new empty FITS file
 	call ftgiou (unit,status)
 	! Open file
 	readwrite=0
-	filename=''
 	filename=trim(opacitydir) // "opacity"
 	filename=trim(filename) // "_" // trim(molname(imol))
 	filename=trim(filename) // ".fits"
-	call ftopen(unit,filename,readwrite,blocksize,status)
+	print*,unit,trim(filename),readwrite,blocksize,status
+	call ftopen(unit,trim(filename),readwrite,blocksize,status)
+	print*,unit,trim(filename),readwrite,blocksize,status
 	if (status /= 0) then
 		filename=trim(opacitydir) // "opacity"
 		filename=trim(filename) // "_" // trim(molname(imol))
