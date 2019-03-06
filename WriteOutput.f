@@ -516,7 +516,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	subroutine ARIELspecres(lam,R,Rexp)
 	IMPLICIT NONE
 	integer nlam,j
-	data(nlam=         103)
+	parameter(nlam=103)
 	real*8 lam(*),R(*),Rexp(*)
 	real*8 l0(         103),R0(         103),e0(         103)
 	data (l0(j),j=1,         103) /
