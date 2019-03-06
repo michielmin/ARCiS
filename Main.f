@@ -87,7 +87,8 @@ c terms of use
 	if(computeT.and.computeopac) then
 		temp=par_tprofile
 		do while(.not.Tconverged.and.nTiter.le.maxiter)
-			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " // trim(int2string(maxiter,'(i3)')) // ")")
+			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
+     &					// trim(int2string(maxiter,'(i3)')) // ")")
 			f=1d0/real(nTiter+1)
 			f=1d0
 			if(nTiter.ge.2) f=0.5
