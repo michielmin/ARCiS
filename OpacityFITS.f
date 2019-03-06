@@ -228,6 +228,7 @@ C	 create the new empty FITS file
 	call ftgiou (unit,status)
 	! Open file
 	readwrite=0
+	status=0
 	filename=trim(opacitydir) // "opacity"
 	filename=trim(filename) // "_" // trim(molname(imol))
 	filename=trim(filename) // ".fits"
