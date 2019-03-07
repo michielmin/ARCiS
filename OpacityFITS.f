@@ -229,6 +229,7 @@ C	 create the new empty FITS file
 	! Open file
 	readwrite=0
 	status=0
+	blocksize=0
 	filename=trim(opacitydir) // "opacity"
 	filename=trim(filename) // "_" // trim(molname(imol))
 	filename=trim(filename) // ".fits"
@@ -239,6 +240,8 @@ C	 create the new empty FITS file
 	if (.not.truefalse.or.status /= 0) then
 		readwrite=0
 		status=0
+		blocksize=0
+		print*,unit
 		filename=trim(opacitydir) // "opacity"
 		filename=trim(filename) // "_" // trim(molname(imol))
 		filename=trim(filename) // ".fits.gz"
@@ -257,26 +260,16 @@ C	 create the new empty FITS file
 	group=1
 	nullval=-999
 
-	print*,1
 	call ftgkyd(unit,'Pmin',Ktable(imol)%P1,comment,status)
-	print*,2
 	call ftgkyd(unit,'Pmax',Ktable(imol)%P2,comment,status)
-	print*,3
 	call ftgkyd(unit,'Tmin',Ktable(imol)%T1,comment,status)
-	print*,4
 	call ftgkyd(unit,'Tmax',Ktable(imol)%T2,comment,status)
-	print*,5
 	call ftgkyd(unit,'l_min',Ktable(imol)%lam1,comment,status)
-	print*,6
 	call ftgkyd(unit,'l_max',Ktable(imol)%lam2,comment,status)
 
-	print*,7
 	call ftgkyj(unit,'nP',Ktable(imol)%nP,comment,status)
-	print*,8
 	call ftgkyj(unit,'nT',Ktable(imol)%nT,comment,status)
-	print*,9
 	call ftgkyj(unit,'nlam',Ktable(imol)%nlam,comment,status)
-	print*,10
 	call ftgkyj(unit,'ng',Ktable(imol)%ng,comment,status)
 
 	call output("Reading in correlated k-tables for " // trim(molname(imol)))
