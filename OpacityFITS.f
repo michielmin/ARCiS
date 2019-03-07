@@ -214,7 +214,7 @@ C	 create the new empty FITS file
 	integer istat,stat4,tmp_int,stat5,stat6
 	real*8  nullval,tot2,w1,ww,Pl,Planck
 	real*8,allocatable :: lamF(:),Ktemp(:,:,:,:),temp(:,:,:),wtemp(:),tot(:,:)
-	logical anynull
+	logical anynull,truefalse
 	integer naxes(4)
 	character*500 filename
 	integer ig,ilam,iT,iP,imol,i,j,i1,i2,ngF
@@ -232,13 +232,21 @@ C	 create the new empty FITS file
 	filename=trim(opacitydir) // "opacity"
 	filename=trim(filename) // "_" // trim(molname(imol))
 	filename=trim(filename) // ".fits"
-	call ftopen(unit,trim(filename),readwrite,blocksize,status)
-	if (status /= 0) then
+	inquire(file=trim(filename),exist=truefalse)
+	if(truefalse) then
+		call ftopen(unit,trim(filename),readwrite,blocksize,status)
+	endif
+	if (.not.truefalse.or.status /= 0) then
+		readwrite=0
+		status=0
 		filename=trim(opacitydir) // "opacity"
 		filename=trim(filename) // "_" // trim(molname(imol))
 		filename=trim(filename) // ".fits.gz"
-		call ftopen(unit,filename,readwrite,blocksize,status)
-		if (status /= 0) then
+		inquire(file=trim(filename),exist=truefalse)
+		if(truefalse) then
+			call ftopen(unit,trim(filename),readwrite,blocksize,status)
+		endif
+		if (.not.truefalse.or.status /= 0) then
 			call output("Opacity file not available: " // trim(filename))
 			call output("setting opacities to 0")
 			Ktable(imol)%available=.false.
