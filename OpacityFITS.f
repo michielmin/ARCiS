@@ -225,7 +225,6 @@ C	 create the new empty FITS file
 	! Get an unused Logical Unit Number to use to open the FITS file.
 	status=0
 
-	call ftgiou (unit,status)
 	! Open file
 	readwrite=0
 	status=0
@@ -235,18 +234,19 @@ C	 create the new empty FITS file
 	filename=trim(filename) // ".fits"
 	inquire(file=trim(filename),exist=truefalse)
 	if(truefalse) then
+		call ftgiou (unit,status)
 		call ftopen(unit,trim(filename),readwrite,blocksize,status)
 	endif
 	if (.not.truefalse.or.status /= 0) then
 		readwrite=0
 		status=0
 		blocksize=0
-		print*,unit
 		filename=trim(opacitydir) // "opacity"
 		filename=trim(filename) // "_" // trim(molname(imol))
 		filename=trim(filename) // ".fits.gz"
 		inquire(file=trim(filename),exist=truefalse)
 		if(truefalse) then
+			call ftgiou (unit,status)
 			call ftopen(unit,trim(filename),readwrite,blocksize,status)
 		endif
 		if (.not.truefalse.or.status /= 0) then
