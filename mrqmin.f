@@ -1,12 +1,13 @@
       SUBROUTINE mrqmin(y,sig,ndata,a,ia,ma,covar,alpha,nca,chisq,
      *funcs,alamda,beta)
       INTEGER ma,nca,ndata,ia(ma),MMAX
-      REAL*8 alamda,chisq,funcs,a(ma),alpha(nca,nca),covar(nca,nca),
+      REAL*8 alamda,chisq,a(ma),alpha(nca,nca),covar(nca,nca),
      *sig(ndata),y(ndata)
       PARAMETER (MMAX=100)
 CU    USES covsrt,gaussj,mrqcof
       INTEGER j,k,l,mfit
       REAL*8 ochisq,atry(MMAX),beta(MMAX),da(MMAX)
+	EXTERNAL funcs
       SAVE ochisq,atry,da,mfit!,beta
       if(alamda.lt.0.)then
         mfit=0

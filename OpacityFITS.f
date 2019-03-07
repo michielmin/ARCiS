@@ -288,7 +288,7 @@ C	 create the new empty FITS file
 	! HDU0 : opacities
 	!------------------------------------------------------------------------
 	! Check dimensions
-	call ftgknj(unit,'NAXIS',1,2,naxes,nfound,status)
+	call ftgknj(unit,'NAXIS',1,4,naxes,nfound,status)
 
 	! read_image
 
@@ -400,7 +400,7 @@ C	 create the new empty FITS file
 	call ftmrhd(unit,1,hdutype,status)	
 
 	! Check dimensions
-	call ftgknj(unit,'NAXIS',1,3,naxes,nfound,status)
+	call ftgknj(unit,'NAXIS',1,1,naxes,nfound,status)
 
 	npixels=naxes(1)
 
@@ -416,7 +416,7 @@ C	 create the new empty FITS file
 	call ftmrhd(unit,1,hdutype,status)	
 
 	! Check dimensions
-	call ftgknj(unit,'NAXIS',1,3,naxes,nfound,status)
+	call ftgknj(unit,'NAXIS',1,1,naxes,nfound,status)
 
 	npixels=naxes(1)
 

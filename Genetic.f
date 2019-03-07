@@ -102,7 +102,7 @@
 					gene(i,0,1:nvars)(1:7)=gene(i,j,1:nvars)(1:7)
 					call WriteStructure()
 					call WriteOutput()
-					call WriteRetrieval(j+(i-1)*npop,1d0/fit(i,j),var(i,j,1:nvars))
+					call WriteRetrieval(j+(i-1)*npop,1d0/fit(i,j),var(i,j,1:nvars),var(i,j,1:nvars),dvar0)
 				endif
 			endif
 		enddo
