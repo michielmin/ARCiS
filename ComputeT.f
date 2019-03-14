@@ -230,7 +230,7 @@
 	real*8,allocatable :: Ce(:,:,:),Ca(:,:,:),Cs(:,:,:),taustar(:,:)
 	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i,E,E0
 	real*8 Cjstar(nr),Jedd(nr),Cj(nr),Ch(nr),z,Hstar(nr),Jtot,Htot,Ktot
-	real*8 Jstar(nr),fedd(nr),Hedd(nr),lH1,lH2,P1,P2
+	real*8 Jstar(nr),fedd(nr),Hedd(nr),lH1,lH2,P1,P2,scale
 	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:)
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax
 	logical docloud0(max(nclouds,1)),converged
@@ -252,7 +252,7 @@
 	do iter=1,10
 	
 	T0(1:nr)=T(1:nr)
-	
+
 	do ir=1,nr
 		do ilam=1,nlam-1
 			call GetMatrix(ir,ilam,M,docloud0)
@@ -295,9 +295,6 @@
 		Cjstar(ir)=0d0
 		do ilam=1,nlam-1
 			do ig=1,ng
-				iT=TeffP+1
-				if(iT.gt.nBB-1) iT=nBB-1
-				if(iT.lt.1) iT=1
 				Jnu(ir,ilam,ig)=0d0
 				Hnu(ir,ilam,ig)=0d0
 				Knu(ir,ilam,ig)=0d0
@@ -308,14 +305,15 @@
 						iT=T(jr)+1
 						if(iT.gt.nBB-1) iT=nBB-1
 						if(iT.lt.1) iT=1
-						nu=-1d0*real(inu)/real(nnu+1)
+						scale=(T(jr)/real(iT))**4
+						nu=-1d0*(real(inu)-0.5)/real(nnu)
 						d=abs(R(jr+1)-R(jr))/abs(nu)
 						tau_a=d*dens(jr)*Ca(jr,ilam,ig)
 						tau=tau_a+d*dens(jr)*Cs(jr,ilam,ig)
 						if(P(jr).gt.Psimplecloud) tau=1d4
 						exp_tau=exp(-tau)
 						tautot=tautot+tau
-						contr=BB(iT,ilam)*(1d0-exp_tau)*fact*tau_a/tau
+						contr=scale*BB(iT,ilam)*(1d0-exp_tau)*fact*tau_a/tau
 						Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+contr/real(nnu*2)
 						Hnu(ir,ilam,ig)=Hnu(ir,ilam,ig)+nu*contr/real(nnu*2)
 						Knu(ir,ilam,ig)=Knu(ir,ilam,ig)+nu*nu*contr/real(nnu*2)
@@ -331,7 +329,7 @@
 					exp_tau=exp(-tau)
 					fact=fact*exp_tau
 				enddo
-				contr=(Fstar(ilam)/(4d0*pi*Dplanet**2))*fact
+				contr=must*(Fstar(ilam)/(pi*Dplanet**2))*fact
 				Hstar(ir)=Hstar(ir)-dfreq(ilam)*wgg(ig)*must*contr
 				Jstar(ir)=Jstar(ir)+dfreq(ilam)*wgg(ig)*contr
 				Cjstar(ir)=Cjstar(ir)+dfreq(ilam)*wgg(ig)*contr*Ca(ir,ilam,ig)
@@ -342,20 +340,21 @@
 						iT=T(jr)+1
 						if(iT.gt.nBB-1) iT=nBB-1
 						if(iT.lt.1) iT=1
-						nu=1d0*real(inu)/real(nnu+1)
+						scale=(T(jr)/real(iT))**4
+						nu=1d0*(real(inu)-0.5)/real(nnu)
 						d=abs(R(jr+1)-R(jr))/abs(nu)
 						tau_a=d*dens(jr)*Ca(jr,ilam,ig)
 						tau=tau_a+d*dens(jr)*Cs(jr,ilam,ig)
 						if(P(jr).gt.Psimplecloud) tau=1d4
 						exp_tau=exp(-tau)
 						tautot=tautot+tau
-						contr=BB(iT,ilam)*(1d0-exp_tau)*fact*tau_a/tau
+						contr=scale*BB(iT,ilam)*(1d0-exp_tau)*fact*tau_a/tau
 						Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+contr/real(nnu*2)
 						Hnu(ir,ilam,ig)=Hnu(ir,ilam,ig)+nu*contr/real(nnu*2)
 						Knu(ir,ilam,ig)=Knu(ir,ilam,ig)+nu*nu*contr/real(nnu*2)
 						fact=fact*exp_tau
 					enddo
-					contr=BB(iT,ilam)*fact*tau_a/tau
+					contr=scale*BB(iT,ilam)*fact*tau_a/tau
 					Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+contr/real(nnu*2)
 					Hnu(ir,ilam,ig)=Hnu(ir,ilam,ig)+nu*contr/real(nnu*2)
 					Knu(ir,ilam,ig)=Knu(ir,ilam,ig)+nu*nu*contr/real(nnu*2)
@@ -371,8 +370,9 @@
 	iT=TeffP+1
 	if(iT.gt.nBB-1) iT=nBB-1
 	if(iT.lt.1) iT=1
+	scale=(TeffP/real(iT))**4
 	do ilam=1,nlam-1
-		E0=E0+dfreq(ilam)*BB(iT,ilam)
+		E0=E0+scale*dfreq(ilam)*BB(iT,ilam)
 	enddo
 	E0=E0/4d0
 	do ir=1,nr
@@ -396,7 +396,7 @@
 			enddo
 		enddo
 		Cj(ir)=Cj(ir)/tot2
-		Ch(ir)=Ch(ir)/tot3
+		Ch(ir)=abs(Ch(ir)/tot3)
 	enddo
 
 	Jtot=0d0
@@ -409,13 +409,7 @@
 	enddo
 	Jedd(nr)=Hedd(nr)*Jtot/Htot
 	do ir=nr-1,1,-1
-		lH1=log(Hedd(ir+1)*Ch(ir+1)/grav(ir+1))
-		lH2=log(Hedd(ir)*Ch(ir)/grav(ir))
-		P1=P(ir+1)*1d6
-		P2=P(ir)*1d6
-c		Jedd(ir)=fedd(ir+1)*Jedd(ir+1)+(P(ir)-P(ir+1))*1d6*(Ch(ir+1)*Hedd(ir+1)/(grav(ir+1)))
-		Jedd(ir)=fedd(ir+1)*Jedd(ir+1)+
-     &		((P1-P2)/(lH1-lH2))*(exp((lH1-lH2)*P2/(P1-P2))-exp((lH1-lH2)*P1/(P1-P2)))*exp((lH2*P1-lH1*P2)/(P1-P2))
+		Jedd(ir)=fedd(ir+1)*Jedd(ir+1)+(P(ir)-P(ir+1))*1d6*(Ch(ir)*Hedd(ir)/(grav(ir)))
 		Jedd(ir)=Jedd(ir)/fedd(ir)
 	enddo
 	
@@ -442,7 +436,11 @@ c		Jedd(ir)=fedd(ir+1)*Jedd(ir+1)+(P(ir)-P(ir+1))*1d6*(Ch(ir+1)*Hedd(ir+1)/(grav
 		enddo
 		T0(ir)=real(iT)*(E/E0)**0.25
 
-		if(.not.T0(ir).gt.3d0) T0(ir)=3d0
+		if(.not.T0(ir).gt.3d0) then
+			print*,T0(ir),iT,ir,fedd(ir),fedd(ir+1),Ch(ir),Ch(ir+1)
+			T0(ir)=3d0
+			read*
+		endif
 		if(ir.lt.nr) then
 			dlnP=log(P(ir+1)/P(ir))
 			dlnT=log(T0(ir+1)/T0(ir))

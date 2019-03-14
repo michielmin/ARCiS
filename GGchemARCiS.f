@@ -1874,7 +1874,7 @@ c      write(*,*)
               call QGEDI ( DF, NELEM, Nunsolved, ipvt, det, work, 1 )
               if (info.ne.0) then
                 print*,"*** singular matrix in QGEFA: info=",info
-                stop
+                return!stop
               endif   
               !do i=1,Nunsolved
               !  print'(99(1pE12.3))',(DF(i,j),j=1,Nunsolved)
