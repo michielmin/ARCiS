@@ -13,6 +13,9 @@
 	logical docloud0(max(nclouds,1)),converged
 	type(Mueller) M	
 
+	call DoComputeTeddington(converged,f)
+	return
+
 	if(doMCcompute.and.nTiter.gt.0) then
 		call MCDoComputeT(converged,f)
 		converged=.false.
@@ -215,6 +218,297 @@
 
 
 
+	subroutine DoComputeTeddington(converged,f)
+	use GlobalSetup
+	use Constants
+	use modComputeT
+	use CloudModule
+	IMPLICIT NONE
+	integer iphase,iter
+	real*8 tau_V,tau_T,Planck,Cp(nr),f
+	real*8 g,dlnT,dlnP,d,tau,tautot,fact,contr,tau_a,exp_tau,nu
+	real*8,allocatable :: Ce(:,:,:),Ca(:,:,:),Cs(:,:,:),taustar(:,:)
+	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i,E,E0
+	real*8 Cjstar(nr),Jedd(nr),Cj(nr),Ch(nr),z,Hstar(nr),Jtot,Htot,Ktot
+	real*8 Jstar(nr),fedd(nr),Hedd(nr),lH1,lH2,P1,P2
+	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:)
+	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax
+	logical docloud0(max(nclouds,1)),converged
+	type(Mueller) M	
+
+	allocate(taustar(nlam,ng))
+	allocate(Ce(nr,nlam,ng))
+	allocate(Ca(nr,nlam,ng))
+	allocate(Cs(nr,nlam,ng))
+	allocate(Jnu(nr,nlam,ng))
+	allocate(Hnu(nr,nlam,ng))
+	allocate(Knu(nr,nlam,ng))
+
+	docloud0=.false.
+	do i=1,nclouds
+		if(Cloud(i)%coverage.gt.0.5) docloud0(i)=.true.
+	enddo
+	
+	do iter=1,10
+	
+	T0(1:nr)=T(1:nr)
+	
+	do ir=1,nr
+		do ilam=1,nlam-1
+			call GetMatrix(ir,ilam,M,docloud0)
+			g=0d0
+			tot=0d0
+			do iphase=1,180
+				g=g+M%F11(iphase)*costheta(iphase)*sintheta(iphase)
+				tot=tot+M%F11(iphase)*sintheta(iphase)
+			enddo
+			g=g/tot
+			do ig=1,ng
+				call Crossections(ir,ilam,ig,Ca(ir,ilam,ig),Cs(ir,ilam,ig),docloud0)
+				Ca(ir,ilam,ig)=Ca(ir,ilam,ig)/dens(ir)
+				Cs(ir,ilam,ig)=Cs(ir,ilam,ig)/dens(ir)
+				Ce(ir,ilam,ig)=(Ca(ir,ilam,ig)+Cs(ir,ilam,ig)*(1d0-g))
+			enddo
+		enddo
+	enddo
+
+	must=betaT
+	if(i2d.ne.0) then
+		if(i2d.eq.1) then
+			call ComputeBeta(90d0,twind,must)
+		else if(i2d.eq.2) then
+			call ComputeBeta(270d0,twind,must)
+		else if(i2d.eq.3) then
+			call ComputeBeta(0d0,twind,must)
+		else if(i2d.eq.4) then
+			call ComputeBeta(180d0,twind,must)
+		endif
+		must=must*betaT
+	endif
+
+	nnu=4
+	do ir=1,nr
+		Ktot=0d0
+		Jtot=0d0
+		Hstar(ir)=0d0
+		Jstar(ir)=0d0
+		Cjstar(ir)=0d0
+		do ilam=1,nlam-1
+			do ig=1,ng
+				iT=TeffP+1
+				if(iT.gt.nBB-1) iT=nBB-1
+				if(iT.lt.1) iT=1
+				Jnu(ir,ilam,ig)=0d0
+				Hnu(ir,ilam,ig)=0d0
+				Knu(ir,ilam,ig)=0d0
+				do inu=1,nnu
+					tautot=0d0
+					fact=1d0
+					do jr=ir+1,nr
+						iT=T(jr)+1
+						if(iT.gt.nBB-1) iT=nBB-1
+						if(iT.lt.1) iT=1
+						nu=-1d0*real(inu)/real(nnu+1)
+						d=abs(R(jr+1)-R(jr))/abs(nu)
+						tau_a=d*dens(jr)*Ca(jr,ilam,ig)
+						tau=tau_a+d*dens(jr)*Cs(jr,ilam,ig)
+						if(P(jr).gt.Psimplecloud) tau=1d4
+						exp_tau=exp(-tau)
+						tautot=tautot+tau
+						contr=BB(iT,ilam)*(1d0-exp_tau)*fact*tau_a/tau
+						Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+contr/real(nnu*2)
+						Hnu(ir,ilam,ig)=Hnu(ir,ilam,ig)+nu*contr/real(nnu*2)
+						Knu(ir,ilam,ig)=Knu(ir,ilam,ig)+nu*nu*contr/real(nnu*2)
+						fact=fact*exp_tau
+					enddo
+				enddo
+				fact=1d0
+				do jr=ir+1,nr
+					d=abs(R(jr+1)-R(jr))/abs(must)
+					tau_a=d*dens(jr)*Ca(jr,ilam,ig)
+					tau=tau_a+d*dens(jr)*Cs(jr,ilam,ig)
+					if(P(jr).gt.Psimplecloud) tau=1d4
+					exp_tau=exp(-tau)
+					fact=fact*exp_tau
+				enddo
+				contr=(Fstar(ilam)/(4d0*pi*Dplanet**2))*fact
+				Hstar(ir)=Hstar(ir)-dfreq(ilam)*wgg(ig)*must*contr
+				Jstar(ir)=Jstar(ir)+dfreq(ilam)*wgg(ig)*contr
+				Cjstar(ir)=Cjstar(ir)+dfreq(ilam)*wgg(ig)*contr*Ca(ir,ilam,ig)
+				do inu=1,nnu
+					tautot=0d0
+					fact=1d0
+					do jr=ir,1,-1
+						iT=T(jr)+1
+						if(iT.gt.nBB-1) iT=nBB-1
+						if(iT.lt.1) iT=1
+						nu=1d0*real(inu)/real(nnu+1)
+						d=abs(R(jr+1)-R(jr))/abs(nu)
+						tau_a=d*dens(jr)*Ca(jr,ilam,ig)
+						tau=tau_a+d*dens(jr)*Cs(jr,ilam,ig)
+						if(P(jr).gt.Psimplecloud) tau=1d4
+						exp_tau=exp(-tau)
+						tautot=tautot+tau
+						contr=BB(iT,ilam)*(1d0-exp_tau)*fact*tau_a/tau
+						Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+contr/real(nnu*2)
+						Hnu(ir,ilam,ig)=Hnu(ir,ilam,ig)+nu*contr/real(nnu*2)
+						Knu(ir,ilam,ig)=Knu(ir,ilam,ig)+nu*nu*contr/real(nnu*2)
+						fact=fact*exp_tau
+					enddo
+					contr=BB(iT,ilam)*fact*tau_a/tau
+					Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+contr/real(nnu*2)
+					Hnu(ir,ilam,ig)=Hnu(ir,ilam,ig)+nu*contr/real(nnu*2)
+					Knu(ir,ilam,ig)=Knu(ir,ilam,ig)+nu*nu*contr/real(nnu*2)
+				enddo
+				Ktot=Ktot+dfreq(ilam)*wgg(ig)*Knu(ir,ilam,ig)
+				Jtot=Jtot+dfreq(ilam)*wgg(ig)*Jnu(ir,ilam,ig)
+			enddo
+		enddo
+		fedd(ir)=Ktot/Jtot
+	enddo
+
+	E0=0d0
+	iT=TeffP+1
+	if(iT.gt.nBB-1) iT=nBB-1
+	if(iT.lt.1) iT=1
+	do ilam=1,nlam-1
+		E0=E0+dfreq(ilam)*BB(iT,ilam)
+	enddo
+	E0=E0/4d0
+	do ir=1,nr
+		Hedd(ir)=E0-Hstar(ir)
+	enddo
+
+	do ir=nr,1,-1
+		Cj(ir)=0d0
+		Ch(ir)=0d0
+		tot2=0d0
+		tot3=0d0
+		iT=T(ir)+1
+		if(iT.gt.nBB-1) iT=nBB-1
+		if(iT.lt.1) iT=1
+		do ilam=1,nlam-1
+			do ig=1,ng
+				Cj(ir)=Cj(ir)+wgg(ig)*dfreq(ilam)*Jnu(ir,ilam,ig)*Ca(ir,ilam,ig)
+				tot2=tot2+wgg(ig)*dfreq(ilam)*Jnu(ir,ilam,ig)
+				Ch(ir)=Ch(ir)+wgg(ig)*dfreq(ilam)*Hnu(ir,ilam,ig)*Ce(ir,ilam,ig)
+				tot3=tot3+wgg(ig)*dfreq(ilam)*Hnu(ir,ilam,ig)
+			enddo
+		enddo
+		Cj(ir)=Cj(ir)/tot2
+		Ch(ir)=Ch(ir)/tot3
+	enddo
+
+	Jtot=0d0
+	Htot=0d0
+	do ilam=1,nlam-1
+		do ig=1,ng
+			Jtot=Jtot+dfreq(ilam)*wgg(ig)*Jnu(nr,ilam,ig)
+			Htot=Htot+dfreq(ilam)*wgg(ig)*Hnu(nr,ilam,ig)
+		enddo
+	enddo
+	Jedd(nr)=Hedd(nr)*Jtot/Htot
+	do ir=nr-1,1,-1
+		lH1=log(Hedd(ir+1)*Ch(ir+1)/grav(ir+1))
+		lH2=log(Hedd(ir)*Ch(ir)/grav(ir))
+		P1=P(ir+1)*1d6
+		P2=P(ir)*1d6
+c		Jedd(ir)=fedd(ir+1)*Jedd(ir+1)+(P(ir)-P(ir+1))*1d6*(Ch(ir+1)*Hedd(ir+1)/(grav(ir+1)))
+		Jedd(ir)=fedd(ir+1)*Jedd(ir+1)+
+     &		((P1-P2)/(lH1-lH2))*(exp((lH1-lH2)*P2/(P1-P2))-exp((lH1-lH2)*P1/(P1-P2)))*exp((lH2*P1-lH1*P2)/(P1-P2))
+		Jedd(ir)=Jedd(ir)/fedd(ir)
+	enddo
+	
+	do ir=nr,1,-1
+		E=(Cjstar(ir)+Cj(ir)*Jedd(ir))
+		iTmin=1
+		iTmax=nBB
+		iT=0.5d0*(iTmax+iTmin)
+		do while(abs(iTmax-iTmin).gt.1)
+			E0=0d0
+			do ilam=1,nlam-1
+				do ig=1,ng
+					E0=E0+wgg(ig)*dfreq(ilam)*BB(iT,ilam)*Ca(ir,ilam,ig)
+				enddo
+			enddo
+			if(E0.gt.E) then
+				iTmax=iT
+			else
+				iTmin=iT
+			endif
+			iT=0.5d0*(iTmax+iTmin)
+			if(iT.lt.1) iT=1
+			if(iT.gt.nBB) iT=nBB
+		enddo
+		T0(ir)=real(iT)*(E/E0)**0.25
+
+		if(.not.T0(ir).gt.3d0) T0(ir)=3d0
+		if(ir.lt.nr) then
+			dlnP=log(P(ir+1)/P(ir))
+			dlnT=log(T0(ir+1)/T0(ir))
+			if((dlnT/dlnP).gt.nabla_ad(ir)) then
+				dlnT=(nabla_ad(ir))*dlnP
+				T0(ir)=T0(ir+1)/exp(dlnT)
+			endif
+		endif
+	enddo
+
+	converged=.true.
+	do ir=1,nr
+		if(abs(T(ir)-T0(ir))/(T(ir)+T0(ir)).gt.epsiter) converged=.false.
+	enddo
+
+	chi2=0d0
+	do ir=1,nr
+		chi2=chi2+((min(T(ir),2900d0)-min(T0(ir),2900d0))/((min(T0(ir),2900d0)+min(T(ir),2900d0))*epsiter))**2
+		T(ir)=T(ir)**(1d0-f)*T0(ir)**f
+	enddo
+	chi2=chi2/real(nr)
+
+	call WriteStructure
+
+	enddo
+	converged=.false.
+
+	deallocate(taustar)
+	deallocate(Ce)
+	deallocate(Ca)
+	deallocate(Cs)
+	deallocate(Jnu)
+	deallocate(Hnu)
+	deallocate(Knu)
+
+
+	return
+	end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	subroutine DoComputeTfluxes(converged,niter,f)
 	use GlobalSetup
 	use Constants
@@ -241,7 +535,7 @@
 	allocate(PlStar(nlam))
 	allocate(PlEffP(nlam))
 
-	if(nTiter.eq.0) call MCDoComputeT(converged)
+c	if(nTiter.eq.0) call MCDoComputeT(converged)
 
 	docloud0=.false.
 	do i=1,nclouds

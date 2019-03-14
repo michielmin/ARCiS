@@ -1964,7 +1964,6 @@ c not entirely correct...
 		call output("Maximum logg:   " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
 			end select
 		enddo
-	stop
 		return
 	endif
 	goto 1
