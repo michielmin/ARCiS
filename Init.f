@@ -1258,7 +1258,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	enddo
 
 	computeT=.false.
-	doMCcompute=.true.
+	doMCcompute=.false.
 	TeffP=600d0
 	outputopacity=.false.
 

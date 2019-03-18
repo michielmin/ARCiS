@@ -630,7 +630,7 @@ c equations for material
 		rpart(i)=sqrt(rr*rpart(i))
 	enddo
 
-	if(computeT.and.nTiter.lt.maxiter.and.nTiter.gt.0.and..not.doMCcompute) then
+	if(computeT.and.nTiter.lt.maxiter.and.nTiter.gt.0.and..not.doMCcompute.and..false.) then
 		k=1
 		do i=1,nr
 			cloud_dens(i,ii)=0d0
@@ -642,7 +642,7 @@ c equations for material
 				if(k.gt.nnr) k=nnr
 			enddo
 		enddo
-		call DoComputeT(Tconverged,0.5d0)
+		call DoComputeT(Tconverged,0.1d0)
 		
 		k=1
 		do i=1,nr-1
