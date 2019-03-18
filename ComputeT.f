@@ -231,8 +231,8 @@ c		endif
 	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i,E,E0
 	real*8 Cjstar(nr),Jedd(nr),Cj(nr),Ch(nr),z,Hstar(nr),Jtot,Htot,Ktot,AStar(nr)
 	real*8 Jstar(nr),fedd(nr),Hedd(nr),lH1,lH2,P1,P2,scale,IntH(nr,nr),Fl2(nr)
-	real*8 B1,B2,Si(0:nr+1),Ts(nr),tauR(nr+1),tottauR(nr+1),Fl(nr),minFl(nr),maxFl(nr)
-	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:),IntHnu(:,:,:),TempH(:)
+	real*8 B1,B2,Ts(nr),Fl(nr),minFl(nr),maxFl(nr)
+	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:),IntHnu(:,:,:),TempH(:),CaL(:,:)
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax,info,NRHS,IWORK(10*nr*nr)
 	logical docloud0(max(nclouds,1)),converged
 	type(Mueller) M	
@@ -248,6 +248,7 @@ c		endif
 	allocate(taustar(nlam,ng))
 	allocate(Ce(nr,nlam,ng))
 	allocate(Ca(nr,nlam,ng))
+	allocate(CaL(nr,nlam))
 	allocate(Cs(nr,nlam,ng))
 	allocate(Jnu(nr,nlam,ng))
 	allocate(Hnu(nr,nlam,ng))
@@ -284,9 +285,11 @@ c		endif
 				tot=tot+M%F11(iphase)*sintheta(iphase)
 			enddo
 			g=g/tot
+			CaL(ir,ilam)=0d0
 			do ig=1,ng
 				call Crossections(ir,ilam,ig,Ca(ir,ilam,ig),Cs(ir,ilam,ig),docloud0)
 				Ce(ir,ilam,ig)=Ca(ir,ilam,ig)+Cs(ir,ilam,ig)
+				CaL(ir,ilam)=CaL(ir,ilam)+wgg(ig)*Ca(ir,ilam,ig)
 			enddo
 		enddo
 	enddo
@@ -297,10 +300,6 @@ c		endif
 	IntHnu=0d0
 	Hstar=0d0
 	Cjstar=0d0
-	tauR=0d0
-	tottauR=0d0
-	tauR(nr+1)=0d0
-	tottauR(nr+1)=1d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ir,ilam,ig,inu,jr,tautot,TempH,fact,nu,d,tau_a,tau,exp_tau,contr)
@@ -389,39 +388,27 @@ c		endif
 	
 	Ts(1:nr)=T(1:nr)
 
-	tauR=0d0
-	tottauR=0d0
-	tauR(nr+1)=0d0
-	tottauR(nr+1)=1d0
 	IntH=0d0
-	Si(nr+1)=0d0
-	do ilam=1,nlam-1
-		do jr=nr,1,-1
-			iT=T(jr)+1
-			if(iT.gt.nBB-1) iT=nBB-1
-			if(iT.lt.1) iT=1
-			scale=(T(jr)/real(iT))**4
-			Si(jr)=scale*BB(iT,ilam)
-		enddo
-		Si(0)=Si(1)
-		do ir=nr,1,-1
-			do jr=1,nr
-				IntH(ir,jr)=IntH(ir,jr)+Si(jr)*IntHnu(ilam,ir,jr)
-			enddo
-			do ig=1,ng
-				do jr=nr,1,-1
-					if(jr.eq.ir) then
-						tauR(ir)=tauR(ir)+dfreq(ilam)*wgg(ig)*abs(R(ir+1)-R(ir))*Ce(ir,ilam,ig)*Si(ir)/(must*0.5d0+0.5d0)
-						tottauR(ir)=tottauR(ir)+dfreq(ilam)*wgg(ig)*Si(ir)
-					endif	
-				enddo
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ilam,jr,iT,scale,ir,ig)
+!$OMP& SHARED(nlam,T,nr,IntH,IntHnu,BB)
+!$OMP DO
+!$OMP& SCHEDULE(DYNAMIC,1)
+	do ir=1,nr
+		do ilam=1,nlam-1
+			do jr=nr,1,-1
+				iT=T(jr)+1
+				if(iT.gt.nBB-1) iT=nBB-1
+				if(iT.lt.1) iT=1
+				scale=(T(jr)/real(iT))**4
+				IntH(ir,jr)=IntH(ir,jr)+scale*BB(iT,ilam)*IntHnu(ilam,ir,jr)
 			enddo
 		enddo
 	enddo
-	tauR=tauR/tottauR
-	do ir=nr,1,-1
-		tauR(ir)=tauR(ir+1)+tauR(ir)
-	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 
 	E0=0d0
 	iT=TeffP+1
@@ -439,19 +426,16 @@ c		endif
 		if(iT.lt.1) iT=1
 		E=0d0
 		do ilam=1,nlam-1
-			do ig=1,ng
-				E=E+wgg(ig)*dfreq(ilam)*BB(iT,ilam)*Ca(ir,ilam,ig)
-			enddo
+			E=E+dfreq(ilam)*BB(iT,ilam)*CaL(ir,ilam)
 		enddo
 		minFl(ir)=Cjstar(ir)/E
 		maxFl(ir)=max(minFl(ir)*10d0,100d0)
-	enddo
 
-	do ir=1,nr
 		Fl(ir)=E0-Hstar(ir)
 		Fl(ir)=Fl(ir)*P(ir)**(-0.25)
 		IntH(ir,1:nr)=IntH(ir,1:nr)*P(ir)**(-0.25)
 	enddo
+
 	IP(1)=(2*(nr)+nr*3+(nr*2+2)*(nr+7))
 	IP(2)=nr*4+2
 	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
@@ -471,7 +455,7 @@ c		endif
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ir,iT,E,iTmin,iTmax,E0,ilam,ig)
-!$OMP& SHARED(nr,wgg,BB,Ca,nlam,ng,dfreq,Fl,Ts,T)
+!$OMP& SHARED(nr,wgg,BB,Ca,nlam,ng,dfreq,Fl,Ts,T,CaL)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC,1)
 	do ir=1,nr
@@ -480,9 +464,7 @@ c		endif
 		if(iT.lt.1) iT=1
 		E=0d0
 		do ilam=1,nlam-1
-			do ig=1,ng
-				E=E+wgg(ig)*dfreq(ilam)*BB(iT,ilam)*Ca(ir,ilam,ig)
-			enddo
+			E=E+dfreq(ilam)*BB(iT,ilam)*CaL(ir,ilam)
 		enddo
 		E=E*min(max(1d-2,Fl(ir)),100d0)
 		iTmin=1
@@ -491,9 +473,7 @@ c		endif
 		do while(abs(iTmax-iTmin).gt.1)
 			E0=0d0
 			do ilam=1,nlam-1
-				do ig=1,ng
-					E0=E0+wgg(ig)*dfreq(ilam)*BB(iT,ilam)*Ca(ir,ilam,ig)
-				enddo
+				E0=E0+dfreq(ilam)*BB(iT,ilam)*CaL(ir,ilam)
 			enddo
 			if(E0.gt.E) then
 				iTmax=iT
@@ -555,6 +535,7 @@ c		endif
 	deallocate(taustar)
 	deallocate(Ce)
 	deallocate(Ca)
+	deallocate(CaL)
 	deallocate(Cs)
 	deallocate(Jnu)
 	deallocate(Hnu)
