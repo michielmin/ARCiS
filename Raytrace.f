@@ -244,6 +244,7 @@
 !$OMP END PARALLEL
 
 
+	if(emisspec.or.computecontrib) then
 
 	if(.not.allocated(flux_contr)) then
 		allocate(flux_contr(nr,nlam))
@@ -252,7 +253,6 @@
 	Ocolumn=0d0
 	Ccolumn=0d0
 	Hcolumn=0d0
-	call tellertje(1,nlam)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,
@@ -265,7 +265,6 @@
 	allocate(Ag_contr(nr))
 !$OMP DO SCHEDULE(STATIC,1)
 	do ilam=1,nlam-1
-c		call tellertje(ilam+1,nlam+1)
 		freq0=sqrt(freq(ilam)*freq(ilam+1))
 		obsA(:,ilam)=0d0
 		obsA_contr(1:nr,ilam)=0d0
@@ -366,7 +365,86 @@ c		call tellertje(ilam+1,nlam+1)
 	deallocate(Ag_contr)
 !$OMP FLUSH
 !$OMP END PARALLEL
-	call tellertje(nlam,nlam)
+
+	endif
+
+	if(transspec) then
+	obsA=0d0
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud)
+!$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,includemol,irtrace,dtrace,Cabs_mol,mixrat_r,
+!$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,useDRIFT,Cext_cont,
+!$OMP&		cloudfrac,nirtrace,Psimplecloud,maxtau)
+!$OMP DO SCHEDULE(STATIC,1)
+	do ilam=1,nlam-1
+		do icc=1,ncc
+		if(cloudfrac(icc).gt.0d0) then
+			do i=1,nrtrace-1
+				A=1d0
+				do imol=1,nmol
+					if(includemol(imol)) then
+					Ag=0d0
+					do ig=1,ng
+						tautot=0d0
+						do k=1,nirtrace(i)
+							ir=irtrace(i,k)
+							d=dtrace(i,k)
+							tau=d*Cabs_mol(imol,ir,ilam,ig)*mixrat_r(ir,imol)
+							if(P(ir).gt.Psimplecloud) tau=1d4
+							tautot=tautot+tau
+							if(k.lt.nirtrace(i)) ir_next=irtrace(i,k+1)
+							if(ir_next.le.0.or.tautot.ge.maxtau) then
+								tautot=1d4
+								exit
+							endif
+						enddo
+						Ag=Ag+exp(-tautot)*wgg(ig)
+					enddo
+					A=A*Ag
+					endif
+				enddo
+				tautot=0d0
+				do k=1,nirtrace(i)
+					ir=irtrace(i,k)
+					d=dtrace(i,k)
+					Ca=Cext_cont(ir,ilam)
+					do icloud=1,nclouds
+						if(docloud(icc,icloud)) then
+							if(useDRIFT) then
+								Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+								Ca=Ca+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+							else
+								do isize=1,Cloud(icloud)%nr
+									Ca=Ca+
+     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+									Ca=Ca+
+     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+								enddo
+							endif
+						endif
+					enddo
+					tau=d*Ca
+					if(P(ir).gt.Psimplecloud) tau=1d4
+					tautot=tautot+tau
+					if(k.lt.nirtrace(i)) ir_next=irtrace(i,k+1)
+					if(ir_next.le.0.or.tautot.ge.maxtau) then
+						tautot=1d4
+						exit
+					endif
+				enddo
+				A=A*exp(-tautot)
+				A=pi*(rtrace(i+1)**2-rtrace(i)**2)*(1d0-A)
+				obsA(icc,ilam)=obsA(icc,ilam)+A
+				obsA(0,ilam)=obsA(0,ilam)+cloudfrac(icc)*A
+			enddo
+		endif
+		enddo
+	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+	endif
 
 	deallocate(dtrace)
 	deallocate(irtrace)

@@ -30,6 +30,9 @@
 		docloud0(i,:)=docloud(:,i)
 	enddo
 	call output("==================================================================")
+
+	if(emisspec) then
+	
 	filename=trim(outputdir) // "emis" // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=1000)
@@ -68,6 +71,9 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	enddo
 	close(unit=30)
 
+	endif
+	
+	if(transspec) then
 
 	filename=trim(outputdir) // "trans" // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
@@ -87,6 +93,9 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	enddo
 	close(unit=30)
 
+	endif
+
+	if(emisspec) then
 
 	if(.not.domakeai) then
 		if(nphase.le.310) then
@@ -138,6 +147,10 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		endif
 	endif
 
+	endif
+	
+	if(transspec) then
+
 	filename=trim(outputdir) // "transC" // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=1000)
@@ -152,7 +165,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	enddo
 	close(unit=30)
 
-
+	endif
 
 	filename=trim(outputdir) // "tau1depth" // trim(side)
 	call output("Writing tau1depth to: " // trim(filename))

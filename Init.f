@@ -489,7 +489,7 @@ c	condensates=(condensates.or.cloudcompute)
 		allocate(Ndens(nr))
 		allocate(R(nr+1))
 		allocate(T(nr))
-		allocate(P(nr))
+		allocate(P(nr+1))
 		allocate(Hp(nr))
 		allocate(nabla_ad(nr))
 		allocate(grav(nr))
@@ -519,6 +519,8 @@ c	condensates=(condensates.or.cloudcompute)
 
 	metallicity0=metallicity
 
+	allocate(Cabs_mol(nmol,nr,nlam,ng))
+	allocate(Cext_cont(nr,nlam))
 	allocate(Cabs(nr,nlam,ng))
 	allocate(Csca(nr,nlam))
 	do i=1,360
@@ -874,6 +876,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			n2d=max(i,n2d)
 		case("iwolk")
 			read(key%value,*) iWolk
+		case("emisspec")
+			read(key%value,*) emisspec
+		case("transspec")
+			read(key%value,*) transspec
 		case default
 			do i=1,59
 				if(key%key.eq.molname(i)) then
@@ -1025,6 +1031,7 @@ c			if(T0(i).lt.Tmin) T0(i)=Tmin
 c		enddo
 c	endif
 
+	P(nr+1)=0d0
 	do i=1,nr
 		T(i)=T0(nr+1-i)
 		P(i)=P0(nr+1-i)
@@ -1064,7 +1071,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	allocate(Ndens(nr))
 	allocate(R(nr+1))
 	allocate(T(nr))
-	allocate(P(nr))
+	allocate(P(nr+1))
 	allocate(Hp(nr))
 	allocate(nabla_ad(nr))
 	allocate(grav(nr))
@@ -1110,6 +1117,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 	iWolk=0
 	
 	particledir='./Particles/'
+
+	transspec=.true.
+	emisspec=.true.
 
 	Mplanet=1d0
 	Rplanet=1d0
@@ -1318,7 +1328,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	maxTprofile=1d6
 	
 	maxiter=6
-	epsiter=1d-2
+	epsiter=1d-4
 
 	maxchemtime=1d200
 	

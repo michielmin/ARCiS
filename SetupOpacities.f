@@ -38,7 +38,8 @@
 	do i=1,nmol
 		if(includemol(i)) j=j+1
 	enddo
-	n_nu_line=ng*min(j,4)
+	n_nu_line=ng*min(j,4)*5
+	if(.not.emisspec.and..not.computeT) n_nu_line=ng
 	
 	allocate(nu_line(n_nu_line))
 
@@ -124,6 +125,14 @@
 		deallocate(k_line,ktemp)
 !$OMP FLUSH
 !$OMP END PARALLEL
+		Cext_cont(ir,1:nlam)=(cont_tot(1:nlam)+Csca(ir,1:nlam))*Ndens(ir)
+		do imol=1,nmol
+			do i=1,nlam
+				do j=1,ng
+					Cabs_mol(imol,ir,i,j)=kappa_mol(j,imol,i)*Ndens(ir)
+				enddo
+			enddo
+		enddo
 		if(outputopacity) then
 			call WriteOpacity(ir,"ktab",freq,Cabs(ir,1:nlam-1,1:ng),nlam-1,ng)
 			do i=1,nlam-1

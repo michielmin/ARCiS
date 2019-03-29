@@ -85,6 +85,7 @@ c===============================================================================
 	real*8,allocatable :: cloud_dens(:,:)					! radius, cloud
 	real*8,allocatable :: Fstar(:)							! wavelength
 	real*8,allocatable :: tau1depth(:,:),cloudtau(:,:)		! ncc,wavelength
+	real*8,allocatable :: Cabs_mol(:,:,:,:),Cext_cont(:,:)
 	integer nangle_Jscat
 	parameter(nangle_Jscat=60)
 	real*8,allocatable :: Jscat(:,:)						! radius, angle
@@ -104,6 +105,7 @@ c===============================================================================
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
 	real*8 mixratHaze,PHaze,dPHaze,kappaHaze
 	logical enhancecarbon,fast_chem,gamma_equal,dopostequalweights
+	logical transspec,emisspec
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),lamdust(:)
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:)

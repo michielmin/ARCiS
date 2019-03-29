@@ -18,9 +18,9 @@
 		converged=.false.
 		return
 	else
-		call DoComputeTeddington(converged,f)
-		return
 		call DoComputeTfluxes(converged,f)
+		return
+		call DoComputeTeddington(converged,f)
 	endif
 
 	if(.not.allocated(CrV_prev)) allocate(CrV_prev(nr),CrT_prev(nr),Taverage(nr))
@@ -232,16 +232,13 @@ c		endif
 	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i,E,E0
 	real*8 Cjstar(nr),Jedd(nr),Cj(nr),Ch(nr),z,Hstar(nr),Jtot,Htot,Ktot,AStar(nr)
 	real*8 Jstar(nr),fedd(nr),Hedd(nr),lH1,lH2,P1,P2,scale,IntH(nr,nr),Fl2(nr)
-	real*8 B1,B2,Ts(nr),Fl(nr),minFl(nr),maxFl(nr),IntJ(nr,nr)
+	real*8 B1,B2,Ts(nr),Fl(nr),minFl(nr),maxFl(nr)
 	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:),IntHnu(:,:,:),TempH(:),CaL(:,:)
-	real*8,allocatable :: IntJnu(:,:,:),TempJ(:)
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax,info,NRHS,IWORK(10*nr*nr)
 	logical docloud0(max(nclouds,1)),converged
 	type(Mueller) M	
 	integer,allocatable :: IP(:)
 	real*8,allocatable :: WS(:)
-	integer ii(3),j
-	real*8 cM(3,3),cMLU(3,3),tauR(-1:nr+2),tau1,tau2,ee0,ee1,ee2
 	
 	allocate(IP(nr*4+2))
 	IP(1)=(2*(nr)+nr*3+(nr*2+2)*(nr+7))
@@ -249,7 +246,6 @@ c		endif
 	allocate(WS(IP(1)))
 
 	allocate(IntHnu(nlam,nr,nr))
-	allocate(IntJnu(nlam,nr,nr))
 	allocate(taustar(nlam,ng))
 	allocate(Ce(nr,nlam,ng))
 	allocate(Ca(nr,nlam,ng))
@@ -304,25 +300,21 @@ c		endif
 
 	nnu=5
 	IntHnu=0d0
-	IntJnu=0d0
 	Hstar=0d0
 	Cjstar=0d0
 
-	allocate(TempH(-1:nr+2))
-	allocate(TempJ(-1:nr+2))
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ir,ilam,ig,inu,jr,tautot,TempH,fact,nu,d,tau_a,tau,exp_tau,contr)
+!$OMP& SHARED(nr,nlam,ng,nnu,R,P,Ca,Cs,Psimplecloud,dfreq,wgg,Cjstar,Hstar,Fstar,
+!$OMP&	Dplanet,must,IntHnu)
+	allocate(TempH(nr))
+!$OMP DO
+!$OMP& SCHEDULE(STATIC)
 	do ir=nr,1,-1
 		do ilam=1,nlam-1
 			TempH=0d0
-			TempJ=0d0
 			do ig=1,ng
-				tauR(nr+2)=0d0
-				tauR(nr+1)=0d0
-				do jr=nr,1,-1
-					d=abs(R(jr+1)-R(jr))
-					tauR(jr)=d*Ce(jr,ilam,ig)
-				enddo
-				tauR(0)=2d0*tauR(1)
-				tauR(-1)=3d0*tauR(1)
 				do inu=1,nnu
 					tautot=0d0
 					fact=1d0
@@ -332,35 +324,13 @@ c		endif
 						tau_a=d*Ca(jr,ilam,ig)
 						tau=tau_a+d*Cs(jr,ilam,ig)
 						if(P(jr).gt.Psimplecloud) tau=1d4
-						if(jr.lt.nr.and.jr.gt.1.and..false.) then
-							ii(1)=jr+1
-							ii(2)=jr
-							ii(3)=jr-1
-							tau1=tauR(ii(2))/abs(nu)
-							tau2=tauR(ii(3))/abs(nu)
-							exp_tau=exp(-tau1)
-							tautot=tautot+tau1
-							ee0=1d0-exp_tau
-							ee1=tau1-ee0
-							ee2=tau1**2-2d0*ee1
-							contr=ee0+(ee2-(2d0*tau1+tau2)*ee1)/(tau1*(tau1+tau2))
-							TempH(ii(1))=TempH(ii(1))+dfreq(ilam)*wgg(ig)*nu*contr*fact*tau_a/tau/real(2*nnu)
-							TempJ(ii(1))=TempJ(ii(1))+dfreq(ilam)*wgg(ig)*contr*fact*tau_a/tau/real(2*nnu)
-							contr=((tau1+tau2)*ee1-ee2)/(tau1*tau2)
-							TempH(ii(2))=TempH(ii(2))+dfreq(ilam)*wgg(ig)*nu*contr*fact*tau_a/tau/real(2*nnu)
-							TempJ(ii(2))=TempJ(ii(2))+dfreq(ilam)*wgg(ig)*contr*fact*tau_a/tau/real(2*nnu)
-							contr=(ee2-tau1*ee1)/(tau2*(tau1+tau2))
-							TempH(ii(3))=TempH(ii(3))+dfreq(ilam)*wgg(ig)*nu*contr*fact*tau_a/tau/real(2*nnu)
-							TempJ(ii(3))=TempJ(ii(3))+dfreq(ilam)*wgg(ig)*contr*fact*tau_a/tau/real(2*nnu)
-						else
-							exp_tau=exp(-tau)
-							tautot=tautot+tau
-							contr=((tau-1d0+exp_tau)/tau)*fact*tau_a/tau
-							TempH(jr)=TempH(jr)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
-							TempJ(jr)=TempJ(jr)+dfreq(ilam)*wgg(ig)*contr/real(nnu*2)
+						exp_tau=exp(-tau)
+						tautot=tautot+tau
+						contr=((tau-1d0+exp_tau)/tau)*fact*tau_a/tau
+						TempH(jr)=TempH(jr)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						if(jr.lt.nr) then
 							contr=((1d0-(tau+1d0)*exp_tau)/tau)*fact*tau_a/tau
 							TempH(jr+1)=TempH(jr+1)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
-							TempJ(jr+1)=TempJ(jr+1)+dfreq(ilam)*wgg(ig)*contr/real(nnu*2)
 						endif
 						fact=fact*exp_tau
 						if(tautot.gt.20d0) exit
@@ -379,44 +349,15 @@ c		endif
 							tau=tau_a+d*Cs(jr,ilam,ig)
 						endif
 						if(P(jr).gt.Psimplecloud) tau=1d4
-						if(jr.lt.nr.and.jr.gt.1.and..false.) then
-							ii(1)=jr-1
-							ii(2)=jr
-							ii(3)=jr+1
-							tau1=tauR(ii(1))/abs(nu)
-							tau2=tauR(ii(2))/abs(nu)
-							exp_tau=exp(-tau1)
-							tautot=tautot+tau1
-							ee0=1d0-exp_tau
-							ee1=tau1-ee0
-							ee2=tau1**2-2d0*ee1
-							do i=1,3
-								if(ii(i).le.1) ii(i)=1
-							enddo
-							contr=ee0+(ee2-(2d0*tau1+tau2)*ee1)/(tau1*(tau1+tau2))
-							TempH(ii(1))=TempH(ii(1))+dfreq(ilam)*wgg(ig)*nu*contr*fact*tau_a/tau/real(2*nnu)
-							TempJ(ii(1))=TempJ(ii(1))+dfreq(ilam)*wgg(ig)*contr*fact*tau_a/tau/real(2*nnu)
-							contr=((tau1+tau2)*ee1-ee2)/(tau1*tau2)
-							TempH(ii(2))=TempH(ii(2))+dfreq(ilam)*wgg(ig)*nu*contr*fact*tau_a/tau/real(2*nnu)
-							TempJ(ii(2))=TempJ(ii(2))+dfreq(ilam)*wgg(ig)*contr*fact*tau_a/tau/real(2*nnu)
-							contr=(ee2-tau1*ee1)/(tau2*(tau1+tau2))
-							TempH(ii(3))=TempH(ii(3))+dfreq(ilam)*wgg(ig)*nu*contr*fact*tau_a/tau/real(2*nnu)
-							TempJ(ii(3))=TempJ(ii(3))+dfreq(ilam)*wgg(ig)*contr*fact*tau_a/tau/real(2*nnu)
+						exp_tau=exp(-tau)
+						tautot=tautot+tau
+						contr=((tau-1d0+exp_tau)/tau)*fact*tau_a/tau
+						TempH(jr)=TempH(jr)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						contr=((1d0-(tau+1d0)*exp_tau)/tau)*fact*tau_a/tau
+						if(jr.gt.1) then
+							TempH(jr-1)=TempH(jr-1)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
 						else
-							exp_tau=exp(-tau)
-							tautot=tautot+tau
-							contr=((tau-1d0+exp_tau)/tau)*fact*tau_a/tau
 							TempH(jr)=TempH(jr)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
-							TempJ(jr)=TempJ(jr)+dfreq(ilam)*wgg(ig)*contr/real(nnu*2)
-							if(jr.gt.1) then
-								contr=((1d0-(tau+1d0)*exp_tau)/tau)*fact*tau_a/tau
-								TempH(jr-1)=TempH(jr-1)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
-								TempJ(jr-1)=TempJ(jr-1)+dfreq(ilam)*wgg(ig)*contr/real(nnu*2)
-							else
-								contr=fact*tau_a/tau
-								TempH(jr)=TempH(jr)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
-								TempJ(jr)=TempJ(jr)+dfreq(ilam)*wgg(ig)*contr/real(nnu*2)
-							endif
 						endif
 						fact=fact*exp_tau
 						if(tautot.gt.20d0) exit
@@ -437,43 +378,24 @@ c		endif
 				contr=must*(Fstar(ilam)/(4d0*pi*Dplanet**2))*fact
 				Hstar(ir)=Hstar(ir)-dfreq(ilam)*wgg(ig)*contr*must
 				Cjstar(ir)=Cjstar(ir)+dfreq(ilam)*wgg(ig)*contr*Ca(ir,ilam,ig)
-
-				tautot=0d0
-				fact=1d0
-				do jr=1,ir
-					d=abs(R(jr+1)-R(jr))/abs(must)
-					tau_a=d*Ca(jr,ilam,ig)
-					tau=tau_a+d*Cs(jr,ilam,ig)
-					if(P(jr).gt.Psimplecloud) tau=1d4
-					tautot=tautot+tau
-					exp_tau=exp(-tau)
-					fact=fact*exp_tau
-					if(tautot.gt.20d0) exit
-				enddo
-				iT=TeffP+1
-				if(iT.gt.nBB-1) iT=nBB-1
-				if(iT.lt.1) iT=1
-				scale=(TeffP/real(iT))**4
-				contr=scale*dfreq(ilam)*BB(iT,ilam)*fact
-				Cjstar(ir)=Cjstar(ir)+dfreq(ilam)*wgg(ig)*contr*Ca(ir,ilam,ig)
 			enddo
 			IntHnu(ilam,ir,1:nr)=TempH(1:nr)
-			IntJnu(ilam,ir,1:nr)=TempJ(1:nr)
 		enddo
 	enddo
+!$OMP END DO
 	deallocate(TempH)
-	deallocate(TempJ)
+!$OMP FLUSH
+!$OMP END PARALLEL
 	
 	do iter=1,50
 	
 	Ts(1:nr)=T(1:nr)
 
 	IntH=0d0
-	IntJ=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,jr,iT,scale,ir,ig)
-!$OMP& SHARED(nlam,T,nr,IntH,IntHnu,BB,IntJ,CaL,IntJnu)
+!$OMP& SHARED(nlam,T,nr,IntH,IntHnu,BB)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC,1)
 	do ir=1,nr
@@ -484,7 +406,6 @@ c		endif
 				if(iT.lt.1) iT=1
 				scale=(T(jr)/real(iT))**4
 				IntH(ir,jr)=IntH(ir,jr)+scale*BB(iT,ilam)*IntHnu(ilam,ir,jr)
-				IntJ(ir,jr)=IntJ(ir,jr)+scale*BB(iT,ilam)*IntJnu(ilam,ir,jr)*CaL(ir,ilam)
 			enddo
 		enddo
 	enddo
@@ -514,39 +435,44 @@ c		endif
 		maxFl(ir)=minFl(ir)*1.2
 
 		Fl(ir)=E0-Hstar(ir)
+c		Fl(ir)=Fl(ir)/P(ir)
+c		IntH(ir,1:nr)=IntH(ir,1:nr)/P(ir)
 	enddo
 
 	IP(1)=(2*(nr)+nr*3+(nr*2+2)*(nr+7))
 	IP(2)=nr*4+2
 	NRHS=1
-	call DGESV( nr, NRHS, IntH, nr, IWORK, Fl, nr, info )
-c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
+c	call DGESV( nr, NRHS, IntH, nr, IWORK, Fl, nr, info )
+	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 
+	Fl2=Fl
 	do ir=1,nr
+c		Fl(ir)=0d0
+c		tot2=0d0
+c		do jr=1,nr
+c			tot=exp(-(real(ir-jr)/4d0)**2)
+c			tot2=tot2+tot
+c			Fl(ir)=Fl(ir)+Fl2(jr)*tot
+c		enddo
+c		Fl(ir)=Fl(ir)/tot2
 		Fl(ir)=min(max(minFl(ir),Fl(ir)),maxFl(ir))
 	enddo
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ir,iT,E,iTmin,iTmax,E0,ilam,ig)
-!$OMP& SHARED(nr,wgg,BB,Ca,nlam,ng,dfreq,Fl,Ts,T,IntJ,Cjstar,CaL)
+!$OMP& SHARED(nr,wgg,BB,Ca,nlam,ng,dfreq,Fl,Ts,T,CaL)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC,1)
 	do ir=1,nr
 		iT=T(ir)+1
 		if(iT.gt.nBB-1) iT=nBB-1
 		if(iT.lt.1) iT=1
-		E=Cjstar(ir)
-		do jr=1,nr
-			E=E+Fl(ir)*IntJ(ir,jr)
-		enddo
-
 		E=0d0
 		do ilam=1,nlam-1
 			E=E+dfreq(ilam)*BB(iT,ilam)*CaL(ir,ilam)
 		enddo
-		E=E*Fl(ir)
-
+		E=E*min(max(1d-2,Fl(ir)),100d0)
 		iTmin=1
 		iTmax=nBB
 		iT=(iTmax+iTmin)/2
@@ -709,18 +635,15 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	real*8 tau_V,tau_T,Planck,Cp(nr),f
 	real*8 g,dlnT,dlnP,d,tau,tautot,fact,contr,tau_a,exp_tau,nu
 	real*8,allocatable :: Ce(:,:,:),Ca(:,:,:),Cs(:,:,:),taustar(:,:)
-	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i,E,E0,Tinp(nr)
+	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i,E,E0
 	real*8 Cjstar(nr),Jedd(nr),Cj(nr),Ch(nr),z,Hstar(nr),Jtot,Htot,Ktot
 	real*8 Jstar(nr),fedd(nr),Hedd(nr),lH1,lH2,P1,P2,scale
 	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:)
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax
 	logical docloud0(max(nclouds,1)),converged
 	type(Mueller) M	
-	real*8 tauf(nr),Si(1:nr+2),B1,B2,x1,x2,dx1,dx2,ax,bx
-	integer info,IWORK(10*nr*nr),NRHS,ii(3)
-	real*8 tau1,tau2,ee0,ee1,ee2,tauR(-1:nr+2),Ij(nr+2),Ih(nr),Ma(nr+2),Mb(nr+2),Mc(nr+2)
-	real*8 MM(nr+2,3),MMal(nr+2,1)
-	integer indx(nr+2)
+	real*8 tauf(nr),Si(0:nr+1),B1,B2,x1,x2,dx1,dx2,ax,bx
+	integer info,IWORK(10*nr*nr),NRHS
 
 	allocate(taustar(nlam,ng))
 	allocate(Ce(nr,nlam,ng))
@@ -734,12 +657,8 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	do i=1,nclouds
 		if(Cloud(i)%coverage.gt.0.5) docloud0(i)=.true.
 	enddo
-
-	Tinp(1:nr)=T(1:nr)
 	
-	niter=40
-	do iter=1,niter
-	call tellertje(iter,niter)
+	do iter=1,50
 	
 	T0(1:nr)=T(1:nr)
 
@@ -757,12 +676,10 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 				call Crossections(ir,ilam,ig,Ca(ir,ilam,ig),Cs(ir,ilam,ig),docloud0)
 				Ca(ir,ilam,ig)=Ca(ir,ilam,ig)/dens(ir)
 				Cs(ir,ilam,ig)=Cs(ir,ilam,ig)/dens(ir)
-				Ce(ir,ilam,ig)=(Ca(ir,ilam,ig)+Cs(ir,ilam,ig)*(1d0-g))/dens(ir)
+				Ce(ir,ilam,ig)=(Ca(ir,ilam,ig)+Cs(ir,ilam,ig)*(1d0-g))
 			enddo
 		enddo
 	enddo
-	Cs=0d0
-	Ce=Ca
 
 	must=betaT
 	if(i2d.ne.0) then
@@ -786,17 +703,17 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 			do ig=1,ng
 				tautot=0d0
 				fact=1d0
-				do jr=ir,nr
-					d=abs(R(jr+1)-R(jr))*dens(jr)/abs(must)
-					tau_a=d*Ca(jr,ilam,ig)
-					tau=tau_a+d*Cs(jr,ilam,ig)
+				do jr=ir+1,nr
+					d=abs(R(jr+1)-R(jr))/abs(must)
+					tau_a=d*Ca(jr,ilam,ig)*dens(jr)
+					tau=tau_a+d*Cs(jr,ilam,ig)*dens(jr)
 					if(P(jr).gt.Psimplecloud) tau=1d4
 					tautot=tautot+tau
 					exp_tau=exp(-tau)
 					fact=fact*exp_tau
 					if(tautot.gt.20d0) exit
 				enddo
-				contr=(Fstar(ilam)/(4d0*pi*Dplanet**2))*fact/2d0
+				contr=(Fstar(ilam)/(pi*Dplanet**2))*fact
 				Hstar(ir)=Hstar(ir)-must*dfreq(ilam)*wgg(ig)*contr
 				Jstar(ir)=Jstar(ir)+dfreq(ilam)*wgg(ig)*contr
 				Cjstar(ir)=Cjstar(ir)+dfreq(ilam)*wgg(ig)*contr*Ca(ir,ilam,ig)
@@ -812,6 +729,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	do ilam=1,nlam-1
 		E0=E0+scale*dfreq(ilam)*BB(iT,ilam)
 	enddo
+	E0=E0*4d0*pi
 	do ir=1,nr
 		Hedd(ir)=E0-Hstar(ir)
 	enddo
@@ -820,80 +738,84 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	Hnu=0d0
 	Knu=0d0
 
-	nnu=10
+	nnu=5
 	do ilam=1,nlam-1
-		Si=0d0
-		do ir=1,nr
-			iT=T(ir)+1
+		iT=T(nr)+1
+		if(iT.gt.nBB-1) iT=nBB-1
+		if(iT.lt.1) iT=1
+		scale=(T(nr)/real(iT))**4
+		Si(nr+1)=0d0
+		do jr=nr,1,-1
+			iT=T(jr)+1
 			if(iT.gt.nBB-1) iT=nBB-1
 			if(iT.lt.1) iT=1
-			scale=(T(ir)/real(iT))**4
-			Si(ir+1)=scale*BB(iT,ilam)
+			scale=(T(jr)/real(iT))**4
+			Si(jr)=scale*BB(iT,ilam)
 		enddo
+		Si(0)=Si(1)
 		do ig=1,ng
-			do inu=1,nnu
-				nu=(real(inu)-0.5)/real(nnu)
-				tauR(nr+2)=0d0
-				tauR(nr+1)=0d0
-				do ir=nr,1,-1
-					d=abs(R(ir+1)-R(ir))*dens(ir)/abs(nu)
-					tau=d*Ce(ir,ilam,ig)
-					if(tau.lt.1d-5) tau=1d-5
-					tauR(ir)=tauR(ir+1)+tau
-				enddo
-				tauR(0)=2d0*tauR(1)
-				tauR(-1)=3d0*tauR(1)
-				Ma=0d0
-				Mb=0d0
-				Mc=0d0
-				do ir=1,nr
-					fact=1d0/(0.5d0*(tauR(ir+1)+tauR(ir))-0.5d0*(tauR(ir)+tauR(ir-1)))
-					Mb(ir+1)=1d0+fact*(1d0/(tauR(ir+1)-tauR(ir))+1d0/(tauR(ir)-tauR(ir-1)))
-					Ma(ir+1)=-fact/(tauR(ir)-tauR(ir-1))
-					Mc(ir+1)=-fact/(tauR(ir+1)-tauR(ir))
-				enddo
-				Mb(1)=-1d0
-				Mc(1)=1d0
-				Ma(nr+2)=1d0/(tauR(nr))
-				Mb(nr+2)=-1d0-1d0/(tauR(nr))
-				info=0
-				call tridag(Ma,Mb,Mc,Si,Ij,nr+2,info)
-				Ij(1:nr)=Ij(2:nr+1)
-				do ir=1,nr
-					if(Ij(ir).lt.0d0) info=1
-				enddo
-				if(info.ne.0) then
-					do ir=1,nr+2
-						MM(ir,1)=Ma(ir)
-						MM(ir,2)=Mb(ir)
-						MM(ir,3)=Mc(ir)
+			do ir=1,nr
+				do inu=1,nnu
+					tautot=0d0
+					fact=1d0
+					nu=-1d0*(real(inu)-0.5)/real(nnu)
+					do jr=ir,nr
+						B1=Si(jr)
+						B2=Si(jr+1)
+						d=abs(R(jr+1)-R(jr))/abs(nu)
+						tau_a=d*Ca(jr,ilam,ig)
+						tau=tau_a+d*Cs(jr,ilam,ig)
+						if(P(jr).gt.Psimplecloud) tau=1d4
+						exp_tau=exp(-tau)
+						tautot=tautot+tau
+						contr=(B1*(tau-1d0+exp_tau)/tau)*fact*tau_a/tau
+						Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						Hnu(ir,ilam,ig)=Hnu(ir,ilam,ig)+nu*dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						Knu(ir,ilam,ig)=Knu(ir,ilam,ig)+nu*nu*dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						if(jr.lt.nr) then
+							contr=(B2*(1d0-(tau+1d0)*exp_tau)/tau)*fact*tau_a/tau
+							Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+							Hnu(ir,ilam,ig)=Hnu(ir,ilam,ig)+nu*dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+							Knu(ir,ilam,ig)=Knu(ir,ilam,ig)+nu*nu*dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						endif
+						fact=fact*exp_tau
+						if(tautot.gt.20d0) exit
 					enddo
-					call bandec(MM,nr+2,1,1,nr+2,3,MMal,1,indx,d)
-					Ij=Si
-					call banbks(MM,nr+2,1,1,nr+2,3,MMal,1,indx,Ij)
-					Ij(1:nr)=Ij(2:nr+1)
-				endif
-				do ir=1,nr
-					if(Ij(ir).lt.0d0) then
-						Ij(ir)=0d0
-					endif
 				enddo
-				Ij=Ij
-				do ir=1,nr-1
-					Ih(ir)=-(Ij(ir)-Ij(ir+1))/(tauR(ir)-tauR(ir+1))
-				enddo
-				Ih(nr)=-(Ij(nr-1)-Ij(nr))/(tauR(nr-1)-tauR(nr))
-				do ir=1,nr
-					Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+Ij(ir)/real(nnu)
-					Hnu(ir,ilam,ig)=Hnu(ir,ilam,ig)-nu*Ih(ir)/real(nnu)
-					Knu(ir,ilam,ig)=Knu(ir,ilam,ig)+nu*nu*Ij(ir)/real(nnu)
+				do inu=1,nnu
+					tautot=0d0
+					fact=1d0
+					nu=1d0*(real(inu)-0.5)/real(nnu)
+					do jr=ir,1,-1
+						B1=Si(jr)
+						B2=Si(jr-1)
+						if(jr.gt.1) then
+							d=abs(R(jr-1)-R(jr))/abs(nu)
+							tau_a=d*Ca(jr-1,ilam,ig)
+							tau=tau_a+d*Cs(jr-1,ilam,ig)
+						else
+							d=abs(R(jr+1)-R(jr))/abs(nu)
+							tau_a=d*Ca(jr,ilam,ig)
+							tau=tau_a+d*Cs(jr,ilam,ig)
+						endif
+						if(P(jr).gt.Psimplecloud) tau=1d4
+						exp_tau=exp(-tau)
+						tautot=tautot+tau
+						contr=(B1*(tau-1d0+exp_tau)/tau)*fact*tau_a/tau
+						Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						Hnu(ir,ilam,ig)=Hnu(ir,ilam,ig)+nu*dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						Knu(ir,ilam,ig)=Knu(ir,ilam,ig)+nu*nu*dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						contr=(B2*(1d0-(tau+1d0)*exp_tau)/tau)*fact*tau_a/tau
+						Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						Hnu(ir,ilam,ig)=Hnu(ir,ilam,ig)+nu*dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						Knu(ir,ilam,ig)=Knu(ir,ilam,ig)+nu*nu*dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						fact=fact*exp_tau
+						if(tautot.gt.20d0) exit
+					enddo
 				enddo
 			enddo
 		enddo
 	enddo
-	Jnu=Jnu
-	Hnu=Hnu
-	Knu=Knu
 
 	do ir=1,nr
 		Jtot=0d0
@@ -913,36 +835,57 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		fedd(ir)=Ktot/Jtot
 		Cj(ir)=Cj(ir)/Jtot
 		Ch(ir)=Ch(ir)/Htot
+		print*,ir,fedd(ir)
 	enddo
 
 	Jedd(nr)=Hedd(nr)*Jtot/Htot
 	do ir=nr-1,1,-1
-		dx1=-Ch(ir)*Hedd(ir)*dens(ir)
+		dx1=-dens(ir+1)*(Ch(ir+1)*Hedd(ir+1)/4d0)
+		dx2=-dens(ir)*(Ch(ir)*Hedd(ir)/4d0)
 		x1=R(ir+1)
 		x2=R(ir)
-		Jedd(ir)=fedd(ir+1)*Jedd(ir+1)+dx1*(x2-x1)
+		ax=0.5d0*(dx1-dx2)/(x1-x2)
+		bx=dx1-2d0*ax*x1
+		Jedd(ir)=fedd(ir+1)*Jedd(ir+1)-ax*x1**2-bx*x1+ax*x2**2+bx*x2
+	print*,ir,fedd(ir+1)*Jedd(ir+1),(R(ir)-R(ir+1))*dens(ir+1)*(Ch(ir+1)*Hedd(ir+1)/4d0)
 		Jedd(ir)=max(0d0,Jedd(ir)/fedd(ir))
 	enddo
 	
 	do ir=nr,1,-1
-		E=Cjstar(ir)+Cj(ir)*Jedd(ir)
-		iT=T(ir)+1
-		if(iT.gt.nBB-1) iT=nBB-1
-		if(iT.lt.1) iT=1
-		scale=(T(ir)/real(iT))**4
-		E0=0d0
-		do ilam=1,nlam-1
-			do ig=1,ng
-				E0=E0+wgg(ig)*dfreq(ilam)*BB(iT,ilam)*Ca(ir,ilam,ig)
+		E=(Cjstar(ir)+Cj(ir)*Jedd(ir))
+		iTmin=1
+		iTmax=nBB
+		iT=0.5d0*(iTmax+iTmin)
+		do while(abs(iTmax-iTmin).gt.1)
+			E0=0d0
+			do ilam=1,nlam-1
+				do ig=1,ng
+					E0=E0+wgg(ig)*dfreq(ilam)*BB(iT,ilam)*Ca(ir,ilam,ig)
+				enddo
 			enddo
+			if(E0.gt.E) then
+				iTmax=iT
+			else
+				iTmin=iT
+			endif
+			iT=0.5d0*(iTmax+iTmin)
+			if(iT.lt.1) iT=1
+			if(iT.gt.nBB) iT=nBB
 		enddo
-
-		T0(ir)=T(ir)*(E/E0)**0.25d0
+		T0(ir)=real(iT)*(E/E0)**0.25
 
 		if(.not.T0(ir).gt.3d0) then
 			print*,T0(ir),iT,ir,fedd(ir),Ch(ir)
-			T0(ir)=T(ir)
+			T0(ir)=3d0
 		endif
+c		if(ir.lt.nr) then
+c			dlnP=log(P(ir+1)/P(ir))
+c			dlnT=log(T0(ir+1)/T0(ir))
+c			if((dlnT/dlnP).gt.nabla_ad(ir)) then
+c				dlnT=(nabla_ad(ir))*dlnP
+c				T0(ir)=T0(ir+1)/exp(dlnT)
+c			endif
+c		endif
 	enddo
 
 	converged=.true.
@@ -953,33 +896,15 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	chi2=0d0
 	do ir=1,nr
 		chi2=chi2+((min(T(ir),2900d0)-min(T0(ir),2900d0))/((min(T0(ir),2900d0)+min(T(ir),2900d0))*epsiter))**2
-		T(ir)=T(ir)*0.9d0+T0(ir)*0.1d0
+	f=0.1
+		T(ir)=T(ir)**(1d0-f)*T0(ir)**f
 	enddo
 	chi2=chi2/real(nr)
 
 	call WriteStructure
 
 	enddo
-
-	do ir=nr-1,1,-1
-		if(ir.lt.nr) then
-			dlnP=log(P(ir+1)/P(ir))
-			dlnT=log(T0(ir+1)/T0(ir))
-			if((dlnT/dlnP).gt.nabla_ad(ir)) then
-				dlnT=(nabla_ad(ir))*dlnP
-				T0(ir)=T0(ir+1)/exp(dlnT)
-			endif
-		endif
-	enddo
-
 	converged=.false.
-	chi2=0d0
-	do ir=1,nr
-		chi2=chi2+((min(T(ir),2900d0)-min(T0(ir),2900d0))/((min(T0(ir),2900d0)+min(T(ir),2900d0))*epsiter))**2
-		T(ir)=Tinp(ir)*(1d0-f)+T(ir)*f
-	enddo
-	chi2=chi2/real(nr)
-
 
 	deallocate(taustar)
 	deallocate(Ce)
@@ -997,131 +922,9 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 
 
 
-      SUBROUTINE tridag(a,b,c,r,u,n,info)
-      INTEGER n
-      REAL*8 a(n),b(n),c(n),r(n),u(n)
-      INTEGER j,info
-      REAL*8 bet,gam(n)
-      if(b(1).eq.0.) then
-      	info=1
-      	return
-      endif
-      bet=b(1)
-      u(1)=r(1)/bet
-      do 11 j=2,n
-        gam(j)=c(j-1)/bet
-        bet=b(j)-a(j)*gam(j)
-        if(bet.eq.0.) then
-	      	info=1
-   	   		return
-        endif
-        u(j)=(r(j)-a(j)*u(j-1))/bet
-11    continue
-      do 12 j=n-1,1,-1
-        u(j)=u(j)-gam(j+1)*u(j+1)
-12    continue
-      return
-      END
 
 
-      SUBROUTINE banmul(a,n,m1,m2,np,mp,x,b)
-      INTEGER m1,m2,mp,n,np
-      REAL*8 a(np,mp),b(n),x(n)
-      INTEGER i,j,k
-      do 12 i=1,n
-        b(i)=0.
-        k=i-m1-1
-        do 11 j=max(1,1-k),min(m1+m2+1,n-k)
-          b(i)=b(i)+a(i,j)*x(j+k)
-11      continue
-12    continue
-      return
-      END
 
-
-      SUBROUTINE banbks(a,n,m1,m2,np,mp,al,mpl,indx,b)
-      INTEGER m1,m2,mp,mpl,n,np,indx(n)
-      REAL*8 a(np,mp),al(np,mpl),b(n)
-      INTEGER i,k,l,mm
-      REAL*8 dum
-      mm=m1+m2+1
-      if(mm.gt.mp.or.m1.gt.mpl.or.n.gt.np) pause 'bad args in banbks'
-      l=m1
-      do 12 k=1,n
-        i=indx(k)
-        if(i.ne.k)then
-          dum=b(k)
-          b(k)=b(i)
-          b(i)=dum
-        endif
-        if(l.lt.n)l=l+1
-        do 11 i=k+1,l
-          b(i)=b(i)-al(k,i-k)*b(k)
-11      continue
-12    continue
-      l=1
-      do 14 i=n,1,-1
-        dum=b(i)
-        do 13 k=2,l
-          dum=dum-a(i,k)*b(k+i-1)
-13      continue
-        b(i)=dum/a(i,1)
-        if(l.lt.mm) l=l+1
-14    continue
-      return
-      END
-
-      SUBROUTINE bandec(a,n,m1,m2,np,mp,al,mpl,indx,d)
-      INTEGER m1,m2,mp,mpl,n,np,indx(n)
-      REAL*8 d,a(np,mp),al(np,mpl),TINY
-      PARAMETER (TINY=1.e-20)
-      INTEGER i,j,k,l,mm
-      REAL*8 dum
-      mm=m1+m2+1
-      if(mm.gt.mp.or.m1.gt.mpl.or.n.gt.np) pause 'bad args in bandec'
-      l=m1
-      do 13 i=1,m1
-        do 11 j=m1+2-i,mm
-          a(i,j-l)=a(i,j)
-11      continue
-        l=l-1
-        do 12 j=mm-l,mm
-          a(i,j)=0.
-12      continue
-13    continue
-      d=1.
-      l=m1
-      do 18 k=1,n
-        dum=a(k,1)
-        i=k
-        if(l.lt.n)l=l+1
-        do 14 j=k+1,l
-          if(abs(a(j,1)).gt.abs(dum))then
-            dum=a(j,1)
-            i=j
-          endif
-14      continue
-        indx(k)=i
-        if(dum.eq.0.) a(k,1)=TINY
-        if(i.ne.k)then
-          d=-d
-          do 15 j=1,mm
-            dum=a(k,j)
-            a(k,j)=a(i,j)
-            a(i,j)=dum
-15        continue
-        endif
-        do 17 i=k+1,l
-          dum=a(i,1)/a(k,1)
-          al(k,i-k)=dum
-          do 16 j=2,mm
-            a(i,j-1)=a(i,j)-dum*a(k,j)
-16        continue
-          a(i,mm)=0.
-17      continue
-18    continue
-      return
-      END
 
 
 
