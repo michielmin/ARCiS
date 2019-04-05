@@ -5650,7 +5650,7 @@ c      close(12)
       abund_pick   = 3
       model_eqcond = .false.
       remove_condensates = .false.
-      model_dim    = 1
+      model_dim    = 0
       model_pconst = .true.
       model_struc  = 0
       Npoints      = 100
@@ -5842,7 +5842,7 @@ c      close(12)
       real :: p,rhog,rhod,dustV,nges,mges,kT,pges,mu
       real*8 :: Tg,nHges
 
-      real(kind=qp) :: eps(NELEM),Sat(NDUST),eldust(NDUST),tot
+      real(kind=qp) :: eps(NELEM),Sat(NDUST),eldust(NDUST),tot,maxabun
 	logical condensates,merk
 
 	model_eqcond=condensates
@@ -5879,6 +5879,7 @@ c      write(*,'("C/O =",0pF6.3)') eps(C)/eps(O)
 *     ------------------------------------------------------------------
 
 	tot=sum(nmol(1:NMOLE))+sum(nat(1:NELEM))
+
 	mol_abuns_in=0d0
 	do j=1,n_mol_in
 		call To_upper_ARCiS(mol_names_in(j),uppername)

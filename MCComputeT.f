@@ -234,7 +234,7 @@
 			goingup=.false.
 			onedge=.true.
 			jr=nr
-			E0=E0_star
+			E0=E0_star*abs(must)
 		endif
 		do while((jr.le.nr.and.jr.ge.1).and.random(idum).gt.1d-8)
 1			continue

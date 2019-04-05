@@ -260,8 +260,8 @@ cPoints for the temperature structure
 
 	module modComputeT
 	IMPLICIT NONE
-	real*8,allocatable :: CrV_prev(:),CrT_prev(:)
-	real*8,allocatable :: Taverage(:)
+	real*8,allocatable :: CR_prev(:)
+	real*8,allocatable :: Jnu(:,:,:)
 	integer iaverage
 	end module modComputeT
 	

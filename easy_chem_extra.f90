@@ -1589,7 +1589,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 !      if(temp.gt.3000d0) temp=3000d0
       if(temp.lt.70d0) temp=70d0
       press=Pin
-        	
+        	ini=.true.
         call EASY_CHEM(N_atoms,N_reactants2,names_atoms,names_reactants,molfracs_atoms, &
              molfracs_reactants,massfracs_reactants,temp,press,ini,nabla_ad,gamma2,MMW,rho,cpe)
         ini = .FALSE.

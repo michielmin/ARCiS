@@ -38,7 +38,7 @@
 	do i=1,nmol
 		if(includemol(i)) j=j+1
 	enddo
-	n_nu_line=ng*min(j,4)*5
+	n_nu_line=ng*min(j,4)
 	if(.not.emisspec.and..not.computeT) n_nu_line=ng
 	
 	allocate(nu_line(n_nu_line))
@@ -138,7 +138,7 @@
 			do i=1,nlam-1
 				kaver(i)=0d0
 				do j=1,ng
-					kaver(i)=kaver(i)+wgg(ig)*Cabs(ir,i,j)
+					kaver(i)=kaver(i)+wgg(j)*Cabs(ir,i,j)
 				enddo
 			enddo
 			call WriteOpacity(ir,"aver",freq,kaver(1:nlam-1),nlam-1,1)

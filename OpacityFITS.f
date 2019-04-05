@@ -212,8 +212,8 @@ C	 create the new empty FITS file
 	integer status,stat2,stat3,readwrite,unit,blocksize,nfound,group
 	integer firstpix,nbuffer,npixels
 	integer istat,stat4,tmp_int,stat5,stat6
-	real*8  nullval,tot2,w1,ww,Pl,Planck
-	real*8,allocatable :: lamF(:),Ktemp(:,:,:,:),temp(:,:,:),wtemp(:),tot(:,:)
+	real*8  nullval,tot2,w1,ww,Pl,Planck,tot
+	real*8,allocatable :: lamF(:),Ktemp(:,:,:,:),temp(:),wtemp(:)
 	logical anynull,truefalse
 	integer naxes(4)
 	character*500 filename
@@ -313,11 +313,13 @@ C	 create the new empty FITS file
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,ww,w1,iT,iP)
 !$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp)
-	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam,Ktable(imol)%nT,Ktable(imol)%nP))
+	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam))
 	allocate(wtemp(Ktable(imol)%ng*Ktable(imol)%nlam))
-	allocate(tot(Ktable(imol)%nT,Ktable(imol)%nP))
 !$OMP DO
 	do ilam=1,nlam-1
+		do iP=1,Ktable(imol)%nP
+		do iT=1,Ktable(imol)%nT
+
 		i1=0
 		i2=0
 		do i=1,Ktable(imol)%nlam
@@ -332,25 +334,24 @@ C	 create the new empty FITS file
 				else if(i.eq.i1) then
 					ww=abs(lam(ilam)-lamF(i+1))
 				else if(i.eq.i2) then
-					ww=abs(lam(ilam)-lamF(i))
+					ww=abs(lam(ilam+1)-lamF(i))
 				else
 					ww=abs(lamF(i)-lamF(i+1))
 				endif
 				do ig=1,Ktable(imol)%ng
 					ngF=ngF+1
-					temp(ngF,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=Ktemp(i,ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)
+					temp(ngF)=Ktemp(i,ig,iT,iP)
 					wtemp(ngF)=ww*Ktable(imol)%wg(ig)
 				enddo
 			enddo
 			tot=0d0
 			do ig=1,ngF
-				tot(1:Ktable(imol)%nT,1:Ktable(imol)%nP)=tot(1:Ktable(imol)%nT,1:Ktable(imol)%nP)
-     &					+temp(ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)*wtemp(ig)
+				tot=tot+temp(ig)*wtemp(ig)
 			enddo
 			tot=tot/sum(wtemp(1:ngF))
 			call sortw(temp,wtemp,ngF)
 			if(ng.eq.1) then
-				Ktable(imol)%ktable(ilam,1,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=tot(1:Ktable(imol)%nT,1:Ktable(imol)%nP)
+				Ktable(imol)%ktable(ilam,1,iT,iP)=tot
 			else
 				do ig=2,ngF
 					wtemp(ig)=wtemp(ig)+wtemp(ig-1)
@@ -359,36 +360,31 @@ C	 create the new empty FITS file
 				do ig=1,ng
 					call hunt(wtemp,ngF,gg(ig),j)
 					if(j.eq.0) then
-						Ktable(imol)%ktable(ilam,ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=
-     &			temp(1,1:Ktable(imol)%nT,1:Ktable(imol)%nP)
+						Ktable(imol)%ktable(ilam,ig,iT,iP)=temp(1)
 					else
 						w1=(gg(ig)-wtemp(j+1))/(wtemp(j)-wtemp(j+1))
-						Ktable(imol)%ktable(ilam,ig,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=
-     &			temp(j,1:Ktable(imol)%nT,1:Ktable(imol)%nP)*w1+temp(j+1,1:Ktable(imol)%nT,1:Ktable(imol)%nP)*(1d0-w1)
+						Ktable(imol)%ktable(ilam,ig,iT,iP)=temp(j)*w1+temp(j+1)*(1d0-w1)
 					endif
 				enddo
-				do iT=1,Ktable(imol)%nT
-				do iP=1,Ktable(imol)%nP
-					tot2=0d0
-					do ig=1,ng
-						tot2=tot2+wgg(ig)*Ktable(imol)%ktable(ilam,ig,iT,iP)
-					enddo
-					if(tot2.ne.0d0) then
-						Ktable(imol)%ktable(ilam,1:ng,iT,iP)=Ktable(imol)%ktable(ilam,1:ng,iT,iP)*tot(iT,iP)/tot2
-					else
-						Ktable(imol)%ktable(ilam,1:ng,iT,iP)=tot(iT,iP)
-					endif
+				tot2=0d0
+				do ig=1,ng
+					tot2=tot2+wgg(ig)*Ktable(imol)%ktable(ilam,ig,iT,iP)
 				enddo
-				enddo
+				if(tot2.ne.0d0) then
+					Ktable(imol)%ktable(ilam,1:ng,iT,iP)=Ktable(imol)%ktable(ilam,1:ng,iT,iP)*tot/tot2
+				else
+					Ktable(imol)%ktable(ilam,1:ng,iT,iP)=tot
+				endif
 			endif
 		else
 			Ktable(imol)%ktable(ilam,1:ng,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=0d0
 		endif
+		enddo
+		enddo
 	enddo
 !$OMP END DO
 	deallocate(temp)
 	deallocate(wtemp)
-	deallocate(tot)
 !$OMP FLUSH
 !$OMP END PARALLEL
 	deallocate(Ktemp,lamF)

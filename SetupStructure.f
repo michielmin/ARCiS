@@ -1234,13 +1234,17 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	real*8 Tin,Pin,mol_abun(nmol),nabla_ad
 	character*10 mol_names(nmol)
 	logical includemol(nmol),didcondens,ini,condensates
-	integer Ncloud,i
+	integer Ncloud,i,imol
 	real*8 Xcloud(max(Ncloud,1)),MMW,Tg
 	character*500 cloudspecies(max(Ncloud,1)),namecloud
+	real*8 P1,P2,abun_temp(nmol),M
 
 	Tg=min(max(Tin,70d0),30000d0)
 
+
 c	goto 1
+c	goto 2
+	
 	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates)
 
 	do i=1,nmol
@@ -1256,6 +1260,70 @@ c	goto 1
 	call call_easy_chem(Tg,Pin,mol_abun,mol_names,nmol,ini,condensates,
      &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol)
 
+	do i=1,nmol
+		if(.not.mol_abun(i).gt.0d0) mol_abun(i)=0d0
+	enddo
+
+	return
+	
+2	continue
+
+	mol_abun=0d0
+	MMW=0d0
+	do imol=1,nmol
+		select case(mol_names(imol))
+			case("H2O")
+				i=1
+				M=17.8851
+			case("CH4")
+				i=2
+				M=15.9272
+			case("NH3")
+				i=3
+				M=16.9072
+			case("CO")
+				i=4
+				M=27.8081
+			case("CO2")
+				i=5
+				M=43.6918
+			case("PH3")
+				i=6
+				M=33.7516
+			case("Na")
+				i=7
+				M=22.9900
+			case("K")
+				i=8
+				M=39.0980
+			case("H2")
+				i=-1
+				M=2.0014
+				mol_abun(imol)=0.85
+			case("He")
+				i=-2
+				M=4.0030
+				mol_abun(imol)=0.15
+			case default
+				i=-3
+		end select
+		if(i.gt.0) then
+			open(unit=25,file='dbf26/a_p_WA___.tsv',RECL=6000)
+			ini=.true.
+			P2=0d0
+			do while(ini)
+				P1=P2
+				read(25,*,end=3) P2,abun_temp(1:8)
+				if(Pin.gt.P1.and.Pin.lt.P2) then
+					mol_abun(imol)=abun_temp(i)
+					ini=.false.
+				endif
+			enddo
+3			close(unit=25)
+		endif
+		if(i.ge.-2) MMW=MMW+M*mol_abun(imol)
+	enddo
+	nabla_ad=2d0/7d0
 
 	return
 	end

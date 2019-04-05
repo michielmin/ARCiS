@@ -42,17 +42,17 @@
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax
 	logical docloud0(max(nclouds,1)),converged,stopscat
 	type(Mueller) M	
-	real*8 tauf(nr),Si(1:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff,TT,Si0(1:nr)
+	real*8 tauf(nr),Si(1:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff
 	integer info,IWORK(10*nr*nr),NRHS,ii(3),iscat,nscat
-	real*8 tau1,tau2,ee0,ee1,ee2,tauR(0:nr+1),Ij(nr),Ih(nr),Itot(nr),scale
+	real*8 tau1,tau2,ee0,ee1,ee2,tauR(0:nr+1),Ij(nr),Ih(nr),Itot(nr)
 	integer nlam_LR
 	real*8 specres_LR
-	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:)
+	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:)
 	integer i1,i2,ngF,j
 	real*8 ww,w1,w2
 	real*8,allocatable :: temp_a(:),wtemp(:),Ca_HR(:,:),Cs_HR(:,:),Fstar_LR(:)
 	
-	specres_LR=min(specres/1.5,11d0)
+	specres_LR=10d0
 	tot=lam(1)
 	nlam_LR=1
 	do while(tot.lt.lam(nlam))
@@ -74,27 +74,6 @@
 		dfreq_LR(i)=abs(freq_LR(i+1)-freq_LR(i))
 	enddo
 
-	allocate(BB_LR(nBB,nlam_LR))
-
-	BB_LR=0d0
-	do j=nBB,1,-1
-		TT=real(j)
-		tot=0d0
-		do i=1,nlam_LR-1
-			BB_LR(j,i)=Planck(TT,freq_LR(i))
-			tot=tot+dfreq_LR(i)*BB_LR(j,i)
-		enddo
-		scale=((2d0*(pi*kb*TT)**4)/(15d0*hplanck**3*clight**3))/tot
-		if(scale.gt.2d0.and.j.lt.nBB) then
-			do iT=1,j
-				BB_LR(iT,1:nlam_LR)=BB_LR(j+1,1:nlam_LR)*(real(iT)/real(j+1))**4
-			enddo
-			exit
-		endif
-		BB_LR(j,i)=BB_LR(j,i)*scale
-	enddo
-
-
 	allocate(taustar(nlam_LR,ng))
 	allocate(Ca_HR(nlam,ng))
 	allocate(Cs_HR(nlam,ng))
@@ -115,7 +94,7 @@
 	Tinp(1:nr)=T(1:nr)
 	
 	niter=50
-	nscat=40
+	nscat=5
 	epsiter=1d-3
 
 	must=betaT
@@ -131,6 +110,8 @@
 		endif
 		must=must*betaT
 	endif
+
+	open(unit=20,file='HRopac.dat',RECL=6000)
 
 	allocate(temp_a(ng*nlam))
 	allocate(wtemp(ng*nlam))
@@ -160,7 +141,6 @@
 				if(lam_LR(ilam).ge.lam(i).and.lam_LR(ilam).lt.lam(i+1)) i1=i
 				if(lam_LR(ilam+1).ge.lam(i).and.lam_LR(ilam+1).lt.lam(i+1)) i2=i+1
 			enddo
-			if(ilam.eq.1) i1=1
 			if(ilam.eq.nlam_LR-1) i2=nlam
 			if(i1.gt.0.and.i2.gt.0) then
 				ngF=0
@@ -222,14 +202,30 @@
 				endif
 			else
 				Ca(ir,ilam,1:ng)=0d0
-				Cs(ir,ilam,1:ng)=0d0
 				Fstar_LR(ilam)=0d0
 			endif
 		enddo
+		if(ir.eq.nr/2) then
+			do ilam=1,nlam-1
+				do ig=1,ng
+					write(20,*) lam(ilam),Ca_HR(ilam,ig)
+				enddo
+			enddo
+		endif
 	enddo
 	deallocate(temp_a)
 	deallocate(wtemp)
 	Ce=Ca+Cs
+
+	close(unit=20)
+
+	open(unit=20,file='LRopac.dat',RECL=6000)
+	do ilam=1,nlam_LR-1
+		do ig=1,ng
+			write(20,*) lam_LR(ilam),Ca(1:nr,ilam,ig)
+		enddo
+	enddo
+	close(unit=20)
 
 	do ir=1,nr
 		Hstar(ir)=0d0
@@ -256,12 +252,8 @@
 	enddo
 
 	E0=0d0
-	iT=TeffP+1
-	if(iT.gt.nBB-1) iT=nBB-1
-	if(iT.lt.1) iT=1
-	scale=(TeffP/real(iT))**4
 	do ilam=1,nlam_LR-1
-		E0=E0+scale*dfreq_LR(ilam)*BB_LR(iT,ilam)
+		E0=E0+dfreq_LR(ilam)*Planck(TeffP,freq_LR(ilam))
 	enddo
 	E0=E0/(2d0*pi)
 	do ir=1,nr
@@ -305,13 +297,8 @@
 				enddo
 				fact=exp(-tautot)
 				contr=(Fstar_LR(ilam)/(4d0*pi*Dplanet**2))*fact/2d0
-				iT=T(ir)+1
-				if(iT.gt.nBB-1) iT=nBB-1
-				if(iT.lt.1) iT=1
-				scale=(T(ir)/real(iT))**4
-				Si(ir)=scale*BB_LR(iT,ilam)*Ca(ir,ilam,ig)/Ce(ir,ilam,ig)+contr*Cs(ir,ilam,ig)/(Ce(ir,ilam,ig)*4d0*pi)
+				Si(ir)=Planck(T(ir),freq_LR(ilam))*Ca(ir,ilam,ig)/Ce(ir,ilam,ig)+contr*Cs(ir,ilam,ig)/(Ce(ir,ilam,ig)*4d0*pi)
 			enddo
-			Si0=Si
 			do iscat=1,nscat
 				Itot=0d0
 				do inu=1,nnu
@@ -320,16 +307,14 @@
 					call SolveIj(tauR,Si,Ij,nr)
 					Itot=Itot+Ij/real(nnu)
 				enddo
-				Itot(1:nr)=Itot(1:nr)*Cs(1:nr,ilam,ig)/Ce(1:nr,ilam,ig)/(4d0*pi)
+				Itot(1:nr)=Si(1:nr)+Itot(1:nr)*Cs(1:nr,ilam,ig)/(Ce(1:nr,ilam,ig)*4d0*pi)
 				stopscat=.true.
 				do ir=1,nr
-					if(abs(Itot(ir)/(Itot(ir)+Si0(ir))).gt.1d-2) stopscat=.false.
+					if(abs((Itot(ir)-Si(ir))/(Itot(ir)+Si(ir))).gt.1d-1) stopscat=.false.
 				enddo
-				Si0=Si0+Itot
 				Si=Itot
 				if(stopscat) exit
 			enddo
-			Si=Si0
 			do inu=1,nnu
 				nu=(real(inu)-0.5)/real(nnu)
 				tauR(0:nr+1)=tauR_nu(0:nr+1,ilam,ig)/abs(nu)
@@ -364,7 +349,7 @@
 		enddo
 		fedd(ir)=Ktot/Jtot
 		Cj(ir)=Cj(ir)/Jtot
-		Ch(ir)=Ch(ir)/Htot
+		Ch(ir)=abs(Ch(ir)/Htot)
 	enddo
 
 	ir=nr
@@ -379,9 +364,9 @@
 		enddo
 	enddo
 
-	Jedd(nr)=Hedd(nr)*Jtot/Htot
+	Jedd(nr)=max(Jtot,Hedd(nr)*Jtot/Htot)
 	do ir=nr-1,1,-1
-		dx1=-abs(Ch(ir)*Hedd(ir))*dens(ir)
+		dx1=-Ch(ir)*Hedd(ir)*dens(ir)
 		x1=R(ir+1)
 		x2=R(ir)
 		Jedd(ir)=fedd(ir+1)*Jedd(ir+1)+dx1*(x2-x1)
@@ -390,14 +375,10 @@
 	
 	do ir=nr,1,-1
 		E=Cjstar(ir)+Cj(ir)*Jedd(ir)
-		iT=T(ir)+1
-		if(iT.gt.nBB-1) iT=nBB-1
-		if(iT.lt.1) iT=1
-		scale=(T(ir)/real(iT))**4
 		E0=0d0
 		do ilam=1,nlam_LR-1
 			do ig=1,ng
-				E0=E0+wgg(ig)*dfreq_LR(ilam)*BB_LR(iT,ilam)*Ca(ir,ilam,ig)
+				E0=E0+wgg(ig)*dfreq_LR(ilam)*Planck(T(ir),freq_LR(ilam))*Ca(ir,ilam,ig)
 			enddo
 		enddo
 
@@ -412,7 +393,7 @@
 			E0=0d0
 			do ilam=1,nlam_LR-1
 				do ig=1,ng
-					E0=E0+wgg(ig)*dfreq_LR(ilam)*BB_LR(iT,ilam)*Ca(ir,ilam,ig)
+					E0=E0+wgg(ig)*dfreq_LR(ilam)*Planck(T0(ir),freq_LR(ilam))*Ca(ir,ilam,ig)
 				enddo
 			enddo
 			if(E0.gt.E) then
@@ -424,9 +405,9 @@
 				iT=0.5d0*(iTmax+iTmin)
 				if(iT.lt.1) iT=1
 				if(iT.gt.nBB) iT=nBB
+				T0(ir)=real(iT)
 			endif
 		enddo
-		T0(ir)=real(iT)*(E/E0)**0.25
 
 		if(.not.T0(ir).gt.3d0) then
 			print*,T0(ir),iT,ir,fedd(ir),Ch(ir)
@@ -466,21 +447,14 @@
 	call tellertje(niter,niter)
 	call WriteStructure
 
-	deallocate(lam_LR)
-	deallocate(freq_LR)
-	deallocate(dfreq_LR)
-	deallocate(BB_LR)
 	deallocate(taustar)
-	deallocate(Ca_HR)
-	deallocate(Cs_HR)
 	deallocate(Ce)
 	deallocate(Ca)
 	deallocate(Cs)
-	deallocate(Fstar_LR)
-	deallocate(tauR_nu)
-	deallocate(Jnu)
 	deallocate(Hnu)
 	deallocate(Knu)
+	deallocate(tauR_nu)
+
 
 	return
 	end
@@ -502,8 +476,8 @@
 		Ma(ir+1)=-fact*1d0/(tauR(ir)-tauR(ir-1))
 		Mc(ir+1)=-fact*1d0/(tauR(ir+1)-tauR(ir))
 	enddo
-	Mb(1)=-1d0/tauR(1)
-	Mc(1)=1d0/tauR(1)
+	Mb(1)=-1d0
+	Mc(1)=1d0
 	Ma(nr+2)=1d0/(tauR(nr))
 	Mb(nr+2)=-1d0-1d0/(tauR(nr))
 	x=0d0

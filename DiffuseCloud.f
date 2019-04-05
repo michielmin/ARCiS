@@ -33,11 +33,6 @@
 	allocate(Kd(nnr))
 
 	T0=T
-	allocate(CrV_prev0(nr),CrT_prev0(nr))
-	if(allocated(CrV_prev)) then
-		CrV_prev0=CrV_prev
-		CrT_prev0=CrT_prev
-	endif
 
 	niter=20
 
@@ -739,11 +734,6 @@ c correction for SiC
 	call ComputeTevap
 
 	T=T0
-	if(computeT.and.nTiter.lt.maxiter.and.nTiter.gt.0) then
-		CrV_prev=CrV_prev0
-		CrT_prev=CrT_prev0
-	endif
-	deallocate(CrV_prev0,CrT_prev0)
 
 	open(unit=20,file=trim(outputdir) // '/atoms.dat',RECL=6000)
 	ini=.true.
