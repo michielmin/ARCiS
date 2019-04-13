@@ -72,10 +72,9 @@
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax,info,NRHS,IWORK(10*nr*nr)
 	logical docloud0(max(nclouds,1)),converged
 	type(Mueller) M	
-	integer,allocatable :: IP(:)
-	real*8,allocatable :: WS(:)
-	integer ii(3),j
-	real*8 cM(3,3),cMLU(3,3),tauR(0:nr+1)
+	integer,allocatable :: IP(:),ii(:)
+	real*8,allocatable :: WS(:),tauR(:)
+	real*8 tau1,tau2,ee1,ee2,ee0
 	
 	allocate(IP(nr*4+2))
 	IP(1)=(2*(nr)+nr*3+(nr*2+2)*(nr+7))
@@ -140,62 +139,35 @@
 	Hstar=0d0
 	Cjstar=0d0
 
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ir,ilam,ig,inu,jr,tautot,TempH,fact,nu,d,tau_a,tau,exp_tau,contr)
+!$OMP& SHARED(nr,nlam,ng,nnu,R,P,Ca,Cs,Ce,Psimplecloud,dfreq,wgg,Cjstar,Hstar,Fstar,
+!$OMP&	Dplanet,must,IntHnu)
 	allocate(TempH(nr))
+!$OMP DO
+!$OMP& SCHEDULE(STATIC)
 	do ir=nr,1,-1
-	print*,ir
 		do ilam=1,nlam-1
 			TempH=0d0
 			do ig=1,ng
-				tauR(nr+1)=0d0
-				do jr=nr,1,-1
-					d=abs(R(jr+1)-R(jr))
-					tauR(jr)=tauR(jr+1)+d*Ce(jr,ilam,ig)
-				enddo
 				do inu=1,nnu
 					tautot=0d0
 					fact=1d0
 					nu=-1d0*(real(inu)-0.5)/real(nnu)
 					do jr=ir,nr
-						ii(1)=jr-1
-						ii(2)=jr
-						ii(3)=jr+1
-						if(ii(1).le.0) ii=ii+1
-						cM=0d0
-						do i=1,3
-							do j=1,3
-								if(jr.ne.ii(i)) then
-									cM(i,j)=((tauR(jr)-tauR(ii(i)))/abs(nu))**(j-1)
-								else
-									if(j.eq.1) then
-										cM(i,j)=1d0
-									else
-										cM(i,j)=0d0
-									endif
-								endif
-							enddo
-						enddo
-						j=3
-						cMLU=0d0
-						call MatrixInvert(cM,cM,cMLU,j,INFO)
 						d=abs(R(jr+1)-R(jr))/abs(nu)
 						tau_a=d*Ca(jr,ilam,ig)
 						tau=tau_a+d*Cs(jr,ilam,ig)
 						if(P(jr).gt.Psimplecloud) tau=1d4
 						exp_tau=exp(-tau)
 						tautot=tautot+tau
-						do i=1,3
-							if(ii(i).le.nr) then
-								contr=cM(1,i)*(1d0-exp_tau)*fact*tau_a/tau
-	print*,ir,jr,contr
-								TempH(ii(i))=TempH(ii(i))+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
-								contr=cM(2,i)*(1d0-(tau+1d0)*exp_tau)*fact*tau_a/tau
-	print*,ir,jr,contr
-								TempH(ii(i))=TempH(ii(i))+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
-								contr=cM(3,i)*(2d0-(tau**2+2d0*tau+2d0)*exp_tau)*fact*tau_a/tau
-	print*,ir,jr,contr
-								TempH(ii(i))=TempH(ii(i))+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
-							endif
-						enddo
+						contr=((tau-1d0+exp_tau)/tau)*fact*tau_a/tau
+						TempH(jr)=TempH(jr)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						if(jr.lt.nr) then
+							contr=((1d0-(tau+1d0)*exp_tau)/tau)*fact*tau_a/tau
+							TempH(jr+1)=TempH(jr+1)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						endif
 						fact=fact*exp_tau
 						if(tautot.gt.20d0) exit
 					enddo
@@ -203,27 +175,6 @@
 					fact=1d0
 					nu=1d0*(real(inu)-0.5)/real(nnu)
 					do jr=ir,1,-1
-						ii(1)=jr-1
-						ii(2)=jr
-						ii(3)=jr+1
-						if(ii(1).le.0) ii=ii+1
-						cM=0d0
-						do i=1,3
-							do j=1,3
-								if(jr.ne.ii(i)) then
-									cM(i,j)=((tauR(ii(i))-tauR(jr))/abs(nu))**(j-1)
-								else
-									if(j.eq.1) then
-										cM(i,j)=1d0
-									else
-										cM(i,j)=0d0
-									endif
-								endif
-							enddo
-						enddo
-						j=3
-						cMLU=0d0
-						call MatrixInvert(cM,cM,cMLU,j,INFO)
 						if(jr.gt.1) then
 							d=abs(R(jr-1)-R(jr))/abs(nu)
 							tau_a=d*Ca(jr-1,ilam,ig)
@@ -236,19 +187,14 @@
 						if(P(jr).gt.Psimplecloud) tau=1d4
 						exp_tau=exp(-tau)
 						tautot=tautot+tau
-						do i=1,3
-							if(ii(i).le.nr) then
-								contr=cM(1,i)*(1d0-exp_tau)*fact*tau_a/tau
-	print*,ir,jr,contr
-								TempH(ii(i))=TempH(ii(i))+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
-								contr=cM(2,i)*(1d0-(tau+1d0)*exp_tau)*fact*tau_a/tau
-	print*,ir,jr,contr
-								TempH(ii(i))=TempH(ii(i))+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
-								contr=cM(3,i)*(2d0-(tau**2+2d0*tau+2d0)*exp_tau)*fact*tau_a/tau
-	print*,ir,jr,contr
-								TempH(ii(i))=TempH(ii(i))+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
-							endif
-						enddo
+						contr=((tau-1d0+exp_tau)/tau)*fact*tau_a/tau
+						TempH(jr)=TempH(jr)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						contr=((1d0-(tau+1d0)*exp_tau)/tau)*fact*tau_a/tau
+						if(jr.gt.1) then
+							TempH(jr-1)=TempH(jr-1)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						else
+							TempH(jr)=TempH(jr)+dfreq(ilam)*wgg(ig)*nu*contr/real(nnu*2)
+						endif
 						fact=fact*exp_tau
 						if(tautot.gt.20d0) exit
 					enddo
@@ -272,9 +218,14 @@
 			IntHnu(ilam,ir,1:nr)=TempH(1:nr)
 		enddo
 	enddo
+!$OMP END DO
 	deallocate(TempH)
+!$OMP FLUSH
+!$OMP END PARALLEL
 	
 	do iter=1,50
+	
+	call tellertje(iter,50)
 	
 	Ts(1:nr)=T(1:nr)
 
@@ -299,13 +250,6 @@
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
-
-	do ir=1,nr
-		do jr=1,nr
-			print*,ir,jr,IntH(ir,jr)
-		enddo
-	enddo
-	read*
 
 	E0=0d0
 	iT=TeffP+1
@@ -336,8 +280,8 @@ c		IntH(ir,1:nr)=IntH(ir,1:nr)/P(ir)
 	IP(1)=(2*(nr)+nr*3+(nr*2+2)*(nr+7))
 	IP(2)=nr*4+2
 	NRHS=1
-c	call DGESV( nr, NRHS, IntH, nr, IWORK, Fl, nr, info )
-	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
+	call DGESV( nr, NRHS, IntH, nr, IWORK, Fl, nr, info )
+c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 
 	Fl2=Fl
 	do ir=1,nr
@@ -366,7 +310,7 @@ c		Fl(ir)=Fl(ir)/tot2
 		do ilam=1,nlam-1
 			E=E+dfreq(ilam)*BB(iT,ilam)*CaL(ir,ilam)
 		enddo
-		E=E*Fl(ir)
+		E=E*min(max(1d-2,Fl(ir)),100d0)
 		iTmin=1
 		iTmax=nBB
 		iT=(iTmax+iTmin)/2

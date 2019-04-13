@@ -90,13 +90,13 @@ c terms of use
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
      &					// trim(int2string(maxiter,'(i3)')) // ")")
 			f=1d0/real(nTiter+1)
-			f=0.5
-			if(nTiter.ge.4) f=0.1d0	!1d0/real(nTiter-2)**0.5+0.05
+			f=0.9
+			if(nTiter.ge.4) f=1d0/real(nTiter-2)**0.5+0.1
 			call DoComputeT(Tconverged,f)
 			par_tprofile=.false.
+			nTiter=nTiter+1
 			call SetupStructure(.true.)
 			call SetupOpacities()
-			nTiter=nTiter+1
 		enddo
 		par_tprofile=temp
 	endif

@@ -18,13 +18,13 @@
 	use Constants
 	IMPLICIT NONE
 	integer imol
-	real*8 kappa(ng),nu1,nu2,tanscale,ll,tot,tot2
+	real*8 nu1,nu2,tanscale,ll,tot,tot2
 	real*16 kross,kplanck
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime,cwg(ng),w1
-	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:),mixrat_tmp(:),w_line(:)
+	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:),mixrat_tmp(:),w_line(:),kappa(:)
 	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:),ktemp(:)
 	integer n_nu_line,iT
-	integer i,j,ir,k,nl,ig,ig_c
+	integer i,j,ir,k,nl,ig,ig_c,imol0
 	integer,allocatable :: inu1(:),inu2(:)
 	character*500 filename
 
@@ -38,7 +38,7 @@
 	do i=1,nmol
 		if(includemol(i)) j=j+1
 	enddo
-	n_nu_line=ng*min(j,4)
+	n_nu_line=ng*ng
 	if(.not.emisspec.and..not.computeT) n_nu_line=ng
 	
 	allocate(nu_line(n_nu_line))
@@ -84,22 +84,68 @@
 		enddo
 		do imol=1,nmol
 			kappa_mol(1:ng,imol,1:nlam)=0d0
-			if(mixrat_tmp(imol).gt.0d0) call ReadOpacityFITS(kappa_mol,imol,ir)
+			if(includemol(imol)) call ReadOpacityFITS(kappa_mol,imol,ir)
 		enddo
-!$OMP PARALLEL IF(nlam.gt.200)
+!$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,j,k_line,imol,ig,kappa,ktemp,ig_c)
+!$OMP& PRIVATE(i,j,k_line,imol,ig,kappa,ktemp,ig_c,tot,tot2,imol0,w1,w_line)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,
-!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,cwg,ng_comp)
+!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,cwg,ng_comp,includemol)
 		allocate(k_line(n_nu_line))
 		allocate(ktemp(ng))
+		allocate(kappa(ng))
+		allocate(w_line(n_nu_line))
 !$OMP DO
 		do i=1,nlam-1
+			if(.false.) then
+			tot=0d0
+			do imol=1,nmol
+				if(includemol(imol)) then
+					kappa(1:ng)=kappa_mol(1:ng,imol,i)*mixrat_tmp(imol)
+					tot=tot+sum(kappa(1:ng)*wgg(1:ng))*mixrat_tmp(imol)
+					exit
+				endif
+			enddo
+			imol0=imol
+			do imol=imol0+1,nmol
+				if(includemol(imol)) then
+					ktemp(1:ng)=kappa_mol(1:ng,imol,i)*mixrat_tmp(imol)
+					ig_c=0
+					tot=tot+sum(ktemp(1:ng)*wgg(1:ng))
+					do ig=1,ng
+						do j=1,ng
+							ig_c=ig_c+1
+							k_line(ig_c)=kappa(ig)+ktemp(j)
+							w_line(ig_c)=wgg(ig)*wgg(j)
+						enddo
+					enddo
+					call sortw(k_line,w_line,n_nu_line)
+					do ig=2,n_nu_line
+						w_line(ig)=w_line(ig)+w_line(ig-1)
+					enddo
+					w_line(1:n_nu_line)=w_line(1:n_nu_line)/w_line(n_nu_line)
+					j=1
+					do ig=1,ng
+						call hunt(w_line(j:n_nu_line),n_nu_line-j+1,gg(ig),ig_c)
+						ig_c=ig_c+j-1
+						if(ig_c.le.j) then
+							kappa(ig)=k_line(j)
+						else
+							w1=(gg(ig)-w_line(ig_c+1))/(w_line(ig_c)-w_line(ig_c+1))
+							kappa(ig)=k_line(ig_c)*w1+k_line(ig_c+1)*(1d0-w1)
+							j=ig_c
+						endif
+					enddo
+				endif
+			enddo
+			else
 			ig_c=(ng_comp-n_nu_line*nmol)*random(idum)+1
 			k_line=0d0
+			tot=0d0
 			do imol=1,nmol
-				if(mixrat_tmp(imol).gt.0d0) then
+				if(includemol(imol)) then
 					ktemp(1:ng)=kappa_mol(1:ng,imol,i)
+					tot=tot+sum(ktemp(1:ng)*wgg(1:ng))*mixrat_tmp(imol)
 					do j=1,n_nu_line
 						ig=ig_comp(ig_c)
 						ig_c=ig_c+1
@@ -112,6 +158,12 @@
 				j=real(n_nu_line)*gg(ig)+1
 				kappa(ig)=k_line(j)
 			enddo
+			endif
+
+			tot2=sum(kappa(1:ng)*wgg(1:ng))
+			if(tot2.gt.0d0) then
+				kappa=kappa*tot/tot2
+			endif
 			kappa=kappa+cont_tot(i)
 	
 			Cabs(ir,i,1:ng)=kappa(1:ng)
@@ -122,16 +174,21 @@
 			opac_tot(i,1:ng)=opac_tot(i,1:ng)+(Cabs(ir,i,1:ng)+Csca(ir,i))*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
 !$OMP END DO
-		deallocate(k_line,ktemp)
+		deallocate(k_line)
+		deallocate(w_line)
+		deallocate(ktemp)
+		deallocate(kappa)
 !$OMP FLUSH
 !$OMP END PARALLEL
 		Cext_cont(ir,1:nlam)=(cont_tot(1:nlam)+Csca(ir,1:nlam))*Ndens(ir)
 		do imol=1,nmol
-			do i=1,nlam
-				do j=1,ng
-					Cabs_mol(imol,ir,i,j)=kappa_mol(j,imol,i)*Ndens(ir)
+			if(includemol(imol)) then
+				do i=1,nlam
+					do j=1,ng
+						Cabs_mol(imol,ir,i,j)=kappa_mol(j,imol,i)*Ndens(ir)
+					enddo
 				enddo
-			enddo
+			endif
 		enddo
 		if(outputopacity) then
 			call WriteOpacity(ir,"ktab",freq,Cabs(ir,1:nlam-1,1:ng),nlam-1,ng)

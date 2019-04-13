@@ -392,6 +392,11 @@ c			beta_used=max
 
 	tau=0d0
 	Tirr=beta_used*sqrt(Rstar/(2d0*Dplanet))*Tstar
+	if(computeT) then
+		x=(Tirr**4+TeffP**4)**0.25
+		return
+	endif
+	
 	do i=nr,1,-1
 		tau=kappaT*1d6*P(i)/grav(i)
 		if(tau.lt.0d0) tau=0d0
@@ -1308,7 +1313,7 @@ c	goto 2
 				i=-3
 		end select
 		if(i.gt.0) then
-			open(unit=25,file='dbf26/a_p_WA___.tsv',RECL=6000)
+			open(unit=25,file='dbf26/a_p_G5___.tsv',RECL=6000)
 			ini=.true.
 			P2=0d0
 			do while(ini)

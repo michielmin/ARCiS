@@ -59,9 +59,9 @@ c     &					flux(0:ncc,i)
 		form='("#",a13,a19,' // trim(int2string(ncc,'(i3)')) // 
      &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
      &				trim(int2string(nclouds,'(i3)')) // 'l1))'
-		write(30,form) "lambda [mu]","flux [Jy]",docloud0(1:nclouds,1:ncc)
+		write(30,form) "lambda [mu]","flux/flux_star",docloud0(1:nclouds,1:ncc)
 	else
-		write(30,'("#",a13,a19)') "lambda [mu]","flux [Jy]"
+		write(30,'("#",a13,a19)') "lambda [mu]","flux/flux_star"
 	endif
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam-1
@@ -472,7 +472,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
      &		2d0*(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
 	endif
 	form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
-     &				 '("   flux(",f5.1,") [Jy]"),"         error","             R")'
+     &				 '("     flux/flux_star"),"         error","             R")'
 	write(30,form) "lambda [mu]",theta(1:nphase)
 	form='(f14.6,4es19.7E3)'
 	do i=1,nlamR

@@ -52,16 +52,6 @@
 		must=must*betaT
 	endif
 
-	do ilam=1,nlam
-		do ig=1,ng
-			do ir=1,nr
-				call Crossections(ir,ilam,ig,Ca(ir,ilam,ig),Cs(ir,ilam),docloud0)
-				if(.not.Ca(ir,ilam,ig).gt.0d0) Ca(ir,ilam,ig)=0d0
-				if(.not.Cs(ir,ilam).gt.0d0) Cs(ir,ilam)=0d0
-				Ce(ir,ilam,ig)=Ca(ir,ilam,ig)+Cs(ir,ilam)
-			enddo
-		enddo
-	enddo
 	do ir=1,nr
 		do ilam=1,nlam-1
 			call GetMatrix(ir,ilam,M(ir,ilam),docloud0)
@@ -72,6 +62,17 @@
 				tot=tot+M(ir,ilam)%F11(iphase)*sintheta(iphase)
 			enddo
 			g(ir,ilam)=g(ir,ilam)/tot
+		enddo
+	enddo
+	do ilam=1,nlam
+		do ig=1,ng
+			do ir=1,nr
+				call Crossections(ir,ilam,ig,Ca(ir,ilam,ig),Cs(ir,ilam),docloud0)
+				if(.not.Ca(ir,ilam,ig).gt.0d0) Ca(ir,ilam,ig)=0d0
+				if(.not.Cs(ir,ilam).gt.0d0) Cs(ir,ilam)=0d0
+c				Cs(ir,ilam)=Cs(ir,ilam)*(1d0-g(ir,ilam))
+				Ce(ir,ilam,ig)=Ca(ir,ilam,ig)+Cs(ir,ilam)
+			enddo
 		enddo
 	enddo
 
@@ -113,15 +114,15 @@
 		Cpl(ir)=Cpl(ir)/tot
 		Crw(ir)=tot2/Crw(ir)
 
-		kapmax=(2d0/7d0)*((T(ir)/TeffP)**4)*16d0/(3d0*Hp(ir))
-		if(Crw(ir).gt.kapmax) then
-			scale=kapmax/Crw(ir)
-			Ca(ir,1:nlam,1:ng)=Ca(ir,1:nlam,1:ng)*scale
-			Cs(ir,1:nlam)=Cs(ir,1:nlam)*scale
-			Ce(ir,1:nlam,1:ng)=Ce(ir,1:nlam,1:ng)*scale
-			Crw(ir)=Crw(ir)*scale
-			Cpl(ir)=Cpl(ir)*scale
-		endif
+c		kapmax=(2d0/7d0)*((T(ir)/TeffP)**4)*16d0/(3d0*Hp(ir))
+c		if(Crw(ir).gt.kapmax) then
+c			scale=kapmax/Crw(ir)
+c			Ca(ir,1:nlam,1:ng)=Ca(ir,1:nlam,1:ng)*scale
+c			Cs(ir,1:nlam)=Cs(ir,1:nlam)*scale
+c			Ce(ir,1:nlam,1:ng)=Ce(ir,1:nlam,1:ng)*scale
+c			Crw(ir)=Crw(ir)*scale
+c			Cpl(ir)=Cpl(ir)*scale
+c		endif
 		tau=tau+Crw(ir)*abs(R(ir+1)-R(ir))
 		dorw(ir)=(tau.gt.factRW)
 	enddo
@@ -156,7 +157,7 @@
 		Lum=0d0
 		tot=0d0
 		do ilam=1,nlam-1
-			specsource_star(ilam)=Fstar(ilam)/(4d0*pi*Dplanet**2)
+			specsource_star(ilam)=must*Fstar(ilam)/(4d0*pi*Dplanet**2)
 			Lum=Lum+dfreq(ilam)*specsource_star(ilam)
 			tot=tot+dfreq(ilam)*Planck(Tstar,freq(ilam))
 		enddo
@@ -218,7 +219,7 @@
 			goingup=.true.
 			onedge=.true.
 			jr=1
-			E0=E0_planet
+			E0=E0_planet/2d0
 		else
 			call emit(specsource_star,ilam)
 			rr=random(idum)
@@ -234,7 +235,7 @@
 			goingup=.false.
 			onedge=.true.
 			jr=nr
-			E0=E0_star*abs(must)
+			E0=E0_star
 		endif
 		do while((jr.le.nr.and.jr.ge.1).and.random(idum).gt.1d-8)
 1			continue

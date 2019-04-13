@@ -34,12 +34,12 @@
 	IMPLICIT NONE
 	integer iphase,iter
 	real*8 tau_V,tau_T,Planck,Cp(nr),f
-	real*8 g,dlnT,dlnP,d,tau,tautot,fact,contr,tau_a,exp_tau
+	real*8 g,dlnT,dlnP,d,tau,tautot,fact,contr,tau_a,exp_tau,nu
 	real*8,allocatable :: Ce(:,:,:),Ca(:,:,:),Cs(:,:,:),taustar(:,:),tauR_nu(:,:,:)
 	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i,E,E0,Tinp(nr)
-	real*8 Cjstar(nr),Jedd(nr),Cj(nr),Ch(nr),z,Hstar(nr),Jtot(nr),Htot(nr),Ktot(nr)
-	real*8 fedd(nr),Hedd(nr),lH1,lH2,P1,P2,Cr(nr),Jstar(nr),Kstar(nr)
-	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:),nu(:),wnu(:)
+	real*8 Cjstar(nr),Jedd(nr),Cj(nr),Ch(nr),z,Hstar(nr),Jtot,Htot,Ktot
+	real*8 fedd(nr),Hedd(nr),lH1,lH2,P1,P2
+	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:)
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax
 	logical docloud0(max(nclouds,1)),converged,stopscat
 	type(Mueller) M	
@@ -119,7 +119,7 @@
 	
 	niter=50
 	nscat=10
-	epsiter=1d-2
+	epsiter=1d-3
 
 	must=betaT
 	if(i2d.ne.0) then
@@ -134,7 +134,6 @@
 		endif
 		must=must*betaT
 	endif
-	must=max(1d-4,must)
 
 	do ir=nr,1,-1
 		if(T(ir).gt.0d0) then
@@ -278,26 +277,20 @@
 		enddo
 	enddo
 
-	Hstar=0d0
-	Jstar=0d0
-	Cjstar=0d0
-	do ilam=1,nlam_LR-1
-		do ig=1,ng
-			tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
-			contr=(Fstar_LR(ilam)/(4d0*pi*Dplanet**2))*must
-			call SolveIjStar(tauR,contr,Ij,nr)
-			Ih(nr) = -Ij(nr)
-			do ir=nr-1,2,-1
-				x1 = 1d0/(tauR(ir+1)-tauR(ir))
-				x2 = 1d0/(tauR(ir)-tauR(ir-1))
-				dx1 = x1*(Ij(ir+1)-Ij(ir))
-				dx2 = x2*(Ij(ir)-Ij(ir-1))
-				Ih(ir) = -(dx1+dx2)/2d0
-			end do
-			Ih(1) = 0d0
-			Jstar(1:nr)=Jstar(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ij(1:nr)
-			Hstar(1:nr)=Hstar(1:nr)-must*dfreq_LR(ilam)*wgg(ig)*Ih(1:nr)
-			Cjstar(1:nr)=Cjstar(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ij(1:nr)*Ca(1:nr,ilam,ig)
+	do ir=1,nr
+		Hstar(ir)=0d0
+		Cjstar(ir)=0d0
+		do ilam=1,nlam_LR-1
+			do ig=1,ng
+				tautot=0d0
+				do jr=ir,nr
+					tautot=tautot+tauR_nu(jr,ilam,ig)/abs(must)
+				enddo
+				fact=exp(-tautot)
+				contr=must*(Fstar_LR(ilam)/(4d0*pi*Dplanet**2))*fact
+				Hstar(ir)=Hstar(ir)-must*dfreq_LR(ilam)*wgg(ig)*contr
+				Cjstar(ir)=Cjstar(ir)+dfreq_LR(ilam)*wgg(ig)*contr*Ca(ir,ilam,ig)
+			enddo
 		enddo
 	enddo
 
@@ -307,28 +300,9 @@
 	enddo
 
 	ff=0.5d0
-		
-	nnu=20
-	allocate(nu(nnu),wnu(nnu))
-	call gauleg(0d0,1d0,nu,wnu,nnu)
-
+	
 	do iter=1,niter
-	call tellertje(iter,niter)
-
-	do ir=1,nr
-		Cr(ir)=0d0
-		iT=T(ir)+1
-		if(iT.gt.nBB-1) iT=nBB-1
-		if(iT.lt.1) iT=1
-		tot=0d0
-		do ilam=1,nlam_LR-1
-			do ig=1,ng
-				Cr(ir)=Cr(ir)+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)/Ce(ir,ilam,ig)
-				tot=tot+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)
-			enddo
-		enddo
-		Cr(ir)=tot/Cr(ir)
-	enddo
+	call tellertje(iter,niter+1)
 	
 	T0(1:nr)=T(1:nr)
 
@@ -336,6 +310,7 @@
 	Hnu=0d0
 	Knu=0d0
 
+	nnu=5
 	do ilam=1,nlam_LR-1
 		do ig=1,ng
 			do ir=1,nr
@@ -344,7 +319,7 @@
 					tautot=tautot+tauR_nu(jr,ilam,ig)/abs(must)
 				enddo
 				fact=exp(-tautot)
-				contr=(Fstar_LR(ilam)/(4d0*pi*Dplanet**2))*fact/2d0
+				contr=must*(Fstar_LR(ilam)/(4d0*pi*Dplanet**2))*fact
 				iT=T(ir)+1
 				if(iT.gt.nBB-1) iT=nBB-1
 				if(iT.lt.1) iT=1
@@ -354,23 +329,16 @@
 			enddo
 			Itot=0d0
 			do inu=1,nnu
-				tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
+				nu=(real(inu)-0.5)/real(nnu)
+				tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu)
 				call SolveIj(tauR,Si,Ij,nr)
-				Itot=Itot+Ij*wnu(inu)
-				Ih(nr) = -Ij(nr)
-				do ir=nr-1,2,-1
-					x1 = 1d0/(tauR(ir+1)-tauR(ir))
-					x2 = 1d0/(tauR(ir)-tauR(ir-1))
-					dx1 = x1*(Ij(ir+1)-Ij(ir))
-					dx2 = x2*(Ij(ir)-Ij(ir-1))
-					Ih(ir) = -(dx1+dx2)/2d0
-				end do
-				Ih(1) = 0d0
-
+				Itot=Itot+Ij/real(nnu)
+				call spldiff(tauR,Ij,nr,Ih)
+				Ih=-Ih
 				do ir=1,nr
-					Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+Ij(ir)*wnu(inu)
-					Hnu(ir,ilam,ig)=Hnu(ir,ilam,ig)-nu(inu)*Ih(ir)*wnu(inu)
-					Knu(ir,ilam,ig)=Knu(ir,ilam,ig)+nu(inu)*nu(inu)*Ij(ir)*wnu(inu)
+					Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+Ij(ir)/real(nnu)
+					Hnu(ir,ilam,ig)=Hnu(ir,ilam,ig)-nu*Ih(ir)/real(nnu)
+					Knu(ir,ilam,ig)=Knu(ir,ilam,ig)+nu*nu*Ij(ir)/real(nnu)
 				enddo
 			enddo
 			do ir=1,nr
@@ -381,88 +349,77 @@
 
 	open(unit=25,file='flux.dat',RECL=1000)
 	do ir=1,nr
-		Jtot(ir)=0d0
-		Htot(ir)=0d0
-		Ktot(ir)=0d0
+		Jtot=0d0
+		Htot=0d0
+		Ktot=0d0
 		Cj(ir)=0d0
 		Ch(ir)=0d0
 		do ilam=1,nlam_LR-1
 			do ig=1,ng
-				Jtot(ir)=Jtot(ir)+dfreq_LR(ilam)*wgg(ig)*Jnu(ir,ilam,ig)
-				Htot(ir)=Htot(ir)+dfreq_LR(ilam)*wgg(ig)*Hnu(ir,ilam,ig)
-				Ktot(ir)=Ktot(ir)+dfreq_LR(ilam)*wgg(ig)*Knu(ir,ilam,ig)
+				Jtot=Jtot+dfreq_LR(ilam)*wgg(ig)*Jnu(ir,ilam,ig)
+				Htot=Htot+dfreq_LR(ilam)*wgg(ig)*Hnu(ir,ilam,ig)
+				Ktot=Ktot+dfreq_LR(ilam)*wgg(ig)*Knu(ir,ilam,ig)
 				Cj(ir)=Cj(ir)+wgg(ig)*dfreq_LR(ilam)*Jnu(ir,ilam,ig)*Ca(ir,ilam,ig)
 				Ch(ir)=Ch(ir)+wgg(ig)*dfreq_LR(ilam)*Hnu(ir,ilam,ig)*Ce(ir,ilam,ig)
 			enddo
 		enddo
-		fedd(ir)=Ktot(ir)/Jtot(ir)
-		Cj(ir)=Cj(ir)/Jtot(ir)
-		Ch(ir)=Ch(ir)/Htot(ir)
-		write(25,*) P(ir),Htot(ir),Hedd(ir),Cj(ir),Ch(ir),Cr(ir)
+		fedd(ir)=Ktot/Jtot
+		Cj(ir)=Cj(ir)/Jtot
+		Ch(ir)=Ch(ir)/Htot
+		write(25,*) P(ir),Htot,Hedd(ir),Cj(ir),Ch(ir)
 	enddo
 	close(unit=25)
-	Ch(1)=Cr(1)
 
-	Htot(nr)=0d0
+	ir=nr
+	Jtot=0d0
+	Htot=0d0
+	Ktot=0d0
 	do ilam=1,nlam_LR-1
 		do ig=1,ng
-			Htot(nr)=Htot(nr)+abs(dfreq_LR(ilam)*wgg(ig)*Hnu(nr,ilam,ig))
+			Jtot=Jtot+dfreq_LR(ilam)*wgg(ig)*Jnu(ir,ilam,ig)
+			Htot=Htot+dfreq_LR(ilam)*wgg(ig)*Hnu(ir,ilam,ig)
+			Ktot=Ktot+dfreq_LR(ilam)*wgg(ig)*Knu(ir,ilam,ig)
 		enddo
 	enddo
 
-c	Jedd(nr)=fedd(nr)*abs(Hedd(nr)*Jtot/Htot)
-c	call splintegral(P(1:nr)*1d6,abs(Ch(1:nr)*Hedd(1:nr))/grav(1:nr),nr,Jedd)
+c	call splintegral(P(1:nr)*1d6,dabs(Ch(1:nr)*Hedd(1:nr))/grav(1:nr),nr,Jedd)
 c	do ir=1,nr
-c		Jedd(ir)=max(0d0,Jedd(ir)/fedd(ir))
+c		Jedd(ir)=max(0d0,Jedd(ir)/fedd(ir)+abs(Hedd(nr)*Jtot/Htot))
 c	enddo
 
-	Jedd(nr)=fedd(nr)*abs(Hedd(nr)*Jtot(nr)/Htot(nr))
+	Jedd(nr)=fedd(nr)*abs(Hedd(nr)*Jtot/Htot)
 	do ir=nr-1,1,-1
-		dx1=abs(Ch(ir)*Hedd(ir))/grav(ir)
-		dx2=abs(Ch(ir+1)*Hedd(ir+1))/grav(ir+1)
-		x1=P(ir+1)*1d6
-		x2=P(ir)*1d6
-		Jedd(ir)=Jedd(ir+1)+(dx1+dx2)*(x2-x1)/2d0
+		dx1=-abs(Ch(ir)*Hedd(ir)*dens(ir))
+		x1=R(ir+1)
+		x2=R(ir)
+		Jedd(ir)=Jedd(ir+1)+dx1*(x2-x1)
 		Jedd(ir)=max(0d0,Jedd(ir))
 	enddo
 	Jedd=Jedd/fedd
 
 	do ir=nr,1,-1
 		E=Cjstar(ir)+Cj(ir)*Jedd(ir)
-
-		iT=T(ir)+1
-		if(iT.gt.nBB-1) iT=nBB-1
-		if(iT.lt.1) iT=1
-		scale=(T(ir)/real(iT))**4
-		E0=0d0
-		do ilam=1,nlam_LR-1
-			do ig=1,ng
-				E0=E0+scale*wgg(ig)*dfreq_LR(ilam)*BB_LR(iT,ilam)*Ca(ir,ilam,ig)
+		iTmin=1
+		iTmax=nBB
+		iT=0.5d0*(iTmax+iTmin)
+		do while(abs(iTmax-iTmin).gt.1)
+			E0=0d0
+			do ilam=1,nlam_LR-1
+				do ig=1,ng
+					E0=E0+wgg(ig)*dfreq_LR(ilam)*BB_LR(iT,ilam)*Ca(ir,ilam,ig)
+				enddo
 			enddo
+			if(E0.gt.E) then
+				iTmax=iT
+			else
+				iTmin=iT
+			endif
+			iT=0.5d0*(iTmax+iTmin)
+			if(iT.lt.1) iT=1
+			if(iT.gt.nBB) iT=nBB
 		enddo
+		T0(ir)=real(iT)*(E/E0)**0.25
 
-c		iTmin=1
-c		iTmax=nBB
-c		iT=0.5d0*(iTmax+iTmin)
-c		do while(abs(iTmax-iTmin).gt.1)
-c			E0=0d0
-c			do ilam=1,nlam_LR-1
-c				do ig=1,ng
-c					E0=E0+wgg(ig)*dfreq_LR(ilam)*BB_LR(iT,ilam)*Ca(ir,ilam,ig)
-c				enddo
-c			enddo
-c			if(E0.gt.E) then
-c				iTmax=iT
-c			else
-c				iTmin=iT
-c			endif
-c			iT=0.5d0*(iTmax+iTmin)
-c			if(iT.lt.1) iT=1
-c			if(iT.gt.nBB) iT=nBB
-c		enddo
-c		T0(ir)=real(iT)*(E/E0)**0.25
-
-		T0(ir)=T(ir)*(E/E0)**0.25
 
 		if(.not.T0(ir).gt.3d0) then
 			print*,T0(ir),iT,ir,fedd(ir),Ch(ir)
@@ -495,7 +452,7 @@ c		T0(ir)=real(iT)*(E/E0)**0.25
 
 	converged=.true.
 	do ir=1,nr
-		if(.not.abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).lt.epsiter) converged=.false.
+		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.epsiter) converged=.false.
 		T(ir)=Tinp(ir)*(1d0-f)+T(ir)*f
 	enddo
 
@@ -517,62 +474,10 @@ c		T0(ir)=real(iT)*(E/E0)**0.25
 	deallocate(Jnu)
 	deallocate(Hnu)
 	deallocate(Knu)
-	deallocate(nu,wnu)
 
 	return
 	end
 
-
-	subroutine SolveIjStar(tauR,I0,Ij,nr)
-	IMPLICIT NONE
-	integer ir,nr
-	real*8 tauR(nr),Ij(nr),I0
-	real*8 x(nr),y(nr),fact,d
-	real*8 MM(nr,3),MMal(nr,1),Ma(nr),Mb(nr),Mc(nr)
-	integer indx(nr),info
-
-	Ma=0d0
-	Mb=0d0
-	Mc=0d0
-	do ir=2,nr-1
-		fact=1d0/(0.5d0*(tauR(ir+1)+tauR(ir))-0.5d0*(tauR(ir)+tauR(ir-1)))
-		Mb(ir)=1d0+fact*(1d0/(tauR(ir+1)-tauR(ir))+1d0/(tauR(ir)-tauR(ir-1)))
-		Ma(ir)=-fact*1d0/(tauR(ir)-tauR(ir-1))
-		Mc(ir)=-fact*1d0/(tauR(ir+1)-tauR(ir))
-	enddo
-	Mb(1)=1d0/(tauR(1)-tauR(2))
-	Mc(1)=-1d0/(tauR(1)-tauR(2))
-	Ma(nr)=0d0
-	Mb(nr)=1d0
-	x=0d0
-	x(nr)=I0
-	info=0
-	call tridag(Ma,Mb,Mc,x,y,nr,info)
-	Ij(1:nr)=y(1:nr)
-	do ir=1,nr
-		if(Ij(ir).lt.0d0) info=1
-	enddo
-	if(info.ne.0) then
-		do ir=1,nr
-			MM(ir,1)=Ma(ir)
-			MM(ir,2)=Mb(ir)
-			MM(ir,3)=Mc(ir)
-		enddo
-		call bandec(MM,nr,1,1,nr,3,MMal,1,indx,d)
-		x=0d0
-		x(nr)=I0
-		call banbks(MM,nr,1,1,nr,3,MMal,1,indx,x)
-		Ij(1:nr)=x(1:nr)
-	endif
-	do ir=1,nr
-		if(Ij(ir).lt.0d0) then
-			Ij(ir)=0d0
-		endif
-	enddo
-
-	return
-	end
-	
 
 	subroutine SolveIj(tauR,Si,Ij,nr)
 	IMPLICIT NONE
@@ -591,8 +496,8 @@ c		T0(ir)=real(iT)*(E/E0)**0.25
 		Ma(ir)=-fact*1d0/(tauR(ir)-tauR(ir-1))
 		Mc(ir)=-fact*1d0/(tauR(ir+1)-tauR(ir))
 	enddo
-	Mb(1)=1d0/(tauR(1)-tauR(2))
-	Mc(1)=-1d0/(tauR(1)-tauR(2))
+	Mb(1)=-1d0/tauR(1)
+	Mc(1)=1d0/tauR(1)
 	Ma(nr)=1d0/(tauR(nr-1)-tauR(nr))
 	Mb(nr)=-1d0-1d0/(tauR(nr-1)-tauR(nr))
 	x=0d0
@@ -652,20 +557,37 @@ c		T0(ir)=real(iT)*(E/E0)**0.25
       END
 
 
-	subroutine spldiff(x,y,n,dy)
+	subroutine spldiff(x,y,n,u)
 	IMPLICIT NONE
-	integer n,i
-	real*8 x(n),y(n),dy(n),dy1,dyn,y2(n)
-	dy1=1d50
-	dyn=1d50
-
-	call spline(x,y,n,dy1,dyn,y2)
-	do i=1,n-1
-		dy(i)=(y(i+1)-y(i))/(x(i+1)-x(i))-(x(i+1)-x(i))*y2(i)/3d0-(x(i+1)-x(i))*y2(i+1)/6d0
-	enddo
-	i=n-1
-	dy(n)=(y(i+1)-y(i))/(x(i+1)-x(i))+(x(i+1)-x(i))*y2(i)/6d0+(x(i+1)-x(i))*y2(i+1)/3d0
-	
+c Calculates the numerical derivative using spline interpolation
+c Calls the Numerical Recipes routine TRIDIAG (double precision)
+c REMARK
+c End point behaviour is not so good
+c INPUTS
+c x(n),y(n) - arrays comprising x & y data (equispaced x)
+c h - spacing in x values
+c n - array size
+c OUTPUT
+c u(n) - first order derivative (dy/dx)
+c
+c P. Arumugam, IIT Roorkee - 07-June-2010
+c
+	integer n,i,info
+	real*8 x(n),y(n)
+	real*8 a(n),b(n),c(n),r(n),u(n)
+	a(n)=1.d0
+	b(1)=2.d0
+	b(n)=2.d0
+	c(n-1)=1.d0
+	r(1)=3.d0*(y(2)-y(1))/(x(2)-x(1))
+	r(n)=3.d0*(y(n)-y(n-1))/(x(n)-x(n-1))
+	do i=2,n-1
+		a(i)=1.d0
+		b(i)=4.d0
+		c(i-1)=1.d0
+		r(i)=6.d0*(y(i+1)-y(i-1))/(x(i+1)-x(i-1))
+	end do
+	call tridag(a,b,c,r,u,n,info)
 	return
 	end
 	
@@ -673,21 +595,27 @@ c		T0(ir)=real(iT)*(E/E0)**0.25
 	subroutine splintegral(x,dy,n,y)
 	IMPLICIT NONE
 	integer n,i,info
-	real*8 x(n),y(n),dy(n),dy1,dyn,y2(n)
-	real*8 a,b,c,d,dx(n),r(n),CC
-	dy1=1d50
-	dyn=1d50
-
-	call spline(x,dy,n,dy1,dyn,y2)
-	do i=n-1,1,-1
-		a=(y2(i)-y2(i+1))/(6d0*(x(i)-x(i+1)))
-		b=(y2(i)-6d0*a*x(i))/2d0
-		c=(dy(i)-dy(i+1)-a*(x(i)**3-x(i+1)**3)-b*(x(i)**2-x(i+1)**2))/(x(i)-x(i+1))
-		d=dy(i)-a*x(i)**3-b*x(i)**2-c*x(i)
-		CC=y(i+1)-(a*x(i+1)**4)/4d0-(b*x(i+1)**3)/3d0-(c*x(i+1)**2)/2d0-d*x(i+1)
-		y(i)=CC+(a*x(i)**4)/4d0+(b*x(i)**3)/3d0+(c*x(i)**2)/2d0+d*x(i)
+	real*8 x(n),y(n),dy(n)
+	real*8 a(n),b(n),c(n),dx(n),r(n)
+	
+	do i=1,n-1
+		dx(i)=x(i+1)-x(i)
 	enddo
-
+	dx(n)=dx(n-1)
+	r=dy
+	do i=2,n-1
+		a(i)=-dx(i)/(dx(i-1)*(dx(i-1)+dx(i)))
+		b(i)=dx(i)/(dx(i-1)*(dx(i-1)+dx(i)))-dx(i-1)/(dx(i)*(dx(i-1)+dx(i)))
+		c(i)=dx(i-1)/(dx(i)*(dx(i-1)+dx(i)))
+	enddo
+	a(1)=0d0
+	b(1)=-1d0/dx(1)
+	c(1)=1d0/dx(1)
+	a(n)=0d0
+	b(n)=1d0
+	c(n)=0d0
+	r(n)=0d0
+	call tridag(a,b,c,r,y,n,info)
 	return
 	end
 		
