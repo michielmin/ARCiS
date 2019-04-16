@@ -164,7 +164,7 @@ c		endif
 		specsource_star=specsource_star/Lum
 		scale=((2d0*(pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))/tot
 		Lum=Lum*scale
-		E0_star=Lum/real(NphotStar)
+		E0_star=Lum*max(must,0d0)/real(NphotStar)
 	endif
 
 	if(Nphot.eq.0) then
