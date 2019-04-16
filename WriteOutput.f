@@ -472,7 +472,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
      &		2d0*(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
 	endif
 	form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
-     &				 '("     flux/flux_star"),"         error","             R")'
+     &				 '("   flux(",f5.1,") [Jy]"),"         error","             R")'
 	write(30,form) "lambda [mu]",theta(1:nphase)
 	form='(f14.6,4es19.7E3)'
 	do i=1,nlamR

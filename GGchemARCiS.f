@@ -5646,6 +5646,12 @@ c      close(12)
       dispol_file(2) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_StockKitzmann_withoutTsuji.dat'
       dispol_file(3) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_WoitkeRefit.dat'
       dispol_file(4) = ''
+
+c      dispol_file(1) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_GGchem.dat'
+c      dispol_file(2) = ''
+
+
+
       elements     = 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V el'
       abund_pick   = 3
       model_eqcond = .false.

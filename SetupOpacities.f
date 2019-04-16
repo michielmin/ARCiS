@@ -38,7 +38,8 @@
 	do i=1,nmol
 		if(includemol(i)) j=j+1
 	enddo
-	n_nu_line=ng*ng
+c	n_nu_line=ng*ng
+	n_nu_line=ng*min(j,4)
 	if(.not.emisspec.and..not.computeT) n_nu_line=ng
 	
 	allocate(nu_line(n_nu_line))
@@ -124,16 +125,13 @@
 						w_line(ig)=w_line(ig)+w_line(ig-1)
 					enddo
 					w_line(1:n_nu_line)=w_line(1:n_nu_line)/w_line(n_nu_line)
-					j=1
 					do ig=1,ng
-						call hunt(w_line(j:n_nu_line),n_nu_line-j+1,gg(ig),ig_c)
-						ig_c=ig_c+j-1
-						if(ig_c.le.j) then
-							kappa(ig)=k_line(j)
+						call hunt(w_line,n_nu_line,gg(ig),ig_c)
+						if(ig_c.le.1) then
+							kappa(ig)=k_line(1)
 						else
 							w1=(gg(ig)-w_line(ig_c+1))/(w_line(ig_c)-w_line(ig_c+1))
 							kappa(ig)=k_line(ig_c)*w1+k_line(ig_c+1)*(1d0-w1)
-							j=ig_c
 						endif
 					enddo
 				endif

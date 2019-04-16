@@ -164,7 +164,7 @@ c		endif
 		specsource_star=specsource_star/Lum
 		scale=((2d0*(pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))/tot
 		Lum=Lum*scale
-		E0_star=Lum*max(must,0d0)/real(NphotStar)
+		E0_star=Lum/real(NphotStar)
 	endif
 
 	if(Nphot.eq.0) then
@@ -219,7 +219,7 @@ c		endif
 			goingup=.true.
 			onedge=.true.
 			jr=1
-			E0=E0_planet/2d0
+			E0=E0_planet
 		else
 			call emit(specsource_star,ilam)
 			rr=random(idum)
