@@ -625,6 +625,31 @@ c equations for material
 		rpart(i)=sqrt(rr*rpart(i))
 	enddo
 
+	if(computeT.and.nTiter.lt.maxiter.and.nTiter.gt.0.and..not.doMCcompute.and..false.) then
+		k=1
+		do i=1,nr
+			cloud_dens(i,ii)=0d0
+			do j=1,nr_cloud
+				do iCS=1,nCS
+					cloud_dens(i,ii)=cloud_dens(i,ii)+xc(iCS,k)*Clouddens(k)/real(nr_cloud)
+				enddo
+				k=k+1
+				if(k.gt.nnr) k=nnr
+			enddo
+		enddo
+		call DoComputeT(Tconverged,0.1d0)
+		
+		k=1
+		do i=1,nr-1
+			do j=1,nr_cloud
+				CloudT(k)=10d0**(log10(T(i))+log10(T(i+1)/T(i))*real(j-1)/real(nr_cloud))
+				k=k+1
+				if(k.gt.nnr) k=nnr
+			enddo
+		enddo
+		CloudT(k)=T(nr)
+	endif
+
 	enddo
 c end the loop
 

@@ -86,25 +86,41 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	logical saneplanet
+	logical saneplanet,MassRadius
 	real*8 RHill,SH,Tirr
 	integer i
 
-	saneplanet=.true.
+	saneplanet=MassRadius(Mplanet,Rplanet)
 	RHill=(Dplanet*(Mplanet/(3d0*Mstar))**(1d0/3d0))
 	if(Rplanet.gt.RHill) saneplanet=.false.
 	
 	SH=(sqrt(Rstar/(2d0*Dplanet))*Tstar*kb)/((Ggrav*Mplanet/(Rplanet**2))*mp*2.3d0)
 	if(SH.gt.Rplanet/5d0) saneplanet=.false.
 
-c	call SetupStructure(.true.)
-c	do i=1,nr
-c		if(T(i).le.Tmin) saneplanet=.false.
-c	enddo
-	
 	return
 	end
 
+	logical function MassRadius(Mg,Rg)
+	use Constants
+	IMPLICIT NONE
+	real*8 Mg,Rg,Me,Re,Mb,Rb,s
+	
+	Rb=12.1d0
+	Mb=124d0
+	if(Mg/Mearth.lt.Mb) then
+		s=0.55
+	else
+		s=0.1
+	endif
+	Me=Mg/Mearth
+	Re=Rb*(Me/Mb)**s
+	Re=Re*Rearth
+	MassRadius=.false.
+	if(abs(log10(Re/Rg)).lt.0.5d0) MassRadius=.true.
+	
+	return
+	end
+	
 
 
 	subroutine DoMapCOratio()
@@ -211,6 +227,8 @@ c		f=f/tot
 	character*500 command
 
 	call MapRetrieval(var,error)
+
+	if(Tform.gt.0d0) call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
 
 98	open(unit=20,file=trim(outputdir) // "parameters",RECL=1000,ERR=99)
 	goto 100

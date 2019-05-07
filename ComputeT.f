@@ -38,7 +38,7 @@
 	real*8,allocatable :: Ce(:,:,:),Ca(:,:,:),Cs(:,:,:),taustar(:,:),tauR_nu(:,:,:)
 	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i,E,E0,Tinp(nr)
 	real*8 Cjstar(nr),Jedd(nr),Cj(nr),Ch(nr),z,Hstar(nr),Jtot(nr),Htot(nr),Ktot(nr)
-	real*8 fedd(nr),Hedd(nr),lH1,lH2,P1,P2,Cr(nr),Jstar(nr)
+	real*8 fedd(nr),Hedd(nr),lH1,lH2,P1,P2,Cr(nr),Jstar(nr),Kstar(nr)
 	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:),nu(:),wnu(:),Jstar_nu(:,:,:)
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax
 	logical docloud0(max(nclouds,1)),converged,stopscat
@@ -104,10 +104,10 @@
 	allocate(Cs(nr,nlam_LR,ng))
 	allocate(Fstar_LR(nlam_LR))
 	allocate(tauR_nu(nr,nlam_LR,ng))
+	allocate(Jstar_nu(nr,nlam_LR,ng))
 	allocate(Jnu(nr,nlam_LR,ng))
 	allocate(Hnu(nr,nlam_LR,ng))
 	allocate(Knu(nr,nlam_LR,ng))
-	allocate(Jstar_nu(nr,nlam_LR,ng))
 	if(.not.allocated(Si_prev)) then
 		allocate(Si_prev(nr,nlam_LR,ng))
 		Si_prev=0d0
@@ -303,7 +303,7 @@
 		enddo
 	enddo
 
-	E0=((2d0*(pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))/2d0
+	E0=((2d0*(pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
 	do ir=1,nr
 		Hedd(ir)=E0-Hstar(ir)
 	enddo
@@ -319,22 +319,17 @@
 
 	do ir=1,nr
 		Cr(ir)=0d0
-		Cp(ir)=0d0
 		iT=T(ir)+1
 		if(iT.gt.nBB-1) iT=nBB-1
 		if(iT.lt.1) iT=1
 		tot=0d0
-		tot2=0d0
 		do ilam=1,nlam_LR-1
 			do ig=1,ng
-				Cr(ir)=Cr(ir)+dfreq_LR(ilam)*wgg(ig)*(BB_LR(iT,ilam)-BB_LR(iT-1,ilam))/Ce(ir,ilam,ig)
-				Cp(ir)=Cp(ir)+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)*Ce(ir,ilam,ig)
-				tot=tot+dfreq_LR(ilam)*wgg(ig)*(BB_LR(iT,ilam)-BB_LR(iT-1,ilam))
-				tot2=tot2+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)
+				Cr(ir)=Cr(ir)+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)/Ce(ir,ilam,ig)
+				tot=tot+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)
 			enddo
 		enddo
 		Cr(ir)=tot/Cr(ir)
-		Cp(ir)=Cp(ir)/tot2
 	enddo
 	
 	T0(1:nr)=T(1:nr)
@@ -346,12 +341,13 @@
 	do ilam=1,nlam_LR-1
 		do ig=1,ng
 			do ir=1,nr
+				contr=Jstar_nu(ir,ilam,ig)
 				iT=T(ir)+1
 				if(iT.gt.nBB-1) iT=nBB-1
 				if(iT.lt.1) iT=1
 				scale=(T(ir)/real(iT))**4
-				Si(ir)=scale*BB_LR(iT,ilam)*Ca(ir,ilam,ig)/Ce(ir,ilam,ig)+Jstar_nu(ir,ilam,ig)*Cs(ir,ilam,ig)/(Ce(ir,ilam,ig)*4d0*pi)
-				Si(ir)=Si(ir)+Si_prev(ir,ilam,ig)*Cs(ir,ilam,ig)/(Ce(ir,ilam,ig)*4d0*pi)
+				Si(ir)=scale*BB_LR(iT,ilam)*Ca(ir,ilam,ig)/Ce(ir,ilam,ig)+contr*Cs(ir,ilam,ig)/(Ce(ir,ilam,ig))
+				Si(ir)=Si(ir)+Si_prev(ir,ilam,ig)*Cs(ir,ilam,ig)/(Ce(ir,ilam,ig))
 			enddo
 			Itot=0d0
 			do inu=1,nnu
@@ -367,8 +363,6 @@
 					Ih(ir) = -(dx1+dx2)/2d0
 				end do
 				Ih(1) = 0d0
-c				call spldiff(tauR,Ij,nr,Ih)
-c				Ih=-Ih
 
 				do ir=1,nr
 					Jnu(ir,ilam,ig)=Jnu(ir,ilam,ig)+Ij(ir)*wnu(inu)
@@ -401,7 +395,7 @@ c				Ih=-Ih
 		fedd(ir)=Ktot(ir)/Jtot(ir)
 		Cj(ir)=Cj(ir)/Jtot(ir)
 		Ch(ir)=Ch(ir)/Htot(ir)
-		write(25,*) P(ir),Htot(ir),Hedd(ir),Cj(ir),Ch(ir),Cr(ir),Cp(ir)
+		write(25,*) P(ir),Htot(ir),Hedd(ir),Cj(ir),Ch(ir),Cr(ir)
 	enddo
 	close(unit=25)
 	Ch(1)=Cr(1)
@@ -413,48 +407,62 @@ c				Ih=-Ih
 		enddo
 	enddo
 
-c	Jedd(nr)=fedd(nr)*abs(Hedd(nr)*Jtot(nr)/Htot(nr))
+c	Jedd(nr)=fedd(nr)*abs(Hedd(nr)*Jtot/Htot)
 c	call splintegral(P(1:nr)*1d6,abs(Ch(1:nr)*Hedd(1:nr))/grav(1:nr),nr,Jedd)
 c	do ir=1,nr
 c		Jedd(ir)=max(0d0,Jedd(ir)/fedd(ir))
 c	enddo
-	
-	Jedd(nr)=abs(Hedd(nr)*Jtot(nr)/Htot(nr))
+
+	Jedd(nr)=fedd(nr)*abs(Hedd(nr)*Jtot(nr)/Htot(nr))
 	do ir=nr-1,1,-1
-		dx1=abs(Ch(ir+1)*Hedd(ir+1)/grav(ir+1))
-		dx2=abs(Ch(ir)*Hedd(ir)/grav(ir))
+		dx1=abs(Ch(ir)*Hedd(ir))/grav(ir)
+		dx2=abs(Ch(ir+1)*Hedd(ir+1))/grav(ir+1)
 		x1=P(ir+1)*1d6
 		x2=P(ir)*1d6
-		Jedd(ir)=fedd(ir+1)*Jedd(ir+1)+0.5d0*(dx1+dx2)*(x2-x1)
-		Jedd(ir)=max(0d0,Jedd(ir)/fedd(ir))
+		Jedd(ir)=Jedd(ir+1)+(dx1+dx2)*(x2-x1)/2d0
+		Jedd(ir)=max(0d0,Jedd(ir))
 	enddo
-
+	Jedd=Jedd/fedd
 
 	do ir=nr,1,-1
 		E=Cjstar(ir)+Cj(ir)*Jedd(ir)
 
-		iTmin=1
-		iTmax=nBB
-		iT=0.5d0*(iTmax+iTmin)
-		do while(abs(iTmax-iTmin).gt.1)
-			E0=0d0
-			do ilam=1,nlam_LR-1
-				do ig=1,ng
-					E0=E0+wgg(ig)*dfreq_LR(ilam)*BB_LR(iT,ilam)*Ca(ir,ilam,ig)
-				enddo
+		iT=T(ir)+1
+		if(iT.gt.nBB-1) iT=nBB-1
+		if(iT.lt.1) iT=1
+		scale=(T(ir)/real(iT))**4
+		E0=0d0
+		do ilam=1,nlam_LR-1
+			do ig=1,ng
+				E0=E0+scale*wgg(ig)*dfreq_LR(ilam)*BB_LR(iT,ilam)*Ca(ir,ilam,ig)
 			enddo
-			if(E0.gt.E) then
-				iTmax=iT
-			else
-				iTmin=iT
-			endif
-			iT=0.5d0*(iTmax+iTmin)
-			if(iT.lt.1) iT=1
-			if(iT.gt.nBB) iT=nBB
 		enddo
-		T0(ir)=real(iT)*(E/E0)**0.25
+
+c		iTmin=1
+c		iTmax=nBB
+c		iT=0.5d0*(iTmax+iTmin)
+c		do while(abs(iTmax-iTmin).gt.1)
+c			E0=0d0
+c			do ilam=1,nlam_LR-1
+c				do ig=1,ng
+c					E0=E0+wgg(ig)*dfreq_LR(ilam)*BB_LR(iT,ilam)*Ca(ir,ilam,ig)
+c				enddo
+c			enddo
+c			if(E0.gt.E) then
+c				iTmax=iT
+c			else
+c				iTmin=iT
+c			endif
+c			iT=0.5d0*(iTmax+iTmin)
+c			if(iT.lt.1) iT=1
+c			if(iT.gt.nBB) iT=nBB
+c		enddo
+c		T0(ir)=real(iT)*(E/E0)**0.25
+
+		T0(ir)=T(ir)*(E/E0)**0.25
 
 		if(.not.T0(ir).gt.3d0) then
+			print*,T0(ir),iT,ir,fedd(ir),Ch(ir)
 			T0(ir)=T(ir)
 		endif
 	enddo
@@ -487,7 +495,6 @@ c	enddo
 		if(.not.abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).lt.epsiter) converged=.false.
 		T(ir)=Tinp(ir)*(1d0-f)+T(ir)*f
 	enddo
-	if(nTiter.lt.3) converged=.false.
 
 	call tellertje(niter,niter)
 	call WriteStructure
@@ -507,7 +514,6 @@ c	enddo
 	deallocate(Jnu)
 	deallocate(Hnu)
 	deallocate(Knu)
-	deallocate(Jstar_nu)
 	deallocate(nu,wnu)
 
 	return
@@ -647,8 +653,8 @@ c	enddo
 	IMPLICIT NONE
 	integer n,i
 	real*8 x(n),y(n),dy(n),dy1,dyn,y2(n)
-	dy1=dy(1)
-	dyn=dy(n)
+	dy1=1d50
+	dyn=1d50
 
 	call spline(x,y,n,dy1,dyn,y2)
 	do i=1,n-1

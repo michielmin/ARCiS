@@ -720,20 +720,25 @@ c For other than H2 from Sneep & Ubachs (2005)
 		if(mixrat_r(ir,j).gt.0d0) then
 			select case(j)
 				case(2) !CO2
+c Sneep & Ubachs (2005)
 					Cs=Cs+12.4*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 				case(4) !N2O
+c Sneep & Ubachs (2005)
 					Cs=Cs+15.9*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 				case(5) !CO
+c Sneep & Ubachs (2005)
 					Cs=Cs+6.19*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 				case(6) !CH4
+c Sneep & Ubachs (2005)
 					Cs=Cs+12.47*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 				case(22) !N2
+c Sneep & Ubachs (2005)
 					Cs=Cs+5.1*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 				case(30) !SF6
+c Sneep & Ubachs (2005)
 					Cs=Cs+32.3*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 				case(45) ! H2
-					Cs=Cs+mixrat_r(ir,j)*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4)
-				case default ! H2
+c Dalgarno & Williams (1962)
 					Cs=Cs+mixrat_r(ir,j)*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4)
 			end select
 		endif
