@@ -437,6 +437,32 @@ c changed this to mass fractions (11-05-2010)
 		frac=1d0/real(nm)
 	endif
 
+	partfile=trim(particledir) // "particle" // "_f" // trim(dbl2string(1d0*C%rv(isize),'(es8.2)'))
+	if(abun_in_name.gt.0) then
+		do i=1,nm
+			select case(abun_in_name)
+				case(1)
+					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f3.1)'))
+				case(2)
+					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f4.2)'))
+				case(3)
+					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f5.3)'))
+				case(4)
+					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f6.4)'))
+				case default
+					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f7.5)'))
+			end select
+		enddo
+	endif
+	partfile=trim(partfile) // ".fits.gz"
+
+	inquire(file=partfile,exist=truefalse)
+	if(truefalse) then
+		if(checkparticlefile(partfile,amin,amax,dble(pow),ns,C%fmax,C%blend,C%porosity,frac,rho,nm,filename,(abun_in_name.le.0))) then
+			call ReadParticleFits(partfile,C,isize)
+			goto 300
+		endif
+	endif
 
 	if(C%blend) then
 		nm=nm+1
@@ -946,8 +972,8 @@ c changed this to mass fractions (11-05-2010)
 	endif
 	
 c	if(.not.domakeai) then
-c		call ParticleFITS(C,r0,nr0(1:nm,1:ns),nm,ns,rho_av,ii,amin,amax,dble(pow),
-c     &						C%fmax,C%blend,C%porosity,frac,rho,filename,isize)
+		call ParticleFITS(C,r0,nr0(1:nm,1:ns),nm,ns,rho_av,ii,amin,amax,dble(pow),
+     &						C%fmax,C%blend,C%porosity,frac,rho,filename,isize)
 c	endif
 
 
@@ -1251,7 +1277,7 @@ c	call ftpkye(unit,'a3',real(a3),8,'[micron^3]',status)
 	!  Write the array to the FITS file.
 
 	!------------------------------------------------------------------------------
-	! HDU 0: opacities 
+	! HDU 0: opacities
 	!------------------------------------------------------------------------------
 
 	do i=1,nlam
@@ -1266,7 +1292,7 @@ c	call ftpkye(unit,'a3',real(a3),8,'[micron^3]',status)
 	deallocate(array)
 
 	!------------------------------------------------------------------------------
-	! HDU 1: Temperature 
+	! HDU 1: Temperature
 	!------------------------------------------------------------------------------
 	bitpix=-64
 	naxis=3
@@ -1274,8 +1300,6 @@ c	call ftpkye(unit,'a3',real(a3),8,'[micron^3]',status)
 	naxes(2)=6
 	naxes(3)=180
 	nelements=naxes(1)*naxes(2)*naxes(3)
-
-	if(scattering) then
 
 	allocate(array(nlam,6,180))
 
@@ -1300,8 +1324,6 @@ c	call ftpkye(unit,'a3',real(a3),8,'[micron^3]',status)
 	call ftpprd(unit,group,fpixel,nelements,array,status)
 
 	deallocate(array)
-
-	endif
 	
 	!  Close the file and free the unit number.
 	call ftclos(unit, status)
@@ -1508,28 +1530,28 @@ c-----------------------------------------------------------------------
      &                   M1, M2, S21, D21, MAXANG, Err)
 	USE ArraysDMiLay
 c **********************************************************************
-c    DOUBLE PRECISION version of MieLay, which computes electromagnetic 
-c    scattering by a stratified sphere, i.e. a particle consisting of a 
-c    spherical core surrounded by a spherical shell.  The surrounding 
-c    medium is assumed to have refractive index unity.  The formulas, 
-c    manipulated to avoid the ill-conditioning that plagued earlier 
+c    DOUBLE PRECISION version of MieLay, which computes electromagnetic
+c    scattering by a stratified sphere, i.e. a particle consisting of a
+c    spherical core surrounded by a spherical shell.  The surrounding
+c    medium is assumed to have refractive index unity.  The formulas,
+c    manipulated to avoid the ill-conditioning that plagued earlier
 c    formulations, were published in:
 
 c        Toon, O. and T. Ackerman, Applied Optics 20, 3657 (1981)
 
 c    Further documentation, including definitons of input and output
 c    arguments, is inside the single precision version of this program
-c    (SUBROUTINE MieLay, available by anonymous ftp from 
+c    (SUBROUTINE MieLay, available by anonymous ftp from
 c    climate.gsfc.nasa.gov in directory pub/wiscombe).
 
-c    It is recommended to use this DOUBLE PRECISION version for IEEE 
+c    It is recommended to use this DOUBLE PRECISION version for IEEE
 c    arithmetic (32-bit floating point) computers, just to be safe.
 c    If computer time is critical, back-to-back tests with the single
 c    precision version should be done for ranges of radii and refractive
 c    index relevant to your particular problem, before adopting the
 c    single precision version.  This version is also recommended for
-c    cases of large size parameter (bigger than 10 or so) and/or large 
-c    imaginary refractive index (bigger than 1 or so) and also whenever 
+c    cases of large size parameter (bigger than 10 or so) and/or large
+c    imaginary refractive index (bigger than 1 or so) and also whenever
 c    overflows or strange behavior are encountered in running the
 c    single precision version.  Sometimes the bigger exponent range in
 c    DOUBLE PRECISION is as important as the added precision.
@@ -3355,7 +3377,7 @@ c       upward recursion:
             Sminb  = dcmplx(0.D0,0.D0)
 *  THIS IS THE INNERMOST LOOP !! (Mie sum)
 *  can be programmed more efficiently by taking the facf multiplication
-*  outside the angle loop over index j 
+*  outside the angle loop over index j
             do 20 n=1,nfou
                 Splusf = Splusf + facf(n)*(an(n)+bn(n)) * (pi(n)+tau(n))
                 Sminf  = Sminf  + facf(n)*(an(n)-bn(n)) * (pi(n)-tau(n))

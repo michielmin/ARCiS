@@ -718,16 +718,16 @@ c correction for SiC
 	enddo
 
 	open(unit=20,file=trim(outputdir) // '/cloudstructure.dat',RECL=1000)
-	form='("#",a18,a19,a19,' // trim(int2string(nCS+1,'(i4)')) // 'a23,a19,a19)'
-	write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"MgO","r[micron]","T[K]"
-	form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+1,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3)'
+	form='("#",a18,a19,a19,' // trim(int2string(nCS+1,'(i4)')) // 'a23,a19,a19,a19)'
+	write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"MgO","r[micron]","T[K]","Jstar"
+	form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+1,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
 	do i=1,nnr
 		densv=(mu*mp/(kb*CloudT(i)))*exp(BTP-ATP/CloudT(i))
 		do iCS=1,nCS
 			if(cloudT(i).gt.maxT(iCS)) densv(iCS)=densv(iCS)+(mu(iCS)*mp/(kb*CloudT(i)*10d0))
      &												*exp(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0))
 		enddo
-		write(20,form) CloudP(i),Clouddens(i),xn(i),xc(1:nCS,i),xMgO(i),rpart(i),CloudT(i)
+		write(20,form) CloudP(i),Clouddens(i),xn(i),xc(1:nCS,i),xMgO(i),rpart(i),CloudT(i),Sn(i)/m_nuc
 	enddo
 	close(unit=20)
 

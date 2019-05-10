@@ -70,7 +70,7 @@ c	call ftgkyj(unit,'mcfost2prodimo',mcfost(1)%mcfost2ProDiMo,comment,stat4)
 	call ftgpvd(unit,group,firstpix,npixels,nullval,array,anynull,status)
 
 	allocate(matrix(nl_read,6,180))
-	if(scattering.or..not.retrieval) readmatrix=.true.
+	if(scattering) readmatrix=.true.
 	if(readmatrix) then
 
 	!------------------------------------------------------------------------
@@ -87,7 +87,18 @@ c	call ftgkyj(unit,'mcfost2prodimo',mcfost(1)%mcfost2ProDiMo,comment,stat4)
 	! read_image
 
 	call ftgpvd(unit,group,firstpix,npixels,nullval,matrix,anynull,status)
-   
+
+	else
+	
+	matrix=1d0
+	do i=1,nlam
+		C%F(isize,i)%F11(1:180)=1d0
+		C%F(isize,i)%F12(1:180)=1d0
+		C%F(isize,i)%F22(1:180)=1d0
+		C%F(isize,i)%F33(1:180)=1d0
+		C%F(isize,i)%F34(1:180)=1d0
+		C%F(isize,i)%F44(1:180)=1d0
+	enddo   
 	endif
 				 
 	!  Close the file and free the unit number.
@@ -189,7 +200,6 @@ c		call tellertje(j,nlam)
 			tot=tot+C%F(isize,j)%F11(i)*sin(pi*(real(i)-0.5)/180d0)
 			tot2=tot2+sin(pi*(real(i)-0.5)/180d0)
 		enddo
-		if(readmatrix) then
 		do i=1,180
 			C%F(isize,j)%F11(i)=tot2*C%F(isize,j)%F11(i)/tot
 			C%F(isize,j)%F12(i)=tot2*C%F(isize,j)%F12(i)/tot
@@ -198,7 +208,6 @@ c		call tellertje(j,nlam)
 			C%F(isize,j)%F34(i)=tot2*C%F(isize,j)%F34(i)/tot
 			C%F(isize,j)%F44(i)=tot2*C%F(isize,j)%F44(i)/tot
 		enddo
-		endif
 	enddo
 
 	deallocate(p0%Kabs)
