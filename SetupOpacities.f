@@ -394,7 +394,6 @@ c			enddo
 
 	call tellertje(1,nlines)
 !$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,imol,iiso,x1,x2)
 !$OMP& SHARED(nlines,nu1,nu2,minw,iT,P,ir,ZZ,mixrat_r,T,
 !$OMP&     L_do,L_S,L_S0,L_freq,L_imol,L_iiso,L_Elow)
@@ -457,7 +456,6 @@ c line strength
 	minw=0.01d0
 	minw=(1d0/specres)**2
 !$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,imol,w,gamma,x1,x2)
 !$OMP& SHARED(nlines,minw,iT,P,ir,T,Saver,L_Saver,L_ilam,nlines_lam,L_nclose,mixrat_r,
 !$OMP&     L_do,L_gamma_air,L_gamma_self,L_a_therm,L_a_press,L_freq,L_imol,L_n,opacitymode)
