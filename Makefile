@@ -26,7 +26,7 @@ endif
 # cl> make multi=true
 ifeq ($(multi),true)
 	ifeq ($(gfort),true)
-		MULTICORE = -openmp -DUSE_OPENMP
+		MULTICORE = -fopenmp -DUSE_OPENMP
 	else
 		MULTICORE = -openmp -fp-model strict -DUSE_OPENMP
 		ifeq ($(shell uname),Linux)
