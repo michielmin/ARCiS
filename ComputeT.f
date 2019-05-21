@@ -110,8 +110,8 @@
 	allocate(Knu(nr,nlam_LR,ng))
 	if(.not.allocated(Si_prev)) then
 		allocate(Si_prev(nr,nlam_LR,ng))
-		Si_prev=0d0
 	endif
+	if(nTiter.eq.0) Si_prev=0d0
 
 	docloud0=.false.
 	do i=1,nclouds
@@ -495,9 +495,6 @@ c		T0(ir)=real(iT)*(E/E0)**0.25
 		if(.not.abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).lt.epsiter) converged=.false.
 		T(ir)=Tinp(ir)*(1d0-f)+T(ir)*f
 	enddo
-
-	if(converged.or.nTiter.eq.maxiter) deallocate(Si_prev)
-
 
 	call tellertje(niter,niter)
 	call WriteStructure
