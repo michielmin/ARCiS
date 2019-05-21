@@ -496,6 +496,9 @@ c		T0(ir)=real(iT)*(E/E0)**0.25
 		T(ir)=Tinp(ir)*(1d0-f)+T(ir)*f
 	enddo
 
+	if(converged.or.nTiter.eq.maxiter) deallocate(Si_prev)
+
+
 	call tellertje(niter,niter)
 	call WriteStructure
 
