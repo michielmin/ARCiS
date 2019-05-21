@@ -153,6 +153,7 @@ c			if(domakeai.or.retrieval) return
 	do i=1,nr
 		if(T(i).gt.maxTprofile) T(i)=maxTprofile
 		if(T(i).lt.3d0) T(i)=3d0
+		if(.not.T(i).gt.3d0) T(i)=0.25d0*sqrt(Rstar/(2d0*Dplanet))*Tstar
 	enddo
 
 c	if(useDRIFT.and.domakeai) then
