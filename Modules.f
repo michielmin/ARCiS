@@ -101,11 +101,11 @@ c===============================================================================
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud,metallicity0
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun
 	logical didcondens_chem,coagulation,resume_multinest,doMCcompute
-	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname
+	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
 	real*8 mixratHaze,PHaze,dPHaze,kappaHaze
 	logical enhancecarbon,fast_chem,gamma_equal,dopostequalweights
-	logical transspec,emisspec
+	logical transspec,emisspec,rainout
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),lamdust(:)
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:)

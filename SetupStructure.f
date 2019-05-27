@@ -889,6 +889,11 @@ c use Ackerman & Marley 2001 cloud computation
 	IMPLICIT NONE
 	real*8 NOratio,SiOratio,Zout
 
+	if(element_abun_file.ne.' ') then
+		call read_molfracs_atoms(element_abun_file,COratio,metallicity)
+		return
+	endif
+
 	if(trend_compute) then
 		idum=idum0
 		call TrendCompute(Mplanet/Mjup,Rplanet/Rjup,sqrt(Rstar/(2d0*Dplanet))*Tstar,Tstar,metallicity0,idum,
@@ -909,7 +914,95 @@ c use Ackerman & Marley 2001 cloud computation
 	return
 	end
 	
-	
+	subroutine read_molfracs_atoms(filename,COratio,metallicity)
+	use AtomsModule
+	use OutputModule
+	IMPLICIT NONE
+	character*500 filename
+	real*8 molfracs_atoms_solar(N_atoms),abun,COratio,metallicity
+	character*40 name
+	logical readin(N_atoms)
+	integer i
+
+	names_atoms(1) = 'H'
+	names_atoms(2) = 'He'
+	names_atoms(3) = 'C'
+	names_atoms(4) = 'N'
+	names_atoms(5) = 'O'
+	names_atoms(6) = 'Na'
+	names_atoms(7) = 'Mg'
+	names_atoms(8) = 'Al'
+	names_atoms(9) = 'Si'
+	names_atoms(10) = 'P'
+	names_atoms(11) = 'S'
+	names_atoms(12) = 'Cl'
+	names_atoms(13) = 'K'
+	names_atoms(14) = 'Ca'
+	names_atoms(15) = 'Ti'
+	names_atoms(16) = 'V'
+	names_atoms(17) = 'Fe'
+	names_atoms(18) = 'Ni'
+
+	readin=.false.
+	molfracs_atoms=0d0
+
+	open(unit=43,file=filename)
+1	read(43,*,err=1,end=2) name,abun
+	do i=1,N_atoms
+		if(trim(name).eq.names_atoms(i)) then
+			molfracs_atoms(i)=abun
+			readin(i)=.true.
+		endif
+	enddo
+	goto 1
+2	close(unit=43)
+
+	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))
+
+	molfracs_atoms_solar = (/ 0.9207539305,
+     &  0.0783688694,
+     &  0.0002478241, 
+     &  6.22506056949881e-05, 
+     &  0.0004509658, 
+     &  1.60008694353205e-06, 
+     &  3.66558742055362e-05, 
+     &  2.595e-06, 
+     &  2.9795e-05, 
+     &  2.36670201997668e-07, 
+     &  1.2137900734604e-05, 
+     &  2.91167958499589e-07, 
+     &  9.86605611925677e-08, 
+     &  2.01439011429255e-06, 
+     &  8.20622804366359e-08,
+     &  7.83688694089992e-09,
+     &  2.91167958499589e-05,
+     &  1.52807116806281e-06
+     &  /)
+
+	molfracs_atoms_solar=molfracs_atoms_solar/sum(molfracs_atoms_solar(1:N_atoms))
+
+	do i=1,N_atoms
+		if(.not.readin(i)) molfracs_atoms(i)=1d-30
+	enddo
+
+	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))
+
+	COratio=molfracs_atoms(3)/molfracs_atoms(5)
+	call output("C/O: " // dbl2string(molfracs_atoms(3)/molfracs_atoms(5),'(f6.2)'))
+	call output("Si/O:" // dbl2string(molfracs_atoms(9)/molfracs_atoms(5),'(f6.2)'))
+
+	metallicity=log10((sum(molfracs_atoms(3:n_atoms))/sum(molfracs_atoms(1:n_atoms)))/
+     &			(sum(molfracs_atoms_solar(3:n_atoms))/sum(molfracs_atoms_solar(1:n_atoms))))
+	call output("[Z]: " // dbl2string(metallicity,'(f6.2)'))
+
+	open(unit=50,file='atomic.dat')
+	do i=1,18
+		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
+	enddo
+	close(unit=50)
+
+	return
+	end
 
 	subroutine FormAbun(T,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
 	use AtomsModule

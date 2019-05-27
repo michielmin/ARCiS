@@ -727,6 +727,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) HITEMP
 		case("cloud")
 			call ReadCloud(key)
+		case("rainout")
+			read(key%value,*) rainout
 		case("mixrathaze","haze")
 			read(key%value,*) mixratHaze
 		case("phaze")
@@ -769,6 +771,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) TiScale
 		case("enhancecarbon")
 			read(key%value,*) enhancecarbon
+		case("elementfile")
+			element_abun_file=key%value
 		case("condensates")
 			read(key%value,*) condensates
 		case("cloudcompute")
@@ -1154,6 +1158,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	COratio=0.55
 	TiScale=1d0
 	enhancecarbon=.false.
+	element_abun_file=' '
+	rainout=.false.
 	mixP=0d0
 	mixratHaze=0d0
 	PHaze=1d0

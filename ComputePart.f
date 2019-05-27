@@ -1494,7 +1494,7 @@ c-----------------------------------------------------------------------
 	module ArraysDMiLay
 	IMPLICIT NONE
 	INTEGER   LL
-	PARAMETER (LL = 200000)
+	PARAMETER (LL = 1000000)
 
 	double complex,allocatable :: W(:,:),acap(:)
 !$OMP THREADPRIVATE(W,acap)

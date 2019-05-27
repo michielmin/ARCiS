@@ -234,11 +234,26 @@ c	atoms_cloud(i,3)=1
 		enddo
 	endif
 
+	if(rainout) then
+		densv=(mu*mp/(kb*T(1)))*exp(BTP-ATP/T(1))
+		do iCS=1,nCS
+			if(T(1).gt.maxT(iCS)) densv(iCS)=densv(iCS)+(mu(iCS)*mp/(kb*T(1)*10d0))*exp(BTP(iCS)-ATP(iCS)/(T(1)*10d0))
+		enddo
+		do iCS=1,nCS
+			if(densv(iCS).lt.dens(1)*xv_bot(iCS)) then
+				call output("Rainout of: " // trim(CSname(iCS)) // "(" //
+     &		trim(dbl2string(100d0*(1d0-densv(iCS)/(dens(1)*xv_bot(iCS))),'(f5.1)')) // " %)")
+				xv_bot(iCS)=densv(iCS)/dens(1)
+			endif
+		enddo
+	endif
+
+
 	cloudsform=.false.
 	do i=1,nr
 		densv=(mu*mp/(kb*T(i)))*exp(BTP-ATP/T(i))
 		do iCS=1,nCS
-			if(densv(iCS).gt.dens(i)*xv_bot(iCS)) cloudsform=.true.
+			if(densv(iCS).lt.dens(i)*xv_bot(iCS)) cloudsform=.true.
 		enddo
 	enddo
 	if(.not.cloudsform) then!.or.(computeT.and.nTiter.lt.min(2,maxiter/2))) then
