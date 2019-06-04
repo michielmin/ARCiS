@@ -54,11 +54,11 @@ LIBS_FITS		= -lcfitsio
 
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -diag-disable vec 
-  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -I$(HOME)/include -I/usr/local/include
+  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -I$(HOME)/include -I/usr/local/include -I/usr/local/modules
   LIBS     = -L$(HOME)/lib -L/usr/local/lib -lm $(LIBS_FITS) -lmultinest -fopenmp -lgomp Version.f 
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
-  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
+  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) -I/usr/local/include -I/usr/local/modules
   LIBS    =  -L/usr/local/lib $(LIBS_FITS) -lmultinest Version.f
 endif
 

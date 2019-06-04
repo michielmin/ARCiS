@@ -30,7 +30,7 @@
 	real*8,allocatable :: Mief33(:),Mief34(:),Mief44(:)
 	logical truefalse,checkparticlefile,lnkloglog
 	external Carbon_BE_Zubko1996,Mg07Fe03SiO3_Dorschner1995,AstroSilicate
-	external Enstatite_X,Enstatite_Y,Enstatite_Z
+	external Enstatite_X,Enstatite_Y,Enstatite_Z,checkparticlefile
 	external Forsterite_X,Forsterite_Y,Forsterite_Z
 	external Brookite_X,Brookite_Y,Brookite_Z,Water
 	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O,MgO,SiC
@@ -458,7 +458,7 @@ c changed this to mass fractions (11-05-2010)
 
 	inquire(file=partfile,exist=truefalse)
 	if(truefalse) then
-		if(checkparticlefile(partfile,amin,amax,dble(pow),ns,C%fmax,C%blend,C%porosity,frac,rho,nm,filename,(abun_in_name.le.0))) then
+		if(checkparticlefile(partfile,amin,amax,dble(pow),ns,C%fmax,C%blend,C%porosity,frac,rho,nm,filename,.true.)) then
 			call ReadParticleFits(partfile,C,isize)
 			goto 300
 		endif
