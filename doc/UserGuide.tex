@@ -1,0 +1,192 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{txfonts}
+\usepackage[english]{babel}
+\usepackage{hyperref}
+\usepackage{units}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstdefinelanguage{args}{
+sensitive=false,
+alsoletter={.},
+moredelim=[s][\color{red}]{<}{>},
+moredelim=[s][\color{blue}]{[}{]},
+moredelim=[is][\color{orange}]{:}{:},
+keywords=[10]{...},
+keywordstyle=[10]{\color{magenta}},
+}
+
+\lstnewenvironment{arguments}
+{\lstset{language=args}}
+{}
+
+\lstnewenvironment{bash}
+{\lstset{numbers=left,language=bash,keywordstyle={\color{blue}}}}
+{}
+
+\newcommand{\shellcmd}[1]{\\ \\ \indent\indent\texttt{\# #1}\\ \\ }
+
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+
+\begin{document}
+
+\title{\includegraphics[width=0.9\hsize]{ARCiS}\\User Guide to ARCiS}
+\author{Michiel Min}
+\date{\today}
+\maketitle
+
+\section{Introduction}
+
+
+\subsection{Terms of use}
+
+By using ARCiS you agree to the following:
+\begin{itemize}
+\item You are not permitted to pass (parts of) the code to anyone else. If anyone else is interested, let him/her drop me an email: M.Min@sron.nl
+\item You offer me co-author rights on any paper that uses results computed with ARCiS
+\end{itemize}
+
+\section{Basics}
+
+\section{Installing ARCiS}
+
+Before installing ARCiS you need:
+\begin{description}
+\item{A Fortran compiler:} This can be either \texttt{gfortran} or \texttt{ifort} (any other might work but is not tested).
+\item{\texttt{cfitsio} library:} This is needed to allow fortran to read and write binary fits files.
+\item{\texttt{MultiNest}:} This allows ARCiS to perform Bayesian retrievals.
+\end{description}
+
+On a Mac the easiest is to install cfitsio through HomeBrew (google 'homebrew' for installation instructions. After that:
+%
+\shellcmd{brew install cfitsio}
+%
+Next fetch MultiNest:
+%
+\shellcmd{git clone https://github.com/JohannesBuchner/MultiNest.git}
+\vspace{-2cm}\\
+\shellcmd{cd MultiNest/build}
+\vspace{-2cm}\\
+\shellcmd{cmake ..}
+\vspace{-2cm}\\
+\shellcmd{make}
+\vspace{-2cm}\\
+\shellcmd{sudo make install}
+
+
+Next fetch the git source code from:
+%
+\shellcmd{mkdir ARCiS ; cd ARCiS}
+\vspace{-2cm}\\
+\shellcmd{git clone https://github.com/michielmin/ARCiS.git ./src}
+\vspace{-2cm}\\
+\shellcmd{cd src}
+\vspace{-2cm}\\
+\shellcmd{make gfort=true multi=true}
+%
+This creates the ARCiS binary, which you can put in any path accessible (/usr/bin or something like that).
+
+Now you also need all the data files. These need to be stored under \texttt{\$(HOME)/ARCiS/Data/}
+
+\section{Using ARCiS}
+
+The files are:
+\begin{description}
+\item[\texttt{ProDiMoForFLiTs.fits.gz}] This file contains all the details of the model needed by FLiTs. It contains the density and temperature structure, the opacities of the dust, the abundances of the molecules, and the non-LTE level populations. It also contains some keywords needed by FLiTs such as the radius and mass of the star, and the distance to the source.
+\item[\texttt{inputFLiTs.dat}] This is the input file needed by FLiTs where the details of the FLiTs run can be specified. By default ProDiMo provides a file where all molecular species are included in the FLiTs run.
+\item[\texttt{*Lambda.dat}] These are files that contain for each molecule the levels, and Einstein coefficients for the transitions. It is important to keep the right Lambda files with the accompanying ProDiMoForFLiTs.fits.gz file, since the level numbering has to be consistent between the two.
+\end{description}
+
+These are all files needed by FLiTs. In principle directly after ProDiMo a default run of FLiTs can be done by using the command
+%
+\shellcmd{FLiTs inputFLiTs.dat}
+%
+which creates the file \texttt{specFLiTs.out} containing the default wavelength interval.
+
+There are several options included in FLiTs. These are given as keywords in the \texttt{inputFLiTs.dat} file (or whatever you call it). Keywords are always given as \texttt{key=value} and can be anywhere in the file (order does not matter). Also, you can overwrite keywords set in the input file from the command line in the following way
+%
+\shellcmd{FLiTs inputFLiTs.dat -s key1=value1 -s key2=value2}
+%
+Any number of keys can be set on the command line. Just make sure the first argument of the command line is the name of your input file. Note that FLiTs always takes the last keyword value it encounters, first reading the input file, next the command line keywords one by one.
+
+The possible keywords are described below.
+
+\section{Most important keywords}
+
+\subsection*{\texttt{FLiTsfile}}
+
+This keyword sets the FLiTsfile to use. When using ProDiMo output, this is likely \texttt{ProDiMoForFLiTs.fits.gz}, but you can rename this file, for example to store different models.
+
+\subsection*{\texttt{linefile}}
+
+This keyword can be provided as often as you like (maximum up to 100). Each entry specifies a Lambda file with the information on a particular species that has to be included. These files are provided by ProDiMo with level numbering consistent with that used in the \texttt{ProDiMoForFLiTs.fits.gz} file. However, you can choose to provide different Lambda files. However, you have to make sure that in this case you switch to LTE mode (see below) to avoid inconsistencies in the level populations.
+
+\subsection*{\texttt{LTE}}
+
+When this keyword is set to \texttt{.true.} (default is \texttt{LTE=.false.}), the level populations are computed in LTE. This can be useful when you want to use a different Lambda file as the ones provided by ProDiMo.
+
+\subsection*{\texttt{lmin} and \texttt{lmax}}
+
+These keywords set the minimum and maximum wavelength used (in micron). Default is \texttt{lmin=5} and \texttt{lmax=50}. FLiTs always computes all lines in the given wavelength interval.
+
+\subsection*{\texttt{vres}}
+
+This keyword sets the velocity resolution of the output spectrum in cm/s. Default value is \texttt{vres=1e5}, i.e. 1\,km/s. Note that increasing the resolution by a factor of 10 increases the computation time by more than a factor of 10. This is because for higher resolution velocity spectra, also a finer spatial sampling of the rays is required.
+
+\subsection*{\texttt{inc}}
+
+This keyword sets the inclination angle of the disk in degrees with respect to pole on (0 degrees). Default value is \texttt{inc=30}.
+
+\subsection*{\texttt{accuracy}}
+
+With this keyword you can set the level of accuracy. The default is set for speed (\texttt{accuracy=1}). The different options are:
+\begin{itemize}
+\item[\texttt{0} -] Go for speed! (time $\sim 0.12\,$s per line)
+\item[\texttt{1} -] Default. Increased radial sampling of the rays (time $\sim 0.20\,$s per line)
+\item[\texttt{2} -] Increased azimuthal sampling of the rays (time $\sim 0.57\,$s per line)
+\item[\texttt{3} -] Further increased azimuthal sampling (time $\sim 0.88\,$s per line)
+\item[\texttt{4} -] Increased sampling of radial and azimuthal rays (time $\sim 1.48\,$s per line)
+\item[\texttt{5} -] Maximum sampling of radial and azimuthal rays (time very long)
+\end{itemize}
+The times here are very rough indications for one particular model and depend a lot on the model setup, the number of species, and the amount of line-blending in the model. What accuracy is needed depends on the application. Often \texttt{1} or \texttt{2} are the best options.
+
+\section{Optional keywords}
+
+While all keywords are in principle optional (there are always defaults). The keywords below are probably not useful to the general user.
+
+\subsection*{\texttt{blend}}
+
+Default \texttt{blend=.true.}, i.e. compute line blends consistently. With this keyword you can switch off the computation of line blends. This means all lines are treated separately, and in the \texttt{specFLiTs.out} file you may find some wavelengths multiple times, since they were computed for different lines. This does increase speed a bit (up to a factor of 2 for very specific cases).
+
+\subsection*{\texttt{cylindrical}}
+
+By default FLiTs uses a cylindrical grid setup (\texttt{cylindrical=.true.}). However, when you create a FLiTs file using another program (one that has a spherical grid setup for example. you can switch it to \texttt{.false.}, in which case the grid will be spherical.
+
+\subsection*{\texttt{vres\_profile}}
+
+This keyword can set the velocity resolution of the sampling of the profiles intrinsically. It has no influence on the output resolution. By default it is set to \texttt{vres\_profile=1e4}, i.e. 0.1\,km/s. The only reason to increase this is when you have very narrow lines.
+
+\subsection*{\texttt{tau\_max}}
+
+This keyword sets the maximum optical depth to which FLiTs raytraces. Default is \texttt{tau\_max=15}, so it stops a ray when an optical depth of 15 is encountered. This is quite generous, in principle regions shielded behind 15 optical depths don't contribute to the output flux. Decreasing this threshold might improve speed only a bit, but in general it is recommended not to change this value.
+
+\section{Output file}
+
+FLiTs creates one single output file \texttt{specFLiTs.out}. This file contains the spectrum computed including all lines. The different columns in this file are:
+\begin{description}
+\item[column 1] wavelength in micron
+\item[column 2] flux in Jy
+\item[column 3] velocity with respect to the center of the closest line in the blend
+\item[column 4] flux of the continuum
+\item[column 5] comment which species contributed to this blend
+\end{description}
+
+\section{Examples}
+
+As an example we run the standard TTauri disk setup provided with ProDiMo. We first run ProDiMo to get the radiative transfer and chemistry. Afterwards we run FLiTs using all standard lines and the entire spectral range.
+
+\end{document}
+

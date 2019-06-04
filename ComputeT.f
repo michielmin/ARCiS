@@ -253,11 +253,11 @@
 			do ir=nr,1,-1
 				d=abs(P(ir+1)-P(ir))*1d6/grav(ir)
 				tau=d*Ce(ir,ilam,ig)
-				if(P(ir).gt.Psimplecloud) then
-					tau=tau+1d4
-					Ce(ir,ilam,ig)=tau/d
-					Ca(ir,ilam,ig)=Ce(ir,ilam,ig)-Cs(ir,ilam,ig)
-				endif
+c				if(P(ir).gt.Psimplecloud) then
+c					tau=tau+1d4
+c					Ce(ir,ilam,ig)=tau/d
+c					Ca(ir,ilam,ig)=Ce(ir,ilam,ig)-Cs(ir,ilam,ig)
+c				endif
 				if(tau.lt.1d-10) then
 					tau=1d-10
 					Ce(ir,ilam,ig)=tau/d
