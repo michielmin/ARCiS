@@ -18,7 +18,7 @@ ifeq ($(debug),true)
   ifeq ($(gfort),true)
     DEBUGGING = -fbounds-check -fbacktrace -fcheck=all
   else	
-    DEBUGGING = -check all -traceback -check bounds -O0 -g -p -warn all
+    DEBUGGING = -check all -traceback -check bounds -O0 -g -p
   endif
 endif
 
@@ -26,7 +26,7 @@ endif
 # cl> make multi=true
 ifeq ($(multi),true)
 	ifeq ($(gfort),true)
-		MULTICORE = -fopenmp -DUSE_OPENMP
+		MULTICORE = -openmp -DUSE_OPENMP
 	else
 		MULTICORE = -openmp -fp-model strict -DUSE_OPENMP
 		ifeq ($(shell uname),Linux)
@@ -54,11 +54,11 @@ LIBS_FITS		= -lcfitsio
 
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -diag-disable vec 
-  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -I$(HOME)/include -I/usr/local/include -I/usr/local/modules
-  LIBS     = -L$(HOME)/lib -L/usr/local/lib -lm $(LIBS_FITS) -lmultinest -fopenmp -lgomp Version.f 
+  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -I$(HOME)/include
+  LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) -llapack -lmultinest Version.f 
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
-  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) -I/usr/local/include -I/usr/local/modules
+  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
   LIBS    =  -L/usr/local/lib $(LIBS_FITS) -lmultinest Version.f
 endif
 
