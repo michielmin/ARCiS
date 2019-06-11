@@ -243,6 +243,10 @@
 				Cs(ir,ilam,1:ng)=0d0
 				Fstar_LR(ilam)=0d0
 			endif
+			do ig=1,ng
+				if(.not.Ca(ir,ilam,ig).gt.0d0) Ca(ir,ilam,ig)=0d0
+				if(.not.Cs(ir,ilam,ig).gt.0d0) Cs(ir,ilam,ig)=0d0
+			enddo
 		enddo
 	enddo
 	deallocate(temp_a)
@@ -260,7 +264,7 @@ c					tau=tau+1d4
 c					Ce(ir,ilam,ig)=tau/d
 c					Ca(ir,ilam,ig)=Ce(ir,ilam,ig)-Cs(ir,ilam,ig)
 c				endif
-				if(tau.lt.1d-10) then
+				if(.not.tau.gt.1d-10) then
 					tau=1d-10
 					Ce(ir,ilam,ig)=tau/d
 					Ca(ir,ilam,ig)=Ce(ir,ilam,ig)-Cs(ir,ilam,ig)
