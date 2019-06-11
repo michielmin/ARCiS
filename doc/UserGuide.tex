@@ -48,6 +48,7 @@ By using ARCiS you agree to the following:
 \item You are not permitted to pass (parts of) the code to anyone else. If anyone else is interested, let him/her drop me an email: M.Min@sron.nl
 \item You offer me co-author rights on any paper that uses results computed with ARCiS
 \end{itemize}
+The most important reason for this is to make sure that ARCiS is used in a correct way and the result are scientifically useful. ARCiS is a complex code which can do a lot of things, this also means things can go wrong.
 
 \section{Installing ARCiS}
 
@@ -87,7 +88,7 @@ Next fetch the git source code from:
 %
 This creates the ARCiS binary, which you can put in any path accessible (/usr/bin or something like that).
 
-Now you also need all the data files. These need to be stored under \texttt{\$(HOME)/ARCiS/Data/}
+You also need data files to be stored under \texttt{\$(HOME)/ARCiS/Data/}
 
 \section{Using ARCiS}
 
@@ -99,93 +100,169 @@ which creates the output directory \texttt{outputdir} containing the output file
 
 There are several options included in ARCiS. These are given as keywords in the \texttt{inputfile.dat} file (or whatever you call it). Keywords are always given as \texttt{key=value} and can be anywhere in the file (order does not matter). Also, you can overwrite keywords set in the input file from the command line in the following way
 %
-\shellcmd{ARCiS inputfile.dat -o outputdir -s key1=value1 -s key2=value2}
+\shellcmd{ARCiS inputfile.dat -o outputdir -s key1=value1}
 %
 Any number of keys can be set on the command line. Just make sure the first argument of the command line is the name of your input file. Note that ARCiS always takes the last keyword value it encounters, first reading the input file, next the command line keywords one by one.
 
 \section{Keywords}
 
-\texttt{Rp}\\
+\subsection{Base properties}
+
+\begin{description}
+\item[\texttt{Rp}]
 Radius of the planet in Jupiter radii.
-\\ \\
-\texttt{Mp}\\
+\item[\texttt{Mp}]
 Mass of the planet in Jupiter masses.
-\\ \\
-\texttt{Pp}\\
+\item[\texttt{Pp}]
 Atmospheric pressure corresponding to radius \texttt{Rp}. Default is 10\,bar.
-\\ \\
-\texttt{Tstar}\\
+\item[\texttt{Tstar}]
 Temperature of the host star in K.
-\\ \\
-\texttt{Rstar}\\
+\item[\texttt{Rstar}]
 Radius of the host star in Solar radii.
-\\ \\
-\texttt{distance}\\
+\item[\texttt{distance}]
 distance to the system in parsec.
-\\ \\
-\texttt{betaT}\\
-Cosine of the angle of incoming radiation.
-\\ \\
-\texttt{Dplanet}\\
+\item[\texttt{Dplanet}]
 Distance of the planet to the star in AU.
-\\ \\
-\texttt{chemistry}\\
-Logical determining if chemistry is computed or not (either .true. or .false.)
-\\ \\
-\texttt{condensates}\\
-Logical determining if condensates should be taken into account in the chemistry computations (default is .false. and most stable is to leave it like that).
-\\ \\
-\texttt{pmin, pmax}\\
-Minimum, maximum pressure considered in the atmosphere
-\\ \\
-\texttt{nr}\\
-Number of pressure points
-\\ \\
-\texttt{lmin, lmax}\\
-Minimum, maximum wavelength considered in micron. Note that for temperature computations these must be set wide enough to ensure energy balance is properly computed.
-\\ \\
-\texttt{specres}\\
-Spectral resolution R in lambda/dlambda
-\\ \\
-\texttt{specresdust}\\
-Spectral resolution for computation of the solid state species in the clouds.
-\\ \\
-\texttt{cia}\\
-Logical determining if CIA is taken into account
-\\ \\
-\texttt{maxtau}\\
-Maximum optical depth considered for the raytracing
-\\ \\
-\texttt{compute}\\
-Logical determining if the opacities need to be recomputed from the linelists
-\\ \\
-\texttt{scattering}\\
-Logical determining if scattering of the thermal radiation is included
-\\ \\
-\texttt{scattstar}\\
-Logical deternining if scattering from the star is included
-\\ \\
-\texttt{TeffP}\\
-Effective temperature of the radiation from inside the planet
-\\ \\
-\texttt{computeT}\\
-Logical determining if the temperature structure is computed self-consistently
-\\ \\
-\texttt{maxiter}\\
-Maximum number of iterations for the temperature structure
-\\ \\
-\texttt{COratio}\\
-C/O ratio of the atmosphere
-\\ \\
-\texttt{metallicity}\\
-Metallicity of the atmosphere
-\\ \\
-\texttt{planetname}\\
+\item[\texttt{planetname}]
 Name of the planet to read from the database. Radius, mass and distance of the planet and the star are read from the database.
+\end{description}
+
+\subsection{Grid setup}
+
+\begin{description}
+\item[\texttt{pmin, pmax}]
+Minimum, maximum pressure considered in the atmosphere
+\item[\texttt{nr}]
+Number of pressure points
+\item[\texttt{lmin, lmax}]
+Minimum, maximum wavelength considered in micron. Note that for temperature computations these must be set wide enough to ensure energy balance is properly computed.
+\item[\texttt{specres}]
+Spectral resolution R in lambda/dlambda
+\item[\texttt{specresdust}]
+Spectral resolution for computation of the solid state species in the clouds.
+\end{description}
+
+\subsection{Abundances of the molecules}
+
+Homogeneous abundances can be set using keywords like e.g. \texttt{H2O=1d-4}. Only molecules that are defined through this somewhere in the input file are taken into account. These abundances are overwritten when chemistry is used.
+
+\begin{description}
+\item[\texttt{chemistry}]
+Logical determining if chemistry is computed or not (either .true. or .false.)
+\item[\texttt{condensates}]
+Logical determining if condensates should be taken into account in the chemistry computations (default is .false. and most stable is to leave it like that).
+\item[\texttt{COratio}]
+C/O ratio of the atmosphere
+\item[\texttt{metallicity}]
+Metallicity of the atmosphere
+\end{description}
+
+\subsection{Opacities and raytracing}
+
+\begin{description}
+\item[\texttt{cia}]
+Logical determining if CIA is taken into account
+\item[\texttt{maxtau}]
+Maximum optical depth considered for the raytracing
+\item[\texttt{compute}]
+Logical determining if the opacities need to be recomputed from the linelists
+\item[\texttt{scattering}]
+Logical determining if scattering of the thermal radiation is included
+\item[\texttt{scattstar}]
+Logical deternining if scattering from the star is included
+\end{description}
+
+\subsection{Temperature structure}
+
+\begin{description}
+\item[\texttt{computeT}]
+Logical determining if the temperature structure is computed self-consistently
+\item[\texttt{maxiter}]
+Maximum number of iterations for the temperature structure
+\item[\texttt{betaT}]
+Cosine of the angle of incoming radiation.
+\item[\texttt{TeffP}]
+Effective temperature of the radiation from inside the planet
+\item[\texttt{Tp}]
+Temperature of the planet at 1 bar when \texttt{computeT=.false.}
+\item[\texttt{dTp}]
+Temperature gradient when \texttt{computeT=.false.}
+\begin{equation}
+\log_{10}(T[\mathrm{K}])=\log_{10}(T_p[\mathrm{K}])+dT_p\log_{10}(P[\mathrm{bar}])
+\end{equation}
+\end{description}
+
+\subsection{Retrieval}
+
+\subsubsection{Observations}
+
+\begin{description}
+\item[\texttt{obs1:type}]
+Can be "trans", "emis" or "emisR".
+\item[\texttt{obs1:file}]
+Filename with the observation. Should be in format:\\
+column1: wavelength in micron\\
+column2: trans or emis spectrum (same units as the output file to compare with)\\
+column3: error\\
+column4: spectral resolution of this wavelength bin (so $\lambda/\Delta\lambda$)
+\item[\texttt{obs1:beta}]
+Weight of this observation. Only relevant if more than one obs is defined.
+\end{description}
+
+\subsubsection{Parameters}
+
+\begin{description}
+\item[\texttt{fitpar:keyword}]
+Keyword to be retrieved. This key switches automatically to the next retrieval parameter.
+\item[\texttt{fitpar:min}]
+Minimum value considered
+\item[\texttt{fitpar:max}]
+Maximum value considered
+\item[\texttt{fitpar:log}]
+Logical determining if the parameter is sampled logarithmically
+\end{description}
+
+\subsection{Very rough instrument simulation (use at own risk!)}
+
+You can have ARCiS create simulated observations including estimate of the noise as function of wavelength. 
+\begin{quote}
+\emph{Note that this is absolutely not intended as a replacement of a proper instrument simulation! It only includes photon noise and can be used to get a very rough estimate of the expected performance.}
+\end{quote}
+
+\begin{description}
+
+\item[\texttt{instrument1:name}]
+Can be "MIRI", "NIRSPEC", "WFC3", "JWST" or "ARIEL". When it is something else it is assumed to be a filename containing a proper instrument simulation (file format currently the ExoSim format).
+\item[\texttt{instrument1:ntrans}]
+Number of transits to average over. When put to $0$, the number of transits is computed to assure that at each wavelength 7 scaleheights can be observed with $5\sigma$ accuracy.
+\end{description}
+
+\section{Output files}
+
+There are many output files, most are for checking the model. The most important ones are discussed here.
+
+\begin{description}
+\item[\texttt{log.dat}]
+This is the log file containing the runtime output.
+\item[\texttt{input.dat}]
+Copy of the input file used appended with the command line keywords. This allows rerunning exactly this model again without command line keywords.
+\item[\texttt{mixingratios.dat}]
+This file contains the temperature structure and the abundances of the molecules as a function of height in the atmosphere.
+\item[\texttt{trans}]
+Transmission spectrum. Header explains units.
+\item[\texttt{emis}]
+Emission spectrum. Header explains units.
+\item[\texttt{emisR}]
+Emission spectrum relative to the stellar emission.
+\item[\texttt{.txt}]
+File containing the MultiNest output when retrieval was done.
+\item[\texttt{bestfit.dat}]
+File containing the input file for the best fitting model when retrieval was done.
+\end{description}
 
 \section{Examples}
 
-There are two examples on the VirtualBox server, retrieval and forward modelling.
+There are a few examples on the VirtualBox VM, retrieval and forward modelling.
 
 \end{document}
 

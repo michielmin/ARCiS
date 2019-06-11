@@ -163,6 +163,8 @@
 				tot=tot+M%F11(iphase)*sintheta(iphase)
 			enddo
 			g=g/tot
+			if(.not.g.gt.0d0) g=0d0
+			if(.not.g.lt.1d0) g=1d0
 			do ig=1,ng
 				call Crossections(ir,ilam,ig,Ca_HR(ilam,ig),Cs_HR(ilam,ig),docloud0)
 				Ca_HR(ilam,ig)=Ca_HR(ilam,ig)/dens(ir)

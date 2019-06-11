@@ -3,4 +3,14 @@
 \BOOKMARK [1][-]{section.2}{Installing ARCiS}{}% 3
 \BOOKMARK [1][-]{section.3}{Using ARCiS}{}% 4
 \BOOKMARK [1][-]{section.4}{Keywords}{}% 5
-\BOOKMARK [1][-]{section.5}{Examples}{}% 6
+\BOOKMARK [2][-]{subsection.4.1}{Base properties}{section.4}% 6
+\BOOKMARK [2][-]{subsection.4.2}{Grid setup}{section.4}% 7
+\BOOKMARK [2][-]{subsection.4.3}{Abundances of the molecules}{section.4}% 8
+\BOOKMARK [2][-]{subsection.4.4}{Opacities and raytracing}{section.4}% 9
+\BOOKMARK [2][-]{subsection.4.5}{Temperature structure}{section.4}% 10
+\BOOKMARK [2][-]{subsection.4.6}{Retrieval}{section.4}% 11
+\BOOKMARK [3][-]{subsubsection.4.6.1}{Observations}{subsection.4.6}% 12
+\BOOKMARK [3][-]{subsubsection.4.6.2}{Parameters}{subsection.4.6}% 13
+\BOOKMARK [2][-]{subsection.4.7}{Very rough instrument simulation \(use at own risk!\)}{section.4}% 14
+\BOOKMARK [1][-]{section.5}{Output files}{}% 15
+\BOOKMARK [1][-]{section.6}{Examples}{}% 16

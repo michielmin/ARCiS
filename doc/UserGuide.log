@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2015.10.16)  4 JUN 2019 14:12
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2015.10.16)  5 JUN 2019 10:25
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -488,7 +488,7 @@ LaTeX Info: Redefining \nameref on input line 34.
 \openout3 = `UserGuide.out'.
 
 \c@lstlisting=\count126
- <ARCiS.png, id=28, 1445.4pt x 1445.4pt>
+ <ARCiS.png, id=68, 1445.4pt x 1445.4pt>
 File: ARCiS.png Graphic file (type png)
 
 <use ARCiS.png>
@@ -522,349 +522,222 @@ File: omstxr.fd 2000/12/15 v3.1
 )
 LaTeX Font Info:    Font shape `OMS/txr/m/n' in size <12> not available
 (Font)              Font shape `OMS/txsy/m/n' tried instead on input line 48.
-LaTeX Font Info:    Try loading font information for OT1+txtt on input line 56.
+LaTeX Font Info:    Try loading font information for OT1+txtt on input line 57.
 
 
 (/usr/local/texlive/2015/texmf-dist/tex/latex/txfonts/ot1txtt.fd
 File: ot1txtt.fd 2000/12/15 v3.1
 )
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Overfull \hbox (23.2489pt too wide) in paragraph at lines 61--76
+Overfull \hbox (23.2489pt too wide) in paragraph at lines 62--77
 [][]\OT1/txtt/m/n/12 # git clone https://github.com/JohannesBuchner/MultiNest.g
 it 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 61--76
+Underfull \hbox (badness 10000) in paragraph at lines 62--77
+
+ []
+
+[2]
+Underfull \hbox (badness 10000) in paragraph at lines 79--90
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 78--89
+Underfull \hbox (badness 10000) in paragraph at lines 79--90
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 78--89
+Underfull \hbox (badness 10000) in paragraph at lines 79--90
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 78--89
+Underfull \hbox (badness 10000) in paragraph at lines 79--90
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 78--89
-
- []
-
-
-Overfull \hbox (4.34894pt too wide) in paragraph at lines 78--89
+Overfull \hbox (4.34894pt too wide) in paragraph at lines 79--90
 [][]\OT1/txtt/m/n/12 # git clone https://github.com/michielmin/ARCiS.git ./src 
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 78--89
+Underfull \hbox (badness 10000) in paragraph at lines 79--90
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 78--89
+Underfull \hbox (badness 10000) in paragraph at lines 79--90
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 78--89
+Underfull \hbox (badness 10000) in paragraph at lines 79--90
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 78--89
+Underfull \hbox (badness 10000) in paragraph at lines 79--90
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 78--89
+Underfull \hbox (badness 10000) in paragraph at lines 79--90
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 78--89
+Underfull \hbox (badness 10000) in paragraph at lines 79--90
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 78--89
-
- []
-
-[2]
-Overfull \hbox (61.7726pt too wide) in paragraph at lines 90--91
-[]\OT1/txr/m/n/12 Now you also need all the data files. These need to be stored
- un-der \OT1/txtt/m/n/12 $(HOME)/ARCiS/Data/ 
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 94--99
+Underfull \hbox (badness 10000) in paragraph at lines 79--90
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 94--99
+Underfull \hbox (badness 10000) in paragraph at lines 95--100
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 100--105
+Underfull \hbox (badness 10000) in paragraph at lines 95--100
 
  []
 
 
-Overfull \hbox (48.44885pt too wide) in paragraph at lines 100--105
-[][]\OT1/txtt/m/n/12 # ARCiS inputfile.dat -o outputdir -s key1=value1 -s key2=
-value2 
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 100--105
+Underfull \hbox (badness 10000) in paragraph at lines 101--106
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
+Underfull \hbox (badness 10000) in paragraph at lines 101--106
 
  []
 
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 108--185
-
- []
-
+LaTeX Font Info:    Font shape `OT1/txtt/bx/n' in size <12> not available
+(Font)              Font shape `OT1/txtt/b/n' tried instead on input line 112.
 [3] [4] [5]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 190.
- [6]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 190.
+Overfull \hbox (12.3428pt too wide) in paragraph at lines 235--236
+[]\OT1/txr/m/n/12 Can be "MIRI", "NIR-SPEC", "WFC3", "JWST" or "ARIEL".
+ []
+
+[6]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 267.
+ [7]
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 267.
  (./UserGuide.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 190.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 190.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 267.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 267.
 Package rerunfilecheck Info: File `UserGuide.out' has not changed.
-(rerunfilecheck)             Checksum: 5DCC4FB8A6ADFDF40FB7165D00AFEC72;291.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 190.
+(rerunfilecheck)             Checksum: DD92CDBEADC71919AB146DF39F0F5040;987.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 267.
  ) 
 Here is how much of TeX's memory you used:
- 8548 strings out of 493089
- 121009 string characters out of 6134841
- 216845 words of memory out of 5000000
- 11893 multiletter control sequences out of 15000+600000
- 24583 words of font info for 63 fonts, out of 8000000 for 9000
+ 8610 strings out of 493089
+ 121814 string characters out of 6134841
+ 213845 words of memory out of 5000000
+ 11933 multiletter control sequences out of 15000+600000
+ 39581 words of font info for 101 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 29i,6n,35p,369b,391s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 29i,6n,35p,369b,400s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2015/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/local/t
-exlive/2015/texmf-dist/fonts/type1/public/txfonts/rtxr.pfb></usr/local/texlive/
-2015/texmf-dist/fonts/type1/public/txfonts/txsy.pfb></usr/local/texlive/2015/te
-xmf-dist/fonts/type1/public/txfonts/txtt.pfb></usr/local/texlive/2015/texmf-dis
-t/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2015/texmf-dist/fonts/ty
-pe1/urw/times/utmr8a.pfb>
-Output written on UserGuide.pdf (6 pages, 183429 bytes).
+exlive/2015/texmf-dist/fonts/type1/public/txfonts/rtxmi.pfb></usr/local/texlive
+/2015/texmf-dist/fonts/type1/public/txfonts/rtxr.pfb></usr/local/texlive/2015/t
+exmf-dist/fonts/type1/public/txfonts/txbtt.pfb></usr/local/texlive/2015/texmf-d
+ist/fonts/type1/public/txfonts/txsy.pfb></usr/local/texlive/2015/texmf-dist/fon
+ts/type1/public/txfonts/txtt.pfb></usr/local/texlive/2015/texmf-dist/fonts/type
+1/urw/times/utmb8a.pfb></usr/local/texlive/2015/texmf-dist/fonts/type1/urw/time
+s/utmr8a.pfb></usr/local/texlive/2015/texmf-dist/fonts/type1/urw/times/utmri8a.
+pfb>
+Output written on UserGuide.pdf (7 pages, 207937 bytes).
 PDF statistics:
- 85 PDF objects out of 1000 (max. 8388607)
- 69 compressed objects within 1 object stream
- 13 named destinations out of 1000 (max. 500000)
- 54 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 147 PDF objects out of 1000 (max. 8388607)
+ 126 compressed objects within 2 object streams
+ 25 named destinations out of 1000 (max. 500000)
+ 134 words of extra memory for PDF output out of 10000 (max. 10000000)
 
