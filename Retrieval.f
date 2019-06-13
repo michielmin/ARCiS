@@ -522,7 +522,7 @@ c		end select
 					enddo
 					close(unit=20)
 					open(unit=20,file=trim(outputdir) // "fullobs" // trim(int2string(i,'(i0.3)')),RECL=1000)
-					do j=1,nlam
+					do j=1,nlam-1
 						write(20,*) lam(j)*1d4,specsave(i,j)
 					enddo
 					close(unit=20)
