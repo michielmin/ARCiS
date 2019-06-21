@@ -907,13 +907,213 @@ c use Ackerman & Marley 2001 cloud computation
 		if(Tform.gt.0d0) then
 			call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
 		else
-			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+			call set_molfracs_atoms_form(COratio,metallicity,f_dry,f_wet)
+c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		endif
 	endif
 	
 	
 	return
 	end
+
+
+	subroutine set_molfracs_atoms_form(COratio_in,metallicity_in,f_dry,f_wet)
+	use AtomsModule
+	use OutputModule
+	IMPLICIT NONE
+	character*10 species(20)
+	real*8 sil_atoms(N_atoms),tot_atoms(N_atoms),COratio,metallicity
+	real*8 abun(20),max,maxf(20),f_dry,f_wet,metallicity0,tot,atoms(20,N_atoms)
+	real*8 dry_atoms(N_atoms),wet_atoms(N_atoms),scale,COratio_in,metallicity_in
+	real*8 NOg,NOd,NOi,NCg,NCd,NCi,NZg,NZd,NZi,Ng,Nd,Ni,a,b,minmet,maxmet
+	integer nspecies,i,j,k
+	logical molecule(20)
+
+	COratio=COratio_in
+	if(COratio.gt.1.1) COratio=1.1
+	if(COratio.lt.0.2) COratio=0.2
+	metallicity=metallicity_in
+	if(metallicity.gt.2.5) metallicity=2.5
+	if(metallicity.lt.0.0) metallicity=0.0
+
+	names_atoms(1) = 'H'
+	names_atoms(2) = 'He'
+	names_atoms(3) = 'C'
+	names_atoms(4) = 'N'
+	names_atoms(5) = 'O'
+	names_atoms(6) = 'Na'
+	names_atoms(7) = 'Mg'
+	names_atoms(8) = 'Al'
+	names_atoms(9) = 'Si'
+	names_atoms(10) = 'P'
+	names_atoms(11) = 'S'
+	names_atoms(12) = 'Cl'
+	names_atoms(13) = 'K'
+	names_atoms(14) = 'Ca'
+	names_atoms(15) = 'Ti'
+	names_atoms(16) = 'V'
+	names_atoms(17) = 'Fe'
+	names_atoms(18) = 'Ni'
+
+	molfracs_atoms = (/ 0.9207539305,
+     &  0.0783688694,
+     &  0.0002478241, 
+     &  6.22506056949881e-05, 
+     &  0.0004509658, 
+     &  1.60008694353205e-06, 
+     &  3.66558742055362e-05, 
+     &  2.595e-06, 
+     &  2.9795e-05, 
+     &  2.36670201997668e-07, 
+     &  1.2137900734604e-05, 
+     &  2.91167958499589e-07, 
+     &  9.86605611925677e-08, 
+     &  2.01439011429255e-06, 
+     &  8.20622804366359e-08,
+     &  7.83688694089992e-09,
+     &  2.91167958499589e-05,
+     &  1.52807116806281e-06
+     &  /)
+
+	atoms=0
+	maxf=1d0
+	molecule=.false.
+	i=1
+	species(i)='C'
+		atoms(i,3)=1
+		maxf(i)=0.5d0
+	i=i+1
+	species(i)='CO'
+		atoms(i,3)=1
+		atoms(i,5)=1
+		molecule(i)=.true.
+	i=i+1
+	species(i)='TiO2'
+		atoms(i,5)=2
+		atoms(i,15)=1
+	i=i+1
+	species(i)='VO'
+		atoms(i,5)=1
+		atoms(i,16)=1
+	i=i+1
+	species(i)='Silicates'
+		atoms(i,9)=1
+		atoms(i,6)=min(molfracs_atoms(6),molfracs_atoms(8))/molfracs_atoms(9)
+		atoms(i,8)=min(molfracs_atoms(6),molfracs_atoms(8))/molfracs_atoms(9)
+		atoms(i,7)=molfracs_atoms(7)/molfracs_atoms(9)
+		atoms(i,13)=molfracs_atoms(13)/molfracs_atoms(9)
+		atoms(i,14)=molfracs_atoms(14)/molfracs_atoms(9)
+		atoms(i,5)=atoms(i,6)+atoms(i,7)+atoms(i,8)+atoms(i,14)+atoms(i,13)+2d0
+c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),atoms(i,7),atoms(i,5)
+	i=i+1
+	species(i)='SiO2'
+		atoms(i,9)=1
+		atoms(i,5)=2
+	i=i+1
+	species(i)='FeS'
+		atoms(i,11)=1
+		atoms(i,17)=1
+	i=i+1
+	species(i)='Fe'
+		atoms(i,17)=1
+	i=i+1
+	species(i)='SiC'
+		atoms(i,9)=1
+		atoms(i,3)=1
+	i=i+1
+	species(i)='Al2O3'
+		atoms(i,5)=3
+		atoms(i,8)=2
+	i=i+1
+	species(i)='H2O'
+		atoms(i,1)=2
+		atoms(i,5)=1
+		
+	nspecies=i
+
+	gas_atoms=molfracs_atoms
+	tot_atoms=0d0
+	solid_atoms=0d0
+	abun=0d0
+	do i=1,nspecies
+		max=1d200
+		do j=1,n_atoms
+			if(atoms(i,j).gt.0) then
+				if(maxf(i)*gas_atoms(j)/real(atoms(i,j)).lt.max) max=maxf(i)*gas_atoms(j)/real(atoms(i,j))
+			endif
+		enddo
+		abun(i)=max
+		if(molecule(i)) then
+			abun(i)=max
+			do j=1,n_atoms
+				gas_atoms(j)=gas_atoms(j)-abun(i)*real(atoms(i,j))
+				tot_atoms(j)=tot_atoms(j)+abun(i)*real(atoms(i,j))
+			enddo
+			abun(i)=0d0
+		else
+			abun(i)=max
+			do j=1,n_atoms
+				gas_atoms(j)=gas_atoms(j)-abun(i)*real(atoms(i,j))
+				solid_atoms(j)=solid_atoms(j)+abun(i)*real(atoms(i,j))
+			enddo
+		endif
+	enddo
+	gas_atoms=gas_atoms+tot_atoms
+
+	dry_atoms(1:N_atoms)=solid_atoms(1:N_atoms)-abun(nspecies)*atoms(nspecies,1:N_atoms)
+	wet_atoms=solid_atoms-dry_atoms
+
+	NOg=gas_atoms(5)
+	NOd=dry_atoms(5)
+	NOi=wet_atoms(5)
+	NCg=gas_atoms(3)
+	NCd=dry_atoms(3)
+	NCi=wet_atoms(3)
+	NZg=sum(gas_atoms(3:N_atoms))
+	NZd=sum(dry_atoms(3:N_atoms))
+	NZi=sum(wet_atoms(3:N_atoms))
+	Ng=sum(gas_atoms(1:N_atoms))
+	Nd=sum(dry_atoms(1:N_atoms))
+	Ni=sum(wet_atoms(1:N_atoms))
+	
+	metallicity0=sum(molfracs_atoms(3:n_atoms))/sum(molfracs_atoms(1:n_atoms))
+	scale=metallicity0*10d0**metallicity
+
+	a=(NCg-COratio*NOg)/(COratio*NOd-NCd)
+	b=(NCi-COratio*NOi)/(COratio*NOd-NCd)
+	f_wet=(NZg+a*NZd-scale*(Ng+a*Nd))/(scale*(b*Nd+Ni)-(b*NZd+NZi))
+	f_dry=a+f_wet*b
+
+	tot_atoms=gas_atoms+f_dry*dry_atoms+f_wet*wet_atoms
+	tot_atoms=tot_atoms/sum(tot_atoms(1:N_atoms))
+
+	if(tot_atoms(3)/tot_atoms(5).gt.COratio_in) tot_atoms(3)=tot_atoms(5)*COratio_in
+	if(tot_atoms(3)/tot_atoms(5).lt.COratio_in) tot_atoms(5)=tot_atoms(3)/COratio_in
+	tot_atoms(3:n_atoms)=tot_atoms(3:n_atoms)/sum(tot_atoms(3:n_atoms))
+	tot_atoms(1:2)=tot_atoms(1:2)/sum(tot_atoms(1:2))
+	scale=(10d0**metallicity_in)*metallicity0
+	tot_atoms(3:n_atoms)=tot_atoms(3:n_atoms)*scale/(1d0-scale)
+
+	COratio=tot_atoms(3)/tot_atoms(5)
+	call output("C/O: " // dbl2string(tot_atoms(3)/tot_atoms(5),'(f6.2)'))
+	call output("Si/O:" // dbl2string(tot_atoms(9)/tot_atoms(5),'(f6.2)'))
+
+	metallicity=log10((sum(tot_atoms(3:n_atoms))/sum(tot_atoms(1:n_atoms)))/
+     &			(sum(molfracs_atoms(3:n_atoms))/sum(molfracs_atoms(1:n_atoms))))
+	call output("[Z]: " // dbl2string(metallicity,'(f6.2)'))
+
+	tot=sum(tot_atoms(1:N_atoms))
+	molfracs_atoms=tot_atoms/tot
+
+	open(unit=50,file='atomic.dat')
+	do i=1,18
+		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
+	enddo
+	close(unit=50)
+	
+	return
+	end
+
 	
 	subroutine read_molfracs_atoms(filename,COratio,metallicity)
 	use AtomsModule
