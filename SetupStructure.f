@@ -8,8 +8,9 @@
 	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
-	
 	real*8 starttime,stoptime,chemtime,NOratio,SiOratio,Zout
+
+
 	chemtime=0d0
 		
 	do i=1,nclouds
@@ -177,37 +178,12 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
 		call output("Computing chemistry using GGchem by Peter Woitke")
 		do i=1,nr
 			call tellertje(i,nr)
-			if(chemtime.gt.maxchemtime.and.domakeai) then
-				modelsucces=.false.
-				return
-			endif
-			met_r=metallicity
-			if(sinkZ) then
-				met_r=metallicity+log10((dens(i)/dens1bar)**(1d0/alphaZ**2-1d0))
-				call set_molfracs_atoms(COratio,met_r,TiScale,enhancecarbon)
-			endif
-			if(P(i).ge.mixP.or.i.eq.1) then
-				if(met_r.gt.minZ) then
-					Tc=max(min(T(i),20000d0),100d0)
-c					Tc=T(i)
-					call cpu_time(starttime)
-					call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &					XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
-					call cpu_time(stoptime)
-					chemtime=chemtime+stoptime-starttime
-				else if(i.gt.1) then
-					mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
-					nabla_ad(i)=nabla_ad(i-1)
-				else
-					mixrat_r(i,1:nmol)=0d0
-					mixrat_r(i,45)=0.85453462
-					mixrat_r(i,48)=1d0-mixrat_r(i,45)
-					nabla_ad(i)=2d0/7d0
-				endif
-			else
-				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
-				nabla_ad(i)=nabla_ad(i-1)
-			endif
+			Tc=max(min(T(i),20000d0),100d0)
+			call cpu_time(starttime)
+			call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
+     &			XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
+			call cpu_time(stoptime)
+			chemtime=chemtime+stoptime-starttime
 			do imol=1,nmol
 				if(includemol(imol)) then
 					if(IsNaN(mixrat_r(i,imol))) then
@@ -222,6 +198,15 @@ c					Tc=T(i)
 				endif
 			enddo
 		enddo
+		if(disequilibrium) then
+c call disequilibrium code
+c input: 	R(1:nr+1) : These are the radial boundaries of the layers (bottom to top)
+c			P(1:nr),T(1:nr) : These are the pressure and temperature inside the layers
+c			molname(1:nmol) : names of the molecules included
+c			Kzz : Diffusion coefficient
+c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now set to equilibrium abundances.
+
+		endif
 		call output("==================================================================")
 	else
 		mixrat_r=mixrat_old_r
@@ -231,84 +216,12 @@ c					Tc=T(i)
 
 	enddo
 
-	if(dochemistry.and..false.) then
-	if(compute_mixrat) then
-		ini=.true.
-		call SetAbun
-		call output("==================================================================")
-c		call output("Computing chemistry using easy_chem by Paul Molliere")
-		call output("Computing chemistry using GGchem by Peter Woitke")
-		do i=1,nr
-			call tellertje(i,nr)
-			if(chemtime.gt.maxchemtime.and.domakeai) then
-				modelsucces=.false.
-				return
-			endif
-			met_r=metallicity
-			if(sinkZ) then
-				met_r=metallicity+log10(dens(i)/dens1bar)*(1d0/alphaZ**2-1d0)
-				call set_molfracs_atoms(COratio,met_r,TiScale,enhancecarbon)
-			endif
-			if(P(i).ge.mixP.or.i.eq.1) then
-				if(met_r.gt.minZ) then
-					Tc=max(min(T(i),3000d0),100d0)
-					Tc=T(i)
-				call cpu_time(starttime)
-					call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
-				call cpu_time(stoptime)
-				chemtime=chemtime+stoptime-starttime
-				else if(i.gt.1) then
-					mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
-					nabla_ad(i)=nabla_ad(i-1)
-				else
-					mixrat_r(i,1:nmol)=0d0
-					mixrat_r(i,45)=0.85453462
-					mixrat_r(i,48)=1d0-mixrat_r(i,45)
-					nabla_ad(i)=2d0/7d0
-				endif
-			else
-				Tc=max(min(T(i),3000d0),100d0)
-					Tc=T(i)
-				call cpu_time(starttime)
-				if(cloudcompute) call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,
-     &				cloudspecies,XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
-				call cpu_time(stoptime)
-				chemtime=chemtime+stoptime-starttime
-				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
-				nabla_ad(i)=nabla_ad(i-1)
-			endif
-			do imol=1,nmol
-				if(includemol(imol)) then
-					if(IsNaN(mixrat_r(i,imol))) then
-						print*,imol," is a NaN...",met_r
-						if(i.gt.1) then
-							mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
-							nabla_ad(i)=nabla_ad(i-1)
-						else
-							mixrat_r(i,1:nmol)=0d0
-							mixrat_r(i,45)=0.85453462
-							mixrat_r(i,48)=1d0-mixrat_r(i,45)
-							nabla_ad(i)=2d0/7d0
-						endif
-					endif
-				endif
-			enddo
-		enddo
-		call output("==================================================================")
-	else
-		mixrat_r=mixrat_old_r
-		XeqCloud=XeqCloud_old
-	endif
-	endif
-
 	if(compute_mixrat) then
 		do i=1,nclouds
 			call SetupCloud(i)
 		enddo
 	endif
 
-c bug needs to be fixed!!!!!
 	Otot=0d0
 	Ctot=0d0
 	Htot=0d0
@@ -321,7 +234,6 @@ c bug needs to be fixed!!!!!
 			endif
 		enddo
 	enddo
-c bug needs to be fixed!!!!!
 	COret=Ctot/Otot
 	if(Tform.gt.0d0) COret=COratio
 	call output("C/O: " // dbl2string(COret,'(f8.3)'))
@@ -511,7 +423,7 @@ c			beta_used=max
 	IMPLICIT NONE
 	integer i,ii,j
 	real*8 tmix,frac(nr,10),temp(nr,3)
-	real*8 elabun(nr,7),MMW_form,Kzz(nr),Nmfp,NOratio,SiOratio,Zout
+	real*8 elabun(nr,7),MMW_form,Kzz_r(nr),Nmfp,NOratio,SiOratio,Zout
 	character*500 command
 	character*500 filename
 	logical ini
@@ -540,8 +452,8 @@ c	endif
 	write(25,'("#Density setup")')
 	write(25,'(i5)') nr
 	if(Cloud(ii)%Kzzfile.ne.' ') then
-		call regridN(Cloud(ii)%Kzzfile,P,Kzz,nr,1,2,1,0,.true.,.true.)
-		Kzz=Kzz*Cloud(ii)%Kscale
+		call regridN(Cloud(ii)%Kzzfile,P,Kzz_r,nr,1,2,1,0,.true.,.true.)
+		Kzz_r=Kzz_r*Cloud(ii)%Kscale
 c		do i=nr,1,-1
 c			if(didcondens(i)) then
 c				do j=i,1,-1
@@ -550,13 +462,13 @@ c				enddo
 c				if(j.lt.1) j=1
 c				Nmfp=log(P(j)/P(i))
 c				j=j+real(i-j)*0.7d0
-c				tmix=Nmfp**2*Hp(j)**2/Kzz(j)
-c				Kzz(i)=Hp(i)**2/tmix
+c				tmix=Nmfp**2*Hp(j)**2/Kzz_r(j)
+c				Kzz_r(i)=Hp(i)**2/tmix
 c			endif
 c		enddo
 		do i=nr,1,-1
-c			write(82,*) P(i), Kzz(i)
-			tmix=Hp(i)**2/abs(Kzz(i))
+c			write(82,*) P(i), Kzz_r(i)
+			tmix=Hp(i)**2/abs(Kzz_r(i))
 			if(T(i).lt.Tmin.and.domakeai) then
 				modelsucces=.false.
 				close(unit=25)
@@ -1540,10 +1452,6 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	real*8 P1,P2,abun_temp(nmol),M
 
 	Tg=min(max(Tin,70d0),30000d0)
-
-
-c	goto 1
-c	goto 2
 	
 	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates)
 
@@ -1551,78 +1459,6 @@ c	goto 2
 		if(.not.mol_abun(i).gt.0d0) mol_abun(i)=0d0
 	enddo
 
-	nabla_ad=2d0/7d0
-
-	return
-
-1	continue
-
-	call call_easy_chem(Tg,Pin,mol_abun,mol_names,nmol,ini,condensates,
-     &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol)
-
-	do i=1,nmol
-		if(.not.mol_abun(i).gt.0d0) mol_abun(i)=0d0
-	enddo
-
-	return
-	
-2	continue
-
-	mol_abun=0d0
-	MMW=0d0
-	do imol=1,nmol
-		select case(mol_names(imol))
-			case("H2O")
-				i=1
-				M=17.8851
-			case("CH4")
-				i=2
-				M=15.9272
-			case("NH3")
-				i=3
-				M=16.9072
-			case("CO")
-				i=4
-				M=27.8081
-			case("CO2")
-				i=5
-				M=43.6918
-			case("PH3")
-				i=6
-				M=33.7516
-			case("Na")
-				i=7
-				M=22.9900
-			case("K")
-				i=8
-				M=39.0980
-			case("H2")
-				i=-1
-				M=2.0014
-				mol_abun(imol)=0.85
-			case("He")
-				i=-2
-				M=4.0030
-				mol_abun(imol)=0.15
-			case default
-				i=-3
-		end select
-		if(i.gt.0) then
-			open(unit=25,file='dbf26/a_p_G4___.tsv',RECL=6000)
-			ini=.true.
-			P2=0d0
-			do while(ini)
-				P1=P2
-				read(25,*,end=3) P2,abun_temp(1:8)
-				if(Pin.gt.P1.and.Pin.lt.P2) then
-					mol_abun(imol)=abun_temp(i)
-					ini=.false.
-				endif
-			enddo
-3			close(unit=25)
-		endif
-		if(i.ge.-2) MMW=MMW+M*mol_abun(imol)
-	enddo
 	nabla_ad=2d0/7d0
 
 	return

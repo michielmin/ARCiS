@@ -100,10 +100,10 @@ c===============================================================================
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust,twind,epsiter
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud,metallicity0
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun
-	logical didcondens_chem,coagulation,resume_multinest,doMCcompute
+	logical didcondens_chem,coagulation,resume_multinest,doMCcompute,disequilibrium
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
-	real*8 mixratHaze,PHaze,dPHaze,kappaHaze
+	real*8 mixratHaze,PHaze,dPHaze,kappaHaze,Kzz
 	logical enhancecarbon,fast_chem,gamma_equal,dopostequalweights
 	logical transspec,emisspec,rainout
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
@@ -112,12 +112,15 @@ c===============================================================================
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ,nspike,nai
 	integer,allocatable :: niso(:)
-	real*8 Mmol(60)
 	real*8,allocatable :: MMW(:)
 	integer nBB
 	parameter(nBB=10000)
 	real*8,allocatable :: BB(:,:)						! nBB,nlam
-	character*10 molname(60)
+
+	integer nmol_data
+	parameter(nmol_data=68)
+	real*8 Mmol(nmol_data)
+	character*10 molname(nmol_data)
 	parameter(molname = (/'H2O   ','CO2   ','O3    ','N2O   ','CO    ','CH4   ',
      &	'O2    ','NO    ','SO2   ','NO2   ','NH3   ','HNO3  ','OH    ','HF    ',
      &	'HCl   ','HBr   ','HI    ','ClO   ','OCS   ','H2CO  ','HOCl  ','N2    ',
@@ -125,7 +128,8 @@ c===============================================================================
      &	'H2S   ','HCOOH ','HO2   ','O     ','ClONO2','NO+   ','HOBr  ','C2H4  ',
      &	'CH3OH ','CH3Br ','CH3CN ','CF4   ','C4H2  ','HC3N  ','H2    ','CS    ',
      &	'SO3   ','He    ','X     ','X     ','X     ','X     ','SiS   ','SiO   ',
-     &  'C2    ','Na    ','K     ','TiO   ','VO    ','FeH   ' /))
+     &  'C2    ','Na    ','K     ','TiO   ','VO    ','FeH   ','C     ','CH2OH ',
+     &  'CH3   ','H     ','N     ','NH    ','NH2   ','N2H3  ' /))
 	parameter(Mmol = (/     17.8851,  43.6918,  47.6511,  43.6947,  27.8081,  15.9272,  
      &	31.7674,  29.7889,  63.5840,  45.6607,  16.9072,  62.5442,  16.8841,  19.8619,  
      &	36.1973,  80.3271,   1.0070,  51.0760,  59.6379,  29.8088,  52.0765,  27.8112,  
@@ -133,8 +137,9 @@ c===============================================================================
      &	33.8332,  45.6731,  32.7593,  15.8794,  96.7366,  29.7813,  96.2063,  27.8507,  
      &	31.7949,  94.2413,  40.7302,  87.3580,  49.6543,  50.6424,   2.0014,  43.7539,  
      &	79.3792,   4.0030,   0.0000,   0.0000,   0.0000,   0.0000,  60.1500,  44.0845,
-     &  24.0214,  22.9900,  39.0980,  63.8660,  66.9410, 56.853 /))
-	integer Catoms(60),Oatoms(60),Hatoms(60)
+     &  24.0214,  22.9900,  39.0980,  63.8660,  66.9410,   56.853,  12.0107,  31.0339,
+     &	15.0345,   1.0079,  14.0067,  15.0146,  16.0225,   31.037 /))
+	integer Catoms(nmol_data),Oatoms(nmol_data),Hatoms(nmol_data)
 	parameter(Catoms = (/0,1,0,0,1,1,
      &				 0,0,0,0,0,0,0,0,
      &				 0,0,0,0,1,1,0,0,
@@ -142,7 +147,8 @@ c===============================================================================
      &				 0,1,0,0,0,0,0,2,
      &				 1,1,2,1,4,3,0,1,
      &				 0,0,0,0,0,0,0,0,
-     &				 2,0,0,0,0,0 /))
+     &				 2,0,0,0,0,0,1,1,
+     &				 1,0,0,0,0,0 /))
 	parameter(Oatoms = (/1,2,3,1,1,0,
      &				 2,1,2,2,0,3,1,0,
      &				 0,0,0,1,1,1,1,0,
@@ -150,7 +156,8 @@ c===============================================================================
      &				 0,2,2,1,3,1,1,0,
      &				 1,0,0,0,0,0,0,0,
      &				 3,0,0,0,0,0,0,1,
-     &				 0,0,0,1,1,0 /))
+     &				 0,0,0,1,1,0,0,1,
+     &				 0,0,0,0,0,0 /))
 	parameter(Hatoms = (/2,0,0,0,0,4,
      &				 0,0,0,0,3,1,1,1,
      &				 1,1,1,0,0,2,1,0,
@@ -158,7 +165,8 @@ c===============================================================================
      &				 2,2,0,0,0,0,1,4,
      &				 4,3,3,0,2,1,2,0,
      &				 0,0,0,0,0,0,0,0,
-     &				 0,0,0,0,0,1 /))
+     &				 0,0,0,0,0,1,0,3,
+     &				 3,1,0,1,2,3 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt,n_instr
 	logical HITEMP,opacitymode,compute_opac,Mp_from_logg,trend_compute
@@ -199,7 +207,7 @@ c===============================================================================
 	end type CIA_pair
 	
 	type(CIA_pair),allocatable :: CIA(:)
-	real*8 cia_mixrat(60)
+	real*8 cia_mixrat(nmol_data)
 
 	type Mueller
 		real*8 F11(180),F12(180),F22(180)

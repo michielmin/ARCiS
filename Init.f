@@ -181,7 +181,11 @@ c===============================================================================
 	type(SettingKey),pointer :: key
 	integer i,j,ncia0,n
 	character*500 homedir,h2h2file,h2hefile,h2ch4file
-	character*10 names(60)
+	integer ndiseq_list
+	parameter(ndiseq_list=20)
+	character*10 names(nmol_data),diseq_list(20)
+	parameter(diseq_list = (/ "CH4","CO","CO2","H2","H2O","NH3","N2","C","CH2OH","CH3",
+     &		"CH3OH","C2H2","H","O","OH","N","NH","NH2","NO","N2H3" /))
 	logical existh2h2,existh2he,existh2ch4
 
 
@@ -231,6 +235,8 @@ c===============================================================================
 				endif
 			case("mixratfile")
 				read(key%value,*) mixratfile
+			case("diseq")
+				read(key%value,*) disequilibrium
 			case("tpfile")
 				read(key%value,'(a)') TPfile
 			case("cloud")
@@ -252,7 +258,7 @@ c				if(key%nr1.eq.0) key%nr1=1
 					endif
 				endif
 			case default
-				do i=1,60
+				do i=1,nmol_data
 					if(key%key.eq.molname(i)) then
 						if(i.gt.nmol) nmol=i
 						j=j+1
@@ -267,7 +273,7 @@ c				if(key%nr1.eq.0) key%nr1=1
 		read(30,*) n
 		read(30,*) names(1:n)
 		do j=1,n
-			do i=1,60
+			do i=1,nmol_data
 				if(names(j).eq.molname(i)) then
 					if(i.gt.nmol) nmol=i
 				endif
@@ -275,6 +281,17 @@ c				if(key%nr1.eq.0) key%nr1=1
 		enddo
 	endif
 
+	if(disequilibrium) then
+c select at least the species relevant for disequilibrium chemistry
+		do j=1,ndiseq_list
+			do i=1,nmol_data
+				if(diseq_list(j).eq.molname(i)) then
+					if(i.gt.nmol) nmol=i
+				endif
+			enddo
+		enddo
+	endif
+	
 	if(do_cia) nmol=max(nmol,48)
 
 	allocate(mixrat(nmol))
@@ -761,6 +778,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) epsiter
 		case("chemistry")
 			read(key%value,*) dochemistry
+		case("diseq")
+			read(key%value,*) disequilibrium
+		case("kzz")
+			read(key%value,*) Kzz
 		case("fastchem","fast_chem")
 			read(key%value,*) fast_chem
 		case("metallicity")
@@ -885,7 +906,7 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		case("transspec")
 			read(key%value,*) transspec
 		case default
-			do i=1,60
+			do i=1,nmol_data
 				if(key%key.eq.molname(i)) then
 					read(key%value,*) mixrat(i)
 					includemol(i)=.true.
@@ -967,7 +988,7 @@ c	endif
 		read(20,*) n
 		read(20,*) names(1:n)
 		do j=1,n
-			do i=1,60
+			do i=1,nmol_data
 				if(names(j).eq.molname(i)) then
 					imol(j)=i
 					includemol(imol(j))=.true.
@@ -1153,6 +1174,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 
 	dochemistry=.false.
 	fast_chem=.false.
+	disequilibrium=.false.
+	Kzz=1d8
 	metallicity=0d0
 	condensates=.true.
 	COratio=0.55
