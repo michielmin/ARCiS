@@ -839,14 +839,11 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 	real*8 dry_atoms(N_atoms),wet_atoms(N_atoms),scale,COratio_in,metallicity_in
 	real*8 NOg,NOd,NOi,NCg,NCd,NCi,NZg,NZd,NZi,Ng,Nd,Ni,a,b,minmet,maxmet
 	integer nspecies,i,j,k
-	logical molecule(20)
+	logical molecule(20),adjustCO,adjustZ
+	real*8 z1,z2,f_wet1,f_wet2,f_gas
 
 	COratio=COratio_in
-	if(COratio.gt.1.1) COratio=1.1
-	if(COratio.lt.0.2) COratio=0.2
 	metallicity=metallicity_in
-	if(metallicity.gt.2.5) metallicity=2.5
-	if(metallicity.lt.0.0) metallicity=0.0
 
 	names_atoms(1) = 'H'
 	names_atoms(2) = 'He'
@@ -910,13 +907,11 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 	i=i+1
 	species(i)='Silicates'
 		atoms(i,9)=1
-		atoms(i,6)=min(molfracs_atoms(6),molfracs_atoms(8))/molfracs_atoms(9)
-		atoms(i,8)=min(molfracs_atoms(6),molfracs_atoms(8))/molfracs_atoms(9)
+		atoms(i,6)=molfracs_atoms(6)/molfracs_atoms(9)
 		atoms(i,7)=molfracs_atoms(7)/molfracs_atoms(9)
 		atoms(i,13)=molfracs_atoms(13)/molfracs_atoms(9)
 		atoms(i,14)=molfracs_atoms(14)/molfracs_atoms(9)
 		atoms(i,5)=atoms(i,6)+atoms(i,7)+atoms(i,8)+atoms(i,14)+atoms(i,13)+2d0
-c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),atoms(i,7),atoms(i,5)
 	i=i+1
 	species(i)='SiO2'
 		atoms(i,9)=1
@@ -940,6 +935,7 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	species(i)='H2O'
 		atoms(i,1)=2
 		atoms(i,5)=1
+
 		
 	nspecies=i
 
@@ -996,15 +992,121 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	f_wet=(NZg+a*NZd-scale*(Ng+a*Nd))/(scale*(b*Nd+Ni)-(b*NZd+NZi))
 	f_dry=a+f_wet*b
 
-	tot_atoms=gas_atoms+f_dry*dry_atoms+f_wet*wet_atoms
+	adjustCO=.false.
+	adjustZ=.false.
+
+	f_gas=1d0
+	if(f_dry.gt.0d0.and.f_wet.gt.0d0.and.f_wet.lt.1d0) goto 2
+
+	adjustZ=.true.
+	if(a.gt.0d0.and.b.gt.(-a)) then
+		f_wet1=0d0
+		z1=(NZg+a*NZd+f_wet1*(b*NZd+NZi))/(Ng+a*Nd+f_wet1*(b*Nd+Ni))
+		f_wet2=1d0
+		z2=(NZg+a*NZd+f_wet2*(b*NZd+NZi))/(Ng+a*Nd+f_wet2*(b*Nd+Ni))
+		if(z1.gt.z2) then
+			if(scale.gt.z1) then
+				f_wet=f_wet1
+			else
+				f_wet=f_wet2
+			endif
+		else
+			if(scale.gt.z2) then
+				f_wet=f_wet2
+			else
+				f_wet=f_wet1
+			endif
+		endif
+		f_dry=a+f_wet*b
+	else if(a.gt.0d0.and.b.le.(-a)) then
+		f_wet1=0d0
+		z1=(NZg+a*NZd+f_wet1*(b*NZd+NZi))/(Ng+a*Nd+f_wet2*(b*Nd+Ni))
+		f_wet2=-a/b
+		z2=(NZg+a*NZd+f_wet1*(b*NZd+NZi))/(Ng+a*Nd+f_wet2*(b*Nd+Ni))
+		if(z1.gt.z2) then
+			if(scale.gt.z1) then
+				f_wet=f_wet1
+			else
+				f_wet=f_wet2
+			endif
+		else
+			if(scale.gt.z2) then
+				f_wet=f_wet2
+			else
+				f_wet=f_wet1
+			endif
+		endif
+		f_dry=a+f_wet*b
+	else if(a.le.0d0.and.b.gt.-a) then
+		f_wet1=-a/b
+		z1=(NZg+a*NZd+f_wet1*(b*NZd+NZi))/(Ng+a*Nd+f_wet1*(b*Nd+Ni))
+		f_wet2=1d0
+		z2=(NZg+a*NZd+f_wet2*(b*NZd+NZi))/(Ng+a*Nd+f_wet2*(b*Nd+Ni))
+		if(z1.gt.z2) then
+			if(scale.gt.z1) then
+				f_wet=f_wet1
+			else
+				f_wet=f_wet2
+			endif
+		else
+			if(scale.gt.z2) then
+				f_wet=f_wet2
+			else
+				f_wet=f_wet1
+			endif
+		endif
+		f_dry=a+f_wet*b
+	else
+		adjustCO=.true.
+		if(COratio.gt.NCd/NOd.and.COratio.gt.NCi/NOi.and.COratio.gt.NCg/NOg) then
+			if(NCd/NOd.gt.NCi/NOi.and.NCd/NOd.gt.NCg/NOg) then
+				f_dry=1d3
+				f_wet=0d0
+				f_gas=1d0
+			else if(NCi/NOi.gt.NCd/NOd.and.NCi/NOi.gt.NCg/NOg) then
+				f_dry=0d0
+				f_wet=1d0
+				f_gas=1d0
+			else
+				f_dry=0d0
+				f_wet=0d0
+				f_gas=1d0
+			endif
+		else
+			if(NCd/NOd.lt.NCi/NOi.and.NCd/NOd.lt.NCg/NOg) then
+				f_dry=1d3
+				f_wet=0d0
+				f_gas=1d0
+			else if(NCi/NOi.lt.NCd/NOd.and.NCi/NOi.lt.NCg/NOg) then
+				f_dry=0d0
+				f_wet=1d0
+				f_gas=1d0
+			else
+				f_dry=0d0
+				f_wet=0d0
+				f_gas=1d0
+			endif
+		endif
+	endif
+
+2	continue
+
+	tot_atoms=f_gas*gas_atoms+f_dry*dry_atoms+f_wet*wet_atoms
 	tot_atoms=tot_atoms/sum(tot_atoms(1:N_atoms))
 
-	if(tot_atoms(3)/tot_atoms(5).gt.COratio_in) tot_atoms(3)=tot_atoms(5)*COratio_in
-	if(tot_atoms(3)/tot_atoms(5).lt.COratio_in) tot_atoms(5)=tot_atoms(3)/COratio_in
-	tot_atoms(3:n_atoms)=tot_atoms(3:n_atoms)/sum(tot_atoms(3:n_atoms))
-	tot_atoms(1:2)=tot_atoms(1:2)/sum(tot_atoms(1:2))
-	scale=(10d0**metallicity_in)*metallicity0
-	tot_atoms(3:n_atoms)=tot_atoms(3:n_atoms)*scale/(1d0-scale)
+	if(adjustCO) then
+		if(tot_atoms(3)/tot_atoms(5).gt.COratio_in) tot_atoms(3)=tot_atoms(5)*COratio_in
+		if(tot_atoms(3)/tot_atoms(5).lt.COratio_in) tot_atoms(5)=tot_atoms(3)/COratio_in
+	endif
+	if(adjustZ) then
+		tot_atoms(3:n_atoms)=tot_atoms(3:n_atoms)/sum(tot_atoms(3:n_atoms))
+		tot_atoms(1:2)=tot_atoms(1:2)/sum(tot_atoms(1:2))
+		scale=(10d0**metallicity_in)*metallicity0
+		tot_atoms(3:n_atoms)=tot_atoms(3:n_atoms)*scale
+	endif
+
+	tot=sum(tot_atoms(1:N_atoms))
+	tot_atoms(1:N_atoms)=tot_atoms(1:N_atoms)/tot
 
 	COratio=tot_atoms(3)/tot_atoms(5)
 	call output("C/O: " // dbl2string(tot_atoms(3)/tot_atoms(5),'(f6.2)'))
@@ -1014,18 +1116,21 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
      &			(sum(molfracs_atoms(3:n_atoms))/sum(molfracs_atoms(1:n_atoms))))
 	call output("[Z]: " // dbl2string(metallicity,'(f6.2)'))
 
-	tot=sum(tot_atoms(1:N_atoms))
-	molfracs_atoms=tot_atoms/tot
+	do i=1,N_atoms
+		if(tot_atoms(i).lt.0d0) tot_atoms(i)=0d0
+	enddo
+
+	molfracs_atoms=tot_atoms
 
 	open(unit=50,file='atomic.dat')
 	do i=1,18
-		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
+		write(50,'(a5,es18.6)') names_atoms(i),molfracs_atoms(i)/molfracs_atoms(9)
 	enddo
 	close(unit=50)
 	
 	return
 	end
-
+	
 	
 	subroutine read_molfracs_atoms(filename,COratio,metallicity)
 	use AtomsModule
