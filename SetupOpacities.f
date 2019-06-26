@@ -183,7 +183,7 @@ c	n_nu_line=ng*ng
 			if(includemol(imol)) then
 				do i=1,nlam
 					do j=1,ng
-						Cabs_mol(imol,ir,i,j)=kappa_mol(j,imol,i)*Ndens(ir)
+						Cabs_mol(ir,j,imol,i)=kappa_mol(j,imol,i)*Ndens(ir)
 					enddo
 				enddo
 			endif

@@ -536,7 +536,7 @@ c	condensates=(condensates.or.cloudcompute)
 
 	metallicity0=metallicity
 
-	allocate(Cabs_mol(nmol,nr,nlam,ng))
+	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 	allocate(Cext_cont(nr,nlam))
 	allocate(Cabs(nr,nlam,ng))
 	allocate(Csca(nr,nlam))
