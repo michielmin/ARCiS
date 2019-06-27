@@ -1117,7 +1117,7 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 	call output("[Z]: " // dbl2string(metallicity,'(f6.2)'))
 
 	do i=1,N_atoms
-		if(tot_atoms(i).lt.0d0) tot_atoms(i)=0d0
+		if(tot_atoms(i).lt.1d-30) tot_atoms(i)=1d-30
 	enddo
 
 	molfracs_atoms=tot_atoms
