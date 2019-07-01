@@ -38,7 +38,7 @@
 				j=1
 				ilam=1
 1				read(20,*,end=2,err=1) x,y,dy
-				if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) ilam=ilam+1
+				if((x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)).or.useobsgrid) ilam=ilam+1
 				j=j+1
 				goto 1
 2				ObsSpec(i)%nlam=ilam-1
@@ -60,8 +60,7 @@
 					expspecres_obs=20d0
 					read(line,*,err=3,end=4) x,y,dy,specres_obs,expspecres_obs
 4					continue
-c					if(dy.lt.1d-2*y) dy=1d-2*y
-					if(x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)) then
+					if((x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)).or.useobsgrid) then
 						ObsSpec(i)%lam(ilam)=x*1d-4
 						if(ObsSpec(i)%type.eq."emisa".or.ObsSpec(i)%type.eq."emis".or.ObsSpec(i)%type.eq."emission") then
 							dy=dy/y
@@ -442,7 +441,7 @@ c	enddo
 
 	recomputeopac=.true.
 	imodel=imodel+1
-	call output("model number: " // int2string(imodel,'(i7)') // dbl2string(bestlike,'(f10.2)'))
+	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel) call output("model number: " // int2string(imodel,'(i7)') // dbl2string(bestlike,'(f10.2)'))
 
 	allspec=0d0
 	if(n2d.eq.0) then
@@ -1313,7 +1312,7 @@ c			vec(i)=gasdev(idum)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j,k
+	integer i,j,k,ilam
 	real*8 spec(*),x,specsave(*)
 	real*8 lamobs(nlam-1)
 	real*8 eta,Tirr,tau,expint
@@ -1321,21 +1320,37 @@ c			vec(i)=gasdev(idum)
 	do j=1,nlam-1
 		lamobs(j)=sqrt(lam(j)*lam(j+1))
 	enddo
+	ilam=1
 	select case(ObsSpec(i)%type)
 		case("trans","transmission","transC")
 			specsave(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
-			call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
+			if(useobsgrid) then
+				spec(1:ObsSpec(i)%nlam)=specsave(ilam:ilam+ObsSpec(i)%nlam-1)
+				ilam=ilam+ObsSpec(i)%nlam
+			else
+				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
+    		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
 		case("emisr","emisR")
 			specsave(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
-			call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
+			if(useobsgrid) then
+				spec(1:ObsSpec(i)%nlam)=specsave(ilam:ilam+ObsSpec(i)%nlam-1)
+				ilam=ilam+ObsSpec(i)%nlam
+			else
+				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
+    		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
 		case("emisa","emis","emission")
 			specsave(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
-			call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
+			if(useobsgrid) then
+				spec(1:ObsSpec(i)%nlam)=specsave(ilam:ilam+ObsSpec(i)%nlam-1)
+				ilam=ilam+ObsSpec(i)%nlam
+			else
+				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
+     		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
 			spec(1:ObsSpec(i)%nlam)=log(spec(1:ObsSpec(i)%nlam))
 		case("tprofile")

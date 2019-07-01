@@ -739,39 +739,67 @@ c	make sure the scattering matrix is properly normalized by adjusting the forwar
 !$OMP END PARALLEL
 	deallocate(mu0)
 
-	call regridarray(lamdust,Kabs,nlamdust,lam,C%Kabs(isize,1:nlam),nlam)
-	call regridarray(lamdust,Kext,nlamdust,lam,C%Kext(isize,1:nlam),nlam)
-	call regridarray(lamdust,Ksca,nlamdust,lam,C%Ksca(isize,1:nlam),nlam)
-	if(scattering) then
-		do i=1,180
-			call regridarray(lamdust,F11(1:nlamdust,i),nlamdust,lam,F11_HR(1:nlam),nlam)
-			call regridarray(lamdust,F12(1:nlamdust,i),nlamdust,lam,F12_HR(1:nlam),nlam)
-			call regridarray(lamdust,F22(1:nlamdust,i),nlamdust,lam,F22_HR(1:nlam),nlam)
-			call regridarray(lamdust,F33(1:nlamdust,i),nlamdust,lam,F33_HR(1:nlam),nlam)
-			call regridarray(lamdust,F34(1:nlamdust,i),nlamdust,lam,F34_HR(1:nlam),nlam)
-			call regridarray(lamdust,F44(1:nlamdust,i),nlamdust,lam,F44_HR(1:nlam),nlam)
-			do ilam=1,nlam
-				C%F(isize,ilam)%F11(i)=F11_HR(ilam)
-				C%F(isize,ilam)%F12(i)=F12_HR(ilam)
-				C%F(isize,ilam)%F22(i)=F22_HR(ilam)
-				C%F(isize,ilam)%F33(i)=F33_HR(ilam)
-				C%F(isize,ilam)%F34(i)=F34_HR(ilam)
-				C%F(isize,ilam)%F44(i)=F44_HR(ilam)
+	if(useobsgrid.or.nlam.eq.nlamdust) then
+		C%Kabs(isize,1:nlam)=Kabs(1:nlamdust)
+		C%Kext(isize,1:nlam)=Kext(1:nlamdust)
+		C%Ksca(isize,1:nlam)=Ksca(1:nlamdust)
+		if(scattering) then
+			do i=1,180
+				do ilam=1,nlam
+					C%F(isize,ilam)%F11(i)=F11(ilam,i)
+					C%F(isize,ilam)%F12(i)=F12(ilam,i)
+					C%F(isize,ilam)%F22(i)=F22(ilam,i)
+					C%F(isize,ilam)%F33(i)=F33(ilam,i)
+					C%F(isize,ilam)%F34(i)=F34(ilam,i)
+					C%F(isize,ilam)%F44(i)=F44(ilam,i)
+				enddo
 			enddo
-		enddo
+		else
+			do i=1,180
+				do ilam=1,nlam
+					C%F(isize,ilam)%F11(i)=1d0
+					C%F(isize,ilam)%F12(i)=0d0
+					C%F(isize,ilam)%F22(i)=1d0
+					C%F(isize,ilam)%F33(i)=1d0
+					C%F(isize,ilam)%F34(i)=0d0
+					C%F(isize,ilam)%F44(i)=1d0
+				enddo
+			enddo
+		endif
 	else
-		do i=1,180
-			do ilam=1,nlam
-				C%F(isize,ilam)%F11(i)=1d0
-				C%F(isize,ilam)%F12(i)=0d0
-				C%F(isize,ilam)%F22(i)=1d0
-				C%F(isize,ilam)%F33(i)=1d0
-				C%F(isize,ilam)%F34(i)=0d0
-				C%F(isize,ilam)%F44(i)=1d0
+		call regridarray(lamdust,Kabs,nlamdust,lam,C%Kabs(isize,1:nlam),nlam)
+		call regridarray(lamdust,Kext,nlamdust,lam,C%Kext(isize,1:nlam),nlam)
+		call regridarray(lamdust,Ksca,nlamdust,lam,C%Ksca(isize,1:nlam),nlam)
+		if(scattering) then
+			do i=1,180
+				call regridarray(lamdust,F11(1:nlamdust,i),nlamdust,lam,F11_HR(1:nlam),nlam)
+				call regridarray(lamdust,F12(1:nlamdust,i),nlamdust,lam,F12_HR(1:nlam),nlam)
+				call regridarray(lamdust,F22(1:nlamdust,i),nlamdust,lam,F22_HR(1:nlam),nlam)
+				call regridarray(lamdust,F33(1:nlamdust,i),nlamdust,lam,F33_HR(1:nlam),nlam)
+				call regridarray(lamdust,F34(1:nlamdust,i),nlamdust,lam,F34_HR(1:nlam),nlam)
+				call regridarray(lamdust,F44(1:nlamdust,i),nlamdust,lam,F44_HR(1:nlam),nlam)
+				do ilam=1,nlam
+					C%F(isize,ilam)%F11(i)=F11_HR(ilam)
+					C%F(isize,ilam)%F12(i)=F12_HR(ilam)
+					C%F(isize,ilam)%F22(i)=F22_HR(ilam)
+					C%F(isize,ilam)%F33(i)=F33_HR(ilam)
+					C%F(isize,ilam)%F34(i)=F34_HR(ilam)
+					C%F(isize,ilam)%F44(i)=F44_HR(ilam)
+				enddo
 			enddo
-		enddo
+		else
+			do i=1,180
+				do ilam=1,nlam
+					C%F(isize,ilam)%F11(i)=1d0
+					C%F(isize,ilam)%F12(i)=0d0
+					C%F(isize,ilam)%F22(i)=1d0
+					C%F(isize,ilam)%F33(i)=1d0
+					C%F(isize,ilam)%F34(i)=0d0
+					C%F(isize,ilam)%F44(i)=1d0
+				enddo
+			enddo
+		endif
 	endif
-
 
 	if(C%standard.eq.'FILE') then
 		open(unit=30,file=input,RECL=5000)

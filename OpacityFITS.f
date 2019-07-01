@@ -212,7 +212,7 @@ C	 create the new empty FITS file
 	integer status,stat2,stat3,readwrite,unit,blocksize,nfound,group
 	integer firstpix,nbuffer,npixels
 	integer istat,stat4,tmp_int,stat5,stat6
-	real*8  nullval,tot2,w1,ww,Pl,Planck,tot
+	real*8  nullval,tot2,w1,ww,Pl,Planck,tot,l1,l2
 	real*8,allocatable :: lamF(:),Ktemp(:,:,:,:),temp(:),wtemp(:)
 	logical anynull,truefalse
 	integer naxes(4)
@@ -311,8 +311,8 @@ C	 create the new empty FITS file
 
 !$OMP PARALLEL IF(nlam.gt.200)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,ww,w1,iT,iP)
-!$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp)
+!$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,ww,w1,iT,iP,l1,l2)
+!$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp,dlam,useobsgrid)
 	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam))
 	allocate(wtemp(Ktable(imol)%ng*Ktable(imol)%nlam))
 !$OMP DO
@@ -322,9 +322,16 @@ C	 create the new empty FITS file
 
 		i1=0
 		i2=0
+		l1=lam(ilam)
+		l2=lam(ilam+1)
+		if(useobsgrid) then
+			l1=lam(ilam)-dlam(ilam)/2d0
+			l2=lam(ilam)+dlam(ilam)/2d0
+		endif
+
 		do i=1,Ktable(imol)%nlam
-			if(lam(ilam).ge.lamF(i).and.lam(ilam).lt.lamF(i+1)) i1=i
-			if(lam(ilam+1).ge.lamF(i).and.lam(ilam+1).lt.lamF(i+1)) i2=i
+			if(l1.ge.lamF(i).and.l1.lt.lamF(i+1)) i1=i
+			if(l2.ge.lamF(i).and.l2.lt.lamF(i+1)) i2=i
 		enddo
 		if(i1.gt.0.and.i2.gt.0) then
 			ngF=0
@@ -332,9 +339,9 @@ C	 create the new empty FITS file
 				if(i1.eq.i2) then
 					ww=1d0
 				else if(i.eq.i1) then
-					ww=abs(lam(ilam)-lamF(i+1))
+					ww=abs(l1-lamF(i+1))
 				else if(i.eq.i2) then
-					ww=abs(lam(ilam+1)-lamF(i))
+					ww=abs(l2-lamF(i))
 				else
 					ww=abs(lamF(i)-lamF(i+1))
 				endif

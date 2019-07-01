@@ -376,66 +376,70 @@
 !$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
 !$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,includemol,irtrace,dtrace,Cabs_mol,mixrat_r,
 !$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,useDRIFT,Cext_cont,
-!$OMP&		cloudfrac,nirtrace,Psimplecloud,maxtau)
+!$OMP&		cloudfrac,nirtrace,Psimplecloud,maxtau,ndisk)
 !$OMP DO SCHEDULE(STATIC,1)
 	do ilam=1,nlam-1
 		do icc=1,ncc
 		if(cloudfrac(icc).gt.0d0) then
 			do i=1,nrtrace-1
-				A=1d0
-				nk=nirtrace(i)
-				do imol=1,nmol
-					if(includemol(imol)) then
-					Ag=0d0
-					do ig=1,ng
-						tautot=0d0
-						do k=1,nk
-							ir=irtrace(k,i)
-							d=dtrace(k,i)
-							tau=d*Cabs_mol(ir,ig,imol,ilam)*mixrat_r(ir,imol)
-							if(P(ir).gt.Psimplecloud) tau=1d4
-							tautot=tautot+tau
-							if(k.lt.nk) ir_next=irtrace(k+1,i)
-							if(ir_next.le.0.or.tautot.ge.maxtau) then
-								tautot=1d4
-								exit
-							endif
+				if(i.lt.ndisk) then
+					A=0d0
+				else
+					A=1d0
+					nk=nirtrace(i)
+					do imol=1,nmol
+						if(includemol(imol)) then
+						Ag=0d0
+						do ig=1,ng
+							tautot=0d0
+							do k=1,nk
+								ir=irtrace(k,i)
+								d=dtrace(k,i)
+								tau=d*Cabs_mol(ir,ig,imol,ilam)
+								if(P(ir).gt.Psimplecloud) tau=1d4
+								tautot=tautot+tau
+								if(k.lt.nk) ir_next=irtrace(k+1,i)
+								if(ir_next.le.0.or.tautot.ge.maxtau) then
+									tautot=1d4
+									exit
+								endif
+							enddo
+							Ag=Ag+exp(-tautot)*wgg(ig)
 						enddo
-						Ag=Ag+exp(-tautot)*wgg(ig)
-					enddo
-					A=A*Ag
-					endif
-				enddo
-				tautot=0d0
-				do k=1,nk
-					ir=irtrace(k,i)
-					d=dtrace(k,i)
-					Ca=Cext_cont(ir,ilam)
-					do icloud=1,nclouds
-						if(docloud(icc,icloud)) then
-							if(useDRIFT) then
-								Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
-								Ca=Ca+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-							else
-								do isize=1,Cloud(icloud)%nr
-									Ca=Ca+
-     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-									Ca=Ca+
-     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-								enddo
-							endif
+						A=A*Ag
 						endif
 					enddo
-					tau=d*Ca
-					if(P(ir).gt.Psimplecloud) tau=1d4
-					tautot=tautot+tau
-					if(k.lt.nk) ir_next=irtrace(k+1,i)
-					if(ir_next.le.0.or.tautot.ge.maxtau) then
-						tautot=1d4
-						exit
-					endif
-				enddo
-				A=A*exp(-tautot)
+					tautot=0d0
+					do k=1,nk
+						ir=irtrace(k,i)
+						d=dtrace(k,i)
+						Ca=Cext_cont(ir,ilam)
+						do icloud=1,nclouds
+							if(docloud(icc,icloud)) then
+								if(useDRIFT) then
+									Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+									Ca=Ca+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+								else
+									do isize=1,Cloud(icloud)%nr
+										Ca=Ca+
+     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+										Ca=Ca+
+     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+									enddo
+								endif
+							endif
+						enddo
+						tau=d*Ca
+						if(P(ir).gt.Psimplecloud) tau=1d4
+						tautot=tautot+tau
+						if(k.lt.nk) ir_next=irtrace(k+1,i)
+						if(ir_next.le.0.or.tautot.ge.maxtau) then
+							tautot=1d4
+							exit
+						endif
+					enddo
+					A=A*exp(-tautot)
+				endif
 				A=pi*(rtrace(i+1)**2-rtrace(i)**2)*(1d0-A)
 				obsA(icc,ilam)=obsA(icc,ilam)+A
 				obsA(0,ilam)=obsA(0,ilam)+cloudfrac(icc)*A

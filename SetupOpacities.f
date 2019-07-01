@@ -183,7 +183,7 @@ c	n_nu_line=ng*ng
 			if(includemol(imol)) then
 				do i=1,nlam
 					do j=1,ng
-						Cabs_mol(ir,j,imol,i)=kappa_mol(j,imol,i)*Ndens(ir)
+						Cabs_mol(ir,j,imol,i)=kappa_mol(j,imol,i)*Ndens(ir)*mixrat_r(ir,imol)
 					enddo
 				enddo
 			endif
@@ -712,7 +712,11 @@ c	Random sampling of the Voigt profile
 	real*8 ll,Cs
 	integer ir,i,j
 
-	ll=1d0/(lam(i+1)*lam(i))
+	if(useobsgrid) then
+		ll=1d0/lam(i)**2
+	else
+		ll=1d0/(lam(i+1)*lam(i))
+	endif
 c Rayleigh cross sections from Dalgarno & Williams (1962)
 c For other than H2 from Sneep & Ubachs (2005)
 	Cs=0d0

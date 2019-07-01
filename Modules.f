@@ -98,8 +98,8 @@ c===============================================================================
 	logical dochemistry,retrieve_profile,condensates,faircoverage,speclimits,mapCOratio,randomseed
 	logical,allocatable :: includemol(:),didcondens(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust,twind,epsiter
-	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud,metallicity0
-	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun
+	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud,metallicity0,fday
+	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun,useobsgrid
 	logical didcondens_chem,coagulation,resume_multinest,doMCcompute,disequilibrium
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
@@ -107,7 +107,7 @@ c===============================================================================
 	logical enhancecarbon,fast_chem,gamma_equal,dopostequalweights
 	logical transspec,emisspec,rainout
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
-	real*8,allocatable :: lam(:),freq(:),dfreq(:),lamdust(:)
+	real*8,allocatable :: lam(:),freq(:),dfreq(:),lamdust(:),dlam(:)
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ,nspike,nai

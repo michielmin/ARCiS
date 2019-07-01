@@ -272,6 +272,7 @@ c				if(key%nr1.eq.0) key%nr1=1
 		open(unit=30,file=TPfile,RECL=6000)
 		read(30,*) n
 		read(30,*) names(1:n)
+		close(unit=30)
 		do j=1,n
 			do i=1,nmol_data
 				if(names(j).eq.molname(i)) then
@@ -453,6 +454,11 @@ c allocate the arrays
 #endif
 
 	if(n_ret.gt.0) n_ret=n_ret+RetPar(n_ret)%n-1
+
+	if(useobsgrid) then
+		if(computeT) useobsgrid=.false.
+		if(nobs.le.0) useobsgrid=.false.
+	endif
 
 	if(retrieval) then
 
@@ -770,6 +776,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			opacitydir=trim(key%value)
 		case("computet")
 			read(key%value,*) computeT
+		case("fday")
+			read(key%value,*) fday
 		case("teffp","tplanet")
 			read(key%value,*) TeffP
 		case("maxiter")
@@ -818,6 +826,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadRetrieval(key)
 		case("obs")
 			call ReadObsSpec(key)
+		case("useobsgrid")
+			read(key%value,*) useobsgrid
 		case("instrument")
 			call ReadInstrument(key)
 		case("chimax","chi2max")
@@ -1273,6 +1283,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	nspike=0
 
 	retrieval=.false.
+	useobsgrid=.false.
 	do i=1,n_ret
 		RetPar(i)%x0=-1d200
 		RetPar(i)%dx=-1d0
@@ -1297,6 +1308,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	enddo
 
 	computeT=.false.
+	fday=0d0
 	doMCcompute=.false.
 	TeffP=600d0
 	outputopacity=.false.
@@ -1614,35 +1626,81 @@ c				enddo
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 lam0,T0,Planck,tot
-	integer i,j
+	real*8 lam0,T0,Planck,tot,x,y,dy,dx
+	integer i,j,ilam
 	
-	lam0=lam1
-	nlam=1
-	do while(lam0.le.lam2)
-		lam0=lam0+lam0/specres
-		nlam=nlam+1
-	enddo
+	if(useobsgrid) then
+		nlam=1
+		do i=1,nobs
+			select case(ObsSpec(i)%type)
+				case('tprofile','logtp','priors','prior')
+					continue
+				case default
+					open(unit=30,file=ObsSpec(i)%file,RECL=1000)
+1					read(30,*,end=2,err=1) x,y,dy,dx
+					nlam=nlam+1
+					goto 1
+2					close(unit=30)
+			end select
+		enddo
+	else
+		lam0=lam1
+		nlam=1
+		do while(lam0.le.lam2)
+			lam0=lam0+lam0/specres
+			nlam=nlam+1
+		enddo
+	endif
 	
 	allocate(lam(nlam))
 	allocate(freq(nlam))
 	allocate(dfreq(nlam))
+	allocate(dlam(nlam))
 	
-	i=1
-	lam(i)=lam1
-	do while(lam(i).le.lam2)
-		i=i+1
-		lam(i)=lam(i-1)+lam(i-1)/specres
-	enddo
-	lam(nlam)=lam2
-	
-	do i=1,nlam
-		freq(i)=1d0/lam(i)
-	enddo
-
-	do i=1,nlam-1
-		dfreq(i)=abs(freq(i+1)-freq(i))
-	enddo
+	if(useobsgrid) then
+		ilam=0
+		do i=1,nobs
+			select case(ObsSpec(i)%type)
+				case('tprofile','logtp','priors','prior')
+					continue
+				case default
+					open(unit=30,file=ObsSpec(i)%file,RECL=1000)
+3					read(30,*,end=4,err=3) x,y,dy,dx
+					ilam=ilam+1
+					lam(ilam)=x*micron
+					dx=2d0*x/dx
+					dlam(ilam)=dx*micron
+					goto 3
+4					close(unit=30)
+			end select
+		enddo
+		lam(ilam+1)=lam(ilam)+dlam(ilam)
+		do i=1,nlam
+			freq(i)=1d0/lam(i)
+		enddo
+		lam1=lam(i+1)
+		lam2=lam(i+1)
+		do i=1,nlam-1
+			if(lam(i).lt.lam1) lam1=lam(i)
+			if(lam(i).gt.lam2) lam2=lam(i)
+			dfreq(i)=abs(1d0/(lam(i)-dlam(i))-1d0/(lam(i)+dlam(i)))
+		enddo
+	else
+		i=1
+		lam(i)=lam1
+		do while(lam(i).le.lam2)
+			i=i+1
+			lam(i)=lam(i-1)+lam(i-1)/specres
+		enddo
+		lam(nlam)=lam2
+		do i=1,nlam
+			freq(i)=1d0/lam(i)
+		enddo
+		do i=1,nlam-1
+			dfreq(i)=abs(freq(i+1)-freq(i))
+			dlam(i)=abs(lam(i+1)-lam(i))
+		enddo
+	endif
 
 	allocate(BB(nBB,nlam))
 
@@ -1657,22 +1715,26 @@ c				enddo
 	enddo
 
 
-	lam0=lam1
-	nlamdust=1
-	do while(lam0.le.lam2)
-		lam0=lam0+lam0/specresdust
-		nlamdust=nlamdust+1
-	enddo
-	
-	allocate(lamdust(nlamdust))
-	
-	i=1
-	lamdust(i)=lam1
-	do while(lamdust(i).le.lam2)
-		i=i+1
-		lamdust(i)=lamdust(i-1)+lamdust(i-1)/specresdust
-	enddo
-	lamdust(nlamdust)=lam2
+	if(useobsgrid) then
+		nlamdust=nlam
+		allocate(lamdust(nlamdust))
+		lamdust=lam
+	else
+		lam0=lam1
+		nlamdust=1
+		do while(lam0.le.lam2)
+			lam0=lam0+lam0/specresdust
+			nlamdust=nlamdust+1
+		enddo
+		allocate(lamdust(nlamdust))
+		i=1
+		lamdust(i)=lam1
+		do while(lamdust(i).le.lam2)
+			i=i+1
+			lamdust(i)=lamdust(i-1)+lamdust(i-1)/specresdust
+		enddo
+		lamdust(nlamdust)=lam2
+	endif
 	
 
 	return
