@@ -43,6 +43,8 @@
 	enddo
 	endif
 
+	if(ncc.eq.1) cloudfrac=1d0
+
 	do icc=1,ncc
 		do ilam=1,nlam
 		tau=0d0
