@@ -4,7 +4,8 @@
 	IMPLICIT NONE
 	real*8 var(n_ret),error(n_ret)
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:)
-	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3
+	real*8,allocatable :: PTstruct(:,:)
+	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir
 	
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
 	
@@ -19,11 +20,13 @@
 	allocate(spectrans(nmodels,nlam))
 	allocate(specemis(nmodels,nlam))
 	allocate(specemisR(nmodels,nlam))
+	allocate(PTstruct(nmodels,nr))
 	allocate(sorted(nmodels))
 
 	spectrans=0d0
 	specemis=0d0
 	specemisR=0d0
+	PTstruct=0d0
 
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
 
@@ -64,15 +67,14 @@
 
 	i2d=i2d+1
 	if(i2d.le.n2d) goto 3
-
+	PTstruct(i,1:nr)=T(1:nr)
 	
-	if(i.gt.2) then
-		open(unit=26,file=trim(outputdir) // "trans_limits",RECL=1000)
-		open(unit=27,file=trim(outputdir) // "emis_limits",RECL=1000)
-		open(unit=28,file=trim(outputdir) // "emisR_limits",RECL=1000)
+	if(i.gt.2.and.(100*(i/100).eq.i.or.i.eq.nmodels.or.i.le.10)) then
 		im1=real(i)/2d0-real(i)*0.682689492137086/2d0+0.5d0
+		im2=real(i)/2d0-real(i)*0.954499736103642/2d0+0.5d0
 		im3=real(i)/2d0-real(i)*0.997300203936740/2d0+0.5d0
 		ip1=real(i)/2d0+real(i)*0.682689492137086/2d0+0.5d0
+		ip2=real(i)/2d0+real(i)*0.954499736103642/2d0+0.5d0
 		ip3=real(i)/2d0+real(i)*0.997300203936740/2d0+0.5d0
 		ime=real(i)/2d0+0.5d0
 		if(im1.lt.1) im1=1
@@ -81,20 +83,31 @@
 		if(ip1.gt.i) ip1=i
 		if(ip3.gt.i) ip3=i
 		if(ime.gt.i) ime=i
+		open(unit=26,file=trim(outputdir) // "trans_limits",RECL=1000)
+		open(unit=27,file=trim(outputdir) // "emis_limits",RECL=1000)
+		open(unit=28,file=trim(outputdir) // "emisR_limits",RECL=1000)
 		do ilam=1,nlam-1
 			sorted(1:i)=spectrans(1:i,ilam)
 			call sort(sorted,i)
-			write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im1),sorted(ime),sorted(ip1),sorted(ip3)
+			write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 			sorted(1:i)=specemis(1:i,ilam)
 			call sort(sorted,i)
-			write(27,*) lam(ilam)*1d4,sorted(im3),sorted(im1),sorted(ime),sorted(ip1),sorted(ip3)
+			write(27,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 			sorted(1:i)=specemisR(1:i,ilam)
 			call sort(sorted,i)
-			write(28,*) lam(ilam)*1d4,sorted(im3),sorted(im1),sorted(ime),sorted(ip1),sorted(ip3)
+			write(28,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 		enddo
 		close(unit=26)
 		close(unit=27)
 		close(unit=28)		
+
+		open(unit=26,file=trim(outputdir) // "PT_limits",RECL=1000)
+		do ir=1,nr
+			sorted(1:i)=PTstruct(1:i,ir)
+			call sort(sorted,i)
+			write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+		enddo
+		close(unit=26)
 	endif
 
 	enddo
@@ -103,6 +116,7 @@
 	deallocate(spectrans)
 	deallocate(specemis)
 	deallocate(specemisR)
+	deallocate(PTstruct)
 	deallocate(sorted)
 	
 	return
