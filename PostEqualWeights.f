@@ -2,15 +2,16 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 var(n_ret),error(n_ret)
+	real*8 error(n_ret),random,starttime,stoptime,remaining
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:)
-	real*8,allocatable :: PTstruct(:,:)
-	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir
+	real*8,allocatable :: PTstruct(:,:),var(:,:)
+	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel
+	logical,allocatable :: done(:)
 	
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
 	
 	i=1
-1	read(35,*,end=2) var(1:n_ret)
+1	read(35,*,end=2) error(1:n_ret)
 	i=i+1
 	goto 1
 2	close(unit=35)
@@ -22,6 +23,8 @@
 	allocate(specemisR(nmodels,nlam))
 	allocate(PTstruct(nmodels,nr))
 	allocate(sorted(nmodels))
+	allocate(done(nmodels))
+	allocate(var(nmodels,n_ret))
 
 	spectrans=0d0
 	specemis=0d0
@@ -31,10 +34,33 @@
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
 
 	do i=1,nmodels
+		read(35,*) var(i,1:n_ret)
+	enddo
 
-	read(35,*) var(1:n_ret)
+	done=.false.
+	
+	call cpu_time(starttime)
 
-	call output("model number: " // int2string(i,'(i7)'))
+	do i=1,nmodels
+
+5	imodel=random(idum)*nmodels+1
+	if(done(imodel)) goto 5
+	done(imodel)=.true.
+
+	call cpu_time(stoptime)
+
+	call output("model number: " // int2string(imodel,'(i7)') 
+     &			// "(" // trim(dbl2string(real(i)*100d0/real(nmodels),'(f5.1)')) // "%)")
+	remaining=(stoptime-starttime)*real(nmodels-i)/real(i)
+	if(remaining.gt.3600d0*24d0) then
+		call output("time remaining: " // trim(dbl2string(remaining/3600d0/24d0,'(f6.1)')) // " days")
+	else if(remaining.gt.3600d0) then
+		call output("time remaining: " // trim(dbl2string(remaining/3600d0,'(f6.1)')) // " hours")
+	else if(remaining.gt.60d0) then
+		call output("time remaining: " // trim(dbl2string(remaining/60d0,'(f6.1)')) // " minutes")
+	else
+		call output("time remaining: " // trim(dbl2string(remaining,'(f6.1)')) // " seconds")
+	endif
 
 	if(n2d.eq.0) then
 		i2d=0
@@ -45,7 +71,7 @@
 3	continue
 	error=0d0
 	call SetOutputMode(.false.)
-	call MapRetrievalMN(var,error)
+	call MapRetrievalMN(var(imodel,1:n_ret),error)
 	call SetOutputMode(.true.)
 
 	call InitDens()
