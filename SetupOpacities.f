@@ -694,6 +694,7 @@ c	Random sampling of the Voigt profile
 !$OMP END DO
 !$OMP CRITICAL
 	kline(1:nnu)=kline(1:nnu)+kline_omp(1:nnu)
+	deallocate(kline_omp)
 !$OMP END CRITICAL
 !$OMP FLUSH
 !$OMP END PARALLEL
