@@ -441,7 +441,8 @@ c	enddo
 
 	recomputeopac=.true.
 	imodel=imodel+1
-	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel) call output("model number: " // int2string(imodel,'(i7)') // dbl2string(bestlike,'(f10.2)'))
+	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel) call output("model number: " 
+     &				// int2string(imodel,'(i7)') // dbl2string(bestlike,'(f10.2)'))
 
 	allspec=0d0
 	if(n2d.eq.0) then
