@@ -2,7 +2,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 error(n_ret),random,starttime,stoptime,remaining
+	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:)
 	real*8,allocatable :: PTstruct(:,:),var(:,:)
 	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel
@@ -40,6 +40,9 @@
 	done=.false.
 	
 	call cpu_time(starttime)
+#if USE_OPENMP
+	starttime=omp_get_wtime()
+#endif
 
 	do i=1,nmodels
 
@@ -48,6 +51,9 @@
 	done(imodel)=.true.
 
 	call cpu_time(stoptime)
+#if USE_OPENMP
+	stoptime=omp_get_wtime()
+#endif
 
 	call output("model number: " // int2string(imodel,'(i7)') 
      &			// "(" // trim(dbl2string(real(i)*100d0/real(nmodels),'(f5.1)')) // "%)")

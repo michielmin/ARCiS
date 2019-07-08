@@ -184,8 +184,10 @@ c===============================================================================
 	integer ndiseq_list
 	parameter(ndiseq_list=20)
 	character*10 names(nmol_data),diseq_list(20)
-	parameter(diseq_list = (/ "CH4","CO","CO2","H2","H2O","NH3","N2","C","CH2OH","CH3",
-     &		"CH3OH","C2H2","H","O","OH","N","NH","NH2","NO","N2H3" /))
+	parameter(diseq_list = (/ "CH4       ","CO        ","CO2       ","H2        ","H2O       ",
+     &						  "NH3       ","N2        ","C         ","CH2OH     ","CH3       ",
+     &						  "CH3OH     ","C2H2      ","H         ","O         ","OH        ",
+     &						  "N         ","NH        ","NH2       ","NO        ","N2H3      " /))
 	logical existh2h2,existh2he,existh2ch4
 
 
@@ -1187,7 +1189,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	disequilibrium=.false.
 	Kzz=1d8
 	metallicity=0d0
-	condensates=.true.
+	condensates=.false.
 	COratio=0.55
 	TiScale=1d0
 	enhancecarbon=.false.
@@ -1340,10 +1342,10 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	gridTPfile=.false.
 	
-	scattering=.true.
+	scattering=.false.
 	scattstar=.false.
 	
-	compute_opac=.true.
+	compute_opac=.false.
 	
 	opacitymode=.false.
 	opacitydir=trim(homedir) // '/ARCiS/Data/Opacities'
