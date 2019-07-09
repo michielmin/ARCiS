@@ -1670,7 +1670,7 @@ c				enddo
 3					read(30,*,end=4,err=3) x,y,dy,dx
 					ilam=ilam+1
 					lam(ilam)=x*micron
-					dx=2d0*x/dx
+					dx=x/dx
 					dlam(ilam)=dx*micron
 					goto 3
 4					close(unit=30)
