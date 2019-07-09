@@ -1303,7 +1303,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	retrievaltype='MN'
 
 	do i=1,nobs
-		ObsSpec(i)%beta=-1d0
+		ObsSpec(i)%beta=1d0
 		ObsSpec(i)%scale=-1d-1
 		ObsSpec(i)%spec=.true.
 		ObsSpec(i)%i2d=0
