@@ -1056,8 +1056,10 @@ c-----------------------------------------------------------------------
 
 	integer i,j,ia,iopac,iread,nl_read
 
-c	checkparticlefile=.false.
-c	return
+	if(useobsgrid) then
+		checkparticlefile=.false.
+		return
+	endif
 
 	! Get an unused Logical Unit Number to use to open the FITS file.
 	status=0
@@ -1191,6 +1193,10 @@ c	call output("Checking particle file: " // trim(partfile) )
 	  integer group,fpixel,nelements
 	  logical simple,extend,truefalse
 	character*500 filename,command
+
+	if(useobsgrid) then
+		return
+	endif
 
 	write(command,'("mkdir -p ",a)') trim(particledir)
 	call system(command)
