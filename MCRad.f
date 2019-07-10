@@ -354,7 +354,7 @@ c		enddo
 	Cs=Csca(ir,ilam)*Ndens(ir)
 	do icloud=1,nclouds
 		if(docloud0(icloud)) then
-			if(useDRIFT) then
+			if(Cloud(icloud)%standard.eq.'MIX') then
 				Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
 				Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 			else
@@ -384,7 +384,7 @@ c		enddo
 	M%IF11=Rayleigh%IF11*Csca(ir,ilam)*Ndens(ir)
 	do icloud=1,nclouds
 		if(docloud0(icloud)) then
-			if(useDRIFT) then
+			if(Cloud(icloud)%standard.eq.'MIX') then
 				M%F11=M%F11+Cloud(icloud)%F(ir,ilam)%F11*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 				M%IF11=M%IF11+Cloud(icloud)%F(ir,ilam)%IF11*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 			else

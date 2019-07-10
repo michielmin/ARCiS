@@ -5,7 +5,7 @@
 	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:)
 	real*8,allocatable :: PTstruct(:,:),var(:,:)
-	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel
+	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs
 	logical,allocatable :: done(:)
 	
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
@@ -87,14 +87,28 @@
 	call ComputeModel(.true.)
 	call SetOutputMode(.true.)
 	
-	if(i2d.eq.0) then
-		spectrans(i,1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
-	else if(i2d.le.2) then
-		spectrans(i,1:nlam)=spectrans(i,1:nlam)+obsA(0,1:nlam)/(pi*Rstar**2)/2d0
-	endif
-	if(i2d.eq.0.or.i2d.eq.3) then
-		specemisR(i,1:nlam)=(phase(1,0,1:nlam-1)+flux(0,1:nlam-1))/(Fstar(1:nlam-1)*1d23/distance**2)
-		specemis(i,1:nlam)=phase(1,0,1:nlam-1)+flux(0,1:nlam-1)
+	if(i2d.ne.0.and.nobs.ne.0) then
+		do iobs=1,nobs
+			if(ObsSpec(iobs)%i2d.eq.i2d) then
+				select case(ObsSpec(iobs)%type)
+					case("trans","transmission","transC")
+						spectrans(i,1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+					case("emisr","emisR","emisa","emis","emission")
+						specemisR(i,1:nlam)=(phase(1,0,1:nlam-1)+flux(0,1:nlam-1))/(Fstar(1:nlam-1)*1d23/distance**2)
+						specemis(i,1:nlam)=phase(1,0,1:nlam-1)+flux(0,1:nlam-1)
+				end select
+			endif
+		enddo
+	else
+		if(i2d.eq.0) then
+			spectrans(i,1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+		else if(i2d.le.2) then
+			spectrans(i,1:nlam)=spectrans(i,1:nlam)+obsA(0,1:nlam)/(pi*Rstar**2)/2d0
+		endif
+		if(i2d.eq.0.or.i2d.eq.3) then
+			specemisR(i,1:nlam)=(phase(1,0,1:nlam-1)+flux(0,1:nlam-1))/(Fstar(1:nlam-1)*1d23/distance**2)
+			specemis(i,1:nlam)=phase(1,0,1:nlam-1)+flux(0,1:nlam-1)
+		endif
 	endif
 
 	i2d=i2d+1

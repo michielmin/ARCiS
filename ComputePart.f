@@ -64,7 +64,7 @@
 	allocate(f34(nlamdust,na))
 	allocate(f44(nlamdust,na))
 
-	if(useDRIFT) then
+	if(useDRIFT.or.cloudcompute) then
 		amin=C%amin
 		amax=C%amax
 		if(cloud_dens(isize,ii).lt.1d-40) then
@@ -271,8 +271,8 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(AstroSilicate,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(1,1:nlamdust)=e1d(1:nlamdust)
 		e2(1,1:nlamdust)=e2d(1:nlamdust)
-	else if(C%standard.eq.'DRIFT') then
-		input='DRIFT'
+	else if(C%standard.eq.'MIX') then
+		input='MIX'
 		ns=C%nsubgrains
 		C%Blend=.true.
 		nf=20
@@ -508,7 +508,7 @@ c changed this to mass fractions (11-05-2010)
 	endif
 
 	do l=1,nm
-		if(C%standard.eq.'DRIFT') then
+		if(C%standard.eq.'MIX') then
 			j=0
 			if(C%sigma(isize).le.1d-3.or.ns.eq.1) then
 				ns=1
@@ -894,8 +894,8 @@ c changed this to mass fractions (11-05-2010)
 		rho(1)=3.0
 		frac(1)=1d0/rho(1)
 		filename(1)='AstroSilicate'
-	else if(C%standard.eq.'DRIFT') then
-		input='DRIFT'
+	else if(C%standard.eq.'MIX') then
+		input='MIX'
 		ns=C%nsubgrains
 		C%Blend=.true.
 		nf=20

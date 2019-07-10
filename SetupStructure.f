@@ -157,7 +157,6 @@ c			if(domakeai.or.retrieval) return
 		if(.not.T(i).gt.3d0) T(i)=0.25d0*sqrt(Rstar/(2d0*Dplanet))*Tstar
 	enddo
 
-c	if(useDRIFT.and.domakeai) then
 	if(domakeai) then
 		modelsucces=.false.
 		do i=1,nr
@@ -600,59 +599,52 @@ c			write(82,*) P(i), Kzz_r(i)
 	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau,P_SI1,P_SI2
 	logical cl
 	
-	if(useDRIFT) then
-		if(cloudcompute) then
-			if(.not.allocated(Cloud(ii)%rv)) then
-				allocate(Cloud(ii)%rv(nr))
-				allocate(Cloud(ii)%sigma(nr))
-			endif
-			call DiffuseCloud(ii)
-			Cloud(ii)%rv=Cloud(ii)%rv*1d4
-			Cloud(ii)%sigma=1d-10
-			call output("Computing inhomogeneous cloud particles")
-
-			call SetupPartCloud(ii)
-
-			open(unit=25,file=trim(outputdir) // "DRIFTcloud" // trim(int2string(ii,'(i0.4)')),recl=6000)
-			do i=1,nr
-				write(25,*) P(i),T(i),Cloud(ii)%rv(i),Cloud(ii)%sigma(i),cloud_dens(i,ii),dens(i),
-     &			Cloud(ii)%frac(i,1)*3d0,Cloud(ii)%frac(i,4)*3d0,Cloud(ii)%frac(i,7:12),
-     &			Cloud(ii)%frac(i,13)*3d0,Cloud(ii)%frac(i,16)
-			enddo
-			close(unit=25)
-		else if(Cloud(ii)%file.ne.' ') then
-			call regridN(Cloud(ii)%file,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,4,.false.,.false.)
-			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
-			if(.not.allocated(Cloud(ii)%rv)) then
-				allocate(Cloud(ii)%rv(nr))
-				allocate(Cloud(ii)%sigma(nr))
-			endif
-			call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,12,1,4,.false.,.true.)
-			Cloud(ii)%rv=Cloud(ii)%rv*1d4
-			Cloud(ii)%sigma=1d-10
-			Cloud(ii)%frac(1:nr,1:18)=1d-10
-c 10% iron
-			Cloud(ii)%frac(1:nr,9)=0.1d0
-c 90% MgSiO3
-			Cloud(ii)%frac(1:nr,13:15)=0.9d0/3d0
-			call output("Computing inhomogeneous cloud particles")
-
-			call SetupPartCloud(ii)
-
-			open(unit=25,file=trim(outputdir) // "DRIFTcloud" // trim(int2string(ii,'(i0.4)')),recl=6000)
-			do i=1,nr
-				write(25,*) P(i),T(i),Cloud(ii)%rv(i),Cloud(ii)%sigma(i),cloud_dens(i,ii),dens(i),
-     &			Cloud(ii)%frac(i,1)*3d0,Cloud(ii)%frac(i,4)*3d0,Cloud(ii)%frac(i,7:12),
-     &			Cloud(ii)%frac(i,13)*3d0,Cloud(ii)%frac(i,16)
-			enddo
-			close(unit=25)
-		else
-			call RunDRIFT(ii)
+	if(cloudcompute) then
+		if(.not.allocated(Cloud(ii)%rv)) then
+			allocate(Cloud(ii)%rv(nr))
+			allocate(Cloud(ii)%sigma(nr))
 		endif
-		return
-	endif
+		call DiffuseCloud(ii)
+		Cloud(ii)%rv=Cloud(ii)%rv*1d4
+		Cloud(ii)%sigma=1d-10
+		call output("Computing inhomogeneous cloud particles")
+		call SetupPartCloud(ii)
+		open(unit=25,file=trim(outputdir) // "DRIFTcloud" // trim(int2string(ii,'(i0.4)')),recl=6000)
+		do i=1,nr
+			write(25,*) P(i),T(i),Cloud(ii)%rv(i),Cloud(ii)%sigma(i),cloud_dens(i,ii),dens(i),
+     &			Cloud(ii)%frac(i,1)*3d0,Cloud(ii)%frac(i,4)*3d0,Cloud(ii)%frac(i,7:12),
+     &			Cloud(ii)%frac(i,13)*3d0,Cloud(ii)%frac(i,16)
+		enddo
+		close(unit=25)
+	else if(Cloud(ii)%file.ne.' ') then
+		call regridN(Cloud(ii)%file,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,4,.false.,.false.)
+		cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
+		if(.not.allocated(Cloud(ii)%rv)) then
+			allocate(Cloud(ii)%rv(nr))
+			allocate(Cloud(ii)%sigma(nr))
+		endif
+		call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,12,1,4,.false.,.true.)
+		Cloud(ii)%rv=Cloud(ii)%rv*1d4
+		Cloud(ii)%sigma=1d-10
+		Cloud(ii)%frac(1:nr,1:18)=1d-10
+c 10% iron
+		Cloud(ii)%frac(1:nr,9)=0.1d0
+c 90% MgSiO3
+		Cloud(ii)%frac(1:nr,13:15)=0.9d0/3d0
+		call output("Computing inhomogeneous cloud particles")
 
-	if(.not.cloudcompute) then
+		call SetupPartCloud(ii)
+
+		open(unit=25,file=trim(outputdir) // "DRIFTcloud" // trim(int2string(ii,'(i0.4)')),recl=6000)
+		do i=1,nr
+			write(25,*) P(i),T(i),Cloud(ii)%rv(i),Cloud(ii)%sigma(i),cloud_dens(i,ii),dens(i),
+     &			Cloud(ii)%frac(i,1)*3d0,Cloud(ii)%frac(i,4)*3d0,Cloud(ii)%frac(i,7:12),
+     &			Cloud(ii)%frac(i,13)*3d0,Cloud(ii)%frac(i,16)
+		enddo
+		close(unit=25)
+	else if(useDRIFT) then
+		call RunDRIFT(ii)
+	else if(.true.) then
 		if(Cloud(ii)%haze) then
 			column=0d0
 			do i=1,nr

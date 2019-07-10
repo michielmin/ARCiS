@@ -528,16 +528,16 @@ c	condensates=(condensates.or.cloudcompute)
 		do i=1,nclouds
 			call output("==================================================================")
 			call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
-			if(.not.useDRIFT) then
-				call SetupPartCloud(i)
-				allocate(Cloud(i)%w(Cloud(i)%nr))
-				if(Cloud(i)%species.eq.' ') call NameCloudSpecies(Cloud(i)%standard,Cloud(i)%species)
-			else
+			if(useDRIFT.or.cloudcompute) then
 				Cloud(i)%nr=nr
 				allocate(Cloud(i)%w(Cloud(i)%nr))
 				allocate(Cloud(i)%frac(nr,20))
-				Cloud(i)%species="DRIFT"
-				Cloud(i)%standard="DRIFT"
+				Cloud(i)%species="MIX"
+				Cloud(i)%standard="MIX"
+			else
+				call SetupPartCloud(i)
+				allocate(Cloud(i)%w(Cloud(i)%nr))
+				if(Cloud(i)%species.eq.' ') call NameCloudSpecies(Cloud(i)%standard,Cloud(i)%species)
 			endif
 		enddo
 	endif

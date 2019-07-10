@@ -56,7 +56,7 @@
 			Cs=Csca(ir,ilam)*Ndens(ir)
 			do icloud=1,nclouds
 				if(docloud(icc,icloud)) then
-					if(useDRIFT) then
+					if(Cloud(icloud)%standard.eq.'MIX') then
 						Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
 						Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 					else
@@ -107,7 +107,7 @@
 			Cs=0d0
 			do icloud=1,nclouds
 				if(docloud(icc,icloud)) then
-					if(useDRIFT) then
+					if(Cloud(icloud)%standard.eq.'MIX') then
 						Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
 						Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 					else
@@ -296,7 +296,7 @@
 					Cs=Csca(ir,ilam)*Ndens(ir)
 					do icloud=1,nclouds
 						if(docloud(icc,icloud)) then
-							if(useDRIFT) then
+							if(Cloud(icloud)%standard.eq.'MIX') then
 								Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
 								Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 							else
@@ -418,7 +418,7 @@
 						Ca=Cext_cont(ir,ilam)
 						do icloud=1,nclouds
 							if(docloud(icc,icloud)) then
-								if(useDRIFT) then
+								if(Cloud(icloud)%standard.eq.'MIX') then
 									Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
 									Ca=Ca+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 								else
