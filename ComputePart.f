@@ -457,7 +457,7 @@ c changed this to mass fractions (11-05-2010)
 	partfile=trim(partfile) // ".fits.gz"
 
 	inquire(file=partfile,exist=truefalse)
-	if(truefalse) then
+	if(truefalse.and..not.useobsgrid) then
 		if(checkparticlefile(partfile,amin,amax,dble(pow),ns,C%fmax,C%blend,C%porosity,frac,rho,nm,filename,.true.)) then
 			call ReadParticleFits(partfile,C,isize)
 			goto 300
@@ -1055,11 +1055,6 @@ c-----------------------------------------------------------------------
 	real x
 
 	integer i,j,ia,iopac,iread,nl_read
-
-	if(useobsgrid) then
-		checkparticlefile=.false.
-		return
-	endif
 
 	! Get an unused Logical Unit Number to use to open the FITS file.
 	status=0
