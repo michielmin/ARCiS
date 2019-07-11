@@ -646,3 +646,23 @@ c        print*,'series failed in expint'
       return
       END
 	
+	
+	
+	subroutine stats(dat,n,aver,var)
+	IMPLICIT NONE
+	integer n,i
+	real*8 dat(n),aver,var
+	aver=0d0
+	var=0d0
+	do i=1,n
+		aver=aver+dat(i)
+	enddo
+	aver=aver/real(n)
+	do i=1,n
+		var=var+(aver-dat(i))**2
+	enddo
+	var=sqrt(var/real(n-1))
+	return
+	end
+
+	

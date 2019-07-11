@@ -2,7 +2,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime
+	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime,sig,aver
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:)
 	real*8,allocatable :: PTstruct(:,:),var(:,:)
 	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs
@@ -18,10 +18,10 @@
 	nmodels=i-1
 	print*,nmodels
 
-	allocate(spectrans(nmodels,nlam))
-	allocate(specemis(nmodels,nlam))
-	allocate(specemisR(nmodels,nlam))
-	allocate(PTstruct(nmodels,nr))
+	allocate(spectrans(0:nmodels,nlam))
+	allocate(specemis(0:nmodels,nlam))
+	allocate(specemisR(0:nmodels,nlam))
+	allocate(PTstruct(0:nmodels,nr))
 	allocate(sorted(nmodels))
 	allocate(done(nmodels))
 	allocate(var(nmodels,n_ret))
@@ -44,28 +44,32 @@
 	starttime=omp_get_wtime()
 #endif
 
-	do i=1,nmodels
+	do i=0,nmodels
 
-5	imodel=random(idum)*nmodels+1
-	if(done(imodel)) goto 5
-	done(imodel)=.true.
+	if(i.eq.0) then
+		call output("best fit model")
+	else
+5		imodel=random(idum)*nmodels+1
+		if(done(imodel)) goto 5
+		done(imodel)=.true.
 
-	call cpu_time(stoptime)
+		call cpu_time(stoptime)
 #if USE_OPENMP
-	stoptime=omp_get_wtime()
+		stoptime=omp_get_wtime()
 #endif
 
-	call output("model number: " // int2string(imodel,'(i7)') 
+		call output("model number: " // int2string(imodel,'(i7)') 
      &			// "(" // trim(dbl2string(real(i)*100d0/real(nmodels),'(f5.1)')) // "%)")
-	remaining=(stoptime-starttime)*real(nmodels-i)/real(i)
-	if(remaining.gt.3600d0*24d0) then
-		call output("time remaining: " // trim(dbl2string(remaining/3600d0/24d0,'(f6.1)')) // " days")
-	else if(remaining.gt.3600d0) then
-		call output("time remaining: " // trim(dbl2string(remaining/3600d0,'(f6.1)')) // " hours")
-	else if(remaining.gt.60d0) then
-		call output("time remaining: " // trim(dbl2string(remaining/60d0,'(f6.1)')) // " minutes")
-	else
-		call output("time remaining: " // trim(dbl2string(remaining,'(f6.1)')) // " seconds")
+		remaining=(stoptime-starttime)*real(nmodels-i)/real(i)
+		if(remaining.gt.3600d0*24d0) then
+			call output("time remaining: " // trim(dbl2string(remaining/3600d0/24d0,'(f6.1)')) // " days")
+		else if(remaining.gt.3600d0) then
+			call output("time remaining: " // trim(dbl2string(remaining/3600d0,'(f6.1)')) // " hours")
+		else if(remaining.gt.60d0) then
+			call output("time remaining: " // trim(dbl2string(remaining/60d0,'(f6.1)')) // " minutes")
+		else
+			call output("time remaining: " // trim(dbl2string(remaining,'(f6.1)')) // " seconds")
+		endif
 	endif
 
 	if(n2d.eq.0) then
@@ -77,7 +81,7 @@
 3	continue
 	error=0d0
 	call SetOutputMode(.false.)
-	call MapRetrievalMN(var(imodel,1:n_ret),error)
+	if(i.ne.0) call MapRetrievalMN(var(imodel,1:n_ret),error)
 	call SetOutputMode(.true.)
 
 	call InitDens()
@@ -154,6 +158,25 @@
 			write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 		enddo
 		close(unit=26)
+
+		open(unit=26,file=trim(outputdir) // "trans_sigma",RECL=1000)
+		open(unit=27,file=trim(outputdir) // "emis_sigma",RECL=1000)
+		open(unit=28,file=trim(outputdir) // "emisR_sigma",RECL=1000)
+		do ilam=1,nlam-1
+			sorted(1:i)=spectrans(1:i,ilam)
+			call stats(sorted,i,aver,sig)
+			write(26,*) lam(ilam)*1d4,spectrans(0,ilam),sig,aver
+			sorted(1:i)=specemis(1:i,ilam)
+			call stats(sorted,i,aver,sig)
+			write(27,*) lam(ilam)*1d4,specemis(0,ilam),sig,aver
+			sorted(1:i)=specemisR(1:i,ilam)
+			call stats(sorted,i,aver,sig)
+			write(28,*) lam(ilam)*1d4,specemisR(0,ilam),sig,aver
+		enddo
+		close(unit=26)
+		close(unit=27)
+		close(unit=28)		
+
 	endif
 
 	enddo
