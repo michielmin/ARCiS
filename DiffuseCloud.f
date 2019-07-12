@@ -9,8 +9,8 @@
 	real*8,allocatable :: Sc(:),Sn(:),rpart(:),mpart(:),xMgO(:)
 	real*8,allocatable :: An(:,:),y(:,:),xv(:,:),xn(:),xc(:,:)
 	real*8,allocatable :: Aomp(:,:),xomp(:)
-	real*8,allocatable :: drho(:),drhovsed(:),tcinv(:),rho_av(:),densv(:),Kd(:)
-	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda
+	real*8,allocatable :: drho(:),drhovsed(:),tcinv(:),rho_av(:),densv(:,:),Kd(:)
+	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t
 	integer info,i,j,iter,NN,NRHS,niter,ii,k
 	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm
 	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn
@@ -56,7 +56,7 @@
 	w_atoms(18) = 58.6934 		!'Ni'
 	
 	nCS=10
-	allocate(densv(nCS))
+	allocate(densv(nnr,nCS))
 
 	if(.not.allocated(ATP)) then
 		allocate(ATP(nCS))
@@ -235,15 +235,15 @@ c	atoms_cloud(i,3)=1
 	endif
 
 	if(rainout) then
-		densv=(mu*mp/(kb*T(1)))*exp(BTP-ATP/T(1))
+		densv(1,1:nCS)=(mu*mp/(kb*T(1)))*exp(BTP-ATP/T(1))
 		do iCS=1,nCS
-			if(T(1).gt.maxT(iCS)) densv(iCS)=densv(iCS)+(mu(iCS)*mp/(kb*T(1)*10d0))*exp(BTP(iCS)-ATP(iCS)/(T(1)*10d0))
+			if(T(1).gt.maxT(iCS)) densv(1,iCS)=densv(1,iCS)+(mu(iCS)*mp/(kb*T(1)*10d0))*exp(BTP(iCS)-ATP(iCS)/(T(1)*10d0))
 		enddo
 		do iCS=1,nCS
-			if(densv(iCS).lt.dens(1)*xv_bot(iCS)) then
+			if(densv(1,iCS).lt.dens(1)*xv_bot(iCS)) then
 				call output("Rainout of: " // trim(CSname(iCS)) // "(" //
-     &		trim(dbl2string(100d0*(1d0-densv(iCS)/(dens(1)*xv_bot(iCS))),'(f5.1)')) // " %)")
-				xv_bot(iCS)=densv(iCS)/dens(1)
+     &		trim(dbl2string(100d0*(1d0-densv(1,iCS)/(dens(1)*xv_bot(iCS))),'(f5.1)')) // " %)")
+				xv_bot(iCS)=densv(1,iCS)/dens(1)
 			endif
 		enddo
 	endif
@@ -251,9 +251,9 @@ c	atoms_cloud(i,3)=1
 
 	cloudsform=.false.
 	do i=1,nr
-		densv=(mu*mp/(kb*T(i)))*exp(BTP-ATP/T(i))
+		densv(1,1:nCS)=(mu*mp/(kb*T(i)))*exp(BTP-ATP/T(i))
 		do iCS=1,nCS
-			if(densv(iCS).lt.dens(i)*xv_bot(iCS)) cloudsform=.true.
+			if(densv(1,iCS).lt.dens(i)*xv_bot(iCS)) cloudsform=.true.
 		enddo
 	enddo
 	if(.not.cloudsform) then!.or.(computeT.and.nTiter.lt.min(2,maxiter/2))) then
@@ -355,6 +355,34 @@ c	atoms_cloud(i,3)=1
 		enddo
 	enddo
 	tcinv=0d0
+	
+	do i=1,nnr
+		densv(i,1:nCS)=(mu*mp/(kb*CloudT(i)))*exp(BTP-ATP/CloudT(i))
+		do iCS=1,nCS
+			if(cloudT(i).gt.maxT(iCS)) densv(i,iCS)=densv(i,iCS)+(mu(iCS)*mp/(kb*CloudT(i)*10d0))*exp(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0))
+		enddo
+		if(i.eq.1) then
+			drho(i)=(Clouddens(i+1)-Clouddens(i))/(CloudR(i+1)-CloudR(i))
+		else if(i.eq.nnr) then
+			drho(i)=(Clouddens(i)-Clouddens(i-1))/(CloudR(i)-CloudR(i-1))
+		else
+			if(quadratic) then
+			f1=(CloudR(i-1)**2-CloudR(i)**2)/(CloudR(i+1)**2-CloudR(i)**2)
+			f2=(CloudR(i-1)-CloudR(i))/(CloudR(i+1)-CloudR(i))
+			af=((Clouddens(i-1)-Clouddens(i))-f2*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)**2-CloudR(i)**2)-
+     &					f2*(CloudR(i+1)**2-CloudR(i)**2))
+			bf=((Clouddens(i-1)-Clouddens(i))-f1*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)-CloudR(i))-
+     &					f1*(CloudR(i+1)-CloudR(i)))
+			drho(i)=2d0*af*CloudR(i)+bf
+			else
+			drho(i)=(Clouddens(i+1)-Clouddens(i-1))/(CloudR(i+1)-CloudR(i-1))
+			endif
+		endif
+
+		gz=Ggrav*Mplanet/CloudR(i)**2
+
+		Sn(i)=(Clouddens(i)*gz*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
+	enddo
 
 c start the loop
 	do iter=1,niter
@@ -370,35 +398,22 @@ c start the loop
 
 	do i=1,nnr
 		if(i.eq.1) then
-			drho(i)=(Clouddens(i+1)-Clouddens(i))/(CloudR(i+1)-CloudR(i))
 			drhovsed(i)=(vsed(i+1)*Clouddens(i+1)-vsed(i)*Clouddens(i))/(CloudR(i+1)-CloudR(i))
 		else if(i.eq.nnr) then
-			drho(i)=(Clouddens(i)-Clouddens(i-1))/(CloudR(i)-CloudR(i-1))
 			drhovsed(i)=(vsed(i)*Clouddens(i)-vsed(i-1)*Clouddens(i-1))/(CloudR(i)-CloudR(i-1))
 		else
 			if(quadratic) then
 			f1=(CloudR(i-1)**2-CloudR(i)**2)/(CloudR(i+1)**2-CloudR(i)**2)
 			f2=(CloudR(i-1)-CloudR(i))/(CloudR(i+1)-CloudR(i))
-			af=((Clouddens(i-1)-Clouddens(i))-f2*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)**2-CloudR(i)**2)-
-     &					f2*(CloudR(i+1)**2-CloudR(i)**2))
-			bf=((Clouddens(i-1)-Clouddens(i))-f1*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)-CloudR(i))-
-     &					f1*(CloudR(i+1)-CloudR(i)))
-			drho(i)=2d0*af*CloudR(i)+bf
 			af=((vsed(i-1)*Clouddens(i-1)-vsed(i)*Clouddens(i))-f2*(vsed(i+1)*Clouddens(i+1)-vsed(i)*Clouddens(i)))/
      &				((CloudR(i-1)**2-CloudR(i)**2)-f2*(CloudR(i+1)**2-CloudR(i)**2))
 			bf=((vsed(i-1)*Clouddens(i-1)-vsed(i)*Clouddens(i))-f1*(vsed(i+1)*Clouddens(i+1)-vsed(i)*Clouddens(i)))/
      &				((CloudR(i-1)-CloudR(i))-f1*(CloudR(i+1)-CloudR(i)))
 			drhovsed(i)=2d0*af*CloudR(i)+bf
 			else
-			drho(i)=(Clouddens(i+1)-Clouddens(i-1))/(CloudR(i+1)-CloudR(i-1))
 			drhovsed(i)=(vsed(i+1)*Clouddens(i+1)-vsed(i-1)*Clouddens(i-1))/(CloudR(i+1)-CloudR(i-1))
 			endif
 		endif
-
-		densv=(mu*mp/(kb*CloudT(i)))*exp(BTP-ATP/CloudT(i))
-		gz=Ggrav*Mplanet/CloudR(i)**2
-
-		Sn(i)=(Clouddens(i)*gz*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
 	enddo
 	
 
@@ -487,7 +502,7 @@ c rewritten for better convergence
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(Sc,vthv,cs,Aomp,xomp,IWORKomp,iCS,i,j,dz,f1,f2,af,bf,NRHS,INFO)
-!$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,ATP,BTP,maxT,drhovsed,Kd,xn,
+!$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,
 !$OMP&		NN,rpart,ixc,quadratic,vsed,drho,ixv,m_nuc,mpart,xv_bot,xc,xv)
 	allocate(vthv(nnr))
 	allocate(Sc(nnr))
@@ -512,8 +527,6 @@ c equations for material
 	j=0
 	do i=2,nnr-1
 		dz=CloudR(i+1)-CloudR(i-1)
-		densv(iCS)=(mu(iCS)*mp/(kb*CloudT(i)))*exp(BTP(iCS)-ATP(iCS)/CloudT(i))
-		if(cloudT(i).gt.maxT(iCS)) densv(iCS)=densv(iCS)+(mu(iCS)*mp/(kb*CloudT(i)*10d0))*exp(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0))
 
 		f1=(CloudR(i-1)**2-CloudR(i)**2)/(CloudR(i+1)**2-CloudR(i)**2)
 		f2=(CloudR(i-1)-CloudR(i))/(CloudR(i+1)-CloudR(i))
@@ -543,7 +556,7 @@ c equations for material
 		endif
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)/m_nuc
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Sc(i)*densv(iCS)/mpart(i)
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Sc(i)*densv(i,iCS)/mpart(i)
 		xomp(j)=0d0
 
 		j=j+1
@@ -567,7 +580,7 @@ c equations for material
 		endif
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-Sc(i)*xn(i)*Clouddens(i)/m_nuc
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Sc(i)*densv(iCS)/mpart(i)
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Sc(i)*densv(i,iCS)/mpart(i)
 		xomp(j)=0d0
 	enddo
 	i=1
@@ -737,16 +750,11 @@ c correction for SiC
 	write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"MgO","r[micron]","T[K]","Jstar"
 	form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+1,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
 	do i=1,nnr
-		densv=(mu*mp/(kb*CloudT(i)))*exp(BTP-ATP/CloudT(i))
-		do iCS=1,nCS
-			if(cloudT(i).gt.maxT(iCS)) densv(iCS)=densv(iCS)+(mu(iCS)*mp/(kb*CloudT(i)*10d0))
-     &												*exp(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0))
-		enddo
 		write(20,form) CloudP(i),Clouddens(i),xn(i),xc(1:nCS,i),xMgO(i),rpart(i),CloudT(i),Sn(i)/m_nuc
 	enddo
 	close(unit=20)
 
-	call ComputeTevap
+	if(.not.(retrieval.or.domakeai)) call ComputeTevap
 
 	T=T0
 
