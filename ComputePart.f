@@ -644,11 +644,11 @@ c		endif
 			e1mie=e1(l,ilam)
 			e2mie=e2(l,ilam)
 			if(Err.eq.1.or.i.eq.1) then
-				if(rmie/lmie.lt.100d0) then
+				if(rmie/lmie.lt.1000d0) then
 					call MeerhoffMie(rmie,lmie,e1mie,e2mie,csmie,cemie
      &								,Mief11,Mief12,Mief33,Mief34,na)
 				else
-					call MeerhoffMie(rmie,rmie/100d0,e1mie,e2mie,csmie,cemie
+					call MeerhoffMie(rmie,rmie/1000d0,e1mie,e2mie,csmie,cemie
      &								,Mief11,Mief12,Mief33,Mief34,na)
 				endif
 			endif
