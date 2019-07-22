@@ -57,9 +57,6 @@
 			k=k+1
 		enddo
 	enddo
-	do j=1,n_ret
-		k=k+1
-	enddo
 	ny=k
 	allocate(spec(ny))
 
@@ -82,7 +79,6 @@
 			lnew=lnew+((spec(k)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
 		enddo
 	enddo
-c	lnew=lnew/real(max(1,k-n_ret))
 	lnew=-lnew/2d0+log(tot)
 	
 	return

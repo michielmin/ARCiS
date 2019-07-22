@@ -310,6 +310,7 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(Tin(nr))
 	allocate(instrument(max(n_instr,1)))
 	allocate(instr_ntrans(max(n_instr,1)))
+	allocate(instr_nobs(max(n_instr,1)))
 
 	ncia0=0
 	existh2h2=.false.
@@ -830,6 +831,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadObsSpec(key)
 		case("useobsgrid")
 			read(key%value,*) useobsgrid
+		case("nboot")
+			read(key%value,*) nboot
 		case("instrument")
 			call ReadInstrument(key)
 		case("chimax","chi2max")
@@ -1240,11 +1243,15 @@ c	if(par_tprofile) call ComputeParamT(T)
 	domakeai=.false.
 	nai=1000
 	dopostequalweights=.false.
+	nboot=1
 
 	computecontrib=.false.
 	
 	instrument="ARIEL"
 	instr_ntrans=1d0
+	do i=1,n_instr
+		instr_nobs(i)=i
+	enddo
 
 	nr_cloud=10
 
@@ -1564,6 +1571,8 @@ c				enddo
 			instrument(i)=key%value
 		case("ntrans")
 			read(key%value,*) instr_ntrans(i)
+		case("nobs","nr")
+			read(key%value,*) instr_nobs(i)
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
@@ -1676,7 +1685,7 @@ c				enddo
 4					close(unit=30)
 			end select
 		enddo
-		lam(ilam+1)=lam(ilam)+dlam(ilam)
+		lam(ilam+1)=lam(ilam)+dlam(ilam)/2d0
 		do i=1,nlam
 			freq(i)=1d0/lam(i)
 		enddo
@@ -1685,7 +1694,7 @@ c				enddo
 		do i=1,nlam-1
 			if(lam(i).lt.lam1) lam1=lam(i)
 			if(lam(i).gt.lam2) lam2=lam(i)
-			dfreq(i)=abs(1d0/(lam(i)-dlam(i))-1d0/(lam(i)+dlam(i)))
+			dfreq(i)=abs(1d0/(lam(i)-dlam(i)/2d0)-1d0/(lam(i)+dlam(i)/2d0))
 		enddo
 	else
 		i=1

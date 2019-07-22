@@ -665,4 +665,34 @@ c        print*,'series failed in expint'
 	return
 	end
 
-	
+
+	subroutine stati(dat,n,aver,var1,var2)
+	IMPLICIT NONE
+	integer n,i,n1,n2
+	real*8 dat(n),aver,var1,var2
+	aver=0d0
+	var1=0d0
+	var2=0d0
+	n1=0
+	n2=0
+	do i=1,n
+		aver=aver+dat(i)
+	enddo
+	aver=aver/real(n)
+	do i=1,n
+		if(dat(i).lt.aver) then
+			var1=var1+(aver-dat(i))**2
+			n1=n1+1
+		else
+			var2=var2+(aver-dat(i))**2
+			n2=n2+1
+		endif
+	enddo
+	var1=sqrt(var1/real(n1-1))
+	var2=sqrt(var2/real(n2-1))
+	if(n1.le.1) var1=0d0
+	if(n2.le.1) var2=0d0
+	return
+	end
+
+

@@ -3289,7 +3289,9 @@ c       upward recursion:
           write(*,*) ' scatmat: estimated number of Mie-terms:',nD
           write(*,*) '          for particle sizeparameter   :',x
           write(*,*) '          maximum NDn is only          : ',NDn
-          stop 'in scatmat no room for all Mie terms'
+c          stop 'in scatmat no room for all Mie terms'
+			nD=min(NDn,nD)
+			nfi=min(NDn,nfi)
       endif
       call fichid( m, x, nfi, nmax, nD, fi, chi, D )
       call anbn( m, x, nmax, fi, chi, D, an, bn )

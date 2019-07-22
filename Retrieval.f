@@ -131,7 +131,7 @@
 	real*8 backup_xmin(n_ret),backup_xmax(n_ret),alphaW(3*n_ret,3*n_ret),Cov(3*n_ret,3*n_ret)
 	real*8 beta(n_ret),da(n_ret)
 	real*8 phase0(nlam),flux0(nlam),scale,scalemin,Covar(n_ret,n_ret)
-	integer na,map(n_ret),info,iboot,nboot,niter1,niter2,n_not_improved,ia(n_ret)
+	integer na,map(n_ret),info,niter1,niter2,n_not_improved,ia(n_ret)
 	logical dofit(n_ret),dofit_prev(n_ret),new_best,improved_iter
 	logical,allocatable :: specornot(:)
 
@@ -145,6 +145,10 @@
 	external amoebafunk,lmcompute
 	real*8 pamoeba(n_ret+1,n_ret),yamoeba(n_ret+1),ftol,amoebafunk
 
+	integer iboot
+	real*8,allocatable :: chi2_boot(:),count(:)
+	real*8 chi2_boot_av,chi2_boot_sig1,chi2_boot_sig2
+	
 	allocate(obsA0(nlam))
 	allocate(obsA1(nlam))
 	allocate(obsA2(nlam))
@@ -188,17 +192,24 @@ c	enddo
 	do i=1,nobs
 		ny=ny+ObsSpec(i)%nlam
 	enddo
-	ny=ny+n_ret
 	allocate(y(ny))
 	allocate(y0(ny))
 	allocate(ybest(ny))
 	allocate(y1(ny))
 	allocate(y2(ny))
+	allocate(count(ny))
 	allocate(dy(n_ret,ny))
 	allocate(yobs(ny))
 	allocate(dyobs(ny))
 	allocate(specornot(ny))
 	allocate(dvarq(n_ret))
+
+	allocate(chi2_boot(nboot))
+	open(unit=90,file='chi2boot')
+	do iboot=1,nboot
+	imodel=0
+	bestlike=1d200
+
 	iy=1
 	do i=1,nobs
 		yobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%y(1:ObsSpec(i)%nlam)
@@ -206,11 +217,18 @@ c	enddo
 		specornot(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%spec
 		iy=iy+ObsSpec(i)%nlam
 	enddo
-	do i=1,n_ret
-		yobs(iy)=var0(i)
-		dyobs(iy)=2d0
-		iy=iy+1
-	enddo
+	if(iboot.ne.nboot) then
+c		count=1d-6
+c		do i=1,ny
+c			j=random(idum)*real(ny)+1
+c			count(j)=count(j)+1d0
+c		enddo
+c		dyobs=dyobs/sqrt(count)
+		do i=1,ny
+			yobs(i)=yobs(i)+gasdev(idum)*dyobs(i)
+			dyobs(i)=dyobs(i)*sqrt(2d0)
+		enddo
+	endif
 	
 	Cov=0d0
 
@@ -272,9 +290,9 @@ c	enddo
 	chi2prev=1d200
 
 	do i=1,100
-		print*,"Iteration: ",ii,i,chi2
+c		print*,"Iteration: ",iboot,ii,i,chi2
 		call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
-		chi2=chi2/real(ny-1)
+		chi2=chi2/real(max(1,ny-n_ret))
 		if((chi2prev-chi2).gt.0d0) then
 			if((chi2prev-chi2).lt.0.01d0) then
 				n_not_improved=n_not_improved+1
@@ -294,13 +312,30 @@ c	enddo
 	call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
 	lambda=0d0
 	call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
-	chi2=chi2/real(ny-1)
+	chi2=chi2/real(max(1,ny-n_ret))
 	call fold(var,var,n_ret)
 	do j=1,n_ret
 		if(var(j).gt.1d0) var(j)=1d0
 		if(var(j).lt.0d0) var(j)=0d0
 	enddo
 
+	chi2_boot(iboot)=chi2
+
+	if(iboot.gt.1.and.iboot.lt.nboot) then
+		call stati(chi2_boot(1:iboot),iboot,chi2_boot_av,chi2_boot_sig1,chi2_boot_sig2)
+		write(90,*) chi2_boot_av,chi2_boot_sig1,chi2_boot_sig2
+		flush(90)
+	endif
+
+	enddo
+
+	call output("chi2 best:    " // trim(dbl2string(bestlike,'(f10.3)')))
+	if(nboot.gt.1) then
+		call stati(chi2_boot(1:nboot-1),nboot-1,chi2_boot_av,chi2_boot_sig1,chi2_boot_sig2)
+		call output("chi2 average: " // trim(dbl2string(chi2_boot_av,'(f10.3)')))
+		call output("chi2 sigma-:  " // trim(dbl2string(chi2_boot_sig1,'(f10.3)')))
+		call output("chi2 sigma+:  " // trim(dbl2string(chi2_boot_sig2,'(f10.3)')))
+	endif
 	call WritePTlimits(var,Cov(1:n_ret,1:n_ret),ErrVec,error,bestlike,.true.)
 	call WriteRetrieval(imodel,chi2,var,bestvar,error)
 
@@ -500,10 +535,6 @@ c		end select
 		enddo
 	enddo
 	lnew=lnew/real(max(1,k-n_ret))
-	do j=1,n_ret
-		k=k+1
-		ymod(k)=var_in(j)
-	enddo
 
 	write(31,*) imodel,lnew,var(1:nvars),COratio,metallicity
 	call flush(31)

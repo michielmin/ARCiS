@@ -28,7 +28,7 @@ c terms of use
 
 	call Init()
 
-	if(retrieval) call ReadObs()
+	if(nobs.ne.0) call ReadObs()
 
 	call cpu_time(stoptime)
 	call output("Initialisation time: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")

@@ -260,6 +260,19 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			Dmirror=2.4d0
 			f_phot=0.1d0
 			noisefloor=100d-6
+		case("obs","OBS")
+			instr_add="obs" // trim(int2string(instr_nobs(i_instr),'(i0.3)'))
+			instr_ntrans(i_instr)=1d0
+			noisefloor=0d0
+			nlamR=ObsSpec(instr_nobs(i_instr))%nlam
+			allocate(lamR(nlamR))
+			allocate(specR(nlamR))
+			allocate(specRexp(nlamR))
+			allocate(specErr(nlamR))
+			lamR(1:nlamR)=ObsSpec(instr_nobs(i_instr))%lam(1:nlamR)
+			specRexp(1:nlamR)=ObsSpec(instr_nobs(i_instr))%Rexp(1:nlamR)
+			specR(1:nlamR)=ObsSpec(instr_nobs(i_instr))%R(1:nlamR)
+			specErr(1:nlamR)=ObsSpec(instr_nobs(i_instr))%dy(1:nlamR)
 		case default
 			instr_add="simulated"
 			instr_ntrans(i_instr)=1d0
@@ -275,7 +288,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	allocate(Fstar_obs(nlamR))
 	call regridspecres(lam,Fstar(1:nlam-1),nlam-1,
      &						lamR,Fstar_obs(1:nlamR),specR,specRexp,nlamR)
-	if(instr_add.ne."simulated") then
+	if(instr_add.ne."simulated".and.instr_add(1:3).ne."obs") then
 		do i=1,nlamR
 			tot=1.51d7*(Fstar_obs(i)*1d23/distance**2)
 			tot=tot*(pi*(Dmirror/2d0)**2)
