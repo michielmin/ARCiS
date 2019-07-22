@@ -5,7 +5,7 @@
 	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime,sig,aver
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:)
 	real*8,allocatable :: PTstruct(:,:),var(:,:)
-	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs
+	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels
 	logical,allocatable :: done(:)
 	
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
@@ -44,7 +44,13 @@
 	starttime=omp_get_wtime()
 #endif
 
-	do i=0,nmodels
+	if(npew.lt.0) then
+		donmodels=nmodels
+	else
+		donmodels=min(npew,nmodels)
+	endif
+
+	do i=0,donmodels
 
 	if(i.eq.0) then
 		call output("best fit model")
@@ -119,7 +125,7 @@
 	if(i2d.le.n2d) goto 3
 	PTstruct(i,1:nr)=T(1:nr)
 	
-	if(i.gt.2.and.(100*(i/100).eq.i.or.i.eq.nmodels.or.i.le.10)) then
+	if(i.gt.2.and.(100*(i/100).eq.i.or.i.eq.donmodels.or.i.le.10)) then
 		im1=real(i)/2d0-real(i)*0.682689492137086/2d0+0.5d0
 		im2=real(i)/2d0-real(i)*0.954499736103642/2d0+0.5d0
 		im3=real(i)/2d0-real(i)*0.997300203936740/2d0+0.5d0

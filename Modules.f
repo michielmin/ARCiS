@@ -110,7 +110,7 @@ c===============================================================================
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),lamdust(:),dlam(:)
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
-	integer nTZ,nspike,nai,nboot
+	integer nTZ,nspike,nai,nboot,npew
 	integer,allocatable :: niso(:),instr_nobs(:)
 	real*8,allocatable :: MMW(:)
 	integer nBB

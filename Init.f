@@ -833,6 +833,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) useobsgrid
 		case("nboot")
 			read(key%value,*) nboot
+		case("npew")
+			read(key%value,*) npew
 		case("instrument")
 			call ReadInstrument(key)
 		case("chimax","chi2max")
@@ -1243,6 +1245,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	domakeai=.false.
 	nai=1000
 	dopostequalweights=.false.
+	npew=-1
 	nboot=1
 
 	computecontrib=.false.
