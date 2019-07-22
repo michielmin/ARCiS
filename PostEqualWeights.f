@@ -65,7 +65,7 @@
 #endif
 
 		call output("model number: " // int2string(imodel,'(i7)') 
-     &			// "(" // trim(dbl2string(real(i)*100d0/real(nmodels),'(f5.1)')) // "%)")
+     &			// "(" // trim(dbl2string(real(i)*100d0/real(donmodels),'(f5.1)')) // "%)")
 		remaining=(stoptime-starttime)*real(donmodels-i)/real(i)
 		if(remaining.gt.3600d0*24d0) then
 			call output("time remaining: " // trim(dbl2string(remaining/3600d0/24d0,'(f6.1)')) // " days")
