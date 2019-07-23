@@ -799,6 +799,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) metallicity
 		case("coratio")
 			read(key%value,*) COratio
+		case("sioratio")
+			read(key%value,*) SiOratio
+		case("noratio")
+			read(key%value,*) NOratio
 		case("tiscale")
 			read(key%value,*) TiScale
 		case("enhancecarbon")
@@ -1195,7 +1199,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Kzz=1d8
 	metallicity=0d0
 	condensates=.false.
-	COratio=0.55
+	COratio=0.5495407855762011
+	SiOratio=0.06606931168616334
+	NOratio=0.13803841820153123
 	TiScale=1d0
 	enhancecarbon=.false.
 	element_abun_file=' '

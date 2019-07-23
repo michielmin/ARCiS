@@ -26,7 +26,7 @@ c ==============================================================================
 		TiScale=1d0
 		if(Tp.lt.1800d0) TiScale=1d-8
 
-		call set_molfracs_atoms(COratio0,Z,TiScale,enhancecarbon)
+		call set_molfracs_atoms_old(COratio0,Z,TiScale,enhancecarbon)
 
 		COratio= molfracs_atoms(3)/molfracs_atoms(5)
 		NOratio= molfracs_atoms(4)/molfracs_atoms(5)
@@ -47,10 +47,10 @@ c ==============================================================================
 	fwet=max(min(fwet*(1d0+gasdev(idum)*0.05),1d0),0d0)
 	COratio=max(0.1d0,COratio+gasdev(idum)*0.05)
 
-	call set_molfracs_atoms(COratio0,0d0,1d0,.false.)
+	call set_molfracs_atoms_old(COratio0,0d0,1d0,.false.)
 	Z0=sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))
 	
-	call set_molfracs_atoms(COratio,Z,TiScale,enhancecarbon)
+	call set_molfracs_atoms_old(COratio,Z,TiScale,enhancecarbon)
 	call removecloud(fdry,fwet)
 	molfracs_atoms(4)=molfracs_atoms(4)*Nscale
 	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms)

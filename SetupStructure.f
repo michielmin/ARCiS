@@ -8,7 +8,7 @@
 	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
-	real*8 starttime,stoptime,chemtime,NOratio,SiOratio,Zout
+	real*8 starttime,stoptime,chemtime
 
 
 	chemtime=0d0
@@ -23,7 +23,7 @@
 	nabla_ad=2d0/7d0
 
 	if(PTchemAbun) then
-		call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+		call set_molfracs_atoms(COratio,SiOratio,NOratio,metallicity)
 		call call_chemistry(Tchem,Pchem,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
      &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(1),MMW_form,didcondens_chem,includemol)
 		do i=2,nr
@@ -422,7 +422,7 @@ c			beta_used=max
 	IMPLICIT NONE
 	integer i,ii,j
 	real*8 tmix,frac(nr,10),temp(nr,3)
-	real*8 elabun(nr,7),MMW_form,Kzz_r(nr),Nmfp,NOratio,SiOratio,Zout
+	real*8 elabun(nr,7),MMW_form,Kzz_r(nr),Nmfp
 	character*500 command
 	character*500 filename
 	logical ini
@@ -777,7 +777,7 @@ c use Ackerman & Marley 2001 cloud computation
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
 	enddo
-	call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
+	call set_molfracs_atoms(COratio,SiOratio,NOratio,metallicity)
 	ini=.true.
 	do i=1,nr
 		call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
@@ -792,7 +792,7 @@ c use Ackerman & Marley 2001 cloud computation
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 NOratio,SiOratio,Zout
+	real*8 Zout
 
 	if(element_abun_file.ne.' ') then
 		call read_molfracs_atoms(element_abun_file,COratio,metallicity)
@@ -811,12 +811,94 @@ c use Ackerman & Marley 2001 cloud computation
 		if(Tform.gt.0d0) then
 			call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
 		else
-			call set_molfracs_atoms_form(COratio,metallicity,f_dry,f_wet)
+			call set_molfracs_atoms(COratio,SiOratio,NOratio,metallicity)
+c			call set_molfracs_atoms_form(COratio,metallicity,f_dry,f_wet)
 c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		endif
 	endif
 	
 	
+	return
+	end
+
+
+
+	subroutine set_molfracs_atoms(CO,SiO,NO,Z)
+	use AtomsModule
+	implicit none
+	real*8 CO,Z,tot,SiO,Z0,scale,NO,CO0
+	integer i
+
+	names_atoms(1) = 'H'
+	names_atoms(2) = 'He'
+	names_atoms(3) = 'C'
+	names_atoms(4) = 'N'
+	names_atoms(5) = 'O'
+	names_atoms(6) = 'Na'
+	names_atoms(7) = 'Mg'
+	names_atoms(8) = 'Al'
+	names_atoms(9) = 'Si'
+	names_atoms(10) = 'P'
+	names_atoms(11) = 'S'
+	names_atoms(12) = 'Cl'
+	names_atoms(13) = 'K'
+	names_atoms(14) = 'Ca'
+	names_atoms(15) = 'Ti'
+	names_atoms(16) = 'V'
+	names_atoms(17) = 'Fe'
+	names_atoms(18) = 'Ni'
+
+	molfracs_atoms = (/ 0.9207539305,
+     &	0.0783688694,
+     &	0.0002478241,
+     &	6.22506056949881e-05,
+     &	0.0004509658,
+     &	1.60008694353205e-06,
+     &	3.66558742055362e-05,
+     &	2.595e-06,
+     &	2.9795e-05,
+     &	2.36670201997668e-07,
+     &	1.2137900734604e-05,
+     &	2.91167958499589e-07,
+     &	9.86605611925677e-08,
+     &	2.01439011429255e-06,
+     &	8.20622804366359e-08,
+     &	7.83688694089992e-09,
+     &	2.91167958499589e-05,
+     &	1.52807116806281e-06
+     &  /)
+
+	Z0=sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))
+
+c	adjust C/O ratio
+	CO0=molfracs_atoms(3)/molfracs_atoms(5)
+	if(CO.lt.CO0) then
+		molfracs_atoms(3)=molfracs_atoms(5)*CO
+	else
+		molfracs_atoms(5)=molfracs_atoms(3)/CO
+	endif
+
+c	adjust N/O ratio
+	molfracs_atoms(4)=molfracs_atoms(5)*NO
+
+c	adjust Si/O ratio
+	scale=molfracs_atoms(5)*SiO/molfracs_atoms(9)
+	molfracs_atoms(6:18)=molfracs_atoms(6:18)*scale
+
+c	adjust metallicity
+	scale=sum(molfracs_atoms(3:N_atoms))/(sum(molfracs_atoms(1:2))*Z0*10d0**Z)
+	molfracs_atoms(1:2)=molfracs_atoms(1:2)*scale
+
+	tot=sum(molfracs_atoms(1:N_atoms))
+	molfracs_atoms=molfracs_atoms/tot
+
+	open(unit=50,file='atomic.dat')
+	do i=1,18
+		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
+	enddo
+	close(unit=50)
+
+
 	return
 	end
 
@@ -1395,7 +1477,7 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	end
 	
 
-	subroutine set_molfracs_atoms(CO,Z,TiScale,enhancecarbon)
+	subroutine set_molfracs_atoms_old(CO,Z,TiScale,enhancecarbon)
 	use AtomsModule
 	implicit none
 	real*8 CO,Z,tot,TiScale

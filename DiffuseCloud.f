@@ -20,7 +20,7 @@
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:)
 
-	real*8 Mc_top,Mn_top,IDP_dens,IDP_rad,fact,NOratio,SiOratio,Zout
+	real*8 Mc_top,Mn_top,IDP_dens,IDP_rad,fact
 	integer iCS
 
 	nnr=(nr-1)*nr_cloud+1
