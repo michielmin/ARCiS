@@ -1,4 +1,4 @@
-	subroutine ComputePart(C,ii,isize)
+	subroutine ComputePart(C,ii,isize,computelam)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
@@ -38,7 +38,7 @@
 	parameter(abun_in_name=2)
 	real*8 Kabs(nlamdust),Ksca(nlamdust),Kext(nlamdust)
 	real*8 F11_HR(nlam),F12_HR(nlam),F22_HR(nlam),F33_HR(nlam),F34_HR(nlam),F44_HR(nlam)
-	logical fcomputed
+	logical fcomputed,computelam(nlam)
 	real*8 csmie_fcomp,cemie_fcomp
 	real*8,allocatable :: Mief11_fcomp(:),Mief12_fcomp(:)
 	real*8,allocatable :: Mief33_fcomp(:),Mief34_fcomp(:)
@@ -568,7 +568,7 @@ c changed this to mass fractions (11-05-2010)
 !$OMP&         rad,wvno,m,r1,rcore,qext,qsca,qbs,gqsc,rmie,lmie,e1mie,e2mie,
 !$OMP&         csmie,cemie,MieF11,MieF12,MieF33,MieF34,Mief22,Mief44,tot2,j,Ntot,fcomputed,
 !$OMP&         MieF11_fcomp,MieF12_fcomp,MieF33_fcomp,MieF34_fcomp,M1,M2,S21,D21)
-!$OMP& SHARED(C,nlamdust,na,nm,ns,frac,minlog,maxlog,f,mu0,e1,e2,wf,min,isize,
+!$OMP& SHARED(C,nlamdust,na,nm,ns,frac,minlog,maxlog,f,mu0,e1,e2,wf,min,isize,computelam,
 !$OMP&        rho_av,pow,lamdust,meth,rho,nf,r0,nr0,Kabs,Ksca,Kext,F11,F12,F22,F33,F34,F44)
 	allocate(Mief11(na))
 	allocate(Mief12(na))
@@ -588,6 +588,22 @@ c changed this to mass fractions (11-05-2010)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do ilam=1,nlamdust
+	
+	if(.not.computelam(ilam)) then
+		C%M(isize)=1d0
+		C%rho=1d0
+		rho_av=1d0
+		Kabs(ilam)=1d-10
+		Ksca(ilam)=1d-10
+		Kext(ilam)=1d-10
+		F11(ilam,1:180)=1d0
+		F12(ilam,1:180)=0d0
+		F22(ilam,1:180)=1d0
+		F33(ilam,1:180)=1d0
+		F34(ilam,1:180)=0d0
+		F44(ilam,1:180)=1d0
+		goto 11
+	endif
 	csca0=0d0
 	cabs0=0d0
 	cext0=0d0
@@ -717,6 +733,8 @@ c	make sure the scattering matrix is properly normalized by adjusting the forwar
 	F33(ilam,1:180)=f33(ilam,1:180)/csca0
 	F34(ilam,1:180)=f34(ilam,1:180)/csca0
 	F44(ilam,1:180)=f44(ilam,1:180)/csca0
+
+11	continue
 
 	enddo
 !$OMP END DO

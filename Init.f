@@ -1861,8 +1861,9 @@ c-----------------------------------------------------------------------
 	use Constants
 	IMPLICIT NONE
 	integer ii,is,ilam,j
-	real*8 phi,thet,tot,tot2,fact
-	
+	real*8 phi,thet,tot,tot2,fact,tautot(nlam)
+	logical computelamcloud(nlam),restrictcomputecloud
+
 	if(.not.allocated(Cloud(ii)%rv)) allocate(Cloud(ii)%rv(Cloud(ii)%nr))
 	if(.not.allocated(Cloud(ii)%M)) allocate(Cloud(ii)%M(Cloud(ii)%nr))
 	if(.not.allocated(Cloud(ii)%Kabs)) then
@@ -1874,9 +1875,20 @@ c-----------------------------------------------------------------------
 
 	select case(Cloud(ii)%ptype)
 		case("COMPUTE")
-			do is=1,Cloud(ii)%nr
+			computelamcloud=.true.
+			tautot=0d0
+			restrictcomputecloud=(nlam.eq.nlamdust.and..not.computeT)
+			do is=Cloud(ii)%nr,1,-1
 				call tellertje(is,Cloud(ii)%nr)
-				call ComputePart(Cloud(ii),ii,is)
+				call ComputePart(Cloud(ii),ii,is,computelamcloud)
+				if(restrictcomputecloud.and.(useDRIFT.or.cloudcompute)) then
+					do ilam=1,nlam
+						if(computelamcloud(ilam)) then
+							tautot(ilam)=tautot(ilam)+Cloud(ii)%Kext(is,ilam)*cloud_dens(is,ii)*(R(is+1)-R(is))
+							if(tautot(ilam).gt.maxtau) computelamcloud(ilam)=.false.
+						endif
+					enddo
+				endif
 			enddo
 c		case("PARTFILE")
 c			call ReadParticle(Cloud(ii),ii)
