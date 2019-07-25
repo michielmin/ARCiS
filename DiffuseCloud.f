@@ -19,6 +19,7 @@
 	logical quadratic,ini,Tconverged,cloudsform
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:)
+	logical,allocatable :: dospecies(:)
 
 	real*8 Mc_top,Mn_top,IDP_dens,IDP_rad,fact
 	integer iCS
@@ -304,6 +305,7 @@ c	atoms_cloud(i,3)=1
 
 	allocate(ixv(nCS,nnr))
 	allocate(ixc(nCS,nnr))
+	allocate(dospecies(nCS))
 
 	allocate(xMgO(nnr))
 	
@@ -356,10 +358,12 @@ c	atoms_cloud(i,3)=1
 	enddo
 	tcinv=0d0
 	
+	dospecies=.false.
 	do i=1,nnr
 		densv(i,1:nCS)=(mu*mp/(kb*CloudT(i)))*exp(BTP-ATP/CloudT(i))
 		do iCS=1,nCS
 			if(cloudT(i).gt.maxT(iCS)) densv(i,iCS)=densv(i,iCS)+(mu(iCS)*mp/(kb*CloudT(i)*10d0))*exp(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0))
+			if(densv(i,iCS).lt.Clouddens(i)*xv_bot(iCS)) dospecies(iCS)=.true.
 		enddo
 		if(i.eq.1) then
 			drho(i)=(Clouddens(i+1)-Clouddens(i))/(CloudR(i+1)-CloudR(i))
@@ -503,7 +507,7 @@ c rewritten for better convergence
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(Sc,vthv,cs,Aomp,xomp,IWORKomp,iCS,i,j,dz,f1,f2,af,bf,NRHS,INFO)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,
-!$OMP&		NN,rpart,ixc,quadratic,vsed,drho,ixv,m_nuc,mpart,xv_bot,xc,xv)
+!$OMP&		NN,rpart,ixc,quadratic,vsed,drho,ixv,m_nuc,mpart,xv_bot,xc,xv,dospecies)
 	allocate(vthv(nnr))
 	allocate(Sc(nnr))
 	allocate(xomp(NN))
@@ -513,6 +517,7 @@ c rewritten for better convergence
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=1,nCS
 
+	if(dospecies(iCS)) then
 	do i=1,nnr
 		cs=sqrt(kb*CloudT(i)/(2.3*mp))
 		vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*mu(iCS)*mp))
@@ -620,6 +625,12 @@ c equations for material
 		if(xc(iCS,i).lt.0d0) xc(iCS,i)=0d0
 		if(xv(iCS,i).lt.0d0) xv(iCS,i)=0d0
 	enddo
+	else
+	do i=1,nnr
+		xc(iCS,i)=0d0
+		xv(iCS,i)=xv_bot(iCS)
+	enddo
+	endif
 
 	enddo
 !$OMP END DO
@@ -800,6 +811,7 @@ c correction for SiC
 	deallocate(x)
 	deallocate(IWORK)
 	deallocate(An)
+	deallocate(dospecies)
 
 	return
 	end
