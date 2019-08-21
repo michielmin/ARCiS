@@ -4,8 +4,8 @@
 	IMPLICIT NONE
 	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime,sig,aver
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:)
-	real*8,allocatable :: PTstruct(:,:),var(:,:)
-	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels
+	real*8,allocatable :: PTstruct(:,:),var(:,:),values(:,:)
+	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j
 	logical,allocatable :: done(:)
 	
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
@@ -22,6 +22,7 @@
 	allocate(specemis(0:nmodels,nlam))
 	allocate(specemisR(0:nmodels,nlam))
 	allocate(PTstruct(0:nmodels,nr))
+	allocate(values(0:nmodels,n_ret))
 	allocate(sorted(nmodels))
 	allocate(done(nmodels))
 	allocate(var(nmodels,n_ret))
@@ -88,6 +89,9 @@
 	error=0d0
 	call SetOutputMode(.false.)
 	if(i.ne.0) call MapRetrievalMN(var(imodel,1:n_ret),error)
+	do j=1,n_ret
+		values(i,j)=RetPar(j)%value
+	enddo
 	call SetOutputMode(.true.)
 
 	call InitDens()
@@ -162,6 +166,14 @@
 			sorted(1:i)=PTstruct(1:i,ir)
 			call sort(sorted,i)
 			write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+		enddo
+		close(unit=26)
+
+		open(unit=26,file=trim(outputdir) // "retrieval",RECL=1000)
+		do j=1,n_ret
+			sorted(1:i)=values(1:i,j)
+			call sort(sorted,i)
+			write(26,'(a10,3es12.4)') trim(RetPar(j)%keyword),sorted(ime),sorted(im1),sorted(ip1)
 		enddo
 		close(unit=26)
 
