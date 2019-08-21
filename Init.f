@@ -1698,8 +1698,8 @@ c				enddo
 		do i=1,nlam
 			freq(i)=1d0/lam(i)
 		enddo
-		lam1=lam(i+1)
-		lam2=lam(i+1)
+		lam1=lam(1)
+		lam2=lam(nlam)
 		do i=1,nlam-1
 			if(lam(i).lt.lam1) lam1=lam(i)
 			if(lam(i).gt.lam2) lam2=lam(i)

@@ -205,6 +205,9 @@
 	deallocate(specemisR)
 	deallocate(PTstruct)
 	deallocate(sorted)
+	deallocate(values)
+	deallocate(done)
+	deallocate(var)
 	
 	return
 	end
