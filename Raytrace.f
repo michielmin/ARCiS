@@ -201,27 +201,27 @@
 		ir=nr
 		k=0
 		si=-1d0
-		xx1=si*sqrt(R(ir+1)**2-rr**2)
+		xx1=si*sqrt(abs(R(ir+1)**2-rr**2))
 		in=.true.
 1		continue
 		k=k+1
 		if(in) then
 			xx2=(R(ir)**2-rr**2)
 			if(xx2.gt.0d0) then
-				xx2=si*sqrt(xx2)
+				xx2=si*sqrt(abs(xx2))
 				d=abs(xx1-xx2)
 				ir_next=ir-1
 				goto 2
 			else
 				si=-si
-				xx2=si*sqrt(R(ir+1)**2-rr**2)
+				xx2=si*sqrt(abs(R(ir+1)**2-rr**2))
 				d=abs(xx1-xx2)
 				ir_next=ir+1
 				in=.false.
 				goto 2
 			endif
 		else
-			xx2=si*sqrt(R(ir+1)**2-rr**2)
+			xx2=si*sqrt(abs(R(ir+1)**2-rr**2))
 			d=abs(xx1-xx2)
 			ir_next=ir+1
 			goto 2
