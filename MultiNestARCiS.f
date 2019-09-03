@@ -53,7 +53,7 @@
 
 	k=0
 	do i=1,nobs
-		do j=1,ObsSpec(i)%nlam
+		do j=1,ObsSpec(i)%ndata
 			k=k+1
 		enddo
 	enddo
@@ -69,17 +69,18 @@
 
 	lnew=-0.5d0*lnew
 
-	tot=1d0
+	tot=0d0
 	lnew=0d0
 	k=0
 	do i=1,nobs
-		do j=1,ObsSpec(i)%nlam
+		do j=1,ObsSpec(i)%ndata
 			k=k+1
-			tot=tot/(sqrt(2d0*pi)*ObsSpec(i)%dy(j))
+			tot=tot-log(sqrt(2d0*pi)*ObsSpec(i)%dy(j))
 			lnew=lnew+((spec(k)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
+c	print*,spec(k),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
 		enddo
 	enddo
-	lnew=-lnew/2d0+log(tot)
+	lnew=-lnew/2d0+tot
 	
 	return
 	end

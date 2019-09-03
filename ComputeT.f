@@ -716,7 +716,7 @@ c		T0(ir)=real(iT)*(E/E0)**0.25
       INTEGER i,k,l,mm
       REAL*8 dum
       mm=m1+m2+1
-      if(mm.gt.mp.or.m1.gt.mpl.or.n.gt.np) pause 'bad args in banbks'
+      if(mm.gt.mp.or.m1.gt.mpl.or.n.gt.np) print*,'bad args in banbks'
       l=m1
       do 12 k=1,n
         i=indx(k)
@@ -749,7 +749,7 @@ c		T0(ir)=real(iT)*(E/E0)**0.25
       INTEGER i,j,k,l,mm
       REAL*8 dum
       mm=m1+m2+1
-      if(mm.gt.mp.or.m1.gt.mpl.or.n.gt.np) pause 'bad args in bandec'
+      if(mm.gt.mp.or.m1.gt.mpl.or.n.gt.np) print*,'bad args in bandec'
       l=m1
       do 13 i=1,m1
         do 11 j=m1+2-i,mm

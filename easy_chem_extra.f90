@@ -1591,7 +1591,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
       press=Pin
         	ini=.true.
         call EASY_CHEM(N_atoms,N_reactants2,names_atoms,names_reactants,molfracs_atoms, &
-             molfracs_reactants,massfracs_reactants,temp,press,ini,nabla_ad,gamma2,MMW,rho,cpe)
+             molfracs_reactants,massfracs_reactants,temp,press,ini,nabla_ad,gamma2,MMW,rho)
         ini = .FALSE.
 
 	do i=1,nmol

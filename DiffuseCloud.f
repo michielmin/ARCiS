@@ -7,8 +7,8 @@
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),xtot(:),vth(:),vthv(:)
 	real*8,allocatable :: Sc(:),Sn(:),rpart(:),mpart(:),xMgO(:)
-	real*8,allocatable :: y(:,:),xv(:,:),xn(:),xc(:,:)
-	real*8,allocatable :: Aomp(:,:),xomp(:),A1(:),A2(:),A3(:)
+	real*8,allocatable :: An(:,:),y(:,:),xv(:,:),xn(:),xc(:,:)
+	real*8,allocatable :: Aomp(:,:),xomp(:)
 	real*8,allocatable :: drho(:),drhovsed(:),tcinv(:),rho_av(:),densv(:,:),Kd(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t
 	integer info,i,j,iter,NN,NRHS,niter,ii,k
@@ -16,7 +16,7 @@
 	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),IWORKomp(:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin
-	logical ini,Tconverged,cloudsform
+	logical quadratic,ini,Tconverged,cloudsform
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:)
 	logical,allocatable :: dospecies(:)
@@ -71,6 +71,8 @@
 		allocate(CSnmol(nCS))
 		allocate(ice(nCS))
 	endif
+
+	quadratic=.false.
 
 	call SetAbun
 
@@ -342,8 +344,8 @@ c	atoms_cloud(i,3)=1
 	NN=2*nnr
 	allocate(x(NN))
 	allocate(IWORK(10*NN*NN))
-	
-	allocate(A1(nnr),A2(nnr),A3(nnr))
+
+	allocate(An(nnr,nnr))
 
 	xn=0d0
 	
@@ -368,7 +370,17 @@ c	atoms_cloud(i,3)=1
 		else if(i.eq.nnr) then
 			drho(i)=(Clouddens(i)-Clouddens(i-1))/(CloudR(i)-CloudR(i-1))
 		else
+			if(quadratic) then
+			f1=(CloudR(i-1)**2-CloudR(i)**2)/(CloudR(i+1)**2-CloudR(i)**2)
+			f2=(CloudR(i-1)-CloudR(i))/(CloudR(i+1)-CloudR(i))
+			af=((Clouddens(i-1)-Clouddens(i))-f2*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)**2-CloudR(i)**2)-
+     &					f2*(CloudR(i+1)**2-CloudR(i)**2))
+			bf=((Clouddens(i-1)-Clouddens(i))-f1*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)-CloudR(i))-
+     &					f1*(CloudR(i+1)-CloudR(i)))
+			drho(i)=2d0*af*CloudR(i)+bf
+			else
 			drho(i)=(Clouddens(i+1)-Clouddens(i-1))/(CloudR(i+1)-CloudR(i-1))
+			endif
 		endif
 
 		gz=Ggrav*Mplanet/CloudR(i)**2
@@ -394,30 +406,54 @@ c start the loop
 		else if(i.eq.nnr) then
 			drhovsed(i)=(vsed(i)*Clouddens(i)-vsed(i-1)*Clouddens(i-1))/(CloudR(i)-CloudR(i-1))
 		else
+			if(quadratic) then
+			f1=(CloudR(i-1)**2-CloudR(i)**2)/(CloudR(i+1)**2-CloudR(i)**2)
+			f2=(CloudR(i-1)-CloudR(i))/(CloudR(i+1)-CloudR(i))
+			af=((vsed(i-1)*Clouddens(i-1)-vsed(i)*Clouddens(i))-f2*(vsed(i+1)*Clouddens(i+1)-vsed(i)*Clouddens(i)))/
+     &				((CloudR(i-1)**2-CloudR(i)**2)-f2*(CloudR(i+1)**2-CloudR(i)**2))
+			bf=((vsed(i-1)*Clouddens(i-1)-vsed(i)*Clouddens(i))-f1*(vsed(i+1)*Clouddens(i+1)-vsed(i)*Clouddens(i)))/
+     &				((CloudR(i-1)-CloudR(i))-f1*(CloudR(i+1)-CloudR(i)))
+			drhovsed(i)=2d0*af*CloudR(i)+bf
+			else
 			drhovsed(i)=(vsed(i+1)*Clouddens(i+1)-vsed(i-1)*Clouddens(i-1))/(CloudR(i+1)-CloudR(i-1))
+			endif
 		endif
 	enddo
 	
 
 c equations for Nuclii
-	A1=0d0
-	A2=0d0
-	A3=0d0
+	An=0d0
 	x=0d0
 	do i=2,nnr-1
+		j=i+1
 
 		dz=CloudR(i+1)-CloudR(i-1)
 
-		A2(i)=A2(i)-drhovsed(i)
+		An(j,i)=An(j,i)-drhovsed(i)
 
-		A3(i)=A3(i)+(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
-		A1(i)=A1(i)-(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
+		if(quadratic) then
+		f1=(CloudR(i-1)**2-CloudR(i)**2)/(CloudR(i+1)**2-CloudR(i)**2)
+		f2=(CloudR(i-1)-CloudR(i))/(CloudR(i+1)-CloudR(i))
+		af=1d0/((CloudR(i-1)**2-CloudR(i)**2)-f2*(CloudR(i+1)**2-CloudR(i)**2))
+		bf=1d0/((CloudR(i-1)-CloudR(i))-f1*(CloudR(i+1)-CloudR(i)))
 
-		A3(i)=A3(i)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
-		A1(i)=A1(i)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
-		A2(i)=A2(i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
+		An(j,i-1)=An(j,i-1)+(2d0*af*CloudR(i)+bf)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+		An(j,i+1)=An(j,i+1)-(2d0*af*f2*CloudR(i)+bf*f1)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+		An(j,i)=An(j,i)+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
 
-		x(i)=-Sn(i)
+		An(j,i-1)=An(j,i-1)+2d0*af*Clouddens(i)*Kd(i)
+		An(j,i+1)=An(j,i+1)-2d0*f2*af*Clouddens(i)*Kd(i)
+		An(j,i)=An(j,i)+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
+		else
+		An(j,i+1)=An(j,i+1)+(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
+		An(j,i-1)=An(j,i-1)-(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
+
+		An(j,i+1)=An(j,i+1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
+		An(j,i-1)=An(j,i-1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
+		An(j,i)=An(j,i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
+		endif
+
+		x(j)=-Sn(i)
 
 c coagulation
 		if(coagulation) then
@@ -440,22 +476,28 @@ c rewritten for better convergence
 
 			tcinv(i)=(tcinv(i)+tcoaginv)/2d0
 
-			A2(i)=A2(i)-Clouddens(i)*tcinv(i)
+			An(j,i)=An(j,i)-Clouddens(i)*tcinv(i)
 		endif
 	enddo
 	i=nnr
 	dz=CloudR(i)-CloudR(i-1)
-	A2(i)=Kd(i)/dz-vsed(i)
-	A1(i)=-Kd(i)/dz
-	x(i)=0d0!-Mn_top/Clouddens(i)
+	An(1,i)=Kd(i)/dz-vsed(i)
+	An(1,i-1)=-Kd(i)/dz
+	x(1)=0d0!-Mn_top/Clouddens(i)
 	i=1
-	A2(i)=1d0
-	x(i)=0d0
+	An(2,i)=1d0
+	x(2)=0d0
 
-	call SolveTridag(A1,A2,A3,xn,x,nnr)
+	NRHS=1
+	call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 	
 	do i=1,nnr
-		if(.not.xn(i).gt.0d0) xn(i)=0d0
+		if(.not.x(i).gt.0d0) x(i)=0d0
+	enddo
+	xn(1:nnr)=x(1:nnr)
+
+	do i=1,nnr
+		if(xn(i).lt.0d0) xn(i)=0d0
 	enddo
 
 
@@ -465,7 +507,7 @@ c rewritten for better convergence
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(Sc,vthv,cs,Aomp,xomp,IWORKomp,iCS,i,j,dz,f1,f2,af,bf,NRHS,INFO)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,
-!$OMP&		NN,rpart,ixc,vsed,drho,ixv,m_nuc,mpart,xv_bot,xc,xv,dospecies)
+!$OMP&		NN,rpart,ixc,quadratic,vsed,drho,ixv,m_nuc,mpart,xv_bot,xc,xv,dospecies)
 	allocate(vthv(nnr))
 	allocate(Sc(nnr))
 	allocate(xomp(NN))
@@ -500,6 +542,15 @@ c equations for material
 
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-drhovsed(i)
 
+		if(quadratic) then
+		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))+(2d0*af*CloudR(i)+bf)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))-(2d0*af*f2*CloudR(i)+bf*f1)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+
+		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))+2d0*af*Clouddens(i)*Kd(i)
+		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))-2d0*f2*af*Clouddens(i)*Kd(i)
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
+		else
 		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))+(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
 		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))-(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
 
@@ -507,6 +558,7 @@ c equations for material
 		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))
      &					+1d0/(dz*(CloudR(i)-CloudR(i-1))))
+		endif
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)/m_nuc
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Sc(i)*densv(i,iCS)/mpart(i)
@@ -514,6 +566,15 @@ c equations for material
 
 		j=j+1
 
+		if(quadratic) then
+		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))+(2d0*af*CloudR(i)+bf)*(Kd(i)*drho(i))
+		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))-(2d0*af*f2*CloudR(i)+bf*f1)*(Kd(i)*drho(i))
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(Kd(i)*drho(i))
+
+		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))+2d0*af*Clouddens(i)*Kd(i)
+		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))-2d0*f2*af*Clouddens(i)*Kd(i)
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
+		else
 		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))+(Kd(i)*drho(i))/dz
 		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))-(Kd(i)*drho(i))/dz
 
@@ -521,6 +582,7 @@ c equations for material
 		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))
      &					+1d0/(dz*(CloudR(i)-CloudR(i-1))))
+		endif
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-Sc(i)*xn(i)*Clouddens(i)/m_nuc
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Sc(i)*densv(i,iCS)/mpart(i)
@@ -748,39 +810,10 @@ c correction for SiC
 	deallocate(ixc)
 	deallocate(x)
 	deallocate(IWORK)
-	deallocate(A1,A2,A3)
+	deallocate(An)
 	deallocate(dospecies)
 
 	return
 	end
 	
-
-	
-
-	
-	subroutine SolveTridag(Ma,Mb,Mc,x,y,nr)
-	IMPLICIT NONE
-	integer ir,nr
-	real*8 x(nr),y(nr),fact,d,xx(nr),yy(nr)
-	real*8 MM(nr,3),MMal(nr,1),Ma(nr),Mb(nr),Mc(nr)
-	integer indx(nr),info
-
-	info=0
-	xx=y
-	call tridag(Ma,Mb,Mc,xx,x,nr,info)
-	if(info.ne.0) then
-		do ir=1,nr
-			MM(ir,1)=Ma(ir)
-			MM(ir,2)=Mb(ir)
-			MM(ir,3)=Mc(ir)
-		enddo
-		call bandec(MM,nr,1,1,nr,3,MMal,1,indx,d)
-		x=y
-		call banbks(MM,nr,1,1,nr,3,MMal,1,indx,x)
-	endif
-
-	return
-	end
-
-
 	

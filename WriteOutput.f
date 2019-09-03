@@ -264,7 +264,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			instr_add="obs" // trim(int2string(instr_nobs(i_instr),'(i0.3)'))
 			instr_ntrans(i_instr)=1d0
 			noisefloor=0d0
-			nlamR=ObsSpec(instr_nobs(i_instr))%nlam
+			nlamR=ObsSpec(instr_nobs(i_instr))%ndata
 			allocate(lamR(nlamR))
 			allocate(specR(nlamR))
 			allocate(specRexp(nlamR))

@@ -1992,7 +1992,7 @@ C
       DOUBLE PRECISION D1MACH, DASUM, DDOT, DNRM2
 C
       DOUBLE PRECISION DRELPR, ENORM, FNORM, GAM, RB, RN, RNMAX, SIZE,
-     *   SN, SNMAX, T, TAU, UJ, UP, VJ, XNORM, XNRME
+     *   SN, SNMAX, T, TAU, UJ, UP, VJ, XNORM, XNRME, ones(1), zeros(1)
       INTEGER I, IMAX, J, JP1, K, KEY, KRANKE, LAST, LCHK, LINK, M,
      *   MAPKE1, MDEQC, MEND, MEP1, N1, N2, NEXT, NLINK, NOPT, NP1,
      *   NTIMES
@@ -2006,6 +2006,8 @@ C
 C     Set the nominal tolerance used in the code for the equality
 C     constraint equations.
 C
+	ones=1d0
+	zeros=0d0
       IF (FIRST) DRELPR = D1MACH(4)
       FIRST = .FALSE.
       TAU = SQRT(DRELPR)
@@ -2074,7 +2076,7 @@ C
 C     The nominal column scaling used in the code is
 C     the identity scaling.
 C
-      CALL DCOPY (N, 1.D0, 0, WS(N1), 1)
+      CALL DCOPY (N, ones, 0, WS(N1), 1)
 C
 C     No covariance matrix is nominally computed.
 C
@@ -2227,7 +2229,7 @@ C
          SN = DDOT(KRANKE,W(I,1),MDW,W(I,1),MDW)
          RN = DDOT(N-KRANKE,W(I,KRANKE+1),MDW,W(I,KRANKE+1),MDW)
          IF (RN.LE.SN*TAU**2 .AND. KRANKE.LT.N)
-     *      CALL DCOPY (N-KRANKE, 0.D0, 0, W(I,KRANKE+1), MDW)
+     *      CALL DCOPY (N-KRANKE, zeros, 0, W(I,KRANKE+1), MDW)
   190 CONTINUE
 C
 C     Compute equality constraint equations residual length.
@@ -2394,13 +2396,13 @@ C   900604  DP version created from SP version.  (RWC)
 C   920422  Changed CALL to DHFTI to include variable MA.  (WRB)
 C***END PROLOGUE  DLSI
       INTEGER IP(*), MA, MDW, MG, MODE, N
-      DOUBLE PRECISION PRGOPT(*), RNORM, W(MDW,*), WS(*), X(*)
+      DOUBLE PRECISION PRGOPT(*), RNORM, W(MDW,*), WS(*), X(*), RNORM_MAT(1)
 C
       EXTERNAL D1MACH, DASUM, DAXPY, DCOPY, DDOT, DH12, DHFTI, DLPDP,
      *   DSCAL, DSWAP
       DOUBLE PRECISION D1MACH, DASUM, DDOT
 C
-      DOUBLE PRECISION ANORM, DRELPR, FAC, GAM, RB, TAU, TOL, XNORM
+      DOUBLE PRECISION ANORM, DRELPR, FAC, GAM, RB, TAU, TOL, XNORM, zeros(1)
       INTEGER I, J, K, KEY, KRANK, KRM1, KRP1, L, LAST, LINK, M, MAP1,
      *   MDLPDP, MINMAN, N1, N2, N3, NEXT, NP1
       LOGICAL COV, FIRST, SCLCOV
@@ -2412,6 +2414,7 @@ C***FIRST EXECUTABLE STATEMENT  DLSI
 C
 C     Set the nominal tolerance used in the code.
 C
+	zeros=0d0
       IF (FIRST) DRELPR = D1MACH(4)
       FIRST = .FALSE.
       TOL = SQRT(DRELPR)
@@ -2454,14 +2457,15 @@ C
 C
 C     Compute Householder orthogonal decomposition of matrix.
 C
-      CALL DCOPY (N, 0.D0, 0, WS, 1)
+      CALL DCOPY (N, zeros, 0, WS, 1)
       CALL DCOPY (MA, W(1, NP1), 1, WS, 1)
       K = MAX(M,N)
       MINMAN = MIN(MA,N)
       N1 = K + 1
       N2 = N1 + N
-      CALL DHFTI (W, MDW, MA, N, WS, MA, 1, TAU, KRANK, RNORM, WS(N2),
+      CALL DHFTI (W, MDW, MA, N, WS, MA, 1, TAU, KRANK, RNORM_MAT, WS(N2),
      +           WS(N1), IP)
+     	RNORM=RNORM_MAT(1)
       FAC = 1.D0
       GAM = MA - KRANK
       IF (KRANK.LT.MA .AND. SCLCOV) FAC = RNORM**2/GAM
@@ -2593,7 +2597,7 @@ C
   260    CONTINUE
 C
          DO 270 I = KRP1,N
-            CALL DCOPY (I, 0.D0, 0, W(I,1), MDW)
+            CALL DCOPY (I, zeros, 0, W(I,1), MDW)
   270    CONTINUE
 C
 C        Apply right side transformations to lower triangle.
@@ -2611,7 +2615,7 @@ C
 C
 C              Store unscaled rank one Householder update in work array.
 C
-               CALL DCOPY (N, 0.D0, 0, WS(N3), 1)
+               CALL DCOPY (N, zeros, 0, WS(N3), 1)
                L = N1 + I
                K = N3 + I
                WS(K-1) = WS(L-1)
@@ -2706,7 +2710,7 @@ C   900328  Added TYPE section.  (WRB)
 C   900604  DP version created from SP version. .  (RWC)
 C***END PROLOGUE  DWNLIT
       INTEGER IDOPE(*), IPIVOT(*), ITYPE(*), L, M, MDW, N
-      DOUBLE PRECISION DOPE(*), H(*), RNORM, SCALE(*), W(MDW,*)
+      DOUBLE PRECISION DOPE(*), H(*), RNORM, SCALE(*), W(MDW,*),zeros(1)
       LOGICAL DONE
 C
       EXTERNAL DCOPY, DH12, DROTM, DROTMG, DSCAL, DSWAP, DWNLT1,
@@ -2719,6 +2723,8 @@ C
       INTEGER I, I1, IMAX, IR, J, J1, JJ, JP, KRANK, L1, LB, LEND, ME,
      *   MEND, NIV, NSOLN
       LOGICAL INDEP, RECALC
+
+	zeros=0d0
 C
 C***FIRST EXECUTABLE STATEMENT  DWNLIT
       ME    = IDOPE(1)
@@ -2807,7 +2813,7 @@ C
   190 IF (KRANK.LT.ME) THEN
          FACTOR = ALSQ
          DO 200 I=KRANK+1,ME
-            CALL DCOPY (L, 0.D0, 0, W(I,1), MDW)
+            CALL DCOPY (L, zeros, 0, W(I,1), MDW)
   200    CONTINUE
 C
 C        Determine the rank of the remaining equality constraint
@@ -2847,7 +2853,7 @@ C
             IF (.NOT.DWNLT2(ME, MEND, IR, FACTOR,TAU,SCALE,W(1,I))) THEN
                JJ = IR
                DO 260 IR=JJ,ME
-                  CALL DCOPY (N, 0.D0, 0, W(IR,1), MDW)
+                  CALL DCOPY (N, zeros, 0, W(IR,1), MDW)
                   RNORM = RNORM + (SCALE(IR)*W(IR,N+1)/ALSQ)*W(IR,N+1)
                   W(IR,N+1) = 0.D0
                   SCALE(IR) = 1.D0
@@ -3042,7 +3048,7 @@ C
 C
       DOUBLE PRECISION ALAMDA, ALPHA, ALSQ, AMAX, BLOWUP, BNORM,
      *   DOPE(3), DRELPR, EANORM, FAC, SM, SPARAM(5), T, TAU, WMAX, Z2,
-     *   ZZ
+     *   ZZ, ones(1), zeros(1)
       INTEGER I, IDOPE(3), IMAX, ISOL, ITEMP, ITER, ITMAX, IWMAX, J,
      *   JCON, JP, KEY, KRANK, L1, LAST, LINK, M, ME, NEXT, NIV, NLINK,
      *   NOPT, NSOLN, NTIMES
@@ -3056,6 +3062,8 @@ C     Initialize variables.
 C     DRELPR is the precision for the particular machine
 C     being used.  This logic avoids resetting it every entry.
 C
+	ones(1)=1d0
+	zeros(1)=0d0
       IF (FIRST) DRELPR = D1MACH(4)
       FIRST = .FALSE.
 C
@@ -3078,7 +3086,7 @@ C
 C     The nominal column scaling used in the code is
 C     the identity scaling.
 C
-      CALL DCOPY (N, 1.D0, 0, D, 1)
+      CALL DCOPY (N, ones, 0, D, 1)
 C
 C     Define bound for number of options to change.
 C
@@ -3184,7 +3192,7 @@ C
 C     Set the solution vector X(*) to zero and the column interchange
 C     matrix to the identity.
 C
-      CALL DCOPY (N, 0.D0, 0, X, 1)
+      CALL DCOPY (N, zeros, 0, X, 1)
       DO 150 I = 1,N
          IPIVOT(I) = I
   150 CONTINUE
@@ -3194,7 +3202,7 @@ C     corresponding to the unconstrained variables.
 C     Set first L components of dual vector to zero because
 C     these correspond to the unconstrained variables.
 C
-      CALL DCOPY (L, 0.D0, 0, WD, 1)
+      CALL DCOPY (L, zeros, 0, WD, 1)
 C
 C     The arrays IDOPE(*) and DOPE(*) are used to pass
 C     information to DWNLIT().  This was done to avoid
@@ -3400,7 +3408,7 @@ C
 C        To perform multiplier test and drop a constraint.
 C
          CALL DCOPY (NSOLN, Z, 1, X, 1)
-         IF (NSOLN.LT.N) CALL DCOPY (N-NSOLN, 0.D0, 0, X(NSOLN+1), 1)
+         IF (NSOLN.LT.N) CALL DCOPY (N-NSOLN, zeros, 0, X(NSOLN+1), 1)
 C
 C        Reclassify least squares equations as equalities as necessary.
 C
@@ -3579,7 +3587,7 @@ C
 C
 C     Fill in trailing zeroes for constrained variables not in solution.
 C
-      IF (NSOLN.LT.N) CALL DCOPY (N-NSOLN, 0.D0, 0, X(NSOLN+1), 1)
+      IF (NSOLN.LT.N) CALL DCOPY (N-NSOLN, zeros, 0, X(NSOLN+1), 1)
 C
 C     Permute solution vector to natural order.
 C

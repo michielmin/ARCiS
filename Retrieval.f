@@ -1,27 +1,29 @@
 	subroutine ReadObs()
 	use GlobalSetup
 	IMPLICIT NONE
-	integer i,j,ilam,nj
+	integer i,j,ilam,nj,k,it
 	real*8 x,y,dy,specres_obs,expspecres_obs
-	character*1000 line
+	character*6000 line
 	real*8 scale,scale_av,d,dmin
 	integer nscale,i2,j2
 	
 	do i=1,nobs
 		select case(ObsSpec(i)%type)
 			case('tprofile','logtp')
-				ObsSpec(i)%nlam=nr
-				allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
-				allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
-				allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
+				ObsSpec(i)%ndata=nr
+				ObsSpec(i)%nlam=0
+				allocate(ObsSpec(i)%lam(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%y(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%dy(ObsSpec(i)%ndata))
 				ObsSpec(i)%y=0d0
 				ObsSpec(i)%dy=1d0
 				ObsSpec(i)%spec=.false.
 			case('priors','prior')
-				ObsSpec(i)%nlam=n_ret
-				allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
-				allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
-				allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
+				ObsSpec(i)%ndata=n_ret
+				ObsSpec(i)%nlam=0
+				allocate(ObsSpec(i)%lam(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%y(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%dy(ObsSpec(i)%ndata))
 				do j=1,n_ret
 					if(RetPar(j)%logscale) then
 						ObsSpec(i)%y(j)=log10(RetPar(j)%x0)
@@ -32,6 +34,74 @@
 					endif
 				enddo
 				ObsSpec(i)%spec=.false.
+			case('lightcurve')
+				ObsSpec(i)%spec=.true.
+				open(unit=20,file=ObsSpec(i)%file,RECL=6000)
+10				read(20,*,err=10) ObsSpec(i)%nt
+				allocate(ObsSpec(i)%t(ObsSpec(i)%nt))
+				allocate(ObsSpec(i)%dt(ObsSpec(i)%nt))
+				do j=1,ObsSpec(i)%nt
+					read(20,*) ObsSpec(i)%t(j)!,ObsSpec(i)%dt(j)
+				enddo
+				j=1
+				ilam=1
+11				read(20,*,end=12) x
+				read(20,*)
+				read(20,*)
+				if((x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)).or.useobsgrid) ilam=ilam+1
+				j=j+1
+				goto 11
+12				ObsSpec(i)%nlam=ilam-1
+				ObsSpec(i)%ndata=ObsSpec(i)%nlam*ObsSpec(i)%nt
+				nj=j-1
+				rewind(20)
+20				read(20,*,err=20) ObsSpec(i)%nt
+				do j=1,ObsSpec(i)%nt
+					read(20,*) ObsSpec(i)%t(j)!,ObsSpec(i)%dt(j)
+				enddo
+				allocate(ObsSpec(i)%lam(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%y(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%dy(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%R(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%Rexp(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%model(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%LC(ObsSpec(i)%nlam,ObsSpec(i)%nt))
+				allocate(ObsSpec(i)%dLC(ObsSpec(i)%nlam,ObsSpec(i)%nt))
+				ilam=1
+				if(ObsSpec(i)%beta.lt.0d0) ObsSpec(i)%beta=ObsSpec(i)%ndata
+				k=0
+				print*,nj
+				do j=1,nj
+13					read(20,'(a6000)') line
+					specres_obs=specres
+					expspecres_obs=20d0
+					read(line,*,err=13,end=14) x,specres_obs,expspecres_obs
+14					continue
+					if((x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)).or.useobsgrid) then
+						ObsSpec(i)%lam(ilam)=x*1d-4
+						ObsSpec(i)%R(ilam)=specres_obs
+						ObsSpec(i)%Rexp(ilam)=expspecres_obs
+						read(20,*) ObsSpec(i)%LC(ilam,1:ObsSpec(i)%nt)
+						read(20,*) ObsSpec(i)%dLC(ilam,1:ObsSpec(i)%nt)
+						ilam=ilam+1
+					else
+						read(20,*)
+						read(20,*)
+					endif
+				enddo
+				close(unit=20)
+				k=0
+				do it=1,ObsSpec(i)%nt
+					do ilam=1,ObsSpec(i)%nlam
+						k=k+1
+						ObsSpec(i)%y(k)=ObsSpec(i)%LC(ilam,it)
+						if(ObsSpec(i)%LC(ilam,it).eq.1d0) then
+							ObsSpec(i)%dy(k)=ObsSpec(i)%dLC(ilam,it)/1000d0
+						else
+							ObsSpec(i)%dy(k)=ObsSpec(i)%dLC(ilam,it)/100d0
+						endif
+					enddo
+				enddo
 			case default
 				ObsSpec(i)%spec=.true.
 				open(unit=20,file=ObsSpec(i)%file,RECL=1000)
@@ -41,19 +111,18 @@
 				if((x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)).or.useobsgrid) ilam=ilam+1
 				j=j+1
 				goto 1
-2				ObsSpec(i)%nlam=ilam-1
+2				ObsSpec(i)%ndata=ilam-1
+				ObsSpec(i)%nlam=ObsSpec(i)%ndata
 				nj=j-1
 				rewind(20)
-				allocate(ObsSpec(i)%lam(ObsSpec(i)%nlam))
-				allocate(ObsSpec(i)%y(ObsSpec(i)%nlam))
-				allocate(ObsSpec(i)%dy(ObsSpec(i)%nlam))
-				allocate(ObsSpec(i)%R(ObsSpec(i)%nlam))
-				allocate(ObsSpec(i)%Rexp(ObsSpec(i)%nlam))
-				allocate(ObsSpec(i)%model(ObsSpec(i)%nlam))
-				allocate(ObsSpec(i)%model0(ObsSpec(i)%nlam))
-				allocate(ObsSpec(i)%modelbest(ObsSpec(i)%nlam))
+				allocate(ObsSpec(i)%lam(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%y(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%dy(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%R(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%Rexp(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%model(ObsSpec(i)%ndata))
 				ilam=1
-				if(ObsSpec(i)%beta.lt.0d0) ObsSpec(i)%beta=ObsSpec(i)%nlam
+				if(ObsSpec(i)%beta.lt.0d0) ObsSpec(i)%beta=ObsSpec(i)%ndata
 				do j=1,nj
 3					read(20,'(a1000)',err=3) line
 					specres_obs=specres
@@ -83,11 +152,11 @@
 		nscale=0
 		do i=1,nobs
 			if(ObsSpec(i)%spec) then
-				do j=1,ObsSpec(i)%nlam
+				do j=1,ObsSpec(i)%ndata
 					scale=0d0
 					do i2=1,nobs
 						if(ObsSpec(i2)%spec) then
-							do j2=1,ObsSpec(i2)%nlam
+							do j2=1,ObsSpec(i2)%ndata
 								d=ObsSpec(i)%lam(j)/ObsSpec(i2)%lam(j2)
 								d=log10(d)/log10(2d0)
 								scale=scale+exp(-d**2)
@@ -103,7 +172,7 @@
 		scale_av=scale_av/real(nscale)
 		do i=1,nobs
 			if(ObsSpec(i)%spec) then
-				do j=1,ObsSpec(i)%nlam
+				do j=1,ObsSpec(i)%ndata
 					ObsSpec(i)%dy(j)=ObsSpec(i)%dy(j)/scale_av
 				enddo
 			endif
@@ -120,8 +189,8 @@
 	use Constants
 	use RetrievalMod
 	IMPLICIT NONE
-	external ComputeChi2,mrqcomputemodel
-	real*8 var0(n_ret),dvar0(2,n_ret),ComputeChi2,dvar(n_ret),x(n_ret),chi2min,random
+	external mrqcomputemodel
+	real*8 var0(n_ret),dvar0(2,n_ret),dvar(n_ret),x(n_ret),chi2min,random
 	real*8,allocatable :: y(:),y1(:),y2(:),dy(:,:),yobs(:),dyobs(:),ybest(:),y0(:)
 	real*8 chi2obs(nobs),var(n_ret),chi2,gasdev,maxd,error(2,n_ret),var_best(n_ret)
 	real*8 x1,x2,minT(nr),maxT(nr),ran1,tot,lambda,chi2_1,chi2_2,dchi2(n_ret),chi2prev
@@ -190,7 +259,7 @@ c	enddo
 
 	ny=0
 	do i=1,nobs
-		ny=ny+ObsSpec(i)%nlam
+		ny=ny+ObsSpec(i)%ndata
 	enddo
 	allocate(y(ny))
 	allocate(y0(ny))
@@ -212,10 +281,10 @@ c	enddo
 
 	iy=1
 	do i=1,nobs
-		yobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%y(1:ObsSpec(i)%nlam)
-		dyobs(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%dy(1:ObsSpec(i)%nlam)
-		specornot(iy:iy+ObsSpec(i)%nlam-1)=ObsSpec(i)%spec
-		iy=iy+ObsSpec(i)%nlam
+		yobs(iy:iy+ObsSpec(i)%ndata-1)=ObsSpec(i)%y(1:ObsSpec(i)%ndata)
+		dyobs(iy:iy+ObsSpec(i)%ndata-1)=ObsSpec(i)%dy(1:ObsSpec(i)%ndata)
+		specornot(iy:iy+ObsSpec(i)%ndata-1)=ObsSpec(i)%spec
+		iy=iy+ObsSpec(i)%ndata
 	enddo
 	if(iboot.ne.nboot) then
 c		count=1d-6
@@ -444,13 +513,13 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	use Constants
 	use RetrievalMod
 	IMPLICIT NONE
-	integer nvars,i,j,nlamtot,ny,k,maxspec
+	integer nvars,i,j,nlamtot,ny,k,maxspec,im,ilam
 	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars),spectemp(nlam),specsave(nobs,nlam)
 	real*8,allocatable :: spec(:),allspec(:,:)
 	logical recomputeopac
 	real*16 x
 
-	var=var_in
+2	var=var_in
 	call fold(var_in,var,n_ret)
 	do i=1,n_ret
 		if(var(i).gt.1d0) var(i)=1d0
@@ -459,20 +528,9 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 
 	maxspec=0
 	do i=1,nobs
-		if(ObsSpec(i)%nlam.gt.maxspec) maxspec=ObsSpec(i)%nlam
+		if(ObsSpec(i)%ndata.gt.maxspec) maxspec=ObsSpec(i)%ndata
 	enddo
 	allocate(allspec(nobs,maxspec))
-
-c	do i=1,n_ret
-c		x=var_in(i)
-c		if(x.gt.25.0) then
-c			var(i)=1d0
-c		else if(x.lt.-25.0) then
-c			var(i)=0d0
-c		else
-c			var(i)=1d0/(1d0+qexp(-x))
-c		endif
-c	enddo
 
 	recomputeopac=.true.
 	imodel=imodel+1
@@ -500,25 +558,12 @@ c	enddo
 	call SetOutputMode(.true.)
 	
 	do i=1,nobs
-		allocate(spec(ObsSpec(i)%nlam))
+		allocate(spec(ObsSpec(i)%ndata))
 		call RemapObs(i,spec,spectemp)
 		if(ObsSpec(i)%i2d.eq.i2d) then
-			allspec(i,1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
+			allspec(i,1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
 			specsave(i,1:nlam)=spectemp(1:nlam)
 		endif
-
-c		select case(ObsSpec(i)%type)
-c			case("trans","transmission","transC")
-c				if(i2d.eq.0) then
-c					allspec(i,1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
-c				else if(i2d.le.2) then
-c					allspec(i,1:ObsSpec(i)%nlam)=allspec(i,1:ObsSpec(i)%nlam)+spec(1:ObsSpec(i)%nlam)/2d0
-c				endif
-c			case("emis","emisR","emission","emisa","emisr")
-c				if(i2d.eq.0.or.i2d.eq.3) then
-c					allspec(i,1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
-c				endif
-c		end select		
 		deallocate(spec)
 	enddo
 	i2d=i2d+1
@@ -527,7 +572,7 @@ c		end select
 	lnew=0d0
 	k=0
 	do i=1,nobs
-		do j=1,ObsSpec(i)%nlam
+		do j=1,ObsSpec(i)%ndata
 			k=k+1
 			ymod(k)=allspec(i,j)
 			lnew=lnew+((ymod(k)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
@@ -548,13 +593,24 @@ c		end select
 			select case(ObsSpec(i)%type)
 				case("trans","transmission","emisr","emisR","emisa","emis","emission","transC")
 					open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),RECL=1000)
-					do j=1,ObsSpec(i)%nlam
+					do j=1,ObsSpec(i)%ndata
 						write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
 					enddo
 					close(unit=20)
 					open(unit=20,file=trim(outputdir) // "fullobs" // trim(int2string(i,'(i0.3)')),RECL=1000)
 					do j=1,nlam-1
 						write(20,*) lam(j)*1d4,specsave(i,j)
+					enddo
+					close(unit=20)
+				case("lightcurve")
+					im=0
+					do ilam=1,ObsSpec(i)%nlam
+						open(unit=20,file=trim(outputdir) // "lightcurve" // trim(int2string(i,'(i0.4)')) // "_"  
+     &								// trim(int2string(ilam,'(i0.4)')) // ".dat",RECL=6000)
+						do j=1,ObsSpec(i)%nt
+							im=(j-1)*ObsSpec(i)%nlam+ilam
+							write(20,*) ObsSpec(i)%t(j),ObsSpec(i)%model(im),ObsSpec(i)%y(im)
+						enddo
 					enddo
 					close(unit=20)
 			end select
@@ -1357,45 +1413,45 @@ c			vec(i)=gasdev(idum)
 		case("trans","transmission","transC")
 			specsave(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
 			if(useobsgrid) then
-				spec(1:ObsSpec(i)%nlam)=specsave(ilam:ilam+ObsSpec(i)%nlam-1)
-				ilam=ilam+ObsSpec(i)%nlam
+				spec(1:ObsSpec(i)%ndata)=specsave(ilam:ilam+ObsSpec(i)%ndata-1)
+				ilam=ilam+ObsSpec(i)%ndata
 			else
 				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
-     &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
+     &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
     		endif
-     		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
+     		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
 		case("emisr","emisR")
 			specsave(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
 			if(useobsgrid) then
-				spec(1:ObsSpec(i)%nlam)=specsave(ilam:ilam+ObsSpec(i)%nlam-1)
-				ilam=ilam+ObsSpec(i)%nlam
+				spec(1:ObsSpec(i)%ndata)=specsave(ilam:ilam+ObsSpec(i)%ndata-1)
+				ilam=ilam+ObsSpec(i)%ndata
 			else
 				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
-     &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
+     &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
     		endif
-     		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
+     		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
 		case("emisa","emis","emission")
 			specsave(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 			if(useobsgrid) then
-				spec(1:ObsSpec(i)%nlam)=specsave(ilam:ilam+ObsSpec(i)%nlam-1)
-				ilam=ilam+ObsSpec(i)%nlam
+				spec(1:ObsSpec(i)%ndata)=specsave(ilam:ilam+ObsSpec(i)%ndata-1)
+				ilam=ilam+ObsSpec(i)%ndata
 			else
 				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
-     &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%nlam)
+     &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
      		endif
-     		ObsSpec(i)%model(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)
-			spec(1:ObsSpec(i)%nlam)=log(spec(1:ObsSpec(i)%nlam))
+     		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
+			spec(1:ObsSpec(i)%ndata)=log(spec(1:ObsSpec(i)%ndata))
 		case("tprofile")
 			call ComputeParamT(spec(1:nr))
-			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta
+			spec(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)*ObsSpec(i)%beta
 		case("logtp")
 			spec(1)=0d0!(log10(abs(T(1)/T(2))/log10(P(1)/P(2))))
 			do j=2,nr-1
 				spec(j)=(log10(abs(T(j-1)/T(j)))/log10(P(j-1)/P(j)))-(log10(abs(T(j)/T(j+1)))/log10(P(j)/P(j+1)))
 			enddo
 			spec(nr)=0d0!(log10(abs(T(nr-1)/T(nr)))/log10(P(nr-1)/P(nr)))
-			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)/real(nr)
-			spec(1:ObsSpec(i)%nlam)=spec(1:ObsSpec(i)%nlam)*ObsSpec(i)%beta
+			spec(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)/real(nr)
+			spec(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)*ObsSpec(i)%beta
 		case("prior","priors")
 			do j=1,n_ret
 				if(RetPar(j)%logscale) then
@@ -1404,57 +1460,15 @@ c			vec(i)=gasdev(idum)
 					spec(j)=RetPar(j)%value
 				endif
 			enddo
+		case("lightcurve")
+			do j=1,ObsSpec(i)%ndata
+				spec(j)=ObsSpec(i)%model(j)
+			enddo
 	end select
 
 	return
 	end
 		
-	
-	real*8 function ComputeChi2(imodel,nvars,var,nobs0,chi2obs,recomputeopac,error0)
-	use GlobalSetup
-	use Constants
-	IMPLICIT NONE
-	integer nvars,nobs0,i,j,imodel
-	real*8 var(nvars),chi2obs(nobs0),error(2,n_ret),specsave(nobs,nlam)
-	real*8,allocatable :: spec(:)
-	real*8,intent(in),optional :: error0(2,n_ret)
-	logical recomputeopac
-	error=0d0
-	if(present(error0)) error=error0
-
-	call MapRetrieval(var,error)
-
-c	print*,imodel,(trim(dbl2string(RetPar(i)%value,'(es18.7)')),i=1,n_ret)
-
-	call InitDens()
-	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
-	Fstar=Fstar*pi*Rstar**2
-	call SetOutputMode(.false.)
-	call ComputeModel(recomputeopac)
-	call SetOutputMode(.true.)
-	
-	ComputeChi2=0d0
-	do i=1,nobs
-		allocate(spec(ObsSpec(i)%nlam))
-		call RemapObs(i,spec,specsave(i,1:nlam))
-		chi2obs(i)=0d0
-		do j=1,ObsSpec(i)%nlam
-			chi2obs(i)=chi2obs(i)+((spec(j)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
-		enddo
-		chi2obs(i)=chi2obs(i)/real(ObsSpec(i)%nlam)
-		ComputeChi2=ComputeChi2+chi2obs(i)
-		deallocate(spec)
-	enddo
-
-	write(31,*) imodel,ComputeChi2,(trim(dbl2string(RetPar(i)%value,'(es18.7)')),i=1,n_ret)
-	flush(31)
-
-	chi2obs=1d0/chi2obs
-	ComputeChi2=1d0/ComputeChi2
-	
-	return
-	end
-	
 	
 	subroutine MapRetrieval(var,dvar)
 	use GlobalSetup
@@ -1545,6 +1559,7 @@ c	linear
 	lam2=lam2/micron
 	distance=distance/parsec
 	r_nuc=r_nuc/micron
+	orbit_inc=orbit_inc*180d0/pi
 
 	metallicity=metallicity0
 	do i=1,n_ret
@@ -1595,6 +1610,7 @@ c	linear, square
 	lam2=lam2/micron
 	distance=distance/parsec
 	r_nuc=r_nuc/micron
+	orbit_inc=orbit_inc*180d0/pi
 
 	do i=1,n_ret
 		readline=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
@@ -1836,7 +1852,7 @@ c	do i=1,nobs
 c		select case(ObsSpec(i)%type)
 c			case("trans","transmission","emisr","emisR","emisa","emis","emission","transC")
 c				open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),RECL=1000)
-c				do j=1,ObsSpec(i)%nlam
+c				do j=1,ObsSpec(i)%ndata
 c					write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
 c				enddo
 c				close(unit=20)

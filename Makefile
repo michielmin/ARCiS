@@ -18,7 +18,7 @@ ifeq ($(debug),true)
   ifeq ($(gfort),true)
     DEBUGGING = -fbounds-check -fbacktrace -fcheck=all
   else	
-    DEBUGGING = -check all -traceback -check bounds -O0 -g -p
+    DEBUGGING = -check all -traceback -check bounds -O0 -g -p -warn
   endif
 endif
 
@@ -117,7 +117,8 @@ OBJS	= Modules.o \
 		GGchem_is_nan.o \
 		PostEqualWeights.o \
 		TrendCompute.o \
-		MCComputeT.o
+		MCComputeT.o \
+		LightCurve.o
 
 # program name and install location
 PROGRAM       = ARCiS

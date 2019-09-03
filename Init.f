@@ -484,6 +484,8 @@ c allocate the arrays
 	
 	endif
 
+	if(orbit_P.lt.0d0) orbit_P=sqrt(Dplanet**3/Mstar)*365.25*86400d0
+
 	call ConvertUnits()
 
 c	condensates=(condensates.or.cloudcompute)
@@ -926,6 +928,19 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) emisspec
 		case("transspec")
 			read(key%value,*) transspec
+		case("orbit")
+			select case(key%key2)
+				case("p")
+					read(key%value,*) orbit_P
+				case("e")
+					read(key%value,*) orbit_e
+				case("omega")
+					read(key%value,*) orbit_omega
+				case("inc")
+					read(key%value,*) orbit_inc
+			end select
+		case("computelc")
+			read(key%value,*) computeLC
 		case default
 			do i=1,nmol_data
 				if(key%key.eq.molname(i)) then
@@ -976,6 +991,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 	r_nuc=r_nuc*micron
 
 	distance=distance*parsec
+	
+	orbit_inc=orbit_inc*pi/180d0
 
 c	tot=0d0
 c	do i=1,nmol
@@ -1178,6 +1195,13 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Mstar=1d0
 	Dplanet=1d0
 	logg=4.5d0
+	
+	orbit_P=-1d0
+	orbit_e=0d0
+	orbit_omega=0d0
+	orbit_inc=90d0
+	
+	computeLC=.false.
 	
 	lam1=1d0
 	lam2=15d0
@@ -1647,7 +1671,7 @@ c				enddo
 	use Constants
 	IMPLICIT NONE
 	real*8 lam0,T0,Planck,tot,x,y,dy,dx
-	integer i,j,ilam
+	integer i,j,ilam,nj
 	
 	if(useobsgrid) then
 		nlam=1
@@ -1655,6 +1679,18 @@ c				enddo
 			select case(ObsSpec(i)%type)
 				case('tprofile','logtp','priors','prior')
 					continue
+				case('lightcurve')
+					open(unit=30,file=ObsSpec(i)%file,RECL=1000)
+11					read(30,*,err=11) nj
+					do j=1,nj
+						read(30,*)
+					enddo
+12					read(30,*,end=13,err=12) x,dx
+					read(30,*)
+					read(30,*)
+					nlam=nlam+1
+					goto 12
+13					close(unit=30)					
 				case default
 					open(unit=30,file=ObsSpec(i)%file,RECL=1000)
 1					read(30,*,end=2,err=1) x,y,dy,dx
@@ -1683,6 +1719,22 @@ c				enddo
 			select case(ObsSpec(i)%type)
 				case('tprofile','logtp','priors','prior')
 					continue
+				case('lightcurve')
+					open(unit=30,file=ObsSpec(i)%file,RECL=1000)
+14					read(30,*,err=14) nj
+					do j=1,nj
+						read(30,*)
+					enddo
+15					read(30,*,end=16,err=15) x,dx
+					read(30,*)
+					read(30,*)
+					ilam=ilam+1
+					lam(ilam)=x*micron
+	dx=100d0
+					dx=x/dx
+					dlam(ilam)=dx*micron
+					goto 15
+16					close(unit=30)					
 				case default
 					open(unit=30,file=ObsSpec(i)%file,RECL=1000)
 3					read(30,*,end=4,err=3) x,y,dy,dx
@@ -2039,6 +2091,11 @@ c not entirely correct...
 				case('Planet_Radius_[Re]')
 					read(value(i),*) Rplanet
 					Rplanet=Rplanet*Rearth/RJup
+				case('Planet_Period_[days]')
+					read(value(i),*) orbit_P
+					orbit_P=orbit_P*86400d0
+				case('Eccentricity')
+					read(value(i),*) orbit_e
 			end select
 		endif
 		logg=log10(Ggrav*(Mstar*Msun)/((Rstar*Rsun)**2))
@@ -2055,6 +2112,7 @@ c not entirely correct...
 		call output("Planet radius:    " // dbl2string(Rplanet,'(f9.4)') // "Rjup")
 		call output("Planet mass:      " // dbl2string(Mplanet,'(f9.4)') // "Mjup")
 		call output("Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K")
+		call output("Orbital period:   " // dbl2string(orbit_P/86400d0,'(f9.4)') // "days")
 			
 		open(unit=73,file=trim(outputdir) // "ListParameters",RECL=1000)
 		write(73,'(a)') "Stellar mass:     " // dbl2string(Mstar,'(f9.4)') // "Msun"
@@ -2067,6 +2125,7 @@ c not entirely correct...
 		write(73,'(a)') "Planet radius:    " // dbl2string(Rplanet,'(f9.4)') // "Rjup"
 		write(73,'(a)') "Planet mass:      " // dbl2string(Mplanet,'(f9.4)') // "Mjup"
 		write(73,'(a)') "Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K"
+		write(73,'(a)') "Orbital period:   " // dbl2string(orbit_P/86400d0,'(f9.4)') // "days"
 		close(unit=73)
 
 		dR1=Rplanet*0.1
@@ -2165,7 +2224,8 @@ c not entirely correct...
 	
 	open(unit=72,file=planetparameterfile,RECL=6000)
 	read(72,*)
-1	read(72,*,end=2) name,Tstar,x,x,Zc,x,x,Mstar,x,x,Rstar,x,x,logg,x,x,x,x,x,x,x,x,x,Dplanet,x,x,Mplanet,dM1,dM2,Rplanet,dR1,dR2
+1	read(72,*,end=2) name,Tstar,x,x,Zc,x,x,Mstar,x,x,Rstar,x,x,logg,x,x,x,x,x,orbit_P,orbit_e,x,x,Dplanet,x,x,
+     &					Mplanet,dM1,dM2,Rplanet,dR1,dR2
 	if(Zc.eq.'-1') then
 		metallicity=0d0
 	else
@@ -2175,6 +2235,7 @@ c not entirely correct...
 	if(name(i:i).eq.'b') then
 		name(i:i)=' '
 	endif
+	orbit_P=orbit_P*86400d0
 	if(trim(planetname).eq.trim(name)) then	
 		close(unit=72)
 		call output("Stellar mass:   " // dbl2string(Mstar,'(f9.4)') // "Msun")
@@ -2186,6 +2247,7 @@ c not entirely correct...
 		call output("Planet radius:  " // dbl2string(Rplanet,'(f9.4)') // "Rjup")
 		call output("Planet mass:    " // dbl2string(Mplanet,'(f9.4)') // "Mjup")
 		call output("Blackbody T:    " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K")
+		call output("Orbital period: " // dbl2string(orbit_P/86400d0,'(f9.4)') // "days")
 
 		open(unit=73,file=trim(outputdir) // "ListParameters",RECL=1000)
 		write(73,'(a)') "Stellar mass:     " // dbl2string(Mstar,'(f9.4)') // "Msun"
@@ -2198,6 +2260,7 @@ c not entirely correct...
 		write(73,'(a)') "Planet radius:    " // dbl2string(Rplanet,'(f9.4)') // "Rjup"
 		write(73,'(a)') "Planet mass:      " // dbl2string(Mplanet,'(f9.4)') // "Mjup"
 		write(73,'(a)') "Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K"
+		write(73,'(a)') "Orbital period:   " // dbl2string(orbit_P/86400d0,'(f9.4)') // "days"
 		close(unit=73)
 
 		do i=1,n_ret

@@ -76,6 +76,7 @@ c===============================================================================
 	IMPLICIT NONE
 	real*8 Mplanet,Rplanet,Pplanet,loggPlanet				! mass and radius of the planet at pressure Pplanet
 	real*8 Tstar,Rstar,Mstar,logg,Dplanet
+	real*8 orbit_P,orbit_e,orbit_omega,orbit_inc
 	real*8,allocatable :: dens(:),T(:),P(:),Ndens(:),Tin(:)	! radius
 	real*8,allocatable :: dust_dens(:,:)					! radius, component
 	real*8,allocatable :: R(:),Hp(:)						! radius
@@ -105,10 +106,10 @@ c===============================================================================
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
 	real*8 mixratHaze,PHaze,dPHaze,kappaHaze,Kzz,SiOratio,NOratio
 	logical enhancecarbon,fast_chem,gamma_equal,dopostequalweights
-	logical transspec,emisspec,rainout
+	logical transspec,emisspec,rainout,computeLC
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),lamdust(:),dlam(:)
-	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:)
+	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	integer nTZ,nspike,nai,nboot,npew
 	integer,allocatable :: niso(:),instr_nobs(:)
@@ -207,8 +208,9 @@ c===============================================================================
 	logical sinkZ
 	real*8 alphaZ
 
-	real*8,allocatable :: flux(:,:),obsA(:,:),phase(:,:,:)
-	integer ncc,nphase,n2d,i2d
+	real*8,allocatable :: flux(:,:),obsA(:,:),phase(:,:,:),obsLightCurve(:,:)
+	real*8,allocatable :: timeLightCurve(:)
+	integer ncc,nphase,n2d,i2d,nLightCurve
 	logical cloudcompute,useDRIFT,singlecloud
 	logical,allocatable :: docloud(:,:)
 	real*8,allocatable :: cloudfrac(:),XCloud(:,:),XeqCloud(:,:),XeqCloud_old(:,:)
@@ -278,10 +280,12 @@ cPoints for the temperature structure
 	type ObservedSpec
 		character*500 file
 		character*10 type
-		real*8,allocatable :: lam(:),y(:),dy(:),R(:),Rexp(:),model(:),modelbest(:),model0(:)
+		real*8,allocatable :: lam(:),y(:),dy(:),R(:),Rexp(:),model(:)
 		real*8 beta,scale
-		integer nlam,i2d
+		integer ndata,i2d
 		logical spec
+		integer nlam,nt
+		real*8,allocatable :: LC(:,:),dLC(:,:),t(:),dt(:)
 	end type ObservedSpec
 	type(ObservedSpec),allocatable :: ObsSpec(:)
 

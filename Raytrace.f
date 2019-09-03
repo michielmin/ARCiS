@@ -13,7 +13,7 @@
 	integer icc,imol
 	real*8 Ocolumn(2,nlam,ncc),Ccolumn(2,nlam,ncc),Hcolumn(2,nlam,ncc),Otot,Ctot,Htot,dP
 	character*500 filename
-	real*8,allocatable :: dtrace(:,:)
+	real*8,allocatable :: dtrace(:,:),CaCont(:)
 	integer,allocatable :: irtrace(:,:),nirtrace(:)
 
 	docloud=.false.
@@ -372,17 +372,39 @@
 	endif
 
 	if(transspec) then
+	if(.not.allocated(obsA_LC)) allocate(obsA_LC(nrtrace,nlam))
 	obsA=0d0
+	obsA_LC=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
+!$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk,CaCont)
 !$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,includemol,irtrace,dtrace,Cabs_mol,mixrat_r,
 !$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,useDRIFT,Cext_cont,
-!$OMP&		cloudfrac,nirtrace,Psimplecloud,maxtau,ndisk)
+!$OMP&		cloudfrac,nirtrace,Psimplecloud,maxtau,ndisk,nr,obsA_LC)
+	allocate(CaCont(nr))
 !$OMP DO SCHEDULE(STATIC,1)
 	do ilam=1,nlam-1
 		do icc=1,ncc
 		if(cloudfrac(icc).gt.0d0) then
+			do ir=1,nr
+				Ca=Cext_cont(ir,ilam)
+				do icloud=1,nclouds
+					if(docloud(icc,icloud)) then
+						if(Cloud(icloud)%standard.eq.'MIX') then
+							Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+							Ca=Ca+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+						else
+							do isize=1,Cloud(icloud)%nr
+								Ca=Ca+
+     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+								Ca=Ca+
+     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+							enddo
+						endif
+					endif
+				enddo
+				CaCont(ir)=Ca
+			enddo
 			do i=1,nrtrace-1
 				if(i.lt.ndisk) then
 					A=0d0
@@ -415,23 +437,7 @@
 					do k=1,nk
 						ir=irtrace(k,i)
 						d=dtrace(k,i)
-						Ca=Cext_cont(ir,ilam)
-						do icloud=1,nclouds
-							if(docloud(icc,icloud)) then
-								if(Cloud(icloud)%standard.eq.'MIX') then
-									Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
-									Ca=Ca+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-								else
-									do isize=1,Cloud(icloud)%nr
-										Ca=Ca+
-     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-										Ca=Ca+
-     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-									enddo
-								endif
-							endif
-						enddo
-						tau=d*Ca
+						tau=d*CaCont(ir)
 						if(P(ir).gt.Psimplecloud) tau=1d4
 						tautot=tautot+tau
 						if(k.lt.nk) ir_next=irtrace(k+1,i)
@@ -442,6 +448,7 @@
 					enddo
 					A=A*exp(-tautot)
 				endif
+				obsA_LC(i,ilam)=obsA_LC(i,ilam)+cloudfrac(icc)*A
 				A=pi*(rtrace(i+1)**2-rtrace(i)**2)*(1d0-A)
 				obsA(icc,ilam)=obsA(icc,ilam)+A
 				obsA(0,ilam)=obsA(0,ilam)+cloudfrac(icc)*A
@@ -450,8 +457,16 @@
 		enddo
 	enddo
 !$OMP END DO
+	deallocate(CaCont)
 !$OMP FLUSH
 !$OMP END PARALLEL
+	obsA_LC=1d0-obsA_LC
+	if(computeLC) then
+c		call LightCurve(rtrace,nrtrace)
+c		if(retrieval) call LightCurveRetrieval_Fit(rtrace,nrtrace)
+		call LightCurveRetrieval_Fit(rtrace,nrtrace)
+c		call LightCurveRetrieval(rtrace,nrtrace)
+	endif
 	endif
 
 	deallocate(dtrace)
