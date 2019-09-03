@@ -448,6 +448,7 @@
 					enddo
 					A=A*exp(-tautot)
 				endif
+				if(.not.A.gt.0d0) A=0d0
 				obsA_LC(i,ilam)=obsA_LC(i,ilam)+cloudfrac(icc)*A
 				A=pi*(rtrace(i+1)**2-rtrace(i)**2)*(1d0-A)
 				obsA(icc,ilam)=obsA(icc,ilam)+A

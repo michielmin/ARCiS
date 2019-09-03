@@ -1630,8 +1630,9 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	character*500 cloudspecies(max(Ncloud,1)),namecloud
 	real*8 P1,P2,abun_temp(nmol),M
 
-	Tg=min(max(Tin,70d0),30000d0)
+	Tg=min(max(Tin,100d0),30000d0)
 	
+	Xcloud=0d0
 	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates)
 
 	do i=1,nmol
