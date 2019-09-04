@@ -201,12 +201,14 @@ c	n_nu_line=ng*ng
 		endif
 	enddo
 
-	open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
-	write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
-	do i=1,nlam-1
-		write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng)*wgg(1:ng))
-	enddo
-	close(unit=30)
+	if(.not.retrieval) then
+		open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
+		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
+		do i=1,nlam-1
+			write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng)*wgg(1:ng))
+		enddo
+		close(unit=30)
+	endif
 	
 	if(opacitymode) then
 		open(unit=30,file=trim(outputdir) // "meanopacities",RECL=6000)

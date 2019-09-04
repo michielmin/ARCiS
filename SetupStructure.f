@@ -244,35 +244,29 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		metallicity=log10((Ctot+Otot)/Htot)-log10((0.0002478241+0.0004509658)/0.9207539305)
 	endif
 
-	open(unit=50,file=trim(outputdir) // 'COprofile.dat',RECL=100)
-	write(50,'("#",a14,3a10)') "P [bar]","C/O","[O]","[C]"
-	do i=1,nr
-		Otot=0d0
-		Ctot=0d0
-		Htot=0d0
-		do imol=1,nmol
-			if(includemol(imol)) then
-				Otot=Otot+Ndens(i)*mixrat_r(i,imol)*real(Oatoms(imol))
-				Ctot=Ctot+Ndens(i)*mixrat_r(i,imol)*real(Catoms(imol))
-				Htot=Htot+Ndens(i)*mixrat_r(i,imol)*real(Hatoms(imol))
-			endif
-		enddo
-		write(50,'(es15.4,3f10.3)') P(i),Ctot/Otot,
+	if(.not.retrieval) then
+		open(unit=50,file=trim(outputdir) // 'COprofile.dat',RECL=100)
+		write(50,'("#",a14,3a10)') "P [bar]","C/O","[O]","[C]"
+		do i=1,nr
+			Otot=0d0
+			Ctot=0d0
+			Htot=0d0
+			do imol=1,nmol
+				if(includemol(imol)) then
+					Otot=Otot+Ndens(i)*mixrat_r(i,imol)*real(Oatoms(imol))
+					Ctot=Ctot+Ndens(i)*mixrat_r(i,imol)*real(Catoms(imol))
+					Htot=Htot+Ndens(i)*mixrat_r(i,imol)*real(Hatoms(imol))
+				endif
+			enddo
+			write(50,'(es15.4,3f10.3)') P(i),Ctot/Otot,
      &			log10(Otot/Htot)-log10(0.0004509658/0.9207539305),
      &			log10(Ctot/Htot)-log10(0.0002478241/0.9207539305)
-	enddo
-	close(unit=50)
-
+		enddo
+		close(unit=50)
+	endif
 
 	call output("Chemistry runtime:  " // trim(dbl2string((chemtime),'(f10.2)')) // " s")
 
-
-	open(unit=20,file='output_struct.dat',RECL=1000)
-	do i=1,nr
-		write(20,*) P(i),MMW(i),grav(i),sqrt(R(i)*R(i+1))/Rjup,T(i),Hp(i)
-	enddo
-	close(unit=20)
-	
 	return
 	end
 

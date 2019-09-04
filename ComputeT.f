@@ -311,7 +311,7 @@ c				endif
 
 	E0=((2d0*(pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
 	do ir=1,nr
-		Hedd(ir)=E0-Hstar(ir)
+		Hedd(ir)=E0/4d0-Hstar(ir)
 	enddo
 
 	ff=0.5d0
