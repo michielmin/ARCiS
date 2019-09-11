@@ -13,7 +13,7 @@
 	integer icc,imol
 	real*8 Ocolumn(2,nlam,ncc),Ccolumn(2,nlam,ncc),Hcolumn(2,nlam,ncc),Otot,Ctot,Htot,dP
 	character*500 filename
-	real*8,allocatable :: dtrace(:,:),CaCont(:)
+	real*8,allocatable :: dtrace(:,:),CaCont(:,:)
 	integer,allocatable :: irtrace(:,:),nirtrace(:)
 
 	docloud=.false.
@@ -141,7 +141,7 @@
 !$OMP& PRIVATE(ilam,fluxg,icc,phase0)
 !$OMP& SHARED(nlam,nclouds,flux,phase,ncc,docloud,cloudfrac,nphase)
 	allocate(phase0(nphase))
-!$OMP DO SCHEDULE(STATIC,1)
+!$OMP DO
 	do ilam=1,nlam-1
 		call tellertje(ilam+1,nlam+1)
 		flux(:,ilam)=0d0
@@ -195,7 +195,7 @@
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,rr,ir,k,si,xx1,in,xx2,d,ir_next)
 !$OMP& SHARED(nrtrace,rtrace,R,dtrace,irtrace,nirtrace,nr)
-!$OMP DO SCHEDULE(STATIC,1)
+!$OMP DO
 	do i=1,nrtrace-1
 		rr=sqrt(rtrace(i)*rtrace(i+1))
 		ir=nr
@@ -265,7 +265,7 @@
 	allocate(fact_contr(nr))
 	allocate(fluxg_contr(nr))
 	allocate(Ag_contr(nr))
-!$OMP DO SCHEDULE(STATIC,1)
+!$OMP DO
 	do ilam=1,nlam-1
 		freq0=sqrt(freq(ilam)*freq(ilam+1))
 		obsA(:,ilam)=0d0
@@ -375,14 +375,14 @@
 	if(.not.allocated(obsA_LC)) allocate(obsA_LC(nrtrace,nlam))
 	obsA=0d0
 	obsA_LC=0d0
+	allocate(CaCont(nr,nlam))
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk,CaCont)
+!$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
 !$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,includemol,irtrace,dtrace,Cabs_mol,mixrat_r,
 !$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,useDRIFT,Cext_cont,
-!$OMP&		cloudfrac,nirtrace,Psimplecloud,maxtau,ndisk,nr,obsA_LC)
-	allocate(CaCont(nr))
-!$OMP DO SCHEDULE(STATIC,1)
+!$OMP&		cloudfrac,nirtrace,Psimplecloud,maxtau,ndisk,nr,obsA_LC,CaCont)
+!$OMP DO
 	do ilam=1,nlam-1
 		do icc=1,ncc
 		if(cloudfrac(icc).gt.0d0) then
@@ -403,7 +403,7 @@
 						endif
 					endif
 				enddo
-				CaCont(ir)=Ca
+				CaCont(ir,ilam)=Ca
 			enddo
 			do i=1,nrtrace-1
 				if(i.lt.ndisk) then
@@ -411,6 +411,21 @@
 				else
 					A=1d0
 					nk=nirtrace(i)
+					tautot=0d0
+					do k=1,nk
+						ir=irtrace(k,i)
+						d=dtrace(k,i)
+						tau=d*CaCont(ir,ilam)
+						if(P(ir).gt.Psimplecloud) tau=1d4
+						tautot=tautot+tau
+						if(k.lt.nk) ir_next=irtrace(k+1,i)
+						if(ir_next.le.0.or.tautot.ge.maxtau) then
+							tautot=1d4
+							A=0d0
+							goto 9
+						endif
+					enddo
+					A=A*exp(-tautot)
 					do imol=1,nmol
 						if(includemol(imol)) then
 						Ag=0d0
@@ -425,28 +440,16 @@
 								if(k.lt.nk) ir_next=irtrace(k+1,i)
 								if(ir_next.le.0.or.tautot.ge.maxtau) then
 									tautot=1d4
-									exit
+									goto 8
 								endif
 							enddo
 							Ag=Ag+exp(-tautot)*wgg(ig)
+8							continue
 						enddo
 						A=A*Ag
 						endif
 					enddo
-					tautot=0d0
-					do k=1,nk
-						ir=irtrace(k,i)
-						d=dtrace(k,i)
-						tau=d*CaCont(ir)
-						if(P(ir).gt.Psimplecloud) tau=1d4
-						tautot=tautot+tau
-						if(k.lt.nk) ir_next=irtrace(k+1,i)
-						if(ir_next.le.0.or.tautot.ge.maxtau) then
-							tautot=1d4
-							exit
-						endif
-					enddo
-					A=A*exp(-tautot)
+9					continue
 				endif
 				if(.not.A.gt.0d0) A=0d0
 				obsA_LC(i,ilam)=obsA_LC(i,ilam)+cloudfrac(icc)*A
@@ -458,9 +461,9 @@
 		enddo
 	enddo
 !$OMP END DO
-	deallocate(CaCont)
 !$OMP FLUSH
 !$OMP END PARALLEL
+	deallocate(CaCont)
 	obsA_LC=1d0-obsA_LC
 	if(computeLC) then
 c		call LightCurve(rtrace,nrtrace)

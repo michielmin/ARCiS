@@ -378,7 +378,11 @@ C	 create the new empty FITS file
 					tot2=tot2+wgg(ig)*Ktable(imol)%ktable(ilam,ig,iT,iP)
 				enddo
 				if(tot2.ne.0d0) then
-					Ktable(imol)%ktable(ilam,1:ng,iT,iP)=Ktable(imol)%ktable(ilam,1:ng,iT,iP)*tot/tot2
+					if(tot/tot2.gt.1d0) then
+						Ktable(imol)%ktable(ilam,ng,iT,iP)=Ktable(imol)%ktable(ilam,ng,iT,iP)+(tot-tot2)/wgg(ng)
+					else
+						Ktable(imol)%ktable(ilam,1:ng,iT,iP)=Ktable(imol)%ktable(ilam,1:ng,iT,iP)*tot/tot2
+					endif
 				else
 					Ktable(imol)%ktable(ilam,1:ng,iT,iP)=tot
 				endif
