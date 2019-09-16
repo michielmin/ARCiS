@@ -298,6 +298,7 @@ C	 create the new empty FITS file
 	naxes(4)=Ktable(imol)%nP
 	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
 	if(.not.allocated(Ktable(imol)%ktable)) allocate(Ktable(imol)%ktable(nlam,ng,naxes(3),naxes(4)))
+	Ktable(imol)%ktable(1:nlam,1:ng,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=0d0
 	allocate(Ktemp(naxes(1),naxes(2),naxes(3),naxes(4)))
 
 	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktemp,anynull,status)
@@ -387,8 +388,6 @@ C	 create the new empty FITS file
 					Ktable(imol)%ktable(ilam,1:ng,iT,iP)=tot
 				endif
 			endif
-		else
-			Ktable(imol)%ktable(ilam,1:ng,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=0d0
 		endif
 		enddo
 		enddo

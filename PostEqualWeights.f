@@ -4,7 +4,7 @@
 	IMPLICIT NONE
 	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime,sig,aver
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:)
-	real*8,allocatable :: PTstruct(:,:),var(:,:),values(:,:)
+	real*8,allocatable :: PTstruct(:,:),var(:,:),values(:,:),COratio_der(:),Z_der(:)
 	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j
 	logical,allocatable :: done(:)
 	
@@ -23,6 +23,8 @@
 	allocate(specemisR(0:nmodels,nlam))
 	allocate(PTstruct(0:nmodels,nr))
 	allocate(values(0:nmodels,n_ret))
+	allocate(COratio_der(0:nmodels))
+	allocate(Z_der(0:nmodels))
 	allocate(sorted(nmodels))
 	allocate(done(nmodels))
 	allocate(var(nmodels,n_ret))
@@ -92,6 +94,8 @@
 	do j=1,n_ret
 		values(i,j)=RetPar(j)%value
 	enddo
+	COratio_der(i)=COratio
+	Z_der(i)=metallicity
 	call SetOutputMode(.true.)
 
 	call InitDens()
@@ -175,6 +179,12 @@
 			call sort(sorted,i)
 			write(26,'(a10,3es12.4)') trim(RetPar(j)%keyword),sorted(ime),sorted(im1),sorted(ip1)
 		enddo
+		sorted(1:i)=COratio_der(1:i)
+		call sort(sorted,i)
+		write(26,'(a10,3es12.4)') "C/O",sorted(ime),sorted(im1),sorted(ip1)
+		sorted(1:i)=Z_der(1:i)
+		call sort(sorted,i)
+		write(26,'(a10,3es12.4)') "[Z]",sorted(ime),sorted(im1),sorted(ip1)
 		close(unit=26)
 
 		open(unit=26,file=trim(outputdir) // "trans_sigma",RECL=1000)
@@ -206,6 +216,8 @@
 	deallocate(PTstruct)
 	deallocate(sorted)
 	deallocate(values)
+	deallocate(COratio_der)
+	deallocate(Z_der)
 	deallocate(done)
 	deallocate(var)
 	

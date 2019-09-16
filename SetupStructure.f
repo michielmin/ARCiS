@@ -179,8 +179,16 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
 			call tellertje(i,nr)
 			Tc=max(min(T(i),20000d0),100d0)
 			call cpu_time(starttime)
-			call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
+			if(P(i).ge.mixP.or.i.eq.1) then
+				call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
      &			XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
+    		else
+    			mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
+    			XeqCloud(i,1:nclouds)=XeqCloud(i-1,1:nclouds)
+    			nabla_ad(i)=nabla_ad(i-1)
+    			MMW(i)=MMW(i-1)
+    			didcondens(i)=didcondens(i-1)
+    		endif
 			call cpu_time(stoptime)
 			chemtime=chemtime+stoptime-starttime
 			do imol=1,nmol

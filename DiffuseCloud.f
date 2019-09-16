@@ -786,8 +786,16 @@ c correction for SiC
 		enddo
 		tot=sum(molfracs_atoms(1:N_atoms))
 		molfracs_atoms=molfracs_atoms/tot
-		call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
+		if(P(i).ge.mixP.or.i.eq.1) then
+			call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
      &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
+   		else
+   			mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
+   			XeqCloud(i,1:nclouds)=XeqCloud(i-1,1:nclouds)
+   			nabla_ad(i)=nabla_ad(i-1)
+   			MMW(i)=MMW(i-1)
+   			didcondens(i)=didcondens(i-1)
+   		endif
 		write(20,*) P(i),molfracs_atoms(1:N_atoms)
 	enddo
 	close(unit=20)
