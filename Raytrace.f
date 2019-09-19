@@ -177,7 +177,7 @@
 	k=0
 	do i=1,ndisk
 		k=k+1
-		rtrace(k)=Rplanet*real(i-1)/real(ndisk)
+		rtrace(k)=R(1)*real(i-1)/real(ndisk)
 		ptrace(k)=P(1)*(1d0+real(ndisk-i)/real(ndisk))
 	enddo
 	do i=1,nr-1
@@ -261,13 +261,17 @@
 !$OMP&         Ca,Cs,icloud,isize,BBr,Otot,Ctot,Htot,imol,irc,contr,fact_contr,fluxg_contr,Ag_contr,nk)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
 !$OMP&			cloud_dens,useDRIFT,Psimplecloud,P,flux_contr,obsA_contr,irtrace,dtrace,nirtrace,
-!$OMP&			Ocolumn,Ccolumn,Hcolumn,nmol,mixrat_r,includemol,computecontrib,wgg)
+!$OMP&			Ocolumn,Ccolumn,Hcolumn,nmol,mixrat_r,includemol,computecontrib,wgg,useobsgrid)
 	allocate(fact_contr(nr))
 	allocate(fluxg_contr(nr))
 	allocate(Ag_contr(nr))
 !$OMP DO
 	do ilam=1,nlam-1
-		freq0=sqrt(freq(ilam)*freq(ilam+1))
+		if(useobsgrid) then
+			freq0=freq(ilam)
+		else
+			freq0=sqrt(freq(ilam)*freq(ilam+1))
+		endif
 		obsA(:,ilam)=0d0
 		obsA_contr(1:nr,ilam)=0d0
 		flux_contr(1:nr,ilam)=flux(0,ilam)

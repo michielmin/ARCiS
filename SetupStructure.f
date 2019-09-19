@@ -305,6 +305,70 @@ c			beta_used=max
 	endif
 
 	tau=0d0
+	Tirr=sqrt(Rstar/(Dplanet))*Tstar
+	if(computeT) then
+		x=(Tirr**4/sqrt(2d0)+TeffP**4)**0.25
+		return
+	endif
+	
+	do i=nr,1,-1
+		tau=kappaT*1d6*P(i)/grav(i)
+		if(tau.lt.0d0) tau=0d0
+		x(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)
+		x(i)=x(i)+(3d0*Tirr**4/4d0)*beta_used*
+     &	(2d0/3d0+1d0/(sqrt(3d0)*gammaT1)+(gammaT1/sqrt(3d0)-1d0/(sqrt(3d0)*gammaT1))*exp(-gammaT1*tau*sqrt(3d0)))
+
+		x(i)=x(i)**0.25d0
+
+		if(x(i).gt.10000d0) x(i)=10000d0
+		if(IsNaN(x(i))) then
+			call output("NaN in temperature structure")
+			if(i.gt.1) then
+				x(i)=x(i-1)
+			else
+				x(i)=TeffP
+			endif
+		endif
+		if(i.lt.nr) then
+			dlnP=log(P(i+1)/P(i))
+			dlnT=log(x(i+1)/x(i))
+			if((dlnT/dlnP).gt.(nabla_ad(i)).and.adiabatic_tprofile) then
+				dlnT=(nabla_ad(i))*dlnP
+				x(i)=x(i+1)/exp(dlnT)
+			endif
+		endif
+	enddo
+
+	return
+	end
+
+	subroutine ComputeParamTold(x)
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 x(nr),tau,Tirr,eta,expint,dlnT,dlnP,beta_used,max
+	integer i
+
+	beta_used=betaT
+	if(i2d.ne.0) then
+		if(i2d.eq.1) then
+			call ComputeBeta(90d0,twind,beta_used)
+		else if(i2d.eq.2) then
+			call ComputeBeta(270d0,twind,beta_used)
+		else if(i2d.eq.3) then
+c			max=0d0
+c			do i=0,90
+c				call ComputeBeta(real(i)*1d0,twind,beta_used)
+c				if(beta_used.gt.max) max=beta_used
+c			enddo
+c			beta_used=max
+			call ComputeBeta(0d0,twind,beta_used)
+		else if(i2d.eq.4) then
+			call ComputeBeta(180d0,twind,beta_used)
+		endif
+		beta_used=beta_used*betaT
+	endif
+
+	tau=0d0
 	Tirr=beta_used*sqrt(Rstar/(2d0*Dplanet))*Tstar
 	if(computeT) then
 		x=(Tirr**4+TeffP**4)**0.25
