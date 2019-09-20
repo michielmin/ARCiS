@@ -102,6 +102,8 @@
       integer,allocatable :: m_kind(:,:)        ! index of elements
       integer,allocatable :: m_anz(:,:)         ! stoichiometric coeffs
       real*8,allocatable  :: a(:,:)             ! kp fit-coeffs
+      real*8 :: b_nasa(NELEM,0:13)              ! kp fit-coeffs Added by Yui Kawashima
+      integer :: i_nasa,c_nasa(NELEM)           ! Added by Yui Kawashima
       real*8,allocatable  :: error(:)           ! kp fit errors
       real*8 :: th1,th2,th3,th4,TT1,TT2,TT3     
       end
@@ -540,7 +542,7 @@
 ************************************************************************
       use PARAMETERS,ONLY: elements
       use CHEMISTRY,ONLY: NMOLdim,NMOLE,NELM,catm,cmol,el,
-     &    dispol_file,source,fit,natom,a,error,
+     &    dispol_file,source,fit,natom,a,error,i_nasa,
      &    m_kind,m_anz,elnum,elion,charge,
      &    el,H,He,Li,Be,B,C,N,O,F,Ne,Na,Mg,Al,Si,P,S,Cl,Ar,K,Ca,Sc,
      &    Ti,V,Cr,Mn,Fe,Co,Ni,Cu,Zn,Ga,Ge,As,Se,Br,Kr,Rb,Sr,Y,Zr,W
@@ -551,7 +553,8 @@
       integer :: loop,i,ii,j,iel,e,smax,ret
       character(len=2) :: cel(40),elnam
       character(len=20) :: molname,leer='                    '
-      character(len=200) :: line,filename
+      character(len=200) :: filename
+      character(len=300) :: line
       logical :: found,charged
       real*8 :: fiterr
 
@@ -621,7 +624,7 @@ c        print*,'element '//elnam,elnum(NELM)
 
       NMOLdim = 10000
       allocate(cmol(NMOLdim),fit(NMOLdim),natom(NMOLdim))
-      allocate(error(NMOLdim),a(NMOLdim,0:7))
+      allocate(error(NMOLdim),a(NMOLdim,0:13))
       allocate(source(NMOLdim),m_kind(0:6,NMOLdim),m_anz(6,NMOLdim))
       i=1
       do loop=1,4
@@ -634,17 +637,20 @@ c     &             //trim(filename)//" ..."
         open(unit=12, file=filename, status='old')
         read(12,*) NMOLdim
         do ii=1,NMOLdim
-          read(12,'(A200)') line
+          read(12,'(A300)') line
           read(line,*) molname,iel,cel(1:iel),m_anz(1:iel,i)
           molname=trim(molname)
           fiterr = 0.0
           j = index(line,"+/-")
           if (j>0) read(line(j+3:),*) fiterr
           error(i) = fiterr
-          read(12,'(A200)') line
+          read(12,'(A300)') line
           read(line,*) fit(i)
           if (fit(i)==6) then
             read(line,*) fit(i),(a(i,j),j=0,7)
+          elseif(fit(i)==7) then
+            i_nasa = 1
+            read(line,*) fit(i),(a(i,j),j=0,13)
           else   
             read(line,*) fit(i),(a(i,j),j=0,4)
           endif  
@@ -715,6 +721,8 @@ c            endif
       enddo  
       NMOLE = i-1
       allocate(nmol(NMOLE),mmol(NMOLE))
+
+      if(i_nasa==1) call NASA_POLYNOMIAL !Added by Yui Kawashima
 
 c      if (loop>1) then
 c        print* 
@@ -4348,7 +4356,8 @@ c      close(12)
 *****  fit=1  :  Gail's polynom                                    *****
 *****  fit=2  :  Tsuji's polynom                                   *****
 ************************************************************************
-      use CHEMISTRY,ONLY: a,th1,th2,th3,th4,TT1,TT2,TT3,fit,natom,cmol
+      use CHEMISTRY,ONLY: a,th1,th2,th3,th4,TT1,TT2,TT3,fit,natom,cmol,
+     >                    NELEM,elnum,b_nasa,c_nasa
       implicit none
       integer,parameter :: qp = selected_real_kind ( 33, 4931 )
       real(kind=qp),parameter :: bar=1.Q+6, atm=1.013Q+6, Rcal=1.987Q+0
@@ -4357,6 +4366,10 @@ c      close(12)
       real(kind=qp),parameter :: lnatm=LOG(atm), lnbar=LOG(bar)
       integer,intent(in) :: i    ! index of molecule
       real(kind=qp) :: gk,dG,lnk ! return kp in [cgs]
+
+      integer*4 :: k,j                 !Added by Yui Kawashima
+      real*8 :: h_rt,s_r               !Added by Yui Kawashima
+      real*8 :: dG_rt_ref(NELEM),dG_rt !Added by Yui Kawashima
       if (i.eq.0) then
         gk = 1.Q-300             ! tiny kp for unassigned molecules
         return
@@ -4401,6 +4414,69 @@ c      close(12)
         lnk = a(i,0)/TT3 + a(i,1)/TT2 + a(i,2)/TT1 + a(i,3)/TT1**0.05d0
      &      + a(i,4)*LOG(TT1) + a(i,5) + a(i,6)*TT1 + a(i,7)*TT2
          
+      else if (fit(i).eq.7) then
+        !-----------------------------------------------------
+        ! ***  NASA polynomial fit added by Yui Kawashima  ***
+        !-----------------------------------------------------         
+         if(TT1 > 1.0d3) then
+            h_rt = a(i,0) + a(i,1)*TT1/2.0d0 
+     &           + a(i,2)*TT1**2.0d0/3.0d0 + a(i,3)*TT1**3.0d0/4.0d0
+     &           + a(i,4)*TT1**4.0d0/5.0d0 + a(i,5)/TT1
+            
+            s_r = a(i,0)*log(TT1) + a(i,1)*TT1
+     &           + a(i,2)*TT1**2.0d0/2.0d0 + a(i,3)*TT1**3.0d0/3.0d0
+     &           + a(i,4)*TT1**4.0d0/4.0d0 + a(i,6)
+         else
+            h_rt = a(i,7) + a(i,8)*TT1/2.0d0
+     &           + a(i,9)*TT1**2.0d0/3.0d0 + a(i,10)*TT1**3.0d0/4.0d0
+     &           + a(i,11)*TT1**4.0d0/5.0d0 + a(i,12)/TT1
+            
+            s_r = a(i,7)*log(TT1) + a(i,8)*TT1
+     &           + a(i,9)*TT1**2.0d0/2.0d0 + a(i,10)*TT1**3.0d0/3.0d0
+     &           + a(i,11)*TT1**4.0d0/4.0d0 + a(i,13)           
+         end if
+
+         dG_rt = h_rt - s_r
+         do k=1,m_kind(0,i)
+            j = elnum(m_kind(k,i))
+            if(c_nasa(j)==0) then
+               print*,"Provide the data in data/Burcat_ref-elements.dat"
+     &              ," and edit nasa_polynomial.f for "
+     &              ,trim(catm(m_kind(k,i)))
+               stop
+            else
+               if(TT1 > 1.0d3) then
+                  h_rt = b_nasa(j,0) + b_nasa(j,1)*TT1/2.0d0 
+     &                 + b_nasa(j,2)*TT1**2.0d0/3.0d0
+     &                 + b_nasa(j,3)*TT1**3.0d0/4.0d0
+     &                 + b_nasa(j,4)*TT1**4.0d0/5.0d0 + b_nasa(j,5)/TT1
+                  
+                  s_r = b_nasa(j,0)*log(TT1) + b_nasa(j,1)*TT1
+     &                 + b_nasa(j,2)*TT1**2.0d0/2.0d0
+     &                 + b_nasa(j,3)*TT1**3.0d0/3.0d0
+     &                 + b_nasa(j,4)*TT1**4.0d0/4.0d0 + b_nasa(j,6)
+               else
+                  h_rt = b_nasa(j,7) + b_nasa(j,8)*TT1/2.0d0
+     &                 + b_nasa(j,9)*TT1**2.0d0/3.0d0
+     &                 + b_nasa(j,10)*TT1**3.0d0/4.0d0
+     &                 + b_nasa(j,11)*TT1**4.0d0/5.0d0
+     $                 + b_nasa(j,12)/TT1
+
+                  s_r = b_nasa(j,7)*log(TT1) + b_nasa(j,8)*TT1
+     &                 + b_nasa(j,9)*TT1**2.0d0/2.0d0
+     &                 + b_nasa(j,10)*TT1**3.0d0/3.0d0
+     &                 + b_nasa(j,11)*TT1**4.0d0/4.0d0 + b_nasa(j,13)           
+               end if
+               dG_rt_ref(j) = h_rt - s_r
+
+               dG_rt = dG_rt
+     &              - dble(m_anz(k,i))*dG_rt_ref(j)
+            end if
+         end do
+
+         dG = -dG_rt
+         lnk = dG + (1-Natom(i))*lnbar
+
       else
         print*,cmol(i),"i,fit=",i,fit(i)
         stop "???"
@@ -5270,7 +5346,8 @@ c      close(12)
 *****  fit=1  :  Gail's polynom                                    *****
 *****  fit=2  :  Tsuji's polynom                                   *****
 ************************************************************************
-      use CHEMISTRY,ONLY: a,th1,th2,th3,th4,TT1,TT2,TT3,fit,natom,cmol
+      use CHEMISTRY,ONLY: a,th1,th2,th3,th4,TT1,TT2,TT3,fit,natom,cmol,
+     >                    NELEM,elnum,b_nasa,c_nasa
       implicit none
       real*8,parameter :: bar=1.d+6, atm=1.013d+6, Rcal=1.987d+0
       real*8,parameter :: Rgas=8.3144598d+0
@@ -5278,6 +5355,10 @@ c      close(12)
       real*8,parameter :: lnatm=DLOG(atm), lnbar=DLOG(bar)
       integer,intent(in) :: i    ! index of molecule
       real*8 :: lnk,gk,dG            ! return kp in [cgs]
+
+      integer*4 :: k,j                 !Added by Yui Kawashima
+      real*8 :: h_rt,s_r               !Added by Yui Kawashima
+      real*8 :: dG_rt_ref(NELEM),dG_rt !Added by Yui Kawashima
       if (i.eq.0) then
         gk = 1.d-300             ! tiny kp for unassigned molecules
         return
@@ -5324,6 +5405,69 @@ c      close(12)
         lnk = a(i,0)/TT3 + a(i,1)/TT2 + a(i,2)/TT1 + a(i,3)/TT1**0.05d0
      &      + a(i,4)*LOG(TT1) + a(i,5) + a(i,6)*TT1 + a(i,7)*TT2
          
+      else if (fit(i).eq.7) then
+        !-----------------------------------------------------
+        ! ***  NASA polynomial fit added by Yui Kawashima  ***
+        !-----------------------------------------------------         
+         if(TT1 > 1.0d3) then
+            h_rt = a(i,0) + a(i,1)*TT1/2.0d0 
+     &           + a(i,2)*TT1**2.0d0/3.0d0 + a(i,3)*TT1**3.0d0/4.0d0
+     &           + a(i,4)*TT1**4.0d0/5.0d0 + a(i,5)/TT1
+            
+            s_r = a(i,0)*log(TT1) + a(i,1)*TT1
+     &           + a(i,2)*TT1**2.0d0/2.0d0 + a(i,3)*TT1**3.0d0/3.0d0
+     &           + a(i,4)*TT1**4.0d0/4.0d0 + a(i,6)
+         else
+            h_rt = a(i,7) + a(i,8)*TT1/2.0d0
+     &           + a(i,9)*TT1**2.0d0/3.0d0 + a(i,10)*TT1**3.0d0/4.0d0
+     &           + a(i,11)*TT1**4.0d0/5.0d0 + a(i,12)/TT1
+            
+            s_r = a(i,7)*log(TT1) + a(i,8)*TT1
+     &           + a(i,9)*TT1**2.0d0/2.0d0 + a(i,10)*TT1**3.0d0/3.0d0
+     &           + a(i,11)*TT1**4.0d0/4.0d0 + a(i,13)           
+         end if
+
+         dG_rt = h_rt - s_r
+         do k=1,m_kind(0,i)
+            j = elnum(m_kind(k,i))
+            if(c_nasa(j)==0) then
+               print*,"Provide the data in data/Burcat_ref-elements.dat"
+     &              ," and edit nasa_polynomial.f for "
+     &              ,trim(catm(m_kind(k,i)))
+               stop
+            else
+               if(TT1 > 1.0d3) then
+                  h_rt = b_nasa(j,0) + b_nasa(j,1)*TT1/2.0d0 
+     &                 + b_nasa(j,2)*TT1**2.0d0/3.0d0
+     &                 + b_nasa(j,3)*TT1**3.0d0/4.0d0
+     &                 + b_nasa(j,4)*TT1**4.0d0/5.0d0 + b_nasa(j,5)/TT1
+                  
+                  s_r = b_nasa(j,0)*log(TT1) + b_nasa(j,1)*TT1
+     &                 + b_nasa(j,2)*TT1**2.0d0/2.0d0
+     &                 + b_nasa(j,3)*TT1**3.0d0/3.0d0
+     &                 + b_nasa(j,4)*TT1**4.0d0/4.0d0 + b_nasa(j,6)
+               else
+                  h_rt = b_nasa(j,7) + b_nasa(j,8)*TT1/2.0d0
+     &                 + b_nasa(j,9)*TT1**2.0d0/3.0d0
+     &                 + b_nasa(j,10)*TT1**3.0d0/4.0d0
+     &                 + b_nasa(j,11)*TT1**4.0d0/5.0d0
+     $                 + b_nasa(j,12)/TT1
+
+                  s_r = b_nasa(j,7)*log(TT1) + b_nasa(j,8)*TT1
+     &                 + b_nasa(j,9)*TT1**2.0d0/2.0d0
+     &                 + b_nasa(j,10)*TT1**3.0d0/3.0d0
+     &                 + b_nasa(j,11)*TT1**4.0d0/4.0d0 + b_nasa(j,13)           
+               end if
+               dG_rt_ref(j) = h_rt - s_r
+
+               dG_rt = dG_rt
+     &              - dble(m_anz(k,i))*dG_rt_ref(j)
+            end if
+         end do
+
+         dG = -dG_rt
+         lnk = dG + (1-Natom(i))*lnbar
+
       else
         print*,cmol(i),"i,fit=",i,fit(i)
         stop "???"
@@ -5645,7 +5789,7 @@ c      close(12)
       dispol_file(1) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_BarklemCollet.dat'
       dispol_file(2) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_StockKitzmann_withoutTsuji.dat'
       dispol_file(3) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_WoitkeRefit.dat'
-      dispol_file(4) = ''
+      dispol_file(4) = trim(homedir) // '/ARCiS/src/dispol_Burcat.dat'
 
 c      dispol_file(1) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_GGchem.dat'
 c      dispol_file(2) = ''
