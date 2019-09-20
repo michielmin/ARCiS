@@ -212,6 +212,8 @@ c			P(1:nr),T(1:nr) : These are the pressure and temperature inside the layers
 c			molname(1:nmol) : names of the molecules included
 c			Kzz : Diffusion coefficient
 c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now set to equilibrium abundances.
+		   call output("==================================================================")
+		   call output("Computing disequilibrium chemistry")
 		   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz)
 		   
 		endif
