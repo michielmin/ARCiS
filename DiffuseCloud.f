@@ -362,7 +362,8 @@ c	atoms_cloud(i,3)=1
 	do i=1,nnr
 		densv(i,1:nCS)=(mu*mp/(kb*CloudT(i)))*exp(BTP-ATP/CloudT(i))
 		do iCS=1,nCS
-			if(cloudT(i).gt.maxT(iCS)) densv(i,iCS)=densv(i,iCS)+(mu(iCS)*mp/(kb*CloudT(i)*10d0))*exp(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0))
+			if(cloudT(i).gt.maxT(iCS)) densv(i,iCS)=densv(i,iCS)+
+     &                    (mu(iCS)*mp/(kb*CloudT(i)*10d0))*exp(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0))
 			if(densv(i,iCS).lt.Clouddens(i)*xv_bot(iCS)) dospecies(iCS)=.true.
 		enddo
 		if(i.eq.1) then
