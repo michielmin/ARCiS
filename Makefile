@@ -34,7 +34,7 @@ ifeq ($(multi),true)
 		endif
 	endif
 	ifeq ($(debug),true)
-  		MULTICORE = -openmp -DUSE_OPENMP
+		MULTICORE = -openmp -DUSE_OPENMP
 	endif
 endif
 
@@ -72,6 +72,10 @@ OBJS	= Modules.o \
 		ComputeT.o \
 		DiffuseCloud.o \
 		Init.o \
+		diseq_diffusion.o \
+		diseq_rate.o \
+		diseq_timescale.o \
+		diseq_calc.o \
 		SetupStructure.o \
 		SetupOpacities.o \
 		Raytrace.o \
@@ -113,6 +117,7 @@ OBJS	= Modules.o \
 		truncated_normal.o \
 		amoeba.o \
 		GGchemARCiS.o \
+		nasa_polynomial.o \
 		GGchem_linpack_q.o \
 		GGchem_is_nan.o \
 		PostEqualWeights.o \

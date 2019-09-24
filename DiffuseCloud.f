@@ -362,7 +362,8 @@ c	atoms_cloud(i,3)=1
 	do i=1,nnr
 		densv(i,1:nCS)=(mu*mp/(kb*CloudT(i)))*exp(BTP-ATP/CloudT(i))
 		do iCS=1,nCS
-			if(cloudT(i).gt.maxT(iCS)) densv(i,iCS)=densv(i,iCS)+(mu(iCS)*mp/(kb*CloudT(i)*10d0))*exp(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0))
+			if(cloudT(i).gt.maxT(iCS)) densv(i,iCS)=densv(i,iCS)+
+     &                    (mu(iCS)*mp/(kb*CloudT(i)*10d0))*exp(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0))
 			if(densv(i,iCS).lt.Clouddens(i)*xv_bot(iCS)) dospecies(iCS)=.true.
 		enddo
 		if(i.eq.1) then
@@ -799,6 +800,19 @@ c correction for SiC
 		write(20,*) P(i),molfracs_atoms(1:N_atoms)
 	enddo
 	close(unit=20)
+
+	if(disequilibrium) then
+c       call disequilibrium code
+c       input: 	R(1:nr+1) : These are the radial boundaries of the layers (bottom to top)
+c       P(1:nr),T(1:nr) : These are the pressure and temperature inside the layers
+c       molname(1:nmol) : names of the molecules included
+c       Kzz : Diffusion coefficient
+c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now set to equilibrium abundances.
+	   call output("==================================================================")
+	   call output("Computing disequilibrium chemistry")
+	   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz)
+	   
+	endif
 
 	deallocate(densv)
 	deallocate(rpart)
