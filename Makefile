@@ -118,7 +118,8 @@ OBJS	= Modules.o \
 		PostEqualWeights.o \
 		TrendCompute.o \
 		MCComputeT.o \
-		LightCurve.o
+		LightCurve.o \
+		Run3D.o
 
 # program name and install location
 PROGRAM       = ARCiS

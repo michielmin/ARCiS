@@ -121,6 +121,7 @@
 				allocate(ObsSpec(i)%R(ObsSpec(i)%ndata))
 				allocate(ObsSpec(i)%Rexp(ObsSpec(i)%ndata))
 				allocate(ObsSpec(i)%model(ObsSpec(i)%ndata))
+				allocate(ObsSpec(i)%ilam(ObsSpec(i)%ndata))
 				ilam=1
 				if(ObsSpec(i)%beta.lt.0d0) ObsSpec(i)%beta=ObsSpec(i)%ndata
 				do j=1,nj
@@ -144,6 +145,16 @@
 					endif
 				enddo
 				close(unit=20)
+				do j=1,ObsSpec(i)%ndata
+					dmin=1d200
+					do ilam=1,nlam-1
+						d=abs(lam(ilam)-ObsSpec(i)%lam(j))/dlam(ilam)
+						if(abs(ObsSpec(i)%R(j)-lam(ilam)/dlam(ilam))/ObsSpec(i)%R(j).lt.0.1.and.d.lt.dmin) then
+							ObsSpec(i)%ilam(j)=ilam
+							dmin=d
+						endif
+					enddo
+				enddo
 		end select
 	enddo
 
@@ -1408,13 +1419,13 @@ c			vec(i)=gasdev(idum)
 	do j=1,nlam-1
 		lamobs(j)=sqrt(lam(j)*lam(j+1))
 	enddo
-	ilam=1
 	select case(ObsSpec(i)%type)
 		case("trans","transmission","transC")
 			specsave(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
 			if(useobsgrid) then
-				spec(1:ObsSpec(i)%ndata)=specsave(ilam:ilam+ObsSpec(i)%ndata-1)
-				ilam=ilam+ObsSpec(i)%ndata
+				do ilam=1,ObsSpec(i)%ndata
+					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
+				enddo
 			else
 				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
@@ -1423,8 +1434,9 @@ c			vec(i)=gasdev(idum)
 		case("emisr","emisR")
 			specsave(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
 			if(useobsgrid) then
-				spec(1:ObsSpec(i)%ndata)=specsave(ilam:ilam+ObsSpec(i)%ndata-1)
-				ilam=ilam+ObsSpec(i)%ndata
+				do ilam=1,ObsSpec(i)%ndata
+					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
+				enddo
 			else
 				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
@@ -1433,8 +1445,9 @@ c			vec(i)=gasdev(idum)
 		case("emisa","emis","emission")
 			specsave(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 			if(useobsgrid) then
-				spec(1:ObsSpec(i)%ndata)=specsave(ilam:ilam+ObsSpec(i)%ndata-1)
-				ilam=ilam+ObsSpec(i)%ndata
+				do ilam=1,ObsSpec(i)%ndata
+					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
+				enddo
 			else
 				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)

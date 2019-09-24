@@ -64,8 +64,22 @@ c terms of use
 
 	end
 	
-
 	subroutine ComputeModel(recomputeopacities)
+	use GlobalSetup
+	IMPLICIT NONE
+	logical recomputeopacities
+	
+	if(do3D) then
+		call Run3D
+	else
+		call ComputeModel1D(recomputeopacities)
+	endif
+	
+	return
+	end
+
+
+	subroutine ComputeModel1D(recomputeopacities)
 	use GlobalSetup
 	IMPLICIT NONE
 	logical Tconverged
@@ -106,7 +120,7 @@ c terms of use
 	stoptime_w=omp_get_wtime()
 	call output("Walltime:            " // trim(dbl2string((stoptime_w-starttime_w),'(f10.2)')) // " s")
 #endif
-	call Raytrace()
+	if(.not.do3D) call Raytrace()
 	call cpu_time(stoptime)
 	call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 

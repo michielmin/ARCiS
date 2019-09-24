@@ -104,7 +104,7 @@ c===============================================================================
 	logical didcondens_chem,coagulation,resume_multinest,doMCcompute,disequilibrium
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
-	real*8 mixratHaze,PHaze,dPHaze,kappaHaze,Kzz,SiOratio,NOratio
+	real*8 mixratHaze,PHaze,dPHaze,kappaHaze,Kzz,SiOratio,NOratio,Palbedo
 	logical enhancecarbon,fast_chem,gamma_equal,dopostequalweights
 	logical transspec,emisspec,rainout,computeLC
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
@@ -117,6 +117,10 @@ c===============================================================================
 	integer nBB
 	parameter(nBB=10000)
 	real*8,allocatable :: BB(:,:)						! nBB,nlam
+
+	logical do3D
+	real*8 Kzz3D_1,Kzz3D_2,beta3D_1,beta3D_2,Sdot3D_1,Sdot3D_2,long_shift
+	real*8 kappa3D_1,kappa3D_2,gamma3D_1,gamma3D_2
 
 	integer nmol_data
 	parameter(nmol_data=106)
@@ -281,6 +285,7 @@ cPoints for the temperature structure
 		character*500 file
 		character*10 type
 		real*8,allocatable :: lam(:),y(:),dy(:),R(:),Rexp(:),model(:)
+		integer,allocatable :: ilam(:)
 		real*8 beta,scale
 		integer ndata,i2d
 		logical spec

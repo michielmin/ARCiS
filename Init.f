@@ -873,6 +873,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Tform
 		case("pform")
 			read(key%value,*) Pform
+		case("albedo")
+			read(key%value,*) Palbedo
 		case("fenrich","f_enrich","enrich","fdry","f_dry")
 			read(key%value,*) f_dry
 		case("fwet","f_wet")
@@ -922,6 +924,19 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		case("n2d")
 			read(key%value,*) i
 			n2d=max(i,n2d)
+		case("do3d","run3d")
+			read(key%value,*) do3D
+		case("kzz3d")
+			if(key%nr1.eq.1) read(key%value,*) Kzz3D_1
+			if(key%nr1.eq.2) read(key%value,*) Kzz3D_2
+		case("sdot3d")
+			if(key%nr1.eq.1) read(key%value,*) Sdot3D_1
+			if(key%nr1.eq.2) read(key%value,*) Sdot3D_2
+		case("beta3d")
+			if(key%nr1.eq.1) read(key%value,*) beta3D_1
+			if(key%nr1.eq.2) read(key%value,*) beta3D_2
+		case("longshift")
+			read(key%value,*) long_shift
 		case("iwolk")
 			read(key%value,*) iWolk
 		case("emisspec")
@@ -1196,6 +1211,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Dplanet=1d0
 	logg=4.5d0
 	
+	Palbedo=0d0
+	
 	orbit_P=-1d0
 	orbit_e=0d0
 	orbit_omega=0d0
@@ -1277,6 +1294,15 @@ c	if(par_tprofile) call ComputeParamT(T)
 	dopostequalweights=.false.
 	npew=-1
 	nboot=1
+
+	do3D=.false.
+	Kzz3D_1=-1d8
+	Kzz3D_2=-1d6
+	Sdot3D_1=-1d-12
+	Sdot3D_2=-1d-15
+	beta3D_1=-0.2
+	beta3D_2=-0.1
+	long_shift=0d0
 
 	computecontrib=.false.
 	
@@ -1671,7 +1697,7 @@ c				enddo
 	use Constants
 	IMPLICIT NONE
 	real*8 lam0,T0,Planck,tot,x,y,dy,dx
-	integer i,j,ilam,nj
+	integer i,j,ilam,nj,jlam
 	
 	if(useobsgrid) then
 		nlam=1
@@ -1742,11 +1768,21 @@ c				enddo
 					lam(ilam)=x*micron
 					dx=x/dx
 					dlam(ilam)=dx*micron
+					do jlam=1,ilam-1
+						if(abs(lam(ilam)-lam(jlam)).lt.(dlam(jlam)*0.1d0).and.
+     &							abs(dlam(jlam)-dlam(ilam))/(dlam(jlam)+dlam(ilam)).lt.0.1d0) then
+     						ilam=ilam-1
+     						goto 3
+     					endif
+     				enddo
 					goto 3
 4					close(unit=30)
+					nlam=ilam+1
 			end select
 		enddo
+		call sortw(lam,dlam,ilam)
 		lam(ilam+1)=lam(ilam)+dlam(ilam)/2d0
+		dlam(ilam+1)=dlam(ilam)
 		do i=1,nlam
 			freq(i)=1d0/lam(i)
 		enddo

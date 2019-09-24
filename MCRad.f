@@ -411,6 +411,9 @@ c		enddo
 	real*8 dz,theta,Fr,Fi,random,dx,dy,x,y,z,rr,u,v,w,cost,sint
 	type(Mueller) M
 
+	call randomdirection(dx,dy,dz)
+	return
+
 	Fr=random(idum)*M%IF11(180)
 	it=0
 	call hunt(M%IF11,180,Fr,it)
