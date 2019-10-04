@@ -678,13 +678,15 @@ c			write(82,*) P(i), Kzz_r(i)
 		Cloud(ii)%sigma=1d-10
 		call output("Computing inhomogeneous cloud particles")
 		call SetupPartCloud(ii)
-		open(unit=25,file=trim(outputdir) // "DRIFTcloud" // trim(int2string(ii,'(i0.4)')),recl=6000)
-		do i=1,nr
-			write(25,*) P(i),T(i),Cloud(ii)%rv(i),Cloud(ii)%sigma(i),cloud_dens(i,ii),dens(i),
+		if(.not.retrieval) then
+			open(unit=25,file=trim(outputdir) // "DRIFTcloud" // trim(int2string(ii,'(i0.4)')),recl=6000)
+			do i=1,nr
+				write(25,*) P(i),T(i),Cloud(ii)%rv(i),Cloud(ii)%sigma(i),cloud_dens(i,ii),dens(i),
      &			Cloud(ii)%frac(i,1)*3d0,Cloud(ii)%frac(i,4)*3d0,Cloud(ii)%frac(i,7:12),
      &			Cloud(ii)%frac(i,13)*3d0,Cloud(ii)%frac(i,16)
-		enddo
-		close(unit=25)
+			enddo
+			close(unit=25)
+		endif
 	else if(Cloud(ii)%file.ne.' ') then
 		call regridN(Cloud(ii)%file,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,4,.false.,.false.)
 		cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)

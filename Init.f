@@ -197,6 +197,7 @@ c===============================================================================
 	nclouds=0
 	n_points=0
 	n_ret=0
+	n_Par3D=0
 	n_instr=0
 	j=0
 	mixratfile=.false.
@@ -223,6 +224,10 @@ c===============================================================================
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nobs) nobs=key%nr1
+			case("par3d")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr2.eq.0) key%nr2=1
+				if(key%nr1.gt.n_Par3D) n_Par3D=key%nr1
 			case("instrument")
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
@@ -311,6 +316,7 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(instrument(max(n_instr,1)))
 	allocate(instr_ntrans(max(n_instr,1)))
 	allocate(instr_nobs(max(n_instr,1)))
+	allocate(Par3D(n_Par3D))
 
 	ncia0=0
 	existh2h2=.false.
@@ -627,6 +633,10 @@ c	condensates=(condensates.or.cloudcompute)
 	endif
 	call output("==================================================================")
 	
+	allocate(lamemis(nlam),lamtrans(nlam))
+	lamemis=emisspec
+	lamtrans=transspec
+	
 	return
 	end
 
@@ -835,6 +845,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadRetrieval(key)
 		case("obs")
 			call ReadObsSpec(key)
+		case("par3d")
+			call ReadPar3D(key)
 		case("useobsgrid")
 			read(key%value,*) useobsgrid
 		case("nboot")
@@ -1360,6 +1372,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 		RetPar(i)%opacitycomp=.true.
 		RetPar(i)%increase=.false.
 	enddo
+	do i=1,n_Par3D
+		Par3D(i)%logscale=.false.
+	enddo
 	npop=30
 	ngen=0
 	gene_cross=.false.
@@ -1609,6 +1624,31 @@ c				enddo
 		case("i2d")
 			read(key%value,*) ObsSpec(i)%i2d
 			if(ObsSpec(i)%i2d.gt.n2d) n2d=ObsSpec(i)%i2d
+		case default
+			call output("Keyword not recognised: " // trim(key%key2))
+	end select
+	
+	return
+	end
+
+	subroutine ReadPar3D(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i
+	i=key%nr1
+	
+	select case(key%key2)
+		case("keyword","parameter")
+			read(key%value,*) Par3D(i)%keyword
+		case("min","xmin")
+			read(key%value,*) Par3D(i)%xmin
+		case("max","xmax")
+			read(key%value,*) Par3D(i)%xmax
+		case("log","logscale")
+			read(key%value,*) Par3D(i)%logscale
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
