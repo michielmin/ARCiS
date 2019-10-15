@@ -96,28 +96,22 @@
 
 	do i=1,n3D
 		call tellertje_perc(i,n3D)
+		call SetOutputMode(.false.)
 		beta3D(i)=betamin+(betamax-betamin)*real(i-1)/real(n3D-1)
-		if(Kzz3D_1.gt.0d0) then
-			Kzz3D(i)=10d0**(log10(Kzz3D_1)+log10(Kzz3D_2/Kzz3D_1)*beta3D(i))
-		else
-			Kzz3D(i)=Cloud(1)%Kzz
-		endif
-		if(Sdot3D_1.gt.0d0) then
-			Sdot3D(i)=10d0**(log10(Sdot3D_1)+log10(Sdot3D_2/Sdot3D_1)*beta3D(i))
-		else
-			Sdot3D(i)=Cloud(1)%Sigmadot
-		endif
+		do j=1,n_Par3D
+			if(Par3D(j)%logscale) then
+				Par3D(j)%x=10d0**(log10(Par3D(j)%xmin)+log10(Par3D(j)%xmax/Par3D(j)%xmin)*beta3D(i))
+			else
+				Par3D(j)%x=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*beta3D(i)
+			endif
+		enddo
+		call MapPar3D()
 
 		betaT=beta3D(i)
-		do icloud=1,nclouds
-			Cloud(icloud)%Kzz=Kzz3D(i)
-			Cloud(icloud)%Sigmadot=Sdot3D(i)
-		enddo
 
 		call InitDens()
 		call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
 		Fstar=Fstar*pi*Rstar**2
-		call SetOutputMode(.false.)
 		call ComputeModel1D(recomputeopac)
 
 		if(R(nr+1).gt.Rmax) then
@@ -415,8 +409,39 @@ c	enddo
 	return
 	end
 	
-	
 
+	subroutine MapPar3D()
+	use GlobalSetup
+	use ReadKeywords
+	use Constants
+	IMPLICIT NONE
+	type(SettingKey) key
+	character*1000 readline
+	integer i
+	
+	Rplanet=Rplanet/Rjup
+	Mplanet=Mplanet/Mjup
+	Rstar=Rstar/Rsun
+	Mstar=Mstar/Msun
+	Dplanet=Dplanet/AU
+	lam1=lam1/micron
+	lam2=lam2/micron
+	distance=distance/parsec
+	r_nuc=r_nuc/micron
+	orbit_inc=orbit_inc*180d0/pi
+
+	metallicity=metallicity0
+	do i=1,n_Par3D
+		readline=trim(Par3D(i)%keyword) // "=" // trim(dbl2string(Par3D(i)%x,'(es14.7)'))
+		call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2,key%key2d)
+		call ReadAndSetKey(key)
+	enddo
+	call ConvertUnits()
+	metallicity0=metallicity
+
+	return
+	end
+	
 
 	subroutine Setup3D(beta,long,latt,nlong,nlatt,long0,b1,b2,albedo,betamin,betamax)
 	IMPLICIT NONE
@@ -880,59 +905,67 @@ c-----------------------------------------------------------------------
 		enddo
 	enddo
 
-	do ig=1,ng
-		Si(1:nlam,ig,1:nr,nnu0)=BBr(1:nlam,1:nr)
-	enddo
-
 	call gauleg(0d0,1d0,nu,wnu,nnu)
 
-	do inu0=1,nnu0-1
-		must=(real(inu0)-0.5)/real(nnu0-1)
-		do ilam=1,nlam-1
-			do ig=1,ng
-				tauRs(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
-				contr=(Fstar(ilam)/(2d0*pi*Dplanet**2))
-				call SolveIjStar(tauRs,contr,Ijs,nr)
-				Jstar_nu(1:nr,ilam,ig)=Ijs(1:nr)
+	do inu0=1,nnu0
+		if(inu0.eq.nnu0) then
+			Jstar_nu=0d0
+		else
+			must=(real(inu0)-0.5)/real(nnu0-1)
+			do ilam=1,nlam-1
+				do ig=1,ng
+					tauRs(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
+					contr=(Fstar(ilam)/(2d0*pi*Dplanet**2))
+					call SolveIjStar(tauRs,contr,Ijs,nr)
+					Jstar_nu(1:nr,ilam,ig)=Ijs(1:nr)
+				enddo
 			enddo
-		enddo
+		endif
 	
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,ig,Itot,iter,ir,contr,inu,tauR,Ij)
-!$OMP& SHARED(nlam,ng,nr,Jstar_nu,Ce,Si,BBr,Ca,Cs,tauR_nu,nu,wnu,inu0)
+!$OMP& SHARED(nlam,ng,nr,Jstar_nu,Ce,Si,BBr,Ca,Cs,tauR_nu,nu,wnu,inu0,lamemis)
 	allocate(tauR(nr))
 	allocate(Ij(nr))
 	allocate(Itot(nr))
 !$OMP DO
 		do ilam=1,nlam-1
-			do ig=1,ng
-				Itot=0d0
-				do iter=1,niter
+			if(lamemis(ilam)) then
+				do ig=1,ng
+					Itot=0d0
+					do iter=1,niter
+						do ir=1,nr
+							contr=Jstar_nu(ir,ilam,ig)
+							if(Ce(ilam,ig,ir).eq.0d0) then
+								Si(ilam,ig,ir,inu0)=BBr(ilam,ir)
+							else
+								Si(ilam,ig,ir,inu0)=BBr(ilam,ir)*Ca(ilam,ig,ir)/Ce(ilam,ig,ir)+contr*Cs(ilam,ir)/(Ce(ilam,ig,ir))
+								Si(ilam,ig,ir,inu0)=Si(ilam,ig,ir,inu0)+Itot(ir)*Cs(ilam,ir)/(Ce(ilam,ig,ir))
+							endif
+						enddo
+						Itot=0d0
+						do inu=1,nnu
+							tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
+							call SolveIj(tauR,Si(ilam,ig,1:nr,inu0),Ij,nr)
+							Itot=Itot+Ij*wnu(inu)
+						enddo
+					enddo
 					do ir=1,nr
-						contr=Jstar_nu(ir,ilam,ig)
-						if(Ce(ilam,ig,ir).eq.0d0) then
+						if(Ca(ilam,ig,ir).eq.0d0.or.(.not.Si(ilam,ig,ir,inu0).gt.0d0)) then
 							Si(ilam,ig,ir,inu0)=BBr(ilam,ir)
 						else
-							Si(ilam,ig,ir,inu0)=BBr(ilam,ir)*Ca(ilam,ig,ir)/Ce(ilam,ig,ir)+contr*Cs(ilam,ir)/(Ce(ilam,ig,ir))
-							Si(ilam,ig,ir,inu0)=Si(ilam,ig,ir,inu0)+Itot(ir)*Cs(ilam,ir)/(Ce(ilam,ig,ir))
+							Si(ilam,ig,ir,inu0)=Si(ilam,ig,ir,inu0)*Ce(ilam,ig,ir)/Ca(ilam,ig,ir)
 						endif
 					enddo
-					Itot=0d0
-					do inu=1,nnu
-						tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
-						call SolveIj(tauR,Si(ilam,ig,1:nr,inu0),Ij,nr)
-						Itot=Itot+Ij*wnu(inu)
+				enddo
+			else
+				do ig=1,ng
+					do ir=1,nr
+						Si(ilam,ig,ir,inu0)=BBr(ilam,ir)
 					enddo
 				enddo
-				do ir=1,nr
-					if(Ca(ilam,ig,ir).eq.0d0.or.(.not.Si(ilam,ig,ir,inu0).gt.0d0)) then
-						Si(ilam,ig,ir,inu0)=BBr(ilam,ir)
-					else
-						Si(ilam,ig,ir,inu0)=Si(ilam,ig,ir,inu0)*Ce(ilam,ig,ir)/Ca(ilam,ig,ir)
-					endif
-				enddo
-			enddo
+			endif
 		enddo
 !$OMP END DO
 	deallocate(tauR)

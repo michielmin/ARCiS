@@ -97,7 +97,7 @@ c===============================================================================
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib
 	logical dochemistry,retrieve_profile,condensates,faircoverage,speclimits,mapCOratio,randomseed
-	logical,allocatable :: includemol(:),didcondens(:)
+	logical,allocatable :: includemol(:),didcondens(:),lamemis(:),lamtrans(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust,twind,epsiter
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud,metallicity0,fday
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun,useobsgrid
@@ -123,7 +123,7 @@ c===============================================================================
 	real*8 kappa3D_1,kappa3D_2,gamma3D_1,gamma3D_2
 
 	integer nmol_data
-	parameter(nmol_data=106)
+	parameter(nmol_data=109)
 	real*8 Mmol(nmol_data)
 	character*10 molname(nmol_data)
 	parameter(molname = (/'H2O   ','CO2   ','O3    ','N2O   ','CO    ','CH4   ',
@@ -139,7 +139,7 @@ c===============================================================================
      &  'H2+   ','H3+   ','HeH+  ','KCl   ','KF    ','LiCl  ','LiF   ','LiH   ',
      &  'LiH+  ','MgF   ','MgH   ','MgO   ','NaCl  ','NaF   ','NH    ','NS    ',
      &  'OH+   ','P2H2_c','P2H2_t','PN    ','PO    ','PS    ','ScH   ','SH    ',
-     &  'SiH   ','SiH4  ','TiH   ','H2Oem '/))
+     &  'SiH   ','SiH4  ','TiH   ','H2Oem ','Na+   ','K+    ','H-    '/))
 	parameter(Mmol = (/     17.8851,  43.6918,  47.6511,  43.6947,  27.8081,  15.9272,  
      &	31.7674,  29.7889,  63.5840,  45.6607,  16.9072,  62.5442,  16.8841,  19.8619,  
      &	36.1973,  80.3271,   1.0070,  51.0760,  59.6379,  29.8088,  52.0765,  27.8112,  
@@ -153,7 +153,7 @@ c===============================================================================
      &   2.0151,   3.0238,   5.0105,  74.5513,  58.0967,  42.3940,  25.9390,   7.9500,
      &   7.9500,  43.3030,  25.3130,  40.3040,  58.4400,  41.9882,  15.0146,  46.0717,
      &  17.0070,  63.9600,  63.9600,  44.9800,  46.9700,  31.9800,  45.9600,  33.0729,
-     &  29.0934,  32.1173,  48.8700,  17.8851 /))
+     &  29.0934,  32.1173,  48.8700,  17.8851,  22.9900,  39.0980,   1.0079/))
 	integer Catoms(nmol_data),Oatoms(nmol_data),Hatoms(nmol_data)
 	parameter(Catoms = (/0,1,0,0,1,1,
      &				 0,0,0,0,0,0,0,0,
@@ -168,7 +168,7 @@ c===============================================================================
      &                           0,0,0,0,0,0,0,0,
      &                           0,0,0,0,0,0,0,0,
      &                           0,0,0,0,0,0,0,0,
-     &                           0,0,0,0 /))
+     &                           0,0,0,0,0,0,0 /))
 	parameter(Oatoms = (/1,2,3,1,1,0,
      &				 2,1,2,2,0,3,1,0,
      &				 0,0,0,1,1,1,1,0,
@@ -182,7 +182,7 @@ c===============================================================================
      &                           0,0,0,0,0,0,0,0,
      &                           0,0,0,1,0,0,0,0,
      &                           1,0,0,0,1,0,0,0,
-     &                           0,0,0,1  /))
+     &                           0,0,0,1,0,0,0  /))
 	parameter(Hatoms = (/2,0,0,0,0,4,
      &				 0,0,0,0,3,1,1,1,
      &				 1,1,1,0,0,2,1,0,
@@ -196,7 +196,7 @@ c===============================================================================
      &                           2,3,1,0,0,0,0,1,
      &                           1,0,1,0,0,0,1,0,
      &                           1,2,2,0,0,0,1,1,
-     &                           1,4,1,2 /))
+     &                           1,4,1,2,0,0,1 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt,n_instr
 	logical HITEMP,opacitymode,compute_opac,Mp_from_logg,trend_compute
@@ -280,6 +280,15 @@ cPoints for the temperature structure
 
 	type(RetrievalPar),allocatable :: RetPar(:)
 	integer n_ret
+
+	type Parameter3D
+		character*500 keyword
+		real*8 xmin,xmax,x
+		logical logscale
+	end type Parameter3D
+
+	type(Parameter3D),allocatable :: Par3D(:)
+	integer n_Par3D
 	
 	type ObservedSpec
 		character*500 file

@@ -757,20 +757,22 @@ c correction for SiC
 		Cloud(ii)%frac(i,1:18)=Cloud(ii)%frac(i,1:18)/tot
 	enddo
 
-	open(unit=20,file=trim(outputdir) // '/cloudstructure.dat',RECL=1000)
-	form='("#",a18,a19,a19,' // trim(int2string(nCS+1,'(i4)')) // 'a23,a19,a19,a19)'
-	write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"MgO","r[micron]","T[K]","Jstar"
-	form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+1,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
-	do i=1,nnr
-		write(20,form) CloudP(i),Clouddens(i),xn(i),xc(1:nCS,i),xMgO(i),rpart(i),CloudT(i),Sn(i)/m_nuc
-	enddo
-	close(unit=20)
+	if(.not.retrieval) then
+		open(unit=20,file=trim(outputdir) // '/cloudstructure.dat',RECL=1000)
+		form='("#",a18,a19,a19,' // trim(int2string(nCS+1,'(i4)')) // 'a23,a19,a19,a19)'
+		write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"MgO","r[micron]","T[K]","Jstar"
+		form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+1,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
+		do i=1,nnr
+			write(20,form) CloudP(i),Clouddens(i),xn(i),xc(1:nCS,i),xMgO(i),rpart(i),CloudT(i),Sn(i)/m_nuc
+		enddo
+		close(unit=20)
+	endif
 
 	if(.not.(retrieval.or.domakeai)) call ComputeTevap
 
 	T=T0
 
-	open(unit=20,file=trim(outputdir) // '/atoms.dat',RECL=6000)
+c	open(unit=20,file=trim(outputdir) // '/atoms.dat',RECL=6000)
 	ini=.true.
 	do i=1,nr
 		call tellertje(i,nr)
@@ -797,9 +799,9 @@ c correction for SiC
    			MMW(i)=MMW(i-1)
    			didcondens(i)=didcondens(i-1)
    		endif
-		write(20,*) P(i),molfracs_atoms(1:N_atoms)
+c		write(20,*) P(i),molfracs_atoms(1:N_atoms)
 	enddo
-	close(unit=20)
+c	close(unit=20)
 
 	if(disequilibrium) then
 c       call disequilibrium code

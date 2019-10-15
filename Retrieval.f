@@ -6,6 +6,7 @@
 	character*6000 line
 	real*8 scale,scale_av,d,dmin
 	integer nscale,i2,j2
+	logical truefalse
 	
 	do i=1,nobs
 		select case(ObsSpec(i)%type)
@@ -36,6 +37,11 @@
 				ObsSpec(i)%spec=.false.
 			case('lightcurve')
 				ObsSpec(i)%spec=.true.
+				inquire(file=ObsSpec(i)%file,exist=truefalse)
+				if(.not.truefalse) then
+					call output("File does not exist" // trim(ObsSpec(i)%file))
+					stop
+				endif
 				open(unit=20,file=ObsSpec(i)%file,RECL=6000)
 10				read(20,*,err=10) ObsSpec(i)%nt
 				allocate(ObsSpec(i)%t(ObsSpec(i)%nt))
@@ -104,6 +110,11 @@
 				enddo
 			case default
 				ObsSpec(i)%spec=.true.
+				inquire(file=ObsSpec(i)%file,exist=truefalse)
+				if(.not.truefalse) then
+					call output("File does not exist" // trim(ObsSpec(i)%file))
+					stop
+				endif
 				open(unit=20,file=ObsSpec(i)%file,RECL=1000)
 				j=1
 				ilam=1
@@ -145,6 +156,10 @@
 					endif
 				enddo
 				close(unit=20)
+				if(useobsgrid) then
+					lamemis=.false.
+					lamtrans=.false.
+				endif
 				do j=1,ObsSpec(i)%ndata
 					dmin=1d200
 					do ilam=1,nlam-1
@@ -154,6 +169,10 @@
 							dmin=d
 						endif
 					enddo
+					if(useobsgrid) then
+						if(ObsSpec(i)%type(1:4).eq.'emis') lamemis(ObsSpec(i)%ilam(j))=.true.
+						if(ObsSpec(i)%type(1:5).eq.'trans') lamtrans(ObsSpec(i)%ilam(j))=.true.
+					endif
 				enddo
 		end select
 	enddo
