@@ -287,6 +287,11 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 	real*8 x(nr),tau,Tirr,eta,expint,dlnT,dlnP,beta_used,max
 	integer i
 
+	if(.not.gamma_equal) then
+		call ComputeParamT2(x)
+		return
+	endif
+
 	beta_used=betaT
 	if(i2d.ne.0) then
 		if(i2d.eq.1) then
@@ -345,7 +350,7 @@ c			beta_used=max
 	return
 	end
 
-	subroutine ComputeParamTold(x)
+	subroutine ComputeParamT2(x)
 	use GlobalSetup
 	IMPLICIT NONE
 	real*8 x(nr),tau,Tirr,eta,expint,dlnT,dlnP,beta_used,max
@@ -372,7 +377,7 @@ c			beta_used=max
 	endif
 
 	tau=0d0
-	Tirr=beta_used*sqrt(Rstar/(2d0*Dplanet))*Tstar
+	Tirr=(beta_used/4d0)**0.25*sqrt(Rstar/(2d0*Dplanet))*Tstar
 	if(computeT) then
 		x=(Tirr**4+TeffP**4)**0.25
 		return
@@ -386,14 +391,14 @@ c			beta_used=max
 			eta=2d0/3d0+(2d0/(3d0*gammaT1))*(1d0+(gammaT1*tau/2d0-1)*exp(-gammaT1*tau))
      &					+(2d0*gammaT1/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT1*tau)
 		else
-			eta=2d0/3d0+(2d0/(3d0*gammaT1))
+			eta=(2d0/3d0+1d0/(sqrt(3d0)*gammaT1)+(gammaT1/sqrt(3d0)-1d0/(sqrt(3d0)*gammaT1))*exp(-gammaT1*tau*sqrt(3d0)))
 		endif
 		x(i)=x(i)+(3d0*Tirr**4/4d0)*(1d0-alphaT)*eta
 		if(tau.lt.100d0) then
 			eta=2d0/3d0+(2d0/(3d0*gammaT2))*(1d0+(gammaT2*tau/2d0-1)*exp(-gammaT2*tau))
      &					+(2d0*gammaT2/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT2*tau)
 		else
-			eta=2d0/3d0+(2d0/(3d0*gammaT2))
+			eta=(2d0/3d0+1d0/(sqrt(3d0)*gammaT2)+(gammaT2/sqrt(3d0)-1d0/(sqrt(3d0)*gammaT2))*exp(-gammaT2*tau*sqrt(3d0)))
 		endif
 		x(i)=x(i)+(3d0*Tirr**4/4d0)*alphaT*eta
 		x(i)=x(i)**0.25d0
