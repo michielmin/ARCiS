@@ -304,6 +304,7 @@ c select at least the species relevant for disequilibrium chemistry
 
 	allocate(mixrat(nmol))
 	allocate(includemol(nmol))
+	allocate(opacitymol(nmol))
 	allocate(Cloud(max(nclouds,1)))
 	allocate(XeqCloud(nr,max(nclouds,1)))
 	allocate(XeqCloud_old(nr,max(nclouds,1)))
@@ -586,9 +587,11 @@ c	condensates=(condensates.or.cloudcompute)
 	call output("==================================================================")
 
 	if(compute_opac) then
+		opacitymol=.true.
 		call ReadData()
 	else
 		do i=1,nmol
+			opacitymol(i)=.false.
 			if(includemol(i)) call InitReadOpacityFITS(i)
 		enddo
 	endif

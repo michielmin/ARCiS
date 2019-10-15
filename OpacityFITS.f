@@ -256,6 +256,7 @@ C	 create the new empty FITS file
 			return
 		endif
 	endif
+	opacitymol(imol)=.true.
 	Ktable(imol)%available=.true.
 	group=1
 	nullval=-999

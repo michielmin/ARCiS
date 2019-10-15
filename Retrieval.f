@@ -612,7 +612,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	lnew=lnew/real(max(1,k-n_ret))
 
 	write(31,*) imodel,lnew,var(1:nvars),COratio,metallicity
-	call flush(31)
+	if(.not.useobsgrid.or.dochemistry) call flush(31)
 
 	if(lnew.lt.bestlike) then
 		i2d=0

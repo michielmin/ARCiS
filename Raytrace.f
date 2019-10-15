@@ -189,7 +189,7 @@
 	enddo
 
 	allocate(dtrace(nr*2,nrtrace))
-	allocate(irtrace(nr*2,nrtrace))
+	allocate(irtrace(nr*2+1,nrtrace))
 	allocate(nirtrace(nrtrace))
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -240,6 +240,7 @@
 			dtrace(k,i)=0d0
 		endif
 		nirtrace(i)=k
+		irtrace(k+1,i)=nr+1
 	enddo
 !$OMP END DO
 !$OMP FLUSH
@@ -383,7 +384,7 @@
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
-!$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,includemol,irtrace,dtrace,Cabs_mol,mixrat_r,
+!$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,opacitymol,irtrace,dtrace,Cabs_mol,mixrat_r,
 !$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,useDRIFT,Cext_cont,
 !$OMP&		cloudfrac,nirtrace,Psimplecloud,maxtau,ndisk,nr,obsA_LC,CaCont)
 !$OMP DO
@@ -422,8 +423,13 @@
 						tau=d*CaCont(ir,ilam)
 						if(P(ir).gt.Psimplecloud) tau=1d4
 						tautot=tautot+tau
-						if(k.lt.nk) ir_next=irtrace(k+1,i)
-						if(ir_next.le.0.or.tautot.ge.maxtau) then
+						ir_next=irtrace(k+1,i)
+						if(tautot.gt.maxtau) then
+							tautot=1d4
+							A=0d0
+							goto 9
+						endif
+						if(ir_next.lt.1) then
 							tautot=1d4
 							A=0d0
 							goto 9
@@ -431,7 +437,7 @@
 					enddo
 					A=A*exp(-tautot)
 					do imol=1,nmol
-						if(includemol(imol)) then
+						if(opacitymol(imol)) then
 						Ag=0d0
 						do ig=1,ng
 							tautot=0d0
@@ -441,11 +447,9 @@
 								tau=d*Cabs_mol(ir,ig,imol,ilam)
 								if(P(ir).gt.Psimplecloud) tau=1d4
 								tautot=tautot+tau
-								if(k.lt.nk) ir_next=irtrace(k+1,i)
-								if(ir_next.le.0.or.tautot.ge.maxtau) then
-									tautot=1d4
-									goto 8
-								endif
+								ir_next=irtrace(k+1,i)
+								if(tautot.gt.maxtau) goto 8
+								if(ir_next.lt.1) goto 8
 							enddo
 							Ag=Ag+exp(-tautot)*wgg(ig)
 8							continue

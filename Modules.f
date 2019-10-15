@@ -97,7 +97,7 @@ c===============================================================================
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib
 	logical dochemistry,retrieve_profile,condensates,faircoverage,speclimits,mapCOratio,randomseed
-	logical,allocatable :: includemol(:),didcondens(:),lamemis(:),lamtrans(:)
+	logical,allocatable :: includemol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust,twind,epsiter
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud,metallicity0,fday
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun,useobsgrid

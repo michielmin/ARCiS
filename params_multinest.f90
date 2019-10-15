@@ -49,7 +49,7 @@ implicit none
 	!after how many iterations feedback is required & the output files should be updated
 	!note: posterior files are updated & dumper routine is called after every updInt*10 iterations
 	integer nest_updInt
-	parameter(nest_updInt=10)
+	parameter(nest_updInt=100)
 	
 	!null evidence (set it to very high negative no. if null evidence is unknown)
 	double precision nest_Ztol
