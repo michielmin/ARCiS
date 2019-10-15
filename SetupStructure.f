@@ -377,7 +377,7 @@ c			beta_used=max
 	endif
 
 	tau=0d0
-	Tirr=(beta_used/4d0)**0.25*sqrt(Rstar/(2d0*Dplanet))*Tstar
+	Tirr=(beta_used*4d0)**0.25*sqrt(Rstar/(2d0*Dplanet))*Tstar
 	if(computeT) then
 		x=(Tirr**4+TeffP**4)**0.25
 		return
