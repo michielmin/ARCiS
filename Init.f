@@ -422,6 +422,7 @@ c==============================================================================
 	real*8 tot,tot2,theta,Planck
 	real*8,allocatable :: var(:),dvar(:)
 	character*1000 line
+	character*500 file
 
 	allocate(key)
 	first => key
@@ -538,7 +539,7 @@ c	condensates=(condensates.or.cloudcompute)
 		do i=1,nclouds
 			call output("==================================================================")
 			call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
-			if(useDRIFT.or.cloudcompute) then
+			if(useDRIFT.or.cloudcompute.or.Cloud(i)%simplecloud) then
 				Cloud(i)%nr=nr
 				allocate(Cloud(i)%w(Cloud(i)%nr))
 				allocate(Cloud(i)%frac(nr,20))
@@ -583,6 +584,15 @@ c	condensates=(condensates.or.cloudcompute)
 	allocate(Fstar(nlam))
 	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
 	Fstar=Fstar*pi*Rstar**2
+
+c===============================================================
+c quick thing to read in a file!
+c	file='houghtonsolarwl.dat'
+c	call regridlog(file,1d4*lam,Fstar,nlam)
+c	Fstar=Fstar*lam**2/4d0
+c===============================================================
+
+
 
 	call output("==================================================================")
 
@@ -1360,6 +1370,13 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%Kzz=1d8
 		Cloud(i)%Kzz_pow=0d0
 		Cloud(i)%Sigmadot=1d-17
+		Cloud(i)%simplecloud=.false.
+		Cloud(i)%ff=0.9d0
+		Cloud(i)%g1=0.99d0
+		Cloud(i)%g2=-0.9d0
+		Cloud(i)%kappa=1d-2
+		Cloud(i)%albedo=0.99d0
+		Cloud(i)%P=0.0624d0
 	enddo
 	cloudcompute=.false.
 	useDRIFT=.false.
@@ -1973,6 +1990,17 @@ c				enddo
 			read(key%value,*) Cloud(j)%Kscale
 		case("sigmadot","nucleation")
 			read(key%value,*) Cloud(j)%Sigmadot
+		case("simple")
+			read(key%value,*) Cloud(j)%simplecloud
+		case("f")
+			read(key%value,*) Cloud(j)%ff
+		case("g")
+			if(key%nr2.eq.1) read(key%value,*) Cloud(j)%g1
+			if(key%nr2.eq.2) read(key%value,*) Cloud(j)%g2
+		case("kappa")
+			read(key%value,*) Cloud(j)%kappa
+		case("albedo")
+			read(key%value,*) Cloud(j)%albedo
 		case default
 			call output("Unknown cloud keyword: " // trim(key%key2))
 			stop
@@ -1992,7 +2020,7 @@ c-----------------------------------------------------------------------
 	use Constants
 	IMPLICIT NONE
 	integer ii,is,ilam,j
-	real*8 phi,thet,tot,tot2,fact,tautot(nlam)
+	real*8 phi,thet,tot,tot2,fact,tautot(nlam),HG
 	logical computelamcloud(nlam),restrictcomputecloud
 
 	if(.not.allocated(Cloud(ii)%rv)) allocate(Cloud(ii)%rv(Cloud(ii)%nr))
@@ -2020,6 +2048,31 @@ c-----------------------------------------------------------------------
 						endif
 					enddo
 				endif
+			enddo
+		case("SIMPLE")
+			Cloud(ii)%Kabs(1:nr,1:nlam)=Cloud(ii)%kappa*(1d0-Cloud(ii)%albedo)
+			Cloud(ii)%Ksca(1:nr,1:nlam)=Cloud(ii)%kappa*Cloud(ii)%albedo
+			Cloud(ii)%Kext(1:nr,1:nlam)=Cloud(ii)%kappa
+			do is=1,nr
+				if(P(is).ge.Cloud(ii)%P) then
+					cloud_dens(is,ii)=1d0*dens(is)
+				else
+					cloud_dens(is,ii)=0d0
+				endif
+			enddo
+			do j=1,180
+				thet=pi*real(j-1)/179d0
+				tot=Cloud(ii)%ff*HG(Cloud(ii)%g1,thet)+(1d0-Cloud(ii)%ff)*HG(Cloud(ii)%g2,thet)
+				do ilam=1,nlam
+					do is=1,nr
+						Cloud(ii)%F(is,ilam)%F11(j)=tot
+						Cloud(ii)%F(is,ilam)%F12(j)=0d0
+						Cloud(ii)%F(is,ilam)%F22(j)=1d0
+						Cloud(ii)%F(is,ilam)%F33(j)=1d0
+						Cloud(ii)%F(is,ilam)%F34(j)=0d0
+						Cloud(ii)%F(is,ilam)%F44(j)=1d0
+					enddo
+				enddo
 			enddo
 c		case("PARTFILE")
 c			call ReadParticle(Cloud(ii),ii)
@@ -2376,3 +2429,26 @@ c not entirely correct...
 	return
 	end
 	
+
+	
+	real*8 function HG(g,theta)
+	IMPLICIT NONE
+	real*8 g,theta,t,tot,f
+	integer i,n
+
+c	HG=(1d0-g**2)/((1d0-2d0*g*cos(theta)+g**2)**(3.0/2.0))/2d0
+
+	n=1000
+	tot=0d0
+	HG=0d0
+	do i=1,n
+		t=theta+(real(i-1)/real(n-1)-0.5)*3.1415926536/180d0
+		f=(1d0-g**2)/((1d0-2d0*g*cos(t)+g**2)**(3.0/2.0))/2d0
+		HG=HG+f*sin(t)
+		tot=tot+sin(t)
+	enddo
+	HG=HG/tot
+
+	return
+	end
+

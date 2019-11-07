@@ -102,7 +102,7 @@
 
 		do ilam=1,nlam
 		tau=0d0
-		do ir=nr,2,-1
+		do ir=nr,1,-1
 			Ca=0d0
 			Cs=0d0
 			do icloud=1,nclouds
@@ -120,7 +120,7 @@
 					endif
 				endif
 			enddo
-			tau=tau+(R(ir)-R(ir-1))*(Ca+Cs)
+			tau=tau+(R(ir+1)-R(ir))*(Ca+Cs)
 		enddo
 		cloudtau(icc,ilam)=tau
 		enddo
@@ -167,7 +167,7 @@
 
 	call output("Raytracing over the planet disk")
 
-	ndisk=10
+	ndisk=15
 	nsub=3
 	
 	nrtrace=(nr-1)*nsub+ndisk
@@ -245,7 +245,6 @@
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
-
 
 	if(emisspec.or.computecontrib) then
 
@@ -337,11 +336,11 @@
 					enddo
 
 					if(ir_next.le.0) then
-						fluxg=fluxg+A*BBr(ir)*fact
+						fluxg=fluxg+A*BBr(1)*fact
 						if(computecontrib) then
 							do irc=1,nr
 								if(ir.ne.irc) then
-									contr=A*BBr(ir)*fact_contr(irc)
+									contr=A*BBr(1)*fact_contr(irc)
 									fluxg_contr(irc)=fluxg_contr(irc)+contr
 								endif
 							enddo

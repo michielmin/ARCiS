@@ -43,9 +43,6 @@
 	done=.false.
 	
 	call cpu_time(starttime)
-#if USE_OPENMP
-	starttime=omp_get_wtime()
-#endif
 
 	if(npew.lt.0) then
 		donmodels=nmodels
@@ -63,9 +60,6 @@
 		done(imodel)=.true.
 
 		call cpu_time(stoptime)
-#if USE_OPENMP
-		stoptime=omp_get_wtime()
-#endif
 
 		call output("model number: " // int2string(imodel,'(i7)') 
      &			// "(" // trim(dbl2string(real(i)*100d0/real(donmodels),'(f5.1)')) // "%)")

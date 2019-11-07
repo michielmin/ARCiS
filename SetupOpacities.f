@@ -31,15 +31,15 @@
 	allocate(cont_tot(nlam))
 	allocate(kaver(nlam))
 	allocate(opac_tot(nlam,ng))
-	allocate(kappa_mol(ng,nmol,nlam))
+	allocate(kappa_mol(ng,nlam,nmol))
 	allocate(mixrat_tmp(nmol))
 
 	j=0
 	do i=1,nmol
-		if(includemol(i)) j=j+1
+		if(opacitymol(i)) j=j+1
 	enddo
-c	n_nu_line=ng*ng
-	n_nu_line=ng*min(j,4)
+	n_nu_line=ng*ng
+c	n_nu_line=ng*min(j,4)
 	if(.not.emisspec.and..not.computeT) n_nu_line=ng
 	
 	allocate(nu_line(n_nu_line))
@@ -83,34 +83,34 @@ c	n_nu_line=ng*ng
 			endif
 			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*mixrat_tmp(CIA(i)%imol1)*mixrat_tmp(CIA(i)%imol2)
 		enddo
+		kappa_mol=0d0
 		do imol=1,nmol
-			kappa_mol(1:ng,imol,1:nlam)=0d0
-			if(includemol(imol)) call ReadOpacityFITS(kappa_mol,imol,ir)
+			call ReadOpacityFITS(kappa_mol,imol,ir)
 		enddo
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(.false.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,j,k_line,imol,ig,kappa,ktemp,ig_c,tot,tot2,imol0,w1,w_line)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,
-!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,cwg,ng_comp,includemol)
+!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT)
 		allocate(k_line(n_nu_line))
 		allocate(ktemp(ng))
 		allocate(kappa(ng))
 		allocate(w_line(n_nu_line))
 !$OMP DO
 		do i=1,nlam-1
-			if(.false.) then
+			if(emisspec.or.computeT) then
 			tot=0d0
 			do imol=1,nmol
-				if(includemol(imol)) then
-					kappa(1:ng)=kappa_mol(1:ng,imol,i)*mixrat_tmp(imol)
-					tot=tot+sum(kappa(1:ng)*wgg(1:ng))*mixrat_tmp(imol)
+				if(opacitymol(imol)) then
+					kappa(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
+					tot=tot+sum(kappa(1:ng)*wgg(1:ng))
 					exit
 				endif
 			enddo
 			imol0=imol
 			do imol=imol0+1,nmol
-				if(includemol(imol)) then
-					ktemp(1:ng)=kappa_mol(1:ng,imol,i)*mixrat_tmp(imol)
+				if(opacitymol(imol)) then
+					ktemp(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 					ig_c=0
 					tot=tot+sum(ktemp(1:ng)*wgg(1:ng))
 					do ig=1,ng
@@ -119,6 +119,10 @@ c	n_nu_line=ng*ng
 							k_line(ig_c)=kappa(ig)+ktemp(j)
 							w_line(ig_c)=wgg(ig)*wgg(j)
 						enddo
+					enddo
+					n_nu_line=ig_c
+					do ig=1,n_nu_line
+						if(.not.k_line(ig).ge.0d0) print*,k_line(ig)
 					enddo
 					call sortw(k_line,w_line,n_nu_line)
 					do ig=2,n_nu_line
@@ -141,8 +145,8 @@ c	n_nu_line=ng*ng
 			k_line=0d0
 			tot=0d0
 			do imol=1,nmol
-				if(includemol(imol)) then
-					ktemp(1:ng)=kappa_mol(1:ng,imol,i)
+				if(opacitymol(imol)) then
+					ktemp(1:ng)=kappa_mol(1:ng,i,imol)
 					tot=tot+sum(ktemp(1:ng)*wgg(1:ng))*mixrat_tmp(imol)
 					do j=1,n_nu_line
 						ig=ig_comp(ig_c)
@@ -183,7 +187,7 @@ c	n_nu_line=ng*ng
 			if(includemol(imol)) then
 				do i=1,nlam
 					do j=1,ng
-						Cabs_mol(ir,j,imol,i)=kappa_mol(j,imol,i)*Ndens(ir)*mixrat_r(ir,imol)
+						Cabs_mol(ir,j,imol,i)=kappa_mol(j,i,imol)*Ndens(ir)*mixrat_r(ir,imol)
 					enddo
 				enddo
 			endif
@@ -813,4 +817,69 @@ c	enddo
 	
 	return
 	end
+
+
+	subroutine ReadOpacityFITS(kappa_mol,imol,ir)
+	use GlobalSetup
+	use OpacityFITSdata
+	implicit none
+	character*80 comment,errmessage
+	character*30 errtext
+	integer ig,ilam,iT,iP,imol,i,j,ir,ngF,i1,i2
+	real*8 kappa_mol(ng,nlam,nmol),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random,w1,ww
+	real*8,allocatable :: temp(:),wtemp(:)
+
+	if(.not.Ktable(imol)%available.or..not.includemol(imol)) then
+		kappa_mol(1:ng,1:nlam,imol)=0d0
+		return
+	endif
+
+	if(P(ir).lt.Ktable(imol)%P1) then
+		iP=1
+		wP1=1d0
+		wP2=0d0
+	else if(P(ir).gt.Ktable(imol)%P2) then
+		iP=Ktable(imol)%nP-1
+		wP1=0d0
+		wP2=1d0
+	else
+c		call hunt(Ktable(imol)%P,Ktable(imol)%nP,P(ir),iP)
+		do iP=1,Ktable(imol)%nP
+			if(P(ir).ge.Ktable(imol)%P(iP).and.P(ir).lt.Ktable(imol)%P(iP+1)) exit
+		enddo
+		wP1=1d0-log10(P(ir)/Ktable(imol)%P(iP))/log10(Ktable(imol)%P(iP+1)/Ktable(imol)%P(iP))
+		wP2=1d0-wP1
+	endif
+
+	if(T(ir).lt.Ktable(imol)%T1) then
+		iT=1
+		wT1=1d0
+		wT2=0d0
+	else if(T(ir).gt.Ktable(imol)%T2) then
+		iT=Ktable(imol)%nT-1
+		wT1=0d0
+		wT2=1d0
+	else
+c		call hunt(Ktable(imol)%T,Ktable(imol)%nT,T(ir),iT)
+		do iT=1,Ktable(imol)%nT
+			if(T(ir).ge.Ktable(imol)%T(iT).and.T(ir).lt.Ktable(imol)%T(iT+1)) exit
+		enddo
+		wT1=1d0-log10(T(ir)/Ktable(imol)%T(iT))/log10(Ktable(imol)%T(iT+1)/Ktable(imol)%T(iT))
+		wT2=1d0-wT1
+	endif
+ 
+	do ilam=1,nlam-1
+		do ig=1,ng
+			kappa_mol(ig,ilam,imol)=Ktable(imol)%ktable(ilam,ig,iT,iP)*wT1*wP1+
+     &						  Ktable(imol)%ktable(ilam,ig,iT+1,iP)*wT2*wP1+
+     &						  Ktable(imol)%ktable(ilam,ig,iT,iP+1)*wT1*wP2+
+     &						  Ktable(imol)%ktable(ilam,ig,iT+1,iP+1)*wT2*wP2
+		enddo
+	enddo
+
+	return
+	end
+
+
+
 		

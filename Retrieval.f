@@ -451,6 +451,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	var1=var0
 	do i=1,nvar
 1		continue
+		if(.not.var1(i).gt.0.5d0.and..not.var1(i).lt.0.5d0) var1(i)=0.5d0
 		if(var1(i).gt.1d0) then
 			var1(i)=2d0-var1(i)
 			goto 1

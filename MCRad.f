@@ -55,7 +55,7 @@ c		ct2=1d0-2d0*real(iphase)/real(nphase)
 
 		tau=0d0
 		do ir=nr,1,-1
-			Eemit(ir)=4d0*pi*(R(ir+1)**3-R(ir)**3)*Planck(T(ir),freq(ilam))*Ca(ir)/3d0
+			Eemit(ir)=pi*(R(ir+1)**3-R(ir)**3)*Planck(T(ir),freq(ilam))*Ca(ir)
 			Femit(ir)=Eemit(ir)*exp(-tau)
 			tau=tau+Ca(ir)*(R(ir+1)-R(ir))
 		enddo
@@ -71,9 +71,8 @@ c		ct2=1d0-2d0*real(iphase)/real(nphase)
 			enddo
 			if(ir.lt.1) ir=1
 			E0=Eemit(ir)/(real(Nphot)*Femit(ir))
-
 			call randomdirection(x,y,z)
-			rr=R(ir)+(R(ir+1)-R(ir))*random(idum)
+			rr=(R(ir)**3+(R(ir+1)**3-R(ir)**3)*random(idum))**(1d0/3d0)
 			x=x*rr
 			y=y*rr
 			z=z*rr
@@ -411,8 +410,8 @@ c		enddo
 	real*8 dz,theta,Fr,Fi,random,dx,dy,x,y,z,rr,u,v,w,cost,sint
 	type(Mueller) M
 
-	call randomdirection(dx,dy,dz)
-	return
+c	call randomdirection(dx,dy,dz)
+c	return
 
 	Fr=random(idum)*M%IF11(180)
 	it=0

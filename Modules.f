@@ -263,6 +263,9 @@ c===============================================================================
 		character*500 species
 		integer nr,nsubgrains
 		real*8 tmix,betamix,Kzz,Kscale,Sigmadot,Kzz_pow
+c simple cloud from Jo
+		real*8 ff,g1,g2,kappa,albedo
+		logical simplecloud
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 

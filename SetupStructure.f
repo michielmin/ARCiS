@@ -673,6 +673,12 @@ c			write(82,*) P(i), Kzz_r(i)
 	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau,P_SI1,P_SI2
 	logical cl
 	
+	if(Cloud(ii)%simplecloud) then
+		Cloud(ii)%ptype='SIMPLE'
+		call SetupPartCloud(ii)
+		return
+	endif
+	
 	if(cloudcompute) then
 		if(.not.allocated(Cloud(ii)%rv)) then
 			allocate(Cloud(ii)%rv(nr))

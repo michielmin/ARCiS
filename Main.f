@@ -90,9 +90,6 @@ c terms of use
 	computeopac=recomputeopacities
 
 	call cpu_time(starttime)
-#if USE_OPENMP
-	starttime_w=omp_get_wtime()
-#endif
 	Tconverged=.false.
 	nTiter=0
 	call SetupStructure(computeopac)
@@ -116,10 +113,6 @@ c terms of use
 	endif
 	call cpu_time(stoptime)
 	call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
-#if USE_OPENMP
-	stoptime_w=omp_get_wtime()
-	call output("Walltime:            " // trim(dbl2string((stoptime_w-starttime_w),'(f10.2)')) // " s")
-#endif
 	if(.not.do3D) call Raytrace()
 	call cpu_time(stoptime)
 	call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
