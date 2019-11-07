@@ -97,7 +97,7 @@
 	call output("Computing multiple 1D structures")
 
 	do i=1,n3D
-		call tellertje_perc(i,n3D)
+c		call tellertje_perc(i,n3D)
 		call SetOutputMode(.false.)
 		beta3D(i)=betamin+(betamax-betamin)*real(i-1)/real(n3D-1)
 		do j=1,n_Par3D
