@@ -76,6 +76,7 @@ OBJS	= Modules.o \
 		diseq_rate.o \
 		diseq_timescale.o \
 		diseq_calc.o \
+		OpacityFITS.o \
 		SetupStructure.o \
 		SetupOpacities.o \
 		Raytrace.o \
@@ -103,7 +104,6 @@ OBJS	= Modules.o \
 		SiCData.o \
 		KuruczData.o \
 		MCRad.o \
-		OpacityFITS.o \
 		polyPartition.o \
 		Retrieval.o \
 		Genetic.o \
