@@ -450,6 +450,12 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	
 	var1=var0
 	do i=1,nvar
+		if(.not.var1(i).lt.1d0) var1(i)=1d0
+		if(.not.var1(i).gt.0d0) var1(i)=0d0
+	enddo
+	return
+	
+	do i=1,nvar
 1		continue
 		if(.not.var1(i).gt.0.5d0.and..not.var1(i).lt.0.5d0) var1(i)=0.5d0
 		if(var1(i).gt.1d0) then
@@ -565,7 +571,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 
 	recomputeopac=.true.
 	imodel=imodel+1
-	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel) call output("model number: " 
+	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel.or.do3D) call output("model number: " 
      &				// int2string(imodel,'(i7)') // dbl2string(bestlike,'(f10.2)'))
 
 	allspec=0d0
@@ -613,7 +619,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	lnew=lnew/real(max(1,k-n_ret))
 
 	write(31,*) imodel,lnew,var(1:nvars),COratio,metallicity
-	if(.not.useobsgrid.or.dochemistry) call flush(31)
+	if(.not.useobsgrid.or.dochemistry.or.do3D) call flush(31)
 
 	if(lnew.lt.bestlike) then
 		i2d=0

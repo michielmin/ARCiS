@@ -87,7 +87,7 @@ c	n_nu_line=ng*min(j,4)
 		do imol=1,nmol
 			call ReadOpacityFITS(kappa_mol,imol,ir)
 		enddo
-!$OMP PARALLEL IF(.false.)
+!$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,j,k_line,imol,ig,kappa,ktemp,ig_c,tot,tot2,imol0,w1,w_line)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,
@@ -122,7 +122,7 @@ c	n_nu_line=ng*min(j,4)
 					enddo
 					n_nu_line=ig_c
 					do ig=1,n_nu_line
-						if(.not.k_line(ig).ge.0d0) print*,k_line(ig)
+						if(.not.k_line(ig).ge.0d0) k_line(ig)=0d0
 					enddo
 					call sortw(k_line,w_line,n_nu_line)
 					do ig=2,n_nu_line
