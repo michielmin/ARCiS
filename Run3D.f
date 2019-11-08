@@ -944,6 +944,12 @@ c-----------------------------------------------------------------------
 
 	call gauleg(0d0,1d0,nu,wnu,nnu)
 
+	allocate(tauR(nr))
+	allocate(Ij(nr))
+	allocate(Itot(nr))
+	allocate(Linv(nr,nr))
+	allocate(Lmat(nr,nr))
+	allocate(IWORKomp(10*nr*nr))
 	do inu0=1,nnu0
 		if(inu0.eq.nnu0.or..not.scattstar) then
 			Jstar_nu=0d0
@@ -964,18 +970,6 @@ c-----------------------------------------------------------------------
 		endif
 	
 		NRHS=1
-
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,ig,Itot,iter,ir,contr,inu,tauR,Ij,err,Linv,info,IWORKomp,Lmat)
-!$OMP& SHARED(nlam,ng,nr,Jstar_nu,Ce,Si,BBr,Ca,Cs,tauR_nu,nu,wnu,inu0,lamemis,NRHS)
-	allocate(tauR(nr))
-	allocate(Ij(nr))
-	allocate(Itot(nr))
-	allocate(Linv(nr,nr))
-	allocate(Lmat(nr,nr))
-	allocate(IWORKomp(10*nr*nr))
-!$OMP DO
 		do ilam=1,nlam-1
 			if(lamemis(ilam)) then
 				do ig=1,ng
@@ -1026,15 +1020,12 @@ c						enddo
 				enddo
 			endif
 		enddo
-!$OMP END DO
+1	continue
+	enddo	
 	deallocate(tauR)
 	deallocate(Ij)
 	deallocate(Itot)
 	deallocate(Linv,Lmat,IWORKomp)
-!$OMP FLUSH
-!$OMP END PARALLEL
-1	continue
-	enddo	
 	
 	return
 	end
