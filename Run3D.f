@@ -1044,7 +1044,7 @@ c						enddo
 	subroutine InvertIj(tauR,Linv,nr)
 	IMPLICIT NONE
 	integer ir,nr,iir
-	real*8 tauR(nr),Ij(nr),Si(nr),Linv(nr,nr)
+	real*8 tauR(nr),Ij(nr),Si(nr),Linv(nr,nr),Lmat(nr,nr-2)
 	real*8 x(nr),y(nr),fact,d
 	real*8 MM(nr,3),MMal(nr,1),Ma(nr),Mb(nr),Mc(nr)
 	integer indx(nr),info
@@ -1064,11 +1064,18 @@ c						enddo
 	Mb(nr)=-1d0-1d0/(tauR(nr-1)-tauR(nr))
 	Linv=0d0
 
-c	do iir=1,nr
-c		Linv(iir,iir)=1d0
-c	enddo
-c	call dgtsv(nr,nr,Ma(2:nr),Mb(1:nr),Mc(1:nr-1),Linv,nr,info)
-c	return
+	Lmat=0d0
+	do iir=1,nr-2
+		Lmat(iir+1,iir)=1d0
+	enddo
+	call dgtsv(nr,nr-2,Ma(2:nr),Mb(1:nr),Mc(1:nr-1),Lmat,nr,info)
+	do ir=2,nr-1
+		do iir=1,nr
+			Linv(ir,iir)=Lmat(iir,ir-1)
+		enddo
+	enddo
+
+	return
 
 	do iir=2,nr-1
 		x=0d0
