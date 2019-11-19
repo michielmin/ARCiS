@@ -55,7 +55,7 @@ c		ct2=1d0-2d0*real(iphase)/real(nphase)
 
 		tau=0d0
 		do ir=nr,1,-1
-			Eemit(ir)=pi*(R(ir+1)**3-R(ir)**3)*Planck(T(ir),freq(ilam))*Ca(ir)
+			Eemit(ir)=(4d0*pi/3d0)*(R(ir+1)**3-R(ir)**3)*Planck(T(ir),freq(ilam))*Ca(ir)
 			Femit(ir)=Eemit(ir)*exp(-tau)
 			tau=tau+Ca(ir)*(R(ir+1)-R(ir))
 		enddo
@@ -126,10 +126,10 @@ c		enddo
 
 		do ir=0,nr
 			if(ir.ne.0) then
-				E0=Fstar(ilam)*(R(ir+1)**2-R(ir)**2)/Dplanet**2
+				E0=(Fstar(ilam)*(R(ir+1)**2-R(ir)**2)/Dplanet**2)/4d0
 				Nphot=NphotStar/real(nr)
 			else
-				E0=Fstar(ilam)*R(1)**2/Dplanet**2
+				E0=(Fstar(ilam)*R(1)**2/Dplanet**2)/4d0
 				Nphot=NphotStar
 			endif
 			E0=E0/real(Nphot)

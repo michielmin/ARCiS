@@ -122,7 +122,7 @@ c	n_nu_line=ng*min(j,4)
 					enddo
 					n_nu_line=ig_c
 					do ig=1,n_nu_line
-						if(.not.k_line(ig).ge.1d-50) k_line(ig)=1d-50
+						if(.not.k_line(ig).ge.1d-80) k_line(ig)=1d-80
 					enddo
 					call sortw(k_line,w_line,n_nu_line)
 					do ig=2,n_nu_line

@@ -48,6 +48,7 @@
 	do i=1,nlam-1
 		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
 c     &					flux(0:ncc,i)
+c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam(i+1))
      &					(phase(1,j,i)+flux(j,i),j=0,ncc)
 	enddo
 	close(unit=30)

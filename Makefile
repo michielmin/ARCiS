@@ -18,7 +18,7 @@ ifeq ($(debug),true)
   ifeq ($(gfort),true)
     DEBUGGING = -fbounds-check -fbacktrace -fcheck=all
   else	
-    DEBUGGING = -check all -traceback -check bounds -check uninit -O0 -g -p -warn
+    DEBUGGING = -check all -g -traceback -check bounds -check uninit -O0
   endif
 endif
 
@@ -41,11 +41,11 @@ endif
 
 # Platform specific compilation options
 ifeq ($(gfort),true)
-  FLAG_ALL      = -O5 -g $(DEBUGGING) $(MULTICORE) -lgfortran -I$(HOME)/include
+  FLAG_ALL      = -O5 -g $(MULTICORE) -lgfortran -I$(HOME)/include
   FLAG_LINUX    = -ffixed-line-length-132 -cpp
   FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else
-  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(DEBUGGING) $(MULTICORE) -assume buffered_io -fp-model precise  -I/usr/local/modules
+  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(MULTICORE) -assume buffered_io -fp-model precise  -I/usr/local/modules
   FLAG_LINUX    = -xHOST -fpp
   FLAG_MAC      = -xHOST -opt-prefetch -static-intel -fpp 
 endif
@@ -53,12 +53,12 @@ endif
 LIBS_FITS		= -lcfitsio
 
 ifeq ($(shell uname),Linux)
-  FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -diag-disable vec 
-  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -I$(HOME)/include
+  FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -diag-disable vec $(DEBUGGING) 
+  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -I$(HOME)/include $(DEBUGGING) 
   LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) -llapack -lmultinest Version.f 
 else
-  FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
-  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS)
+  FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) 
+  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) 
   LIBS    =  -L/usr/local/lib $(LIBS_FITS) -lmultinest Version.f
 endif
 

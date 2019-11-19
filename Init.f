@@ -504,7 +504,6 @@ c	condensates=(condensates.or.cloudcompute)
 	call gauleg(0d0,1d0,gg,wgg,ng)
 	
 	call InitFreq()
-
 	if(nphase.le.0) then
 		nphase=2d0*pi/asin(Rstar/Dplanet)
 		if(nphase.gt.90) then
@@ -584,15 +583,6 @@ c	condensates=(condensates.or.cloudcompute)
 	allocate(Fstar(nlam))
 	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
 	Fstar=Fstar*pi*Rstar**2
-
-c===============================================================
-c quick thing to read in a file!
-c	file='houghtonsolarwl.dat'
-c	call regridlog(file,1d4*lam,Fstar,nlam)
-c	Fstar=Fstar*lam**2/4d0
-c===============================================================
-
-
 
 	call output("==================================================================")
 
@@ -1793,7 +1783,6 @@ c				enddo
 			nlam=nlam+1
 		enddo
 	endif
-	
 	allocate(lam(nlam))
 	allocate(freq(nlam))
 	allocate(dfreq(nlam))
@@ -1871,7 +1860,6 @@ c				enddo
 	endif
 
 	allocate(BB(nBB,nlam))
-
 	do j=1,nBB
 		T0=real(j)
 		tot=0d0
@@ -1881,7 +1869,6 @@ c				enddo
 		enddo
 		BB(j,i)=BB(j,i)*((2d0*(pi*kb*T0)**4)/(15d0*hplanck**3*clight**3))/tot
 	enddo
-
 
 	if(useobsgrid) then
 		nlamdust=nlam
