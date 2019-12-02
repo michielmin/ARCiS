@@ -51,7 +51,7 @@
 		Otot=0d0
 		Ctot=0d0
 		Htot=0d0
-		do ir=nr,1,-1
+		do ir=nr,2,-1
 			Ca=sum(wgg(1:ng)*Cabs(ir,ilam,1:ng))*Ndens(ir)
 			Cs=Csca(ir,ilam)*Ndens(ir)
 			do icloud=1,nclouds
@@ -372,7 +372,6 @@
 	deallocate(Ag_contr)
 !$OMP FLUSH
 !$OMP END PARALLEL
-
 	endif
 
 	if(transspec) then

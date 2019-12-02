@@ -2215,6 +2215,8 @@ c not entirely correct...
 					orbit_P=orbit_P*86400d0
 				case('Eccentricity')
 					read(value(i),*) orbit_e
+				case('Planet_Temperature_[K]')
+					read(value(i),*) TP0
 			end select
 		endif
 		logg=log10(Ggrav*(Mstar*Msun)/((Rstar*Rsun)**2))
@@ -2230,6 +2232,7 @@ c not entirely correct...
 		call output("Planet orbit:     " // dbl2string(Dplanet,'(f7.4)') // "AU")
 		call output("Planet radius:    " // dbl2string(Rplanet,'(f9.4)') // "Rjup")
 		call output("Planet mass:      " // dbl2string(Mplanet,'(f9.4)') // "Mjup")
+		call output("Planet T:         " // dbl2string(TP0,'(f9.4)') // "K")
 		call output("Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K")
 		call output("Orbital period:   " // dbl2string(orbit_P/86400d0,'(f9.4)') // "days")
 			
@@ -2243,6 +2246,7 @@ c not entirely correct...
 		write(73,'(a)') "Planet orbit:     " // dbl2string(Dplanet,'(f9.4)') // "AU"
 		write(73,'(a)') "Planet radius:    " // dbl2string(Rplanet,'(f9.4)') // "Rjup"
 		write(73,'(a)') "Planet mass:      " // dbl2string(Mplanet,'(f9.4)') // "Mjup"
+		write(73,'(a)') "Planet T:         " // dbl2string(TP0,'(f9.4)') // "K")
 		write(73,'(a)') "Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K"
 		write(73,'(a)') "Orbital period:   " // dbl2string(orbit_P/86400d0,'(f9.4)') // "days"
 		close(unit=73)

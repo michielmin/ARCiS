@@ -74,7 +74,7 @@ c	n_nu_line=ng*min(j,4)
 		do i=1,ncia
 			if(T(ir).lt.CIA(i)%T(1)) then
 				iT=1
-			else if(T(iR).gt.CIA(i)%T(CIA(i)%nT)) then
+			else if(T(ir).gt.CIA(i)%T(CIA(i)%nT)) then
 				iT=CIA(i)%nT-1
 			else
 				do iT=1,CIA(i)%nT-1
@@ -843,10 +843,10 @@ c	enddo
 		wP1=0d0
 		wP2=1d0
 	else
-c		call hunt(Ktable(imol)%P,Ktable(imol)%nP,P(ir),iP)
-		do iP=1,Ktable(imol)%nP
-			if(P(ir).ge.Ktable(imol)%P(iP).and.P(ir).lt.Ktable(imol)%P(iP+1)) exit
-		enddo
+		call hunt(Ktable(imol)%P,Ktable(imol)%nP,P(ir),iP)
+c		do iP=1,Ktable(imol)%nP
+c			if(P(ir).ge.Ktable(imol)%P(iP).and.P(ir).lt.Ktable(imol)%P(iP+1)) exit
+c		enddo
 		wP1=1d0-log10(P(ir)/Ktable(imol)%P(iP))/log10(Ktable(imol)%P(iP+1)/Ktable(imol)%P(iP))
 		wP2=1d0-wP1
 	endif
@@ -860,10 +860,10 @@ c		call hunt(Ktable(imol)%P,Ktable(imol)%nP,P(ir),iP)
 		wT1=0d0
 		wT2=1d0
 	else
-c		call hunt(Ktable(imol)%T,Ktable(imol)%nT,T(ir),iT)
-		do iT=1,Ktable(imol)%nT
-			if(T(ir).ge.Ktable(imol)%T(iT).and.T(ir).lt.Ktable(imol)%T(iT+1)) exit
-		enddo
+		call hunt(Ktable(imol)%T,Ktable(imol)%nT,T(ir),iT)
+c		do iT=1,Ktable(imol)%nT
+c			if(T(ir).ge.Ktable(imol)%T(iT).and.T(ir).lt.Ktable(imol)%T(iT+1)) exit
+c		enddo
 		wT1=1d0-log10(T(ir)/Ktable(imol)%T(iT))/log10(Ktable(imol)%T(iT+1)/Ktable(imol)%T(iT))
 		wT2=1d0-wT1
 	endif

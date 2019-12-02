@@ -6,7 +6,7 @@
 	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,v,fluxg,dx,dy,wphase(nphase)
 	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase0(nphase),theta,fstop,albedo,ct1,ct2,E0
 	real*8 tot,g(nr),Eabs,EJv(nr),Crw(nr)
-	real*8 Eemit(nr),Femit(nr),xs,ys,zs,inp
+	real*8 Eemit(nr),Femit(nr),xs,ys,zs,inp,Pb(nr+1)
 	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,irdark,j
 	logical docloud0(nclouds),goingup,hitR,onedge,hitR1,hitR2,dorw(nr)
 	type(Mueller) M(nr)
@@ -43,6 +43,11 @@ c		ct2=1d0-2d0*real(iphase)/real(nphase)
 		g(ir)=g(ir)/tot
 	enddo
 	
+	Pb(1)=P(1)
+	do ir=2,nr
+		Pb(ir)=sqrt(P(ir-1)*P(ir))
+	enddo
+	Pb(nr+1)=P(nr)
 	do ig=1,ng
 		do ir=1,nr
 			call Crossections(ir,ilam,ig,Ca(ir),Cs(ir),docloud0)
@@ -54,6 +59,8 @@ c		ct2=1d0-2d0*real(iphase)/real(nphase)
 
 
 		tau=0d0
+		Eemit=0d0
+		Femit=0d0
 		do ir=nr,1,-1
 			Eemit(ir)=(4d0*pi/3d0)*(R(ir+1)**3-R(ir)**3)*Planck(T(ir),freq(ilam))*Ca(ir)
 			Femit(ir)=Eemit(ir)*exp(-tau)
@@ -70,6 +77,7 @@ c		ct2=1d0-2d0*real(iphase)/real(nphase)
 				if(E0.lt.0d0) exit
 			enddo
 			if(ir.lt.1) ir=1
+			if(ir.gt.nr) ir=nr
 			E0=Eemit(ir)/(real(Nphot)*Femit(ir))
 			call randomdirection(x,y,z)
 			rr=(R(ir)**3+(R(ir+1)**3-R(ir)**3)*random(idum))**(1d0/3d0)
@@ -85,6 +93,27 @@ c		ct2=1d0-2d0*real(iphase)/real(nphase)
 				fluxg=fluxg+E*E0*wgg(ig)
 			endif
 		enddo
+
+
+c		Nphot=NphotPlanet
+c		do iphot=1,Nphot
+c			ir=1
+c			E0=4d0*pi*R(ir)**2*Planck(T(ir),freq(ilam))/real(Nphot)
+c			call randomdirection(x,y,z)
+c			rr=R(ir)**0.99*R(ir+1)**0.01
+c			x=x*rr
+c			y=y*rr
+c			z=z*rr
+c			call randomdirection(dx,dy,dz)
+c			jr=ir
+c			onedge=.false.
+c			goingup=((x*dx+y*dy+z*dz).gt.0d0)
+c			call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,0.5d0,Eabs,EJv)
+c			if(jr.gt.nr) then
+c				fluxg=fluxg+E*E0*wgg(ig)
+c			endif
+c		enddo
+
 
 		if(scattstar) then
 c		do ir=0,nr
@@ -126,10 +155,10 @@ c		enddo
 
 		do ir=0,nr
 			if(ir.ne.0) then
-				E0=(Fstar(ilam)*(R(ir+1)**2-R(ir)**2)/Dplanet**2)/4d0
+				E0=Fstar(ilam)*(R(ir+1)**2-R(ir)**2)/(4d0*Dplanet**2)
 				Nphot=NphotStar/real(nr)
 			else
-				E0=(Fstar(ilam)*R(1)**2/Dplanet**2)/4d0
+				E0=(Fstar(ilam)*R(1)**2/Dplanet**2)/2d0
 				Nphot=NphotStar
 			endif
 			E0=E0/real(Nphot)
@@ -325,7 +354,7 @@ c		enddo
 	z=z+v*dz
 	EJv(jr)=EJv(jr)+tau*(1d0-albedo)
 
-	fstop=max(1d0-albedo**powstop,1d-4)
+	fstop=max(1d0-albedo**powstop,1d-6)
 	if(random(idum).lt.fstop.and.powstop.gt.0d0) return
 
 	if(powstop.gt.0d0) then

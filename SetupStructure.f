@@ -72,11 +72,16 @@
 	if(j.eq.1) then
 		MMW=0d0
 		do imol=1,nmol
-			if(mixrat_r(1,imol).gt.0d0) MMW=MMW+mixrat_r(1,imol)*Mmol(imol)
+			if(includemol(imol)) MMW=MMW+mixrat_r(1,imol)*Mmol(imol)
 		enddo
 	endif
 	call output("Mean molecular weight: " // dbl2string(MMW(1),'(f8.3)'))
 	i1=1
+	if(Pb(1).eq.Pplanet) Pb(1)=Pb(1)*1.001
+	do i=2,nr
+		if(Pb(i).eq.Pplanet) Pb(i)=Pb(i)**0.99*P(i)**0.01
+	enddo
+	if(Pb(nr+1).eq.Pplanet) Pb(nr+1)=Pb(nr+1)/1.001
 	do i=1,nr
 		if(Pb(i).ge.Pplanet.and.Pb(i+1).lt.Pplanet) then
 			i1=i
@@ -97,7 +102,7 @@
 		if(.not.dochemistry) then
 			MMW(i3)=0d0
 			do imol=1,nmol
-				if(mixrat_r(i3,imol).gt.0d0) MMW(i3)=MMW(i3)+mixrat_r(i3,imol)*Mmol(imol)
+				if(includemol(imol)) MMW(i3)=MMW(i3)+mixrat_r(i3,imol)*Mmol(imol)
 			enddo
 		endif
 
@@ -115,7 +120,7 @@
 		dens(i3)=Ndens(i3)*mp*MMW(i3)
 
 		R(i+di)=R0+dz
-		if(R(i+di).lt.R(i)/5d0) R(i+di)=R(i)/5d0
+		if(R(i+di).lt.R0/5d0) R(i+di)=R0/5d0
 		R0=R(i+di)
 		P0=Pb(i+di)
 	enddo

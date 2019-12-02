@@ -100,8 +100,8 @@
 	Rmax=0d0
 	call output("Computing multiple 1D structures")
 
+	call tellertje_perc(0,n3D)
 	do i=1,n3D
-		call tellertje_perc(i,n3D)
 		call SetOutputMode(.false.)
 		beta3D(i)=betamin+(betamax-betamin)*real(i-1)/real(n3D-1)
 		do j=1,n_Par3D
@@ -158,34 +158,35 @@ c===============================================================
 					endif
 				enddo
 				Cs(ilam,ir,i)=Cs(ilam,ir,i)+Csca(ir,ilam)*Ndens(ir)
+
 c ===================================================================
 c correction for anisotropic scattering	
 c ===================================================================
-C			M%F11=Rayleigh%F11*Csca(ir,ilam)*Ndens(ir)
-C			do icloud=1,nclouds
-C				if(Cloud(icloud)%standard.eq.'MIX') then
-C					M%F11=M%F11+Cloud(icloud)%F(ir,ilam)%F11*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-C				else
-C					do isize=1,Cloud(icloud)%nr
-C						M%F11=M%F11+Cloud(icloud)%F(isize,ilam)%F11*
-C    &								Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-C					enddo
-C				endif
-C			enddo
-C			g=0d0
-C			tot=0d0
-C			do j=1,180
-C				g=g+M%F11(j)*costheta(j)*sintheta(j)
-C				tot=tot+M%F11(j)*sintheta(j)
-C			enddo
-C			g=g/tot
-C			if(.not.g.ge.-1d0) then
-C				g=0.999d0
-C			endif
-C			if(.not.g.le.1d0) then
-C				g=0.999d0
-C			endif
-C			Cs(ilam,ir,i)=Cs(ilam,ir,i)*(1d0-g)
+ 			M%F11=Rayleigh%F11*Csca(ir,ilam)*Ndens(ir)
+ 			do icloud=1,nclouds
+ 				if(Cloud(icloud)%standard.eq.'MIX') then
+ 					M%F11=M%F11+Cloud(icloud)%F(ir,ilam)%F11*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+ 				else
+ 					do isize=1,Cloud(icloud)%nr
+ 						M%F11=M%F11+Cloud(icloud)%F(isize,ilam)%F11*
+     &								Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+ 					enddo
+ 				endif
+ 			enddo
+ 			g=0d0
+ 			tot=0d0
+ 			do j=1,180
+ 				g=g+M%F11(j)*costheta(j)*sintheta(j)
+ 				tot=tot+M%F11(j)*sintheta(j)
+ 			enddo
+ 			g=g/tot
+ 			if(.not.g.ge.-1d0) then
+ 				g=0.999d0
+ 			endif
+ 			if(.not.g.le.1d0) then
+ 				g=0.999d0
+ 			endif
+ 			Cs(ilam,ir,i)=Cs(ilam,ir,i)*(1d0-g)
 c ===================================================================
 c ===================================================================
 
@@ -209,8 +210,13 @@ c ===================================================================
 			enddo
 			nmol_count=k
 		enddo
-		if(emisspec) call ComputeScatter(BBr(1:nlam,1:nr,i),Si(1:nlam,1:ng,1:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i),Cs(1:nlam,1:nr,i))
+		if(i.eq.1.or.betamax.ne.betamin) then
+			if(emisspec) call ComputeScatter(BBr(1:nlam,1:nr,i),Si(1:nlam,1:ng,1:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i),Cs(1:nlam,1:nr,i))
+		else
+			Si(1:nlam,1:ng,1:nr,1:nnu0,i)=Si(1:nlam,1:ng,1:nr,1:nnu0,1)
+		endif
 		call SetOutputMode(.true.)
+		call tellertje_perc(i,n3D)
 	enddo
 	Rmax=Rmax*1.001
 	R3D(1:n3D,nr+2)=Rmax
@@ -218,6 +224,24 @@ c ===================================================================
 
 	call output("Raytracing over the planet disk in 3D")
 
+	do ilam=1,nlam
+		cloudtau(1,ilam)=0d0
+		do ir=nr,1,-1
+			do icloud=1,nclouds
+				if(Cloud(icloud)%standard.eq.'MIX') then
+					cloudtau(1,ilam)=cloudtau(1,ilam)+(R(ir+1)-R(ir))*Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+					cloudtau(1,ilam)=cloudtau(1,ilam)+(R(ir+1)-R(ir))*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+				else
+					do isize=1,Cloud(icloud)%nr
+						cloudtau(1,ilam)=cloudtau(1,ilam)+
+     &		(R(ir+1)-R(ir))*Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+						cloudtau(1,ilam)=cloudtau(1,ilam)+
+     &		(R(ir+1)-R(ir))*Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+					enddo
+				endif
+			enddo
+		enddo
+	enddo
 
 	if(emisspec) then
 	ndisk=20
@@ -229,14 +253,23 @@ c ===================================================================
 
 	call gauleg(0d0,Rmax,rtrace,wrtrace,ndisk)
 
-	allocate(fluxp(nlam),tauR(nr*2,nlam,ng),SiR(nr*2,nlam,ng),Ij(nr*2))
-	allocate(tauR1(nr*2),SiR1(nr*2))
-c	npc=8
-c	do ipc=1,npc
-c	call tellertje_perc(ipc,npc)
-c	theta=2d0*pi*real(ipc-1)/real(npc)
-	theta=pi
+	allocate(fluxp(nlam))
+	npc=nphase
+	do ipc=1,npc
+	call tellertje_perc(ipc,npc)
+	theta=pi+2d0*pi*real(ipc-1)/real(npc)
+	if(theta.gt.2d0*pi) theta=theta-2d0*pi
+c	theta=pi
 	fluxp=0d0
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,SiR,tauR,SiR1,tauR1,
+!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,Ij)
+!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,inu3D,
+!$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc)
+	allocate(tauR(nr*2,nlam,ng),SiR(nr*2,nlam,ng),Ij(nr*2))
+	allocate(tauR1(nr*2),SiR1(nr*2))
+!$OMP DO
 	do irtrace=1,nrtrace
 		A=2d0*pi*rtrace(irtrace)*wrtrace(irtrace)/real(nptrace)
 		do iptrace=1,nptrace
@@ -275,7 +308,7 @@ c	theta=2d0*pi*real(ipc-1)/real(npc)
 			inu=inu3D(i2,i3)
 			SiR=0d0
 1			continue
-			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nlatt)
+			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nr,nlong,nlatt)
 			if(i1next.le.0) then
 				j=j+1
 				do ilam=1,nlam-1
@@ -286,7 +319,7 @@ c	theta=2d0*pi*real(ipc-1)/real(npc)
 					endif
 					SiR(j,ilam,1:ng)=Planck(T(1),freq0)
 				enddo
-				tauR(j,1:nlam,1:ng)=tauR(j-1,1:nlam,1:ng)+1d0
+				tauR(j,1:nlam,1:ng)=1d0
 				goto 2
 			endif
 			if(i1next.ge.nr+2) goto 2
@@ -299,7 +332,7 @@ c	theta=2d0*pi*real(ipc-1)/real(npc)
 						tot=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
 						if(.not.tot.gt.1d-10) tot=1d-10
 						if(tot.gt.1d10) tot=1d10
-						tauR(j,ilam,ig)=tauR(j-1,ilam,ig)+tot
+						tauR(j,ilam,ig)=tot
 					enddo
 					SiR(j,1:nlam,ig)=Si(1:nlam,ig,i1,inu,i)
 				enddo
@@ -325,30 +358,29 @@ c	theta=2d0*pi*real(ipc-1)/real(npc)
 			if(j.gt.1) then
 				do ilam=1,nlam
 					do ig=1,ng
-						fact1=1d0
 						do ir=1,j
-							tau1=tauR(ir,ilam,ig)
-							exp_tau1=exp(-tau1)
-							fluxp(ilam)=fluxp(ilam)+A*wgg(ig)*SiR(ir,ilam,ig)*(1d0-exp_tau1)*fact1
-							fact1=fact1*exp_tau1
-c							tauR1(j+1-ir)=tauR(ir,ilam,ig)
-c							SiR1(j+1-ir)=SiR(ir,ilam,ig)
+							tauR1(j+1-ir)=tauR(ir,ilam,ig)
+							SiR1(j+1-ir)=SiR(ir,ilam,ig)
 						enddo
-c						call SolveIj(tauR1,SiR1,Ij,j)
-c						fluxp(ilam)=fluxp(ilam)+A*wgg(ig)*Ij(j)*2d0
+						call SolveIjExp(tauR1,SiR1,Ij,j)
+						fluxp(ilam)=fluxp(ilam)+A*wgg(ig)*Ij(j)*2d0
 					enddo
 				enddo
 			endif
 		enddo
 	enddo
+!$OMP END DO
+	deallocate(tauR,SiR,Ij)
+	deallocate(tauR1,SiR1)
+!$OMP FLUSH
+!$OMP END PARALLEL
 	fluxp=fluxp*1d23/distance**2
-	phase(1,0,1:nlam)=fluxp(1:nlam)
+	phase(ipc,0,1:nlam)=fluxp(1:nlam)
 	flux(0,1:nlam)=0d0
-c	enddo
+	enddo
 	
 	deallocate(rtrace,wrtrace)
-	deallocate(fluxp,tauR,SiR,Ij)
-	deallocate(tauR1,SiR1)
+	deallocate(fluxp)
 	endif
 
 
@@ -411,7 +443,7 @@ c	enddo
 			vv=0d0
 			hit=.false.
 3			continue
-			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nlatt)
+			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nr,nlong,nlatt)
 			if(i1next.le.0.or.i1next.ge.nr+2) goto 4
 			if(i1.le.nr) then
 				i=ibeta(i2,i3)
@@ -740,12 +772,12 @@ c	enddo
 
 
 
-	subroutine TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,n3)
+	subroutine TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,n1,n2,n3)
 	use Struct3D
 	use Constants
 	IMPLICIT NONE
 	real*8 x,y,z,vx,vy,vz,v
-	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext,n3
+	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext,n1,n2,n3
 
 	real*8 a,b,r,R1,R2,T1,T2,vR1,vR2,vT1,vT2,vP1,vP2
 	logical hitR1,hitR2,hitR3D,hitT1,hitT2,hitT,hitTsame
@@ -963,8 +995,10 @@ c-----------------------------------------------------------------------
 	do ilam=1,nlam-1
 		do ig=1,ng
 			do ir=nr,1,-1
-				d=abs(P(ir+1)-P(ir))*1d6/grav(ir)
-				tau=d*Ce(ilam,ig,ir)/dens(ir)
+c				d=abs(P(ir+1)-P(ir))*1d6/grav(ir)
+c				tau=d*Ce(ilam,ig,ir)/dens(ir)
+				d=R(ir+1)-R(ir)
+				tau=d*Ce(ilam,ig,ir)
 				if(P(ir).gt.Psimplecloud) then
 					tau=tau+1d4
 				endif
@@ -974,28 +1008,17 @@ c-----------------------------------------------------------------------
 				if(tau.gt.1d10) then
 					tau=1d10
 				endif
-				if(ir.lt.nr) then
-					tauR_nu(ir,ilam,ig)=tauR_nu(ir+1,ilam,ig)+tau
-				else
-					tauR_nu(ir,ilam,ig)=tau
-				endif
+				tauR_nu(ir,ilam,ig)=tau
 			enddo
 		enddo
 	enddo
 
 	call gauleg(0d0,1d0,nu,wnu,nnu)
 
-	allocate(tauR(nr))
-	allocate(Ij(nr))
-	allocate(Itot(nr))
-	allocate(Iprev(nr))
-	allocate(Linv(nr,nr))
-	allocate(Lmat(nr,nr))
-	allocate(IWORKomp(10*nr*nr))
 	do inu0=1,nnu0
 		if(inu0.eq.nnu0.or..not.scattstar) then
 			Jstar_nu=0d0
-			if(inu0.ne.1) then
+			if(inu0.ne.nnu0) then
 				Si(1:nlam,1:ng,1:nr,inu0)=Si(1:nlam,1:ng,1:nr,1)
 				goto 1
 			endif
@@ -1004,56 +1027,42 @@ c-----------------------------------------------------------------------
 			do ilam=1,nlam-1
 				do ig=1,ng
 					tauRs(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
-					contr=(Fstar(ilam)/(4d0*pi*Dplanet**2))
-					call SolveIjStar(tauRs,contr,Ijs,nr)
+					contr=(Fstar(ilam)/(4d0*Dplanet**2))
+					call SolveIjStarExp(tauRs,contr,Ijs,nr)
 					Jstar_nu(1:nr,ilam,ig)=Ijs(1:nr)
 				enddo
 			enddo
 		endif
 	
 		NRHS=1
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ilam,ig,Linv,Lmat,tauR,Itot,IWORKomp,inu,ir,info)
+!$OMP& SHARED(nlam,ng,lamemis,tauR_nu,nr,wnu,nu,BBr,Ca,Cs,Ce,Si,inu0,NRHS,Jstar_nu)
+		allocate(tauR(nr))
+		allocate(Itot(nr))
+		allocate(Linv(nr,nr))
+		allocate(Lmat(nr,nr))
+		allocate(IWORKomp(10*nr*nr))
+!$OMP DO
 		do ilam=1,nlam-1
 			if(lamemis(ilam)) then
 				do ig=1,ng
-					if(.true.) then ! use direct matrix inversion
-						Linv=0d0
-						do inu=1,nnu
-							tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
-							call InvertIj(tauR,Lmat,nr)
-							do ir=1,nr
-								Linv(ir,1:nr)=Linv(ir,1:nr)+wnu(inu)*Lmat(ir,1:nr)*Cs(ilam,1:nr)/(Ce(ilam,ig,1:nr))
-							enddo
-						enddo
-						Linv=-Linv
+					Linv=0d0
+					do inu=1,nnu
+						tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
+						call InvertIjExp(tauR,Lmat,nr)
 						do ir=1,nr
-							Linv(ir,ir)=1d0+Linv(ir,ir)
+							Linv(ir,1:nr)=Linv(ir,1:nr)+wnu(inu)*Lmat(ir,1:nr)*Cs(ilam,1:nr)/(Ce(ilam,ig,1:nr))
 						enddo
-						do ir=1,nr
-							contr=Jstar_nu(ir,ilam,ig)
-							if(Ce(ilam,ig,ir).eq.0d0) then
-								Itot(ir)=BBr(ilam,ir)
-							else
-								Itot(ir)=(BBr(ilam,ir)*Ca(ilam,ig,ir)+contr*Cs(ilam,ir))/Ce(ilam,ig,ir)
-							endif
-						enddo
-						Itot(1:nr)=(BBr(ilam,1:nr)*Ca(ilam,ig,1:nr)+Jstar_nu(1:nr,ilam,ig)*Cs(ilam,1:nr))/Ce(ilam,ig,1:nr)
-						call DGESV( nr, NRHS, Linv, nr, IWORKomp, Itot, nr, info )
-						Si(ilam,ig,1:nr,inu0)=Itot(1:nr)
-					else ! use multiple orders of scattering
-						Iprev(1:nr)=(BBr(ilam,1:nr)*Ca(ilam,ig,1:nr)+Jstar_nu(1:nr,ilam,ig)*Cs(ilam,1:nr))/Ce(ilam,ig,1:nr)
-						Si(ilam,ig,1:nr,inu0)=Iprev(1:nr)
-						do iter=1,500
-							Itot=0d0
-							do inu=1,nnu
-								tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
-								call SolveIj(tauR,Iprev,Ij,nr)
-								Itot=Itot+Ij*wnu(inu)
-							enddo
-							Iprev(1:nr)=Itot(1:nr)*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)
-							Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+Iprev(1:nr)
-							if(abs(Itot(nr))/Si(ilam,ig,nr,inu0).lt.1d-3) exit
-						enddo
-					endif
+					enddo
+					Linv=-Linv
+					do ir=1,nr
+						Linv(ir,ir)=1d0+Linv(ir,ir)
+					enddo
+					Itot(1:nr)=(BBr(ilam,1:nr)*Ca(ilam,ig,1:nr)+Jstar_nu(1:nr,ilam,ig)*Cs(ilam,1:nr))/Ce(ilam,ig,1:nr)
+					call DGESV( nr, NRHS, Linv, nr, IWORKomp, Itot, nr, info )
+					Si(ilam,ig,1:nr,inu0)=Itot(1:nr)
 					do ir=1,nr
 						if(.not.Si(ilam,ig,ir,inu0).gt.0d0) then
 							Si(ilam,ig,ir,inu0)=BBr(ilam,ir)*Ca(ilam,ig,ir)/Ce(ilam,ig,ir)
@@ -1068,85 +1077,99 @@ c-----------------------------------------------------------------------
 				enddo
 			endif
 		enddo
+!$OMP END DO
+		deallocate(tauR)
+		deallocate(Itot)
+		deallocate(Linv)
+		deallocate(Lmat)
+		deallocate(IWORKomp)
+!$OMP FLUSH
+!$OMP END PARALLEL
 1	continue
 	enddo	
-	deallocate(tauR)
-	deallocate(Ij)
-	deallocate(Itot)
-	deallocate(Iprev)
-	deallocate(Linv,Lmat,IWORKomp)
 	
 	return
 	end
-	
 
 
-	subroutine InvertIj(tauR,Linv,nr)
+	subroutine InvertIjExp(tau,Linv,nr)
 	IMPLICIT NONE
-	integer ir,nr,iir
-	real*8 tauR(nr),Ij(nr),Si(nr),Linv(nr,nr),Lmat(nr,nr)
-	real*8 x(nr),y(nr),fact,d
-	real*8 MM(nr,3),MMal(nr,1),Ma(nr),Mb(nr),Mc(nr)
-	integer indx(nr),info
+	integer ir,nr,jr
+	real*8 Linv(nr,nr),tau(nr),Lp(nr,nr),Lm(nr,nr)
+	real*8 exptau(nr),exptau2,fact,Q
 
-	Ma=0d0
-	Mb=0d0
-	Mc=0d0
-	do ir=2,nr-1
-		fact=1d0/(0.5d0*(tauR(ir+1)+tauR(ir))-0.5d0*(tauR(ir)+tauR(ir-1)))
-		Mb(ir)=1d0+fact*(1d0/(tauR(ir+1)-tauR(ir))+1d0/(tauR(ir)-tauR(ir-1)))
-		Ma(ir)=-fact*1d0/(tauR(ir)-tauR(ir-1))
-		Mc(ir)=-fact*1d0/(tauR(ir+1)-tauR(ir))
-	enddo
-	Mb(1)=1d0/(tauR(1)-tauR(2))
-	Mc(1)=-1d0/(tauR(1)-tauR(2))
-	Ma(nr)=1d0/(tauR(nr-1)-tauR(nr))
-	Mb(nr)=-1d0-1d0/(tauR(nr-1)-tauR(nr))
-	Linv=0d0
-
-	Lmat=0d0
-	do iir=1,nr
-		Lmat(iir,iir)=1d0
-	enddo
-	call dgtsv(nr,nr,Ma(2:nr),Mb(1:nr),Mc(1:nr-1),Lmat,nr,info)
 	do ir=1,nr
-		do iir=1,nr
-			Linv(ir,iir)=Lmat(ir,iir)
-		enddo
+		exptau(ir)=exp(-tau(ir))
+	enddo
+	
+	Lp=0d0
+	do ir=1,nr-1
+		Lp(ir+1,1:nr)=Lp(ir,1:nr)*exptau(ir)
+		Q=(1d0-(1d0+tau(ir))*exptau(ir))/tau(ir)
+		Lp(ir+1,ir)=Lp(ir+1,ir)+Q
+		Q=(tau(ir)-1d0+exptau(ir))/tau(ir)
+		Lp(ir+1,ir+1)=Lp(ir+1,ir+1)+Q
 	enddo
 
-	return
-
-	do iir=2,nr-1
-		x=0d0
-		x(iir)=1d0
-		info=0
-		call tridag(Ma,Mb,Mc,x,y,nr,info)
-		Ij(1:nr)=y(1:nr)
-		do ir=1,nr
-			if(Ij(ir).lt.0d0) info=1
-		enddo
-		if(info.ne.0) then
-			do ir=1,nr
-				MM(ir,1)=Ma(ir)
-				MM(ir,2)=Mb(ir)
-				MM(ir,3)=Mc(ir)
-			enddo
-			call bandec(MM,nr,1,1,nr,3,MMal,1,indx,d)
-			x=0d0
-			x(iir)=1d0
-			call banbks(MM,nr,1,1,nr,3,MMal,1,indx,x)
-			Ij(1:nr)=x(1:nr)
-		endif
-		do ir=1,nr
-			if(Ij(ir).lt.0d0) then
-				Ij(ir)=0d0
-			endif
-		enddo
-		Linv(iir,1:nr)=Ij(1:nr)
+	Lm=0d0
+	do ir=nr,2,-1
+		Lm(ir-1,1:nr)=Lm(ir,1:nr)*exptau(ir)
+		Q=(1d0-(1d0+tau(ir))*exptau(ir))/tau(ir)
+		Lm(ir-1,ir)=Lm(ir-1,ir)+Q
+		Q=(tau(ir)-1d0+exptau(ir))/tau(ir)
+		Lm(ir-1,ir-1)=Lm(ir-1,ir-1)+Q
 	enddo
 
+	Linv=(Lp+Lm)/2d0
 
 	return
 	end
+
+
+
+
+	subroutine SolveIjStarExp(tau,I0,Ij,nr)
+	IMPLICIT NONE
+	integer ir,nr
+	real*8 Ij(nr),I0,tau(nr)
+	real*8 fact,d,exptau
+
+	fact=1d0
+	do ir=nr,1,-1
+		exptau=exp(-tau(ir))
+		Ij(ir)=(1d0-exptau)*fact*I0
+		fact=fact*exptau
+	enddo
+	
+	return
+	end
+	
+
+	subroutine SolveIjExp(tau,Si,Ij,nr)
+	IMPLICIT NONE
+	integer ir,nr,jr
+	real*8 Ij(nr),Si(nr),tau(nr),Ip(nr),Im(nr)
+	real*8 exptau(nr),fact,exptau2,Q
+
+	do ir=1,nr
+		exptau(ir)=exp(-tau(ir))
+	enddo
+	
+	Ip=0d0
+	do ir=1,nr-1
+		Q=(Si(ir)*(1d0-(1d0+tau(ir))*exptau(ir))+Si(ir+1)*(tau(ir)-1d0+exptau(ir)))/tau(ir)
+		Ip(ir+1)=Ip(ir)*exptau(ir)+Q
+	enddo
+
+	Im=0d0
+	do ir=nr,2,-1
+		Q=(Si(ir)*(1d0-(1d0+tau(ir))*exptau(ir))+Si(ir-1)*(tau(ir)-1d0+exptau(ir)))/tau(ir)
+		Im(ir-1)=Im(ir)*exptau(ir)+Q
+	enddo
+
+	Ij=(Ip+Im)/2d0
+
+	return
+	end
+	
 

@@ -627,6 +627,82 @@ c		T0(ir)=real(iT)*(E/E0)**0.25
 	return
 	end
 	
+ 
+ 	
+
+
+	subroutine InvertIj(tauR,Linv,nr)
+	IMPLICIT NONE
+	integer ir,nr,iir
+	real*8 tauR(nr),Ij(nr),Si(nr),Linv(nr,nr),Lmat(nr,nr)
+	real*8 x(nr),y(nr),fact,d
+	real*8 MM(nr,3),MMal(nr,1),Ma(nr),Mb(nr),Mc(nr)
+	integer indx(nr),info
+
+	Ma=0d0
+	Mb=0d0
+	Mc=0d0
+	do ir=2,nr-1
+		fact=1d0/(0.5d0*(tauR(ir+1)+tauR(ir))-0.5d0*(tauR(ir)+tauR(ir-1)))
+		Mb(ir)=1d0+fact*(1d0/(tauR(ir+1)-tauR(ir))+1d0/(tauR(ir)-tauR(ir-1)))
+		Ma(ir)=-fact*1d0/(tauR(ir)-tauR(ir-1))
+		Mc(ir)=-fact*1d0/(tauR(ir+1)-tauR(ir))
+	enddo
+	Mb(1)=1d0/(tauR(1)-tauR(2))
+	Mc(1)=-1d0/(tauR(1)-tauR(2))
+	Ma(nr)=1d0/(tauR(nr-1)-tauR(nr))
+	Mb(nr)=-1d0-1d0/(tauR(nr-1)-tauR(nr))
+	Linv=0d0
+
+	Lmat=0d0
+	do iir=1,nr
+		Lmat(iir,iir)=1d0
+	enddo
+	call dgtsv(nr,nr,Ma(2:nr),Mb(1:nr),Mc(1:nr-1),Lmat,nr,info)
+	do ir=1,nr
+		do iir=1,nr
+			Linv(ir,iir)=Lmat(ir,iir)
+		enddo
+	enddo
+
+	return
+
+	do iir=2,nr-1
+		x=0d0
+		x(iir)=1d0
+		info=0
+		call tridag(Ma,Mb,Mc,x,y,nr,info)
+		Ij(1:nr)=y(1:nr)
+		do ir=1,nr
+			if(Ij(ir).lt.0d0) info=1
+		enddo
+		if(info.ne.0) then
+			do ir=1,nr
+				MM(ir,1)=Ma(ir)
+				MM(ir,2)=Mb(ir)
+				MM(ir,3)=Mc(ir)
+			enddo
+			call bandec(MM,nr,1,1,nr,3,MMal,1,indx,d)
+			x=0d0
+			x(iir)=1d0
+			call banbks(MM,nr,1,1,nr,3,MMal,1,indx,x)
+			Ij(1:nr)=x(1:nr)
+		endif
+		do ir=1,nr
+			if(Ij(ir).lt.0d0) then
+				Ij(ir)=0d0
+			endif
+		enddo
+		Linv(iir,1:nr)=Ij(1:nr)
+	enddo
+
+
+	return
+	end
+
+
+
+ 
       SUBROUTINE tridag(a,b,c,r,u,n,info)
       INTEGER n
       REAL*8 a(n),b(n),c(n),r(n),u(n)

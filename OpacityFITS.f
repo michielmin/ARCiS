@@ -431,7 +431,6 @@ C	 create the new empty FITS file
 
 	if(.not.allocated(Ktable(imol)%P)) allocate(Ktable(imol)%P(Ktable(imol)%nP))
 	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktable(imol)%P,anynull,status)
-
    				 
 	!  Close the file and free the unit number.
 	call ftclos(unit, status)
