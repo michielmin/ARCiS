@@ -681,10 +681,9 @@ c			write(82,*) P(i), Kzz_r(i)
 	if(Cloud(ii)%simplecloud) then
 		Cloud(ii)%ptype='SIMPLE'
 		call SetupPartCloud(ii)
+		Cloud(ii)%w=1d0
 		return
-	endif
-	
-	if(cloudcompute) then
+	else if(cloudcompute) then
 		if(.not.allocated(Cloud(ii)%rv)) then
 			allocate(Cloud(ii)%rv(nr))
 			allocate(Cloud(ii)%sigma(nr))

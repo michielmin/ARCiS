@@ -975,7 +975,7 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			do i=1,nmol_data
 				if(key%key.eq.molname(i)) then
 					read(key%value,*) mixrat(i)
-					includemol(i)=.true.
+					includemol(i)=(mixrat(i).ge.0d0)
 					goto 1
 				endif
 			enddo

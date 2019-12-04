@@ -255,8 +255,8 @@ c ===================================================================
 
 	allocate(fluxp(nlam))
 	npc=nphase
+	call tellertje_perc(0,npc)
 	do ipc=1,npc
-	call tellertje_perc(ipc,npc)
 	theta=pi+2d0*pi*real(ipc-1)/real(npc)
 	if(theta.gt.2d0*pi) theta=theta-2d0*pi
 c	theta=pi
@@ -377,6 +377,7 @@ c	theta=pi
 	fluxp=fluxp*1d23/distance**2
 	phase(ipc,0,1:nlam)=fluxp(1:nlam)
 	flux(0,1:nlam)=0d0
+	call tellertje_perc(ipc,npc)
 	enddo
 	
 	deallocate(rtrace,wrtrace)
@@ -1018,7 +1019,7 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 	do inu0=1,nnu0
 		if(inu0.eq.nnu0.or..not.scattstar) then
 			Jstar_nu=0d0
-			if(inu0.ne.nnu0) then
+			if(inu0.ne.1.and..not.scattstar) then
 				Si(1:nlam,1:ng,1:nr,inu0)=Si(1:nlam,1:ng,1:nr,1)
 				goto 1
 			endif

@@ -25,6 +25,7 @@
 	do i=1,nphase
 		theta(i)=acos(1d0-2d0*(real(i)-0.5d0)/real(nphase))*180d0/pi
 		theta(i)=(real(i)-0.5d0)*180d0/real(nphase)
+		if(do3D) theta(i)=360d0*real(i-1)/real(nphase)
 	enddo
 	do i=1,nclouds
 		docloud0(i,:)=docloud(:,i)
@@ -48,8 +49,8 @@
 	do i=1,nlam-1
 		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
 c     &					flux(0:ncc,i)
-c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam(i+1))
-     &					(phase(1,j,i)+flux(j,i),j=0,ncc)
+     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam(i+1))
+c     &					(phase(1,j,i)+flux(j,i),j=0,ncc)
 	enddo
 	close(unit=30)
 
@@ -106,11 +107,12 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         fstar [Jy]")'
 			write(30,form) "lambda [mu]",theta(1:nphase)
-			form='(f14.6,' // int2string(nphase+1,'(i3)') // 'es19.7E3)'
+			form='(f14.6,' // int2string(nphase+2,'(i3)') // 'es19.7E3)'
 			do i=1,nlam-1
 				write(30,form) sqrt(lam(i)*lam(i+1))/micron,
      &					phase(1:nphase,0,i)+flux(0,i),
-     &					Fstar(i)*1d23/distance**2
+     &					Fstar(i)*1d23/distance**2,
+     &					(pi*Rplanet**2)*Fstar(i)*1d23/distance**2/(4d0*Dplanet**2)
 			enddo
 			close(unit=30)
 		endif
