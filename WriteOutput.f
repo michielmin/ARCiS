@@ -23,9 +23,7 @@
 	allocate(docloud0(max(nclouds,1),ncc))
 	allocate(theta(nphase))
 	do i=1,nphase
-		theta(i)=acos(1d0-2d0*(real(i)-0.5d0)/real(nphase))*180d0/pi
-		theta(i)=(real(i)-0.5d0)*180d0/real(nphase)
-		if(do3D) theta(i)=360d0*real(i-1)/real(nphase)
+		theta(i)=theta_phase(i)
 	enddo
 	do i=1,nclouds
 		docloud0(i,:)=docloud(:,i)
@@ -49,8 +47,8 @@
 	do i=1,nlam-1
 		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
 c     &					flux(0:ncc,i)
-     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam(i+1))
-c     &					(phase(1,j,i)+flux(j,i),j=0,ncc)
+c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam(i+1))
+     &					(phase(1,j,i)+flux(j,i),j=0,ncc)
 	enddo
 	close(unit=30)
 

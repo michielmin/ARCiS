@@ -114,6 +114,8 @@ c===============================================================================
 	integer nTZ,nspike,nai,nboot,npew
 	integer,allocatable :: niso(:),instr_nobs(:)
 	real*8,allocatable :: MMW(:)
+	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
+	logical fulloutput3D
 	integer nBB
 	parameter(nBB=10000)
 	real*8,allocatable :: BB(:,:)						! nBB,nlam
@@ -213,7 +215,7 @@ c===============================================================================
 	real*8 alphaZ
 
 	real*8,allocatable :: flux(:,:),obsA(:,:),phase(:,:,:),obsLightCurve(:,:)
-	real*8,allocatable :: timeLightCurve(:)
+	real*8,allocatable :: timeLightCurve(:),theta_phase(:)
 	integer ncc,nphase,n2d,i2d,nLightCurve
 	logical cloudcompute,useDRIFT,singlecloud
 	logical,allocatable :: docloud(:,:)
@@ -299,7 +301,7 @@ cPoints for the temperature structure
 		real*8,allocatable :: lam(:),y(:),dy(:),R(:),Rexp(:),model(:)
 		integer,allocatable :: ilam(:)
 		real*8 beta,scale
-		integer ndata,i2d
+		integer ndata,i2d,iphase
 		logical spec
 		integer nlam,nt
 		real*8,allocatable :: LC(:,:),dLC(:,:),t(:),dt(:)

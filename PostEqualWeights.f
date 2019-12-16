@@ -5,8 +5,9 @@
 	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime,sig,aver
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:)
 	real*8,allocatable :: PTstruct(:,:),var(:,:),values(:,:),COratio_der(:),Z_der(:)
-	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j
+	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j,iphase,imol
 	logical,allocatable :: done(:)
+	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:)
 	
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
 	
@@ -28,6 +29,12 @@
 	allocate(sorted(nmodels))
 	allocate(done(nmodels))
 	allocate(var(nmodels,n_ret))
+	if(do3D.and.fulloutput3D) then
+		allocate(PTstruct3D(0:nmodels,0:nphase,nr))
+		allocate(mixrat3D(0:nmodels,0:nphase,nr,nmol))
+		allocate(phase3D(0:nmodels,1:nphase,nlam))
+		allocate(phase3DR(0:nmodels,1:nphase,nlam))
+	endif
 
 	spectrans=0d0
 	specemis=0d0
@@ -127,6 +134,15 @@
 	if(i2d.le.n2d) goto 3
 	PTstruct(i,1:nr)=T(1:nr)
 	
+	if(do3D.and.fulloutput3D) then
+		PTstruct3D(i,0:nphase,1:nr)=PTaverage3D(0:nphase,1:nr)
+		mixrat3D(i,0:nphase,1:nr,1:nmol)=mixrat_average3D(0:nphase,1:nr,1:nmol)
+		do iphase=1,nphase
+			phase3D(i,iphase,1:nlam)=phase(iphase,0,1:nlam)+flux(0,1:nlam)
+			phase3DR(i,iphase,1:nlam)=(phase(iphase,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
+		enddo
+	endif
+	
 	if(i.gt.2.and.(100*(i/100).eq.i.or.i.eq.donmodels.or.i.le.10)) then
 		im1=real(i)/2d0-real(i)*0.682689492137086/2d0+0.5d0
 		im2=real(i)/2d0-real(i)*0.954499736103642/2d0+0.5d0
@@ -166,6 +182,61 @@
 			write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 		enddo
 		close(unit=26)
+
+		if(do3D.and.fulloutput3D) then
+			open(unit=26,file=trim(outputdir) // "PT_trans_limits",RECL=1000)
+			do ir=1,nr
+				sorted(1:i)=PTstruct3D(1:i,0,ir)
+				call sort(sorted,i)
+				write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+			enddo
+			close(unit=26)
+			do imol=1,nmol
+				if(includemol(imol)) then
+					open(unit=26,file=trim(outputdir) // trim(molname(imol)) // "_trans_limits",RECL=1000)
+					do ir=1,nr
+						sorted(1:i)=mixrat3D(1:i,0,ir,imol)
+						call sort(sorted,i)
+						write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+					enddo
+					close(unit=26)
+				endif
+			enddo
+			do iphase=1,nphase
+				open(unit=26,file=trim(outputdir) // "PT" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",RECL=1000)
+				do ir=1,nr
+					sorted(1:i)=PTstruct3D(1:i,iphase,ir)
+					call sort(sorted,i)
+					write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+				enddo
+				close(unit=26)
+				do imol=1,nmol
+					if(includemol(imol)) then
+						open(unit=26,file=trim(outputdir) // trim(molname(imol)) // "_" // 
+     &						trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",RECL=1000)
+						do ir=1,nr
+							sorted(1:i)=mixrat3D(1:i,iphase,ir,imol)
+							call sort(sorted,i)
+							write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+						enddo
+						close(unit=26)
+					endif
+				enddo
+				open(unit=26,file=trim(outputdir) // "phase" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",RECL=1000)
+				open(unit=27,file=trim(outputdir) // "phaseR" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",RECL=1000)
+				do ilam=1,nlam-1
+					sorted(1:i)=phase3D(1:i,iphase,ilam)
+					call sort(sorted,i)
+					write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+					sorted(1:i)=phase3DR(1:i,iphase,ilam)
+					call sort(sorted,i)
+					write(27,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+				enddo
+				close(unit=26)
+				close(unit=27)
+			enddo
+		endif
+
 
 		open(unit=26,file=trim(outputdir) // "retrieval",RECL=1000)
 		do j=1,n_ret
@@ -214,6 +285,7 @@
 	deallocate(Z_der)
 	deallocate(done)
 	deallocate(var)
+	if(do3D.and.fulloutput3D) deallocate(PTstruct3D,mixrat3D,phase3D,phase3DR)
 	
 	return
 	end

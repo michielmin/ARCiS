@@ -143,7 +143,8 @@
 4					continue
 					if((x.gt.(lam(1)*1d4).and.x.lt.(lam(nlam)*1d4)).or.useobsgrid) then
 						ObsSpec(i)%lam(ilam)=x*1d-4
-						if(ObsSpec(i)%type.eq."emisa".or.ObsSpec(i)%type.eq."emis".or.ObsSpec(i)%type.eq."emission") then
+						if(ObsSpec(i)%type.eq."emisa".or.ObsSpec(i)%type.eq."emis".or.ObsSpec(i)%type.eq."emission"
+     &								.or.ObsSpec(i)%type.eq."phase") then
 							dy=dy/y
 							ObsSpec(i)%y(ilam)=log(y)
 						else
@@ -170,7 +171,7 @@
 						endif
 					enddo
 					if(useobsgrid) then
-						if(ObsSpec(i)%type(1:4).eq.'emis') lamemis(ObsSpec(i)%ilam(j))=.true.
+						if(ObsSpec(i)%type(1:4).eq.'emis'.or.ObsSpec(i)%type(1:5).eq."phase") lamemis(ObsSpec(i)%ilam(j))=.true.
 						if(ObsSpec(i)%type(1:5).eq.'trans') lamtrans(ObsSpec(i)%ilam(j))=.true.
 					endif
 				enddo
@@ -628,7 +629,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 
 		do i=1,nobs
 			select case(ObsSpec(i)%type)
-				case("trans","transmission","emisr","emisR","emisa","emis","emission","transC")
+				case("trans","transmission","emisr","emisR","emisa","emis","emission","transC","phase","phaser","phaseR")
 					open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),RECL=1000)
 					do j=1,ObsSpec(i)%ndata
 						write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
@@ -1459,6 +1460,28 @@ c			vec(i)=gasdev(idum)
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
 		case("emisr","emisR")
 			specsave(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
+			if(useobsgrid) then
+				do ilam=1,ObsSpec(i)%ndata
+					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
+				enddo
+			else
+				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
+     &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
+    		endif
+     		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
+		case("phaser","phaseR")
+			specsave(1:nlam)=(phase(ObsSpec(i)%iphase,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
+			if(useobsgrid) then
+				do ilam=1,ObsSpec(i)%ndata
+					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
+				enddo
+			else
+				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
+     &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
+    		endif
+     		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
+		case("phase")
+			specsave(1:nlam)=phase(ObsSpec(i)%iphase,0,1:nlam)+flux(0,1:nlam)
 			if(useobsgrid) then
 				do ilam=1,ObsSpec(i)%ndata
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)

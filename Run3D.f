@@ -28,9 +28,9 @@
 	real*8 x,y,z,vx,vy,vz,v
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),tauR(:,:,:),SiR(:,:,:),Ij(:),tauR1(:),SiR1(:)
-	real*8,allocatable :: tauc(:),Afact(:),vv(:,:,:),obsA_omp(:)
+	real*8,allocatable :: tauc(:),Afact(:),vv(:,:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:)
 	type(Mueller) M
-	real*8 g,tot
+	real*8 g,tot,contr,tmp(nmol)
 	character*500 file
 	real*8 tau1,fact1,exp_tau1
 
@@ -38,6 +38,8 @@
 	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce(nlam,nr,n3D))
 	allocate(R3D(n3D,nr+2))
 	allocate(R3D2(n3D,nr+2))
+	allocate(T3D(n3D,nr))
+	allocate(mixrat3D(n3D,nr,nmol))
 
 	recomputeopac=.true.
 	docloud=.true.
@@ -135,6 +137,8 @@ c===============================================================
 			R3D2(i,ir)=R(ir)**2
 		enddo
 		do ir=1,nr
+			T3D(i,ir)=T(ir)
+			mixrat3D(i,ir,1:nmol)=mixrat_r(ir,1:nmol)
 			do ilam=1,nlam-1
 				if(useobsgrid) then
 					freq0=freq(ilam)
@@ -162,6 +166,7 @@ c===============================================================
 c ===================================================================
 c correction for anisotropic scattering	
 c ===================================================================
+ 			if(scattering) then
  			M%F11=Rayleigh%F11*Csca(ir,ilam)*Ndens(ir)
  			do icloud=1,nclouds
  				if(Cloud(icloud)%standard.eq.'MIX') then
@@ -187,6 +192,7 @@ c ===================================================================
  				g=0.999d0
  			endif
  			Cs(ilam,ir,i)=Cs(ilam,ir,i)*(1d0-g)
+			endif
 c ===================================================================
 c ===================================================================
 
@@ -244,6 +250,11 @@ c ===================================================================
 	enddo
 
 	if(emisspec) then
+
+	if(fulloutput3D) then
+		PTaverage3D=0d0
+		mixrat_average3D=0d0
+	endif
 	ndisk=20
 	nsub=0
 
@@ -257,22 +268,21 @@ c ===================================================================
 	npc=nphase
 	call tellertje_perc(0,npc)
 	do ipc=1,npc
-	theta=pi+2d0*pi*real(ipc-1)/real(npc)
+	theta=2d0*pi*theta_phase(ipc)/360d0
 	if(theta.gt.2d0*pi) theta=theta-2d0*pi
-c	theta=pi
 	fluxp=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,SiR,tauR,SiR1,tauR1,
-!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,Ij)
-!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,inu3D,
-!$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc)
-	allocate(tauR(nr*2,nlam,ng),SiR(nr*2,nlam,ng),Ij(nr*2))
-	allocate(tauR1(nr*2),SiR1(nr*2))
+!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,
+!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,Ij,tau1,fact,exp_tau1,contr)
+!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,inu3D,fulloutput3D,
+!$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol)
+	allocate(fact(nlam,ng))
 !$OMP DO
 	do irtrace=1,nrtrace
 		A=2d0*pi*rtrace(irtrace)*wrtrace(irtrace)/real(nptrace)
 		do iptrace=1,nptrace
+			fact=1d0
 			phi=2d0*pi*(real(iptrace)-0.5)/real(nptrace)
 			rr=rtrace(irtrace)
 			y=rr*sin(phi)
@@ -302,11 +312,12 @@ c	theta=pi
 			enddo
 			i1=nr+1
 			edgeNR=2
-			j=1
-			tauR(j,1:nlam,1:ng)=1d-10
 			i=ibeta(i2,i3)
 			inu=inu3D(i2,i3)
-			SiR=0d0
+			if(fulloutput3D) then
+				PTaverage3D(ipc,1:nr)=PTaverage3D(ipc,1:nr)+T3D(i,1:nr)*A
+				mixrat_average3D(ipc,1:nr,1:nmol)=mixrat_average3D(ipc,1:nr,1:nmol)+mixrat3D(i,1:nr,1:nmol)*A
+			endif
 1			continue
 			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nr,nlong,nlatt)
 			if(i1next.le.0) then
@@ -317,24 +328,24 @@ c	theta=pi
 					else
 						freq0=sqrt(freq(ilam)*freq(ilam+1))
 					endif
-					SiR(j,ilam,1:ng)=Planck(T(1),freq0)
+					contr=Planck(T(1),freq0)
+					do ig=1,ng
+						fluxp(ilam)=fluxp(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
+					enddo
 				enddo
-				tauR(j,1:nlam,1:ng)=1d0
 				goto 2
 			endif
 			if(i1next.ge.nr+2) goto 2
 			if(i1.le.nr) then
 				i=ibeta(i2,i3)
 				inu=inu3D(i2,i3)
-				j=j+1
 				do ig=1,ng
 					do ilam=1,nlam
-						tot=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
-						if(.not.tot.gt.1d-10) tot=1d-10
-						if(tot.gt.1d10) tot=1d10
-						tauR(j,ilam,ig)=tot
+						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
+						exp_tau1=exp(-tau1)
+						fluxp(ilam)=fluxp(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
+						fact(ilam,ig)=fact(ilam,ig)*exp_tau1
 					enddo
-					SiR(j,1:nlam,ig)=Si(1:nlam,ig,i1,inu,i)
 				enddo
 			endif
 			x=x+v*vx
@@ -355,35 +366,47 @@ c	theta=pi
 			edgeNR=edgenext
 			goto 1
 2			continue
-			if(j.gt.1) then
-				do ilam=1,nlam
-					do ig=1,ng
-						do ir=1,j
-							tauR1(j+1-ir)=tauR(ir,ilam,ig)
-							SiR1(j+1-ir)=SiR(ir,ilam,ig)
-						enddo
-						call SolveIjExp(tauR1,SiR1,Ij,j)
-						fluxp(ilam)=fluxp(ilam)+A*wgg(ig)*Ij(j)*2d0
-					enddo
-				enddo
-			endif
 		enddo
 	enddo
 !$OMP END DO
-	deallocate(tauR,SiR,Ij)
-	deallocate(tauR1,SiR1)
+	deallocate(fact)
 !$OMP FLUSH
 !$OMP END PARALLEL
 	fluxp=fluxp*1d23/distance**2
 	phase(ipc,0,1:nlam)=fluxp(1:nlam)
 	flux(0,1:nlam)=0d0
 	call tellertje_perc(ipc,npc)
+	if(fulloutput3D) then
+		PTaverage3D(ipc,1:nr)=PTaverage3D(ipc,1:nr)/(pi*Rmax**2)
+		mixrat_average3D(ipc,1:nr,1:nmol)=mixrat_average3D(ipc,1:nr,1:nmol)/(pi*Rmax**2)
+		open(unit=25,file=trim(outputdir) // "mixrat_phase" // trim(int2string(int(theta_phase(ipc)),'(i0.3)')),RECL=6000)
+		do ir=1,nr
+			j=0
+			do i=1,nmol
+				if(includemol(i)) then
+					j=j+1
+					tmp(j)=mixrat_average3D(ipc,ir,i)
+				endif
+			enddo
+			write(25,*) PTaverage3D(ipc,ir),P(ir),tmp(1:j)
+		enddo
+	endif
 	enddo
 	
 	deallocate(rtrace,wrtrace)
 	deallocate(fluxp)
 	endif
 
+	if(fulloutput3D) then
+		do j=1,nlatt
+			i=nlong/4+1
+			PTaverage3D(0,1:nr)=PTaverage3D(0,1:nr)+T3D(ibeta(i,j),1:nr)/real(nlatt*2)
+			mixrat_average3D(0,1:nr,1:nmol)=mixrat_average3D(0,1:nr,1:nmol)+mixrat3D(ibeta(i,j),1:nr,1:nmol)/real(nlatt*2)
+			i=3*nlong/4+1
+			PTaverage3D(0,1:nr)=PTaverage3D(0,1:nr)+T3D(ibeta(i,j),1:nr)/real(nlatt*2)
+			mixrat_average3D(0,1:nr,1:nmol)=mixrat_average3D(0,1:nr,1:nmol)+mixrat3D(ibeta(i,j),1:nr,1:nmol)/real(nlatt*2)
+		enddo
+	endif
 
 	if(transspec) then
 
@@ -511,6 +534,7 @@ c	theta=pi
 	deallocate(Ca_mol,Ce)
 	deallocate(R3D)
 	deallocate(R3D2)
+	deallocate(T3D,mixrat3D)
 	
 	return
 	end
@@ -1009,7 +1033,11 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 				if(tau.gt.1d10) then
 					tau=1d10
 				endif
-				tauR_nu(ir,ilam,ig)=tau
+				if(ir.eq.nr) then
+					tauR_nu(ir,ilam,ig)=tau
+				else
+					tauR_nu(ir,ilam,ig)=tauR_nu(ir+1,ilam,ig)+tau
+				endif
 			enddo
 		enddo
 	enddo
@@ -1028,9 +1056,9 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 			do ilam=1,nlam-1
 				do ig=1,ng
 					tauRs(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
-					contr=(Fstar(ilam)/(4d0*Dplanet**2))
-					call SolveIjStarExp(tauRs,contr,Ijs,nr)
-					Jstar_nu(1:nr,ilam,ig)=Ijs(1:nr)
+					contr=(Fstar(ilam)/(4d0*pi*Dplanet**2))
+					call SolveIjStar(tauRs,contr,Ijs,nr)
+					Jstar_nu(1:nr,ilam,ig)=Ijs(1:nr)*2d0
 				enddo
 			enddo
 		endif
@@ -1052,7 +1080,7 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 					Linv=0d0
 					do inu=1,nnu
 						tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
-						call InvertIjExp(tauR,Lmat,nr)
+						call InvertIj(tauR,Lmat,nr)
 						do ir=1,nr
 							Linv(ir,1:nr)=Linv(ir,1:nr)+wnu(inu)*Lmat(ir,1:nr)*Cs(ilam,1:nr)/(Ce(ilam,ig,1:nr))
 						enddo

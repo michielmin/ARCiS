@@ -155,10 +155,10 @@ c		enddo
 
 		do ir=0,nr
 			if(ir.ne.0) then
-				E0=Fstar(ilam)*(R(ir+1)**2-R(ir)**2)/(4d0*Dplanet**2)
+				E0=Fstar(ilam)*(R(ir+1)**2-R(ir)**2)/(2d0*Dplanet**2)
 				Nphot=NphotStar/real(nr)
 			else
-				E0=(Fstar(ilam)*R(1)**2/Dplanet**2)/2d0
+				E0=Fstar(ilam)*R(1)**2/(2d0*Dplanet**2)
 				Nphot=NphotStar
 			endif
 			E0=E0/real(Nphot)

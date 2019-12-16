@@ -199,6 +199,7 @@ c===============================================================================
 	n_ret=0
 	n_Par3D=0
 	n_instr=0
+	nphase=0
 	j=0
 	mixratfile=.false.
 	fcloud_default=1d0
@@ -224,6 +225,10 @@ c===============================================================================
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nobs) nobs=key%nr1
+			case("phase")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr2.eq.0) key%nr2=1
+				if(key%nr1.gt.nphase) nphase=key%nr1
 			case("par3d")
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
@@ -318,6 +323,7 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(instr_ntrans(max(n_instr,1)))
 	allocate(instr_nobs(max(n_instr,1)))
 	allocate(Par3D(n_Par3D))
+	allocate(theta_phase(max(nphase,1)))
 
 	ncia0=0
 	existh2h2=.false.
@@ -505,11 +511,8 @@ c	condensates=(condensates.or.cloudcompute)
 	
 	call InitFreq()
 	if(nphase.le.0) then
-		nphase=2d0*pi/asin(Rstar/Dplanet)
-		if(nphase.gt.90) then
-			call output("Adjusting number of phase angles to 90")
-			nphase=90
-		endif
+		nphase=1
+		theta_phase(1)=180d0
 	endif
 
 	if(particledir.eq.' ') particledir=trim(outputdir)
@@ -640,6 +643,11 @@ c	condensates=(condensates.or.cloudcompute)
 	lamemis=emisspec
 	lamtrans=transspec
 	
+	if(fulloutput3D) then
+		allocate(PTaverage3D(0:nphase,nr))
+		allocate(mixrat_average3D(0:nphase,nr,nmol))
+	endif
+	
 	return
 	end
 
@@ -690,8 +698,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) computecontrib
 		case("outputopacity","writeopacity")
 			read(key%value,*) outputopacity
+		case("phase")
+			read(key%value,*) theta_phase(key%nr1)
 		case("nphase")
-			read(key%value,*) nphase
+			print*,'WARNING: no longer supported keyword nphase'
 		case("cia")
 			call ReadCIA(key)
 		case("cutoff","cutoff_lor")
@@ -941,6 +951,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			n2d=max(i,n2d)
 		case("do3d","run3d")
 			read(key%value,*) do3D
+		case("output3d")
+			read(key%value,*) fulloutput3D
 		case("kzz3d")
 			if(key%nr1.eq.1) read(key%value,*) Kzz3D_1
 			if(key%nr1.eq.2) read(key%value,*) Kzz3D_2
@@ -1246,7 +1258,6 @@ c	if(par_tprofile) call ComputeParamT(T)
 	includemol=.false.
 	par_tprofile=.false.
 	
-	nphase=0
 	Nphot0=2500
 
 	dochemistry=.false.
@@ -1398,6 +1409,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 		ObsSpec(i)%scale=-1d-1
 		ObsSpec(i)%spec=.true.
 		ObsSpec(i)%i2d=0
+		ObsSpec(i)%iphase=1
 	enddo
 
 	computeT=.false.
@@ -1465,6 +1477,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	epsiter=1d-4
 
 	maxchemtime=1d200
+	
+	fulloutput3D=.false.
 	
 	return
 	end
@@ -1634,6 +1648,8 @@ c				enddo
 		case("i2d")
 			read(key%value,*) ObsSpec(i)%i2d
 			if(ObsSpec(i)%i2d.gt.n2d) n2d=ObsSpec(i)%i2d
+		case("iphase")
+			read(key%value,*) ObsSpec(i)%iphase
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
