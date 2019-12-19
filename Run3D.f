@@ -54,7 +54,7 @@
 	endif
 	long0=long_shift*pi/180d0
 
-	call Setup3D(beta,long,latt,nlong,nlatt,long0,b1,b2,Palbedo,betamin,betamax)
+	call Setup3D(beta,long,latt,nlong,nlatt,long0,b1,b2,Palbedo,betapow,betamin,betamax)
 	do i=1,nlong
 		if(long(i).lt.(pi/4d0)) then
 			tanx(i)=sin(long(i))/cos(long(i))
@@ -573,14 +573,14 @@ c ===================================================================
 	end
 	
 
-	subroutine Setup3D(beta,long,latt,nlong,nlatt,long0,b1,b2,albedo,betamin,betamax)
+	subroutine Setup3D(beta,long,latt,nlong,nlatt,long0,b1,b2,p,albedo,betamin,betamax)
 	IMPLICIT NONE
 	integer i,j,nlong,nlatt
 	real*8 pi
 	parameter(pi=3.1415926536)
 	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
-	real*8 beta(nlong,nlatt),la,lo,albedo
-	real*8 long0,b1,b2,f,fact,betamin,betamax
+	real*8 beta(nlong,nlatt),la,lo,albedo,p
+	real*8 long0,b1,b2,f,firr1,firr2,betamin,betamax
 
 	f=max(0d0,((1d0-albedo)-2d0*(b1+b2)))
 
@@ -595,26 +595,21 @@ c ===================================================================
 	betamax=0d0
 	do i=1,nlong-1
 		do j=1,nlatt-1
-			lo=(long(i)+long(i+1))/2d0
-			la=(latt(j)+latt(j+1))/2d0
 			if(abs(lo).lt.pi/2d0) then	! dayside
-				beta(i,j)=b1+(b2-b1)*(lo+pi/2d0)/pi
+				firr1=b1+(b2-b1)*((lo+pi/2d0)/pi)**p
+			else if(lo.lt.(-pi/2d0)) then
+				firr1=b1+(b2-b1)*((-lo-pi/2d0)/pi)**p
 			else
-				if(lo.lt.0d0) then
-					beta(i,j)=b1-(b2-b1)*(lo+pi/2d0)/pi
-				else
-					beta(i,j)=b2+(b1-b2)*(lo-pi/2d0)/pi
-				endif
+				firr1=b1+(b2-b1)*(1d0-(lo-pi/2d0)/pi)**p
 			endif
-			if((lo+long0).gt.0d0) then
-				fact=cos((lo+long0)*(pi/2d0)/(long0+pi/2d0))
-			else
-				fact=cos(-(lo+long0)*(pi/2d0)/(long0-pi/2d0))
+			firr2=0d0
+			if(lo.gt.(-pi/2d0).and.lo.lt.(long0)) then
+				firr2=f*cos((lo-long0)*(pi/2d0)/(pi/2d0+long0))
+			else if(lo.lt.(pi/2d0).and.lo.gt.(long0)) then
+				firr2=f*cos((lo-long0)*(pi/2d0)/(pi/2d0-long0))
 			endif
-			if(abs(lo).lt.pi/2d0) then
-				beta(i,j)=beta(i,j)+f*fact
-			endif
-			beta(i,j)=abs((b1+b2)/2d0+(beta(i,j)-(b1+b2)/2d0)*cos(la))
+			beta(i,j)=abs((b1+(b2-b1)/(p+1d0))
+     &		+(firr1+firr2-(b1+(b2-b1)/(p+1d0)))*cos(la))
 			if(beta(i,j).gt.betamax) betamax=beta(i,j)
 			if(beta(i,j).lt.betamin) betamin=beta(i,j)
 		enddo

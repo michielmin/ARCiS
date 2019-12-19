@@ -900,6 +900,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Pform
 		case("albedo")
 			read(key%value,*) Palbedo
+		case("betapow")
+			read(key%value,*) betapow
 		case("fenrich","f_enrich","enrich","fdry","f_dry")
 			read(key%value,*) f_dry
 		case("fwet","f_wet")
@@ -1239,6 +1241,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	logg=4.5d0
 	
 	Palbedo=0d0
+	betapow=1d0
 	
 	orbit_P=-1d0
 	orbit_e=0d0
