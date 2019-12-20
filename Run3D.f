@@ -595,6 +595,8 @@ c ===================================================================
 	betamax=0d0
 	do i=1,nlong-1
 		do j=1,nlatt-1
+			lo=(long(i)+long(i+1))/2d0
+			la=(latt(j)+latt(j+1))/2d0
 			if(abs(lo).lt.pi/2d0) then	! dayside
 				firr1=b1+(b2-b1)*((lo+pi/2d0)/pi)**p
 			else if(lo.lt.(-pi/2d0)) then
