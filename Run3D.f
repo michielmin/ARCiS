@@ -28,7 +28,7 @@
 	real*8 x,y,z,vx,vy,vz,v
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),tauR(:,:,:),SiR(:,:,:),Ij(:),tauR1(:),SiR1(:)
-	real*8,allocatable :: tauc(:),Afact(:),vv(:,:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:)
+	real*8,allocatable :: tauc(:),Afact(:),vv(:,:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
 	type(Mueller) M
 	real*8 g,tot,contr,tmp(nmol)
 	character*500 file
@@ -259,7 +259,7 @@ c ===================================================================
 	nsub=0
 
 	nrtrace=(nr-1)*nsub+ndisk
-	nptrace=nlatt*2
+	nptrace=nlatt
 	allocate(rtrace(nrtrace),wrtrace(nrtrace))
 
 	call gauleg(0d0,Rmax,rtrace,wrtrace,ndisk)
@@ -273,20 +273,23 @@ c ===================================================================
 	fluxp=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,
+!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,Ij,tau1,fact,exp_tau1,contr)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,inu3D,fulloutput3D,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol)
 	allocate(fact(nlam,ng))
+	allocate(fluxp_omp(nlam))
+	fluxp_omp=0d0
 !$OMP DO
 	do irtrace=1,nrtrace
 		A=2d0*pi*rtrace(irtrace)*wrtrace(irtrace)/real(nptrace)
 		do iptrace=1,nptrace
 			fact=1d0
-			phi=2d0*pi*(real(iptrace)-0.5)/real(nptrace)
+c Note we are here using the symmetry between North and South
+			phi=pi*(real(iptrace)-0.5)/real(nptrace)
 			rr=rtrace(irtrace)
-			y=rr*sin(phi)
-			z=rr*cos(phi)
+			y=rr*cos(phi)
+			z=rr*sin(phi)
 			x=sqrt(Rmax**2-y**2-z**2)
 			vx=-1d0
 			vy=0d0
@@ -330,7 +333,7 @@ c ===================================================================
 					endif
 					contr=Planck(T(1),freq0)
 					do ig=1,ng
-						fluxp(ilam)=fluxp(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
+						fluxp_omp(ilam)=fluxp_omp(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
 					enddo
 				enddo
 				goto 2
@@ -343,7 +346,7 @@ c ===================================================================
 					do ilam=1,nlam
 						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
 						exp_tau1=exp(-tau1)
-						fluxp(ilam)=fluxp(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
+						fluxp_omp(ilam)=fluxp_omp(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
 						fact(ilam,ig)=fact(ilam,ig)*exp_tau1
 					enddo
 				enddo
@@ -369,6 +372,10 @@ c ===================================================================
 		enddo
 	enddo
 !$OMP END DO
+!$OMP CRITICAL
+	fluxp(1:nlam)=fluxp(1:nlam)+fluxp_omp(1:nlam)
+	deallocate(fluxp_omp)
+!$OMP END CRITICAL
 	deallocate(fact)
 !$OMP FLUSH
 !$OMP END PARALLEL
@@ -444,10 +451,11 @@ c ===================================================================
 	do irtrace=1,nrtrace-1
 		A=pi*(rtrace(irtrace+1)**2-rtrace(irtrace)**2)/real(nptrace)
 		do iptrace=1,nptrace
-			phi=2d0*pi*(real(iptrace)-0.5)/real(nptrace)
+c Note we use the symmetry of the North and South here!
+			phi=pi*(real(iptrace)-0.5)/real(nptrace)
 			rr=0.5d0*(rtrace(irtrace)+rtrace(irtrace+1))
-			y=rr*sin(phi)
-			z=rr*cos(phi)
+			y=rr*cos(phi)
+			z=rr*sin(phi)
 			x=sqrt(Rmax**2-y**2-z**2)
 			vx=-1d0
 			vy=0d0

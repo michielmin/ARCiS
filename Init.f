@@ -626,7 +626,7 @@ c	condensates=(condensates.or.cloudcompute)
 		enddo			
 	endif
 
-	if(dochemistry) call init_GGchem()
+	if(dochemistry) call init_GGchem(molname,nmol)
 
 	if(iWolk.gt.0) then
 		open(unit=50,file=trim(outputdir) // "/Wolk.dat",RECL=6000)

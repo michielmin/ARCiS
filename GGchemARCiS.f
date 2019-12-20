@@ -154,6 +154,13 @@
       end MODULE DATABASE
 
 **********************************************************************
+      MODULE ARCiS_GGCHEM
+**********************************************************************
+      implicit none
+      integer,allocatable :: linkmol(:),linkele(:)
+      end MODULE ARCiS_GGCHEM
+
+**********************************************************************
       SUBROUTINE SAVE_DBASE
 **********************************************************************
       use dust_data,ONLY: NELEM,NDUST,dust_nam
@@ -5756,7 +5763,7 @@ c      close(12)
 
 
 ***********************************************************************
-	subroutine init_GGchem()
+	subroutine init_GGchem(mol_names_in,n_mol_in)
 ***********************************************************************
       use PARAMETERS,ONLY: elements,abund_pick,model_dim,model_pconst,
      >                     model_struc,model_eqcond,Npoints,useDatabase,
@@ -5770,9 +5777,12 @@ c      close(12)
       use DATABASE,ONLY: NLAST
 
       use CHEMISTRY,ONLY: NewBackIt,NewFullIt,NewBackFac,NewPreMethod,
-     >                    NewFastLevel,dispol_file
+     >                    NewFastLevel,dispol_file,NMOLE,NELM,cmol
       use DUST_DATA,ONLY: NELEM,eps=>eps0,mass,muH,elnam,amu,bar
+      use ARCiS_GGCHEM
       implicit none
+	integer n_mol_in,ii
+	character*10 :: mol_names_in(n_mol_in),uppername
       integer :: i,j,nr
       real*8 :: m,val,abund(74,4),eps0(NELEM),epsH
       character(len=2) :: el
@@ -5960,6 +5970,26 @@ c      dispol_file(2) = ''
       call INIT_CHEMISTRY_ARCiS
       call INIT_DUSTCHEM_ARCiS
 
+	if(.not.allocated(linkmol)) then
+		allocate(linkmol(n_mol_in))
+		allocate(linkele(n_mol_in))
+		linkmol=0
+		linkele=0
+		do j=1,n_mol_in
+			call To_upper_ARCiS(mol_names_in(j),uppername)
+			do i=1,NMOLE
+				if(uppername.eq.cmol(i)) then
+					linkmol(j)=i
+				endif
+			enddo
+			do i=1,NELEM
+				if(mol_names_in(j).eq.elnam(i)) then
+					linkele(j)=i
+				endif
+			enddo
+		enddo
+	endif
+
 	return
 	end
 
@@ -5982,6 +6012,7 @@ c      dispol_file(2) = ''
       use DUST_DATA,ONLY: NELEM,NDUST,elnam,eps0,bk,bar,muH,amu,mass,
      >                    dust_nel,dust_el,dust_nu,dust_nam,dust_mass,
      >                    dust_Vol,mass,mel
+      use ARCiS_GGCHEM
       implicit none
 	integer :: n_atom_in,n_mol_in,verbose,i,j
 	real*8 :: Tin,Pin,atom_abuns_in(n_atom_in),mol_abuns_in(n_mol_in),MMW
@@ -6032,17 +6063,25 @@ c      write(*,'("C/O =",0pF6.3)') eps(C)/eps(O)
 
 	mol_abuns_in=0d0
 	do j=1,n_mol_in
-		call To_upper_ARCiS(mol_names_in(j),uppername)
-		do i=1,NMOLE
-			if(uppername.eq.cmol(i)) then
-				mol_abuns_in(j)=mol_abuns_in(j)+nmol(i)/tot
-			endif
-		enddo
-		do i=1,NELEM
-			if(mol_names_in(j).eq.elnam(i)) then
-				mol_abuns_in(j)=mol_abuns_in(j)+nat(i)/tot
-			endif
-		enddo
+c		call To_upper_ARCiS(mol_names_in(j),uppername)
+c		do i=1,NMOLE
+c			if(uppername.eq.cmol(i)) then
+c				mol_abuns_in(j)=mol_abuns_in(j)+nmol(i)/tot
+c			endif
+c		enddo
+c		do i=1,NELEM
+c			if(mol_names_in(j).eq.elnam(i)) then
+c				mol_abuns_in(j)=mol_abuns_in(j)+nat(i)/tot
+c			endif
+c		enddo
+		i=linkmol(j)
+		if(i.ne.0) then
+			mol_abuns_in(j)=nmol(i)/tot
+		endif
+		i=linkele(j)
+		if(i.ne.0) then
+			mol_abuns_in(j)=nat(i)/tot
+		endif
 	enddo
 
 	MMW=0d0
