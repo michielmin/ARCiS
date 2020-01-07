@@ -45,7 +45,7 @@
 	docloud=.true.
 	cloudfrac=1d0
 
-	if(beta3D_1.gt.0d0) then
+	if(beta3D_1.ge.0d0) then
 		b1=beta3D_1	! evening limb, limited to 0-0.25
 		b2=beta3D_2	! morning limb, limited to 0-0.25
 	else
@@ -53,8 +53,9 @@
 		b2=betaT
 	endif
 	long0=long_shift*pi/180d0
+	print*,beta3D_1,beta3D_2
 
-	call Setup3D(beta,long,latt,nlong,nlatt,long0,b1,b2,Palbedo,betapow,betamin,betamax)
+	call Setup3D(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,betamax)
 	do i=1,nlong
 		if(long(i).lt.(pi/4d0)) then
 			tanx(i)=sin(long(i))/cos(long(i))
@@ -108,9 +109,12 @@
 		beta3D(i)=betamin+(betamax-betamin)*real(i-1)/real(n3D-1)
 		do j=1,n_Par3D
 			if(Par3D(j)%logscale) then
-				Par3D(j)%x=10d0**(log10(Par3D(j)%xmin)+log10(Par3D(j)%xmax/Par3D(j)%xmin)*beta3D(i))
+c				Par3D(j)%x=10d0**(log10(Par3D(j)%xmin)+log10(Par3D(j)%xmax/Par3D(j)%xmin)*beta3D(i))
+				Par3D(j)%x=10d0**(log10(Par3D(j)%xmin)+
+     &							  log10(Par3D(j)%xmax/Par3D(j)%xmin)*(real(i-1)/real(n3D-1))**Par3D(j)%pow)
 			else
-				Par3D(j)%x=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*beta3D(i)
+c				Par3D(j)%x=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*beta3D(i)
+				Par3D(j)%x=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*(real(i-1)/real(n3D-1))**Par3D(j)%pow
 			endif
 		enddo
 		call MapPar3D()
@@ -581,7 +585,7 @@ c Note we use the symmetry of the North and South here!
 	end
 	
 
-	subroutine Setup3D(beta,long,latt,nlong,nlatt,long0,b1,b2,p,albedo,betamin,betamax)
+	subroutine Setup3D(beta,long,latt,nlong,nlatt,long0,b1,b2,p,f,betamin,betamax)
 	IMPLICIT NONE
 	integer i,j,nlong,nlatt
 	real*8 pi
@@ -589,8 +593,6 @@ c Note we use the symmetry of the North and South here!
 	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
 	real*8 beta(nlong,nlatt),la,lo,albedo,p
 	real*8 long0,b1,b2,f,firr1,firr2,betamin,betamax
-
-	f=max(0d0,((1d0-albedo)-2d0*(b1+b2)))
 
 	do i=1,nlong
 		long(i)=-pi+2d0*pi*real(i-1)/real(nlong-1)

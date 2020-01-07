@@ -322,7 +322,7 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(instrument(max(n_instr,1)))
 	allocate(instr_ntrans(max(n_instr,1)))
 	allocate(instr_nobs(max(n_instr,1)))
-	allocate(Par3D(n_Par3D))
+	allocate(Par3D(max(n_Par3D,1)))
 	allocate(theta_phase(max(nphase,1)))
 
 	ncia0=0
@@ -804,8 +804,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			opacitydir=trim(key%value)
 		case("computet")
 			read(key%value,*) computeT
-		case("fday")
-			read(key%value,*) fday
 		case("teffp","tplanet")
 			read(key%value,*) TeffP
 		case("maxiter")
@@ -898,8 +896,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Tform
 		case("pform")
 			read(key%value,*) Pform
-		case("albedo")
-			read(key%value,*) Palbedo
+		case("fday")
+			read(key%value,*) fDay
 		case("betapow")
 			read(key%value,*) betapow
 		case("fenrich","f_enrich","enrich","fdry","f_dry")
@@ -1240,7 +1238,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Dplanet=1d0
 	logg=4.5d0
 	
-	Palbedo=0d0
+	fDay=0.5d0
 	betapow=1d0
 	
 	orbit_P=-1d0
@@ -1398,6 +1396,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	enddo
 	do i=1,n_Par3D
 		Par3D(i)%logscale=.false.
+		Par3D(i)%pow=1d0
 	enddo
 	npop=30
 	ngen=0
@@ -1414,9 +1413,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 		ObsSpec(i)%i2d=0
 		ObsSpec(i)%iphase=1
 	enddo
-
+	
 	computeT=.false.
-	fday=0d0
 	doMCcompute=.false.
 	TeffP=600d0
 	outputopacity=.false.
