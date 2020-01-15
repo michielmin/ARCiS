@@ -1321,22 +1321,6 @@ c	adjust metallicity
 	names_atoms(17) = 'Fe'
 	names_atoms(18) = 'Ni'
 
-	readin=.false.
-	molfracs_atoms=0d0
-
-	open(unit=43,file=filename)
-1	read(43,*,err=1,end=2) name,abun
-	do i=1,N_atoms
-		if(trim(name).eq.names_atoms(i)) then
-			molfracs_atoms(i)=abun
-			readin(i)=.true.
-		endif
-	enddo
-	goto 1
-2	close(unit=43)
-
-	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))
-
 	molfracs_atoms_solar = (/ 0.9207539305,
      &  0.0783688694,
      &  0.0002478241, 
@@ -1357,11 +1341,23 @@ c	adjust metallicity
      &  1.52807116806281e-06
      &  /)
 
-	molfracs_atoms_solar=molfracs_atoms_solar/sum(molfracs_atoms_solar(1:N_atoms))
+	readin=.false.
+	molfracs_atoms=molfracs_atoms_solar
 
+	open(unit=43,file=filename)
+1	read(43,*,err=1,end=2) name,abun
 	do i=1,N_atoms
-		if(.not.readin(i)) molfracs_atoms(i)=1d-30
+		if(trim(name).eq.names_atoms(i)) then
+			molfracs_atoms(i)=abun
+			readin(i)=.true.
+		endif
 	enddo
+	goto 1
+2	close(unit=43)
+
+	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))
+
+	molfracs_atoms_solar=molfracs_atoms_solar/sum(molfracs_atoms_solar(1:N_atoms))
 
 	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))
 
