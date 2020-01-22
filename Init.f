@@ -898,6 +898,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Pform
 		case("fday")
 			read(key%value,*) fDay
+		case("kxx")
+			read(key%value,*) Kxx
+		case("vxx")
+			read(key%value,*) vxx
 		case("betapow")
 			read(key%value,*) betapow
 		case("fenrich","f_enrich","enrich","fdry","f_dry")
@@ -1240,6 +1244,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	fDay=0.5d0
 	betapow=1d0
+	Kxx=0d0
+	vxx=0d0
 	
 	orbit_P=-1d0
 	orbit_e=0d0

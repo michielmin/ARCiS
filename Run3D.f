@@ -53,9 +53,9 @@
 		b2=betaT
 	endif
 	long0=long_shift*pi/180d0
-	print*,beta3D_1,beta3D_2
 
-	call Setup3D(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,betamax)
+c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,betamax)
+	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,vxx,fDay,betamin,betamax)
 	do i=1,nlong
 		if(long(i).lt.(pi/4d0)) then
 			tanx(i)=sin(long(i))/cos(long(i))
@@ -585,7 +585,7 @@ c Note we use the symmetry of the North and South here!
 	end
 	
 
-	subroutine Setup3D(beta,long,latt,nlong,nlatt,long0,b1,b2,p,f,betamin,betamax)
+	subroutine Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,p,f,betamin,betamax)
 	IMPLICIT NONE
 	integer i,j,nlong,nlatt
 	real*8 pi
@@ -634,8 +634,189 @@ c Note we use the symmetry of the North and South here!
 	end
 	
 
+	subroutine Setup3D(beta,long,latt,nlong,nlatt,Kxx,vxx,f,betamin,betamax)
+	IMPLICIT NONE
+	integer i,j,nlong,nlatt
+	real*8 pi
+	parameter(pi=3.1415926536)
+	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
+	real*8 beta(nlong,nlatt),la,lo,albedo,p,f,tot1,tot2,b1,b2
+	real*8 Kxx,vxx,betamin,betamax,beta1(nlong)
+
+	do i=1,nlong
+		long(i)=-pi+2d0*pi*real(i-1)/real(nlong-1)
+	enddo
+	do j=1,nlatt
+		latt(j)=-pi/2d0+pi*real(j-1)/real(nlatt-1)
+	enddo
+	
+	betamin=1d0
+	betamax=0d0
+
+	call DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,vxx)
+	beta=beta*f
+
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			if(beta(i,j).gt.betamax) betamax=beta(i,j)
+			if(beta(i,j).lt.betamin) betamin=beta(i,j)
+		enddo
+	enddo
+	
+	latt=latt+pi/2d0
+	long=long+pi
+
+	open(unit=20,file='output.dat',RECL=6000)
+	do j=1,nlatt-1
+		write(20,*) beta(1:nlong-1,j)
+	enddo
+	close(unit=20)
+
+	return
+	end
+	
+
+	subroutine DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,vxx)
+	IMPLICIT NONE
+	integer nlatt,nlong,NN
+	integer,allocatable :: IWORK(:)
+	integer i,info,j,NRHS,ii(nlong-1,nlatt-1)
+	real*8 beta(nlong,nlatt),Kxx,vxx,long(nlong),latt(nlatt),S(nlong-1,nlatt-1)
+	real*8 pi,tot,x((nlatt-1)*(nlong-1))
+	real*8 la(nlatt-1),lo(nlong-1),tp,tm,tot1,tot2
+	real*8,allocatable :: A(:,:)
+	integer j0,jm,jp,k
+	parameter(pi=3.1415926536)
+	allocate(IWORK(50*nlatt*nlong*nlatt*nlong))
+	allocate(A((nlatt-1)*(nlong-1),(nlatt-1)*(nlong-1)))
+
+	do i=1,nlong-1
+		lo(i)=(long(i)+long(i+1))/2d0
+	enddo
+	do j=1,nlatt-1
+		la(j)=(latt(j)+latt(j+1))/2d0
+	enddo
+	k=0
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			k=k+1
+			ii(i,j)=k
+		enddo
+	enddo
+	S=0d0
+	A=0d0
+	tot=0d0
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			if(abs(lo(i)).le.pi/2d0) S(i,j)=-cos(lo(i))*cos(la(j))
+		enddo
+	enddo
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			j0=ii(i,j)
+			x(j0)=S(i,j)
+			A(j0,j0)=A(j0,j0)-1d0
+			if(i.gt.1) then
+				jm=ii(i-1,j)
+			else
+				jm=ii(nlong-1,j)
+			endif
+			if(i.lt.nlong-2) then
+				jp=ii(i+1,j)
+			else
+				jp=ii(1,j)
+			endif
+			A(j0,jm)=A(j0,jm)+0.5d0*vxx*real(nlong)/cos(la(j))
+			A(j0,jp)=A(j0,jp)-0.5d0*vxx*real(nlong)/cos(la(j))
+			A(j0,jm)=A(j0,jm)+Kxx*(real(nlong)/cos(la(j)))**2
+			A(j0,j0)=A(j0,j0)-2d0*Kxx*(real(nlong)/cos(la(j)))**2
+			A(j0,jp)=A(j0,jp)+Kxx*(real(nlong)/cos(la(j)))**2
+
+			if(j.gt.1) then
+				jm=ii(i,j-1)
+				tm=latt(j-1)
+			else
+				k=i+nlong/2
+				if(k.gt.nlong-1) k=k-nlong+1
+				jm=ii(k,1)
+				tm=latt(1)
+			endif
+			if(j.lt.nlatt-2) then
+				jp=ii(i,j+1)
+				tp=latt(j+2)
+			else
+				k=i+nlong/2
+				if(k.gt.nlong-1) k=k-nlong+1
+				jp=ii(k,nlatt-1)
+				tp=latt(nlatt)
+			endif
+			A(j0,jp)=A(j0,jp)+Kxx*real(nlatt*2)**2*cos(tp)/cos(la(j))
+			A(j0,jm)=A(j0,jm)+Kxx*real(nlatt*2)**2*cos(tm)/cos(la(j))
+			A(j0,j0)=A(j0,j0)-Kxx*real(nlatt*2)**2*(cos(tp)+cos(tm))/cos(la(j))
+		enddo
+	enddo
+
+	NRHS=1
+	NN=(nlong-1)*(nlatt-1)
+	call DGESV( NN, NRHS, A, NN, IWORK, x, NN, info )
+
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			j0=ii(i,j)
+			beta(i,j)=x(j0)
+			tot1=tot1+beta(i,j)*cos(la(j))
+			tot2=tot2+cos(la(j))
+		enddo
+	enddo
+	beta=beta*0.25*tot2/tot1
+	
+	return
+	end
+	
 
 
+
+	subroutine DiffuseBeta1D(beta,theta,nbeta,K,v)
+	IMPLICIT NONE
+	integer nbeta
+	integer i,info,IWORK(50*nbeta*nbeta),j,NRHS
+	real*8 beta(nbeta),K,v,theta(nbeta),S(nbeta)
+	real*8 pi,A(nbeta,nbeta),tot
+	parameter(pi=3.1415926536)
+	
+	S=0d0
+	A=0d0
+	do i=1,nbeta
+		if(abs(theta(i)).le.pi/2d0) S(i)=-cos(theta(i))
+	enddo
+	tot=-sum(S)
+	do i=2,nbeta-1
+		j=i
+		A(j,i)=-1d0
+		A(j,i-1)=A(j,i-1)+0.5d0*v*real(nbeta)
+		A(j,i+1)=A(j,i+1)-0.5d0*v*real(nbeta)
+		A(j,i-1)=A(j,i-1)+K*real(nbeta)**2
+		A(j,i  )=A(j,i  )-2d0*K*real(nbeta)**2
+		A(j,i+1)=A(j,i+1)+K*real(nbeta)**2
+	enddo
+	A(1,1)=-1d0
+	A(1,nbeta)=A(1,nbeta)+0.5d0*v*real(nbeta)
+	A(1,2)=A(1,2)-0.5d0*v*real(nbeta)
+	A(1,nbeta)=A(1,nbeta)+K*real(nbeta)**2
+	A(1,1)=A(1,1)-2d0*K*real(nbeta)**2
+	A(1,2)=A(1,2)+K*real(nbeta)**2
+
+	A(nbeta,1:nbeta)=1d0
+	S(nbeta)=tot
+
+	beta=S
+
+	NRHS=1
+	call DGESV( nbeta, NRHS, A, nbeta, IWORK, beta, nbeta, info )
+	
+	return
+	end
+	
 
 
 
