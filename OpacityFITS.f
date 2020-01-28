@@ -298,8 +298,8 @@ C	 create the new empty FITS file
 	naxes(3)=Ktable(imol)%nT
 	naxes(4)=Ktable(imol)%nP
 	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-	if(.not.allocated(Ktable(imol)%ktable)) allocate(Ktable(imol)%ktable(nlam,ng,naxes(3),naxes(4)))
-	Ktable(imol)%ktable(1:nlam,1:ng,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=0d0
+	if(.not.allocated(Ktable(imol)%ktable)) allocate(Ktable(imol)%ktable(ng,nlam,naxes(3),naxes(4)))
+	Ktable(imol)%ktable(1:ng,1:nlam,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=0d0
 	allocate(Ktemp(naxes(1),naxes(2),naxes(3),naxes(4)))
 
 	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktemp,anynull,status)
@@ -311,7 +311,7 @@ C	 create the new empty FITS file
      &			log10(Ktable(imol)%lam2/Ktable(imol)%lam1)*real(ilam-1)/real(Ktable(imol)%nlam))
 	enddo
 
-!$OMP PARALLEL IF(nlam.gt.200)
+!$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,ww,w1,iT,iP,l1,l2)
 !$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp,dlam,useobsgrid)
@@ -360,7 +360,7 @@ C	 create the new empty FITS file
 			tot=tot/sum(wtemp(1:ngF))
 			call sortw(temp,wtemp,ngF)
 			if(ng.eq.1) then
-				Ktable(imol)%ktable(ilam,1,iT,iP)=tot
+				Ktable(imol)%ktable(1,ilam,iT,iP)=tot
 			else
 				do ig=2,ngF
 					wtemp(ig)=wtemp(ig)+wtemp(ig-1)
@@ -369,24 +369,24 @@ C	 create the new empty FITS file
 				do ig=1,ng
 					call hunt(wtemp,ngF,gg(ig),j)
 					if(j.eq.0) then
-						Ktable(imol)%ktable(ilam,ig,iT,iP)=temp(1)
+						Ktable(imol)%ktable(ig,ilam,iT,iP)=temp(1)
 					else
 						w1=(gg(ig)-wtemp(j+1))/(wtemp(j)-wtemp(j+1))
-						Ktable(imol)%ktable(ilam,ig,iT,iP)=temp(j)*w1+temp(j+1)*(1d0-w1)
+						Ktable(imol)%ktable(ig,ilam,iT,iP)=temp(j)*w1+temp(j+1)*(1d0-w1)
 					endif
 				enddo
 				tot2=0d0
 				do ig=1,ng
-					tot2=tot2+wgg(ig)*Ktable(imol)%ktable(ilam,ig,iT,iP)
+					tot2=tot2+wgg(ig)*Ktable(imol)%ktable(ig,ilam,iT,iP)
 				enddo
 				if(tot2.ne.0d0) then
 					if(tot/tot2.gt.1d0) then
-						Ktable(imol)%ktable(ilam,ng,iT,iP)=Ktable(imol)%ktable(ilam,ng,iT,iP)+(tot-tot2)/wgg(ng)
+						Ktable(imol)%ktable(ng,ilam,iT,iP)=Ktable(imol)%ktable(ng,ilam,iT,iP)+(tot-tot2)/wgg(ng)
 					else
-						Ktable(imol)%ktable(ilam,1:ng,iT,iP)=Ktable(imol)%ktable(ilam,1:ng,iT,iP)*tot/tot2
+						Ktable(imol)%ktable(1:ng,ilam,iT,iP)=Ktable(imol)%ktable(1:ng,ilam,iT,iP)*tot/tot2
 					endif
 				else
-					Ktable(imol)%ktable(ilam,1:ng,iT,iP)=tot
+					Ktable(imol)%ktable(1:ng,ilam,iT,iP)=tot
 				endif
 			endif
 		endif
@@ -457,7 +457,7 @@ C	 create the new empty FITS file
 			Pl=Planck(Ktable(imol)%T(iT),freq(ilam))
 			do iP=1,Ktable(imol)%nP
 				do ig=1,ng
-					Ktable(imol)%Cp(iT,iP)=Ktable(imol)%Cp(iT,iP)+wgg(ig)*dfreq(ilam)*Pl*Ktable(imol)%ktable(ilam,ig,iT,iP)
+					Ktable(imol)%Cp(iT,iP)=Ktable(imol)%Cp(iT,iP)+wgg(ig)*dfreq(ilam)*Pl*Ktable(imol)%ktable(ig,ilam,iT,iP)
 				enddo
 			enddo
 			tot2=tot2+dfreq(ilam)*Pl

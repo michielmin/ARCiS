@@ -868,6 +868,11 @@ c		enddo
 		wT2=1d0-wT1
 	endif
  
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ilam,ig)
+!$OMP& SHARED(nlam,ng,kappa_mol,imol,Ktable,wT1,wT2,wP1,wP2,iT,iP)
+!$OMP DO
 	do ilam=1,nlam-1
 		do ig=1,ng
 			kappa_mol(ig,ilam,imol)=Ktable(imol)%ktable(ilam,ig,iT,iP)*wT1*wP1+
@@ -876,6 +881,9 @@ c		enddo
      &						  Ktable(imol)%ktable(ilam,ig,iT+1,iP+1)*wT2*wP2
 		enddo
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 
 	return
 	end
