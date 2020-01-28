@@ -43,9 +43,6 @@
 	real*8,allocatable :: Mief11_fcomp(:),Mief12_fcomp(:)
 	real*8,allocatable :: Mief33_fcomp(:),Mief34_fcomp(:)
 
-	write(tmp,'("mkdir -p ",a)') outputdir(1:len_trim(outputdir)-1)
-	call system(tmp)
-
 	write(meth,100)
 100	format('DHS')
 
@@ -437,33 +434,6 @@ c changed this to mass fractions (11-05-2010)
 		frac=1d0/real(nm)
 	endif
 
-	partfile=trim(particledir) // "particle" // "_f" // trim(dbl2string(1d0*C%rv(isize),'(es8.2)'))
-	if(abun_in_name.gt.0) then
-		do i=1,nm
-			select case(abun_in_name)
-				case(1)
-					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f3.1)'))
-				case(2)
-					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f4.2)'))
-				case(3)
-					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f5.3)'))
-				case(4)
-					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f6.4)'))
-				case default
-					partfile=trim(partfile) // "_f" // trim(dbl2string(1d0*frac(i),'(f7.5)'))
-			end select
-		enddo
-	endif
-	partfile=trim(partfile) // ".fits.gz"
-
-	inquire(file=partfile,exist=truefalse)
-	if(truefalse.and..not.useobsgrid) then
-		if(checkparticlefile(partfile,amin,amax,dble(pow),ns,C%fmax,C%blend,C%porosity,frac,rho,nm,filename,.true.)) then
-			call ReadParticleFits(partfile,C,isize)
-			goto 300
-		endif
-	endif
-
 	if(C%blend) then
 		nm=nm+1
 		e1(nm,1:nlamdust)=1d0
@@ -476,7 +446,7 @@ c changed this to mass fractions (11-05-2010)
 !$OMP& PRIVATE(i,e1blend,e2blend)
 !$OMP& SHARED(nlamdust,e1,e2,frac,nm)
 !$OMP DO
-!$OMP& SCHEDULE(DYNAMIC,1)
+!$OMP& SCHEDULE(STATIC)
 		do i=1,nlamdust
 			call Blender(e1(1:nm,i),e2(1:nm,i),frac,nm,e1blend,e2blend)
 			e1(1,i)=e1blend
@@ -595,7 +565,7 @@ c changed this to mass fractions (11-05-2010)
 	allocate(D21(na,2))
 	call AllocateDMiLay
 !$OMP DO
-!$OMP& SCHEDULE(DYNAMIC, 1)
+!$OMP& SCHEDULE(STATIC,1)
 	do ilam=1,nlamdust
 	
 	if(.not.computelam(ilam)) then
@@ -1044,12 +1014,6 @@ c changed this to mass fractions (11-05-2010)
 		frac=1d0/real(nm)
 	endif
 	
-c	if(.not.domakeai) then
-		call ParticleFITS(C,r0,nr0(1:nm,1:ns),nm,ns,rho_av,ii,amin,amax,dble(pow),
-     &						C%fmax,C%blend,C%porosity,frac,rho,filename,isize)
-c	endif
-
-
 300	continue	
 
 	deallocate(r0)
