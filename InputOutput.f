@@ -65,7 +65,6 @@ c-----------------------------------------------------------------------
 	if(.not.do_output) return
 
 	write(*,'(1a1,a,$)') char(13),trim(string)
-	write(9,'(1a1,a,$)') char(13),trim(string)
 	
 	return
 	end
