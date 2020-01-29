@@ -875,10 +875,10 @@ c		enddo
 !$OMP DO
 	do ilam=1,nlam-1
 		do ig=1,ng
-			kappa_mol(ig,ilam,imol)=Ktable(imol)%ktable(ilam,ig,iT,iP)*wT1*wP1+
-     &						  Ktable(imol)%ktable(ilam,ig,iT+1,iP)*wT2*wP1+
-     &						  Ktable(imol)%ktable(ilam,ig,iT,iP+1)*wT1*wP2+
-     &						  Ktable(imol)%ktable(ilam,ig,iT+1,iP+1)*wT2*wP2
+			kappa_mol(ig,ilam,imol)=Ktable(imol)%ktable(ig,ilam,iT,iP)*wT1*wP1+
+     &						  Ktable(imol)%ktable(ig,ilam,iT+1,iP)*wT2*wP1+
+     &						  Ktable(imol)%ktable(ig,ilam,iT,iP+1)*wT1*wP2+
+     &						  Ktable(imol)%ktable(ig,ilam,iT+1,iP+1)*wT2*wP2
 		enddo
 	enddo
 !$OMP END DO
