@@ -55,7 +55,7 @@
 	long0=long_shift*pi/180d0
 
 c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,betamax)
-	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,vxx,fDay,betamin,betamax)
+	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,vxx,night2day,fDay,betamin,betamax)
 	do i=1,nlong
 		if(long(i).lt.(pi/4d0)) then
 			tanx(i)=sin(long(i))/cos(long(i))
@@ -634,14 +634,14 @@ c Note we use the symmetry of the North and South here!
 	end
 	
 
-	subroutine Setup3D(beta,long,latt,nlong,nlatt,Kxx,vxx,f,betamin,betamax)
+	subroutine Setup3D(beta,long,latt,nlong,nlatt,Kxx,vxx,night2day,f,betamin,betamax)
 	IMPLICIT NONE
 	integer i,j,nlong,nlatt
 	real*8 pi
 	parameter(pi=3.1415926536)
 	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
 	real*8 beta(nlong,nlatt),la,lo,albedo,p,f,tot1,tot2,b1,b2
-	real*8 Kxx,vxx,betamin,betamax,beta1(nlong)
+	real*8 Kxx,vxx,betamin,betamax,beta1(nlong),night2day
 
 	do i=1,nlong
 		long(i)=-pi+2d0*pi*real(i-1)/real(nlong-1)
@@ -653,7 +653,7 @@ c Note we use the symmetry of the North and South here!
 	betamin=1d0
 	betamax=0d0
 
-	call DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,vxx)
+	call DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,vxx,night2day)
 	beta=beta*f
 
 	do i=1,nlong-1
@@ -676,7 +676,144 @@ c Note we use the symmetry of the North and South here!
 	end
 	
 
-	subroutine DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,vxx)
+	subroutine DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,vxx,contrast)
+	IMPLICIT NONE
+	integer nlatt,nlong,NN
+	integer,allocatable :: IWORK(:)
+	integer i,info,j,NRHS,ii(nlong-1,nlatt-1)
+	real*8 beta(nlong,nlatt),Kxx,vxx,long(nlong),latt(nlatt),S(nlong-1,nlatt-1)
+	real*8 pi,tot,x((nlatt-1)*(nlong-1)),contrast,eps
+	parameter(eps=1d-3)
+	real*8 la(nlatt-1),lo(nlong-1),tp,tm,tot1,tot2
+	real*8,allocatable :: A(:,:)
+	integer j0,jm,jp,k,niter,maxiter
+	parameter(pi=3.1415926536)
+	real*8 smax,smin,scale,betamin,betamax,contr
+
+	allocate(IWORK(50*nlatt*nlong*nlatt*nlong))
+	allocate(A((nlatt-1)*(nlong-1),(nlatt-1)*(nlong-1)))
+
+	smax=-1d0
+	smin=-1d0
+	scale=1d0
+	
+	contr=contrast*10d0
+	maxiter=10000
+	niter=0
+	do while(abs((contrast-contr)/(contrast+contr)).gt.eps.or.niter.gt.maxiter)
+	niter=niter+1
+	
+	do i=1,nlong-1
+		lo(i)=(long(i)+long(i+1))/2d0
+	enddo
+	do j=1,nlatt-1
+		la(j)=(latt(j)+latt(j+1))/2d0
+	enddo
+	k=0
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			k=k+1
+			ii(i,j)=k
+		enddo
+	enddo
+	S=0d0
+	A=0d0
+	tot=0d0
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			if(abs(lo(i)).le.pi/2d0) S(i,j)=-cos(lo(i))*cos(la(j))
+		enddo
+	enddo
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			j0=ii(i,j)
+			x(j0)=S(i,j)
+			A(j0,j0)=A(j0,j0)-1d0
+			if(i.gt.1) then
+				jm=ii(i-1,j)
+			else
+				jm=ii(nlong-1,j)
+			endif
+			if(i.lt.nlong-2) then
+				jp=ii(i+1,j)
+			else
+				jp=ii(1,j)
+			endif
+			A(j0,jm)=A(j0,jm)+0.5d0*vxx*scale*real(nlong)/cos(la(j))
+			A(j0,jp)=A(j0,jp)-0.5d0*vxx*scale*real(nlong)/cos(la(j))
+			A(j0,jm)=A(j0,jm)+Kxx*scale*(real(nlong)/cos(la(j)))**2
+			A(j0,j0)=A(j0,j0)-2d0*Kxx*scale*(real(nlong)/cos(la(j)))**2
+			A(j0,jp)=A(j0,jp)+Kxx*scale*(real(nlong)/cos(la(j)))**2
+
+			if(j.gt.1) then
+				jm=ii(i,j-1)
+				tm=latt(j-1)
+			else
+				k=i+nlong/2
+				if(k.gt.nlong-1) k=k-nlong+1
+				jm=ii(k,1)
+				tm=latt(1)
+			endif
+			if(j.lt.nlatt-2) then
+				jp=ii(i,j+1)
+				tp=latt(j+2)
+			else
+				k=i+nlong/2
+				if(k.gt.nlong-1) k=k-nlong+1
+				jp=ii(k,nlatt-1)
+				tp=latt(nlatt)
+			endif
+			A(j0,jp)=A(j0,jp)+Kxx*scale*real(nlatt*2)**2*cos(tp)/cos(la(j))
+			A(j0,jm)=A(j0,jm)+Kxx*scale*real(nlatt*2)**2*cos(tm)/cos(la(j))
+			A(j0,j0)=A(j0,j0)-Kxx*scale*real(nlatt*2)**2*(cos(tp)+cos(tm))/cos(la(j))
+		enddo
+	enddo
+
+	NRHS=1
+	NN=(nlong-1)*(nlatt-1)
+	call DGESV( NN, NRHS, A, NN, IWORK, x, NN, info )
+
+	betamin=0d0
+	betamax=0d0
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			j0=ii(i,j)
+			beta(i,j)=x(j0)
+			tot1=tot1+beta(i,j)*cos(la(j))
+			tot2=tot2+cos(la(j))
+			if(abs(lo(i)).le.pi/2d0) then
+				betamax=betamax+beta(i,j)*abs(cos(la(j))*cos(lo(i)))
+			else
+				betamin=betamin+beta(i,j)*abs(cos(la(j))*cos(lo(i)))
+			endif
+		enddo
+	enddo
+	beta=beta*0.25*tot2/tot1
+	contr=betamin/betamax
+	if(contr.lt.contrast) then
+		smin=scale
+		if(smax.lt.0d0) then
+			scale=scale*2d0
+		else
+			scale=(scale+smax)/2d0
+		endif
+	else
+		smax=scale
+		if(smin.lt.0d0) then
+			scale=scale/2d0
+		else
+			scale=(scale+smin)/2d0
+		endif
+	endif
+	enddo
+	
+	return
+	end
+	
+
+
+
+	subroutine DiffuseBetaFix(beta,long,latt,nlong,nlatt,Kxx,vxx)
 	IMPLICIT NONE
 	integer nlatt,nlong,NN
 	integer,allocatable :: IWORK(:)
