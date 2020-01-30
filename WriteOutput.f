@@ -1249,7 +1249,6 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	
 	open(unit=20,file=filename,RECL=6000)
 
-	read(20,*)
 1	read(20,'(a1000)',end=3) line
 	call getkeys(line,key,n)
 	if(line(1:1).eq.' '.or.key(1)(1:1).eq.'#') goto 1
@@ -1280,7 +1279,6 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 
 	open(unit=20,file=filename,RECL=6000)
 
-	read(20,*)
 4	read(20,'(a1000)',end=6) line
 	call getkeys(line,key,n)
 	if(line(1:1).eq.' '.or.line(1:1).eq.'#') goto 4
