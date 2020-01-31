@@ -2194,14 +2194,30 @@ c not entirely correct...
 	return
 	end
 	
+	subroutine compactname(name,cname)
+	IMPLICIT NONE
+	character*500 name,cname
+	integer i,n,j
+	n=len_trim(name)
+	j=1
+	cname=' '
+	do i=1,n
+		if(name(i:i).ne.' '.and.name(i:i).ne.'_'.and.name(i:i).ne.'-') then
+			cname(j:j)=name(i:i)
+			j=j+1
+		endif
+	enddo
 	
+	return
+	end
+
 	
 	subroutine ReadPlanetNameCSV()
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
 	real*8 x,dR1,dR2,dM1,dM2
-	character*100 name,namestar
+	character*500 name,namestar,cname,cplanetname
 	integer i,n
 	character*10 Zc
 	character*1000 line,key(100),value(100)
@@ -2209,6 +2225,8 @@ c not entirely correct...
 	open(unit=72,file=planetparameterfile,RECL=6000)
 	read(72,'(a1000)') line
 	call getkeys(line,key,n)
+
+	call compactname(planetname,cplanetname)
 
 1	read(72,'(a1000)',end=2) line
 	call getkeys(line,value,n)
@@ -2247,7 +2265,9 @@ c not entirely correct...
 		endif
 		logg=log10(Ggrav*(Mstar*Msun)/((Rstar*Rsun)**2))
 	enddo
-	if(trim(name).eq.trim(planetname)) then
+	call compactname(name,cname)
+	
+	if(trim(cname).eq.trim(cplanetname)) then
 		close(unit=72)
 		call output("Stellar mass:     " // dbl2string(Mstar,'(f9.4)') // "Msun")
 		call output("Stellar T:        " // dbl2string(Tstar,'(f9.4)') // "K")

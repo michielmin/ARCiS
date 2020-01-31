@@ -417,6 +417,17 @@ c Note we are here using the symmetry between North and South
 			PTaverage3D(0,1:nr)=PTaverage3D(0,1:nr)+T3D(ibeta(i,j),1:nr)/real(nlatt*2)
 			mixrat_average3D(0,1:nr,1:nmol)=mixrat_average3D(0,1:nr,1:nmol)+mixrat3D(ibeta(i,j),1:nr,1:nmol)/real(nlatt*2)
 		enddo
+		open(unit=25,file=trim(outputdir) // "mixrat_transit",RECL=6000)
+		do ir=1,nr
+			j=0
+			do i=1,nmol
+				if(includemol(i)) then
+					j=j+1
+					tmp(j)=mixrat_average3D(0,ir,i)
+				endif
+			enddo
+			write(25,*) PTaverage3D(0,ir),P(ir),tmp(1:j)
+		enddo
 	endif
 
 	if(transspec) then
