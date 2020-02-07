@@ -1306,7 +1306,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		endif
 	enddo
 	if(specErr(ilam).le.0d0) specErr(ilam)=TRSignal/TRSNR
-	specR(ilam)=lamR(ilam)/(specR(ilam))
+	specR(ilam)=lamR(ilam)/(2d0*specR(ilam))
 	lamR(ilam)=1d-4*lamR(ilam)
 	goto 5
 6	close(unit=20)
