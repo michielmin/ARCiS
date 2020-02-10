@@ -36,10 +36,10 @@ c		return
 c ========================================================================================
 c ========================================================================================
 
-	COratio=min(COratio0*max(0.5d0,Mp**0.25),1d0)
+	COratio=min(COratio0*max(0.5d0,Mp**0.5),1d0)
 	Z=Zstar-1d0+min(3d0,(0.75*Rp/Mp)*(1d0/(1d0+exp(-(Tstar-1000d0)/1000d0))))
-	fdry=min(1d0,1d0/Mp**0.25)*min(Rp/Mp,1d0)**0.25
-	fwet=min(1d0,1d0/Mp**0.25)
+	fdry=min(1d0,1d0/Mp**0.5)*min(Rp/Mp,1d0)**0.5
+	fwet=min(1d0,1d0/Mp**0.5)
 	Nscale=(2d0/(1d0+exp((Tp+gasdev(idum)*50d0-750d0)/500d0)))
 
 	Z=Z+gasdev(idum)*0.05d0
