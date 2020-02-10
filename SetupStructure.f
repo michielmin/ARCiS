@@ -893,6 +893,18 @@ c use Ackerman & Marley 2001 cloud computation
 		call output("Trend computed N/O:  " // dbl2string(NOratio,'(es10.4)'))
 		call output("Trend computed Si/O: " // dbl2string(SiOratio,'(es10.4)'))
 		call output("Trend computed [Z]:  " // dbl2string(Zout,'(es10.3)'))
+		open(unit=25,file=trim(outputdir) // "TrendValues",RECL=6000)
+		write(25,'(a25,es11.4)') "Planet mass",Mplanet/Mjup
+		write(25,'(a25,es11.4)') "Planet radius",Rplanet/Rjup
+		write(25,'(a25,es11.4)') "Planet temperature",sqrt(Rstar/(2d0*Dplanet))*Tstar
+		write(25,'(a25,es11.4)') "Stellar temperature",Tstar
+		write(25,'(a25,es11.4)') "Stellar metallicity",metallicity0
+		write(25,'(a25,es11.4)') "C/O ratio",COratio
+		write(25,'(a25,es11.4)') "N/O ratio",NOratio
+		write(25,'(a25,es11.4)') "Si/O ratio",SiOratio
+		write(25,'(a25,es11.4)') "Planet metallicity",Zout
+		write(25,'(a25,es11.4)') "Ti scaling",TiScale
+		close(unit=25)
 	else
 		if(Tform.gt.0d0) then
 			call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
