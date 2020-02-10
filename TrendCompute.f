@@ -23,16 +23,16 @@ c	molfracs_atoms 					is set
 c ========================================================================================
 c This is for now: no trend inserted, just solar composition
 c ========================================================================================
-		TiScale=1d0
-		if(Tp.lt.1800d0) TiScale=1d-8
-
-		call set_molfracs_atoms_old(COratio0,Z,TiScale,enhancecarbon)
-
-		COratio= molfracs_atoms(3)/molfracs_atoms(5)
-		NOratio= molfracs_atoms(4)/molfracs_atoms(5)
-		SiOratio=molfracs_atoms(9)/molfracs_atoms(5)
-
-		return
+c		TiScale=1d0
+c		if(Tp.lt.1800d0) TiScale=1d-8
+c
+c		call set_molfracs_atoms_old(COratio0,Z,TiScale,enhancecarbon)
+c
+c		COratio= molfracs_atoms(3)/molfracs_atoms(5)
+c		NOratio= molfracs_atoms(4)/molfracs_atoms(5)
+c		SiOratio=molfracs_atoms(9)/molfracs_atoms(5)
+c
+c		return
 c ========================================================================================
 c ========================================================================================
 
