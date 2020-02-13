@@ -60,6 +60,8 @@ c ==============================================================================
 	SiOratio=molfracs_atoms(9)/molfracs_atoms(5)
 	Z=-log10(Z0/(sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))))
 
+	call set_molfracs_atoms(COratio,SiOratio,NOratio,Z)
+
 	return
 	end
 
