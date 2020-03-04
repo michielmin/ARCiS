@@ -102,6 +102,7 @@ OBJS	= Modules.o \
 		MgOData.o \
 		IronData.o \
 		SiCData.o \
+		OrganicsHenning.o \
 		KuruczData.o \
 		MCRad.o \
 		polyPartition.o \

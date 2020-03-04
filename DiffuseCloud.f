@@ -7,7 +7,7 @@
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),xtot(:),vth(:),vthv(:)
 	real*8,allocatable :: Sc(:),Sn(:),rpart(:),mpart(:),xMgO(:)
-	real*8,allocatable :: An(:,:),y(:,:),xv(:,:),xn(:),xc(:,:)
+	real*8,allocatable :: An(:,:),y(:,:),xv(:,:),xn(:),xc(:,:),xm(:)
 	real*8,allocatable :: Aomp(:,:),xomp(:)
 	real*8,allocatable :: drho(:),drhovsed(:),tcinv(:),rho_av(:),densv(:,:),Kd(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t
@@ -261,7 +261,7 @@ c	atoms_cloud(i,3)=1
 		cloud_dens=0d0
 		do i=1,nr
 			Cloud(ii)%rv(i)=r_nuc
-			Cloud(ii)%frac(i,1:18)=1d0/18d0
+			Cloud(ii)%frac(i,1:19)=1d0/19d0
 		enddo
 		return
 	endif
@@ -300,6 +300,7 @@ c	atoms_cloud(i,3)=1
 	allocate(xv(nCS,nnr))
 	allocate(xc(nCS,nnr))
 	allocate(xn(nnr))
+	allocate(xm(nnr))
 	allocate(tcinv(nnr))
 	allocate(vsed(nnr))
 
@@ -422,7 +423,7 @@ c start the loop
 	enddo
 	
 
-c equations for Nuclii
+c equations for number of Nuclii
 	An=0d0
 	x=0d0
 	do i=2,nnr-1
@@ -458,7 +459,7 @@ c equations for Nuclii
 
 c coagulation
 		if(coagulation) then
-			npart=xn(i)*Clouddens(i)/m_nuc
+			npart=xn(i)*Clouddens(i)
 			lmfp=2.3*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
 			vmol=0.5d0*lmfp*vth(i)
 			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
@@ -495,13 +496,71 @@ c rewritten for better convergence
 	do i=1,nnr
 		if(.not.x(i).gt.0d0) x(i)=0d0
 	enddo
-	xn(1:nnr)=x(1:nnr)
+	xn(1:nnr)=x(1:nnr)/m_nuc
 
 	do i=1,nnr
 		if(xn(i).lt.0d0) xn(i)=0d0
 	enddo
 
 
+	if(Cloud(ii)%haze) then
+c equations for mass in Nuclii
+		An=0d0
+		x=0d0
+		do i=2,nnr-1
+			j=i+1
+
+			dz=CloudR(i+1)-CloudR(i-1)
+
+			An(j,i)=An(j,i)-drhovsed(i)
+
+			if(quadratic) then
+			f1=(CloudR(i-1)**2-CloudR(i)**2)/(CloudR(i+1)**2-CloudR(i)**2)
+			f2=(CloudR(i-1)-CloudR(i))/(CloudR(i+1)-CloudR(i))
+			af=1d0/((CloudR(i-1)**2-CloudR(i)**2)-f2*(CloudR(i+1)**2-CloudR(i)**2))
+			bf=1d0/((CloudR(i-1)-CloudR(i))-f1*(CloudR(i+1)-CloudR(i)))
+
+			An(j,i-1)=An(j,i-1)+(2d0*af*CloudR(i)+bf)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+			An(j,i+1)=An(j,i+1)-(2d0*af*f2*CloudR(i)+bf*f1)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+			An(j,i)=An(j,i)+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
+
+			An(j,i-1)=An(j,i-1)+2d0*af*Clouddens(i)*Kd(i)
+			An(j,i+1)=An(j,i+1)-2d0*f2*af*Clouddens(i)*Kd(i)
+			An(j,i)=An(j,i)+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
+			else
+			An(j,i+1)=An(j,i+1)+(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
+			An(j,i-1)=An(j,i-1)-(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
+
+			An(j,i+1)=An(j,i+1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
+			An(j,i-1)=An(j,i-1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
+			An(j,i)=An(j,i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
+			endif
+
+			x(j)=-Sn(i)
+		enddo
+		i=nnr
+		dz=CloudR(i)-CloudR(i-1)
+		An(1,i)=Kd(i)/dz-vsed(i)
+		An(1,i-1)=-Kd(i)/dz
+		x(1)=0d0!-Mn_top/Clouddens(i)
+		i=1
+		An(2,i)=1d0
+		x(2)=0d0
+
+		NRHS=1
+		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
+	
+		do i=1,nnr
+			if(.not.x(i).gt.0d0) x(i)=0d0
+		enddo
+		xm(1:nnr)=x(1:nnr)
+
+		do i=1,nnr
+			if(xm(i).lt.0d0) xm(i)=0d0
+		enddo
+	else
+		xm=0d0
+	endif
 
 
 !$OMP PARALLEL IF(.true.)
@@ -561,7 +620,7 @@ c equations for material
      &					+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 		endif
 
-		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)/m_nuc
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Sc(i)*densv(i,iCS)/mpart(i)
 		xomp(j)=0d0
 
@@ -585,7 +644,7 @@ c equations for material
      &					+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 		endif
 
-		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-Sc(i)*xn(i)*Clouddens(i)/m_nuc
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-Sc(i)*xn(i)*Clouddens(i)
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Sc(i)*densv(i,iCS)/mpart(i)
 		xomp(j)=0d0
 	enddo
@@ -646,18 +705,18 @@ c equations for material
 
 
 	do i=1,nnr
-		tot=0d0
+		tot=xm(i)/1.80d0
 		do iCS=1,nCS
 			tot=tot+xc(iCS,i)/rhodust(iCS)
 		enddo
 		if(tot.gt.0d0) then
-			rho_av(i)=sum(xc(1:nCS,i))/tot
+			rho_av(i)=(sum(xc(1:nCS,i))+xm(i))/tot
 		else
 			rho_av(i)=sum(rhodust(1:nCS))/real(nCS)
 		endif
 		if(xn(i).gt.0d0) then
-			tot=sum(xc(1:nCS,i))
-			rr=(3d0*(tot*m_nuc/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
+			tot=sum(xc(1:nCS,i))+xm(i)
+			rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
 			if(.not.rr.gt.r_nuc) rr=r_nuc
 		else
 			rr=r_nuc
@@ -670,6 +729,7 @@ c equations for material
 		do i=1,nr
 			cloud_dens(i,ii)=0d0
 			do j=1,nr_cloud
+				cloud_dens(i,ii)=cloud_dens(i,ii)+xm(k)*Clouddens(k)/real(nr_cloud)
 				do iCS=1,nCS
 					cloud_dens(i,ii)=cloud_dens(i,ii)+xc(iCS,k)*Clouddens(k)/real(nr_cloud)
 				enddo
@@ -697,7 +757,7 @@ c end the loop
 	do i=1,nr
 		cloud_dens(i,ii)=0d0
 		Cloud(ii)%rv(i)=0d0
-		Cloud(ii)%frac(i,1:18)=1d-200
+		Cloud(ii)%frac(i,1:19)=1d-200
 		do j=1,nr_cloud
 c correction for silicates
 			f=mu(4)*CSnmol(4)+mu(5)*CSnmol(5)
@@ -750,11 +810,12 @@ c correction for SiC
 			Cloud(ii)%frac(i,17)=Cloud(ii)%frac(i,17)+xc(10,k)			! SiC			
 			Cloud(ii)%frac(i,16)=Cloud(ii)%frac(i,16)+xc(9,k)			! C
 			Cloud(ii)%frac(i,12)=Cloud(ii)%frac(i,12)+xMgO(k)			! MgO
+			Cloud(ii)%frac(i,19)=Cloud(ii)%frac(i,19)+xm(k)				! organic seed particles
 			k=k+1
 			if(k.gt.nnr) k=nnr
 		enddo
-		tot=sum(Cloud(ii)%frac(i,1:18))
-		Cloud(ii)%frac(i,1:18)=Cloud(ii)%frac(i,1:18)/tot
+		tot=sum(Cloud(ii)%frac(i,1:19))
+		Cloud(ii)%frac(i,1:19)=Cloud(ii)%frac(i,1:19)/tot
 	enddo
 
 	if(.not.retrieval) then
@@ -763,7 +824,7 @@ c correction for SiC
 		write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"MgO","r[micron]","T[K]","Jstar"
 		form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+1,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
 		do i=1,nnr
-			write(20,form) CloudP(i),Clouddens(i),xn(i),xc(1:nCS,i),xMgO(i),rpart(i),CloudT(i),Sn(i)/m_nuc
+			write(20,form) CloudP(i),Clouddens(i),xn(i)*m_nuc,xc(1:nCS,i),xMgO(i),rpart(i),CloudT(i),Sn(i)/m_nuc
 		enddo
 		close(unit=20)
 	endif

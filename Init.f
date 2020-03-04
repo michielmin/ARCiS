@@ -1387,7 +1387,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%g2=-0.9d0
 		Cloud(i)%kappa=1d-2
 		Cloud(i)%albedo=0.99d0
-		Cloud(i)%P=0.0624d0
+c		Cloud(i)%P=0.0624d0
 	enddo
 	cloudcompute=.false.
 	useDRIFT=.false.

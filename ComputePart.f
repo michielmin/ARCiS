@@ -32,7 +32,7 @@
 	external Carbon_BE_Zubko1996,Mg07Fe03SiO3_Dorschner1995,AstroSilicate
 	external Enstatite_X,Enstatite_Y,Enstatite_Z,checkparticlefile
 	external Forsterite_X,Forsterite_Y,Forsterite_Z
-	external Brookite_X,Brookite_Y,Brookite_Z,Water
+	external Brookite_X,Brookite_Y,Brookite_Z,Water,OrganicsHenning
 	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O,MgO,SiC
 	integer abun_in_name
 	parameter(abun_in_name=2)
@@ -250,6 +250,114 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(Water,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(1,1:nlamdust)=e1d(1:nlamdust)
 		e2(1,1:nlamdust)=e2d(1:nlamdust)
+	else if(C%standard.eq.'CARBON') then
+		input='CARBON'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		allocate(r0(ns))
+		allocate(nr0(MAXMAT,ns))
+		allocate(f(nf))
+		allocate(wf(nf))
+		nm=1
+		rho(1)=1.80
+		frac(1)=1d0/rho(1)
+		allocate(e1d(nlamdust))
+		allocate(e2d(nlamdust))
+		filename(1)='Carbon'
+		call RegridDataLNK(Carbon_BE_Zubko1996,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		e1(1,1:nlamdust)=e1d(1:nlamdust)
+		e2(1,1:nlamdust)=e2d(1:nlamdust)
+	else if(C%standard.eq.'QUARTZ') then
+		input='QUARTZ'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		allocate(r0(ns))
+		allocate(nr0(MAXMAT,ns))
+		allocate(f(nf))
+		allocate(wf(nf))
+		nm=1
+		rho(1)=2.648
+		frac(1)=1d0/rho(1)
+		allocate(e1d(nlamdust))
+		allocate(e2d(nlamdust))
+		filename(1)='Quartz'
+		call RegridDataLNK(SiO2,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		e1(1,1:nlamdust)=e1d(1:nlamdust)
+		e2(1,1:nlamdust)=e2d(1:nlamdust)
+	else if(C%standard.eq.'SiO') then
+		input='SiO'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		allocate(r0(ns))
+		allocate(nr0(MAXMAT,ns))
+		allocate(f(nf))
+		allocate(wf(nf))
+		nm=1
+		rho(1)=2.18
+		frac(1)=1d0/rho(1)
+		allocate(e1d(nlamdust))
+		allocate(e2d(nlamdust))
+		filename(1)='SiO'
+		call RegridDataLNK(SiO,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		e1(1,1:nlamdust)=e1d(1:nlamdust)
+		e2(1,1:nlamdust)=e2d(1:nlamdust)
+	else if(C%standard.eq.'IRON') then
+		input='IRON'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		allocate(r0(ns))
+		allocate(nr0(MAXMAT,ns))
+		allocate(f(nf))
+		allocate(wf(nf))
+		nm=1
+		rho(1)=7.87
+		frac(1)=1d0/rho(1)
+		allocate(e1d(nlamdust))
+		allocate(e2d(nlamdust))
+		filename(1)='Iron'
+		call RegridDataLNK(Iron,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		e1(1,1:nlamdust)=e1d(1:nlamdust)
+		e2(1,1:nlamdust)=e2d(1:nlamdust)
+	else if(C%standard.eq.'CORRUNDUM') then
+		input='CORRUNDUM'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		allocate(r0(ns))
+		allocate(nr0(MAXMAT,ns))
+		allocate(f(nf))
+		allocate(wf(nf))
+		nm=1
+		rho(1)=3.97
+		frac(1)=1d0/rho(1)
+		allocate(e1d(nlamdust))
+		allocate(e2d(nlamdust))
+		filename(1)='Corrundum'
+		call RegridDataLNK(Corrundum,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		e1(1,1:nlamdust)=e1d(1:nlamdust)
+		e2(1,1:nlamdust)=e2d(1:nlamdust)
+	else if(C%standard.eq.'ORGANICS') then
+		input='ORGANICS'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		allocate(r0(ns))
+		allocate(nr0(MAXMAT,ns))
+		allocate(f(nf))
+		allocate(wf(nf))
+		nm=1
+		rho(1)=1.80
+		frac(1)=1d0/rho(1)
+		allocate(e1d(nlamdust))
+		allocate(e2d(nlamdust))
+		filename(1)='Organics'
+		call RegridDataLNK(OrganicsHenning,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		e1(1,1:nlamdust)=e1d(1:nlamdust)
+		e2(1,1:nlamdust)=e2d(1:nlamdust)
 	else if(C%standard.eq.'ASTROSIL') then
 		input='ASTROSIL'
 		ns=C%nsubgrains
@@ -278,7 +386,7 @@ c changed this to mass fractions (11-05-2010)
 		allocate(nr0(MAXMAT,ns))
 		allocate(f(nf))
 		allocate(wf(nf))
-		nm=18
+		nm=19
 		i=0
 		allocate(e1d(nlamdust))
 		allocate(e2d(nlamdust))
@@ -418,6 +526,14 @@ c changed this to mass fractions (11-05-2010)
 		rho(i)=1.00
 		frac(i)=frac(i)/rho(i)
 		call RegridDataLNK(Water,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		e1(i,1:nlamdust)=e1d(1:nlamdust)
+		e2(i,1:nlamdust)=e2d(1:nlamdust)
+
+		i=i+1
+		filename(i)='Organics'
+		rho(i)=1.80
+		frac(i)=frac(i)/rho(i)
+		call RegridDataLNK(OrganicsHenning,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 	endif
@@ -900,6 +1016,60 @@ c changed this to mass fractions (11-05-2010)
 		rho(1)=3.0
 		frac(1)=1d0/rho(1)
 		filename(1)='Water'
+	else if(C%standard.eq.'CARBON') then
+		input='CARBON'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		nm=1
+		rho(1)=1.80
+		frac(1)=1d0/rho(1)
+		filename(1)='Carbon'
+	else if(C%standard.eq.'QUARTZ') then
+		input='QUARTZ'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		nm=1
+		rho(1)=2.648
+		frac(1)=1d0/rho(1)
+		filename(1)='Quartz'
+	else if(C%standard.eq.'IRON') then
+		input='IRON'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		nm=1
+		rho(1)=7.87
+		frac(1)=1d0/rho(1)
+		filename(1)='Iron'
+	else if(C%standard.eq.'SiO') then
+		input='SiO'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		nm=1
+		rho(1)=2.18
+		frac(1)=1d0/rho(1)
+		filename(1)='SiO'
+	else if(C%standard.eq.'CORRUNDUM') then
+		input='CORRUNDUM'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		nm=1
+		rho(1)=3.97
+		frac(1)=1d0/rho(1)
+		filename(1)='Corrundum'
+	else if(C%standard.eq.'ORGANICS') then
+		input='ORGANICS'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		nm=1
+		rho(1)=1.80
+		frac(1)=1d0/rho(1)
+		filename(1)='Organics'
 	else if(C%standard.eq.'ASTROSIL') then
 		input='ASTROSIL'
 		ns=C%nsubgrains
@@ -915,7 +1085,7 @@ c changed this to mass fractions (11-05-2010)
 		C%Blend=.true.
 		nf=20
 		if(maxf.eq.0e0) nf=1
-		nm=18
+		nm=19
 		i=0
 		frac(1:nm)=C%frac(isize,1:nm)
 		i=i+1
@@ -1000,6 +1170,11 @@ c changed this to mass fractions (11-05-2010)
 		i=i+1
 		filename(i)='Water'
 		rho(i)=1.00
+		frac(i)=frac(i)/rho(i)
+
+		i=i+1
+		filename(i)='Organics'
+		rho(i)=1.80
 		frac(i)=frac(i)/rho(i)
 	endif
 

@@ -712,7 +712,7 @@ c			write(82,*) P(i), Kzz_r(i)
 		call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,12,1,4,.false.,.true.)
 		Cloud(ii)%rv=Cloud(ii)%rv*1d4
 		Cloud(ii)%sigma=1d-10
-		Cloud(ii)%frac(1:nr,1:18)=1d-10
+		Cloud(ii)%frac(1:nr,1:19)=1d-10
 c 10% iron
 		Cloud(ii)%frac(1:nr,9)=0.1d0
 c 90% MgSiO3
@@ -741,6 +741,7 @@ c 90% MgSiO3
 		else
 			column=0d0
 			nsubr=100
+			cloud_dens(1:nr,ii)=0d0
 			do i=1,nr
 				do j=1,nsubr
 					if(i.ne.nr) then
