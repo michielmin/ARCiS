@@ -15,7 +15,7 @@
 	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm
 	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),IWORKomp(:)
-	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin
+	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
 	logical quadratic,ini,Tconverged,cloudsform
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:)
@@ -287,7 +287,8 @@ c	atoms_cloud(i,3)=1
 	Kd=Cloud(ii)%Kzz*Clouddens**Cloud(ii)%Kzz_pow
 	Sigmadot=Cloud(ii)%Sigmadot
 	
-	m_nuc=4d0*pi*r_nuc**3*6d0/3d0
+	rho_nuc=1d0
+	m_nuc=4d0*pi*r_nuc**3*rho_nuc/3d0
 
 	allocate(rpart(nnr))
 	allocate(mpart(nnr))
@@ -562,6 +563,7 @@ c equations for mass in Nuclii
 		xm=0d0
 	endif
 
+	if(Cloud(ii)%condensates) then
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -702,10 +704,17 @@ c equations for material
 	deallocate(Aomp)
 !$OMP END PARALLEL
 
-
+	else
+	do iCS=1,nCS
+		do i=1,nnr
+			xc(iCS,i)=0d0
+			xv(iCS,i)=xv_bot(iCS)
+		enddo
+	enddo
+	endif
 
 	do i=1,nnr
-		tot=xm(i)/1.80d0
+		tot=xm(i)/rho_nuc
 		do iCS=1,nCS
 			tot=tot+xc(iCS,i)/rhodust(iCS)
 		enddo
@@ -797,6 +806,7 @@ c correction for SiC
 				xc(10,k)=xc(10,k)+mm
 			endif
 
+			cloud_dens(i,ii)=cloud_dens(i,ii)+xm(k)*Clouddens(k)/real(nr_cloud)
 			do iCS=1,nCS
 				cloud_dens(i,ii)=cloud_dens(i,ii)+xc(iCS,k)*Clouddens(k)/real(nr_cloud)
 			enddo

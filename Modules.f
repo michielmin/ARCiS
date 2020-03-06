@@ -256,7 +256,7 @@ c===============================================================================
 		real*8,allocatable :: rv(:),w(:),M(:)					! dimension nsize
 		real*8,allocatable :: frac(:,:),sigma(:)
 		real*8 rho,amin,amax,fmax,porosity,fcarbon,reff,veff
-		logical blend,haze
+		logical blend,haze,condensates
 		real*8 fcond,mixrat,tau,lam
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
 		type(Mueller),allocatable :: F(:,:)							! dimension nsize,nlam

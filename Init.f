@@ -1375,6 +1375,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%frain=1d0
 		Cloud(i)%species=''
 		Cloud(i)%haze=.false.
+		Cloud(i)%condensates=.true.
 		Cloud(i)%tmix=300d0
 		Cloud(i)%betamix=2.2
 		Cloud(i)%Kscale=1d0
@@ -1985,6 +1986,8 @@ c				enddo
 			read(key%value,*) Cloud(j)%frain
 		case("haze")
 			read(key%value,*) Cloud(j)%haze
+		case("condensates")
+			read(key%value,*) Cloud(j)%condensates
 		case("mixrat")
 			read(key%value,*) Cloud(j)%mixrat
 		case("fcond")
