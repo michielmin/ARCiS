@@ -556,6 +556,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	real*8,allocatable :: spec(:),allspec(:,:)
 	logical recomputeopac
 	real*16 x
+	real*8 xx,xy,scale
 
 2	var=var_in
 	call fold(var_in,var,n_ret)
@@ -607,6 +608,26 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	i2d=i2d+1
 	if(i2d.le.n2d) goto 1
 
+	if(doscaleR) then
+		xy=0d0
+		xx=0d0
+		k=0
+		do i=1,nobs
+			do j=1,ObsSpec(i)%ndata
+				k=k+1
+				ymod(k)=allspec(i,j)
+				xy=xy+ymod(k)*ObsSpec(i)%y(j)/ObsSpec(i)%dy(j)**2
+				xx=xx+ymod(k)*ymod(k)/ObsSpec(i)%dy(j)**2
+			enddo
+		enddo
+		scale=xy/xx
+		allspec=allspec*scale
+		print*,'scale:',scale
+		if(scale.lt.1d0) scale=1d0/scale
+	else
+		scale=1d0
+	endif
+
 	lnew=0d0
 	k=0
 	do i=1,nobs
@@ -617,7 +638,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 			ObsSpec(i)%model(j)=allspec(i,j)
 		enddo
 	enddo
-	lnew=lnew/real(max(1,k-n_ret))
+	lnew=scale*lnew/real(max(1,k-n_ret))
 
 	write(31,*) imodel,lnew,var(1:nvars),COratio,metallicity
 	if(.not.useobsgrid.or.dochemistry.or.do3D) call flush(31)

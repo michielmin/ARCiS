@@ -656,7 +656,6 @@ c changed this to mass fractions (11-05-2010)
 		mu0(i)=cos(theta)
 	enddo
 
-
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,csca0,cabs0,cext0,Mass,Vol,theta,i,l,tot,k,Err,spheres,toolarge,

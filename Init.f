@@ -694,6 +694,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Dplanet
 		case("retrieval")
 			read(key%value,*) retrieval
+		case("doscaler","scaler")
+			read(key%value,*) doscaleR
 		case("contrib","computecontrib")
 			read(key%value,*) computecontrib
 		case("outputopacity","writeopacity")
@@ -1395,6 +1397,7 @@ c		Cloud(i)%P=0.0624d0
 	nspike=0
 
 	retrieval=.false.
+	doscaleR=.false.
 	useobsgrid=.false.
 	do i=1,n_ret
 		RetPar(i)%x0=-1d200
