@@ -105,6 +105,7 @@ c===============================================================================
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
 	real*8 mixratHaze,PHaze,dPHaze,kappaHaze,Kzz,SiOratio,NOratio,fDay,betapow,Kxx,vxx,night2day
+	real*8 Kzz_deep,Kzz_upper,Kzz_P
 	logical enhancecarbon,fast_chem,gamma_equal,dopostequalweights
 	logical transspec,emisspec,rainout,computeLC,doscaleR
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
@@ -264,7 +265,7 @@ c===============================================================================
 		character*20 standard,ptype
 		character*500 species
 		integer nr,nsubgrains
-		real*8 tmix,betamix,Kzz,Kscale,Sigmadot,Kzz_pow
+		real*8 tmix,betamix,Kzz,Kscale,Sigmadot
 c simple cloud from Jo
 		real*8 ff,g1,g2,kappa,albedo
 		logical simplecloud

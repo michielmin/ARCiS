@@ -284,7 +284,14 @@ c	atoms_cloud(i,3)=1
 
 	eps=1d-3
 
-	Kd=Cloud(ii)%Kzz*Clouddens**Cloud(ii)%Kzz_pow
+	if(Kzz_deep.gt.0d0.and.Kzz_upper.gt.0d0) then
+		Kd=10.0**(log10(Kzz_deep) - log10(Kzz_deep/Kzz_upper)*exp(-CloudP/Kzz_P))
+	else if(Cloud(ii)%Kzz.gt.0d0) then
+		Kd=Cloud(ii)%Kzz
+	else
+		Kd=Kzz
+	endif
+
 	Sigmadot=Cloud(ii)%Sigmadot
 	
 	rho_nuc=1d0

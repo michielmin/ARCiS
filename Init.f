@@ -647,7 +647,7 @@ c	condensates=(condensates.or.cloudcompute)
 		allocate(PTaverage3D(0:nphase,nr))
 		allocate(mixrat_average3D(0:nphase,nr,nmol))
 	endif
-	
+		
 	return
 	end
 
@@ -818,6 +818,12 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) disequilibrium
 		case("kzz")
 			read(key%value,*) Kzz
+		case("kzz_deep")
+			read(key%value,*) Kzz_deep
+		case("kzz_upper","kzz_up")
+			read(key%value,*) Kzz_upper
+		case("kzz_p")
+			read(key%value,*) Kzz_P
 		case("fastchem","fast_chem")
 			read(key%value,*) fast_chem
 		case("metallicity")
@@ -1342,6 +1348,10 @@ c	if(par_tprofile) call ComputeParamT(T)
 	beta3D_2=-0.1
 	long_shift=0d0
 
+	Kzz_deep=-1d0
+	Kzz_upper=-1d0
+	Kzz_P=1d0
+
 	computecontrib=.false.
 	
 	instrument="ARIEL"
@@ -1381,8 +1391,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%tmix=300d0
 		Cloud(i)%betamix=2.2
 		Cloud(i)%Kscale=1d0
-		Cloud(i)%Kzz=1d8
-		Cloud(i)%Kzz_pow=0d0
+		Cloud(i)%Kzz=-1d0
 		Cloud(i)%Sigmadot=1d-17
 		Cloud(i)%simplecloud=.false.
 		Cloud(i)%ff=0.9d0
@@ -1687,6 +1696,8 @@ c				enddo
 			read(key%value,*) Par3D(i)%xmin
 		case("max","xmax")
 			read(key%value,*) Par3D(i)%xmax
+		case("pow")
+			read(key%value,*) Par3D(i)%pow
 		case("log","logscale")
 			read(key%value,*) Par3D(i)%logscale
 		case default
@@ -2003,8 +2014,6 @@ c				enddo
 			Cloud(j)%Kzzfile=trim(key%value)
 		case("kzz","k")
 			read(key%value,*) Cloud(j)%Kzz
-		case("kzz_pow","k_pow")
-			read(key%value,*) Cloud(j)%Kzz_pow
 		case("kscale")
 			read(key%value,*) Cloud(j)%Kscale
 		case("sigmadot","nucleation")

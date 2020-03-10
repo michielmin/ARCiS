@@ -623,7 +623,6 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 		scale=xy/xx
 		allspec=allspec*scale
 		print*,'scale:',scale
-		if(scale.lt.1d0) scale=1d0/scale
 	else
 		scale=1d0
 	endif
@@ -638,7 +637,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 			ObsSpec(i)%model(j)=allspec(i,j)
 		enddo
 	enddo
-	lnew=scale*lnew/real(max(1,k-n_ret))
+	lnew=lnew/real(max(1,k-n_ret))
 
 	write(31,*) imodel,lnew,var(1:nvars),COratio,metallicity
 	if(.not.useobsgrid.or.dochemistry.or.do3D) call flush(31)
