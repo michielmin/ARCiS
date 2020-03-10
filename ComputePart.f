@@ -677,6 +677,7 @@ c changed this to mass fractions (11-05-2010)
 			enddo
 		endif
 	enddo
+	if(LLmax.gt.10000000) LLmax=10000000
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -731,6 +732,7 @@ c changed this to mass fractions (11-05-2010)
 	if(frac(l).eq.0d0) goto 10
 	do k=1,ns
 	r1=r0(k)
+	if(.not.r1.gt.0d0) r1=0.001d0
 	Err=0
 	spheres=0
 	toolarge=0
@@ -744,7 +746,7 @@ c changed this to mass fractions (11-05-2010)
 			spheres=1
 			goto 20
 		endif
-		if(r1*wvno.gt.1000d0) then
+		if(r1*wvno.gt.1000d0.or.(1.1d0*rad*abs(m)*wvno+2).gt.10000000) then
 c			if(i.eq.1) then
 c				print*,'Particle too large for hollow spheres'
 c				print*,'Using homogeneous spheres (r=',r1,', lamdust=',lamdust(ilam),')'
@@ -3488,7 +3490,6 @@ c          write(*,*) ' scatmat: estimated number of Mie-terms:',nD
 c          write(*,*) '          for particle sizeparameter   :',x
 c          write(*,*) '          maximum NDn is only          : ',NDn
 c          stop 'in scatmat no room for all Mie terms'
-	print*,nmax,nD,nfi
 			nD=min(NDn,nD)
 			nfi=min(NDn,nfi)
 			nmax=nfi-60
