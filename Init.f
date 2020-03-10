@@ -2066,7 +2066,7 @@ c-----------------------------------------------------------------------
 			tautot=0d0
 			restrictcomputecloud=(nlam.eq.nlamdust.and..not.computeT)
 			do is=Cloud(ii)%nr,1,-1
-				call tellertje(is,Cloud(ii)%nr)
+				call tellertje(Cloud(ii)%nr-is+1,Cloud(ii)%nr)
 				call ComputePart(Cloud(ii),ii,is,computelamcloud)
 				if(restrictcomputecloud.and.(useDRIFT.or.cloudcompute)) then
 					do ilam=1,nlam

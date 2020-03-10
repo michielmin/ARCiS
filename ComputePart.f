@@ -34,7 +34,7 @@
 	external Forsterite_X,Forsterite_Y,Forsterite_Z
 	external Brookite_X,Brookite_Y,Brookite_Z,Water,OrganicsHenning,Soot
 	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O,MgO,SiC
-	integer abun_in_name
+	integer abun_in_name,LL,LLmax
 	parameter(abun_in_name=2)
 	real*8 Kabs(nlamdust),Ksca(nlamdust),Kext(nlamdust)
 	real*8 F11_HR(nlam),F12_HR(nlam),F22_HR(nlam),F33_HR(nlam),F34_HR(nlam),F44_HR(nlam)
@@ -655,6 +655,28 @@ c changed this to mass fractions (11-05-2010)
 		theta=(real(i)-0.5)/real(na/2)*3.1415926536/2d0
 		mu0(i)=cos(theta)
 	enddo
+	
+	LLmax=1000
+	do ilam=1,nlamdust
+		if(computelam(ilam)) then
+			do l=1,nm
+				if(frac(l).gt.0d0) then
+					do k=1,ns
+						r1=r0(k)
+						if(r1*wvno.le.1000d0) then
+							do i=1,nf
+								rad=r1/(1d0-f(i))**(1d0/3d0)
+								m=dcmplx(e1(l,ilam),-e2(l,ilam))
+								wvno=2d0*3.1415926536/(lamdust(ilam)*1d4)
+								LL=1.1d0*rad*abs(m)*wvno+2
+								if(LL.gt.LLmax) LLmax=LL
+							enddo
+						endif
+					enddo
+				endif
+			enddo
+		endif
+	enddo
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -663,7 +685,7 @@ c changed this to mass fractions (11-05-2010)
 !$OMP&         csmie,cemie,MieF11,MieF12,MieF33,MieF34,Mief22,Mief44,tot2,j,Ntot,fcomputed,
 !$OMP&         MieF11_fcomp,MieF12_fcomp,MieF33_fcomp,MieF34_fcomp,M1,M2,S21,D21)
 !$OMP& SHARED(C,nlamdust,na,nm,ns,frac,minlog,maxlog,f,mu0,e1,e2,wf,min,isize,computelam,
-!$OMP&        rho_av,pow,lamdust,meth,rho,nf,r0,nr0,Kabs,Ksca,Kext,F11,F12,F22,F33,F34,F44)
+!$OMP&        rho_av,pow,lamdust,meth,rho,nf,r0,nr0,Kabs,Ksca,Kext,F11,F12,F22,F33,F34,F44,LLmax)
 	allocate(Mief11(na))
 	allocate(Mief12(na))
 	allocate(Mief22(na))
@@ -678,7 +700,7 @@ c changed this to mass fractions (11-05-2010)
 	allocate(M2(na,2))
 	allocate(S21(na,2))
 	allocate(D21(na,2))
-	call AllocateDMiLay
+	call AllocateDMiLay(LLmax)
 !$OMP DO
 !$OMP& SCHEDULE(STATIC,1)
 	do ilam=1,nlamdust
@@ -1706,19 +1728,22 @@ c-----------------------------------------------------------------------
 	module ArraysDMiLay
 	IMPLICIT NONE
 	INTEGER   LL
-	PARAMETER (LL = 1000000)
+!$OMP THREADPRIVATE(LL)
+c	PARAMETER (LL = 1000000)
 
 	double complex,allocatable :: W(:,:),acap(:)
 !$OMP THREADPRIVATE(W,acap)
 	
 	end module ArraysDMiLay
 
-	subroutine AllocateDMiLay()
+	subroutine AllocateDMiLay(LLmax)
 	USE ArraysDMiLay
 	IMPLICIT NONE
+	integer LLmax
 
-	allocate(w(3,LL))
-	allocate(acap(LL))
+	LL=LLmax
+	allocate(w(3,LLmax))
+	allocate(acap(LLmax))
 		
 	return
 	end
@@ -2226,12 +2251,12 @@ c     ..
 
       IF( FATAL ) THEN
 
-         WRITE( *, '(//,2A,//)' ) ' ****** ERROR *****  ', MESSAG
+c         WRITE( *, '(//,2A,//)' ) ' ****** ERROR *****  ', MESSAG
 
 c                                 ** Example symbolic dump call for Cray
 c cccc    CALL SYMDUMP( '-B -c3' )
 
-         write(*,*) 'I should actually stop, but... whatever'!STOP
+c         write(*,*) 'I should actually stop, but... whatever'!STOP
 
       END IF
 
@@ -2242,13 +2267,13 @@ c cccc    CALL SYMDUMP( '-B -c3' )
 
       IF( NUMMSG.LE.MAXMSG ) THEN
 
-         WRITE( *, '(/,2A,/)' ) ' ****** WARNING *****  ', MESSAG
+c         WRITE( *, '(/,2A,/)' ) ' ****** WARNING *****  ', MESSAG
 
       ELSE
 
-         WRITE( *, '(//,A,//)' )
-     &      ' ****** TOO MANY WARNING MESSAGES --  ' //
-     &      'They will no longer be printed *******'
+c         WRITE( *, '(//,A,//)' )
+c     &      ' ****** TOO MANY WARNING MESSAGES --  ' //
+c     &      'They will no longer be printed *******'
 
          MSGLIM = .True.
 
@@ -2287,8 +2312,8 @@ c     ..
 
       WRTBAD = .TRUE.
       NUMMSG = NUMMSG + 1
-      WRITE( *, '(3A)' ) ' ****  Input variable  ', VARNAM,
-     &   '  in error  ****'
+c      WRITE( *, '(3A)' ) ' ****  Input variable  ', VARNAM,
+c     &   '  in error  ****'
 
       IF( NUMMSG.EQ.MAXMSG ) CALL ERRMSG(
      &    'Too many input errors.  Aborting...', .TRUE. )
@@ -2311,8 +2336,8 @@ c     .. Scalar Arguments ..
       INTEGER   MINVAL
 c     ..
 
-      WRITE( *, '(3A,I7)' ) ' ****  Symbolic dimension  ',
-     &   DIMNAM, '  should be increased to at least ', MINVAL
+c      WRITE( *, '(3A,I7)' ) ' ****  Symbolic dimension  ',
+c     &   DIMNAM, '  should be increased to at least ', MINVAL
 
       WRTDIM = .TRUE.
 
@@ -2476,9 +2501,9 @@ c     +    call opensc(scfile(iparts),nrunit,'new')
 ************************************************************************
       ncoef = nangle
       if ((ncoef .gt. NDcoef) .and. (develop .eq. 1)) then
-         write(*,*) ' main: too many coefficients needed :',ncoef
-         write(*,*) '       maximum array size NDcoef = ',NDcoef
-         write(*,*) '       Therefore I cannot do the expansion.'
+c         write(*,*) ' main: too many coefficients needed :',ncoef
+c         write(*,*) '       maximum array size NDcoef = ',NDcoef
+c         write(*,*) '       Therefore I cannot do the expansion.'
          develop=0
          call clossc(nrunit)
       endif
@@ -2489,10 +2514,10 @@ c     +    call opensc(scfile(iparts),nrunit,'new')
          call devel(ncoef,nangle,u,w,F,coefs)
          npunt = idnint((thmax-thmin)/step)+1
          if (npunt .gt. NDang) then
-            write(*,*) ' main: too many angles for table npunt=',npunt
-            write(*,*) '       maximum array size NDang = ',NDang
+c            write(*,*) ' main: too many angles for table npunt=',npunt
+c            write(*,*) '       maximum array size NDang = ',NDang
             npunt=61
-            write(*,*) '      I have set the number of angles to ',npunt
+c            write(*,*) '      I have set the number of angles to ',npunt
          endif
       endif
 ************************************************************************
@@ -3239,8 +3264,8 @@ c       upward recursion:
          rmax= par1
       else
           goto (10,20,30,40,50,60,70,80,90) idis
-          write(*,*) ' rminmax: illegal size distribution index :',idis
-          stop 'in rminmax illegal size distribution index'
+c          write(*,*) ' rminmax: illegal size distribution index :',idis
+c          stop 'in rminmax illegal size distribution index'
 ************************************************************************
    10     sef = 1.D0/dsqrt(par2+3.D0)
           ref = 1.D0/(sef*sef*par2)
@@ -3458,6 +3483,22 @@ c       upward recursion:
       zabs = x*cdabs(m)
       nD   = zabs + 4.05D0*zabs**(1.D0/3.D0) + 70
 
+      if ((nD.gt.NDn) .or. (nfi.gt.NDn)) then
+c          write(*,*) ' scatmat: estimated number of Mie-terms:',nD
+c          write(*,*) '          for particle sizeparameter   :',x
+c          write(*,*) '          maximum NDn is only          : ',NDn
+c          stop 'in scatmat no room for all Mie terms'
+	print*,nmax,nD,nfi
+			nD=min(NDn,nD)
+			nfi=min(NDn,nfi)
+			nmax=nfi-60
+      endif
+	  if(nmax.lt.0 .or. nD.lt.0) then
+			nD=NDn
+			nfi=NDn
+			nmax=nfi-60
+      endif
+
 	allocate(an(max(nD,nfi,nmax)))
 	allocate(bn(max(nD,nfi,nmax)))
 	allocate(pi(max(nD,nfi,nmax)))
@@ -3468,14 +3509,6 @@ c       upward recursion:
 	allocate(facf(max(nD,nfi,nmax)))
 	allocate(facb(max(nD,nfi,nmax)))
 
-      if ((nD.gt.NDn) .or. (nfi.gt.NDn)) then
-          write(*,*) ' scatmat: estimated number of Mie-terms:',nD
-          write(*,*) '          for particle sizeparameter   :',x
-          write(*,*) '          maximum NDn is only          : ',NDn
-c          stop 'in scatmat no room for all Mie terms'
-			nD=min(NDn,nD)
-			nfi=min(NDn,nfi)
-      endif
       call fichid( m, x, nfi, nmax, nD, fi, chi, D )
       call anbn( m, x, nmax, fi, chi, D, an, bn )
 ************************************************************************
@@ -3509,15 +3542,15 @@ c          stop 'in scatmat no room for all Mie terms'
    52 continue
    53 nfou = nstop
       if (nfou .ge. nmax) then
-          write(*,*) ' WARNING from scatmat : Mie sum not converged for'
-     +           ,' scattering cross section'
-          write(*,*) '   radius r = ',r(i),' sizeparameter x = ',x
-     +           ,' sizedistribution nr. ',idis
-          write(*,*) '   Re(m) = ',dble(m),' Im(m) = ',dimag(m)
-          write(*,*) '   a priori estimate of number of Mie terms:',nmax
-          write(*,*) '   term ',nmax,' for Csca was ',aux
-          write(*,*) '   should have been less than ',delta
-          write(*,*) '   the a priori estimate will be used'
+c          write(*,*) ' WARNING from scatmat : Mie sum not converged for'
+c     +           ,' scattering cross section'
+c          write(*,*) '   radius r = ',r(i),' sizeparameter x = ',x
+c     +           ,' sizedistribution nr. ',idis
+c          write(*,*) '   Re(m) = ',dble(m),' Im(m) = ',dimag(m)
+c          write(*,*) '   a priori estimate of number of Mie terms:',nmax
+c          write(*,*) '   term ',nmax,' for Csca was ',aux
+c          write(*,*) '   should have been less than ',delta
+c          write(*,*) '   the a priori estimate will be used'
       endif
 ************************************************************************
 *  Only for the first run through the loop set points in u= dcos(th)   *
@@ -3533,10 +3566,10 @@ c          stop 'in scatmat no room for all Mie terms'
 ************************************************************************
               nangle = 2*nfou+2
               if (nangle .gt. NDang) then
-                 write(*,*) ' scatmat: need too many integration angles'
-     +                  ,' nangle=',nangle
-                 write(*,*) '       maximum array size NDang = ',NDang
-                 stop 'too many integration angles'
+c                 write(*,*) ' scatmat: need too many integration angles'
+c     +                  ,' nangle=',nangle
+c                 write(*,*) '       maximum array size NDang = ',NDang
+c                 stop 'too many integration angles'
               endif
 *             call gausspt(nangle,nangle,-1.d0,1.D0,u,wth)
               call gaulegCP(nangle,nangle,-1.d0,1.D0,u,wth)
@@ -3547,10 +3580,10 @@ c          stop 'in scatmat no room for all Mie terms'
 ************************************************************************
               nangle = idnint((thmax-thmin)/step) + 1
               if (nangle .gt. NDang) then
-                 write(*,*) ' scatmat : need too many scattering angles'
-     +                  ,' nangle=',nangle
-                 write(*,*) '       maximum array size NDang = ',NDang
-                 stop 'too many scattering angles'
+c                 write(*,*) ' scatmat : need too many scattering angles'
+c     +                  ,' nangle=',nangle
+c                 write(*,*) '       maximum array size NDang = ',NDang
+c                 stop 'too many scattering angles'
               endif
               wfac = 2.d0/dble(nangle)
               do 260 iang=1, nangle
@@ -3712,8 +3745,8 @@ c          stop 'in scatmat no room for all Mie terms'
       root2p = dsqrt(pi+pi)
       if (idis .eq. 0) return
       goto (10, 20, 30, 40, 50, 60, 70, 80, 90 ) idis
-      write(*,*) ' sizedis: illegal index : ',idis
-      stop 'illegal index in sizedis'
+c      write(*,*) ' sizedis: illegal index : ',idis
+c      stop 'illegal index in sizedis'
 ************************************************************************
 *  1 TWO PARAMETER GAMMA with alpha and b given                        *
 ************************************************************************
@@ -3871,12 +3904,12 @@ c          stop 'in scatmat no room for all Mie terms'
      +   ,-1.231739516D0, 0.120858003D-2, -0.536382D-5, 2.50662827465D0/
       pi = 4.D0*datan(1.D0)
       if (xarg .le. 0.D0) then
-        write(*,*) ' gammlnCP: called with negative argument xarg = ',xarg
-        stop 'function gammlnCP called with negative value'
+c        write(*,*) ' gammlnCP: called with negative argument xarg = ',xarg
+c        stop 'function gammlnCP called with negative value'
       endif
       if (dabs(xarg-one) .lt. eps) then
-          write(*,*) ' gammlnCP: argument too close to one for algorithm'
-          stop ' in function gammlnCP argument too close to one'
+c          write(*,*) ' gammlnCP: argument too close to one for algorithm'
+c          stop ' in function gammlnCP argument too close to one'
       endif
       if (xarg .ge. one) then
           xx = xarg
@@ -3921,14 +3954,14 @@ c          stop 'in scatmat no room for all Mie terms'
       dimension x(NDmui),y(nn),y2(nn),u(nmax)
 
       if (nn .ne. NDmui) then
-          write(*,*) ' splineCP : uncomfortable error occurred, '
-          write(*,*) ' nn .ne. NDmui '
-          stop ' dimension error in splineCP '
+c          write(*,*) ' splineCP : uncomfortable error occurred, '
+c          write(*,*) ' nn .ne. NDmui '
+c          stop ' dimension error in splineCP '
       endif
       if (nmax .lt. nn) then
-          write(*,*) ' splineCP : nmax may not be smaller than nn '
-          write(*,*) ' nmax = ',nmax,' nn = ',nn
-          stop ' dimension error in splineCP '
+c          write(*,*) ' splineCP : nmax may not be smaller than nn '
+c          write(*,*) ' nmax = ',nmax,' nn = ',nn
+c          stop ' dimension error in splineCP '
       endif
       if (yp1.gt..99d30) then
         y2(1)=0.d0
@@ -3971,9 +4004,9 @@ c          stop 'in scatmat no room for all Mie terms'
       dimension xa(NDmui),ya(nn),y2a(nn)
 
       if (nn .ne. NDmui) then
-          write(*,*) ' a very stupid an unnecessary error occurred '
-          write(*,*) ' in splintCP: nn .ne. NDmui '
-          stop ' dimension error in splintCP '
+c          write(*,*) ' a very stupid an unnecessary error occurred '
+c          write(*,*) ' in splintCP: nn .ne. NDmui '
+c          stop ' dimension error in splintCP '
       endif
       klo=1
       khi=n
@@ -3988,7 +4021,7 @@ c          stop 'in scatmat no room for all Mie terms'
       goto 1
       endif
       h=xa(khi)-xa(klo)
-      if (dabs(h).lt.1.d-10) write (7,10) 
+c      if (dabs(h).lt.1.d-10) write (7,10) 
       a=(xa(khi)-x)/h
       b=(x-xa(klo))/h
       y=a*ya(klo)+b*ya(khi)+
@@ -4208,9 +4241,9 @@ C However, they do not need to be commented out.
 C***********************************************************************
 C*** Safety checks
 
-      IF(SINGLE)WRITE(0,*)'Warning: this version of bhmie uses only ',
-     &          'single precision complex numbers!'
-      IF(NANG.GT.MXNANG)STOP'***Error: NANG > MXNANG in bhmie'
+c      IF(SINGLE)WRITE(0,*)'Warning: this version of bhmie uses only ',
+c     &          'single precision complex numbers!'
+c      IF(NANG.GT.MXNANG)STOP'***Error: NANG > MXNANG in bhmie'
       IF(NANG.LT.2)NANG=2
 
 C*** Obtain pi:
@@ -4235,8 +4268,8 @@ C conclusion: we are indeed retaining enough terms in series!
       NSTOP=NINT(XSTOP)
 
       IF(NMX.GT.NMXX)THEN
-         WRITE(0,*)'Error: NMX > NMXX=',NMXX,' for |m|x=',YMOD
-         STOP
+c         WRITE(0,*)'Error: NMX > NMXX=',NMXX,' for |m|x=',YMOD
+c         STOP
       ENDIF
 
 C*** Require NANG.GE.1 in order to calculate scattering intensities

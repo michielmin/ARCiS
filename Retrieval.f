@@ -621,7 +621,8 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 				xx=xx+ymod(k)*ymod(k)/ObsSpec(i)%dy(j)**2
 			enddo
 		enddo
-		scale=xy/xx
+		scale=1d0
+		if(xx.gt.0d0) scale=xy/xx
 		allspec=allspec*scale
 		obsA=obsA*scale
 		flux=flux*scale
