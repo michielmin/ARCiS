@@ -551,12 +551,13 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	use Constants
 	use RetrievalMod
 	IMPLICIT NONE
-	integer nvars,i,j,nlamtot,ny,k,maxspec,im,ilam
+	integer nvars,i,j,nlamtot,ny,k,maxspec,im,ilam,status,system
 	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars),spectemp(nlam),specsave(nobs,nlam)
 	real*8,allocatable :: spec(:),allspec(:,:)
-	logical recomputeopac
+	logical recomputeopac,truefalse
 	real*16 x
 	real*8 xx,xy,scale
+	character*100 command
 
 2	var=var_in
 	call fold(var_in,var,n_ret)
@@ -622,6 +623,9 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 		enddo
 		scale=xy/xx
 		allspec=allspec*scale
+		obsA=obsA*scale
+		flux=flux*scale
+		phase=phase*scale
 		print*,'scale:',scale
 	else
 		scale=1d0
@@ -643,6 +647,13 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	if(.not.useobsgrid.or.dochemistry.or.do3D) call flush(31)
 
 	if(lnew.lt.bestlike) then
+
+		inquire(file="improve.sh",exist=truefalse)
+		if(truefalse) then
+			write(command,'("./improve.sh ",f10.3)') lnew
+			status=system(command)
+		endif
+
 		i2d=0
 		call WriteStructure()
 		call WriteOutput()
@@ -674,7 +685,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 			end select
 		enddo
 
-		call system("cp " // trim(outputdir) // "input.dat " // trim(outputdir) // "bestfit.dat")
+		status=system("cp " // trim(outputdir) // "input.dat " // trim(outputdir) // "bestfit.dat")
 		open(unit=21,file=trim(outputdir) // "bestfit.dat",RECL=1000,access='APPEND')
 		write(21,'("*** retrieval keywords ***")')
 		write(21,'("retrieval=.false.")')
