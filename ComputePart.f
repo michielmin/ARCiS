@@ -677,7 +677,6 @@ c changed this to mass fractions (11-05-2010)
 			enddo
 		endif
 	enddo
-	if(LLmax.gt.10000000) LLmax=10000000
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -733,6 +732,8 @@ c changed this to mass fractions (11-05-2010)
 	do k=1,ns
 	r1=r0(k)
 	if(.not.r1.gt.0d0) r1=0.001d0
+	if(.not.e1(l,ilam).gt.0d0) e1(l,ilam)=1.1d+0
+	if(.not.e2(l,ilam).gt.0d0) e2(l,ilam)=1.0d-6
 	Err=0
 	spheres=0
 	toolarge=0
@@ -746,7 +747,7 @@ c changed this to mass fractions (11-05-2010)
 			spheres=1
 			goto 20
 		endif
-		if(r1*wvno.gt.1000d0.or.(1.1d0*rad*abs(m)*wvno+2).gt.10000000) then
+		if(r1*wvno.gt.1000d0) then
 c			if(i.eq.1) then
 c				print*,'Particle too large for hollow spheres'
 c				print*,'Using homogeneous spheres (r=',r1,', lamdust=',lamdust(ilam),')'
@@ -787,7 +788,8 @@ c					Mief12=1d0
 c					Mief33=1d0
 c					Mief34=1d0
 				else
-					call MeerhoffMie(rmie,rmie/100d0,e1mie,e2mie,csmie,cemie
+					lmie=rmie/100d0
+					call MeerhoffMie(rmie,lmie,e1mie,e2mie,csmie,cemie
      &								,Mief11,Mief12,Mief33,Mief34,na)
 c					call callBHMIE(rmie,rmie/100d0,e1mie,e2mie,csmie,cemie)
 c					Mief11=1d0
@@ -3485,21 +3487,6 @@ c          stop 'in rminmax illegal size distribution index'
       zabs = x*cdabs(m)
       nD   = zabs + 4.05D0*zabs**(1.D0/3.D0) + 70
 
-      if ((nD.gt.NDn) .or. (nfi.gt.NDn)) then
-c          write(*,*) ' scatmat: estimated number of Mie-terms:',nD
-c          write(*,*) '          for particle sizeparameter   :',x
-c          write(*,*) '          maximum NDn is only          : ',NDn
-c          stop 'in scatmat no room for all Mie terms'
-			nD=min(NDn,nD)
-			nfi=min(NDn,nfi)
-			nmax=nfi-60
-      endif
-	  if(nmax.lt.0 .or. nD.lt.0) then
-			nD=NDn
-			nfi=NDn
-			nmax=nfi-60
-      endif
-
 	allocate(an(max(nD,nfi,nmax)))
 	allocate(bn(max(nD,nfi,nmax)))
 	allocate(pi(max(nD,nfi,nmax)))
@@ -3510,6 +3497,14 @@ c          stop 'in scatmat no room for all Mie terms'
 	allocate(facf(max(nD,nfi,nmax)))
 	allocate(facb(max(nD,nfi,nmax)))
 
+      if ((nD.gt.NDn) .or. (nfi.gt.NDn)) then
+c          write(*,*) ' scatmat: estimated number of Mie-terms:',nD
+c          write(*,*) '          for particle sizeparameter   :',x
+c          write(*,*) '          maximum NDn is only          : ',NDn
+c          stop 'in scatmat no room for all Mie terms'
+			nD=min(NDn,nD)
+			nfi=min(NDn,nfi)
+      endif
       call fichid( m, x, nfi, nmax, nD, fi, chi, D )
       call anbn( m, x, nmax, fi, chi, D, an, bn )
 ************************************************************************
