@@ -272,6 +272,7 @@ c ===================================================================
 	npc=nphase
 	call tellertje_perc(0,npc)
 	do ipc=1,npc
+	if(fulloutput3D) PTaverage3D(ipc,1:nr)=0d0
 	theta=2d0*pi*theta_phase(ipc)/360d0
 	if(theta.gt.2d0*pi) theta=theta-2d0*pi
 	fluxp=0d0
@@ -409,6 +410,7 @@ c Note we are here using the symmetry between North and South
 	endif
 
 	if(fulloutput3D) then
+		PTaverage3D(0,1:nr)=0d0
 		do j=1,nlatt
 			i=nlong/4+1
 			PTaverage3D(0,1:nr)=PTaverage3D(0,1:nr)+T3D(ibeta(i,j),1:nr)/real(nlatt*2)
@@ -786,6 +788,8 @@ c Note we use the symmetry of the North and South here!
 
 	betamin=0d0
 	betamax=0d0
+	tot1=0d0
+	tot2=0d0
 	do i=1,nlong-1
 		do j=1,nlatt-1
 			j0=ii(i,j)

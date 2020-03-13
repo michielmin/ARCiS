@@ -284,14 +284,6 @@ c	atoms_cloud(i,3)=1
 
 	eps=1d-3
 
-	if(Kzz_deep.gt.0d0.and.Kzz_upper.gt.0d0) then
-		Kd=10.0**(log10(Kzz_deep) - log10(Kzz_deep/Kzz_upper)*exp(-CloudP/Kzz_P))
-	else if(Cloud(ii)%Kzz.gt.0d0) then
-		Kd=Cloud(ii)%Kzz
-	else
-		Kd=Kzz
-	endif
-
 	Sigmadot=Cloud(ii)%Sigmadot
 	
 	rho_nuc=1d0
@@ -347,6 +339,20 @@ c	atoms_cloud(i,3)=1
 	CloudR(k)=R(nr)
 	Clouddens(k)=dens(nr)
 
+	if(Kzz_deep.gt.0d0.and.Kzz_upper.gt.0d0) then
+		do i=1,nnr
+			if(CloudP(i)/Kzz_P.lt.100d0) then
+				Kd(i)=10.0**(log10(Kzz_deep) - log10(Kzz_deep/Kzz_upper)*exp(-CloudP(i)/Kzz_P))
+			else
+				Kd(i)=Kzz_deep
+			endif
+		enddo
+	else if(Cloud(ii)%Kzz.gt.0d0) then
+		Kd=Cloud(ii)%Kzz
+	else
+		Kd=Kzz
+	endif
+
 	f=0.1d0
 	rpart=r_nuc
 
@@ -357,7 +363,7 @@ c	atoms_cloud(i,3)=1
 	allocate(An(nnr,nnr))
 
 	xn=0d0
-	
+	xm=0d0
 	xv=0d0
 	xc=0d0
 	do j=1,nCS
@@ -434,8 +440,9 @@ c start the loop
 c equations for number of Nuclii
 	An=0d0
 	x=0d0
+	j=0
 	do i=2,nnr-1
-		j=i+1
+		j=j+1
 
 		dz=CloudR(i+1)-CloudR(i-1)
 
@@ -490,13 +497,15 @@ c rewritten for better convergence
 		endif
 	enddo
 	i=nnr
+	j=j+1
 	dz=CloudR(i)-CloudR(i-1)
-	An(1,i)=Kd(i)/dz-vsed(i)
-	An(1,i-1)=-Kd(i)/dz
-	x(1)=0d0!-Mn_top/Clouddens(i)
+	An(j,i)=Kd(i)/dz-vsed(i)
+	An(j,i-1)=-Kd(i)/dz
+	x(j)=0d0!-Mn_top/Clouddens(i)
 	i=1
-	An(2,i)=1d0
-	x(2)=0d0
+	j=j+1
+	An(j,i)=1d0
+	x(j)=0d0
 
 	NRHS=1
 	call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
@@ -510,13 +519,13 @@ c rewritten for better convergence
 		if(xn(i).lt.0d0) xn(i)=0d0
 	enddo
 
-
 	if(Cloud(ii)%haze) then
 c equations for mass in Nuclii
 		An=0d0
 		x=0d0
+		j=0
 		do i=2,nnr-1
-			j=i+1
+			j=j+1
 
 			dz=CloudR(i+1)-CloudR(i-1)
 
@@ -547,13 +556,15 @@ c equations for mass in Nuclii
 			x(j)=-Sn(i)
 		enddo
 		i=nnr
+		j=j+1
 		dz=CloudR(i)-CloudR(i-1)
-		An(1,i)=Kd(i)/dz-vsed(i)
-		An(1,i-1)=-Kd(i)/dz
-		x(1)=0d0!-Mn_top/Clouddens(i)
+		An(j,i)=Kd(i)/dz-vsed(i)
+		An(j,i-1)=-Kd(i)/dz
+		x(j)=0d0!-Mn_top/Clouddens(i)
 		i=1
-		An(2,i)=1d0
-		x(2)=0d0
+		j=j+1
+		An(j,i)=1d0
+		x(j)=0d0
 
 		NRHS=1
 		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
@@ -739,32 +750,6 @@ c equations for material
 		endif
 		rpart(i)=sqrt(rr*rpart(i))
 	enddo
-
-	if(computeT.and.nTiter.lt.maxiter.and.nTiter.gt.0.and..not.doMCcompute.and..false.) then
-		k=1
-		do i=1,nr
-			cloud_dens(i,ii)=0d0
-			do j=1,nr_cloud
-				cloud_dens(i,ii)=cloud_dens(i,ii)+xm(k)*Clouddens(k)/real(nr_cloud)
-				do iCS=1,nCS
-					cloud_dens(i,ii)=cloud_dens(i,ii)+xc(iCS,k)*Clouddens(k)/real(nr_cloud)
-				enddo
-				k=k+1
-				if(k.gt.nnr) k=nnr
-			enddo
-		enddo
-		call DoComputeT(Tconverged,0.1d0)
-		
-		k=1
-		do i=1,nr-1
-			do j=1,nr_cloud
-				CloudT(k)=10d0**(log10(T(i))+log10(T(i+1)/T(i))*real(j-1)/real(nr_cloud))
-				k=k+1
-				if(k.gt.nnr) k=nnr
-			enddo
-		enddo
-		CloudT(k)=T(nr)
-	endif
 
 	enddo
 c end the loop

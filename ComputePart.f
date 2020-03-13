@@ -651,7 +651,7 @@ c changed this to mass fractions (11-05-2010)
 		endif
 	enddo
 
-!$OMP PARALLEL IF(.false.)
+!$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,csca0,cabs0,cext0,Mass,Vol,theta,i,l,tot,k,Err,spheres,toolarge,
 !$OMP&         rad,wvno,m,r1,rcore,qext,qsca,qbs,gqsc,rmie,lmie,e1mie,e2mie,
@@ -958,6 +958,12 @@ c-----------------------------------------------------------------------
 	do j=1,nm
 		m(j)=dcmplx(e1in(j),e2in(j))
 	enddo
+c LLL mixing rule (not preferred)
+	mm=0d0
+	do j=1,nm
+		mm=mm+m(j)**(2d0/3d0)*abun(j)
+	enddo
+	mm=mm**(3d0/2d0)
 	do iter=1,100
 		sum=0d0
 		do j=1,nm
