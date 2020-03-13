@@ -336,8 +336,8 @@ c			beta_used=max
 		if(x(i).gt.10000d0) x(i)=10000d0
 		if(IsNaN(x(i))) then
 			call output("NaN in temperature structure")
-			if(i.gt.1) then
-				x(i)=x(i-1)
+			if(i.lt.nr) then
+				x(i)=x(i+1)
 			else
 				x(i)=TeffP
 			endif
@@ -410,8 +410,8 @@ c			beta_used=max
 		if(x(i).gt.10000d0) x(i)=10000d0
 		if(IsNaN(x(i))) then
 			call output("NaN in temperature structure")
-			if(i.gt.1) then
-				x(i)=x(i-1)
+			if(i.lt.nr) then
+				x(i)=x(i+1)
 			else
 				x(i)=TeffP
 			endif

@@ -1034,14 +1034,19 @@ c-----------------------------------------------------------------------
 	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie
 	real*8 pi
 	parameter(pi=3.1415926536)
-      INTEGER NANG
+      INTEGER NANG,Err
       REAL GSCA,QBACK,QEXT,QSCA,X
       COMPLEX REFREL
       COMPLEX S1(20),S2(20)
 	NANG=2
 	X=2d0*pi*rmie/lmie
 	REFREL=cmplx(e1mie,e2mie)
-	call BHMIE(X,REFREL,NANG,S1,S2,QEXT,QSCA,QBACK,GSCA)
+	call BHMIE(X,REFREL,NANG,S1,S2,QEXT,QSCA,QBACK,GSCA,Err)
+	if(Err.gt.0) then
+1		x=x/2d0
+		call BHMIE(X,REFREL,NANG,S1,S2,QEXT,QSCA,QBACK,GSCA,Err)
+		if(Err.gt.0d0) goto 1
+	endif
 	csmie=pi*rmie**2*QSCA
 	cemie=pi*rmie**2*QEXT
 	
@@ -1100,7 +1105,7 @@ c-----------------------------------------------------------------------
 	end
 
 
-      SUBROUTINE BHMIE(X,REFREL,NANG,S1,S2,QEXT,QSCA,QBACK,GSCA)
+      SUBROUTINE BHMIE(X,REFREL,NANG,S1,S2,QEXT,QSCA,QBACK,GSCA,Err)
       IMPLICIT NONE
 
 C Declare parameters:
@@ -1113,7 +1118,7 @@ C      PARAMETER(MXNANG=1000,NMXX=15000)
 
 C Arguments:
 
-      INTEGER NANG
+      INTEGER NANG,Err
       REAL GSCA,QBACK,QEXT,QSCA,X
       COMPLEX REFREL
       COMPLEX S1(2*MXNANG-1),S2(2*MXNANG-1)
@@ -1259,13 +1264,14 @@ C However, they do not need to be commented out.
       DOUBLE PRECISION IMAGPART
       REALPART(DPCX)=(DBLE(DPCX))
       IMAGPART(DPCX)=(DIMAG(DPCX))
-      
+
+	Err=0      
 C***********************************************************************
 C*** Safety checks
 
       IF(SINGLE)WRITE(0,*)'Warning: this version of bhmie uses only ',
      &          'single precision complex numbers!'
-      IF(NANG.GT.MXNANG)STOP'***Error: NANG > MXNANG in bhmie'
+      IF(NANG.GT.MXNANG)NANG=MXNANG
       IF(NANG.LT.2)NANG=2
 
 C*** Obtain pi:
@@ -1291,7 +1297,8 @@ C conclusion: we are indeed retaining enough terms in series!
 
       IF(NMX.GT.NMXX)THEN
          WRITE(0,*)'Error: NMX > NMXX=',NMXX,' for |m|x=',YMOD
-         STOP
+         Err=1
+         return
       ENDIF
 
 C*** Require NANG.GE.1 in order to calculate scattering intensities
