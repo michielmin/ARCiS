@@ -554,11 +554,12 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	integer nvars,i,j,nlamtot,ny,k,maxspec,im,ilam,status,system
 	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars),spectemp(nlam),specsave(nobs,nlam)
 	real*8,allocatable :: spec(:),allspec(:,:)
-	logical recomputeopac,truefalse
+	logical recomputeopac,truefalse,doscaleR2
 	real*16 x
 	real*8 xx,xy,scale
 	character*100 command
 
+	doscaleR2=doscaleR
 2	var=var_in
 	call fold(var_in,var,n_ret)
 	do i=1,n_ret
@@ -609,7 +610,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	i2d=i2d+1
 	if(i2d.le.n2d) goto 1
 
-	if(doscaleR) then
+	if(doscaleR2) then
 		xy=0d0
 		xx=0d0
 		k=0
@@ -623,11 +624,25 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 		enddo
 		scale=1d0
 		if(xx.gt.0d0) scale=xy/xx
-		allspec=allspec*scale
-		obsA=obsA*scale
-		flux=flux*scale
-		phase=phase*scale
 		print*,'scale:',scale
+		do i=1,n_ret
+			if(RetPar(i)%keyword.eq.'Rp'.or.RetPar(i)%keyword.eq.'rp') then
+				RetPar(i)%value=RetPar(i)%value*sqrt(scale)
+				if(RetPar(i)%logscale) then
+c	log
+					var_in(i)=log10(RetPar(i)%value/RetPar(i)%xmin)/log10(RetPar(i)%xmax/RetPar(i)%xmin)
+				else if(RetPar(i)%squarescale) then
+c	square
+					var_in(i)=(RetPar(i)%value**2-RetPar(i)%xmin**2)/(RetPar(i)%xmax**2-RetPar(i)%xmin**2)
+				else
+c	linear
+					var_in(i)=(RetPar(i)%value-RetPar(i)%xmin)/(RetPar(i)%xmax-RetPar(i)%xmin)
+				endif
+			endif
+		enddo
+		doscaleR2=.false.
+		deallocate(allspec)
+		goto 2
 	else
 		scale=1d0
 	endif

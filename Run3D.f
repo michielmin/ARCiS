@@ -170,7 +170,7 @@ c===============================================================
 c ===================================================================
 c correction for anisotropic scattering	
 c ===================================================================
- 			if(scattering) then
+ 			if(scattering.and..false.) then
  			M%F11=Rayleigh%F11*Csca(ir,ilam)*Ndens(ir)
  			do icloud=1,nclouds
  				if(Cloud(icloud)%standard.eq.'MIX') then
