@@ -560,6 +560,11 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	character*100 command
 
 	doscaleR2=doscaleR
+	if(dopostequalweights) doscaleR2=.false.
+	imodel=imodel+1
+	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel.or.do3D) call output("model number: " 
+     &				// int2string(imodel,'(i7)') // dbl2string(bestlike,'(f10.2)'))
+
 2	var=var_in
 	call fold(var_in,var,n_ret)
 	do i=1,n_ret
@@ -574,9 +579,6 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	allocate(allspec(nobs,maxspec))
 
 	recomputeopac=.true.
-	imodel=imodel+1
-	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel.or.do3D) call output("model number: " 
-     &				// int2string(imodel,'(i7)') // dbl2string(bestlike,'(f10.2)'))
 
 	allspec=0d0
 	if(n2d.eq.0) then
