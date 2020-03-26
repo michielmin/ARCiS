@@ -1296,7 +1296,7 @@ C conclusion: we are indeed retaining enough terms in series!
       NSTOP=NINT(XSTOP)
 
       IF(NMX.GT.NMXX)THEN
-         WRITE(0,*)'Error: NMX > NMXX=',NMXX,' for |m|x=',YMOD
+c         WRITE(0,*)'Error: NMX > NMXX=',NMXX,' for |m|x=',YMOD
          Err=1
          return
       ENDIF
@@ -2150,12 +2150,12 @@ c     ..
 
       IF( FATAL ) THEN
 
-         WRITE( *, '(//,2A,//)' ) ' ****** ERROR *****  ', MESSAG
+c         WRITE( *, '(//,2A,//)' ) ' ****** ERROR *****  ', MESSAG
 
 c                                 ** Example symbolic dump call for Cray
 c cccc    CALL SYMDUMP( '-B -c3' )
 
-         write(*,*) 'I should actually stop, but... whatever'!STOP
+c         write(*,*) 'I should actually stop, but... whatever'!STOP
 
       END IF
 
@@ -2166,13 +2166,13 @@ c cccc    CALL SYMDUMP( '-B -c3' )
 
       IF( NUMMSG.LE.MAXMSG ) THEN
 
-         WRITE( *, '(/,2A,/)' ) ' ****** WARNING *****  ', MESSAG
+c         WRITE( *, '(/,2A,/)' ) ' ****** WARNING *****  ', MESSAG
 
       ELSE
 
-         WRITE( *, '(//,A,//)' )
-     &      ' ****** TOO MANY WARNING MESSAGES --  ' //
-     &      'They will no longer be printed *******'
+c         WRITE( *, '(//,A,//)' )
+c     &      ' ****** TOO MANY WARNING MESSAGES --  ' //
+c     &      'They will no longer be printed *******'
 
          MSGLIM = .True.
 
@@ -2210,8 +2210,8 @@ c     ..
 
       WRTBAD = .TRUE.
       NUMMSG = NUMMSG + 1
-      WRITE( *, '(3A)' ) ' ****  Input variable  ', VARNAM,
-     &   '  in error  ****'
+c      WRITE( *, '(3A)' ) ' ****  Input variable  ', VARNAM,
+c     &   '  in error  ****'
 
       IF( NUMMSG.EQ.MAXMSG ) CALL ERRMSG(
      &    'Too many input errors.  Aborting...', .TRUE. )
@@ -2234,8 +2234,8 @@ c     .. Scalar Arguments ..
       INTEGER   MINVAL
 c     ..
 
-      WRITE( *, '(3A,I7)' ) ' ****  Symbolic dimension  ',
-     &   DIMNAM, '  should be increased to at least ', MINVAL
+c      WRITE( *, '(3A,I7)' ) ' ****  Symbolic dimension  ',
+c     &   DIMNAM, '  should be increased to at least ', MINVAL
 
       WRTDIM = .TRUE.
 
