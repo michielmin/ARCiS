@@ -152,9 +152,11 @@
 		ip3=real(i)/2d0+real(i)*0.997300203936740/2d0+0.5d0
 		ime=real(i)/2d0+0.5d0
 		if(im1.lt.1) im1=1
+		if(im2.lt.1) im2=1
 		if(im3.lt.1) im3=1
 		if(ime.lt.1) ime=1
 		if(ip1.gt.i) ip1=i
+		if(ip2.gt.i) ip2=i
 		if(ip3.gt.i) ip3=i
 		if(ime.gt.i) ime=i
 		open(unit=26,file=trim(outputdir) // "trans_limits",RECL=1000)
