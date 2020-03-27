@@ -263,7 +263,7 @@ c===============================================================================
 		type(Mueller),allocatable :: F(:,:)							! dimension nsize,nlam
 		character*500 file,Kzzfile
 		character*20 standard,ptype
-		character*500 species
+		character*500 species,hazetype
 		integer nr,nsubgrains
 		real*8 tmix,betamix,Kzz,Kscale,Sigmadot
 c simple cloud from Jo

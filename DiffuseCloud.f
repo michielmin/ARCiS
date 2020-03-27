@@ -286,7 +286,26 @@ c	atoms_cloud(i,3)=1
 
 	Sigmadot=Cloud(ii)%Sigmadot
 	
-	rho_nuc=1d0
+	select case(Cloud(ii)%hazetype)
+		case("SOOT","SOOTH","soot,","sooth")
+			rho_nuc=1.00
+		case("SiC")
+			rho_nuc=3.22
+		case("CARBON","Carbon","carbon")
+			rho_nuc=1.80
+		case("CORRUNDUM","Corrundum","corrundum","Al2O3")
+			rho_nuc=3.97
+		case("IRON","Iron","iron","Fe")
+			rho_nuc=7.87
+		case("SiO")
+			rho_nuc=2.18
+		case("TiO2")
+			rho_nuc=4.23
+		case default
+			call output("hazetype unknown")
+			stop
+	end select
+
 	m_nuc=4d0*pi*r_nuc**3*rho_nuc/3d0
 
 	allocate(rpart(nnr))

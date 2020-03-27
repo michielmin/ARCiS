@@ -529,13 +529,51 @@ c changed this to mass fractions (11-05-2010)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
-		i=i+1
-		filename(i)='Soot'
-		rho(i)=1.00
-		frac(i)=frac(i)/rho(i)
-		call RegridDataLNK(Soot,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
-		e1(i,1:nlamdust)=e1d(1:nlamdust)
-		e2(i,1:nlamdust)=e2d(1:nlamdust)
+		select case(C%hazetype)
+			case("SOOT","SOOTH","soot,","sooth")
+				i=i+1
+				filename(i)='Soot'
+				rho(i)=1.00
+				call RegridDataLNK(Soot,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+				frac(i)=frac(i)/rho(i)
+				e1(i,1:nlamdust)=e1d(1:nlamdust)
+				e2(i,1:nlamdust)=e2d(1:nlamdust)
+			case("SiC")
+				i=i+1
+				rho(i)=3.22
+				nm=nm-1
+				frac(17)=frac(17)+frac(i)/rho(i)
+			case("CARBON","Carbon","carbon")
+				i=i+1
+				rho(i)=1.80
+				nm=nm-1
+				frac(16)=frac(16)+frac(i)/rho(i)
+			case("CORRUNDUM","Corrundum","corrundum","Al2O3")
+				i=i+1
+				rho(i)=3.97
+				nm=nm-1
+				frac(10)=frac(10)+frac(i)/rho(i)
+			case("IRON","Iron","iron","Fe")
+				i=i+1
+				rho(i)=7.87
+				nm=nm-1
+				frac(9)=frac(9)+frac(i)/rho(i)
+			case("SiO")
+				i=i+1
+				rho(i)=2.18
+				nm=nm-1
+				frac(7)=frac(7)+frac(i)/rho(i)
+			case("TiO2")
+				i=i+1
+				rho(i)=4.23
+				nm=nm-1
+				frac(1)=frac(1)+frac(i)/rho(i)/3d0
+				frac(2)=frac(2)+frac(i)/rho(i)/3d0
+				frac(3)=frac(3)+frac(i)/rho(i)/3d0
+			case default
+				call output("hazetype unknown")
+				stop
+		end select
 	endif
 			
 	min=dcmplx(1d0,0d0)
