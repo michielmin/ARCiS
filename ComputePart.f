@@ -32,7 +32,7 @@
 	external Carbon_BE_Zubko1996,Mg07Fe03SiO3_Dorschner1995,AstroSilicate
 	external Enstatite_X,Enstatite_Y,Enstatite_Z,checkparticlefile
 	external Forsterite_X,Forsterite_Y,Forsterite_Z
-	external Brookite_X,Brookite_Y,Brookite_Z,Water,OrganicsHenning,Soot
+	external Rutile_xy,Rutile_z,Water,OrganicsHenning,Soot
 	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O,MgO,SiC
 	integer abun_in_name,LL,LLmax
 	parameter(abun_in_name=2)
@@ -201,8 +201,8 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(Forsterite_Z,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(3,1:nlamdust)=e1d(1:nlamdust)
 		e2(3,1:nlamdust)=e2d(1:nlamdust)
-	else if(C%standard.eq.'BROOKITE'.or.C%standard.eq.'TiO2') then
-		input='BROOKITE'
+	else if(C%standard.eq.'BROOKITE'.or.C%standard.eq.'RUTILE'.or.C%standard.eq.'TiO2') then
+		input='RUTILE'
 		ns=C%nsubgrains
 		C%blend=.false.
 		nf=20
@@ -220,16 +220,16 @@ c changed this to mass fractions (11-05-2010)
 		frac(3)=1d0/3d0
 		allocate(e1d(nlamdust))
 		allocate(e2d(nlamdust))
-		filename(1)='Brookite_X'
-		call RegridDataLNK(Brookite_X,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		filename(1)='Rutile_xy'
+		call RegridDataLNK(Rutile_xy,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(1,1:nlamdust)=e1d(1:nlamdust)
 		e2(1,1:nlamdust)=e2d(1:nlamdust)
-		filename(2)='Brookite_Y'
-		call RegridDataLNK(Brookite_Y,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		filename(2)='Rutile_xy'
+		call RegridDataLNK(Rutile_xy,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(2,1:nlamdust)=e1d(1:nlamdust)
 		e2(2,1:nlamdust)=e2d(1:nlamdust)
-		filename(3)='Brookite_Z'
-		call RegridDataLNK(Brookite_Z,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		filename(3)='Rutile_z'
+		call RegridDataLNK(Rutile_z,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(3,1:nlamdust)=e1d(1:nlamdust)
 		e2(3,1:nlamdust)=e2d(1:nlamdust)
 	else if(C%standard.eq.'WATER') then
@@ -392,24 +392,24 @@ c changed this to mass fractions (11-05-2010)
 		allocate(e2d(nlamdust))
 		frac(1:nm)=C%frac(isize,1:nm)
 		i=i+1
-		filename(i)='Brookite_X'
+		filename(i)='Rutile_xy'
 		rho(i)=4.23
 		frac(i)=frac(i)/rho(i)
-		call RegridDataLNK(Brookite_X,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		call RegridDataLNK(Rutile_xy,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 		i=i+1
-		filename(i)='Brookite_Y'
+		filename(i)='Rutile_xy'
 		rho(i)=4.23
 		frac(i)=frac(i)/rho(i)
-		call RegridDataLNK(Brookite_Y,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		call RegridDataLNK(Rutile_xy,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 		i=i+1
-		filename(i)='Brookite_Z'
+		filename(i)='Rutile_z'
 		rho(i)=4.23
 		frac(i)=frac(i)/rho(i)
-		call RegridDataLNK(Brookite_Z,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		call RegridDataLNK(Rutile_z,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
@@ -530,7 +530,7 @@ c changed this to mass fractions (11-05-2010)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
 		select case(C%hazetype)
-			case("SOOT","SOOTH","soot,","sooth")
+			case("SOOT","soot")
 				i=i+1
 				filename(i)='Soot'
 				rho(i)=1.00

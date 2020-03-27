@@ -287,7 +287,7 @@ c	atoms_cloud(i,3)=1
 	Sigmadot=Cloud(ii)%Sigmadot
 	
 	select case(Cloud(ii)%hazetype)
-		case("SOOT","SOOTH","soot,","sooth")
+		case("SOOT","soot")
 			rho_nuc=1.00
 		case("SiC")
 			rho_nuc=3.22
