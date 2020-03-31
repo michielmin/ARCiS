@@ -628,7 +628,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 		enddo
 		scale=1d0
 		if(xx.gt.0d0) scale=xy/xx
-		print*,'scale:',scale
+c		print*,'scale:',scale
 		do i=1,n_ret
 			if(RetPar(i)%keyword.eq.'Rp'.or.RetPar(i)%keyword.eq.'rp') then
 				RetPar(i)%value=RetPar(i)%value*sqrt(scale)
