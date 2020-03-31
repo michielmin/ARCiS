@@ -76,7 +76,7 @@
 		do j=1,ObsSpec(i)%ndata
 			k=k+1
 			tot=tot-log(sqrt(2d0*pi)*ObsSpec(i)%dy(j))
-			lnew=lnew+((spec(k)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
+			lnew=lnew+((spec(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
 		enddo
 	enddo
 	lnew=-lnew/2d0+tot

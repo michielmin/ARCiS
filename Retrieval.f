@@ -620,8 +620,10 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 			do j=1,ObsSpec(i)%ndata
 				k=k+1
 				ymod(k)=allspec(i,j)
-				xy=xy+ymod(k)*ObsSpec(i)%y(j)/ObsSpec(i)%dy(j)**2
-				xx=xx+ymod(k)*ymod(k)/ObsSpec(i)%dy(j)**2
+				if(.not.ObsSpec(i)%scaling) then
+					xy=xy+ymod(k)*ObsSpec(i)%y(j)/ObsSpec(i)%dy(j)**2
+					xx=xx+ymod(k)*ymod(k)/ObsSpec(i)%dy(j)**2
+				endif
 			enddo
 		enddo
 		scale=1d0
@@ -649,13 +651,35 @@ c	linear
 		scale=1d0
 	endif
 
+	k=0
+	do i=1,nobs
+		if(ObsSpec(i)%scaling) then
+			xy=0d0
+			xx=0d0
+			do j=1,ObsSpec(i)%ndata
+				k=k+1
+				ymod(k)=allspec(i,j)
+				xy=xy+ymod(k)*ObsSpec(i)%y(j)/ObsSpec(i)%dy(j)**2
+				xx=xx+ymod(k)*ymod(k)/ObsSpec(i)%dy(j)**2
+			enddo
+			ObsSpec(i)%scale=1d0
+			if(xx.gt.0d0) ObsSpec(i)%scale=xx/xy
+		else
+			ObsSpec(i)%scale=1d0
+			do j=1,ObsSpec(i)%ndata
+				k=k+1
+				ymod(k)=allspec(i,j)
+			enddo
+		endif
+	enddo
+
 	lnew=0d0
 	k=0
 	do i=1,nobs
 		do j=1,ObsSpec(i)%ndata
 			k=k+1
 			ymod(k)=allspec(i,j)
-			lnew=lnew+((ymod(k)-ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
+			lnew=lnew+((ymod(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
 			ObsSpec(i)%model(j)=allspec(i,j)
 		enddo
 	enddo
@@ -681,12 +705,12 @@ c	linear
 				case("trans","transmission","emisr","emisR","emisa","emis","emission","transC","phase","phaser","phaseR")
 					open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),RECL=1000)
 					do j=1,ObsSpec(i)%ndata
-						write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
+						write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j)/ObsSpec(i)%scale,ObsSpec(i)%scale*ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
 					enddo
 					close(unit=20)
 					open(unit=20,file=trim(outputdir) // "fullobs" // trim(int2string(i,'(i0.3)')),RECL=1000)
 					do j=1,nlam-1
-						write(20,*) lam(j)*1d4,specsave(i,j)
+						write(20,*) lam(j)*1d4,specsave(i,j)/ObsSpec(i)%scale
 					enddo
 					close(unit=20)
 				case("lightcurve")

@@ -1431,7 +1431,8 @@ c		Cloud(i)%P=0.0624d0
 
 	do i=1,nobs
 		ObsSpec(i)%beta=1d0
-		ObsSpec(i)%scale=-1d-1
+		ObsSpec(i)%scale=1d0
+		ObsSpec(i)%scaling=.false.
 		ObsSpec(i)%spec=.true.
 		ObsSpec(i)%i2d=0
 		ObsSpec(i)%iphase=1
@@ -1667,8 +1668,8 @@ c				enddo
 			ObsSpec(i)%file=key%value
 		case("beta","weight")
 			read(key%value,*) ObsSpec(i)%beta
-		case("scale")
-			read(key%value,*) ObsSpec(i)%scale
+		case("scaling","scale")
+			read(key%value,*) ObsSpec(i)%scaling
 		case("i2d")
 			read(key%value,*) ObsSpec(i)%i2d
 			if(ObsSpec(i)%i2d.gt.n2d) n2d=ObsSpec(i)%i2d

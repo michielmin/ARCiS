@@ -303,7 +303,7 @@ cPoints for the temperature structure
 		integer,allocatable :: ilam(:)
 		real*8 beta,scale
 		integer ndata,i2d,iphase
-		logical spec
+		logical spec,scaling
 		integer nlam,nt
 		real*8,allocatable :: LC(:,:),dLC(:,:),t(:),dt(:)
 	end type ObservedSpec
