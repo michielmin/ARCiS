@@ -635,6 +635,9 @@ c	condensates=(condensates.or.cloudcompute)
 			read(50,*) j,tot,var(1:n_ret)
 		enddo
 		call MapRetrieval(var,dvar)
+		do i=1,n_ret
+			call output(RetPar(i)%keyword(1:15) // trim(dbl2string(RetPar(i)%value,'(es15.3)')))
+		enddo
 		close(unit=50)
 	endif
 	call output("==================================================================")

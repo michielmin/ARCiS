@@ -46,7 +46,7 @@
 	use params_multinest
 	IMPLICIT NONE
 	integer nvars,i,j,nlamtot,k,ny
-	real*8 var(nvars),chi2obs(nobs),error(2,nvars),lnew
+	real*8 var(nvars),chi2obs(nobs),error(2,nvars),lnew,scale
 	real*8,allocatable :: spec(:)
 	logical recomputeopac
 	real*16 tot,xx
@@ -60,7 +60,7 @@
 	ny=k
 	allocate(spec(ny))
 
-	call mrqcomputeY(var,spec,nvars,ny,lnew)
+	call mrqcomputeY(var,spec,nvars,ny,lnew,scale)
 
 	do i=1,nvars
 		var(i)=RetPar(i)%value
@@ -79,7 +79,7 @@
 			lnew=lnew+((spec(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
 		enddo
 	enddo
-	lnew=-lnew/2d0+tot
+	lnew=-scale*lnew/2d0+tot
 	
 	return
 	end

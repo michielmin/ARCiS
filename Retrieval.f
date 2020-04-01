@@ -482,7 +482,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	integer nvars,i,j,nlamtot,ny,what,ii
 	real*8 var(nvars),ymod(ny),dyda(ny,nvars),error(2,nvars),var0(nvars),lnew
 	real*8 y1(ny),y2(ny),var1(nvars),var2(nvars),chi2_1,chi2_2,random
-	real*8 aq,bq,cq,gasdev,dd
+	real*8 aq,bq,cq,gasdev,dd,scale
 	real*8,allocatable :: spec(:)
 	logical recomputeopac,recompute
 
@@ -490,7 +490,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 
 	var=var0
 	if(what.eq.1) then
-		call mrqcomputeY(var,ymod,nvars,ny,chi2_0)
+		call mrqcomputeY(var,ymod,nvars,ny,chi2_0,scale)
 		obsA0(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
 		emis0(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 		emisR0(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
@@ -506,7 +506,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 		dd=gasdev(idum)
 		var1(i)=var(i)+dd*dvarq(i)
 		if(abs(var(i)-var1(i)).lt.1d-5) goto 3
-		call mrqcomputeY(var1,y1,nvars,ny,chi2_1)
+		call mrqcomputeY(var1,y1,nvars,ny,chi2_1,scale)
 		obsA1(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
 		emis1(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 		emisR1(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
@@ -537,16 +537,16 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	use RetrievalMod
 	IMPLICIT NONE
 	integer ny,i
-	real*8 ymod(ny),var(n_ret),chi2
+	real*8 ymod(ny),var(n_ret),chi2,scale
 	real*16 x
 
-	call mrqcomputeY(var,ymod,n_ret,ny,chi2)
+	call mrqcomputeY(var,ymod,n_ret,ny,chi2,scale)
 	amoebafunk=chi2
 	
 	return
 	end
 
-	subroutine mrqcomputeY(var_in,ymod,nvars,ny,lnew)
+	subroutine mrqcomputeY(var_in,ymod,nvars,ny,lnew,scale)
 	use GlobalSetup
 	use Constants
 	use RetrievalMod
@@ -683,7 +683,8 @@ c	linear
 			ObsSpec(i)%model(j)=allspec(i,j)
 		enddo
 	enddo
-	lnew=lnew/real(max(1,k-n_ret))
+	if(scale.lt.1d0) scale=1d0/scale
+	lnew=scale*lnew/real(max(1,k-n_ret))
 
 	write(31,*) imodel,lnew,var(1:nvars),COratio,metallicity
 	if(.not.useobsgrid.or.dochemistry.or.do3D) call flush(31)
