@@ -565,9 +565,9 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel.or.do3D) call output("model number: " 
      &				// int2string(imodel,'(i7)') // dbl2string(bestlike,'(f10.2)'))
 
-2	var=var_in
+	var=var_in
 	call fold(var_in,var,n_ret)
-	do i=1,n_ret
+2	do i=1,n_ret
 		if(var(i).gt.1d0) var(i)=1d0
 		if(var(i).lt.0d0) var(i)=0d0
 	enddo
@@ -634,13 +634,13 @@ c		print*,'scale:',scale
 				RetPar(i)%value=RetPar(i)%value*sqrt(scale)
 				if(RetPar(i)%logscale) then
 c	log
-					var_in(i)=log10(RetPar(i)%value/RetPar(i)%xmin)/log10(RetPar(i)%xmax/RetPar(i)%xmin)
+					var(i)=log10(RetPar(i)%value/RetPar(i)%xmin)/log10(RetPar(i)%xmax/RetPar(i)%xmin)
 				else if(RetPar(i)%squarescale) then
 c	square
-					var_in(i)=(RetPar(i)%value**2-RetPar(i)%xmin**2)/(RetPar(i)%xmax**2-RetPar(i)%xmin**2)
+					var(i)=(RetPar(i)%value**2-RetPar(i)%xmin**2)/(RetPar(i)%xmax**2-RetPar(i)%xmin**2)
 				else
 c	linear
-					var_in(i)=(RetPar(i)%value-RetPar(i)%xmin)/(RetPar(i)%xmax-RetPar(i)%xmin)
+					var(i)=(RetPar(i)%value-RetPar(i)%xmin)/(RetPar(i)%xmax-RetPar(i)%xmin)
 				endif
 			endif
 		enddo
