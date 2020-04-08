@@ -887,6 +887,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) gene_cross
 		case("resume_nest")
 			read(key%value,*) resume_multinest
+		case("consteff")
+			read(key%value,*) const_eff_multinest
 		case("fmultinest","efr")
 			read(key%value,*) f_multinest
 		case("tolmultinest","ftol")
@@ -1430,6 +1432,7 @@ c		Cloud(i)%P=0.0624d0
 	resume_multinest=.false.
 	f_multinest=0.3d0
 	tol_multinest=0.5d0
+	const_eff_multinest=.false.
 	retrievaltype='MN'
 
 	do i=1,nobs

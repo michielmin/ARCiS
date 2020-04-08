@@ -104,6 +104,7 @@ OBJS	= Modules.o \
 		SiCData.o \
 		OrganicsHenning.o \
 		Soot.o \
+		TholinData.o \
 		KuruczData.o \
 		MCRad.o \
 		polyPartition.o \

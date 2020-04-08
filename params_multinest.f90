@@ -23,7 +23,7 @@ implicit none
 	
       	!sample with constant efficiency
 	logical nest_ceff
- 	parameter(nest_ceff=.false.)
+! 	parameter(nest_ceff=.false.)
 	
       	!max no. of live points
       	integer nest_nlive

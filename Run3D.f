@@ -11,7 +11,7 @@
 	integer ibeta(nlong,nlatt),inu3D(nlong,nlatt)
 	end module Struct3D
 
-	subroutine Run3D
+	subroutine Run3D(recomputeopac)
 	use GlobalSetup
 	use Constants
 	use Struct3D
@@ -41,7 +41,7 @@
 	allocate(T3D(n3D,nr))
 	allocate(mixrat3D(n3D,nr,nmol))
 
-	recomputeopac=.true.
+c	recomputeopac=.true.
 	docloud=.true.
 	cloudfrac=1d0
 

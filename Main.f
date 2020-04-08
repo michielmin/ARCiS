@@ -70,7 +70,7 @@ c terms of use
 	logical recomputeopacities
 	
 	if(do3D) then
-		call Run3D
+		call Run3D(recomputeopacities)
 	else
 		call ComputeModel1D(recomputeopacities)
 	endif

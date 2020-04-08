@@ -101,7 +101,7 @@ c===============================================================================
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust,twind,epsiter
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud,metallicity0
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun,useobsgrid
-	logical didcondens_chem,coagulation,resume_multinest,doMCcompute,disequilibrium
+	logical didcondens_chem,coagulation,resume_multinest,doMCcompute,disequilibrium,const_eff_multinest
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
 	real*8 mixratHaze,PHaze,dPHaze,kappaHaze,Kzz,SiOratio,NOratio,fDay,betapow,Kxx,vxx,night2day

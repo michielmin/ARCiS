@@ -560,6 +560,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	character*100 command
 
 	doscaleR2=doscaleR
+	recomputeopac=.true.
 	if(dopostequalweights) doscaleR2=.false.
 	imodel=imodel+1
 	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel.or.do3D) call output("model number: " 
@@ -577,8 +578,6 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 		if(ObsSpec(i)%ndata.gt.maxspec) maxspec=ObsSpec(i)%ndata
 	enddo
 	allocate(allspec(nobs,maxspec))
-
-	recomputeopac=.true.
 
 	allspec=0d0
 	if(n2d.eq.0) then
@@ -628,7 +627,6 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 		enddo
 		scale=1d0
 		if(xx.gt.0d0) scale=xy/xx
-c		print*,'scale:',scale
 		do i=1,n_ret
 			if(RetPar(i)%keyword.eq.'Rp'.or.RetPar(i)%keyword.eq.'rp') then
 				RetPar(i)%value=RetPar(i)%value*sqrt(scale)
@@ -645,6 +643,7 @@ c	linear
 			endif
 		enddo
 		doscaleR2=.false.
+		recomputeopac=.false.
 		deallocate(allspec)
 		goto 2
 	else

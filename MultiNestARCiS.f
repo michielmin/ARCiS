@@ -106,6 +106,7 @@
 	nest_resume=resume_multinest
 	nest_efr=f_multinest
 	nest_tol=tol_multinest
+	nest_ceff=const_eff_multinest
 
 	if(nest_resume) then
 		open(unit=31,file=trim(outputdir) // '/Wolk.dat',RECL=6000,ACCESS='APPEND')

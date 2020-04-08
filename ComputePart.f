@@ -32,7 +32,7 @@
 	external Carbon_BE_Zubko1996,Mg07Fe03SiO3_Dorschner1995,AstroSilicate
 	external Enstatite_X,Enstatite_Y,Enstatite_Z,checkparticlefile
 	external Forsterite_X,Forsterite_Y,Forsterite_Z
-	external Rutile_xy,Rutile_z,Water,OrganicsHenning,Soot
+	external Rutile_xy,Rutile_z,Water,OrganicsHenning,Soot,Tholin
 	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O,MgO,SiC
 	integer abun_in_name,LL,LLmax
 	parameter(abun_in_name=2)
@@ -535,6 +535,14 @@ c changed this to mass fractions (11-05-2010)
 				filename(i)='Soot'
 				rho(i)=1.00
 				call RegridDataLNK(Soot,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+				frac(i)=frac(i)/rho(i)
+				e1(i,1:nlamdust)=e1d(1:nlamdust)
+				e2(i,1:nlamdust)=e2d(1:nlamdust)
+			case("THOLIN","tholin")
+				i=i+1
+				filename(i)='Tholin'
+				rho(i)=1.00
+				call RegridDataLNK(Tholin,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 				frac(i)=frac(i)/rho(i)
 				e1(i,1:nlamdust)=e1d(1:nlamdust)
 				e2(i,1:nlamdust)=e2d(1:nlamdust)

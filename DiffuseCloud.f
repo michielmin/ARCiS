@@ -289,6 +289,8 @@ c	atoms_cloud(i,3)=1
 	select case(Cloud(ii)%hazetype)
 		case("SOOT","soot")
 			rho_nuc=1.00
+		case("THOLIN","tholin")
+			rho_nuc=1.00
 		case("SiC")
 			rho_nuc=3.22
 		case("CARBON","Carbon","carbon")
