@@ -643,7 +643,7 @@ c	linear
 			endif
 		enddo
 		doscaleR2=.false.
-		recomputeopac=.false.
+		recomputeopac=.true.
 		deallocate(allspec)
 		goto 2
 	else
