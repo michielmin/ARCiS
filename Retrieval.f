@@ -683,6 +683,7 @@ c	linear
 		enddo
 	enddo
 	if(scale.lt.1d0) scale=1d0/scale
+	scale=1d0	! remove the error from the scaleR scaling on the goodness of fit.
 	lnew=scale*lnew/real(max(1,k-n_ret))
 
 	write(31,*) imodel,lnew,var(1:nvars),COratio,metallicity
