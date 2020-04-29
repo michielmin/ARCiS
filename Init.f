@@ -602,6 +602,7 @@ c	condensates=(condensates.or.cloudcompute)
 	call ReadDataCIA()
 
 	if(Pform.lt.0d0) Pform=-Pform*82.05736*1.01325*Tform/(mp*2.2*Avogadro)
+	if(PTchemAbun.and.Tchem.le.0d0) Tchem=sqrt(Rstar/(2d0*Dplanet))*Tstar
 
 	if(retrieval) then
 		do i=1,n_ret
@@ -626,7 +627,7 @@ c	condensates=(condensates.or.cloudcompute)
 		enddo			
 	endif
 
-	if(dochemistry) call init_GGchem(molname,nmol)
+	if(dochemistry.or.PTchemAbun) call init_GGchem(molname,nmol)
 
 	if(iWolk.gt.0) then
 		open(unit=50,file=trim(outputdir) // "/Wolk.dat",RECL=6000)
@@ -1333,7 +1334,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	r_nuc=1d-3
 	
 	PTchemAbun=.false.
-	Tchem=500d0
+	Tchem=-500d0
 	Pchem=1d0
 	
 	adiabatic_tprofile=.false.
@@ -1393,6 +1394,11 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%species=''
 		Cloud(i)%haze=.false.
 		Cloud(i)%hazetype='SOOT'
+		Cloud(i)%fHazeSiO=0d0
+		Cloud(i)%fHazeTiO2=0d0
+		Cloud(i)%fHazeAl2O3=0d0
+		Cloud(i)%fHazeFe=0d0
+		Cloud(i)%fHazeTholin=0d0
 		Cloud(i)%condensates=.true.
 		Cloud(i)%tmix=300d0
 		Cloud(i)%betamix=2.2
@@ -2039,6 +2045,16 @@ c				enddo
 			read(key%value,*) Cloud(j)%kappa
 		case("albedo")
 			read(key%value,*) Cloud(j)%albedo
+		case("fhazesio")
+			read(key%value,*) Cloud(j)%fHazeSiO
+		case("fhazetholin")
+			read(key%value,*) Cloud(j)%fHazeTholin
+		case("fhazetio","fhazerutile")
+			read(key%value,*) Cloud(j)%fHazeTiO2
+		case("fhazealo","fhazeal2o")
+			read(key%value,*) Cloud(j)%fHazeAl2O3
+		case("fhazefe","fhazeiron")
+			read(key%value,*) Cloud(j)%fHazeFe
 		case default
 			call output("Unknown cloud keyword: " // trim(key%key2))
 			stop

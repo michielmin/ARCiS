@@ -303,6 +303,15 @@ c	atoms_cloud(i,3)=1
 			rho_nuc=2.18
 		case("TiO2")
 			rho_nuc=4.23
+		case("MIX")
+			tot=Cloud(ii)%fHazeSiO+Cloud(ii)%fHazeAl2O3+Cloud(ii)%fHazeTiO2+Cloud(ii)%fHazeTholin+Cloud(ii)%fHazeFe
+			Cloud(ii)%fHazeSiO=Cloud(ii)%fHazeSiO/tot
+			Cloud(ii)%fHazeAl2O3=Cloud(ii)%fHazeAl2O3/tot
+			Cloud(ii)%fHazeTiO2=Cloud(ii)%fHazeTiO2/tot
+			Cloud(ii)%fHazeTholin=Cloud(ii)%fHazeTholin/tot
+			Cloud(ii)%fHazeFe=Cloud(ii)%fHazeFe/tot
+			rho_nuc=1d0/(Cloud(ii)%fHazeSiO/2.18+Cloud(ii)%fHazeAl2O3/3.97+Cloud(ii)%fHazeTiO2/4.23+
+     &					Cloud(ii)%fHazeTholin/1.00+Cloud(ii)%fHazeFe/7.87)
 		case default
 			call output("hazetype unknown")
 			stop
@@ -833,7 +842,7 @@ c correction for SiC
 			Cloud(ii)%frac(i,17)=Cloud(ii)%frac(i,17)+xc(10,k)			! SiC			
 			Cloud(ii)%frac(i,16)=Cloud(ii)%frac(i,16)+xc(9,k)			! C
 			Cloud(ii)%frac(i,12)=Cloud(ii)%frac(i,12)+xMgO(k)			! MgO
-			Cloud(ii)%frac(i,19)=Cloud(ii)%frac(i,19)+xm(k)				! organic seed particles
+			Cloud(ii)%frac(i,19)=Cloud(ii)%frac(i,19)+xm(k)				! seed particles
 			k=k+1
 			if(k.gt.nnr) k=nnr
 		enddo

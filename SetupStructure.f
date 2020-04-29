@@ -23,7 +23,6 @@
 	nabla_ad=2d0/7d0
 
 	if(PTchemAbun) then
-		call set_molfracs_atoms(COratio,SiOratio,NOratio,metallicity)
 		call call_chemistry(Tchem,Pchem,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
      &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(1),MMW_form,didcondens_chem,includemol)
 		do i=2,nr

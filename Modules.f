@@ -264,6 +264,7 @@ c===============================================================================
 		character*500 file,Kzzfile
 		character*20 standard,ptype
 		character*500 species,hazetype
+		real*8 fHazeSiO,fHazeTiO2,fHazeTholin,fHazeAl2O3,fHazeFe
 		integer nr,nsubgrains
 		real*8 tmix,betamix,Kzz,Kscale,Sigmadot
 c simple cloud from Jo

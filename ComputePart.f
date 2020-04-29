@@ -578,6 +578,35 @@ c changed this to mass fractions (11-05-2010)
 				frac(1)=frac(1)+frac(i)/rho(i)/3d0
 				frac(2)=frac(2)+frac(i)/rho(i)/3d0
 				frac(3)=frac(3)+frac(i)/rho(i)/3d0
+			case("MIX")
+				tot=C%fHazeSiO+C%fHazeAl2O3+C%fHazeTiO2+C%fHazeTholin+C%fHazeFe
+				C%fHazeSiO=C%fHazeSiO/tot
+				C%fHazeAl2O3=C%fHazeAl2O3/tot
+				C%fHazeTiO2=C%fHazeTiO2/tot
+				C%fHazeTholin=C%fHazeTholin/tot
+				C%fHazeFe=C%fHazeFe/tot
+				i=i+1
+
+				rho(i)=3.97
+				frac(10)=frac(10)+C%fHazeAl2O3*frac(i)/rho(i)
+
+				rho(i)=7.87
+				frac(9)=frac(9)+C%fHazeFe*frac(i)/rho(i)
+
+				rho(i)=2.18
+				frac(7)=frac(7)+C%fHazeSiO*frac(i)/rho(i)
+
+				rho(i)=4.23
+				frac(1)=frac(1)+C%fHazeTiO2*frac(i)/rho(i)/3d0
+				frac(2)=frac(2)+C%fHazeTiO2*frac(i)/rho(i)/3d0
+				frac(3)=frac(3)+C%fHazeTiO2*frac(i)/rho(i)/3d0
+
+				filename(i)='Tholin'
+				rho(i)=1.00
+				call RegridDataLNK(Tholin,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+				frac(i)=C%fHazeTholin*frac(i)/rho(i)
+				e1(i,1:nlamdust)=e1d(1:nlamdust)
+				e2(i,1:nlamdust)=e2d(1:nlamdust)
 			case default
 				call output("hazetype unknown")
 				stop
