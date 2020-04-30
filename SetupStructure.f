@@ -863,7 +863,7 @@ c use Ackerman & Marley 2001 cloud computation
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
 	enddo
-	call set_molfracs_atoms(COratio,SiOratio,NOratio,metallicity)
+	call set_molfracs_atoms(COratio,SiOratio,NOratio,SOratio,metallicity)
 	ini=.true.
 	do i=1,nr
 		call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
@@ -909,7 +909,7 @@ c use Ackerman & Marley 2001 cloud computation
 		if(Tform.gt.0d0) then
 			call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
 		else
-			call set_molfracs_atoms(COratio,SiOratio,NOratio,metallicity)
+			call set_molfracs_atoms(COratio,SiOratio,NOratio,SOratio,metallicity)
 c			call set_molfracs_atoms_form(COratio,metallicity,f_dry,f_wet)
 c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 		endif
@@ -921,10 +921,10 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 
 
 
-	subroutine set_molfracs_atoms(CO,SiO,NO,Z)
+	subroutine set_molfracs_atoms(CO,SiO,NO,SO,Z)
 	use AtomsModule
 	implicit none
-	real*8 CO,Z,tot,SiO,Z0,scale,NO,CO0
+	real*8 CO,Z,tot,SiO,Z0,scale,NO,CO0,SO
 	integer i
 
 	names_atoms(1) = 'H'
@@ -982,6 +982,9 @@ c	adjust N/O ratio
 c	adjust Si/O ratio
 	scale=molfracs_atoms(5)*SiO/molfracs_atoms(9)
 	molfracs_atoms(6:18)=molfracs_atoms(6:18)*scale
+
+c	adjust S/O ratio
+	molfracs_atoms(11)=molfracs_atoms(5)*SO
 
 c	adjust metallicity
 	scale=sum(molfracs_atoms(3:N_atoms))/(sum(molfracs_atoms(1:2))*Z0*10d0**Z)
