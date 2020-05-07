@@ -41,6 +41,8 @@
 	allocate(T3D(n3D,nr))
 	allocate(mixrat3D(n3D,nr,nmol))
 
+	if(retrieval) call SetOutputMode(.false.)
+
 c	recomputeopac=.true.
 	docloud=.true.
 	cloudfrac=1d0
@@ -225,7 +227,7 @@ c ===================================================================
 		else
 			Si(1:nlam,1:ng,1:nr,1:nnu0,i)=Si(1:nlam,1:ng,1:nr,1:nnu0,1)
 		endif
-		call SetOutputMode(.true.)
+		if(.not.retrieval) call SetOutputMode(.true.)
 		call tellertje_perc(i,n3D)
 	enddo
 	Rmax=Rmax*1.001
@@ -560,6 +562,8 @@ c Note we use the symmetry of the North and South here!
 	deallocate(R3D)
 	deallocate(R3D2)
 	deallocate(T3D,mixrat3D)
+
+	if(retrieval) call SetOutputMode(.true.)
 	
 	return
 	end
