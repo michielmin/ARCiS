@@ -922,10 +922,14 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 
 
 	subroutine set_molfracs_atoms(CO,SiO,NO,SO,Z)
+	use GlobalSetup
 	use AtomsModule
 	implicit none
 	real*8 CO,Z,tot,SiO,Z0,scale,NO,CO0,SO
 	integer i
+	character*500 command,homedir
+	character*10 name
+	real*8 abun
 
 	names_atoms(1) = 'H'
 	names_atoms(2) = 'He'
@@ -966,6 +970,31 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
      &	1.52807116806281e-06
      &  /)
 
+
+	goto 3
+	
+	call getenv('HOME',homedir) 
+	write(command,'("python ",a,"/ARCiS/Data/elements.py atomic.dat ",5es15.4)') trim(homedir),CO,SiO,NO,SO,Z
+	call system(command)
+
+	molfracs_atoms=1d-200
+	open(unit=43,file=trim(outputdir) // 'atomic.dat')
+1	read(43,*,err=1,end=2) name,abun
+	do i=1,N_atoms
+		if(trim(name).eq.names_atoms(i)) then
+			molfracs_atoms(i)=abun
+			exit
+		endif
+	enddo
+	goto 1
+2	close(unit=43)
+
+	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))
+
+	return
+
+3	continue
+
 	Z0=sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))
 
 c	adjust C/O ratio
@@ -993,12 +1022,11 @@ c	adjust metallicity
 	tot=sum(molfracs_atoms(1:N_atoms))
 	molfracs_atoms=molfracs_atoms/tot
 
-	open(unit=50,file='atomic.dat')
-	do i=1,18
-		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
-	enddo
-	close(unit=50)
-
+c	open(unit=50,file='atomic.dat')
+c	do i=1,18
+c		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
+c	enddo
+c	close(unit=50)
 
 	return
 	end
