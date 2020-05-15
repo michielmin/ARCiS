@@ -1005,6 +1005,16 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			end select
 		case("computelc")
 			read(key%value,*) computeLC
+		case("planetform")
+			read(key%value,*) planetform
+		case("fdust")
+			read(key%value,*) planetform_fdust
+		case("fplanet")
+			read(key%value,*) planetform_fplan
+		case("rstart","rcore")
+			read(key%value,*) planetform_Rstart
+		case("mstart","mcore")
+			read(key%value,*) planetform_Mstart
 		case default
 			do i=1,nmol_data
 				if(key%key.eq.molname(i)) then
@@ -1519,6 +1529,12 @@ c		Cloud(i)%P=0.0624d0
 	maxchemtime=1d200
 	
 	fulloutput3D=.false.
+
+	planetform=.false.
+	planetform_fdust=0.1
+	planetform_fplan=0.1
+	planetform_Rstart=15d0
+	planetform_Mstart=10d0
 	
 	return
 	end

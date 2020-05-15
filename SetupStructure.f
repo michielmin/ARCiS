@@ -923,6 +923,7 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 
 	subroutine set_molfracs_atoms(CO,SiO,NO,SO,Z)
 	use GlobalSetup
+	use Constants
 	use AtomsModule
 	implicit none
 	real*8 CO,Z,tot,SiO,Z0,scale,NO,CO0,SO
@@ -971,10 +972,11 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
      &  /)
 
 
-	goto 3
-	
+	if(planetform) then
+		
 	call getenv('HOME',homedir) 
-	write(command,'("python ",a,"/ARCiS/Data/elements.py atomic.dat ",5es15.4)') trim(homedir),CO,SiO,NO,SO,Z
+	write(command,'("python ",a,"/ARCiS/Data/planetform/elements.py ",a,"/atomic.dat ",6es15.4)') 
+     &	trim(homedir),trim(outputdir),Dplanet/AU,Mplanet/Mearth,planetform_Rstart,planetform_Mstart,planetform_fdust,planetform_fplan
 	call system(command)
 
 	molfracs_atoms=1d-200
@@ -993,7 +995,7 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 
 	return
 
-3	continue
+	else
 
 	Z0=sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))
 
@@ -1027,6 +1029,8 @@ c	do i=1,18
 c		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
 c	enddo
 c	close(unit=50)
+
+	endif
 
 	return
 	end

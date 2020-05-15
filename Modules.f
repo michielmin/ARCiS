@@ -112,6 +112,8 @@ c===============================================================================
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),lamdust(:),dlam(:)
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
+	real*8 planetform_fdust,planetform_fplan,planetform_Rstart,planetform_Mstart
+	logical planetform
 	integer nTZ,nspike,nai,nboot,npew
 	integer,allocatable :: niso(:),instr_nobs(:)
 	real*8,allocatable :: MMW(:)
