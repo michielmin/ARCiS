@@ -682,6 +682,10 @@ c	linear
 			ObsSpec(i)%model(j)=allspec(i,j)
 		enddo
 	enddo
+	if(massprior) then
+		lnew=lnew+((Mplanet/Mjup-Mp_prior)/dMp_prior)**2
+		k=k+1
+	endif
 	if(scale.lt.1d0) scale=1d0/scale
 	scale=1d0	! remove the error from the scaleR scaling on the goodness of fit.
 	lnew=scale*lnew/real(max(1,k-n_ret))

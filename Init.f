@@ -874,6 +874,12 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadPar3D(key)
 		case("useobsgrid")
 			read(key%value,*) useobsgrid
+		case("massprior")
+			read(key%value,*) massprior
+		case("mp_prior")
+			read(key%value,*) Mp_prior
+		case("dmp_prior")
+			read(key%value,*) dMp_prior
 		case("nboot")
 			read(key%value,*) nboot
 		case("npew")
@@ -1432,6 +1438,7 @@ c		Cloud(i)%P=0.0624d0
 
 	retrieval=.false.
 	doscaleR=.false.
+	massprior=.false.
 	useobsgrid=.false.
 	do i=1,n_ret
 		RetPar(i)%x0=-1d200
@@ -2361,6 +2368,9 @@ c not entirely correct...
 		dR2=Rplanet*0.1
 		dM1=Mplanet*0.1
 		dM2=Mplanet*0.2
+
+		Mp_prior=Mplanet
+		dMp_prior=sqrt(dM1**2+dM2**2)
 		do i=1,n_ret
 			select case(RetPar(i)%keyword)
 				case("Rp","rp","RP")
@@ -2465,6 +2475,8 @@ c not entirely correct...
 		name(i:i)=' '
 	endif
 	orbit_P=orbit_P*86400d0
+	Mp_prior=Mplanet
+	dMp_prior=sqrt(dM1**2+dM2**2)
 	if(trim(planetname).eq.trim(name)) then	
 		close(unit=72)
 		call output("Stellar mass:   " // dbl2string(Mstar,'(f9.4)') // "Msun")
@@ -2475,6 +2487,7 @@ c not entirely correct...
 		call output("Planet orbit:   " // dbl2string(Dplanet,'(f7.4)') // "AU")
 		call output("Planet radius:  " // dbl2string(Rplanet,'(f9.4)') // "Rjup")
 		call output("Planet mass:    " // dbl2string(Mplanet,'(f9.4)') // "Mjup")
+		call output("Mass uncert.:   " // dbl2string(dMp_prior,'(f9.4)') // "Mjup")
 		call output("Blackbody T:    " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K")
 		call output("Orbital period: " // dbl2string(orbit_P/86400d0,'(f9.4)') // "days")
 

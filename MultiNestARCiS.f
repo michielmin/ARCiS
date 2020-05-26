@@ -79,6 +79,11 @@
 			lnew=lnew+((spec(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
 		enddo
 	enddo
+	if(massprior) then
+		lnew=lnew+((Mplanet/Mjup-Mp_prior)/dMp_prior)**2
+		tot=tot-log(sqrt(2d0*pi)*dMp_prior)
+		k=k+1
+	endif
 	lnew=-scale*lnew/2d0+tot
 	
 	return
