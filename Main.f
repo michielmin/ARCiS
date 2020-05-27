@@ -100,9 +100,9 @@ c terms of use
 		do while(.not.Tconverged.and.nTiter.le.maxiter)
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
      &					// trim(int2string(maxiter,'(i3)')) // ")")
-			f=1d0/real(nTiter+1)
-			f=0.9
-			if(nTiter.ge.4) f=1d0/real(nTiter-2)**0.5+0.1
+			f=1d0/real(nTiter+1)+0.2d0
+c			f=0.9
+c			if(nTiter.ge.4) f=1d0/real(nTiter-2)**0.5+0.1
 			call DoComputeT(Tconverged,f)
 			par_tprofile=.false.
 			nTiter=nTiter+1

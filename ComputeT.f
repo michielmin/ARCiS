@@ -257,8 +257,8 @@
 					Ce(ir,ilam,ig)=tau/d
 					Ca(ir,ilam,ig)=Ce(ir,ilam,ig)-Cs(ir,ilam,ig)
 				endif
-				if(tau.lt.1d-5) then
-					tau=1d-5
+				if(tau.lt.1d-10) then
+					tau=1d-10
 					Ce(ir,ilam,ig)=tau/d
 					Ca(ir,ilam,ig)=Ce(ir,ilam,ig)-Cs(ir,ilam,ig)
 				endif
@@ -284,15 +284,25 @@
 
 
 	Hstar=0d0
-	Cjstar=0d0
 	do ilam=1,nlam_LR-1
 		do ig=1,ng
 			do ir=1,nr
 				fact=exp(-tauR_nu(ir,ilam,ig)/abs(must))
 				contr=(Fstar_LR(ilam)/(4d0*pi*Dplanet**2))*fact
 				Hstar(ir)=Hstar(ir)-must*dfreq_LR(ilam)*wgg(ig)*contr
-				Cjstar(ir)=Cjstar(ir)+dfreq_LR(ilam)*wgg(ig)*contr*Ca(ir,ilam,ig)
 			enddo
+
+c			tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
+c			contr=(Fstar_LR(ilam)/(4d0*pi*Dplanet**2))
+c			call SolveIjStar(tauR,contr,Ij,nr)
+c			Si_p(1:nr)=Ij(1:nr)*Cs(1:nr,ilam,ig)
+c			call AddScatter(Si_p,Ca(1:nr,ilam,ig),Cs(1:nr,ilam,ig))
+c			Ij(1:nr)=Ij(1:nr)*Ca(1:nr,ilam,ig)+Si_p(1:nr)
+c			Ij(1:nr)=Ij(1:nr)/(Ca(1:nr,ilam,ig)+Cs(1:nr,ilam,ig))
+c			do jr=1,nr-1
+c				Hstar(jr)=Hstar(jr)+must*dfreq_LR(ilam)*wgg(ig)*(Ij(jr)-Ij(jr+1))/(tauR(jr)-tauR(jr+1))
+c			enddo
+c			Hstar(nr)=Hstar(nr-1)
 		enddo
 	enddo
 
@@ -311,23 +321,9 @@
 		call tellertje(ilam,nlam_LR-1)
 		do ig=1,ng
 			do ir=1,nr
-				tautot=0d0
-				do jr=ir,nr
-					tautot=tautot+tauR_nu(jr,ilam,ig)/abs(must)
-				enddo
-				fact=exp(-tautot)
-				contr=must*(Fstar_LR(ilam)/(4d0*pi*Dplanet**2))*fact
-				iT=T(ir)+1
-				if(iT.gt.nBB-1) iT=nBB-1
-				if(iT.lt.1) iT=1
-				scale=(T(ir)/real(iT))**4
-				Si(ir)=1d0!scale*BB_LR(iT,ilam)*Ca(ir,ilam,ig)/Ce(ir,ilam,ig)+contr*Cs(ir,ilam,ig)/(Ce(ir,ilam,ig)*4d0*pi)
-			enddo
-			do ir=1,nr
 				Si_p=0d0
 				Si_p(ir)=1d0
-c				tauR(1:nr)=tauR_nu(1:nr,ilam,ig)
-c				call AddScatter(Si_p,tauR,Ca(1:nr,ilam,ig),Cs(1:nr,ilam,ig),Ce(1:nr,ilam,ig),nr,nu,wnu,nnu)
+c				call AddScatter(Si_p,Ca(1:nr,ilam,ig),Cs(1:nr,ilam,ig))
 				do inu=1,nnu
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
 					call SolveIj(tauR,Si_p,Ij,nr)
@@ -367,12 +363,11 @@ c					call spldiff(tauR,Ij,nr,Ih)
 	IP(2)=nr*4+2
 	NRHS=1
 
-c	call DGESV( nr, NRHS, IntH, nr, IWORK, Fl, nr, info )
-	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
+	call DGESV( nr, NRHS, IntH, nr, IWORK, Fl, nr, info )
+c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 
 	do ir=1,nr
-		print*,Fl(ir)
-		Fl(ir)=min(max(0.1d0,Fl(ir)),10d0)
+		Fl(ir)=min(max(0.9d0,Fl(ir)),1.1d0)
 	enddo
 
 	do ir=1,nr
@@ -964,7 +959,7 @@ c
 	
 
 
-	subroutine AddScatter(Si,tauR,Ca,Cs,Ce,nr,nu,wnu,nnu)
+	subroutine AddScatter_old(Si,tauR,Ca,Cs,Ce,nr,nu,wnu,nnu)
 	use Constants
 	IMPLICIT NONE
 	integer inu,nnu,ilam,ir,info,NRHS,nr
@@ -995,6 +990,83 @@ c
 	return
 	end
 
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+
+
+
+	subroutine AddScatter(Si,Ca,Cs)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	integer inu,nnu,ir,info,NRHS
+	parameter(nnu=5)
+	real*8 tau,d,tauR_nu(nr),contr
+	real*8 Si(nr),Si_in(nr),Ca(nr),Cs(nr),Ce(nr)
+	real*8 nu(nnu),wnu(nnu),must
+	real*8,allocatable :: tauR(:),Ij(:),Itot(:),Linv(:,:),Lmat(:,:),Iprev(:)
+	integer,allocatable :: IWORKomp(:)
+
+	Si_in=Si
+	if(.not.scattering) return
+	Ce=Ca+Cs
+	tauR_nu=0d0
+			do ir=nr,1,-1
+				d=R(ir+1)-R(ir)
+				tau=d*Ce(ir)
+				if(P(ir).gt.Psimplecloud) then
+					tau=tau+1d4
+				endif
+				if(.not.tau.gt.1d-10) then
+					tau=1d-10
+				endif
+				if(tau.gt.1d10) then
+					tau=1d10
+				endif
+				if(ir.eq.nr) then
+					tauR_nu(ir)=tau
+				else
+					tauR_nu(ir)=tauR_nu(ir+1)+tau
+				endif
+			enddo
+
+	call gauleg(0d0,1d0,nu,wnu,nnu)
+	
+		NRHS=1
+		allocate(tauR(nr))
+		allocate(Itot(nr))
+		allocate(Linv(nr,nr))
+		allocate(Lmat(nr,nr))
+		allocate(IWORKomp(10*nr*nr))
+					Linv=0d0
+					do inu=1,nnu
+						tauR(1:nr)=tauR_nu(1:nr)/abs(nu(inu))
+						call InvertIj(tauR,Lmat,nr)
+						do ir=1,nr
+							Linv(ir,1:nr)=Linv(ir,1:nr)+wnu(inu)*Lmat(ir,1:nr)*Cs(1:nr)/(Ce(1:nr))
+						enddo
+					enddo
+					Linv=-Linv
+					do ir=1,nr
+						Linv(ir,ir)=1d0+Linv(ir,ir)
+					enddo
+					Itot(1:nr)=Si_in(1:nr)
+					call DGESV( nr, NRHS, Linv, nr, IWORKomp, Itot, nr, info )
+					Si(1:nr)=Itot(1:nr)
+					do ir=1,nr
+						if(.not.Si(ir).gt.0d0) then
+							Si(ir)=Si_in(ir)
+						endif
+					enddo
+		deallocate(tauR)
+		deallocate(Itot)
+		deallocate(Linv)
+		deallocate(Lmat)
+		deallocate(IWORKomp)
+	
+	return
+	end
 
 
 
