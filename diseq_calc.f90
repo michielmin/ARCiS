@@ -56,4 +56,7 @@ subroutine diseq_calc(nr, R, P, T, nmol, molname, mixrat_r, COratio, Kzz)
      end if
   end do
 
+  !CO2 calculated with pseudo-eq value
+  n(2, 1:nr) = n(5, 1:nr) * n(1, 1:nr) * n_eq(64, 1:nr) / n_eq(5, 1:nr) / n_eq(1, 1:nr) / n(64, 1:nr)
+
 end subroutine diseq_calc
