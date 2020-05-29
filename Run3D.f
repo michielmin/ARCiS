@@ -1458,7 +1458,7 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 		deallocate(IWORKomp)
 !$OMP FLUSH
 !$OMP END PARALLEL
-1	continue
+1		continue
 	enddo	
 	
 	return
