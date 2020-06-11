@@ -202,6 +202,7 @@ c	atoms_cloud(i,3)=1
 		mu(i)=sum(w_atoms(1:N_atoms)*atoms_cloud(i,1:N_atoms))/CSnmol(i)
 	enddo
 
+
 	mutot=0d0
 	xv_bot=1d200
 	do i=1,N_atoms
@@ -221,6 +222,8 @@ c	atoms_cloud(i,3)=1
 			if(molfracs_atoms(k).lt.0d0) molfracs_atoms(k)=0d0
 		enddo
 	enddo
+	if(xv_bot(10).gt.xv_bot(9)) xv_bot(10)=xv_bot(9)
+	if(xv_bot(8).gt.xv_bot(7)) xv_bot(8)=xv_bot(7)
 	
 	molfracs_atoms0=molfracs_atoms
 	xv_bot=xv_bot*mu*CSnmol/mutot
