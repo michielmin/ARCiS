@@ -710,10 +710,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			print*,'WARNING: no longer supported keyword nphase'
 		case("cia")
 			call ReadCIA(key)
-		case("cutoff","cutoff_lor")
-			read(key%value,*) cutoff_lor
-		case("cutoff_abs")
-			read(key%value,*) cutoff_abs
 		case("lam")
 			if(key%nr1.eq.1) read(key%value,*) lam1
 			if(key%nr1.eq.2) read(key%value,*) lam2
@@ -731,12 +727,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Tmin
 		case("tmax")
 			read(key%value,*) Tmax
-		case("eps","epsck")
-			read(key%value,*) epsCk
-		case("epslines","eps_lines")
-			read(key%value,*) eps_lines
-		case("factrw")
-			read(key%value,*) factRW
 		case("maxtau","max_tau")
 			read(key%value,*) maxtau
 		case("specres")
@@ -771,21 +761,14 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) alphaT
 		case("beta","betat")
 			read(key%value,*) betaT
-		case("tmix","twind")
-			read(key%value,*) twind
-			if(twind.gt.0d0) n2d=max(2,n2d)
 		case("partprofile","par_tprofile")
 			read(key%value,*) par_tprofile
 		case("ng")
 			read(key%value,*) ng
 		case("distance")
 			read(key%value,*) distance
-		case("hitemp")
-			read(key%value,*) HITEMP
 		case("cloud")
 			call ReadCloud(key)
-		case("rainout")
-			read(key%value,*) rainout
 		case("mixrathaze","haze")
 			read(key%value,*) mixratHaze
 		case("phaze")
@@ -794,42 +777,16 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) dPHaze
 		case("kappahaze")
 			read(key%value,*) kappaHaze
-		case("scattering")
-			read(key%value,*) scattering
-		case("scattstar","starscatt")
-			read(key%value,*) scattstar
-		case("compute","compute_opac","computeopac")
-			read(key%value,*) compute_opac
-		case("opacitymode")
-			read(key%value,*) opacitymode
 		case("np")
 			read(key%value,*) nPom
 		case("nt")
 			read(key%value,*) nTom
 		case("opacitydir")
 			opacitydir=trim(key%value)
-		case("computet")
-			read(key%value,*) computeT
 		case("teffp","tplanet")
 			read(key%value,*) TeffP
-		case("maxiter")
-			read(key%value,*) maxiter
-		case("epsiter")
-			read(key%value,*) epsiter
 		case("chemistry")
 			read(key%value,*) dochemistry
-		case("diseq")
-			read(key%value,*) disequilibrium
-		case("kzz")
-			read(key%value,*) Kzz
-		case("kzz_deep")
-			read(key%value,*) Kzz_deep
-		case("kzz_upper","kzz_up")
-			read(key%value,*) Kzz_upper
-		case("kzz_p")
-			read(key%value,*) Kzz_P
-		case("fastchem","fast_chem")
-			read(key%value,*) fast_chem
 		case("metallicity")
 			read(key%value,*) metallicity
 		case("coratio")
@@ -844,8 +801,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) TiScale
 		case("enhancecarbon")
 			read(key%value,*) enhancecarbon
-		case("elementfile")
-			element_abun_file=key%value
 		case("condensates")
 			read(key%value,*) condensates
 		case("cloudcompute")
@@ -854,24 +809,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) useDRIFT
 		case("mixp")
 			read(key%value,*) mixP
-		case("sinkz")
-			read(key%value,*) sinkZ
-		case("alphaz")
-			read(key%value,*) alphaZ
-		case("nspike")
-			read(key%value,*) nspike
-		case("nphot")
-			read(key%value,*) Nphot0
-		case("domccompute","mccompute","mccomputet")
-			read(key%value,*) doMCcompute
-		case("point")
-			call ReadPoint(key)
 		case("retpar","fitpar")
 			call ReadRetrieval(key)
 		case("obs")
 			call ReadObsSpec(key)
-		case("par3d")
-			call ReadPar3D(key)
 		case("useobsgrid")
 			read(key%value,*) useobsgrid
 		case("massprior")
@@ -880,8 +821,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Mp_prior
 		case("dmp_prior")
 			read(key%value,*) dMp_prior
-		case("nboot")
-			read(key%value,*) nboot
 		case("npew")
 			read(key%value,*) npew
 		case("instrument")
@@ -912,47 +851,13 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) faircoverage
 		case("speclimits")
 			read(key%value,*) speclimits
-		case("adiabatic","adiabatic_tprofile")
-			read(key%value,*) adiabatic_tprofile
-		case("tform")
-			read(key%value,*) Tform
-		case("pform")
-			read(key%value,*) Pform
-		case("fday")
-			read(key%value,*) fDay
-		case("kxx")
-			read(key%value,*) Kxx
-		case("vxx")
-			read(key%value,*) vxx
-		case("night2day")
-			read(key%value,*) night2day
-		case("betapow")
-			read(key%value,*) betapow
-		case("fenrich","f_enrich","enrich","fdry","f_dry")
-			read(key%value,*) f_dry
-		case("fwet","f_wet")
-			read(key%value,*) f_wet
-		case("scalefe","scale_fe","f_fe")
-			read(key%value,*) scale_fe
-		case("tchem")
-			read(key%value,*) Tchem
-		case("pchem")
-			read(key%value,*) Pchem
-		case("chemabun","ptchemabun")
-			read(key%value,*) PTchemAbun
 		case("rnuc","r_nuc")
 			read(key%value,*) r_nuc
 		case("rhoform","densform")
 			read(key%value,*) Pform
 			Pform=-Pform
-		case("makeai")
-			read(key%value,*) domakeai
 		case("pew","postequalweights")
 			read(key%value,*) dopostequalweights
-		case("mapcoratio")
-			read(key%value,*) mapCOratio
-		case("nai")
-			read(key%value,*) nai
 		case("maxchemtime")
 			read(key%value,*) maxchemtime
 		case("idum","seed")
@@ -970,57 +875,12 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		case("planetname")
 			read(key%value,*) planetname
 			call ReadPlanetName
-		case("trend_compute","dotrend")
-			read(key%value,*) trend_compute
-		case("i2d")
-			read(key%value,*) i2d
-		case("n2d")
-			read(key%value,*) i
-			n2d=max(i,n2d)
-		case("do3d","run3d")
-			read(key%value,*) do3D
-		case("output3d")
-			read(key%value,*) fulloutput3D
-		case("kzz3d")
-			if(key%nr1.eq.1) read(key%value,*) Kzz3D_1
-			if(key%nr1.eq.2) read(key%value,*) Kzz3D_2
-		case("sdot3d")
-			if(key%nr1.eq.1) read(key%value,*) Sdot3D_1
-			if(key%nr1.eq.2) read(key%value,*) Sdot3D_2
-		case("beta3d")
-			if(key%nr1.eq.1) read(key%value,*) beta3D_1
-			if(key%nr1.eq.2) read(key%value,*) beta3D_2
-		case("longshift")
-			read(key%value,*) long_shift
 		case("iwolk")
 			read(key%value,*) iWolk
 		case("emisspec")
 			read(key%value,*) emisspec
 		case("transspec")
 			read(key%value,*) transspec
-		case("orbit")
-			select case(key%key2)
-				case("p")
-					read(key%value,*) orbit_P
-				case("e")
-					read(key%value,*) orbit_e
-				case("omega")
-					read(key%value,*) orbit_omega
-				case("inc")
-					read(key%value,*) orbit_inc
-			end select
-		case("computelc")
-			read(key%value,*) computeLC
-		case("planetform")
-			read(key%value,*) planetform
-		case("fdust")
-			read(key%value,*) planetform_fdust
-		case("fplanet")
-			read(key%value,*) planetform_fplan
-		case("rstart","rcore")
-			read(key%value,*) planetform_Rstart
-		case("mstart","mcore")
-			read(key%value,*) planetform_Mstart
 		case default
 			do i=1,nmol_data
 				if(key%key.eq.molname(i)) then
@@ -1720,33 +1580,6 @@ c				enddo
 	return
 	end
 
-	subroutine ReadPar3D(key)
-	use GlobalSetup
-	use Constants
-	use ReadKeywords
-	IMPLICIT NONE
-	type(SettingKey) key
-	integer i
-	i=key%nr1
-	
-	select case(key%key2)
-		case("keyword","parameter")
-			read(key%value,*) Par3D(i)%keyword
-		case("min","xmin")
-			read(key%value,*) Par3D(i)%xmin
-		case("max","xmax")
-			read(key%value,*) Par3D(i)%xmax
-		case("pow")
-			read(key%value,*) Par3D(i)%pow
-		case("log","logscale")
-			read(key%value,*) Par3D(i)%logscale
-		case default
-			call output("Keyword not recognised: " // trim(key%key2))
-	end select
-	
-	return
-	end
-
 	subroutine ReadInstrument(key)
 	use GlobalSetup
 	use Constants
@@ -2016,8 +1849,6 @@ c				enddo
 			Cloud(j)%standard=trim(key%value)
 		case("species")
 			Cloud(j)%species=trim(key%value)
-		case("hazetype")
-			Cloud(j)%hazetype=trim(key%value)
 		case("fcarbon")
 			read(key%value,*) Cloud(j)%fcarbon
 		case("pressure","p")
@@ -2040,10 +1871,6 @@ c				enddo
 			read(key%value,*) Cloud(j)%coverage
 		case("frain")
 			read(key%value,*) Cloud(j)%frain
-		case("haze")
-			read(key%value,*) Cloud(j)%haze
-		case("condensates")
-			read(key%value,*) Cloud(j)%condensates
 		case("mixrat")
 			read(key%value,*) Cloud(j)%mixrat
 		case("fcond")
@@ -2052,8 +1879,6 @@ c				enddo
 			read(key%value,*) Cloud(j)%tmix
 		case("betamix")
 			read(key%value,*) Cloud(j)%betamix
-		case("kzzfile")
-			Cloud(j)%Kzzfile=trim(key%value)
 		case("kzz","k")
 			read(key%value,*) Cloud(j)%Kzz
 		case("kscale")
@@ -2071,16 +1896,6 @@ c				enddo
 			read(key%value,*) Cloud(j)%kappa
 		case("albedo")
 			read(key%value,*) Cloud(j)%albedo
-		case("fhazesio")
-			read(key%value,*) Cloud(j)%fHazeSiO
-		case("fhazetholin")
-			read(key%value,*) Cloud(j)%fHazeTholin
-		case("fhazetio","fhazerutile")
-			read(key%value,*) Cloud(j)%fHazeTiO2
-		case("fhazealo","fhazeal2o")
-			read(key%value,*) Cloud(j)%fHazeAl2O3
-		case("fhazefe","fhazeiron")
-			read(key%value,*) Cloud(j)%fHazeFe
 		case default
 			call output("Unknown cloud keyword: " // trim(key%key2))
 			stop
