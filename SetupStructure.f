@@ -973,6 +973,8 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 
 
 	if(planetform) then
+
+	Z0=sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))
 		
 	call getenv('HOME',homedir) 
 	write(command,'("python ",a,"/ARCiS/Data/planetform/elements.py ",a,"/atomic.dat ",6es15.4)') 
@@ -992,6 +994,12 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 2	close(unit=43)
 
 	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))
+	
+	CO=molfracs_atoms(3)/molfracs_atoms(5)
+	SiO=molfracs_atoms(4)/molfracs_atoms(5)
+	NO=molfracs_atoms(9)/molfracs_atoms(5)
+	SO=molfracs_atoms(11)/molfracs_atoms(5)
+	Z=log10(sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))/Z0)
 
 	return
 
@@ -1760,7 +1768,7 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	real*8 P1,P2,abun_temp(nmol),M
 
 	Tg=min(max(Tin,100d0),30000d0)
-	
+
 	Xcloud=0d0
 	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates)
 
@@ -1770,6 +1778,11 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 
 	nabla_ad=2d0/7d0
 
+	return
+
+	call call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,
+     &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol)
+	
 	return
 	end
 

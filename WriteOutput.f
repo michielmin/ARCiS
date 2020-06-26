@@ -150,24 +150,6 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 
 	endif
 	
-	if(transspec) then
-
-	filename=trim(outputdir) // "transC" // trim(side)
-	call output("Writing spectrum to: " // trim(filename))
-	open(unit=30,file=filename,RECL=1000)
-	write(30,'("#",a13,a19,a26)') "lambda [mu]","Rp^2/Rstar^2","Rp^2/Rstar^2 using eclipse"
-	form='(f14.6,es19.7E3,es19.7E3)'
-	do i=1,nlam-1
-		Fp1=(phase(nphase-1,0,i)+flux(0,i)*abs(theta(nphase)-theta(nphase-1))/180d0)/(Fstar(i)*1d23/distance**2)
-		Fp2=(phase(nphase,0,i))/(Fstar(i)*1d23/distance**2)
-		ApAs=obsA(0,i)/(pi*Rstar**2)
-		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
-     &					(Fp1-Fp2+ApAs)/(Fp1+1d0),ApAs-Fp2
-	enddo
-	close(unit=30)
-
-	endif
-
 	filename=trim(outputdir) // "tau1depth" // trim(side)
 	call output("Writing tau1depth to: " // trim(filename))
 	open(unit=30,file=filename,RECL=1000)
@@ -464,7 +446,8 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	write(30,form) "lambda [mu]"
 	form='(f14.6,3es19.7E3)'
 	do i=1,nlamR
-		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(i)**2,specErr(i)/sqrt(real(k)),specR(i)
+c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(i)**2,specErr(i)/sqrt(real(k)),specR(i)
+		write(30,form) lamR(i)/micron,spec(1,i),specErr(i)/sqrt(real(k)),specR(i)
 	enddo
 	close(unit=30)
 	do j=1,nphase

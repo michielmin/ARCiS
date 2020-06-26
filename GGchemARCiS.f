@@ -6061,6 +6061,13 @@ c      write(*,'("C/O =",0pF6.3)') eps(C)/eps(O)
 
 	tot=sum(nmol(1:NMOLE))+sum(nat(1:NELEM))
 
+c		do i=1,NMOLE
+c			if(nmol(i)/tot.gt.1d-8) then
+c				print*,nmol(i)/tot,trim(cmol(i))
+c			endif
+c		enddo
+
+
 	mol_abuns_in=0d0
 	do j=1,n_mol_in
 c		call To_upper_ARCiS(mol_names_in(j),uppername)
