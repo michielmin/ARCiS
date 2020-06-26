@@ -67,9 +67,6 @@ endif
 OBJS	= Modules.o \
 		InputOutput.o \
 		Main.o \
-		easy_chem_extra.o \
-		easy_chem.o \
-		ComputeT.o \
 		DiffuseCloud.o \
 		Init.o \
 		diseq_diffusion.o \
@@ -81,7 +78,6 @@ OBJS	= Modules.o \
 		SetupOpacities.o \
 		Raytrace.o \
 		WriteOutput.o \
-		AdjustParameters.o \
 		ReadData.o \
 		Subroutines.o \
 		Voigt.o \
@@ -110,7 +106,6 @@ OBJS	= Modules.o \
 		polyPartition.o \
 		Retrieval.o \
 		Genetic.o \
-		MakeAI.o \
 		dlsei.o \
 		Lapack.o \
 		writeFITS.o \
@@ -123,11 +118,7 @@ OBJS	= Modules.o \
 		nasa_polynomial.o \
 		GGchem_linpack_q.o \
 		GGchem_is_nan.o \
-		PostEqualWeights.o \
-		TrendCompute.o \
-		MCComputeT.o \
-		LightCurve.o \
-		Run3D.o
+		PostEqualWeights.o
 
 # program name and install location
 PROGRAM       = ARCiS
