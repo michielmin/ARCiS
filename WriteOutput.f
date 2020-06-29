@@ -361,6 +361,9 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 				call output(molname(i) // ": " // dbl2string(molweight(i),'(es10.3)'))
 			endif
 		enddo
+
+		if(emisspec) then
+
 		filename=trim(outputdir) // "contr_emisR_" // trim(instr_add) // trim(side)
 		open(unit=30,file=filename,RECL=1000)
 		write(30,'("#",a13,f10.3)') "T average ",Tweight
@@ -374,6 +377,9 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			write(30,*) P(ir),wr(ir)
 		enddo
 		close(unit=30)
+
+		endif
+
 	endif
 
 	call regridspecres(lam,obsA(0,1:nlam-1),nlam-1,
@@ -433,6 +439,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	enddo
 	call regridspecres(lam,Fstar(1:nlam-1),nlam-1,
      &						lamR,Fstar_obs(1:nlamR),specR,specRexp,nlamR)
+	if(emisspec) then
 	filename=trim(outputdir) // "obs_emis_" // trim(instr_add) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,RECL=6000)
@@ -492,6 +499,8 @@ c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(
 		write(30,form) lamR(i)/micron,spec(1:nphase,i),specErr(i)/sqrt(real(k)),specR(i)
 	enddo
 	close(unit=30)
+
+	endif
 
 	deallocate(lamR)
 	deallocate(specR)
