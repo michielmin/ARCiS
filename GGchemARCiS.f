@@ -5799,7 +5799,7 @@ c      close(12)
       dispol_file(1) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_BarklemCollet.dat'
       dispol_file(2) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_StockKitzmann_withoutTsuji.dat'
       dispol_file(3) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_WoitkeRefit.dat'
-      dispol_file(4) = trim(homedir) // '/ARCiS/src/dispol_Burcat.dat'
+      dispol_file(4) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_Burcat.dat'
 
 c      dispol_file(1) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_GGchem.dat'
 c      dispol_file(2) = ''
