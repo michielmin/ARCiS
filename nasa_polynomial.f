@@ -10,7 +10,7 @@
       call getenv('HOME',homedir) 
 
       c_nasa(1:NELEM) = 0
-      open(10, file = trim(homedir) // '/ARCiS/src/Burcat_ref-elements.dat')
+      open(10, file = trim(homedir) // '/ARCiS/Data/GGchem/Burcat_ref-elements.dat')
 
       do k=1,4
          read(10,*)
