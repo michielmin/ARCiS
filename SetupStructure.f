@@ -681,39 +681,7 @@ c use Ackerman & Marley 2001 cloud computation
 	IMPLICIT NONE
 	real*8 Zout
 
-	if(element_abun_file.ne.' ') then
-		call read_molfracs_atoms(element_abun_file,COratio,metallicity)
-		return
-	endif
-
-	if(trend_compute) then
-		idum=idum0
-		call TrendCompute(Mplanet/Mjup,Rplanet/Rjup,sqrt(Rstar/(2d0*Dplanet))*Tstar,Tstar,metallicity0,idum,
-     &			COratio,NOratio,SiOratio,Zout,TiScale)
-		call output("Trend computed C/O:  " // dbl2string(COratio,'(es10.4)'))
-		call output("Trend computed N/O:  " // dbl2string(NOratio,'(es10.4)'))
-		call output("Trend computed Si/O: " // dbl2string(SiOratio,'(es10.4)'))
-		call output("Trend computed [Z]:  " // dbl2string(Zout,'(es10.3)'))
-		open(unit=25,file=trim(outputdir) // "TrendValues",RECL=6000)
-		write(25,'(a25,es11.4)') "Planet mass              ",Mplanet/Mjup
-		write(25,'(a25,es11.4)') "Planet radius            ",Rplanet/Rjup
-		write(25,'(a25,es11.4)') "Planet temperature       ",sqrt(Rstar/(2d0*Dplanet))*Tstar
-		write(25,'(a25,es11.4)') "Stellar temperature      ",Tstar
-		write(25,'(a25,es11.4)') "Stellar metallicity      ",metallicity0
-		write(25,'(a25,es11.4)') "C/O ratio                ",COratio
-		write(25,'(a25,es11.4)') "N/O ratio                ",NOratio
-		write(25,'(a25,es11.4)') "Si/O ratio               ",SiOratio
-		write(25,'(a25,es11.4)') "Planet metallicity       ",Zout
-		write(25,'(a25,es11.4)') "Ti scaling               ",TiScale
-		close(unit=25)
-	else
-		if(Tform.gt.0d0) then
-			call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
-		else
-			call set_molfracs_atoms(COratio,SiOratio,NOratio,SOratio,metallicity)
-		endif
-	endif
-	
+	call set_molfracs_atoms(COratio,SiOratio,NOratio,SOratio,metallicity)
 	
 	return
 	end

@@ -471,12 +471,6 @@
 !$OMP END PARALLEL
 	deallocate(CaCont)
 	obsA_LC=1d0-obsA_LC
-	if(computeLC) then
-c		call LightCurve(rtrace,nrtrace)
-c		if(retrieval) call LightCurveRetrieval_Fit(rtrace,nrtrace)
-		call LightCurveRetrieval_Fit(rtrace,nrtrace)
-c		call LightCurveRetrieval(rtrace,nrtrace)
-	endif
 	endif
 
 	deallocate(dtrace)

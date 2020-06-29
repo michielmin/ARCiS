@@ -360,6 +360,19 @@ cPoints for the temperature structure
 	real*8 phi(NY),yy(NY)
 	end module RandomWalkModule
 
+
+
+	module AtomsModule
+	IMPLICIT NONE
+
+	INTEGER,parameter            :: N_atoms = 18
+	CHARACTER*40                 :: names_atoms(N_atoms)
+	DOUBLE PRECISION             :: molfracs_atoms(N_atoms)
+	real*8 :: gas_atoms(N_atoms),solid_atoms(N_atoms)
+	
+	end module AtomsModule
+
+
 	
 
 

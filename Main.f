@@ -34,20 +34,8 @@ c terms of use
 	call output("Initialisation time: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 	call output("==================================================================")
 
-	if(opacitymode) then
-		if(dochemistry) then
-			call OnlyChemCompute
-		else
-			do i=1,nmol
-				mixrat_r(:,i)=mixrat(i)
-			enddo
-		endif
-		call SetupOpacities()
-		call WriteOpacityFITS()
-	else if(dopostequalweights) then
+	if(dopostequalweights) then
 		call PostEqualWeights()
-	else if(domakeai) then
-		call MakeAI()
 	else if(retrieval) then
 		call DoRetrieval()
 	else
@@ -69,11 +57,7 @@ c terms of use
 	IMPLICIT NONE
 	logical recomputeopacities
 	
-	if(do3D) then
-		call Run3D(recomputeopacities)
-	else
-		call ComputeModel1D(recomputeopacities)
-	endif
+	call ComputeModel1D(recomputeopacities)
 	
 	return
 	end
@@ -95,22 +79,6 @@ c terms of use
 	call SetupStructure(computeopac)
 	if(domakeai.and..not.modelsucces) return
 	if(computeopac) call SetupOpacities()
-	if(computeT.and.computeopac) then
-		temp=par_tprofile
-		do while(.not.Tconverged.and.nTiter.le.maxiter)
-			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
-     &					// trim(int2string(maxiter,'(i3)')) // ")")
-			f=1d0/real(nTiter+1)+0.2d0
-c			f=0.9
-c			if(nTiter.ge.4) f=1d0/real(nTiter-2)**0.5+0.1
-			call DoComputeT(Tconverged,f)
-			par_tprofile=.false.
-			nTiter=nTiter+1
-			call SetupStructure(.true.)
-			call SetupOpacities()
-		enddo
-		par_tprofile=temp
-	endif
 	call cpu_time(stoptime)
 	call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 	if(.not.do3D) call Raytrace()

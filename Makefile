@@ -69,10 +69,6 @@ OBJS	= Modules.o \
 		Main.o \
 		DiffuseCloud.o \
 		Init.o \
-		diseq_diffusion.o \
-		diseq_rate.o \
-		diseq_timescale.o \
-		diseq_calc.o \
 		OpacityFITS.o \
 		SetupStructure.o \
 		SetupOpacities.o \
