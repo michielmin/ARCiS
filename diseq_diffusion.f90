@@ -11,9 +11,6 @@ subroutine diffusion(nr, R, nt, Kzz, eddy)
   eddy(1:nr, 1:nr) = 0.0d0
   do j = 1, nr
      if(j == 1) then
-        dr = R(j+1) - R(j)
-        eddy(j, j) = - 0.5d0 * (nt(j) + nt(j+1)) / nt(j) / dr**2.0d0
-        eddy(j, j+1) = 0.5d0 * (nt(j) + nt(j+1)) / nt(j+1) / dr**2.0d0
      elseif(j == nr) then
         dr = R(j) - R(j-1)
         eddy(j, j-1) = 0.5d0 * (nt(j-1) + nt(j)) / nt(j-1) / dr**2.0d0
