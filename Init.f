@@ -385,6 +385,10 @@ c					ncia0=ncia0+1
 c				endif
 c			endif
 c		endif
+		if(ncia0.eq.0) then
+			call output("NO CIA FILES FOUND: rerun with cia=.false.")
+			stop
+		endif
 	endif
 
 	allocate(CIA(max(ncia+ncia0,1)))
