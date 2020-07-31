@@ -672,7 +672,7 @@ c			write(82,*) P(i), Kzz_r(i)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 pp,tot,column,tt,z
+	real*8 pp,tot,column,tt,z,densdust
 	integer ii,i,j,nsubr,isize,ilam
 	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau,P_SI1,P_SI2
 	logical cl
@@ -702,20 +702,35 @@ c			write(82,*) P(i), Kzz_r(i)
 			close(unit=25)
 		endif
 	else if(Cloud(ii)%file.ne.' ') then
-		call regridN(Cloud(ii)%file,P*1d6,cloud_dens(1:nr,ii),nr,2,6,1,4,.false.,.false.)
-		cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
+		call regridN(Cloud(ii)%file,P,cloud_dens(1:nr,ii),nr,2,6,1,1,.false.,.false.)
 		if(.not.allocated(Cloud(ii)%rv)) then
 			allocate(Cloud(ii)%rv(nr))
 			allocate(Cloud(ii)%sigma(nr))
 		endif
-		call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,12,1,4,.false.,.true.)
+		call regridN(Cloud(ii)%file,P,Cloud(ii)%rv(1:nr),nr,2,5,1,1,.false.,.true.)
+
+
+		Cloud(ii)%frac(1:nr,1:19)=1d-10
+		select case(Cloud(ii)%hazetype)
+			case("SOOT","soot","THOLIN","tholin")
+				Cloud(ii)%frac(1:nr,19)=1d0
+				densdust=1.00
+				Cloud(ii)%haze=.true.
+			case("CHRIS")
+c 10% iron
+				Cloud(ii)%frac(1:nr,9)=0.1d0
+c 90% MgSiO3
+				Cloud(ii)%frac(1:nr,13:15)=0.9d0/3d0
+				densdust=3.7
+				Cloud(ii)%hazetype='THOLIN'
+			case default
+				call output("Cloud species unknown for file readin")
+				stop
+		end select
+		
+		cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*(4d0*pi*densdust*Cloud(ii)%rv(1:nr)**3)/3d0
 		Cloud(ii)%rv=Cloud(ii)%rv*1d4
 		Cloud(ii)%sigma=1d-10
-		Cloud(ii)%frac(1:nr,1:19)=1d-10
-c 10% iron
-		Cloud(ii)%frac(1:nr,9)=0.1d0
-c 90% MgSiO3
-		Cloud(ii)%frac(1:nr,13:15)=0.9d0/3d0
 		call output("Computing inhomogeneous cloud particles")
 
 		call SetupPartCloud(ii)
