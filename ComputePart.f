@@ -879,27 +879,19 @@ c changed this to mass fractions (11-05-2010)
 		call regridarray(lamdust,Ksca,nlamdust,lam,C%Ksca(isize,1:nlam),nlam)
 		if(scattering) then
 			do i=1,180
-				do ilam=1,nlamdust
-					C%F(isize,ilam)%F11(i)=F11(ilam,i)
-					C%F(isize,ilam)%F12(i)=F12(ilam,i)
-					C%F(isize,ilam)%F22(i)=F22(ilam,i)
-					C%F(isize,ilam)%F33(i)=F33(ilam,i)
-					C%F(isize,ilam)%F34(i)=F34(ilam,i)
-					C%F(isize,ilam)%F44(i)=F44(ilam,i)
-				enddo
-				call regridarray(lamdust,C%F(isize,ilam)%F11,nlamdust,lam,F11_HR(1:nlam),nlam)
-				call regridarray(lamdust,C%F(isize,ilam)%F12,nlamdust,lam,F12_HR(1:nlam),nlam)
-				call regridarray(lamdust,C%F(isize,ilam)%F22,nlamdust,lam,F22_HR(1:nlam),nlam)
-				call regridarray(lamdust,C%F(isize,ilam)%F33,nlamdust,lam,F33_HR(1:nlam),nlam)
-				call regridarray(lamdust,C%F(isize,ilam)%F34,nlamdust,lam,F34_HR(1:nlam),nlam)
-				call regridarray(lamdust,C%F(isize,ilam)%F44,nlamdust,lam,F44_HR(1:nlam),nlam)
+c				call regridarray(lamdust,F11(1:nlamdust,i),nlamdust,lam,F11_HR(1:nlam),nlam)
+c				call regridarray(lamdust,F12(1:nlamdust,i),nlamdust,lam,F12_HR(1:nlam),nlam)
+c				call regridarray(lamdust,F22(1:nlamdust,i),nlamdust,lam,F22_HR(1:nlam),nlam)
+c				call regridarray(lamdust,F33(1:nlamdust,i),nlamdust,lam,F33_HR(1:nlam),nlam)
+c				call regridarray(lamdust,F34(1:nlamdust,i),nlamdust,lam,F34_HR(1:nlam),nlam)
+c				call regridarray(lamdust,F44(1:nlamdust,i),nlamdust,lam,F44_HR(1:nlam),nlam)
 				do ilam=1,nlam
-					C%F(isize,ilam)%F11(i)=F11_HR(ilam)
-					C%F(isize,ilam)%F12(i)=F12_HR(ilam)
-					C%F(isize,ilam)%F22(i)=F22_HR(ilam)
-					C%F(isize,ilam)%F33(i)=F33_HR(ilam)
-					C%F(isize,ilam)%F34(i)=F34_HR(ilam)
-					C%F(isize,ilam)%F44(i)=F44_HR(ilam)
+					C%F(isize,ilam)%F11(i)=1d0!F11_HR(ilam)
+					C%F(isize,ilam)%F12(i)=0d0!F12_HR(ilam)
+					C%F(isize,ilam)%F22(i)=1d0!F22_HR(ilam)
+					C%F(isize,ilam)%F33(i)=1d0!F33_HR(ilam)
+					C%F(isize,ilam)%F34(i)=0d0!F34_HR(ilam)
+					C%F(isize,ilam)%F44(i)=1d0!F44_HR(ilam)
 				enddo
 			enddo
 		else
@@ -1839,8 +1831,8 @@ c     .. Data statements ..
      &          CZERO / ( 0.D0, 0.D0 ) / , CI / ( 0.D0, 1.D0 ) /
 c     ..
 
-	allocate(w(3,LL))
-	allocate(acap(LL))
+c	allocate(w(3,LL))
+c	allocate(acap(LL))
 
       IF( PASS1 ) THEN
 
@@ -1897,6 +1889,9 @@ c                        ** Check input arguments for gross errors
 		CALL ERRMSG(
      &    'MIELAY--Input argument errors.  Aborting...', .True. )
 	endif
+	allocate(w(3,NMX1+1))
+	allocate(acap(NMX1+1))
+
 
       K1     = RINDCO*WVNO
       K2     = RINDSH*WVNO

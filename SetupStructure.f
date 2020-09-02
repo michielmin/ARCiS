@@ -1787,6 +1787,8 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	Xcloud=0d0
 	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates)
 
+c	call readBaud(mol_abun,nmol,Pin,MMW)
+
 	do i=1,nmol
 		if(.not.mol_abun(i).gt.0d0) mol_abun(i)=0d0
 	enddo
@@ -1801,6 +1803,30 @@ c		write(*,'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms(i,8),atoms(i,6),a
 	return
 	end
 
+	subroutine readBaud(mf,nm,Pin,mm)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	integer nm,i
+	real*8 mf(nm),Pin,P0,mm
+	
+	open(unit=20,file='dbf26/a_p_G4___.tsv')
+1	read(20,*) P0,mf(1),mf(6),mf(11),mf(5),mf(2),mf(28),mf(56),mf(57)
+	if(P0.ge.Pin) then
+		mm=0d0
+		do i=1,nm
+			if(includemol(i)) mm=mm+mf(i)*Mmol(i)
+		enddo
+		mm=mm/sum(mf(1:nm))
+		close(unit=20)
+		return
+	endif
+	goto 1
+
+	close(unit=20)
+	return
+	end
+	
 
 
 	subroutine ComputeBeta(theta,t,beta)
