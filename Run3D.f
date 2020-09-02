@@ -172,33 +172,33 @@ c===============================================================
 c ===================================================================
 c correction for anisotropic scattering	
 c ===================================================================
- 			if(scattering.and..false.) then
- 			M%F11=Rayleigh%F11*Csca(ir,ilam)*Ndens(ir)
- 			do icloud=1,nclouds
- 				if(Cloud(icloud)%standard.eq.'MIX') then
- 					M%F11=M%F11+Cloud(icloud)%F(ir,ilam)%F11*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
- 				else
- 					do isize=1,Cloud(icloud)%nr
- 						M%F11=M%F11+Cloud(icloud)%F(isize,ilam)%F11*
-     &								Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
- 					enddo
- 				endif
- 			enddo
- 			g=0d0
- 			tot=0d0
- 			do j=1,180
- 				g=g+M%F11(j)*costheta(j)*sintheta(j)
- 				tot=tot+M%F11(j)*sintheta(j)
- 			enddo
- 			g=g/tot
- 			if(.not.g.ge.-1d0) then
- 				g=0.999d0
- 			endif
- 			if(.not.g.le.1d0) then
- 				g=0.999d0
- 			endif
- 			Cs(ilam,ir,i)=Cs(ilam,ir,i)*(1d0-g)
-			endif
+C			if(scattering.and..false.) then
+C			M%F11=Rayleigh%F11*Csca(ir,ilam)*Ndens(ir)
+C			do icloud=1,nclouds
+C				if(Cloud(icloud)%standard.eq.'MIX') then
+C					M%F11=M%F11+Cloud(icloud)%F(ir,ilam)%F11*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+C				else
+C					do isize=1,Cloud(icloud)%nr
+C						M%F11=M%F11+Cloud(icloud)%F(isize,ilam)%F11*
+C    &								Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+C					enddo
+C				endif
+C			enddo
+C			g=0d0
+C			tot=0d0
+C			do j=1,180
+C				g=g+M%F11(j)*costheta(j)*sintheta(j)
+C				tot=tot+M%F11(j)*sintheta(j)
+C			enddo
+C			g=g/tot
+C			if(.not.g.ge.-1d0) then
+C				g=0.999d0
+C			endif
+C			if(.not.g.le.1d0) then
+C				g=0.999d0
+C			endif
+C			Cs(ilam,ir,i)=Cs(ilam,ir,i)*(1d0-g)
+C		endif
 c ===================================================================
 c ===================================================================
 
