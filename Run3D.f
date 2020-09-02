@@ -1356,8 +1356,12 @@ c-----------------------------------------------------------------------
 		return
 	endif
 
-	do ig=1,ng
-		Ce(1:nlam,ig,1:nr)=Ca(1:nlam,ig,1:nr)+Cs(1:nlam,1:nr)
+	do ir=1,nr
+		do ig=1,ng
+			do ilam=1,nlam
+				Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
+			enddo
+		enddo
 	enddo
 
 	tauR_nu=0d0
