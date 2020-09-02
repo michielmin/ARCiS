@@ -1364,7 +1364,6 @@ c-----------------------------------------------------------------------
 		enddo
 	enddo
 
-	tauR_nu=0d0
 	do ilam=1,nlam-1
 		do ig=1,ng
 			do ir=nr,1,-1
@@ -1387,6 +1386,11 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 					tauR_nu(ir,ilam,ig)=tauR_nu(ir+1,ilam,ig)+tau
 				endif
 			enddo
+		enddo
+	enddo
+	do ig=1,ng
+		do ir=1,nr
+			tauR_nu(ir,nlam,ig)=tauR_nu(ir,nlam-1,ig)
 		enddo
 	enddo
 
