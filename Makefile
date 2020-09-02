@@ -35,6 +35,9 @@ ifeq ($(multi),true)
 	endif
 	ifeq ($(debug),true)
 		MULTICORE = -openmp -DUSE_OPENMP
+		ifeq ($(shell uname),Linux)
+			MULTICORE = -qopenmp -DUSE_OPENMP
+		endif
 	endif
 endif
 
@@ -46,7 +49,7 @@ ifeq ($(gfort),true)
   FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else
   FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(MULTICORE) -assume buffered_io -I/usr/local/modules
-  FLAG_LINUX    = -xHOST -fpp
+  FLAG_LINUX    = -xHOST -fpp -fp-model strict
   FLAG_MAC      = -xHOST -opt-prefetch -static-intel -fpp 
 endif
 
