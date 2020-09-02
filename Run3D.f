@@ -1392,6 +1392,11 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 
 	call gauleg(0d0,1d0,nu,wnu,nnu)
 
+	allocate(tauR(nr))
+	allocate(Itot(nr))
+	allocate(Linv(nr,nr))
+	allocate(Lmat(nr,nr))
+	allocate(IWORKomp(10*nr*nr))
 	do inu0=1,nnu0
 		if(inu0.eq.nnu0.or..not.scattstar) then
 			Jstar_nu=0d0
@@ -1412,16 +1417,6 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 		endif
 	
 		NRHS=1
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,ig,Linv,Lmat,tauR,Itot,IWORKomp,inu,ir,info)
-!$OMP& SHARED(nlam,ng,lamemis,tauR_nu,nr,wnu,nu,BBr,Ca,Cs,Ce,Si,inu0,NRHS,Jstar_nu)
-		allocate(tauR(nr))
-		allocate(Itot(nr))
-		allocate(Linv(nr,nr))
-		allocate(Lmat(nr,nr))
-		allocate(IWORKomp(10*nr*nr))
-!$OMP DO
 		do ilam=1,nlam-1
 			if(lamemis(ilam)) then
 				do ig=1,ng
@@ -1454,17 +1449,13 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 				enddo
 			endif
 		enddo
-!$OMP END DO
-		deallocate(tauR)
-		deallocate(Itot)
-		deallocate(Linv)
-		deallocate(Lmat)
-		deallocate(IWORKomp)
-!$OMP FLUSH
-!$OMP END PARALLEL
-
 1		continue
 	enddo	
+	deallocate(tauR)
+	deallocate(Itot)
+	deallocate(Linv)
+	deallocate(Lmat)
+	deallocate(IWORKomp)
 	
 	return
 	end
