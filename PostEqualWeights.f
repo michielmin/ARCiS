@@ -224,8 +224,10 @@
 						close(unit=26)
 					endif
 				enddo
-				open(unit=26,file=trim(outputdir) // "phase" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",RECL=1000)
-				open(unit=27,file=trim(outputdir) // "phaseR" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",RECL=1000)
+				open(unit=26,file=trim(outputdir) // "phase" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) 
+     &			// "_limits",RECL=1000)
+				open(unit=27,file=trim(outputdir) // "phaseR" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) 
+     &			// "_limits",RECL=1000)
 				do ilam=1,nlam-1
 					sorted(1:i)=phase3D(1:i,iphase,ilam)
 					call sort(sorted,i)

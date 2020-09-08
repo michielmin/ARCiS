@@ -10,6 +10,7 @@
 c H2O, CO2, CO, NO, OH, (Na,K,TiO,VO)
 	parameter(nfile=34+20+1+1+1+4)
 	character*30 files(nfile)
+	character*2 num
 	parameter(files = (/
      &	'01_0-50_HITEMP2010.par        ','01_1000-1150_HITEMP2010.par   ','01_11000-30000_HITEMP2010.par ',
      &	'01_1150-1300_HITEMP2010.par   ','01_1300-1500_HITEMP2010.par   ','01_150-250_HITEMP2010.par     ',
@@ -40,7 +41,8 @@ c H2O, CO2, CO, NO, OH, (Na,K,TiO,VO)
 		call output("Counting HITEMP database")
 		do ifile=1,nfile
 			file=trim(HITEMPdir) // trim(files(ifile))
-			read(files(ifile)(1:2),*) j
+			num=files(ifile)(1:2)
+			read(num,*) j
 			doneHITEMP(j)=.true.
 			if(j.le.nmol) then
 			if(includemol(j)) then
@@ -118,7 +120,8 @@ c done counting, now read it in!
 	if(HITEMP) then
 		do ifile=1,nfile
 			file=trim(HITEMPdir) // trim(files(ifile))
-			read(files(ifile)(1:2),*) j
+			num=files(ifile)(1:2)
+			read(num,*) j
 			doneHITEMP(j)=.true.
 			if(j.le.nmol) then
 			if(includemol(j)) then

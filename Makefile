@@ -26,7 +26,7 @@ endif
 # cl> make multi=true
 ifeq ($(multi),true)
 	ifeq ($(gfort),true)
-		MULTICORE = -openmp -DUSE_OPENMP
+		MULTICORE = -fopenmp -DUSE_OPENMP
 	else
 		MULTICORE = -openmp -fp-model strict -DUSE_OPENMP
 		ifeq ($(shell uname),Linux)
@@ -44,7 +44,7 @@ endif
 
 # Platform specific compilation options
 ifeq ($(gfort),true)
-  FLAG_ALL      = -O5 -g $(MULTICORE) -lgfortran -I$(HOME)/include
+  FLAG_ALL      = -O5 -g $(MULTICORE) -lgfortran -I$(HOME)/include -I/usr/local/modules
   FLAG_LINUX    = -ffixed-line-length-132 -cpp
   FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else

@@ -1104,7 +1104,7 @@ c-----------------------------------------------------------------------
       INTEGER NANG,Err
       REAL GSCA,QBACK,QEXT,QSCA,X
       COMPLEX REFREL
-      COMPLEX S1(20),S2(20)
+      COMPLEX S1(2001),S2(2001)
 	NANG=2
 	X=2d0*pi*rmie/lmie
 	REFREL=cmplx(e1mie,e2mie)
