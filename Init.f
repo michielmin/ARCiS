@@ -1110,12 +1110,17 @@ c	endif
 		read(20,*) n
 		read(20,*) names(1:n)
 		do j=1,n
+			imol(j)=0
 			do i=1,nmol_data
 				if(names(j).eq.molname(i)) then
 					imol(j)=i
 					includemol(imol(j))=.true.
 				endif
 			enddo
+			if(imol(j).eq.0) then
+				call output("molecule " // trim(names(j)) // " not included yet in ARCiS")
+				stop
+			endif
 		enddo
 		i=1
 1		read(20,*,err=1,end=2) pp,tt,mm(1:n)

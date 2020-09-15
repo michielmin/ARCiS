@@ -34,7 +34,7 @@ ifeq ($(multi),true)
 		endif
 	endif
 	ifeq ($(debug),true)
-		MULTICORE = -openmp -DUSE_OPENMP
+		MULTICORE = -fopenmp -DUSE_OPENMP
 		ifeq ($(shell uname),Linux)
 			MULTICORE = -qopenmp -DUSE_OPENMP
 		endif
