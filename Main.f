@@ -86,45 +86,12 @@ c terms of use
 	real*8 starttime,stoptime,starttime_w,stoptime_w,omp_get_wtime,f
 	logical recomputeopacities
 	logical computeopac,temp
-	real*8 srdtemp,srd,ldtemp(nlamdust),lam0
-	integer nldtemp,nld,i
 	
 	computeopac=recomputeopacities
 
 	call cpu_time(starttime)
 	Tconverged=.false.
 	nTiter=0
-	if(computeT.and.computeopac) then
-		nldtemp=nlamdust
-		srdtemp=specresdust
-		ldtemp=lamdust
-		specresdust=10d0
-		if(useobsgrid) then
-			nlamdust=nlam
-			lamdust=lam
-		else
-			lam0=lam1
-			nld=1
-			do while(lam0.le.lam2)
-				lam0=lam0+lam0/specresdust
-				nld=nld+1
-			enddo
-			if(nld.lt.nlamdust) then
-				nlamdust=nld
-				i=1
-				lamdust(i)=lam1
-				do while(lamdust(i).le.lam2)
-					i=i+1
-					lamdust(i)=lamdust(i-1)+lamdust(i-1)/specresdust
-				enddo
-				lamdust(nlamdust)=lam2
-			else
-				nlamdust=nldtemp
-				specresdust=srdtemp
-				lamdust=ldtemp
-			endif
-		endif
-	endif
 	call SetupStructure(computeopac)
 	if(domakeai.and..not.modelsucces) return
 	if(computeopac) call SetupOpacities()
@@ -139,11 +106,6 @@ c			if(nTiter.ge.4) f=1d0/real(nTiter-2)**0.5+0.1
 			call DoComputeT(Tconverged,f)
 			par_tprofile=.false.
 			nTiter=nTiter+1
-			if(Tconverged.or.nTiter.gt.maxiter) then
-				nlamdust=nldtemp
-				specresdust=srdtemp
-				lamdust=ldtemp
-			endif
 			call SetupStructure(.true.)
 			call SetupOpacities()
 		enddo

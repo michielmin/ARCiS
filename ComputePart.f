@@ -732,7 +732,7 @@ c changed this to mass fractions (11-05-2010)
 !$OMP&         rad,wvno,m,r1,rcore,qext,qsca,qbs,gqsc,rmie,lmie,e1mie,e2mie,
 !$OMP&         csmie,cemie,MieF11,MieF12,MieF33,MieF34,Mief22,Mief44,tot2,j,Ntot,fcomputed,
 !$OMP&         MieF11_fcomp,MieF12_fcomp,MieF33_fcomp,MieF34_fcomp,M1,M2,S21,D21)
-!$OMP& SHARED(C,nlamdust,na,nm,ns,frac,minlog,maxlog,f,mu0,e1,e2,wf,min,isize,computelam,
+!$OMP& SHARED(C,nlamdust,na,nm,ns,frac,minlog,maxlog,f,mu0,e1,e2,wf,min,isize,computelam,dummy,maxf,use_pogo,
 !$OMP&        rho_av,pow,lamdust,meth,rho,nf,r0,nr0,Kabs,Ksca,Kext,F11,F12,F22,F33,F34,F44,LLmax)
 !$OMP DO
 !$OMP& SCHEDULE(STATIC,1)
@@ -771,6 +771,19 @@ c changed this to mass fractions (11-05-2010)
 	spheres=0
 	toolarge=0
 	fcomputed=.false.
+	if(use_pogo) then
+		rmie=r1
+		lmie=lamdust(ilam)*1d4
+		e1mie=e1(l,ilam)
+		e2mie=e2(l,ilam)
+		call q_pogo(e1mie,e2mie,lmie,rmie,cemie,csmie,dummy,maxf)
+		cext0=cext0+nr0(l,k)*cemie
+		csca0=csca0+nr0(l,k)*csmie
+	   	cabs0=cabs0+nr0(l,k)*(cemie-csmie)
+		Mass=Mass+nr0(l,k)*rho(l)*4d0*pi*r1**3/3d0
+		Vol=Vol+nr0(l,k)*4d0*pi*r1**3/3d0
+		Ntot=Ntot+nr0(l,k)	
+	else
 	do i=1,nf
 		rad=r1/(1d0-f(i))**(1d0/3d0)
 		m=dcmplx(e1(l,ilam),-e2(l,ilam))
@@ -821,6 +834,8 @@ c changed this to mass fractions (11-05-2010)
 		Vol=Vol+wf(i)*nr0(l,k)*4d0*pi*r1**3/3d0
 		Ntot=Ntot+wf(i)*nr0(l,k)
 	enddo
+	endif
+
 	enddo
 10	continue
 	enddo

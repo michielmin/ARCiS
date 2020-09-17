@@ -58,11 +58,11 @@ LIBS_FITS		= -lcfitsio
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -diag-disable vec $(DEBUGGING) 
   LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -I$(HOME)/include $(DEBUGGING) 
-  LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) -llapack -lmultinest Version.f 
+  LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) -llapack -lmultinest -lneural Version.f 
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) 
   LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) 
-  LIBS    =  -L/usr/local/lib $(LIBS_FITS) -lmultinest Version.f
+  LIBS    =  -L/usr/local/lib $(LIBS_FITS) -lmultinest -lneural Version.f
 endif
 
 
@@ -130,7 +130,8 @@ OBJS	= Modules.o \
 		TrendCompute.o \
 		MCComputeT.o \
 		LightCurve.o \
-		Run3D.o
+		Run3D.o \
+		q_pogo.o
 
 # program name and install location
 PROGRAM       = ARCiS

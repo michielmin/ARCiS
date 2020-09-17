@@ -433,6 +433,8 @@ c==============================================================================
 	real*8,allocatable :: var(:),dvar(:)
 	character*1000 line
 	character*500 file
+	character*100 homedir
+	character*100 dirabs,dirsca
 
 	allocate(key)
 	first => key
@@ -655,6 +657,12 @@ c	condensates=(condensates.or.cloudcompute)
 		allocate(PTaverage3D(0:nphase,nr))
 		allocate(mixrat_average3D(0:nphase,nr,nmol))
 	endif
+	
+	if(use_pogo) then
+		dirabs=trim(homedir) // '/ARCiS/Data/POGO/Cabs/'
+		dirsca=trim(homedir) // '/ARCiS/Data/POGO/Csca/'
+		call InitNeural(dirabs,dirsca)
+	endif
 		
 	return
 	end
@@ -804,6 +812,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) scattstar
 		case("compute","compute_opac","computeopac")
 			read(key%value,*) compute_opac
+		case("use_pogo")
+			read(key%value,*) use_pogo
 		case("opacitymode")
 			read(key%value,*) opacitymode
 		case("np")
@@ -1551,7 +1561,9 @@ c		Cloud(i)%P=0.0624d0
 	planetform_fplan=0.1
 	planetform_Rstart=15d0
 	planetform_Mstart=10d0
-	
+
+	use_pogo=.false.
+
 	return
 	end
 
