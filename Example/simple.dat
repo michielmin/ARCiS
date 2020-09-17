@@ -1,0 +1,31 @@
+H2=0.85
+He=0.15
+H2O=100d-6
+CO2=1d-6
+CO=10d-6
+CH4=10d-6
+NH3=1d-6
+
+Rp=1d0			! radius scales roughly as sqrt(M) ~ M^(1/3)
+Mp=1d0			! between 0.01 and 13 jupiter masses
+Dplanet=0.05	! between 0.02 and 0.2 AU for a hot/warm Jupiter
+
+distance=19.3
+
+pmin=1d-7
+pmax=1d+3
+
+nr=25
+
+lmin=0.25d0
+lmax=5.0d0				! when iterating for temperature structure lmax > 30.0
+
+specres=150
+
+cia=.true.
+
+compute=.false.
+
+TP0=1200
+dTP0=0d0
+
