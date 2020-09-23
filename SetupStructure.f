@@ -3,7 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,met_r,dens1bar,minZ,Tc,Rscale
-	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill,MMW_form,P0,R0
+	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill,MMW_form,P0,R0,Kzz_r(nr)
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3
 	logical ini,compute_mixrat
@@ -214,11 +214,18 @@ c call disequilibrium code
 c input: 	R(1:nr+1) : These are the radial boundaries of the layers (bottom to top)
 c			P(1:nr),T(1:nr) : These are the pressure and temperature inside the layers
 c			molname(1:nmol) : names of the molecules included
-c			Kzz : Diffusion coefficient
+c			Kzz_r(1:nr) : Diffusion coefficient
 c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now set to equilibrium abundances.
 		   call output("==================================================================")
 		   call output("Computing disequilibrium chemistry")
-		   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz)
+			if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
+				do i=1,nr
+					Kzz_r(i)=Kzz_deep+Kzz_1bar/(P(i)**Kzz_P)
+				enddo
+			else
+				Kzz_r=Kzz
+			endif
+		   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))
 		   
 		endif
 		call output("==================================================================")

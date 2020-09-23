@@ -1,7 +1,7 @@
 subroutine diffusion(nr, R, nt, Kzz, eddy)
   implicit none
   integer(4), intent(in) :: nr
-  real(8), intent(in) :: R(nr), nt(nr), Kzz
+  real(8), intent(in) :: R(nr), nt(nr), Kzz(nr)
   real(8), intent(out) :: eddy(nr, nr)
 
   integer(4) :: j
@@ -21,7 +21,7 @@ subroutine diffusion(nr, R, nt, Kzz, eddy)
         eddy(j, j) = - (0.5d0 * (nt(j-1) + nt(j)) + 0.5d0 * (nt(j) + nt(j+1))) / nt(j) / dr**2.0d0
         eddy(j, j+1) = 0.5d0 * (nt(j) + nt(j+1)) / nt(j+1) / dr**2.0d0
      end if
+     eddy(j, 1:nr) = - Kzz(j) * eddy(j, 1:nr)
   end do
-  eddy(1:nr, 1:nr) = - Kzz * eddy(1:nr, 1:nr)
    
 end subroutine diffusion

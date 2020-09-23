@@ -1,7 +1,7 @@
 subroutine diseq_calc(nr, R, P, T, nmol, molname, mixrat_r, COratio, Kzz)
   implicit none
   integer(4), intent(in) :: nr, nmol
-  real(8), intent(in) :: R(nr+1), P(nr), T(nr), COratio, Kzz
+  real(8), intent(in) :: R(nr+1), P(nr), T(nr), COratio, Kzz(nr)
   character(10), intent(in) :: molname(nmol)
   real(8), intent(inout) :: mixrat_r(nr, nmol)
   
@@ -24,7 +24,7 @@ subroutine diseq_calc(nr, R, P, T, nmol, molname, mixrat_r, COratio, Kzz)
 
   call timescale(nr, T(1:nr), nt(1:nr), nmol, molname(1:nmol), n_eq(1:nmol, 1:nr), COratio, tau(1:nmol, 1:nr))
   
-  call diffusion(nr, R(1:nr), nt(1:nr), Kzz, eddy(1:nr, 1:nr))
+  call diffusion(nr, R(1:nr), nt(1:nr), Kzz(1:nr), eddy(1:nr, 1:nr))
 
   
   e(1:nr, 1:nr) = 0.0d0

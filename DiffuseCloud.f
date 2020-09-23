@@ -13,7 +13,7 @@
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t
 	integer info,i,j,iter,NN,NRHS,niter,ii,k
 	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm
-	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn
+	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr)
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),IWORKomp(:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
 	logical quadratic,ini,Tconverged,cloudsform
@@ -372,13 +372,9 @@ c	atoms_cloud(i,3)=1
 	CloudR(k)=R(nr)
 	Clouddens(k)=dens(nr)
 
-	if(Kzz_deep.gt.0d0.and.Kzz_upper.gt.0d0) then
+	if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
 		do i=1,nnr
-			if(CloudP(i)/Kzz_P.lt.100d0) then
-				Kd(i)=10.0**(log10(Kzz_deep) - log10(Kzz_deep/Kzz_upper)*exp(-CloudP(i)/Kzz_P))
-			else
-				Kd(i)=Kzz_deep
-			endif
+			Kd(i)=Kzz_deep+Kzz_1bar/(CloudP(i)**Kzz_P)
 		enddo
 	else if(Cloud(ii)%Kzz.gt.0d0) then
 		Kd=Cloud(ii)%Kzz
@@ -904,12 +900,18 @@ c       call disequilibrium code
 c       input: 	R(1:nr+1) : These are the radial boundaries of the layers (bottom to top)
 c       P(1:nr),T(1:nr) : These are the pressure and temperature inside the layers
 c       molname(1:nmol) : names of the molecules included
-c       Kzz : Diffusion coefficient
+c       Kzz_r(1:nr) : Diffusion coefficient
 c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now set to equilibrium abundances.
 	   call output("==================================================================")
 	   call output("Computing disequilibrium chemistry")
-	   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz)
-	   
+		if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
+			do i=1,nr
+				Kzz_r(i)=Kzz_deep+Kzz_1bar/(P(i)**Kzz_P)
+			enddo
+		else
+			Kzz_r=Kzz
+		endif
+	   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))
 	endif
 
 	deallocate(densv)

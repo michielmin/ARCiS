@@ -16,7 +16,7 @@ endif
 # array boundary check
 ifeq ($(debug),true)
   ifeq ($(gfort),true)
-    DEBUGGING = -fbounds-check -fbacktrace -fcheck=all
+    DEBUGGING = -Wall -Wno-unused-variable -fbounds-check -fbacktrace -fcheck=all
   else	
     DEBUGGING = -check all -g -traceback -check bounds -check uninit -O0
   endif
@@ -36,7 +36,7 @@ ifeq ($(multi),true)
 	ifeq ($(debug),true)
 		MULTICORE = -fopenmp -DUSE_OPENMP
 		ifeq ($(shell uname),Linux)
-			MULTICORE = -qopenmp -DUSE_OPENMP
+			MULTICORE = -fopenmp -DUSE_OPENMP
 		endif
 	endif
 endif

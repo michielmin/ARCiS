@@ -828,8 +828,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Kzz
 		case("kzz_deep")
 			read(key%value,*) Kzz_deep
-		case("kzz_upper","kzz_up")
-			read(key%value,*) Kzz_upper
+		case("kzz_1bar","kzz_up")
+			read(key%value,*) Kzz_1bar
 		case("kzz_p")
 			read(key%value,*) Kzz_P
 		case("fastchem","fast_chem")
@@ -1382,9 +1382,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 	beta3D_2=-0.1
 	long_shift=0d0
 
-	Kzz_deep=-1d0
-	Kzz_upper=-1d0
-	Kzz_P=1d0
+	Kzz_deep=1d2
+	Kzz_1bar=-1d0
+	Kzz_P=0.5d0
 
 	computecontrib=.false.
 	
