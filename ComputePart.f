@@ -268,7 +268,7 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(Carbon_BE_Zubko1996,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(1,1:nlamdust)=e1d(1:nlamdust)
 		e2(1,1:nlamdust)=e2d(1:nlamdust)
-	else if(C%standard.eq.'QUARTZ') then
+	else if(C%standard.eq.'QUARTZ'.or.C%standard.eq.'SiO2') then
 		input='QUARTZ'
 		ns=C%nsubgrains
 		nf=20
@@ -356,6 +356,24 @@ c changed this to mass fractions (11-05-2010)
 		allocate(e2d(nlamdust))
 		filename(1)='Organics'
 		call RegridDataLNK(OrganicsHenning,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		e1(1,1:nlamdust)=e1d(1:nlamdust)
+		e2(1,1:nlamdust)=e2d(1:nlamdust)
+	else if(C%standard.eq.'THOLIN') then
+		input='THOLIN'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		allocate(r0(ns))
+		allocate(nr0(MAXMAT,ns))
+		allocate(f(nf))
+		allocate(wf(nf))
+		nm=1
+		rho(1)=1.00
+		frac(1)=1d0/rho(1)
+		allocate(e1d(nlamdust))
+		allocate(e2d(nlamdust))
+		filename(1)='Tholin'
+		call RegridDataLNK(Tholin,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(1,1:nlamdust)=e1d(1:nlamdust)
 		e2(1,1:nlamdust)=e2d(1:nlamdust)
 	else if(C%standard.eq.'ASTROSIL') then

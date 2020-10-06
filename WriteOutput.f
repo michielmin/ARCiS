@@ -30,6 +30,16 @@
 	enddo
 	call output("==================================================================")
 
+	filename=trim(outputdir) // "star" // trim(side)
+	call output("Writing spectrum to: " // trim(filename))
+	open(unit=30,file=filename,RECL=1000)
+	write(30,'("#",a13,a19)') "lambda [mu]","flux_star[Jy]"
+	form='(f14.6,es19.7E3)'
+	do i=1,nlam-1
+		write(30,form) sqrt(lam(i)*lam(i+1))/micron,Fstar(i)*1d23/distance**2
+	enddo
+	close(unit=30)
+
 	if(emisspec) then
 	
 	filename=trim(outputdir) // "emis" // trim(side)
