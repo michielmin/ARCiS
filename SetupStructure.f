@@ -681,7 +681,7 @@ c			write(82,*) P(i), Kzz_r(i)
 	IMPLICIT NONE
 	real*8 pp,tot,column,tt,z,densdust
 	integer ii,i,j,nsubr,isize,ilam
-	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau,P_SI1,P_SI2
+	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau,P_SI1,P_SI2,veff
 	logical cl
 	
 	if(Cloud(ii)%simplecloud) then
@@ -811,16 +811,17 @@ c use Ackerman & Marley 2001 cloud computation
 	endif
 
 	j=0
+	veff=Cloud(ii)%veff
 1	tot=0d0
 	do i=1,Cloud(ii)%nr
-		Cloud(ii)%w(i)=(1q4*Cloud(ii)%rv(i))**(1q0+(1q0-3q0*Cloud(ii)%veff)/Cloud(ii)%veff)*
-     &					exp(-1q4*Cloud(ii)%rv(i)/(Cloud(ii)%reff*Cloud(ii)%veff))
+		Cloud(ii)%w(i)=(1q4*Cloud(ii)%rv(i))**(1q0+(1q0-3q0*veff)/veff)*
+     &					exp(-1q4*Cloud(ii)%rv(i)/(Cloud(ii)%reff*veff))
 		Cloud(ii)%w(i)=Cloud(ii)%w(i)*Cloud(ii)%rv(i)**3
 		tot=tot+Cloud(ii)%w(i)
 	enddo
 	if(.not.tot.gt.0d0) then
 		if(j.lt.10) then
-			Cloud(ii)%veff=Cloud(ii)%veff*2d0
+			veff=veff*2d0
 			call output("increasing veff")
 			j=j+1
 			goto 1
