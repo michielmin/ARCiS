@@ -6,7 +6,7 @@
 	parameter(nlong=36,nlatt=18)
 	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
 	real*8 tanx(nlong),tany(nlong)
-	real*8 cost2(nlatt)
+	real*8 cost2(nlatt),beta3D_eq(nlong),ibeta3D_eq(nlong)
 	real*8,allocatable :: R3D(:,:),R3D2(:,:)
 	integer ibeta(nlong,nlatt),inu3D(nlong,nlatt)
 	end module Struct3D
@@ -79,7 +79,7 @@ c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,b
 	do i=1,nlatt
 		cost2(i)=cos(latt(i))**2
 	enddo
-	
+
 	ibeta=1
 	do i=1,nlong-1
 		do j=1,nlatt-1
@@ -103,6 +103,15 @@ c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,b
 		enddo
 	enddo
 	Rmax=0d0
+
+	if(fulloutput3D) then
+		j=nlatt/2
+		do i=1,nlong
+			beta3D_eq(i)=beta(i,j)
+			ibeta3D_eq(i)=(beta(i,j)-betamin)/(betamax-betamin)
+		enddo
+	endif
+
 	call output("Computing multiple 1D structures")
 
 	call tellertje_perc(0,n3D)
@@ -167,42 +176,10 @@ c===============================================================
 						enddo
 					endif
 				enddo
+				Ce(ilam,ir,i)=Ca(ilam,1,ir,i)+Cs(ilam,ir,i)+Cext_cont(ir,ilam)
 				Cs(ilam,ir,i)=Cs(ilam,ir,i)+Csca(ir,ilam)*Ndens(ir)
+				Ca(ilam,1:ng,ir,i)=Ca(ilam,1:ng,ir,i)+Cext_cont(ir,ilam)-Csca(ir,ilam)*Ndens(ir)
 
-c ===================================================================
-c correction for anisotropic scattering	
-c ===================================================================
- 			if(scattering.and..false.) then
- 			M%F11=Rayleigh%F11*Csca(ir,ilam)*Ndens(ir)
- 			do icloud=1,nclouds
- 				if(Cloud(icloud)%standard.eq.'MIX') then
- 					M%F11=M%F11+Cloud(icloud)%F(ir,ilam)%F11*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
- 				else
- 					do isize=1,Cloud(icloud)%nr
- 						M%F11=M%F11+Cloud(icloud)%F(isize,ilam)%F11*
-     &								Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
- 					enddo
- 				endif
- 			enddo
- 			g=0d0
- 			tot=0d0
- 			do j=1,180
- 				g=g+M%F11(j)*costheta(j)*sintheta(j)
- 				tot=tot+M%F11(j)*sintheta(j)
- 			enddo
- 			g=g/tot
- 			if(.not.g.ge.-1d0) then
- 				g=0.999d0
- 			endif
- 			if(.not.g.le.1d0) then
- 				g=0.999d0
- 			endif
- 			Cs(ilam,ir,i)=Cs(ilam,ir,i)*(1d0-g)
- 		endif
-c ===================================================================
-c ===================================================================
-
-				Ce(ilam,ir,i)=Ca(ilam,1,ir,i)+Cs(ilam,ir,i)
 				do ig=1,ng
 					Ca(ilam,ig,ir,i)=Ca(ilam,ig,ir,i)+Cabs(ir,ilam,ig)*Ndens(ir)
 				enddo
@@ -364,7 +341,7 @@ c Note we are here using the symmetry between North and South
 			if(ibeta(i2,i3).ne.ibeta(i2next,i3next)) then
 				rr=x**2+y**2+z**2
 				i=ibeta(i2next,i3next)
-				if(rr.lt.R3D2(i,1).or.rr.gt.R3D2(i,nr+2)) goto 2
+				if((.not.rr.ge.R3D2(i,1)).or.(.not.rr.le.R3D2(i,nr+2))) goto 2
 				do i1=1,nr+1
 					if(rr.gt.R3D2(i,i1).and.rr.le.R3D2(i,i1+1)) exit
 				enddo
@@ -508,7 +485,7 @@ c Note we use the symmetry of the North and South here!
 			if(ibeta(i2,i3).ne.ibeta(i2next,i3next)) then
 				rr=x**2+y**2+z**2
 				i=ibeta(i2next,i3next)
-				if(rr.lt.R3D2(i,1).or.rr.gt.R3D2(i,nr+2)) goto 4
+				if((.not.rr.ge.R3D2(i,1)).or.(.not.rr.le.R3D2(i,nr+2))) goto 4
 				do i1=1,nr+1
 					if(rr.gt.R3D2(i,i1).and.rr.le.R3D2(i,i1+1)) exit
 				enddo
@@ -683,12 +660,6 @@ c Note we use the symmetry of the North and South here!
 	latt=latt+pi/2d0
 	long=long+pi
 
-	open(unit=20,file='output.dat',RECL=6000)
-	do j=1,nlatt-1
-		write(20,*) beta(1:nlong-1,j)
-	enddo
-	close(unit=20)
-
 	return
 	end
 	
@@ -700,8 +671,8 @@ c Note we use the symmetry of the North and South here!
 	integer i,info,j,NRHS,ii(nlong-1,nlatt-1)
 	real*8 beta(nlong,nlatt),Kxx,vxx,long(nlong),latt(nlatt),S(nlong-1,nlatt-1)
 	real*8 pi,tot,x((nlatt-1)*(nlong-1)),contrast,eps
-	parameter(eps=1d-3)
-	real*8 la(nlatt-1),lo(nlong-1),tp,tm,tot1,tot2
+	parameter(eps=1d-4)
+	real*8 la(nlatt-1),lo(nlong-1),tp,tm,tot1,tot2,cmax,cmin
 	real*8,allocatable :: A(:,:)
 	integer j0,jm,jp,k,niter,maxiter
 	parameter(pi=3.1415926536)
@@ -811,17 +782,19 @@ c Note we use the symmetry of the North and South here!
 	contr=betamin/betamax
 	if(contr.lt.contrast) then
 		smin=scale
+		cmin=contr
 		if(smax.lt.0d0) then
 			scale=scale*2d0
 		else
-			scale=(scale+smax)/2d0
+			scale=scale+(smax-scale)*(contrast-contr)/(cmax-contr)
 		endif
 	else
 		smax=scale
+		cmax=contr
 		if(smin.lt.0d0) then
 			scale=scale/2d0
 		else
-			scale=(scale+smin)/2d0
+			scale=scale+(smin-scale)*(contrast-contr)/(cmin-contr)
 		endif
 	endif
 	enddo

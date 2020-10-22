@@ -2149,26 +2149,42 @@ c-----------------------------------------------------------------------
 					cloud_dens(is,ii)=0d0
 				endif
 			enddo
-			do j=1,180
-				thet=pi*real(j-1)/179d0
-				tot=Cloud(ii)%ff*HG(Cloud(ii)%g1,thet)+(1d0-Cloud(ii)%ff)*HG(Cloud(ii)%g2,thet)
-				do ilam=1,nlam
-					do is=1,nr
-						Cloud(ii)%F(is,ilam)%F11(j)=tot
-						Cloud(ii)%F(is,ilam)%F12(j)=0d0
-						Cloud(ii)%F(is,ilam)%F22(j)=1d0
-						Cloud(ii)%F(is,ilam)%F33(j)=1d0
-						Cloud(ii)%F(is,ilam)%F34(j)=0d0
-						Cloud(ii)%F(is,ilam)%F44(j)=1d0
+			if(scattering.and.emisspec.and.(abs(Cloud(ii)%g1).gt.1d-3.or.abs(Cloud(ii)%g2).gt.1d-3)) then
+				do j=1,180
+					thet=pi*real(j-1)/179d0
+					tot=Cloud(ii)%ff*HG(Cloud(ii)%g1,thet)+(1d0-Cloud(ii)%ff)*HG(Cloud(ii)%g2,thet)
+					do ilam=1,nlam
+						do is=1,nr
+							Cloud(ii)%F(is,ilam)%F11(j)=tot
+							Cloud(ii)%F(is,ilam)%F12(j)=0d0
+							Cloud(ii)%F(is,ilam)%F22(j)=1d0
+							Cloud(ii)%F(is,ilam)%F33(j)=1d0
+							Cloud(ii)%F(is,ilam)%F34(j)=0d0
+							Cloud(ii)%F(is,ilam)%F44(j)=1d0
+						enddo
 					enddo
 				enddo
-			enddo
+			else if(scattering.and.emisspec) then
+				do j=1,180
+					do ilam=1,nlam
+						do is=1,nr
+							Cloud(ii)%F(is,ilam)%F11(j)=1d0
+							Cloud(ii)%F(is,ilam)%F12(j)=0d0
+							Cloud(ii)%F(is,ilam)%F22(j)=0d0
+							Cloud(ii)%F(is,ilam)%F33(j)=0d0
+							Cloud(ii)%F(is,ilam)%F34(j)=0d0
+							Cloud(ii)%F(is,ilam)%F44(j)=0d0
+						enddo
+					enddo
+				enddo
+			endif				
 c		case("PARTFILE")
 c			call ReadParticle(Cloud(ii),ii)
 		case default
 			call output("I did not understand what I was trying to do. Sorry!")
 	end select
 	
+	if(scattering.and.emisspec) then
 	if(nspike.gt.0.and.nspike.le.180) call output("making the first " // trim(int2string(nspike,'(i3)')) // " degrees isotropic")
 	do ilam=1,nlam
 		do is=1,Cloud(ii)%nr
@@ -2231,6 +2247,7 @@ c the nspike parameter removes the n degree spike in the forward direction.
 			enddo
 		enddo
 	enddo
+	endif
 	
 	return
 	end

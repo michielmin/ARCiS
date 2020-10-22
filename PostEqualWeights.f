@@ -1,13 +1,14 @@
 	subroutine PostEqualWeights()
 	use GlobalSetup
 	use Constants
+	use Struct3D
 	IMPLICIT NONE
 	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime,sig,aver
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:)
 	real*8,allocatable :: PTstruct(:,:),var(:,:),values(:,:),COratio_der(:),Z_der(:)
 	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j,iphase,imol
 	logical,allocatable :: done(:)
-	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:)
+	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
 	
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
 	
@@ -34,6 +35,7 @@
 		allocate(mixrat3D(0:nmodels,0:nphase,nr,nmol))
 		allocate(phase3D(0:nmodels,1:nphase,nlam))
 		allocate(phase3DR(0:nmodels,1:nphase,nlam))
+		allocate(var3D(0:nmodels,1:nlong,0:n_Par3D))
 	endif
 
 	spectrans=0d0
@@ -141,6 +143,17 @@
 			phase3D(i,iphase,1:nlam)=phase(iphase,0,1:nlam)+flux(0,1:nlam)
 			phase3DR(i,iphase,1:nlam)=(phase(iphase,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
 		enddo
+		var3D(i,1:nlong,0)=beta3D_eq(1:nlong)
+		do j=1,n_Par3D
+			do ir=1,nlong
+				if(Par3D(j)%logscale) then
+					var3D(i,ir,j)=10d0**(log10(Par3D(j)%xmin)+
+     &							  log10(Par3D(j)%xmax/Par3D(j)%xmin)*ibeta3D_eq(ir)**Par3D(j)%pow)
+				else
+					var3D(i,ir,j)=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*ibeta3D_eq(ir)**Par3D(j)%pow
+				endif
+			enddo
+		enddo
 	endif
 	
 	if(i.gt.2.and.(100*(i/100).eq.i.or.i.eq.donmodels.or.i.le.10)) then
@@ -186,6 +199,22 @@
 		close(unit=26)
 
 		if(do3D.and.fulloutput3D) then
+			open(unit=26,file=trim(outputdir) // "beta3D_eq_limits",RECL=1000)
+			do ir=1,nlong
+				sorted(1:i)=var3D(1:i,ir,0)
+				call sort(sorted,i)
+				write(26,*) 180d0*long(ir)/pi,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+			enddo
+			close(unit=26)
+			do j=1,n_Par3D
+				open(unit=26,file=trim(outputdir) // trim(Par3D(j)%keyword) // "_eq_limits",RECL=1000)
+				do ir=1,nlong
+					sorted(1:i)=var3D(1:i,ir,j)
+					call sort(sorted,i)
+					write(26,*) 180d0*long(ir)/pi,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+				enddo
+				close(unit=26)
+			enddo
 			open(unit=26,file=trim(outputdir) // "PT_trans_limits",RECL=1000)
 			do ir=1,nr
 				sorted(1:i)=PTstruct3D(1:i,0,ir)

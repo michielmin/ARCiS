@@ -70,6 +70,9 @@ c	n_nu_line=ng*min(j,4)
 	do ir=nr,1,-1
 		call tellertje(nr-ir+1,nr)
 		cont_tot=0d0
+		if(P(ir).gt.psimplecloud) then
+			cont_tot(1:nlam)=1d0/Ndens(ir)
+		endif
 		mixrat_tmp(1:nmol)=mixrat_r(ir,1:nmol)
 		do i=1,ncia
 			if(T(ir).lt.CIA(i)%T(1)) then

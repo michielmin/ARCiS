@@ -126,11 +126,11 @@ OBJS	= Modules.o \
 		nasa_polynomial.o \
 		GGchem_linpack_q.o \
 		GGchem_is_nan.o \
+		Run3D.o \
 		PostEqualWeights.o \
 		TrendCompute.o \
 		MCComputeT.o \
-		LightCurve.o \
-		Run3D.o
+		LightCurve.o
 
 # program name and install location
 PROGRAM       = ARCiS

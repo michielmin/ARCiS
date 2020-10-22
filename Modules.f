@@ -270,7 +270,7 @@ c===============================================================================
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
 		type(Mueller),allocatable :: F(:,:)							! dimension nsize,nlam
 		character*500 file,Kzzfile
-		character*20 standard,ptype
+		character*20 standard,ptype,type
 		character*500 species,hazetype
 		real*8 fHazeSiO,fHazeTiO2,fHazeTholin,fHazeAl2O3,fHazeFe
 		integer nr,nsubgrains
