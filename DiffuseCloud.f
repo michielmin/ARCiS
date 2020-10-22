@@ -21,7 +21,6 @@
 	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:)
 	logical,allocatable :: dospecies(:)
 
-	real*8 Mc_top,Mn_top,IDP_dens,IDP_rad,fact
 	integer iCS
 
 	nnr=(nr-1)*nr_cloud+1
@@ -268,12 +267,6 @@ c	atoms_cloud(i,3)=1
 		enddo
 		return
 	endif
-
-	IDP_dens=0d0
-	IDP_rad=0.01d0*micron
-
-	Mc_top=-IDP_dens*sqrt(Ggrav*Mplanet/Dplanet)
-	Mn_top=-Mc_top*(r_nuc/IDP_rad)**3
 
 	sigmastar=0.1
 	Pstar=60d-6
@@ -530,7 +523,7 @@ c rewritten for better convergence
 	dz=CloudR(i)-CloudR(i-1)
 	An(j,i)=Kd(i)/dz-vsed(i)
 	An(j,i-1)=-Kd(i)/dz
-	x(j)=0d0!-Mn_top/Clouddens(i)
+	x(j)=0d0
 	i=1
 	j=j+1
 	An(j,i)=1d0

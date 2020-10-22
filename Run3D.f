@@ -58,6 +58,15 @@ c	recomputeopac=.true.
 
 c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,betamax)
 	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,vxx,night2day,fDay,betamin,betamax)
+
+	if(.not.retrieval) then
+		open(unit=20,file=trim(outputdir) // "structure3D.dat",RECL=6000)
+		do j=1,nlatt-1
+			write(20,*) beta(1:nlong-1,j)
+		enddo
+		close(unit=20)
+	endif
+
 	do i=1,nlong
 		if(long(i).lt.(pi/4d0)) then
 			tanx(i)=sin(long(i))/cos(long(i))
