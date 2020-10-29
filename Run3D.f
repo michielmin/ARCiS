@@ -92,7 +92,7 @@ c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,b
 	ibeta=1
 	do i=1,nlong-1
 		do j=1,nlatt-1
-			if(betamax.eq.betamin) then
+			if(betamax.eq.betamin.or.(night2day.eq.1d0.and.vxx.eq.0d0)) then
 				ibeta(i,j)=1
 			else
 				ibeta(i,j)=(real(n3D-1)*((beta(i,j)-betamin)/(betamax-betamin))+0.5d0)+1
@@ -141,16 +141,18 @@ c				Par3D(j)%x=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*beta3D(i)
 
 		betaT=beta3D(i)
 
-		call InitDens()
-		call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
-		Fstar=Fstar*pi*Rstar**2
+		if(((vxx.ne.0d0.or.night2day.ne.1d0).and.betamax.ne.betamin).or.i.eq.1) then
+			call InitDens()
+			call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
+			Fstar=Fstar*pi*Rstar**2
 c===============================================================
 c quick thing to read in a file!
 c	file='houghtonsolarwl.dat'
 c	call regridlog(file,1d4*lam,Fstar,nlam)
 c	Fstar=Fstar*lam**2/4d0
 c===============================================================
-		call ComputeModel1D(recomputeopac)
+			call ComputeModel1D(recomputeopac)
+		endif
 
 		if(R(nr+1).gt.Rmax) then
 			Rmax=R(nr+1)
