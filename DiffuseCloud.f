@@ -130,9 +130,6 @@ c Silicates
 	i=i+1
 	ATP(i)=68908.	! MgSiO3 for now
 	BTP(i)=38.1
-
-
-c==================
 	atoms_cloud(i,9)=1
 c	atoms_cloud(i,6)=min(molfracs_atoms(6),molfracs_atoms(8))/molfracs_atoms(9)
 c	atoms_cloud(i,8)=min(molfracs_atoms(6),molfracs_atoms(8))/molfracs_atoms(9)
@@ -145,11 +142,6 @@ c     &				,atoms_cloud(i,5)
 	write(CSname(i),'("Mg",f3.1,"SiO",f3.1)') atoms_cloud(i,7),atoms_cloud(i,5)
 	atoms_cloud(i,9)=0
 	atoms_cloud(i,5)=atoms_cloud(i,5)-2
-c==================
-
-	atoms_cloud(i,1:N_atoms)=0
-	atoms_cloud(i,7)=1
-	atoms_cloud(i,5)=1
 	rhodust(i)=2.0d0
 	CSnmol(i)=3d0
 	ice(i)=.false.

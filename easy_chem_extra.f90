@@ -1223,6 +1223,7 @@ END MODULE nrutil
 	INTEGER,parameter            :: N_atoms = 18
 	CHARACTER*40                 :: names_atoms(N_atoms)
 	DOUBLE PRECISION             :: molfracs_atoms(N_atoms)
+	DOUBLE PRECISION             :: mass_atoms(N_atoms)
 	real*8 :: gas_atoms(N_atoms),solid_atoms(N_atoms)
 	
 	end module AtomsModule
