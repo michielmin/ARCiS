@@ -304,6 +304,24 @@ c changed this to mass fractions (11-05-2010)
 		call RegridDataLNK(SiO,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
 		e1(1,1:nlamdust)=e1d(1:nlamdust)
 		e2(1,1:nlamdust)=e2d(1:nlamdust)
+	else if(C%standard.eq.'SiC') then
+		input='SiC'
+		ns=C%nsubgrains
+		nf=20
+		if(maxf.eq.0e0) nf=1
+		allocate(r0(ns))
+		allocate(nr0(MAXMAT,ns))
+		allocate(f(nf))
+		allocate(wf(nf))
+		nm=1
+		rho(1)=3.22
+		frac(1)=1d0/rho(1)
+		allocate(e1d(nlamdust))
+		allocate(e2d(nlamdust))
+		filename(1)='SiC'
+		call RegridDataLNK(SiC,lamdust(1:nlamdust)*1d4,e1d(1:nlamdust),e2d(1:nlamdust),nlamdust,.true.)
+		e1(1,1:nlamdust)=e1d(1:nlamdust)
+		e2(1,1:nlamdust)=e2d(1:nlamdust)
 	else if(C%standard.eq.'IRON') then
 		input='IRON'
 		ns=C%nsubgrains
