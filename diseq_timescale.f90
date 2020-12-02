@@ -20,22 +20,22 @@ subroutine timescale(nr, T, nt, nmol, molname, n_eq, COratio, tau)
      !CH4
      tau(6, 1:nr) = n_eq(6, 1:nr) / (k(1, 1:nr) * n_eq(63, 1:nr) * n_eq(13, 1:nr) &
           + max(min(k(2, 1:nr) * n_eq(62, 1:nr) * n_eq(64, 1:nr), k(3, 1:nr) * n_eq(62, 1:nr)), &
-          k(4, 1:nr) * n_eq(63, 1:nr) * n_eq(34, 1:nr) + k(9, 1:nr) * n_eq(39, 1:nr) * n_eq(64, 1:nr) &
-          + min(k(5, 1:nr) * n_eq(61, 1:nr) * n_eq(13, 1:nr), k(6, 1:nr) * n_eq(6, 1:nr) * n_eq(64, 1:nr)))) &
+          k(4, 1:nr) * n_eq(63, 1:nr) * n_eq(34, 1:nr)) + k(9, 1:nr) * n_eq(39, 1:nr) * n_eq(64, 1:nr) &
+          + min(k(5, 1:nr) * n_eq(61, 1:nr) * n_eq(13, 1:nr), k(6, 1:nr) * n_eq(6, 1:nr) * n_eq(64, 1:nr))) &
           + tau(45, 1:nr) * 3.0d0 * n_eq(5, 1:nr) / n_eq(45, 1:nr)
 
     !CO
      tau(5, 1:nr) = n_eq(5, 1:nr) / (k(1, 1:nr) * n_eq(63, 1:nr) * n_eq(13, 1:nr) &
           + max(min(k(2, 1:nr) * n_eq(62, 1:nr) * n_eq(64, 1:nr), k(3, 1:nr) * n_eq(62, 1:nr)), &
-          k(4, 1:nr) * n_eq(63, 1:nr) * n_eq(34, 1:nr) + k(9, 1:nr) * n_eq(39, 1:nr) * n_eq(64, 1:nr) &
-          + min(k(5, 1:nr) * n_eq(61, 1:nr) * n_eq(13, 1:nr), k(6, 1:nr) * n_eq(6, 1:nr) * n_eq(64, 1:nr)))) &
+          k(4, 1:nr) * n_eq(63, 1:nr) * n_eq(34, 1:nr)) + k(9, 1:nr) * n_eq(39, 1:nr) * n_eq(64, 1:nr) &
+          + min(k(5, 1:nr) * n_eq(61, 1:nr) * n_eq(13, 1:nr), k(6, 1:nr) * n_eq(6, 1:nr) * n_eq(64, 1:nr))) &
           + tau(45, 1:nr) * 3.0d0 * n_eq(5, 1:nr) / n_eq(45, 1:nr)
 
     !H2O
      tau(1, 1:nr) = n_eq(1, 1:nr) / (k(1, 1:nr) * n_eq(63, 1:nr) * n_eq(13, 1:nr) &
           + max(min(k(2, 1:nr) * n_eq(62, 1:nr) * n_eq(64, 1:nr), k(3, 1:nr) * n_eq(62, 1:nr)), &
-          k(4, 1:nr) * n_eq(63, 1:nr) * n_eq(34, 1:nr) + k(9, 1:nr) * n_eq(39, 1:nr) * n_eq(64, 1:nr) &
-          + min(k(5, 1:nr) * n_eq(61, 1:nr) * n_eq(13, 1:nr), k(6, 1:nr) * n_eq(6, 1:nr) * n_eq(64, 1:nr)))) &
+          k(4, 1:nr) * n_eq(63, 1:nr) * n_eq(34, 1:nr)) + k(9, 1:nr) * n_eq(39, 1:nr) * n_eq(64, 1:nr) &
+          + min(k(5, 1:nr) * n_eq(61, 1:nr) * n_eq(13, 1:nr), k(6, 1:nr) * n_eq(6, 1:nr) * n_eq(64, 1:nr))) &
           + tau(45, 1:nr) * 3.0d0 * n_eq(5, 1:nr) / n_eq(45, 1:nr)
      
   else
