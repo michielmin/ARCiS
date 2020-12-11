@@ -13289,7 +13289,8 @@
 c	print*,Tk,loggk
 c	print*,real(kuruczT(i0)),real(kuruczg(i0))/10d0
 
-	scale=((Tk/real(kuruczT(i0)))**4)*3.1415926536/3.336e11
+c	scale=((Tk/real(kuruczT(i0)))**4)*3.1415926536/3.336e11
+	scale=3.1415926536/3.336e11
 
 	i=1
 	k=1
@@ -13321,7 +13322,12 @@ c	print*,real(kuruczT(i0)),real(kuruczg(i0))/10d0
 	do j=i,nlam
 		flux(j)=y1*x1**2/lam(j)**2
 	enddo
-	
+
+	do i=1,nlam
+		scale=Planck(Tk,1d4/lam(i))/Planck(1d0*real(kuruczT(i0)),1d4/lam(i))
+		flux(i)=flux(i)*scale
+	enddo
+
 	return
 	end
 	

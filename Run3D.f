@@ -34,11 +34,11 @@
 	character*500 file
 	real*8 tau1,fact1,exp_tau1
 
-	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,nr,n3D),Si(nlam,ng,nr,nnu0,n3D))
+	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr,n3D),Si(nlam,ng,0:nr,nnu0,n3D))
 	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce(nlam,nr,n3D))
 	allocate(R3D(n3D,nr+2))
 	allocate(R3D2(n3D,nr+2))
-	allocate(T3D(n3D,nr))
+	allocate(T3D(n3D,0:nr))
 	allocate(mixrat3D(n3D,nr,nmol))
 
 	if(retrieval) call SetOutputMode(.false.)
@@ -147,9 +147,9 @@ c				Par3D(j)%x=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*beta3D(i)
 			Fstar=Fstar*pi*Rstar**2
 c===============================================================
 c quick thing to read in a file!
-c	file='houghtonsolarwl.dat'
+c	file='sedlhs.txt'
 c	call regridlog(file,1d4*lam,Fstar,nlam)
-c	Fstar=Fstar*lam**2/4d0
+c	Fstar=Fstar*distance**2/1e23
 c===============================================================
 			call ComputeModel1D(recomputeopac)
 		endif
@@ -196,6 +196,19 @@ c===============================================================
 				enddo
 			enddo
 		enddo
+		if(computeT) then
+			T3D(i,0)=Tsurface
+		else
+			T3D(i,0)=T3D(i,1)
+		endif
+		do ilam=1,nlam-1
+			if(useobsgrid) then
+				freq0=freq(ilam)
+			else
+				freq0=sqrt(freq(ilam)*freq(ilam+1))
+			endif
+			BBr(ilam,0,i)=Planck(T3D(i,0),freq0)
+		enddo
 		do ir=1,nr
 			k=0
 			do imol=1,nmol
@@ -211,9 +224,9 @@ c===============================================================
 			nmol_count=k
 		enddo
 		if(i.eq.1.or.betamax.ne.betamin) then
-			if(emisspec) call ComputeScatter(BBr(1:nlam,1:nr,i),Si(1:nlam,1:ng,1:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i),Cs(1:nlam,1:nr,i))
+			if(emisspec) call ComputeScatter(BBr(1:nlam,0:nr,i),Si(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i),Cs(1:nlam,1:nr,i))
 		else
-			Si(1:nlam,1:ng,1:nr,1:nnu0,i)=Si(1:nlam,1:ng,1:nr,1:nnu0,1)
+			Si(1:nlam,1:ng,0:nr,1:nnu0,i)=Si(1:nlam,1:ng,0:nr,1:nnu0,1)
 		endif
 		if(.not.retrieval) call SetOutputMode(.true.)
 		call tellertje_perc(i,n3D)
@@ -243,6 +256,7 @@ c===============================================================
 		enddo
 	enddo
 
+
 	if(emisspec) then
 
 	if(fulloutput3D) then
@@ -270,8 +284,8 @@ c===============================================================
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,Ij,tau1,fact,exp_tau1,contr)
-!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,inu3D,fulloutput3D,
-!$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol)
+!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,inu3D,fulloutput3D,Rplanet,
+!$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis)
 	allocate(fact(nlam,ng))
 	allocate(fluxp_omp(nlam))
 	fluxp_omp=0d0
@@ -321,13 +335,10 @@ c Note we are here using the symmetry between North and South
 			if(i1next.le.0) then
 				j=j+1
 				do ilam=1,nlam-1
-					if(useobsgrid) then
-						freq0=freq(ilam)
-					else
-						freq0=sqrt(freq(ilam)*freq(ilam+1))
-					endif
-					contr=Planck(T(1),freq0)
+					i=ibeta(i2,i3)
+					inu=inu3D(i2,i3)
 					do ig=1,ng
+						contr=Si(ilam,ig,0,inu,i)
 						fluxp_omp(ilam)=fluxp_omp(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
 					enddo
 				enddo
@@ -1324,7 +1335,7 @@ c-----------------------------------------------------------------------
 	integer inu,nnu,ilam,ir,ig,inu0,iter,niter,info,NRHS
 	parameter(nnu=5,niter=500)
 	real*8 tau,d,tauR_nu(nr,nlam,ng),contr,Jstar_nu(nr,nlam,ng)
-	real*8 Si(nlam,ng,nr,nnu0),BBr(nlam,nr),Ca(nlam,ng,nr),Cs(nlam,nr),Ce(nlam,ng,nr)
+	real*8 Si(nlam,ng,0:nr,nnu0),BBr(nlam,0:nr),Ca(nlam,ng,nr),Cs(nlam,nr),Ce(nlam,ng,nr)
 	real*8 nu(nnu),wnu(nnu),must,tauRs(nr),Ijs(nr),eps,Planck,tot
 	logical err
 	parameter(eps=1d-20)
@@ -1335,6 +1346,7 @@ c-----------------------------------------------------------------------
 		do inu0=1,nnu0
 			do ig=1,ng
 				Si(1:nlam,ig,1:nr,inu0)=BBr(1:nlam,1:nr)*Ca(1:nlam,ig,1:nr)/(Ca(1:nlam,ig,1:nr)+Cs(1:nlam,1:nr))
+				Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
 			enddo
 		enddo
 		return
@@ -1380,7 +1392,7 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 		if(inu0.eq.nnu0.or..not.scattstar) then
 			Jstar_nu=0d0
 			if(inu0.ne.1.and..not.scattstar) then
-				Si(1:nlam,1:ng,1:nr,inu0)=Si(1:nlam,1:ng,1:nr,1)
+				Si(1:nlam,1:ng,0:nr,inu0)=Si(1:nlam,1:ng,0:nr,1)
 				goto 1
 			endif
 		else
@@ -1394,6 +1406,17 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 				enddo
 			enddo
 		endif
+
+		do ilam=1,nlam-1
+			do ig=1,ng
+				Si(ilam,ig,0,inu0)=BBr(ilam,0)*surface_emis(ilam)+Jstar_nu(1,ilam,ig)*(1d0-surface_emis(ilam))
+				do inu=1,nnu
+					tauRs(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
+					call SolveIjSurface(tauRs,Ijs,nr)
+					Jstar_nu(1:nr,ilam,ig)=Jstar_nu(1:nr,ilam,ig)+wnu(inu)*Ijs(1:nr)*Si(ilam,ig,0,inu0)
+				enddo
+			enddo
+		enddo
 	
 		NRHS=1
 !$OMP PARALLEL IF(.true.)
@@ -1529,7 +1552,53 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 		Im(ir-1)=Im(ir)*exptau(ir)+Q
 	enddo
 
-	Ij=(Ip+Im)/2d0
+	Ij=(Ip-Im)/2d0
+
+	return
+	end
+	
+
+
+
+
+	subroutine ComputeHapke(emis,e1,e2,nlam)
+	IMPLICIT NONE
+	integer i,nlam,nt,j
+	real*8 e1(nlam),e2(nlam),emis(nlam),Rs,Rp,theta,tot,pi,w
+	pi=3.1415926536
+	nt=10
+	tot=0d0
+	do j=1,nt
+		theta=real(j-1)*pi/(2d0*real(nt-1))
+		tot=tot+sin(theta)
+	enddo
+	do i=1,nlam
+		w=0d0
+		do j=1,nt
+			theta=real(j-1)*pi/(2d0*real(nt-1))
+			call Reflect(e1(i),e2(i),theta,Rs,Rp)
+			w=w+(Rs+Rp)*sin(theta)/2d0
+		enddo
+		w=w/tot
+		w=sqrt(1d0-w)
+		emis(i)=1d0+log(2d0*w+1d0)*(w-1)/(2d0*w)
+	enddo
+
+	return
+	end	
+	
+
+	subroutine Reflect(n,k,theta,Rs,Rp)
+	IMPLICIT NONE
+	real*8 theta,n,k,Rs,Rp
+	complex*16 m
+	
+	m=dcmplx(n,k)
+	
+	Rs=cdabs((cos(theta)-sqrt(m**2-sin(theta)**2))/
+     &		(cos(theta)+sqrt(m**2-sin(theta)**2)))**2
+	Rp=cdabs((sqrt(1d0-(sin(theta)/m)**2)-m*cos(theta))/
+     &		(sqrt(1d0-(sin(theta)/m)**2)+m*cos(theta)))**2
 
 	return
 	end

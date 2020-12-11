@@ -679,11 +679,12 @@ c			write(82,*) P(i), Kzz_r(i)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 pp,tot,column,tt,z,densdust
+	real*8 pp,tot,column,tt,z,densdust,CloudMass
 	integer ii,i,j,nsubr,isize,ilam
-	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau,P_SI1,P_SI2,veff
+	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau,P_SI1,P_SI2,veff,frac(nr,10)
 	logical cl
-	
+
+	print*,Cloud(ii)%file	
 	if(Cloud(ii)%simplecloud) then
 		Cloud(ii)%ptype='SIMPLE'
 		call SetupPartCloud(ii)
@@ -709,6 +710,44 @@ c			write(82,*) P(i), Kzz_r(i)
 			close(unit=25)
 		endif
 	else if(Cloud(ii)%file.ne.' ') then
+		if(useDRIFT) then
+		
+		call regridN(Cloud(ii)%file,P*1d6,frac,nr,2,9,10,4,.true.,.true.)
+		if(.not.allocated(Cloud(ii)%rv)) then
+			allocate(Cloud(ii)%rv(nr))
+			allocate(Cloud(ii)%sigma(nr))
+		endif
+		Cloud(ii)%frac(1:nr,1)=frac(1:nr,1)/3d0
+		Cloud(ii)%frac(1:nr,2)=frac(1:nr,1)/3d0
+		Cloud(ii)%frac(1:nr,3)=frac(1:nr,1)/3d0
+
+		Cloud(ii)%frac(1:nr,4)=frac(1:nr,2)/3d0
+		Cloud(ii)%frac(1:nr,5)=frac(1:nr,2)/3d0
+		Cloud(ii)%frac(1:nr,6)=frac(1:nr,2)/3d0
+
+		Cloud(ii)%frac(1:nr,7)=frac(1:nr,3)
+		Cloud(ii)%frac(1:nr,8)=frac(1:nr,4)
+		Cloud(ii)%frac(1:nr,9)=frac(1:nr,5)
+		Cloud(ii)%frac(1:nr,10)=frac(1:nr,6)
+		Cloud(ii)%frac(1:nr,11)=frac(1:nr,7)
+		Cloud(ii)%frac(1:nr,12)=frac(1:nr,8)
+
+		Cloud(ii)%frac(1:nr,13)=frac(1:nr,9)/3d0
+		Cloud(ii)%frac(1:nr,14)=frac(1:nr,9)/3d0
+		Cloud(ii)%frac(1:nr,15)=frac(1:nr,9)/3d0
+
+		Cloud(ii)%frac(1:nr,16)=frac(1:nr,10)
+
+		Cloud(ii)%frac(1:nr,17)=0d0
+		Cloud(ii)%frac(1:nr,18)=0d0
+
+		call regridN(Cloud(ii)%file,P*1d6,cloud_dens(1:nr,ii),nr,2,43,1,4,.true.,.false.)
+		cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
+
+		call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,7,1,4,.true.,.false.)
+		
+		else
+
 		call regridN(Cloud(ii)%file,P,cloud_dens(1:nr,ii),nr,2,6,1,1,.false.,.false.)
 		if(.not.allocated(Cloud(ii)%rv)) then
 			allocate(Cloud(ii)%rv(nr))
@@ -736,6 +775,8 @@ c 90% MgSiO3
 		end select
 		
 		cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*(4d0*pi*densdust*Cloud(ii)%rv(1:nr)**3)/3d0
+		endif
+		
 		Cloud(ii)%rv=Cloud(ii)%rv*1d4
 		Cloud(ii)%sigma=1d-10
 		call output("Computing inhomogeneous cloud particles")
@@ -834,7 +875,7 @@ c use Ackerman & Marley 2001 cloud computation
 	if(Cloud(ii)%tau.gt.0d0) then
 		tau=0d0
 		do ilam=nlam-1,1,-1
-			if(lam(ilam).gt.Cloud(ii)%lam.and.lam(ilam+1).le.Cloud(ii)%lam) exit
+			if((lam(ilam)*1d4).lt.Cloud(ii)%lam.and.(lam(ilam+1)*1d4).ge.Cloud(ii)%lam) exit
 		enddo
 		if(ilam.lt.1) ilam=1
 		do i=nr,2,-1
@@ -850,6 +891,12 @@ c use Ackerman & Marley 2001 cloud computation
 		enddo
 		cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%tau/tau
 	endif
+
+	CloudMass=0d0
+	do i=1,nr
+		CloudMass=CloudMass+cloud_dens(i,ii)*4d0*pi*abs(R(i+1)**3-R(i)**3)/3d0
+	enddo
+	call output("Cloud mass: " // dbl2string(CloudMass/Mearth,'(es13.4E3)') // " Mearth")
 
 	return
 	end	

@@ -276,6 +276,10 @@ C	 create the new empty FITS file
 	call output("Reading in correlated k-tables for " // trim(molname(imol)))
 	call output("   wavelength range: " // trim(dbl2string(Ktable(imol)%lam1*1d4,'(es8.2)')) // " - " 
      &		// trim(dbl2string(Ktable(imol)%lam2*1d4,'(es8.2)')) // " micron")
+	call output("     pressure range: " // trim(dbl2string(Ktable(imol)%P1,'(es8.2)')) // " - " 
+     &		// trim(dbl2string(Ktable(imol)%P2,'(es8.2)')) // " bar")
+	call output("  temperature range: " // trim(dbl2string(Ktable(imol)%T1,'(es8.2)')) // " - " 
+     &		// trim(dbl2string(Ktable(imol)%T2,'(es8.2)')) // " K")
 
 	firstpix=1
 

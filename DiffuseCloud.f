@@ -845,6 +845,25 @@ c correction for SiC
 			Cloud(ii)%frac(i,19)=Cloud(ii)%frac(i,19)+xm(k)				! seed particles
 			k=k+1
 			if(k.gt.nnr) k=nnr
+
+CCloud(ii)%frac(i,1:19)=0d0
+Cc TiO
+CCloud(ii)%frac(i,1:3)=0d0
+Cc Forsterite
+CCloud(ii)%frac(i,4:6)=1d0
+Cc SiO
+CCloud(ii)%frac(i,7)=0d0
+Cc SiO2
+CCloud(ii)%frac(i,8)=0d0
+Cc Fe
+CCloud(ii)%frac(i,9)=0d0
+Cc Al2O3
+CCloud(ii)%frac(i,10)=0d0
+Cc Enstatite
+CCloud(ii)%frac(i,13:15)=0d0
+Cc SiC
+CCloud(ii)%frac(i,17)=0d0
+
 		enddo
 		tot=sum(Cloud(ii)%frac(i,1:19))
 		Cloud(ii)%frac(i,1:19)=Cloud(ii)%frac(i,1:19)/tot

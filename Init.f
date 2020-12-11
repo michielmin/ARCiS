@@ -650,6 +650,9 @@ c	condensates=(condensates.or.cloudcompute)
 	allocate(lamemis(nlam),lamtrans(nlam))
 	lamemis=emisspec
 	lamtrans=transspec
+
+	allocate(surface_emis(nlam))
+	surface_emis=1d0
 	
 	if(fulloutput3D) then
 		allocate(PTaverage3D(0:nphase,nr))
@@ -1993,7 +1996,6 @@ c				enddo
 	type(SettingKey) key
 	integer j,j1,j2
 
-	Cloud(key%nr1)%ptype="COMPUTE"
 
 	if(key%nr1.eq.0) then
 		j1=1
@@ -2001,6 +2003,7 @@ c				enddo
 	else
 		j1=key%nr1
 		j2=key%nr1
+		Cloud(key%nr1)%ptype="COMPUTE"
 	endif
 
 	do j=j1,j2
@@ -2090,6 +2093,8 @@ c				enddo
 			read(key%value,*) Cloud(j)%fHazeAl2O3
 		case("fhazefe","fhazeiron")
 			read(key%value,*) Cloud(j)%fHazeFe
+		case("type")
+			Cloud(j)%type=trim(key%value)
 		case default
 			call output("Unknown cloud keyword: " // trim(key%key2))
 			stop
@@ -2122,7 +2127,7 @@ c-----------------------------------------------------------------------
 	endif
 
 	select case(Cloud(ii)%ptype)
-		case("COMPUTE")
+		case("COMPUTE","DRIFT")
 			computelamcloud=.true.
 			tautot=0d0
 			restrictcomputecloud=(nlam.eq.nlamdust.and..not.computeT)

@@ -37,7 +37,7 @@
 	real*8 g,dlnT,dlnP,d,tau,tautot,fact,contr,tau_a,exp_tau
 	real*8,allocatable :: Ce(:,:,:),Ca(:,:,:),Cs(:,:,:),taustar(:,:),tauR_nu(:,:,:)
 	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i,E,E0,Tinp(nr)
-	real*8 Cjstar(nr),Jedd(nr),Cj(nr),Ch(nr),z,Hstar(nr),Jtot,Htot,Ktot
+	real*8 z,Hstar(nr),Jtot,Htot,Ktot
 	real*8 fedd(nr),Hedd(nr),lH1,lH2,P1,P2
 	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:)
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax
@@ -45,15 +45,18 @@
 	type(Mueller) M	
 	real*8 tauf(nr),Si(1:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff,TT
 	integer info,IWORK(10*nr*nr),NRHS,ii(3),iscat,nscat
-	real*8 tau1,tau2,ee0,ee1,ee2,tauR(nr),Ij(nr),Ih(nr),Itot(nr),scale
+	real*8 tau1,tau2,ee0,ee1,ee2,tauR(nr),Ij(nr),Ih(nr),scale
 	integer nlam_LR
-	real*8 specres_LR,IntH(nr,nr),Fl(nr),Ts(nr),Si_p(nr),minFl(nr),maxFl(nr)
-	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:)
+	real*8 specres_LR,IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr)
+	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
 	integer i1,i2,ngF,j
-	real*8 ww,w1,w2
-	real*8,allocatable :: temp_a(:),wtemp(:),Ca_HR(:,:),Cs_HR(:,:),Fstar_LR(:)
+	real*8 ww,w1,w2,SurfStar
+	real*8,allocatable :: Si_omp(:),Ih_omp(:),Ij_omp(:),tauR_omp(:)
+	real*8,allocatable :: temp_a(:),wtemp(:),Ca_HR(:,:),Cs_HR(:,:),Fstar_LR(:),SurfInt(:,:),SurfEmis_LR(:)
 	integer,allocatable :: IP(:)
 	real*8,allocatable :: WS(:),nu(:),wnu(:)
+	real*8,allocatable :: x_SIj(:),y_SIj(:),tauR_SIj(:),Ma_SIj(:),Mb_SIj(:),Mc_SIj(:)
+	character*500 file
 	
 	allocate(IP(nr*4+2))
 	IP(1)=(2*(nr)+nr*3+(nr*2+2)*(nr+7))
@@ -93,12 +96,6 @@
 			tot=tot+dfreq_LR(i)*BB_LR(j,i)
 		enddo
 		scale=((2d0*(pi*kb*TT)**4)/(15d0*hplanck**3*clight**3))/tot
-		if(scale.gt.2d0.and.j.lt.nBB) then
-			do iT=1,j
-				BB_LR(iT,1:nlam_LR)=BB_LR(j+1,1:nlam_LR)*(real(iT)/real(j+1))**4
-			enddo
-			exit
-		endif
 		BB_LR(j,i)=BB_LR(j,i)*scale
 	enddo
 
@@ -111,7 +108,43 @@
 	allocate(Cs(nr,nlam_LR,ng))
 	allocate(Fstar_LR(nlam_LR))
 	allocate(tauR_nu(nr,nlam_LR,ng))
-	allocate(IntHnu(nlam_LR,nr,nr))
+	allocate(dtauR_nu(nr,nlam_LR,ng))
+	allocate(IntHnu(nlam_LR,nr,0:nr))
+	allocate(SurfInt(nlam_LR,nr))
+	allocate(SurfEmis_LR(nlam_LR))
+
+	call ComputeSurface()
+	do ilam=1,nlam_LR-1
+		i1=0
+		i2=0
+		do i=1,nlam-1
+			if(lam_LR(ilam).ge.lam(i).and.lam_LR(ilam).lt.lam(i+1)) i1=i
+			if(lam_LR(ilam+1).ge.lam(i).and.lam_LR(ilam+1).lt.lam(i+1)) i2=i+1
+		enddo
+		if(ilam.eq.1) i1=1
+		if(ilam.eq.nlam_LR-1) i2=nlam
+		if(i1.gt.0.and.i2.gt.0) then
+			tot=0d0
+			SurfEmis_LR(ilam)=0d0
+			do i=i1,i2
+				if(i1.eq.i2) then
+					ww=1d0
+				else if(i.eq.i1) then
+					ww=abs(lam_LR(ilam)-lam(i+1))
+				else if(i.eq.i2) then
+					ww=abs(lam_LR(ilam+1)-lam(i))
+				else
+					ww=abs(lam(i)-lam(i+1))
+				endif
+				SurfEmis_LR(ilam)=SurfEmis_LR(ilam)+ww*surface_emis(i)
+				tot=tot+ww
+			enddo
+			SurfEmis_LR(ilam)=SurfEmis_LR(ilam)/tot
+		else
+			SurfEmis_LR(ilam)=1d0
+		endif
+	enddo
+
 
 	docloud0=.false.
 	do i=1,nclouds
@@ -257,22 +290,18 @@
 					Ce(ir,ilam,ig)=tau/d
 					Ca(ir,ilam,ig)=Ce(ir,ilam,ig)-Cs(ir,ilam,ig)
 				endif
-				if(tau.lt.1d-10) then
-					tau=1d-10
-					Ce(ir,ilam,ig)=tau/d
-					Ca(ir,ilam,ig)=Ce(ir,ilam,ig)-Cs(ir,ilam,ig)
+				if(tau.lt.1d-6) then
+					tau=1d-6
 				endif
 				if(tau.gt.1d10) then
 					tau=1d10
-					Ce(ir,ilam,ig)=tau/d
-					Ca(ir,ilam,ig)=Ce(ir,ilam,ig)
-					Cs(ir,ilam,ig)=0d0
 				endif
 				if(ir.lt.nr) then
 					tauR(ir)=tauR(ir+1)+tau
 				else
 					tauR(ir)=tau
 				endif
+				dtauR_nu(ir,ilam,ig)=tau
 			enddo
 			tauR_nu(1:nr,ilam,ig)=tauR(1:nr)
 		enddo
@@ -282,66 +311,150 @@
 	allocate(nu(nnu),wnu(nnu))
 	call gauleg(0d0,1d0,nu,wnu,nnu)
 
-
-	Hstar=0d0
-	do ilam=1,nlam_LR-1
-		do ig=1,ng
-			do ir=1,nr
-				fact=exp(-tauR_nu(ir,ilam,ig)/abs(must))
-				contr=(Fstar_LR(ilam)/(4d0*pi*Dplanet**2))*fact
-				Hstar(ir)=Hstar(ir)-must*dfreq_LR(ilam)*wgg(ig)*contr
-			enddo
-
-c			tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
-c			contr=(Fstar_LR(ilam)/(4d0*pi*Dplanet**2))
-c			call SolveIjStar(tauR,contr,Ij,nr)
-c			Si_p(1:nr)=Ij(1:nr)*Cs(1:nr,ilam,ig)
-c			call AddScatter(Si_p,Ca(1:nr,ilam,ig),Cs(1:nr,ilam,ig))
-c			Ij(1:nr)=Ij(1:nr)*Ca(1:nr,ilam,ig)+Si_p(1:nr)
-c			Ij(1:nr)=Ij(1:nr)/(Ca(1:nr,ilam,ig)+Cs(1:nr,ilam,ig))
-c			do jr=1,nr-1
-c				Hstar(jr)=Hstar(jr)+must*dfreq_LR(ilam)*wgg(ig)*(Ij(jr)-Ij(jr+1))/(tauR(jr)-tauR(jr+1))
-c			enddo
-c			Hstar(nr)=Hstar(nr-1)
-		enddo
-	enddo
-
-
-	E0=((2d0*(pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
-	do ir=1,nr
-		Hedd(ir)=E0/2d0-Hstar(ir)
-	enddo
+c===============================================================
+c quick thing to read in a file!
+c	file='sedlhs.txt'
+c	call regridlog(file,1d4*lam_LR,Fstar_LR,nlam_LR)
+c	Fstar_LR=Fstar_LR*distance**2/1e23
+c===============================================================
 
 	ff=0.5d0
 	
 	T0(1:nr)=T(1:nr)
 
+	Hstar=0d0
+	SurfStar=0d0
 	IntHnu=0d0
+	SurfInt=0d0
+	allocate(x_SIj(nr+2),y_SIj(nr+2),tauR_SIj(0:nr+1),Ma_SIj(nr+2),Mb_SIj(nr+2),Mc_SIj(nr+2))
+	do ilam=1,nlam_LR-1
+		do ig=1,ng
+			contr=(Fstar_LR(ilam)/(2d0*Dplanet**2))
+			tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
+			Ij=contr*exp(-tauR(1:nr))
+			Ih(1:nr)=-Ij(1:nr)
+
+			Hstar(1:nr)=Hstar(1:nr)+must*dfreq_LR(ilam)*wgg(ig)*Ih(1:nr)
+			SurfStar=SurfStar+must*dfreq_LR(ilam)*wgg(ig)*Ij(1)*SurfEmis_LR(ilam)/2d0
+
+			Si(1:nr)=must*Ij(1:nr)*Cs(1:nr,ilam,ig)/Ce(1:nr,ilam,ig)
+			call AddScatter(Si(1:nr),tauR_nu(1:nr,ilam,ig),Ca(1:nr,ilam,ig),Cs(1:nr,ilam,ig),Ce(1:nr,ilam,ig),nr,nu,wnu,nnu)
+			do inu=1,nnu
+				tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
+				call SolveIj(tauR,Si,Ij,nr,x_SIj,y_SIj,tauR_SIj,Ma_SIj,Mb_SIj,Mc_SIj)
+				do jr=1,nr-1
+					Ih(jr)=(Ij(jr)-Ij(jr+1))/(tauR(jr)-tauR(jr+1))
+				enddo
+				Ih(nr)=Ij(nr)
+				Hstar(1:nr)=Hstar(1:nr)+nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih(1:nr)
+				SurfStar=SurfStar+nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih(1)*SurfEmis_LR(ilam)/2d0
+			enddo
+		enddo
+	enddo
+	deallocate(x_SIj,y_SIj,tauR_SIj,Ma_SIj,Mb_SIj,Mc_SIj)
+	
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(x_SIj,y_SIj,tauR_SIj,Ma_SIj,Mb_SIj,Mc_SIj,Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr)
+!$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfInt,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs)
+	allocate(x_SIj(nr+2),y_SIj(nr+2),tauR_SIj(0:nr+1),Ma_SIj(nr+2),Mb_SIj(nr+2),Mc_SIj(nr+2))
+	allocate(Si_omp(nr),tauR_omp(nr),Ih_omp(nr),Ij_omp(nr))
+!$OMP DO
 	do ilam=1,nlam_LR-1
 		call tellertje(ilam,nlam_LR-1)
 		do ig=1,ng
 			do ir=1,nr
-				Si_p=0d0
-				Si_p(ir)=1d0
-c				call AddScatter(Si_p,Ca(1:nr,ilam,ig),Cs(1:nr,ilam,ig))
+				Si_omp=0d0
+				Si_omp(ir)=Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
+				call AddScatter(Si_omp(1:nr),tauR_nu(1:nr,ilam,ig),Ca(1:nr,ilam,ig),Cs(1:nr,ilam,ig),Ce(1:nr,ilam,ig),nr,nu,wnu,nnu)
 				do inu=1,nnu
-					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
-					call SolveIj(tauR,Si_p,Ij,nr)
-c					call spldiff(tauR,Ij,nr,Ih)
+					tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
+					call SolveIj(tauR_omp,Si_omp,Ij_omp,nr,x_SIj,y_SIj,tauR_SIj,Ma_SIj,Mb_SIj,Mc_SIj)
 					do jr=1,nr-1
-						Ih(jr)=(Ij(jr)-Ij(jr+1))/(tauR(jr)-tauR(jr+1))
+						Ih_omp(jr)=(Ij_omp(jr)-Ij_omp(jr+1))/(tauR_omp(jr)-tauR_omp(jr+1))
 					enddo
-					Ih(nr)=Ij(nr)
-					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih(1:nr)
+					Ih_omp(nr)=Ij_omp(nr)
+					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+nu(inu)*4d0*pi*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 				enddo
 			enddo
 		enddo
 	enddo
-	
+!$OMP END DO
+	deallocate(x_SIj,y_SIj,tauR_SIj,Ma_SIj,Mb_SIj,Mc_SIj)
+	deallocate(Si_omp,tauR_omp,Ih_omp,Ij_omp)
+!$OMP FLUSH
+!$OMP END PARALLEL
+
+c	IntHnu(1:nlam_LR,1:nr,0)=IntHnu(1:nlam_LR,1:nr,1)
+
+	do ilam=1,nlam_LR-1
+		do ig=1,ng
+			do inu=1,nnu
+				fact=1d0
+				do ir=1,nr
+					exp_tau=exp(-dtauR_nu(ir,ilam,ig)/nu(inu))
+					SurfInt(ilam,ir)=SurfInt(ilam,ir)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*(1d0-exp_tau)*SurfEmis_LR(ilam)*fact
+					fact=fact*exp_tau
+				enddo
+			enddo
+		enddo
+	enddo
+
 
 	do iter=1,50
 
 	Ts(1:nr)=T(1:nr)
+
+	E=SurfStar
+	do ir=1,nr
+		iT=T(ir)+1
+		if(iT.gt.nBB-1) iT=nBB-1
+		if(iT.lt.1) iT=1
+		scale=(T(ir)/real(iT))**4
+		do ilam=1,nlam_LR-1
+			E=E+scale*BB_LR(iT,ilam)*SurfInt(ilam,ir)
+		enddo
+	enddo
+	iTmin=1
+	iTmax=nBB
+	iT=(iTmax+iTmin)/2
+	do while(abs(iTmax-iTmin).gt.1)
+		E0=0d0
+		do ilam=1,nlam_LR-1
+			E0=E0+dfreq_LR(ilam)*BB_LR(iT,ilam)*SurfEmis_LR(ilam)
+		enddo
+		if(E0.gt.E) then
+			iTmax=iT
+		else
+			iTmin=iT
+		endif
+		iT=0.5d0*(iTmax+iTmin)
+		if(iT.lt.1) iT=1
+		if(iT.gt.nBB) iT=nBB
+	enddo
+	Tsurface=real(iT)*(E/E0)**0.25
+
+	E0=SurfStar+2d0*pi*(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
+	iT=Tsurface+1
+	if(iT.gt.nBB-1) iT=nBB-1
+	if(iT.lt.1) iT=1
+	scale=(Tsurface/real(iT))**4
+	do ir=1,nr
+		Hedd(ir)=E0-Hstar(ir)
+	enddo
+
+	E0=0d0
+	do ilam=1,nlam_LR-1
+		do jr=nr,1,-1
+			iT=T(jr)+1
+			if(iT.gt.nBB-1) iT=nBB-1
+			if(iT.lt.1) iT=1
+			scale=(T(jr)/real(iT))**4
+			E0=E0-scale*BB_LR(iT,ilam)*IntHnu(ilam,1,jr)
+		enddo
+	enddo
+	if(E0.lt.0d0) E0=0d0
+	Hedd(1:nr)=Hedd(1:nr)+E0
 
 	IntH=0d0
 	do ir=1,nr
@@ -356,8 +469,8 @@ c					call spldiff(tauR,Ij,nr,Ih)
 		enddo
 		Fl(ir)=Hedd(ir)
 	enddo
-	minFl=0.1d0
-	maxFl=10d0
+	minFl=0.8d0
+	maxFl=1.2d0
 
 	IP(1)=(2*(nr)+nr*3+(nr*2+2)*(nr+7))
 	IP(2)=nr*4+2
@@ -367,9 +480,14 @@ c					call spldiff(tauR,Ij,nr,Ih)
 c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 
 	do ir=1,nr
-		Fl(ir)=min(max(0.9d0,Fl(ir)),1.1d0)
+		Fl(ir)=min(max(minFl(ir),Fl(ir)),maxFl(ir))
 	enddo
 
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ir,E,E0,ilam,iTmin,iTmax,ig,iT)
+!$OMP& SHARED(nr,nlam_LR,dfreq_LR,wgg,BB_LR,Ca,Fl,ng,T,Ts)
+!$OMP DO
 	do ir=1,nr
 		iT=T(ir)+1
 		if(iT.gt.nBB-1) iT=nBB-1
@@ -402,6 +520,9 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		enddo
 		Ts(ir)=real(iT)*(E/E0)**0.25
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 
 	do ir=nr,1,-1
 		if(.not.Ts(ir).gt.3d0) then
@@ -423,6 +544,8 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 
 	if(converged.and.iter.gt.5) exit
 	enddo
+
+	print*,Tsurface
 
 	do ir=nr-1,1,-1
 		if(ir.lt.nr) then
@@ -461,15 +584,16 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	return
 	end
 
-	subroutine SolveIj(tauR_in,Si,Ij,nr)
+	subroutine SolveIj(tauR_in,Si,Ij,nr,x,y,tauR,Ma,Mb,Mc)
 	IMPLICIT NONE
-	integer ir,nr
-	real*8 tauR_in(nr),Ij(nr),Si(nr),x(nr+2),y(nr+2),fact,d,tauR(0:nr+1)
-	real*8 MM(nr+2,3),MMal(nr+2,1),Ma(nr+2),Mb(nr+2),Mc(nr+2)
-	integer indx(nr+2),info
+	integer ir,nr,info
+	real*8 tauR_in(nr),Ij(nr),Si(nr),fact,d
+	real*8,allocatable :: MM(:,:),MMal(:,:)
+	integer,allocatable :: indx(:)
+	real*8 x(nr+2),y(nr+2),tauR(0:nr+1),Ma(nr+2),Mb(nr+2),Mc(nr+2)
 
 	tauR(1:nr)=tauR_in(1:nr)
-	tauR(0)=tauR(1)*2d0
+	tauR(0)=tauR(1)+100d0
 	tauR(nr+1)=0d0
 
 	Ma=0d0
@@ -481,11 +605,71 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		Ma(ir+1)=-fact*1d0/(tauR(ir)-tauR(ir-1))
 		Mc(ir+1)=-fact*1d0/(tauR(ir+1)-tauR(ir))
 	enddo
-	Mb(1)=-1d0
-	Mc(1)=1d0
+	Mb(1)=1d0-1d0/(tauR(0)-tauR(1))
+	Mc(1)=1d0/(tauR(0)-tauR(1))
 	Ma(nr+2)=1d0/(tauR(nr))
 	Mb(nr+2)=-1d0-1d0/(tauR(nr))
 	x=0d0
+	x(2:nr+1)=Si(1:nr)
+	info=0
+	call tridag(Ma,Mb,Mc,x,y,nr+2,info)
+	Ij(1:nr)=y(2:nr+1)
+	do ir=1,nr
+		if(Ij(ir).lt.0d0) info=1
+	enddo
+	if(info.ne.0) then
+		allocate(MM(nr+2,3),MMal(nr+2,1))
+		allocate(indx(nr+2))
+		do ir=1,nr+2
+			MM(ir,1)=Ma(ir)
+			MM(ir,2)=Mb(ir)
+			MM(ir,3)=Mc(ir)
+		enddo
+		call bandec(MM,nr+2,1,1,nr+2,3,MMal,1,indx,d)
+		x=0d0
+		x(2:nr+1)=Si(1:nr)
+		call banbks(MM,nr+2,1,1,nr+2,3,MMal,1,indx,x)
+		Ij(1:nr)=x(2:nr+1)
+		deallocate(MM,MMal,indx)
+	endif
+	do ir=1,nr
+		if(Ij(ir).lt.0d0) then
+			Ij(ir)=0d0
+		endif
+	enddo
+
+	return
+	end
+	
+
+	subroutine SolveIjSurface(tauR_in,Ij,nr)
+	IMPLICIT NONE
+	integer ir,nr
+	real*8 tauR_in(nr),Ij(nr),Si(nr),x(nr+2),y(nr+2),fact,d,tauR(0:nr+1)
+	real*8 MM(nr+2,3),MMal(nr+2,1),Ma(nr+2),Mb(nr+2),Mc(nr+2)
+	integer indx(nr+2),info
+
+	tauR(1:nr)=tauR_in(1:nr)
+	tauR(0)=tauR(1)+100d0
+	tauR(nr+1)=0d0
+	
+	Si=0d0
+
+	Ma=0d0
+	Mb=0d0
+	Mc=0d0
+	do ir=1,nr
+		fact=1d0/(0.5d0*(tauR(ir+1)+tauR(ir))-0.5d0*(tauR(ir)+tauR(ir-1)))
+		Mb(ir+1)=1d0+fact*(1d0/(tauR(ir+1)-tauR(ir))+1d0/(tauR(ir)-tauR(ir-1)))
+		Ma(ir+1)=-fact*1d0/(tauR(ir)-tauR(ir-1))
+		Mc(ir+1)=-fact*1d0/(tauR(ir+1)-tauR(ir))
+	enddo
+	Mb(1)=1d0/(tauR(0)-tauR(1))
+	Mc(1)=-1d0/(tauR(0)-tauR(1))
+	Ma(nr+2)=1d0/(tauR(nr))
+	Mb(nr+2)=-1d0-1d0/(tauR(nr))
+	x=0d0
+	x(1)=1d0
 	x(2:nr+1)=Si(1:nr)
 	info=0
 	call tridag(Ma,Mb,Mc,x,y,nr+2,info)
@@ -907,13 +1091,71 @@ c
 	end
 
 
-	subroutine SolveIjStar(tauR,I0,Ij,nr)
+	subroutine SolveIjStar(tauR_in,I0,Ij,nr)
+	IMPLICIT NONE
+	integer ir,nr
+	real*8 tauR_in(nr),Ij(nr),I0,tauR(0:nr+1)
+	real*8 x(nr+2),y(nr+2),fact,d
+	real*8 MM(nr+2,3),MMal(nr+2,1),Ma(nr+2),Mb(nr+2),Mc(nr+2)
+	integer indx(nr),info
+
+	tauR(1:nr)=tauR_in(1:nr)
+	tauR(0)=tauR(1)+100d0
+	tauR(nr+1)=0d0
+
+	Ma=0d0
+	Mb=0d0
+	Mc=0d0
+	do ir=1,nr
+		fact=1d0/(0.5d0*(tauR(ir+1)+tauR(ir))-0.5d0*(tauR(ir)+tauR(ir-1)))
+		Mb(ir+1)=1d0+fact*(1d0/(tauR(ir+1)-tauR(ir))+1d0/(tauR(ir)-tauR(ir-1)))
+		Ma(ir+1)=-fact*1d0/(tauR(ir)-tauR(ir-1))
+		Mc(ir+1)=-fact*1d0/(tauR(ir+1)-tauR(ir))
+	enddo
+	Mb(1)=1d0-1d0/(tauR(0)-tauR(1))
+	Mc(1)=1d0/(tauR(0)-tauR(1))
+	Ma(nr+2)=0d0
+	Mb(nr+2)=1d0
+	x=0d0
+	x(nr+2)=I0
+	info=0
+	call tridag(Ma,Mb,Mc,x,y,nr+2,info)
+	Ij(1:nr)=y(2:nr+1)
+	do ir=1,nr
+		if(Ij(ir).lt.0d0) info=1
+	enddo
+	if(info.ne.0) then
+		do ir=1,nr+2
+			MM(ir,1)=Ma(ir)
+			MM(ir,2)=Mb(ir)
+			MM(ir,3)=Mc(ir)
+		enddo
+		call bandec(MM,nr+2,1,1,nr+2,3,MMal,1,indx,d)
+		x=0d0
+		x(nr+2)=I0
+		call banbks(MM,nr+2,1,1,nr+2,3,MMal,1,indx,x)
+		Ij(1:nr)=x(2:nr+1)
+	endif
+	do ir=1,nr
+		if(Ij(ir).lt.0d0) then
+			Ij(ir)=0d0
+		endif
+	enddo
+
+	return
+	end
+	
+
+
+	subroutine SolveIjSurf(tauR,Ij,nr)
 	IMPLICIT NONE
 	integer ir,nr
 	real*8 tauR(nr),Ij(nr),I0
 	real*8 x(nr),y(nr),fact,d
 	real*8 MM(nr,3),MMal(nr,1),Ma(nr),Mb(nr),Mc(nr)
 	integer indx(nr),info
+
+	I0=1d0
 
 	Ma=0d0
 	Mb=0d0
@@ -924,12 +1166,12 @@ c
 		Ma(ir)=-fact*1d0/(tauR(ir)-tauR(ir-1))
 		Mc(ir)=-fact*1d0/(tauR(ir+1)-tauR(ir))
 	enddo
-	Mb(1)=1d0/(tauR(1)-tauR(2))
-	Mc(1)=-1d0/(tauR(1)-tauR(2))
-	Ma(nr)=0d0
-	Mb(nr)=1d0
+	Mb(1)=1d0
+	Mc(1)=0d0
+	Ma(nr)=1d0/(tauR(nr))
+	Mb(nr)=-1d0-1d0/(tauR(nr))
 	x=0d0
-	x(nr)=I0
+	x(1)=I0
 	info=0
 	call tridag(Ma,Mb,Mc,x,y,nr,info)
 	Ij(1:nr)=y(1:nr)
@@ -944,7 +1186,7 @@ c
 		enddo
 		call bandec(MM,nr,1,1,nr,3,MMal,1,indx,d)
 		x=0d0
-		x(nr)=I0
+		x(1)=I0
 		call banbks(MM,nr,1,1,nr,3,MMal,1,indx,x)
 		Ij(1:nr)=x(1:nr)
 	endif
@@ -959,11 +1201,11 @@ c
 	
 
 
-	subroutine AddScatter_old(Si,tauR,Ca,Cs,Ce,nr,nu,wnu,nnu)
+	subroutine AddScatter(Si_in,tauR_in,Ca,Cs,Ce,nr,nu,wnu,nnu)
 	use Constants
 	IMPLICIT NONE
 	integer inu,nnu,ilam,ir,info,NRHS,nr
-	real*8 tauR(nr)
+	real*8 tauR(nr),tauR_in(nr),Si_in(nr)
 	real*8 Si(nr),Ca(nr),Cs(nr),Ce(nr)
 	real*8 nu(nnu),wnu(nnu)
 	real*8 Ij(nr),Itot(nr),Linv(nr,nr),Lmat(nr,nr)
@@ -971,9 +1213,12 @@ c
 
 	NRHS=1
 	allocate(IWORKomp(10*nr*nr))
+
+
 	Linv=0d0
 	do inu=1,nnu
-		call InvertIj(tauR/nu(inu),Lmat,nr)
+		tauR(1:nr)=tauR_in(1:nr)/abs(nu(inu))
+		call InvertIj(tauR,Lmat,nr)
 		do ir=1,nr
 			Linv(ir,1:nr)=Linv(ir,1:nr)+wnu(inu)*Lmat(ir,1:nr)*Cs(1:nr)/(Ce(1:nr))
 		enddo
@@ -982,21 +1227,23 @@ c
 	do ir=1,nr
 		Linv(ir,ir)=1d0+Linv(ir,ir)
 	enddo
-	Itot(1:nr)=Si(1:nr)
+	Itot(1:nr)=Si_in(1:nr)
 	call DGESV( nr, NRHS, Linv, nr, IWORKomp, Itot, nr, info )
 	Si(1:nr)=Itot(1:nr)
+	do ir=1,nr
+		if(.not.Si(ir).gt.0d0) then
+			Si(ir)=Si_in(ir)
+		endif
+	enddo
+	Si_in=Si
 	deallocate(IWORKomp)
 
 	return
 	end
 
 
-c-----------------------------------------------------------------------
-c-----------------------------------------------------------------------
 
-
-
-	subroutine AddScatter(Si,Ca,Cs)
+	subroutine AddScatter_old(Si,Ca,Cs)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
@@ -1067,8 +1314,76 @@ c-----------------------------------------------------------------------
 	
 	return
 	end
+	
 
 
+
+	subroutine ComputeSurface()
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 SurfEmis(nlam),e1(nlam),e2(nlam),tot
+	external Enstatite_X,Enstatite_Y,Enstatite_Z
+	external Forsterite_X,Forsterite_Y,Forsterite_Z
+	external Labradorite_X,Labradorite_Y,Labradorite_Z,SiO2
+	integer i
+
+c=========================================
+c compute emissivity of the surface
+c=========================================
+	surface_emis=0d0
+
+	tot=0.0d0
+	call RegridDataLNK(Enstatite_X,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+	call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+	surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+	call RegridDataLNK(Enstatite_Y,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+	call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+	surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+	call RegridDataLNK(Enstatite_Z,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+	call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+	surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+
+	tot=0.0d0
+	call RegridDataLNK(Forsterite_X,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+	call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+	surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+	call RegridDataLNK(Forsterite_Y,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+	call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+	surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+	call RegridDataLNK(Forsterite_Z,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+	call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+	surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+
+	tot=1.0d0
+	call RegridDataLNK(Labradorite_X,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+	call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+	surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+	call RegridDataLNK(Labradorite_Y,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+	call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+	surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+	call RegridDataLNK(Labradorite_Z,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+	call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+	surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+
+	tot=0.0d0
+	call RegridDataLNK(SiO2,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+	call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+	surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
+
+	surface_emis=1d0
+
+	open(unit=93,file='surfemis.dat')
+	do i=1,nlam
+		write(93,*) lam(i),surface_emis(i)
+	enddo
+	close(unit=93)
+
+c=========================================
+c=========================================
+
+
+	return
+	end
 
 
 
