@@ -65,14 +65,14 @@
 
 	i=index(CIA(icia)%name,'-')
 	read(CIA(icia)%name(1:i-1),*) name
-	do i=1,48
+	do i=1,nmol_data
 		if(name.eq.molname(i)) then
 			CIA(icia)%imol1=i
 		endif
 	enddo
 	i=index(CIA(icia)%name,'-')
 	read(CIA(icia)%name(i+1:20),*) name
-	do i=1,48
+	do i=1,nmol_data
 		if(name.eq.molname(i)) then
 			CIA(icia)%imol2=i
 		endif
