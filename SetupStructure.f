@@ -684,7 +684,6 @@ c			write(82,*) P(i), Kzz_r(i)
 	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau,P_SI1,P_SI2,veff,frac(nr,10)
 	logical cl
 
-	print*,Cloud(ii)%file	
 	if(Cloud(ii)%simplecloud) then
 		Cloud(ii)%ptype='SIMPLE'
 		call SetupPartCloud(ii)
@@ -1865,8 +1864,8 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	integer nm,i
 	real*8 mf(nm),Pin,P0,mm
 	
-	open(unit=20,file='dbf26/a_p_G4___.tsv')
-1	read(20,*) P0,mf(1),mf(6),mf(11),mf(5),mf(2),mf(28),mf(56),mf(57)
+	open(unit=20,file='dbf26/a_p_WA___.tsv')
+1	read(20,*,end=2) P0,mf(1),mf(6),mf(11),mf(5),mf(2),mf(28),mf(56),mf(57)
 	if(P0.ge.Pin) then
 		mm=0d0
 		do i=1,nm
@@ -1877,7 +1876,7 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 		return
 	endif
 	goto 1
-
+2	continue
 	close(unit=20)
 	return
 	end

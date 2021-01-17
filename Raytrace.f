@@ -3,7 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot,Ag
-	real*8 Ca,Cs,BBr(nr),tot,contr
+	real*8 Ca,Cs,BBr(0:nr),tot,contr
 	integer icloud,isize
 	real*8,allocatable :: rtrace(:),phase0(:),ptrace(:)
 	real*8,allocatable :: fluxg_contr(:),fact_contr(:),Ag_contr(:)
@@ -275,6 +275,7 @@
 		obsA(:,ilam)=0d0
 		obsA_contr(1:nr,ilam)=0d0
 		flux_contr(1:nr,ilam)=flux(0,ilam)
+		BBr(0)=Planck(Tsurface,freq0)
 		do ir=1,nr
 			BBr(ir)=Planck(T(ir),freq0)
 		enddo
@@ -336,11 +337,11 @@
 					enddo
 
 					if(ir_next.le.0) then
-						fluxg=fluxg+A*BBr(1)*fact
+						fluxg=fluxg+A*BBr(0)*fact
 						if(computecontrib) then
 							do irc=1,nr
 								if(ir.ne.irc) then
-									contr=A*BBr(1)*fact_contr(irc)
+									contr=A*BBr(0)*fact_contr(irc)
 									fluxg_contr(irc)=fluxg_contr(irc)+contr
 								endif
 							enddo

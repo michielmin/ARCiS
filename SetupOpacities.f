@@ -70,6 +70,16 @@ c	n_nu_line=ng*min(j,4)
 	do ir=nr,1,-1
 		call tellertje(nr-ir+1,nr)
 		cont_tot=0d0
+
+c===============
+c UV cross sections of CO2 from Venot et al.
+c		call CO2_UV_cross(lam,cont_tot,nlam,min(T(ir),800d0))
+c		cont_tot=cont_tot*mixrat_r(ir,2)
+c		do i=1,nlam
+c			if(lam(i).gt.0.3d-4) cont_tot(i)=0d0
+c		enddo
+c===============
+
 		if(P(ir).gt.psimplecloud) then
 			cont_tot(1:nlam)=1d0/Ndens(ir)
 		endif
@@ -99,7 +109,7 @@ c	n_nu_line=ng*min(j,4)
 		allocate(ktemp(ng))
 		allocate(kappa(ng))
 		allocate(w_line(n_nu_line))
-!$OMP DO
+!$OMP DO SCHEDULE(DYNAMIC,1)
 		do i=1,nlam-1
 			if(emisspec.or.computeT) then
 			tot=0d0
@@ -892,5 +902,33 @@ c		enddo
 	end
 
 
+	
+	subroutine CO2_UV_cross(lam,C,nlam,T)
+c Venot et al. 2018
+	IMPLICIT NONE
+	integer nlam,i
+	real*8 lam(nlam),C(nlam),T
+	real*8 s1,s2,s3,A1,A2,A3,nu,nu1,nu2,nu3
+	
+	s1=877.36+10947.81*exp(-1382.63/T)
+	s2=T*(2.78+49.52*exp(-0.00654*T))
+	s3=T*(8.17+46.12*exp(-0.00813*T))
+	
+	A1=50d-19
+	A2=(3.58+9.18*exp(-580.92/T))*1d-19
+	A3=(4.09+0.0022*T)*1d-19
 
+	nu1=88574.0
+	nu2=76000.0
+	nu3=68000.0
+	
+	do i=1,nlam
+		nu=1d0/lam(i)
+		C(i)=A1*exp(-(nu-nu1)**2/(2d0*s1**2))
+     &		+A2*exp(-(nu-nu2)**2/(2d0*s2**2))
+     &		+A3*exp(-(nu-nu3)**2/(2d0*s3**2))
+	enddo
+	
+	return
+	end
 		

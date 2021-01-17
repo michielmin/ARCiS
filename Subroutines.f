@@ -491,10 +491,32 @@ c-----------------------------------------------------------------------
       goto 1
       END
 
+
+	subroutine sortw(array,warray,n)
+	IMPLICIT NONE
+	integer n
+	real*8 array(n),warray(n)
+	integer i,j
+	real*8 temp,wtemp
+
+	do i=2,n
+		temp=array(i)
+		wtemp=warray(i)
+		do j=i-1,1,-1
+			if (array(j).le.temp) exit
+			array(j+1)=array(j)
+			warray(j+1)=warray(j)
+		enddo
+		array(j+1)=temp
+		warray(j+1)=wtemp
+	enddo
+	return
+	end
+
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 	
-      SUBROUTINE sortw(arr,brr,n)
+      SUBROUTINE sortw_2(arr,brr,n)
       INTEGER n,M,NSTACK
       REAL*8 arr(n),brr(n)
       PARAMETER (M=7,NSTACK=50)
@@ -592,6 +614,61 @@ c-----------------------------------------------------------------------
 
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
+
+
+	subroutine sortw_new(array,warray,last)
+	IMPLICIT NONE
+	integer i,j,left,right,last
+	real*8 array(last),warray(last)
+	real*8 temp,p,next,wtemp,wnext
+
+	p=0.5*(array(1)+array(last))
+	if (array(1).gt.array(last)) then
+		temp=array(last)
+		array(last)=array(1)
+		array(1)=temp
+		wtemp=warray(last)
+		warray(last)=warray(1)
+		warray(1)=wtemp
+	endif
+
+	left=1
+	right=last
+	temp=array(2)
+	wtemp=warray(2)
+
+	do i=2,last-1
+		if (temp.lt.p) then
+			do j=left,1,-1
+				if (array(j).le.temp) exit
+				array(j+1)=array(j)
+				warray(j+1)=warray(j)
+			enddo
+			array(j+1)=temp
+			warray(j+1)=wtemp
+			temp=array(left+2)
+			wtemp=warray(left+2)
+			left=left+1
+		else
+			next=array(right-1)
+			wnext=warray(right-1)
+			do j=right,last
+				if (array(j).ge.temp) exit
+				array(j-1)=array(j)
+				warray(j-1)=warray(j)
+			enddo
+			array(j-1)=temp
+			warray(j-1)=wtemp
+			temp=next
+			wtemp=wnext
+			right=right-1	
+		endif
+	enddo
+
+	return
+	end
+
+
 
 	
       SUBROUTINE spline(x,y,n,yp1,ypn,y2)

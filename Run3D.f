@@ -151,6 +151,9 @@ c	file='sedlhs.txt'
 c	call regridlog(file,1d4*lam,Fstar,nlam)
 c	Fstar=Fstar*distance**2/1e23
 c===============================================================
+c	do ilam=1,nlam
+c		Fstar(ilam)=Planck(Tstar,freq(ilam))*pi*Rstar**2
+c	enddo
 			call ComputeModel1D(recomputeopac)
 		endif
 
@@ -165,7 +168,7 @@ c===============================================================
 		do ir=1,nr
 			T3D(i,ir)=T(ir)
 			mixrat3D(i,ir,1:nmol)=mixrat_r(ir,1:nmol)
-			do ilam=1,nlam-1
+			do ilam=1,nlam
 				if(useobsgrid) then
 					freq0=freq(ilam)
 				else
@@ -201,7 +204,7 @@ c===============================================================
 		else
 			T3D(i,0)=T3D(i,1)
 		endif
-		do ilam=1,nlam-1
+		do ilam=1,nlam
 			if(useobsgrid) then
 				freq0=freq(ilam)
 			else
@@ -234,6 +237,15 @@ c===============================================================
 	Rmax=Rmax*1.001
 	R3D(1:n3D,nr+2)=Rmax
 	R3D2(1:n3D,nr+2)=Rmax**2
+
+	if(.not.retrieval) then
+		open(unit=20,file=trim(outputdir) // "surfacetemp3D.dat",RECL=6000)
+		do j=1,nlatt-1
+			write(20,*) T3D(ibeta(1:nlong-1,j),0)
+		enddo
+		close(unit=20)
+	endif
+
 
 	call output("Raytracing over the planet disk in 3D")
 
@@ -334,11 +346,11 @@ c Note we are here using the symmetry between North and South
 			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nr,nlong,nlatt)
 			if(i1next.le.0) then
 				j=j+1
-				do ilam=1,nlam-1
+				do ilam=1,nlam
 					i=ibeta(i2,i3)
 					inu=inu3D(i2,i3)
 					do ig=1,ng
-						contr=Si(ilam,ig,0,inu,i)
+						contr=Si(ilam,ig,0,inu,i)*abs(x*vx+y*vy+z*vz)/sqrt((x*x+y*y+z*z)*(vx*vx+vy*vy+vz*vz))
 						fluxp_omp(ilam)=fluxp_omp(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
 					enddo
 				enddo
@@ -404,6 +416,13 @@ c Note we are here using the symmetry between North and South
 			write(25,*) PTaverage3D(ipc,ir),P(ir),tmp(1:j)
 		enddo
 	endif
+	tot=0d0
+	do ilam=1,nlam-1
+		tot=tot+phase(ipc,0,ilam)*dfreq(ilam)
+	enddo
+	tot=tot*distance**2/1d23
+	print*,tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*Rstar**2*Rplanet**2/(Dplanet**2))
+
 	enddo
 	
 	deallocate(rtrace,wrtrace)
@@ -494,7 +513,11 @@ c Note we use the symmetry of the North and South here!
 			hit=.false.
 3			continue
 			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nr,nlong,nlatt)
-			if(i1next.le.0.or.i1next.ge.nr+2) goto 4
+			if(i1next.le.0) then
+				tauc(1:nlam)=1d5
+				goto 4
+			endif
+			if(i1next.ge.nr+2) goto 4
 			if(i1.le.nr) then
 				i=ibeta(i2,i3)
 				vv(1:nmol_count,i1,i)=vv(1:nmol_count,i1,i)+v
@@ -1401,7 +1424,8 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 				do ig=1,ng
 					tauRs(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
 					contr=(Fstar(ilam)/(4d0*pi*Dplanet**2))
-					call SolveIjStar(tauRs,contr,Ijs,nr)
+					call SolveIjStar(tauRs,Ijs,nr)
+					Ijs=Ijs*contr
 					Jstar_nu(1:nr,ilam,ig)=Ijs(1:nr)*2d0
 				enddo
 			enddo
@@ -1412,7 +1436,7 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 				Si(ilam,ig,0,inu0)=BBr(ilam,0)*surface_emis(ilam)+Jstar_nu(1,ilam,ig)*(1d0-surface_emis(ilam))
 				do inu=1,nnu
 					tauRs(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
-					call SolveIjSurface(tauRs,Ijs,nr)
+					call SolveIjSurf2(tauRs,Ijs,nr)
 					Jstar_nu(1:nr,ilam,ig)=Jstar_nu(1:nr,ilam,ig)+wnu(inu)*Ijs(1:nr)*Si(ilam,ig,0,inu0)
 				enddo
 			enddo
@@ -1437,16 +1461,19 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 						tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
 						call InvertIj(tauR,Lmat,nr)
 						do ir=1,nr
-							Linv(ir,1:nr)=Linv(ir,1:nr)+wnu(inu)*Lmat(ir,1:nr)*Cs(ilam,1:nr)/(Ce(ilam,ig,1:nr))
+							Linv(ir,2:nr-1)=Linv(ir,2:nr-1)+wnu(inu)*Lmat(ir,2:nr-1)*Cs(ilam,2:nr-1)/(Ce(ilam,ig,2:nr-1))
 						enddo
 					enddo
 					Linv=-Linv
 					do ir=1,nr
 						Linv(ir,ir)=1d0+Linv(ir,ir)
 					enddo
-					Itot(1:nr)=(BBr(ilam,1:nr)*Ca(ilam,ig,1:nr)+Jstar_nu(1:nr,ilam,ig)*Cs(ilam,1:nr))/Ce(ilam,ig,1:nr)
+					Itot=0d0
+					Itot(2:nr-1)=(BBr(ilam,2:nr-1)*Ca(ilam,ig,2:nr-1)+Jstar_nu(2:nr-1,ilam,ig)*Cs(ilam,2:nr-1))/Ce(ilam,ig,2:nr-1)
 					call DGESV( nr, NRHS, Linv, nr, IWORKomp, Itot, nr, info )
-					Si(ilam,ig,1:nr,inu0)=Itot(1:nr)
+					Si(ilam,ig,1,inu0)=BBr(ilam,1)*Ca(ilam,ig,1)/Ce(ilam,ig,1)
+					Si(ilam,ig,nr,inu0)=BBr(ilam,nr)*Ca(ilam,ig,nr)/Ce(ilam,ig,nr)
+					Si(ilam,ig,2:nr-1,inu0)=Itot(2:nr-1)
 					do ir=1,nr
 						if(.not.Si(ilam,ig,ir,inu0).gt.0d0) then
 							Si(ilam,ig,ir,inu0)=BBr(ilam,ir)*Ca(ilam,ig,ir)/Ce(ilam,ig,ir)
@@ -1476,6 +1503,113 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 	return
 	end
 
+	subroutine SolveIjSurf2(tauR_in,Ij,nr)
+	IMPLICIT NONE
+	integer ir,nr
+	real*8 tauR_in(nr),Ij(nr),x(nr+2),y(nr+2),fact,d,tauR(0:nr+1)
+	real*8 MM(nr+2,3),MMal(nr+2,1),Ma(nr+2),Mb(nr+2),Mc(nr+2)
+	integer indx(nr+2),info
+
+	tauR(1:nr)=tauR_in(1:nr)
+	tauR(0)=tauR(1)+100d0
+	tauR(nr+1)=0d0
+	
+	Ma=0d0
+	Mb=0d0
+	Mc=0d0
+	do ir=1,nr
+		fact=1d0/(0.5d0*(tauR(ir+1)+tauR(ir))-0.5d0*(tauR(ir)+tauR(ir-1)))
+		Mb(ir+1)=1d0+fact*(1d0/(tauR(ir+1)-tauR(ir))+1d0/(tauR(ir)-tauR(ir-1)))
+		Ma(ir+1)=-fact*1d0/(tauR(ir)-tauR(ir-1))
+		Mc(ir+1)=-fact*1d0/(tauR(ir+1)-tauR(ir))
+	enddo
+	Mb(1)=1d0/(tauR(0)-tauR(1))
+	Mc(1)=-1d0/(tauR(0)-tauR(1))
+	Ma(nr+2)=1d0/(tauR(nr))
+	Mb(nr+2)=-1d0-1d0/(tauR(nr))
+	x=0d0
+	x(1)=1d0
+	info=0
+	call tridag(Ma,Mb,Mc,x,y,nr+2,info)
+	Ij(1:nr)=y(2:nr+1)
+	do ir=1,nr
+		if(Ij(ir).lt.0d0) info=1
+	enddo
+	if(info.ne.0) then
+		do ir=1,nr+2
+			MM(ir,1)=Ma(ir)
+			MM(ir,2)=Mb(ir)
+			MM(ir,3)=Mc(ir)
+		enddo
+		call bandec(MM,nr+2,1,1,nr+2,3,MMal,1,indx,d)
+		x=0d0
+		x(1)=1d0
+		call banbks(MM,nr+2,1,1,nr+2,3,MMal,1,indx,x)
+		Ij(1:nr)=x(2:nr+1)
+	endif
+	do ir=1,nr
+		if(Ij(ir).lt.0d0) then
+			Ij(ir)=0d0
+		endif
+	enddo
+
+	return
+	end
+	
+
+	subroutine SolveIjStar(tauR_in,Ij,nr)
+	IMPLICIT NONE
+	integer ir,nr
+	real*8 tauR_in(nr),Ij(nr),x(nr+2),y(nr+2),fact,d,tauR(0:nr+1)
+	real*8 MM(nr+2,3),MMal(nr+2,1),Ma(nr+2),Mb(nr+2),Mc(nr+2)
+	integer indx(nr+2),info
+
+	tauR(1:nr)=tauR_in(1:nr)
+	tauR(0)=tauR(1)+100d0
+	tauR(nr+1)=0d0
+	
+	Ma=0d0
+	Mb=0d0
+	Mc=0d0
+	do ir=1,nr
+		fact=1d0/(0.5d0*(tauR(ir+1)+tauR(ir))-0.5d0*(tauR(ir)+tauR(ir-1)))
+		Mb(ir+1)=1d0+fact*(1d0/(tauR(ir+1)-tauR(ir))+1d0/(tauR(ir)-tauR(ir-1)))
+		Ma(ir+1)=-fact*1d0/(tauR(ir)-tauR(ir-1))
+		Mc(ir+1)=-fact*1d0/(tauR(ir+1)-tauR(ir))
+	enddo
+	Mb(1)=1d0+1d0/(tauR(0)-tauR(1))
+	Mc(1)=-1d0/(tauR(0)-tauR(1))
+	Ma(nr+2)=-1d0/(tauR(nr))
+	Mb(nr+2)=1d0/(tauR(nr))
+	x=0d0
+	x(nr+2)=1d0
+	info=0
+	call tridag(Ma,Mb,Mc,x,y,nr+2,info)
+	Ij(1:nr)=y(2:nr+1)
+	do ir=1,nr
+		if(Ij(ir).lt.0d0) info=1
+	enddo
+	if(info.ne.0) then
+		do ir=1,nr+2
+			MM(ir,1)=Ma(ir)
+			MM(ir,2)=Mb(ir)
+			MM(ir,3)=Mc(ir)
+		enddo
+		call bandec(MM,nr+2,1,1,nr+2,3,MMal,1,indx,d)
+		x=0d0
+		x(nr+2)=1d0
+		call banbks(MM,nr+2,1,1,nr+2,3,MMal,1,indx,x)
+		Ij(1:nr)=x(2:nr+1)
+	endif
+	do ir=1,nr
+		if(Ij(ir).lt.0d0) then
+			Ij(ir)=0d0
+		endif
+	enddo
+
+	return
+	end
+	
 
 	subroutine InvertIjExp(tau,Linv,nr)
 	IMPLICIT NONE
@@ -1526,34 +1660,6 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 		fact=fact*exptau
 	enddo
 	
-	return
-	end
-	
-
-	subroutine SolveIjExp(tau,Si,Ij,nr)
-	IMPLICIT NONE
-	integer ir,nr,jr
-	real*8 Ij(nr),Si(nr),tau(nr),Ip(nr),Im(nr)
-	real*8 exptau(nr),fact,exptau2,Q
-
-	do ir=1,nr
-		exptau(ir)=exp(-tau(ir))
-	enddo
-	
-	Ip=0d0
-	do ir=1,nr-1
-		Q=(Si(ir)*(1d0-(1d0+tau(ir))*exptau(ir))+Si(ir+1)*(tau(ir)-1d0+exptau(ir)))/tau(ir)
-		Ip(ir+1)=Ip(ir)*exptau(ir)+Q
-	enddo
-
-	Im=0d0
-	do ir=nr,2,-1
-		Q=(Si(ir)*(1d0-(1d0+tau(ir))*exptau(ir))+Si(ir-1)*(tau(ir)-1d0+exptau(ir)))/tau(ir)
-		Im(ir-1)=Im(ir)*exptau(ir)+Q
-	enddo
-
-	Ij=(Ip-Im)/2d0
-
 	return
 	end
 	
