@@ -1365,15 +1365,13 @@ c-----------------------------------------------------------------------
 	real*8,allocatable :: tauR(:),Ij(:),Itot(:),Linv(:,:),Lmat(:,:),Iprev(:)
 	integer,allocatable :: IWORKomp(:)
 
-	if(.not.scattering) then
-		do inu0=1,nnu0
-			do ig=1,ng
-				Si(1:nlam,ig,1:nr,inu0)=BBr(1:nlam,1:nr)*Ca(1:nlam,ig,1:nr)/(Ca(1:nlam,ig,1:nr)+Cs(1:nlam,1:nr))
-				Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
-			enddo
+	do inu0=1,nnu0
+		do ig=1,ng
+			Si(1:nlam,ig,1:nr,inu0)=BBr(1:nlam,1:nr)*Ca(1:nlam,ig,1:nr)/(Ca(1:nlam,ig,1:nr)+Cs(1:nlam,1:nr))
+			Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
 		enddo
-		return
-	endif
+	enddo
+	if(.not.scattering) return
 
 	do ir=1,nr
 		do ig=1,ng
@@ -1411,94 +1409,41 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 
 	call gauleg(0d0,1d0,nu,wnu,nnu)
 
-	do inu0=1,nnu0
-		if(inu0.eq.nnu0.or..not.scattstar) then
-			Jstar_nu=0d0
-			if(inu0.ne.1.and..not.scattstar) then
-				Si(1:nlam,1:ng,0:nr,inu0)=Si(1:nlam,1:ng,0:nr,1)
-				goto 1
-			endif
-		else
-			must=(real(inu0)-0.5)/real(nnu0-1)
-			do ilam=1,nlam-1
-				do ig=1,ng
-					tauRs(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
-					contr=(Fstar(ilam)/(4d0*pi*Dplanet**2))
-					call SolveIjStar(tauRs,Ijs,nr)
-					Ijs=Ijs*contr
-					Jstar_nu(1:nr,ilam,ig)=Ijs(1:nr)*2d0
-				enddo
-			enddo
-		endif
 
-		do ilam=1,nlam-1
-			do ig=1,ng
-				Si(ilam,ig,0,inu0)=BBr(ilam,0)*surface_emis(ilam)+Jstar_nu(1,ilam,ig)*(1d0-surface_emis(ilam))
-				do inu=1,nnu
-					tauRs(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
-					call SolveIjSurf2(tauRs,Ijs,nr)
-					Jstar_nu(1:nr,ilam,ig)=Jstar_nu(1:nr,ilam,ig)+wnu(inu)*Ijs(1:nr)*Si(ilam,ig,0,inu0)
-				enddo
-			enddo
-		enddo
-	
-		NRHS=1
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,ig,Linv,Lmat,tauR,Itot,IWORKomp,inu,ir,info)
-!$OMP& SHARED(nlam,ng,lamemis,tauR_nu,nr,wnu,nu,BBr,Ca,Cs,Ce,Si,inu0,NRHS,Jstar_nu)
-		allocate(tauR(nr))
-		allocate(Itot(nr))
-		allocate(Linv(nr,nr))
-		allocate(Lmat(nr,nr))
-		allocate(IWORKomp(10*nr*nr))
+!$OMP& PRIVATE(tauR,Ij,ilam,ig,inu0,inu,contr,must)
+!$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar)
+	allocate(tauR(nr),Ij(nr))
 !$OMP DO
-		do ilam=1,nlam-1
-			if(lamemis(ilam)) then
-				do ig=1,ng
-					Linv=0d0
-					do inu=1,nnu
-						tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
-						call InvertIj(tauR,Lmat,nr)
-						do ir=1,nr
-							Linv(ir,2:nr-1)=Linv(ir,2:nr-1)+wnu(inu)*Lmat(ir,2:nr-1)*Cs(ilam,2:nr-1)/(Ce(ilam,ig,2:nr-1))
-						enddo
-					enddo
-					Linv=-Linv
-					do ir=1,nr
-						Linv(ir,ir)=1d0+Linv(ir,ir)
-					enddo
-					Itot=0d0
-					Itot(2:nr-1)=(BBr(ilam,2:nr-1)*Ca(ilam,ig,2:nr-1)+Jstar_nu(2:nr-1,ilam,ig)*Cs(ilam,2:nr-1))/Ce(ilam,ig,2:nr-1)
-					call DGESV( nr, NRHS, Linv, nr, IWORKomp, Itot, nr, info )
-					Si(ilam,ig,1,inu0)=BBr(ilam,1)*Ca(ilam,ig,1)/Ce(ilam,ig,1)
-					Si(ilam,ig,nr,inu0)=BBr(ilam,nr)*Ca(ilam,ig,nr)/Ce(ilam,ig,nr)
-					Si(ilam,ig,2:nr-1,inu0)=Itot(2:nr-1)
-					do ir=1,nr
-						if(.not.Si(ilam,ig,ir,inu0).gt.0d0) then
-							Si(ilam,ig,ir,inu0)=BBr(ilam,ir)*Ca(ilam,ig,ir)/Ce(ilam,ig,ir)
-						endif
-					enddo
+	do ilam=1,nlam-1
+		do ig=1,ng
+			do inu0=1,nnu0
+				if(inu0.ne.nnu0.and.scattstar) then
+					must=(real(inu0)-0.5)/real(nnu0-1)
+					contr=must*(Fstar(ilam)/(4d0*Dplanet**2))
+					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
+					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+contr*exp(-tauR(1:nr))*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)
+					contr=contr*exp(-tauR(1))
+				else
+					contr=0d0
+				endif
+				Si(ilam,ig,0,inu0)=Si(ilam,ig,0,inu0)+contr*(1d0-surface_emis(ilam))
+				do inu=1,nnu
+					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
+					tauR(1:nr)=abs(tauR(1:nr)-tauR(1))
+					Ij(1:nr)=(BBr(ilam,0)*surface_emis(ilam)+contr*(1d0-surface_emis(ilam)))*exp(-tauR(1:nr))
+					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+2d0*nu(inu)*wnu(inu)*Ij(1:nr)*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)
 				enddo
-			else
-				do ig=1,ng
-					do ir=1,nr
-						Si(ilam,ig,ir,inu0)=BBr(ilam,ir)*Ca(ilam,ig,ir)/Ce(ilam,ig,ir)
-					enddo
-				enddo
-			endif
+			enddo
+			call AddScatter(Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ilam,ig),
+     &					Ca(ilam,ig,1:nr),Cs(ilam,1:nr),Ce(ilam,ig,1:nr),nr,nu,wnu,nnu,nnu0)
 		enddo
+	enddo
 !$OMP END DO
-		deallocate(tauR)
-		deallocate(Itot)
-		deallocate(Linv)
-		deallocate(Lmat)
-		deallocate(IWORKomp)
+	deallocate(tauR,Ij)
 !$OMP FLUSH
 !$OMP END PARALLEL
-
-1       continue
-	enddo	
 	
 	return
 	end

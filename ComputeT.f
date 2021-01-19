@@ -377,7 +377,8 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 				Ij_omp(0:nr)=exp(-abs(tauR_omp(0:nr)-tauR_omp(0)))*SurfEmis_LR(ilam)
 				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,Ij_omp(0),Ij_omp(nr))
-				Si_omp(0:nr,nr+1)=Si_omp(0:nr,nr+1)+0.5d0*pi*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(0:nr)
+				Ih_omp(0:nr)=Ij_omp(0:nr)
+				Si_omp(0:nr,nr+1)=Si_omp(0:nr,nr+1)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(0:nr)
 				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+0.5d0*pi*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
 			enddo
 			Si_omp(0,nr+1)=0d0
@@ -1388,7 +1389,7 @@ c=========================================
 	call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
 	surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
 
-c	surface_emis(1:nlam)=0.9
+	surface_emis(1:nlam)=1.0
 
 	open(unit=93,file='surfemis.dat')
 	do i=1,nlam
