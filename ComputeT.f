@@ -50,11 +50,11 @@
 	real*8 specres_LR,IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr)
 	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
 	integer i1,i2,ngF,j
-	real*8 ww,w1,w2,SurfStar,SurfStar_omp
+	real*8 ww,w1,w2,SurfStar,SurfStar_omp,FstarBottom
 	real*8,allocatable :: Si_omp(:,:),Ih_omp(:),Ij_omp(:),tauR_omp(:),Hsurf(:,:),Hstar_omp(:)
 	real*8,allocatable :: temp_a(:),wtemp(:),Ca_HR(:,:),Cs_HR(:,:),Fstar_LR(:),SurfEmis_LR(:)
 	integer,allocatable :: IP(:)
-	real*8,allocatable :: WS(:),nu(:),wnu(:),ScattStarContr(:)
+	real*8,allocatable :: WS(:),nu(:),wnu(:)
 	real*8,allocatable :: x_SIj(:),y_SIj(:),tauR_SIj(:),Ma_SIj(:),Mb_SIj(:),Mc_SIj(:)
 	character*500 file
 	
@@ -73,7 +73,6 @@
 	allocate(lam_LR(nlam_LR))
 	allocate(freq_LR(nlam_LR))
 	allocate(dfreq_LR(nlam_LR))
-	allocate(ScattStarContr(nlam_LR))
 	lam_LR(1)=lam(1)
 	do i=2,nlam_LR-1
 		lam_LR(i)=lam_LR(i-1)*(1d0+1d0/specres_LR)
@@ -338,14 +337,13 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	Hstar(0:nr)=0d0
 	SurfStar=0d0
 	IntHnu(1:nlam_LR,0:nr,0:nr)=0d0
-	ScattStarContr=0d0
 	
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(x_SIj,y_SIj,tauR_SIj,Ma_SIj,Mb_SIj,Mc_SIj,Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,
-!$OMP&			Hstar_omp,SurfStar_omp,contr)
+!$OMP&			Hstar_omp,SurfStar_omp,contr,FstarBottom)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,
-!$OMP&			Hstar,SurfStar,Dplanet,Fstar_LR,must,ScattStarContr)
+!$OMP&			Hstar,SurfStar,Dplanet,Fstar_LR,must)
 	allocate(x_SIj(nr+2),y_SIj(nr+2),tauR_SIj(0:nr+1),Ma_SIj(nr+2),Mb_SIj(nr+2),Mc_SIj(nr+2))
 	allocate(Si_omp(0:nr,0:nr+1),tauR_omp(0:nr),Ih_omp(0:nr),Ij_omp(0:nr))
 	allocate(Hstar_omp(0:nr))
@@ -355,17 +353,18 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	do ilam=1,nlam_LR-1
 		call tellertje(ilam,nlam_LR-1)
 		do ig=1,ng
-			contr=(Fstar_LR(ilam)/(4d0*Dplanet**2))
+			contr=must*(Fstar_LR(ilam)/(pi*Dplanet**2))
 			tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(must)
 			Ij_omp(0:nr)=contr*exp(-tauR_omp(0:nr))
 			Ih_omp(0:nr-1)=-contr*exp(-(tauR_omp(0:nr-1)+tauR_omp(1:nr))/2d0)
 			Ih_omp(nr)=-contr*exp(-tauR_omp(nr))
 
-			Hstar_omp(0:nr)=Hstar_omp(0:nr)+must*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
-			SurfStar_omp=SurfStar_omp+must*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1)*SurfEmis_LR(ilam)
+			Hstar_omp(0:nr)=Hstar_omp(0:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
+			SurfStar_omp=SurfStar_omp+dfreq_LR(ilam)*wgg(ig)*Ij_omp(1)*SurfEmis_LR(ilam)
+			FstarBottom=Ij_omp(1)
 
-			Si_omp(1:nr,0)=must*Ij_omp(1:nr)*Cs(1:nr,ilam,ig)/Ce(1:nr,ilam,ig)
-			Si_omp(0,0)=must*Ij_omp(0)*(1d0-SurfEmis_LR(ilam))
+			Si_omp(1:nr,0)=0.25d0*Ij_omp(1:nr)*Cs(1:nr,ilam,ig)/Ce(1:nr,ilam,ig)
+			Si_omp(0,0)=Ij_omp(0)*(1d0-SurfEmis_LR(ilam))
 
 			do ir=1,nr
 				Si_omp(0:nr,ir)=0d0
@@ -375,11 +374,11 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 			Si_omp(0:nr,nr+1)=0d0
 			do inu=1,nnu
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
-				Ij_omp(0:nr)=exp(-abs(tauR_omp(0:nr)-tauR_omp(0)))*SurfEmis_LR(ilam)
+				Ij_omp(0:nr)=exp(-abs(tauR_omp(0:nr)-tauR_omp(0)))
 				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,Ij_omp(0),Ij_omp(nr))
 				Ih_omp(0:nr)=Ij_omp(0:nr)
-				Si_omp(0:nr,nr+1)=Si_omp(0:nr,nr+1)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(0:nr)
-				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+0.5d0*pi*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
+				Si_omp(0:nr,nr+1)=Si_omp(0:nr,nr+1)+0.5d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(0:nr)
+				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
 			enddo
 			Si_omp(0,nr+1)=0d0
 			Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)*Cs(1:nr,ilam,ig)/Ce(1:nr,ilam,ig)
@@ -391,9 +390,8 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 				call SolveIj(tauR_omp(0:nr),Si_omp(0:nr,0),Ij_omp(0:nr),nr,x_SIj,y_SIj,tauR_SIj(0:nr+1),Ma_SIj,Mb_SIj,Mc_SIj)
 				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
-				Hstar_omp(0:nr)=Hstar_omp(0:nr)+nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
-				ScattStarContr(ilam)=ScattStarContr(ilam)+nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(nr)
-				SurfStar_omp=SurfStar_omp+nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1)*SurfEmis_LR(ilam)
+				Hstar_omp(0:nr)=Hstar_omp(0:nr)+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
+				SurfStar_omp=SurfStar_omp+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1)*SurfEmis_LR(ilam)
 			enddo
 
 			do ir=1,nr
@@ -401,7 +399,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 					tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 					call SolveIj(tauR_omp(0:nr),Si_omp(0:nr,ir),Ij_omp(0:nr),nr,x_SIj,y_SIj,tauR_SIj(0:nr+1),Ma_SIj,Mb_SIj,Mc_SIj)
 					call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
-					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+nu(inu)*2d0*pi*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
+					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 				enddo
 			enddo
 
@@ -409,12 +407,8 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 				call SolveIj(tauR_omp(0:nr),Si_omp(0:nr,nr+1),Ij_omp(0:nr),nr,x_SIj,y_SIj,tauR_SIj(0:nr+1),Ma_SIj,Mb_SIj,Mc_SIj)
 				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
-				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+nu(inu)*wnu(inu)*Ih_omp(0:nr)
-
-				Hstar_omp(0:nr)=Hstar_omp(0:nr)
-     &				+nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)*Si_omp(0,0)/SurfEmis_LR(ilam)
-				ScattStarContr(ilam)=ScattStarContr(ilam)
-     &				+nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(nr)*Si_omp(0,0)/SurfEmis_LR(ilam)
+				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+8d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)
+				Hstar_omp(0:nr)=Hstar_omp(0:nr)+FstarBottom*8d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)*(1d0-SurfEmis_LR(ilam))
 			enddo
 		enddo
 	enddo
@@ -435,7 +429,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	Ts(1:nr)=T(1:nr)
 
 	Hedd=0d0
-	E0=pi*(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
+	E0=4d0*(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
 	do ir=0,nr
 		Hedd(ir)=Hedd(ir)+E0-Hstar(ir)
 	enddo
@@ -460,7 +454,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	scale=(Tsurface/real(iT))**4
 	do ir=1,nr
 		do ilam=1,nlam_LR-1
-			Fl(ir)=Fl(ir)-scale*BB_LR(iT,ilam)*IntHnu(ilam,ir,0)
+			Fl(ir)=Fl(ir)-IntHnu(ilam,ir,0)*scale*BB_LR(iT,ilam)*SurfEmis_LR(ilam)
 		enddo
 	enddo
 	do ir=1,nr
@@ -558,7 +552,6 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 			enddo
 		enddo
 	enddo
-	E=E*4d0/pi
 
 	iTmin=1
 	iTmax=nBB
@@ -585,6 +578,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	enddo
 
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
+	print*,Tsurface
 
 	do ir=nr-1,1,-1
 		if(ir.lt.nr) then
@@ -1149,71 +1143,45 @@ c
 
 
 
-	subroutine InvertIj(tauR,Linv,nr)
+	subroutine InvertIj(tauR_in,Linv,nr)
 	IMPLICIT NONE
-	integer ir,nr,iir
-	real*8 tauR(nr),Ij(nr),Si(nr),Linv(nr,nr),Lmat(nr,nr)
-	real*8 x(nr),y(nr),fact,d
-	real*8 MM(nr,3),MMal(nr,1),Ma(nr),Mb(nr),Mc(nr)
-	integer indx(nr),info
+	integer ir,nr,iir,nrr
+	real*8 tauR_in(nr),Linv(nr,nr),Lmat(0:nr+1,0:nr+1)
+	real*8 tauR(0:nr+1),fact
+	real*8 Ma(nr+2),Mb(nr+2),Mc(nr+2)
+	integer info
+
+	tauR(1:nr)=tauR_in(1:nr)
+	tauR(nr+1)=0d0
+	tauR(0)=tauR(1)+1d-2
 
 	Ma=0d0
 	Mb=0d0
 	Mc=0d0
-	do ir=2,nr-1
+	ir=1
+	do ir=1,nr
 		fact=1d0/(0.5d0*(tauR(ir+1)+tauR(ir))-0.5d0*(tauR(ir)+tauR(ir-1)))
-		Mb(ir)=1d0+fact*(1d0/(tauR(ir+1)-tauR(ir))+1d0/(tauR(ir)-tauR(ir-1)))
-		Ma(ir)=-fact*1d0/(tauR(ir)-tauR(ir-1))
-		Mc(ir)=-fact*1d0/(tauR(ir+1)-tauR(ir))
+		Mb(ir+1)=1d0+fact*(1d0/(tauR(ir+1)-tauR(ir))+1d0/(tauR(ir)-tauR(ir-1)))
+		Ma(ir+1)=-fact*1d0/(tauR(ir)-tauR(ir-1))
+		Mc(ir+1)=-fact*1d0/(tauR(ir+1)-tauR(ir))
 	enddo
-	Mb(1)=1d0/(tauR(1)-tauR(2))
-	Mc(1)=-1d0/(tauR(1)-tauR(2))
-	Ma(nr)=1d0/(tauR(nr-1)-tauR(nr))
-	Mb(nr)=-1d0-1d0/(tauR(nr-1)-tauR(nr))
+	Mb(1)=1d0+1d0/(tauR(0)-tauR(1))
+	Mc(1)=-1d0/(tauR(0)-tauR(1))
+	Ma(nr+2)=1d0/(tauR(nr))
+	Mb(nr+2)=-1d0-1d0/(tauR(nr))
 	Linv=0d0
 
-	Lmat=0d0
-	do iir=1,nr
+	Lmat(0:nr+1,0:nr+1)=0d0
+	do iir=0,nr+1
 		Lmat(iir,iir)=1d0
 	enddo
-	call dgtsv(nr,nr,Ma(2:nr),Mb(1:nr),Mc(1:nr-1),Lmat,nr,info)
+	nrr=nr+2
+	call dgtsv(nrr,nrr,Ma(2:nr+2),Mb(1:nr+2),Mc(1:nr+1),Lmat(0:nr+1,0:nr+1),nrr,info)
 	do ir=1,nr
 		do iir=1,nr
 			Linv(ir,iir)=Lmat(ir,iir)
 		enddo
 	enddo
-
-	return
-
-	do iir=2,nr-1
-		x=0d0
-		x(iir)=1d0
-		info=0
-		call tridag(Ma,Mb,Mc,x,y,nr,info)
-		Ij(1:nr)=y(1:nr)
-		do ir=1,nr
-			if(Ij(ir).lt.0d0) info=1
-		enddo
-		if(info.ne.0) then
-			do ir=1,nr
-				MM(ir,1)=Ma(ir)
-				MM(ir,2)=Mb(ir)
-				MM(ir,3)=Mc(ir)
-			enddo
-			call bandec(MM,nr,1,1,nr,3,MMal,1,indx,d)
-			x=0d0
-			x(iir)=1d0
-			call banbks(MM,nr,1,1,nr,3,MMal,1,indx,x)
-			Ij(1:nr)=x(1:nr)
-		endif
-		do ir=1,nr
-			if(Ij(ir).lt.0d0) then
-				Ij(ir)=0d0
-			endif
-		enddo
-		Linv(iir,1:nr)=Ij(1:nr)
-	enddo
-
 
 	return
 	end
@@ -1244,7 +1212,7 @@ c
 		Linv(ir,ir)=1d0+Linv(ir,ir)
 	enddo
 	Itot=0d0
-	Itot(2:nr-1,1:NRHS)=Si_in(2:nr-1,1:NRHS)
+	Itot(1:nr,1:NRHS)=Si_in(1:nr,1:NRHS)
 	call DGESV( nr, NRHS, Linv, nr, IWORKomp, Itot, nr, info )
 	Si(1:nr,1:NRHS)=Itot(1:nr,1:NRHS)
 	do i=1,NRHS

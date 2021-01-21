@@ -292,7 +292,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		enddo
 	endif
 
-	if(computecontrib) then
+	if(computecontrib.and.allocated(obsA_contr)) then
 		molweight=0d0
 		Tweight=0d0
 		Pweight=0d0

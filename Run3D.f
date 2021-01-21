@@ -421,7 +421,7 @@ c Note we are here using the symmetry between North and South
 		tot=tot+phase(ipc,0,ilam)*dfreq(ilam)
 	enddo
 	tot=tot*distance**2/1d23
-	print*,tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*Rstar**2*Rplanet**2/(Dplanet**2))
+	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*Rstar**2*Rplanet**2/(Dplanet**2))
 
 	enddo
 	
@@ -1385,10 +1385,8 @@ c-----------------------------------------------------------------------
 	do ilam=1,nlam-1
 		do ig=1,ng
 			do ir=nr,1,-1
-c				d=abs(P(ir+1)-P(ir))*1d6/grav(ir)
-c				tau=d*Ce(ilam,ig,ir)/dens(ir)
-				d=R(ir+1)-R(ir)
-				tau=d*Ce(ilam,ig,ir)
+				d=abs(P(ir+1)-P(ir))*1d6/grav(ir)
+				tau=d*Ce(ilam,ig,ir)/dens(ir)
 				if(P(ir).gt.Psimplecloud) then
 					tau=tau+1d4
 				endif
@@ -1421,9 +1419,9 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 			do inu0=1,nnu0
 				if(inu0.ne.nnu0.and.scattstar) then
 					must=(real(inu0)-0.5)/real(nnu0-1)
-					contr=must*(Fstar(ilam)/(4d0*Dplanet**2))
+					contr=must*(Fstar(ilam)/(pi*Dplanet**2))
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
-					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+contr*exp(-tauR(1:nr))*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)
+					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+0.25d0*contr*exp(-tauR(1:nr))*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)
 					contr=contr*exp(-tauR(1))
 				else
 					contr=0d0
@@ -1433,7 +1431,7 @@ c				tau=d*Ce(ilam,ig,ir)/dens(ir)
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
 					tauR(1:nr)=abs(tauR(1:nr)-tauR(1))
 					Ij(1:nr)=(BBr(ilam,0)*surface_emis(ilam)+contr*(1d0-surface_emis(ilam)))*exp(-tauR(1:nr))
-					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+2d0*nu(inu)*wnu(inu)*Ij(1:nr)*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)
+					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+0.5d0*nu(inu)*wnu(inu)*Ij(1:nr)*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)
 				enddo
 			enddo
 			call AddScatter(Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ilam,ig),
