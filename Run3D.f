@@ -297,7 +297,7 @@ c	enddo
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,Ij,tau1,fact,exp_tau1,contr)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,inu3D,fulloutput3D,Rplanet,
-!$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis)
+!$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
 	allocate(fluxp_omp(nlam))
 	fluxp_omp=0d0
@@ -346,13 +346,15 @@ c Note we are here using the symmetry between North and South
 			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nr,nlong,nlatt)
 			if(i1next.le.0) then
 				j=j+1
+				i=ibeta(i2,i3)
+				inu=inu3D(i2,i3)
 				do ilam=1,nlam
-					i=ibeta(i2,i3)
-					inu=inu3D(i2,i3)
+					if(lamemis(ilam)) then
 					do ig=1,ng
 						contr=Si(ilam,ig,0,inu,i)*abs(x*vx+y*vy+z*vz)/sqrt((x*x+y*y+z*z)*(vx*vx+vy*vy+vz*vz))
 						fluxp_omp(ilam)=fluxp_omp(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
 					enddo
+					endif
 				enddo
 				goto 2
 			endif
@@ -360,13 +362,15 @@ c Note we are here using the symmetry between North and South
 			if(i1.le.nr) then
 				i=ibeta(i2,i3)
 				inu=inu3D(i2,i3)
-				do ig=1,ng
-					do ilam=1,nlam
+				do ilam=1,nlam
+					if(lamemis(ilam)) then
+					do ig=1,ng
 						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
 						exp_tau1=exp(-tau1)
 						fluxp_omp(ilam)=fluxp_omp(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
 						fact(ilam,ig)=fact(ilam,ig)*exp_tau1
 					enddo
+					endif
 				enddo
 			endif
 			x=x+v*vx
@@ -1411,10 +1415,11 @@ c-----------------------------------------------------------------------
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(tauR,Ij,ilam,ig,inu0,inu,contr,must)
-!$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar)
+!$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar,lamemis)
 	allocate(tauR(nr),Ij(nr))
 !$OMP DO
 	do ilam=1,nlam-1
+		if(lamemis(ilam)) then
 		do ig=1,ng
 			do inu0=1,nnu0
 				if(inu0.ne.nnu0.and.scattstar) then
@@ -1437,6 +1442,7 @@ c-----------------------------------------------------------------------
 			call AddScatter(Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ilam,ig),
      &					Ca(ilam,ig,1:nr),Cs(ilam,1:nr),Ce(ilam,ig,1:nr),nr,nu,wnu,nnu,nnu0)
 		enddo
+		endif
 	enddo
 !$OMP END DO
 	deallocate(tauR,Ij)

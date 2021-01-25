@@ -104,14 +104,14 @@ c===============
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,j,k_line,imol,ig,kappa,ktemp,ig_c,tot,tot2,imol0,w1,w_line)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,
-!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT)
+!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid)
 		allocate(k_line(n_nu_line))
 		allocate(ktemp(ng))
 		allocate(kappa(ng))
 		allocate(w_line(n_nu_line))
 !$OMP DO SCHEDULE(DYNAMIC,1)
 		do i=1,nlam-1
-			if(emisspec.or.computeT) then
+			if((emisspec.or.computeT).and.(.not.useobsgrid.or.lamemis(i))) then
 			tot=0d0
 			do imol=1,nmol
 				if(opacitymol(imol)) then

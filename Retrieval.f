@@ -7,6 +7,11 @@
 	real*8 scale,scale_av,d,dmin
 	integer nscale,i2,j2
 	logical truefalse
+
+	if(useobsgrid) then
+		lamemis=.false.
+		lamtrans=.false.
+	endif
 	
 	do i=1,nobs
 		select case(ObsSpec(i)%type)
@@ -157,10 +162,6 @@
 					endif
 				enddo
 				close(unit=20)
-				if(useobsgrid) then
-					lamemis=.false.
-					lamtrans=.false.
-				endif
 				do j=1,ObsSpec(i)%ndata
 					dmin=1d200
 					do ilam=1,nlam-1
