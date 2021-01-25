@@ -1612,8 +1612,12 @@ c-----------------------------------------------------------------------
 
 	subroutine ComputeHapke(emis,e1,e2,nlam)
 	IMPLICIT NONE
-	integer i,nlam,nt,j
-	real*8 e1(nlam),e2(nlam),emis(nlam),Rs,Rp,theta,tot,pi,w
+	integer i,nlam,nt,j,k,nmu
+	parameter(nmu=10)
+	real*8 e1(nlam),e2(nlam),emis(nlam),Rs,Rp,theta,tot,pi,w,g
+	real*8 mu(nmu),wmu(nmu),refl,H1,H2,lmie,rmie,csmie,cemie
+
+	call gauleg(0d0,1d0,mu,wmu,nmu)
 	pi=3.1415926536
 	nt=10
 	tot=0d0
@@ -1622,20 +1626,30 @@ c-----------------------------------------------------------------------
 		tot=tot+sin(theta)
 	enddo
 	do i=1,nlam
-		w=0d0
-		do j=1,nt
-			theta=real(j-1)*pi/(2d0*real(nt-1))
-			call Reflect(e1(i),e2(i),theta,Rs,Rp)
-			w=w+(Rs+Rp)*sin(theta)/2d0
+		rmie=1d0
+		lmie=rmie/100d0
+		call callBHMIE(rmie,lmie,e1(i),e2(i),csmie,cemie)
+		w=csmie/cemie
+		if(.not.w.lt.(1d0-1d-4)) w=1d0-1d-4
+		if(.not.w.gt.0d0) w=0d0
+
+		g=sqrt(1d0-w)
+		refl=0d0
+		do j=1,nmu
+			do k=1,nmu
+				H1=(1d0+2d0*mu(j))/(1d0+2d0*g*mu(j))
+				H2=(1d0+2d0*mu(k))/(1d0+2d0*g*mu(k))
+				refl=refl+wmu(j)*wmu(k)*mu(j)*H1*H2/(mu(j)+mu(k))
+			enddo
 		enddo
-		w=w/tot
-		w=sqrt(1d0-w)
-		emis(i)=1d0+log(2d0*w+1d0)*(w-1)/(2d0*w)
+		emis(i)=1d0-w*refl/2d0
+c		emis(i)=1d0+log(2d0*g+1d0)*(g-1)/(2d0*g)
 	enddo
 
 	return
 	end	
 	
+
 
 	subroutine Reflect(n,k,theta,Rs,Rp)
 	IMPLICIT NONE
@@ -1652,4 +1666,90 @@ c-----------------------------------------------------------------------
 	return
 	end
 	
+
+
+
+	subroutine ComputeSurface()
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 SurfEmis(nlam),e1(nlam),e2(nlam),tot
+	external Enstatite_X,Enstatite_Y,Enstatite_Z
+	external Forsterite_X,Forsterite_Y,Forsterite_Z
+	external Labradorite_X,Labradorite_Y,Labradorite_Z,SiO2
+	integer i
+
+c=========================================
+c compute emissivity of the surface
+c=========================================
+	surface_emis=0d0
+
+	select case(surfacetype)
+		case("MIXED","MIX","mixed","mix")
+			tot=0.6d0
+			call RegridDataLNK(Enstatite_X,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+			call RegridDataLNK(Enstatite_Y,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+			call RegridDataLNK(Enstatite_Z,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+
+			tot=0.3d0
+			call RegridDataLNK(Forsterite_X,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+			call RegridDataLNK(Forsterite_Y,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+			call RegridDataLNK(Forsterite_Z,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+
+			tot=0.1d0
+			call RegridDataLNK(SiO2,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
+		case("QUARTZ","quartz","SiO2")
+			tot=1d0
+			call RegridDataLNK(SiO2,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
+		case("labradorite","LABRADORITE")
+			tot=1.0d0
+			call RegridDataLNK(Labradorite_X,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+			call RegridDataLNK(Labradorite_Y,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+			call RegridDataLNK(Labradorite_Z,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+		case("BLACK","black")
+			surface_emis(1:nlam)=1.0
+		case("GREY","grey")
+			surface_emis(1:nlam)=0.5
+		case("WHITE","white")
+			surface_emis(1:nlam)=0.0
+	end select
+
+	if(.not.retrieval) then
+		open(unit=93,file='surfemis.dat')
+		do i=1,nlam
+			write(93,*) lam(i),surface_emis(i)
+		enddo
+		close(unit=93)
+	endif
+
+c=========================================
+c=========================================
+
+
+	return
+	end
+
+
+
 

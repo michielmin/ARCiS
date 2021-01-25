@@ -1864,7 +1864,7 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	integer nm,i
 	real*8 mf(nm),Pin,P0,mm
 	
-	open(unit=20,file='dbf26/a_p_WA___.tsv')
+	open(unit=20,file='dbf26/a_p_G4___.tsv')
 1	read(20,*,end=2) P0,mf(1),mf(6),mf(11),mf(5),mf(2),mf(28),mf(56),mf(57)
 	if(P0.ge.Pin) then
 		mm=0d0

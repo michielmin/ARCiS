@@ -115,6 +115,7 @@ c===============================================================================
 	real*8 planetform_fdust,planetform_fplan,planetform_Rstart,planetform_Mstart
 	logical planetform,massprior
 	real*8 Mp_prior,dMp_prior
+	character*20 surfacetype
 	integer nTZ,nspike,nai,nboot,npew
 	integer,allocatable :: niso(:),instr_nobs(:)
 	real*8,allocatable :: MMW(:)
