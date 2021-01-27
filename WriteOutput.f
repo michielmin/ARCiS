@@ -131,9 +131,9 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			call output("Writing phasecurve to: " // trim(filename))
 			open(unit=30,file=filename,RECL=6000)
 			form='("#",a13,' // '"       fint [Jy]",'// trim(int2string(nlam-1,'(i4)')) // 
-     &				 '("      F(",es7.1E3,")"),"      fstar [Jy]")'
+     &				 '("      F(",es8.1E3,")"),"      fstar [Jy]")'
 			write(30,form) "lambda [mu]",lam(1:nlam-1)
-			form='(f14.6,' // int2string(nlam+1,'(i3)') // 'es16.9E3)'
+			form='(f14.6,' // int2string(nlam+1,'(i3)') // 'es17.9E3)'
 			do i=1,nphase
 				specR(1:nlam-1)=Fstar(1:nlam-1)*1d23/distance**2
 				if(sin(pi-pi*theta(i)/180d0).lt.(Rstar/Dplanet)) then

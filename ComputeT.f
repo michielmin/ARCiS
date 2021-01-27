@@ -54,7 +54,7 @@
 	real*8,allocatable :: Si_omp(:,:),Ih_omp(:),Ij_omp(:),tauR_omp(:),Hsurf(:,:),Hstar_omp(:)
 	real*8,allocatable :: temp_a(:),wtemp(:),Ca_HR(:,:),Cs_HR(:,:),Fstar_LR(:),SurfEmis_LR(:)
 	integer,allocatable :: IP(:)
-	real*8,allocatable :: WS(:),nu(:),wnu(:)
+	real*8,allocatable :: WS(:),nu(:),wnu(:),Hstar_lam(:),Hsurf_lam(:)
 	real*8,allocatable :: x_SIj(:),y_SIj(:),tauR_SIj(:),Ma_SIj(:),Mb_SIj(:),Mc_SIj(:)
 	character*500 file
 	
@@ -341,29 +341,31 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(x_SIj,y_SIj,tauR_SIj,Ma_SIj,Mb_SIj,Mc_SIj,Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,
-!$OMP&			Hstar_omp,SurfStar_omp,contr,FstarBottom)
+!$OMP&			Hstar_omp,SurfStar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,
 !$OMP&			Hstar,SurfStar,Dplanet,Fstar_LR,must)
 	allocate(x_SIj(nr+2),y_SIj(nr+2),tauR_SIj(0:nr+1),Ma_SIj(nr+2),Mb_SIj(nr+2),Mc_SIj(nr+2))
 	allocate(Si_omp(0:nr,0:nr+1),tauR_omp(0:nr),Ih_omp(0:nr),Ij_omp(0:nr))
-	allocate(Hstar_omp(0:nr))
+	allocate(Hstar_omp(0:nr),Hstar_lam(0:nr),Hsurf_lam(0:nr))
 	Hstar_omp=0d0
 	SurfStar_omp=0d0
 !$OMP DO
 	do ilam=1,nlam_LR-1
 		call tellertje(ilam,nlam_LR-1)
 		do ig=1,ng
-			contr=must*(Fstar_LR(ilam)/(pi*Dplanet**2))
+			Hstar_lam(0:nr)=0d0
+			Hsurf_lam(0:nr)=0d0
+			contr=(Fstar_LR(ilam)/(pi*Dplanet**2))
 			tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(must)
-			Ij_omp(0:nr)=contr*exp(-tauR_omp(0:nr))
-			Ih_omp(0:nr-1)=-contr*exp(-(tauR_omp(0:nr-1)+tauR_omp(1:nr))/2d0)
-			Ih_omp(nr)=-contr*exp(-tauR_omp(nr))
+			Ij_omp(0:nr)=contr*exp(-tauR_omp(0:nr))/(4d0*pi)
+			Ih_omp(0:nr-1)=-must*contr*exp(-(tauR_omp(0:nr-1)+tauR_omp(1:nr))/2d0)
+			Ih_omp(nr)=-must*contr*exp(-tauR_omp(nr))
 
-			Hstar_omp(0:nr)=Hstar_omp(0:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
-			SurfStar_omp=SurfStar_omp+dfreq_LR(ilam)*wgg(ig)*Ij_omp(1)*SurfEmis_LR(ilam)
-			FstarBottom=Ij_omp(1)
+			Hstar_lam(0:nr)=Hstar_lam(0:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
+			SurfStar_omp=SurfStar_omp+dfreq_LR(ilam)*wgg(ig)*abs(Ih_omp(0))*SurfEmis_LR(ilam)
+			FstarBottom=abs(Ih_omp(1))
 
-			Si_omp(1:nr,0)=0.25d0*Ij_omp(1:nr)*Cs(1:nr,ilam,ig)/Ce(1:nr,ilam,ig)
+			Si_omp(1:nr,0)=(Ij_omp(1:nr)*Cs(1:nr,ilam,ig)/Ce(1:nr,ilam,ig))
 			Si_omp(0,0)=Ij_omp(0)*(1d0-SurfEmis_LR(ilam))
 
 			do ir=1,nr
@@ -377,7 +379,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 				Ij_omp(0:nr)=exp(-abs(tauR_omp(0:nr)-tauR_omp(0)))
 				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,Ij_omp(0),Ij_omp(nr))
 				Ih_omp(0:nr)=Ij_omp(0:nr)
-				Si_omp(0:nr,nr+1)=Si_omp(0:nr,nr+1)+0.5d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(0:nr)
+				Si_omp(0:nr,nr+1)=Si_omp(0:nr,nr+1)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(0:nr)/(4d0*pi)
 				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
 			enddo
 			Si_omp(0,nr+1)=0d0
@@ -390,7 +392,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 				call SolveIj(tauR_omp(0:nr),Si_omp(0:nr,0),Ij_omp(0:nr),nr,x_SIj,y_SIj,tauR_SIj(0:nr+1),Ma_SIj,Mb_SIj,Mc_SIj)
 				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
-				Hstar_omp(0:nr)=Hstar_omp(0:nr)+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
+				Hstar_lam(0:nr)=Hstar_lam(0:nr)+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
 				SurfStar_omp=SurfStar_omp+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1)*SurfEmis_LR(ilam)
 			enddo
 
@@ -408,7 +410,11 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 				call SolveIj(tauR_omp(0:nr),Si_omp(0:nr,nr+1),Ij_omp(0:nr),nr,x_SIj,y_SIj,tauR_SIj(0:nr+1),Ma_SIj,Mb_SIj,Mc_SIj)
 				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
 				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+8d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)
-				Hstar_omp(0:nr)=Hstar_omp(0:nr)+FstarBottom*8d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)*(1d0-SurfEmis_LR(ilam))
+				Hsurf_lam(0:nr)=Hsurf_lam(0:nr)+FstarBottom*8d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)*(1d0-SurfEmis_LR(ilam))
+			enddo
+
+			do ir=0,nr
+				Hstar_omp(ir)=Hstar_omp(ir)+min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0)
 			enddo
 		enddo
 	enddo
@@ -419,7 +425,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 !$OMP END CRITICAL
 	deallocate(x_SIj,y_SIj,tauR_SIj,Ma_SIj,Mb_SIj,Mc_SIj)
 	deallocate(Si_omp,tauR_omp,Ih_omp,Ij_omp)
-	deallocate(Hstar_omp)
+	deallocate(Hstar_omp,Hstar_lam,Hsurf_lam)
 !$OMP FLUSH
 !$OMP END PARALLEL
 
@@ -431,7 +437,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	Hedd=0d0
 	E0=4d0*(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
 	do ir=0,nr
-		Hedd(ir)=Hedd(ir)+E0-Hstar(ir)
+		Hedd(ir)=Hedd(ir)+E0+abs(Hstar(ir))
 	enddo
 
 	IntH=0d0
@@ -1153,7 +1159,7 @@ c
 
 	tauR(1:nr)=tauR_in(1:nr)
 	tauR(nr+1)=0d0
-	tauR(0)=tauR(1)+1d-2
+	tauR(0)=tauR(1)+1d0
 
 	Ma=0d0
 	Mb=0d0
@@ -1193,18 +1199,22 @@ c
 	integer inu,nnu,ilam,ir,info,NRHS,nr,i
 	real*8 tauR(nr),tauR_in(nr),Si_in(nr,NRHS)
 	real*8 Si(nr,NRHS),Ca(nr),Cs(nr),Ce(nr)
-	real*8 nu(nnu),wnu(nnu)
+	real*8 nu(nnu),wnu(nnu),albedo(1:nr)
 	real*8 Ij(nr),Itot(nr,NRHS),Linv(nr,nr),Lmat(nr,nr)
 	integer,allocatable :: IWORKomp(:)
 
 	allocate(IWORKomp(10*nr*nr))
+
+	do ir=1,nr
+		albedo(ir)=min(0.99d0,Cs(ir)/Ce(ir))
+	enddo
 
 	Linv=0d0
 	do inu=1,nnu
 		tauR(1:nr)=tauR_in(1:nr)/abs(nu(inu))
 		call InvertIj(tauR,Lmat,nr)
 		do ir=1,nr
-			Linv(ir,2:nr-1)=Linv(ir,2:nr-1)+wnu(inu)*Lmat(ir,2:nr-1)*Cs(2:nr-1)/(Ce(2:nr-1))
+			Linv(ir,1:nr)=Linv(ir,1:nr)+wnu(inu)*Lmat(ir,1:nr)*albedo(1:nr)
 		enddo
 	enddo
 	Linv=-Linv
@@ -1213,16 +1223,19 @@ c
 	enddo
 	Itot=0d0
 	Itot(1:nr,1:NRHS)=Si_in(1:nr,1:NRHS)
-	call DGESV( nr, NRHS, Linv, nr, IWORKomp, Itot, nr, info )
+	info=0
+	call DGESV( nr, NRHS, Linv, nr, IWORKomp, Itot, nr, info)
+
 	Si(1:nr,1:NRHS)=Itot(1:nr,1:NRHS)
 	do i=1,NRHS
 	do ir=1,nr
-		if(.not.Si(ir,i).gt.0d0) then
+		if(.not.Si(ir,i).gt.Si_in(ir,i)) then
 			Si(ir,i)=Si_in(ir,i)
 		endif
 	enddo
 	enddo
 	Si_in=Si
+
 	deallocate(IWORKomp)
 
 	return

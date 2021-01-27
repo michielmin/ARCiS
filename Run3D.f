@@ -151,6 +151,12 @@ c	file='sedlhs.txt'
 c	call regridlog(file,1d4*lam,Fstar,nlam)
 c	Fstar=Fstar*distance**2/1e23
 c===============================================================
+c===============================================================
+c quick thing to read in a file!
+c	file='houghtonsolarwl.dat'
+c	call regridlog(file,1d4*lam,Fstar,nlam)
+c	Fstar=Fstar*lam**2/4d0
+c===============================================================
 c	do ilam=1,nlam
 c		Fstar(ilam)=Planck(Tstar,freq(ilam))*pi*Rstar**2
 c	enddo
@@ -1424,10 +1430,10 @@ c-----------------------------------------------------------------------
 			do inu0=1,nnu0
 				if(inu0.ne.nnu0.and.scattstar) then
 					must=(real(inu0)-0.5)/real(nnu0-1)
-					contr=must*(Fstar(ilam)/(pi*Dplanet**2))
+					contr=(Fstar(ilam)/(pi*Dplanet**2))
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
-					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+0.25d0*contr*exp(-tauR(1:nr))*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)
-					contr=contr*exp(-tauR(1))
+					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+contr*exp(-tauR(1:nr))*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)/(4d0*pi)
+					contr=must*contr*exp(-tauR(1))
 				else
 					contr=0d0
 				endif
@@ -1436,7 +1442,7 @@ c-----------------------------------------------------------------------
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
 					tauR(1:nr)=abs(tauR(1:nr)-tauR(1))
 					Ij(1:nr)=(BBr(ilam,0)*surface_emis(ilam)+contr*(1d0-surface_emis(ilam)))*exp(-tauR(1:nr))
-					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+0.5d0*nu(inu)*wnu(inu)*Ij(1:nr)*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)
+					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+wnu(inu)*Ij(1:nr)*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)
 				enddo
 			enddo
 			call AddScatter(Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ilam,ig),
