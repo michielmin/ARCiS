@@ -277,7 +277,7 @@ c===============================================================================
 		integer nr,nsubgrains
 		real*8 tmix,betamix,Kzz,Kscale,Sigmadot
 c simple cloud from Jo
-		real*8 ff,g1,g2,kappa,albedo
+		real*8 ff,g1,g2,kappa,albedo,kappa_haze,albedo_haze
 		logical simplecloud
 	end type CloudType
 

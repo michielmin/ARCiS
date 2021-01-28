@@ -363,7 +363,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 
 			Hstar_lam(0:nr)=Hstar_lam(0:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
 			SurfStar_omp=SurfStar_omp+dfreq_LR(ilam)*wgg(ig)*abs(Ih_omp(0))*SurfEmis_LR(ilam)
-			FstarBottom=abs(Ih_omp(1))
+			FstarBottom=abs(Ih_omp(0))
 
 			Si_omp(1:nr,0)=(Ij_omp(1:nr)*Cs(1:nr,ilam,ig)/Ce(1:nr,ilam,ig))
 			Si_omp(0,0)=Ij_omp(0)*(1d0-SurfEmis_LR(ilam))

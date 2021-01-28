@@ -1447,6 +1447,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 		Cloud(i)%kappa=1d-2
 		Cloud(i)%albedo=0.99d0
 c		Cloud(i)%P=0.0624d0
+		Cloud(i)%kappa_haze=0d0
+		Cloud(i)%albedo_haze=0d0
 	enddo
 	cloudcompute=.false.
 	useDRIFT=.false.
@@ -2087,6 +2089,10 @@ c				enddo
 			read(key%value,*) Cloud(j)%kappa
 		case("albedo")
 			read(key%value,*) Cloud(j)%albedo
+		case("kappa_haze")
+			read(key%value,*) Cloud(j)%kappa_haze
+		case("albedo_haze")
+			read(key%value,*) Cloud(j)%albedo_haze
 		case("fhazesio")
 			read(key%value,*) Cloud(j)%fHazeSiO
 		case("fhazetholin")
@@ -2118,7 +2124,7 @@ c-----------------------------------------------------------------------
 	use Constants
 	IMPLICIT NONE
 	integer ii,is,ilam,j
-	real*8 phi,thet,tot,tot2,fact,tautot(nlam),HG
+	real*8 phi,thet,tot,tot2,fact,tautot(nlam),HG,kabs,ksca
 	logical computelamcloud(nlam),restrictcomputecloud
 
 	if(.not.allocated(Cloud(ii)%rv)) allocate(Cloud(ii)%rv(Cloud(ii)%nr))
@@ -2148,15 +2154,23 @@ c-----------------------------------------------------------------------
 				endif
 			enddo
 		case("SIMPLE")
-			Cloud(ii)%Kabs(1:nr,1:nlam)=Cloud(ii)%kappa*(1d0-Cloud(ii)%albedo)
-			Cloud(ii)%Ksca(1:nr,1:nlam)=Cloud(ii)%kappa*Cloud(ii)%albedo
-			Cloud(ii)%Kext(1:nr,1:nlam)=Cloud(ii)%kappa
+			Cloud(ii)%Kabs(1:nr,1:nlam)=0d0
+			Cloud(ii)%Ksca(1:nr,1:nlam)=0d0
+			Cloud(ii)%Kext(1:nr,1:nlam)=0d0
 			do is=1,nr
+				cloud_dens(is,ii)=dens(is)
 				if(P(is).ge.Cloud(ii)%P) then
-					cloud_dens(is,ii)=1d0*dens(is)
-				else
-					cloud_dens(is,ii)=0d0
+					Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%kappa*(1d0-Cloud(ii)%albedo)
+					Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%kappa*Cloud(ii)%albedo
+					Cloud(ii)%Kext(is,1:nlam)=Cloud(ii)%kappa
 				endif
+				do ilam=1,nlam
+					kabs=Cloud(ii)%kappa_haze*(1d0-Cloud(ii)%albedo_haze)/(lam(ilam)*1d4)
+					ksca=Cloud(ii)%kappa_haze*Cloud(ii)%albedo_haze/(lam(ilam)*1d4)**4
+					Cloud(ii)%Kabs(is,ilam)=Cloud(ii)%Kabs(is,ilam)+kabs
+					Cloud(ii)%Ksca(is,ilam)=Cloud(ii)%Ksca(is,ilam)+ksca
+					Cloud(ii)%Kext(is,ilam)=Cloud(ii)%Kext(is,ilam)+ksca+kabs
+				enddo
 			enddo
 			if(scattering.and.emisspec.and.(abs(Cloud(ii)%g1).gt.1d-3.or.abs(Cloud(ii)%g2).gt.1d-3)) then
 				do j=1,180

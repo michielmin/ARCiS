@@ -767,8 +767,16 @@ c Dalgarno & Williams (1962)
 			end select
 		endif
 	enddo
+c============================
+c old parameterization
 	Cs=Cs+mixratHaze*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4+kappaHaze*2d0*mp)*exp(-(abs(log10(P(ir)/PHaze))
      &					/log10(dPHaze))**2/2d0)
+c============================
+
+c============================
+c Pinhas 2019
+c	Cs=Cs+mixratHaze*5.31e-27*(sqrt(ll)*0.35e-4)**4
+c============================
 
 	return
 	end
