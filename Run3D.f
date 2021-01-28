@@ -1744,7 +1744,7 @@ c=========================================
 		case("GREY","grey")
 			surface_emis(1:nlam)=0.5
 		case("WHITE","white")
-			surface_emis(1:nlam)=0.0
+			surface_emis(1:nlam)=1d-4
 	end select
 
 	if(.not.retrieval) then

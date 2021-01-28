@@ -541,7 +541,8 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		T(ir)=0.5d0*(T(ir)+Ts(ir))
 	enddo
 
-	E=SurfStar
+	E0=(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
+	E=SurfStar+E0
 	do ilam=1,nlam_LR-1
 		do ig=1,ng
 			do inu=1,nnu
@@ -578,7 +579,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	enddo
 	Tsurface=real(iT)*(E/E0)**0.25
 
-	if(.not.Tsurface.gt.3d0) Tsurface=3d0
+	if(.not.Tsurface.gt.3d0.or.E0.eq.0d0) Tsurface=3d0
 
 	if(converged.and.iter.gt.5) exit
 	enddo
