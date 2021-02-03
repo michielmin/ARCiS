@@ -29,7 +29,6 @@
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),tauR(:,:,:),SiR(:,:,:),Ij(:),tauR1(:),SiR1(:)
 	real*8,allocatable :: tauc(:),Afact(:),vv(:,:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
-	type(Mueller) M
 	real*8 g,tot,contr,tmp(nmol)
 	character*500 file
 	real*8 tau1,fact1,exp_tau1
@@ -115,7 +114,7 @@ c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,b
 
 	if(fulloutput3D) then
 		j=nlatt/2
-		do i=1,nlong
+		do i=1,nlong-1
 			beta3D_eq(i)=beta(i,j)
 			ibeta3D_eq(i)=(beta(i,j)-betamin)/(betamax-betamin)
 		enddo

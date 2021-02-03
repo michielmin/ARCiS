@@ -570,22 +570,6 @@ c	condensates=(condensates.or.cloudcompute)
 		sintheta(i)=sin(theta)
 		costheta(i)=cos(theta)
 	enddo
-	do i=1,180
-		Rayleigh%F11(i)=(1d0+costheta(i)**2)/2d0
-	enddo
-	tot=0d0
-	tot2=0d0
-	do i=1,180
-		tot=tot+Rayleigh%F11(i)*sintheta(i)
-		tot2=tot2+sintheta(i)
-	enddo
-	Rayleigh%F11=Rayleigh%F11*tot2/tot
-	Rayleigh%IF11=0d0
-	j=1
-	Rayleigh%IF11(j)=sintheta(j)*Rayleigh%F11(j)
-	do j=2,180
-		Rayleigh%IF11(j)=Rayleigh%IF11(j-1)+sintheta(j)*Rayleigh%F11(j)
-	enddo
 
 	allocate(Fstar(nlam))
 	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
@@ -2133,7 +2117,6 @@ c-----------------------------------------------------------------------
 		allocate(Cloud(ii)%Kabs(Cloud(ii)%nr,nlam))
 		allocate(Cloud(ii)%Ksca(Cloud(ii)%nr,nlam))
 		allocate(Cloud(ii)%Kext(Cloud(ii)%nr,nlam))
-		allocate(Cloud(ii)%F(Cloud(ii)%nr,nlam))
 	endif
 
 	select case(Cloud(ii)%ptype)
@@ -2172,106 +2155,12 @@ c-----------------------------------------------------------------------
 					Cloud(ii)%Kext(is,ilam)=Cloud(ii)%Kext(is,ilam)+ksca+kabs
 				enddo
 			enddo
-			if(scattering.and.emisspec.and.(abs(Cloud(ii)%g1).gt.1d-3.or.abs(Cloud(ii)%g2).gt.1d-3)) then
-				do j=1,180
-					thet=pi*real(j-1)/179d0
-					tot=Cloud(ii)%ff*HG(Cloud(ii)%g1,thet)+(1d0-Cloud(ii)%ff)*HG(Cloud(ii)%g2,thet)
-					do ilam=1,nlam
-						do is=1,nr
-							Cloud(ii)%F(is,ilam)%F11(j)=tot
-							Cloud(ii)%F(is,ilam)%F12(j)=0d0
-							Cloud(ii)%F(is,ilam)%F22(j)=1d0
-							Cloud(ii)%F(is,ilam)%F33(j)=1d0
-							Cloud(ii)%F(is,ilam)%F34(j)=0d0
-							Cloud(ii)%F(is,ilam)%F44(j)=1d0
-						enddo
-					enddo
-				enddo
-			else if(scattering.and.emisspec) then
-				do j=1,180
-					do ilam=1,nlam
-						do is=1,nr
-							Cloud(ii)%F(is,ilam)%F11(j)=1d0
-							Cloud(ii)%F(is,ilam)%F12(j)=0d0
-							Cloud(ii)%F(is,ilam)%F22(j)=0d0
-							Cloud(ii)%F(is,ilam)%F33(j)=0d0
-							Cloud(ii)%F(is,ilam)%F34(j)=0d0
-							Cloud(ii)%F(is,ilam)%F44(j)=0d0
-						enddo
-					enddo
-				enddo
-			endif				
 c		case("PARTFILE")
 c			call ReadParticle(Cloud(ii),ii)
 		case default
 			call output("I did not understand what I was trying to do. Sorry!")
 	end select
-	
-	if(scattering.and.emisspec) then
-	if(nspike.gt.0.and.nspike.le.180) call output("making the first " // trim(int2string(nspike,'(i3)')) // " degrees isotropic")
-	do ilam=1,nlam
-		do is=1,Cloud(ii)%nr
-			tot=0d0
-			tot2=0d0
-			do j=1,180
-				tot=tot+Cloud(ii)%F(is,ilam)%F11(j)*sin(pi*(real(j)-0.5)/180d0)
-				tot2=tot2+sin(pi*(real(j)-0.5)/180d0)
-			enddo
-			do j=1,180
-				Cloud(ii)%F(is,ilam)%F11(j)=tot2*Cloud(ii)%F(is,ilam)%F11(j)/tot
-				Cloud(ii)%F(is,ilam)%F12(j)=tot2*Cloud(ii)%F(is,ilam)%F12(j)/tot
-				Cloud(ii)%F(is,ilam)%F22(j)=tot2*Cloud(ii)%F(is,ilam)%F22(j)/tot
-				Cloud(ii)%F(is,ilam)%F33(j)=tot2*Cloud(ii)%F(is,ilam)%F33(j)/tot
-				Cloud(ii)%F(is,ilam)%F34(j)=tot2*Cloud(ii)%F(is,ilam)%F34(j)/tot
-				Cloud(ii)%F(is,ilam)%F44(j)=tot2*Cloud(ii)%F(is,ilam)%F44(j)/tot
-			enddo
-
-			if(nspike.gt.0.and.nspike.le.180) then
-c the nspike parameter removes the n degree spike in the forward direction.
-				do j=1,nspike
-					fact=Cloud(ii)%F(is,ilam)%F11(nspike+1)/Cloud(ii)%F(is,ilam)%F11(j)
-					Cloud(ii)%F(is,ilam)%F12(j)=Cloud(ii)%F(is,ilam)%F12(j)*fact
-					Cloud(ii)%F(is,ilam)%F22(j)=Cloud(ii)%F(is,ilam)%F22(j)*fact
-					Cloud(ii)%F(is,ilam)%F33(j)=Cloud(ii)%F(is,ilam)%F33(j)*fact
-					Cloud(ii)%F(is,ilam)%F34(j)=Cloud(ii)%F(is,ilam)%F34(j)*fact
-					Cloud(ii)%F(is,ilam)%F44(j)=Cloud(ii)%F(is,ilam)%F44(j)*fact
-					Cloud(ii)%F(is,ilam)%F11(j)=Cloud(ii)%F(is,ilam)%F11(nspike+1)
-				enddo
-
-				tot=0d0
-				tot2=0d0
-				do j=1,180
-					tot=tot+Cloud(ii)%F(is,ilam)%F11(j)*sin(pi*(real(j)-0.5)/180d0)
-					tot2=tot2+sin(pi*(real(j)-0.5)/180d0)
-				enddo
-				Cloud(ii)%Ksca(is,ilam)=Cloud(ii)%Ksca(is,ilam)*tot/tot2
-				Cloud(ii)%Kext(is,ilam)=Cloud(ii)%Kabs(is,ilam)+Cloud(ii)%Ksca(is,ilam)
-				do j=1,180
-					Cloud(ii)%F(is,ilam)%F11(j)=tot2*Cloud(ii)%F(is,ilam)%F11(j)/tot
-					Cloud(ii)%F(is,ilam)%F12(j)=tot2*Cloud(ii)%F(is,ilam)%F12(j)/tot
-					Cloud(ii)%F(is,ilam)%F22(j)=tot2*Cloud(ii)%F(is,ilam)%F22(j)/tot
-					Cloud(ii)%F(is,ilam)%F33(j)=tot2*Cloud(ii)%F(is,ilam)%F33(j)/tot
-					Cloud(ii)%F(is,ilam)%F34(j)=tot2*Cloud(ii)%F(is,ilam)%F34(j)/tot
-					Cloud(ii)%F(is,ilam)%F44(j)=tot2*Cloud(ii)%F(is,ilam)%F44(j)/tot
-				enddo
-			endif
-		enddo
-	enddo
-	do ilam=1,nlam
-		do is=1,Cloud(ii)%nr
-			Cloud(ii)%F(is,ilam)%IF11=0d0
-			j=1
-			thet=pi*(real(j)-0.5d0)/180d0
-			Cloud(ii)%F(is,ilam)%IF11(j)=sin(thet)*Cloud(ii)%F(is,ilam)%F11(j)
-			do j=2,180
-				thet=pi*(real(j)-0.5d0)/180d0
-				Cloud(ii)%F(is,ilam)%IF11(j)=Cloud(ii)%F(is,ilam)%IF11(j-1)+sin(thet)
-     &			*Cloud(ii)%F(is,ilam)%F11(j)
-			enddo
-		enddo
-	enddo
-	endif
-	
+		
 	return
 	end
 	

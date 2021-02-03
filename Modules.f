@@ -252,14 +252,6 @@ c===============================================================================
 	type(CIA_pair),allocatable :: CIA(:)
 	real*8 cia_mixrat(nmol_data)
 
-	type Mueller
-		real*8 F11(180),F12(180),F22(180)
-		real*8 F33(180),F44(180),F34(180)
-		real*8 IF11(180),IF12(180)
-	end type Mueller
-	
-	type(Mueller) Rayleigh
-
 	type CloudType
 		real*8 P,dP,s,column
 		real*8 coverage,frain
@@ -269,7 +261,6 @@ c===============================================================================
 		logical blend,haze,condensates
 		real*8 fcond,mixrat,tau,lam
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
-		type(Mueller),allocatable :: F(:,:)							! dimension nsize,nlam
 		character*500 file,Kzzfile
 		character*20 standard,ptype,type
 		character*500 species,hazetype

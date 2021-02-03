@@ -23,11 +23,9 @@
 	allocate(p0%Kabs(1,nlam))
 	allocate(p0%Ksca(1,nlam))
 	allocate(p0%Kext(1,nlam))
-	allocate(p0%F(1,nlam))
 	allocate(p1%Kabs(1,nlam))
 	allocate(p1%Ksca(1,nlam))
 	allocate(p1%Kext(1,nlam))
-	allocate(p1%F(1,nlam))
 
 	! Get an unused Logical Unit Number to use to open the FITS file.
 	status=0
@@ -88,17 +86,6 @@ c	call ftgkyj(unit,'mcfost2prodimo',mcfost(1)%mcfost2ProDiMo,comment,stat4)
 
 	call ftgpvd(unit,group,firstpix,npixels,nullval,matrix,anynull,status)
 
-	else
-	
-	matrix=1d0
-	do i=1,nlam
-		C%F(isize,i)%F11(1:180)=1d0
-		C%F(isize,i)%F12(1:180)=1d0
-		C%F(isize,i)%F22(1:180)=1d0
-		C%F(isize,i)%F33(1:180)=1d0
-		C%F(isize,i)%F34(1:180)=1d0
-		C%F(isize,i)%F44(1:180)=1d0
-	enddo   
 	endif
 				 
 	!  Close the file and free the unit number.
@@ -126,21 +113,10 @@ c	call ftgkyj(unit,'mcfost2prodimo',mcfost(1)%mcfost2ProDiMo,comment,stat4)
 	p0%Kext(1,1)=array(iread,2)
 	p0%Kabs(1,1)=array(iread,3)
 	p0%Ksca(1,1)=array(iread,4)
-	if(readmatrix) then
-	do j=1,180
-		p0%F(1,1)%F11(j)=matrix(iread,1,j)
-		p0%F(1,1)%F12(j)=matrix(iread,2,j)
-		p0%F(1,1)%F22(j)=matrix(iread,3,j)
-		p0%F(1,1)%F33(j)=matrix(iread,4,j)
-		p0%F(1,1)%F34(j)=matrix(iread,5,j)
-		p0%F(1,1)%F44(j)=matrix(iread,6,j)
-	enddo
-	endif
 103	if(l0.ge.lam(i)) then
 		C%Kext(isize,i)=p0%Kext(1,1)
 		C%Ksca(isize,i)=p0%Ksca(1,1)
 		C%Kabs(isize,i)=p0%Kabs(1,1)
-		if(readmatrix) C%F(isize,i)=p0%F(1,1)
 c		call tellertje(i,nlam)
 		i=i+1
 		goto 103
@@ -151,28 +127,10 @@ c		call tellertje(i,nlam)
 	p1%Kext(1,1)=array(iread,2)
 	p1%Kabs(1,1)=array(iread,3)
 	p1%Ksca(1,1)=array(iread,4)
-	if(readmatrix) then
-	do j=1,180
-		p1%F(1,1)%F11(j)=matrix(iread,1,j)
-		p1%F(1,1)%F12(j)=matrix(iread,2,j)
-		p1%F(1,1)%F22(j)=matrix(iread,3,j)
-		p1%F(1,1)%F33(j)=matrix(iread,4,j)
-		p1%F(1,1)%F34(j)=matrix(iread,5,j)
-		p1%F(1,1)%F44(j)=matrix(iread,6,j)
-	enddo
-	endif
 101	if(lam(i).le.l1.and.lam(i).ge.l0) then
 		C%Kext(isize,i)=p1%Kext(1,1)+(lam(i)-l1)*(p0%Kext(1,1)-p1%Kext(1,1))/(l0-l1)
 		C%Ksca(isize,i)=p1%Ksca(1,1)+(lam(i)-l1)*(p0%Ksca(1,1)-p1%Ksca(1,1))/(l0-l1)
 		C%Kabs(isize,i)=p1%Kabs(1,1)+(lam(i)-l1)*(p0%Kabs(1,1)-p1%Kabs(1,1))/(l0-l1)
-		if(readmatrix) then
-		C%F(isize,i)%F11(1:180)=p1%F(1,1)%F11(1:180)+(lam(i)-l1)*(p0%F(1,1)%F11(1:180)-p1%F(1,1)%F11(1:180))/(l0-l1)
-		C%F(isize,i)%F12(1:180)=p1%F(1,1)%F12(1:180)+(lam(i)-l1)*(p0%F(1,1)%F12(1:180)-p1%F(1,1)%F12(1:180))/(l0-l1)
-		C%F(isize,i)%F22(1:180)=p1%F(1,1)%F22(1:180)+(lam(i)-l1)*(p0%F(1,1)%F22(1:180)-p1%F(1,1)%F22(1:180))/(l0-l1)
-		C%F(isize,i)%F33(1:180)=p1%F(1,1)%F33(1:180)+(lam(i)-l1)*(p0%F(1,1)%F33(1:180)-p1%F(1,1)%F33(1:180))/(l0-l1)
-		C%F(isize,i)%F34(1:180)=p1%F(1,1)%F34(1:180)+(lam(i)-l1)*(p0%F(1,1)%F34(1:180)-p1%F(1,1)%F34(1:180))/(l0-l1)
-		C%F(isize,i)%F44(1:180)=p1%F(1,1)%F44(1:180)+(lam(i)-l1)*(p0%F(1,1)%F44(1:180)-p1%F(1,1)%F44(1:180))/(l0-l1)
-		endif
 c		call tellertje(i,nlam)
 		i=i+1
 		if(i.gt.nlam) goto 102
@@ -182,7 +140,6 @@ c		call tellertje(i,nlam)
 	p0%Kext(1,1)=p1%Kext(1,1)
 	p0%Ksca(1,1)=p1%Ksca(1,1)
 	p0%Kabs(1,1)=p1%Kabs(1,1)
-	if(readmatrix) p0%F(1,1)=p1%F(1,1)
 	goto 100
 102	continue
 	do j=i,nlam
@@ -190,34 +147,15 @@ c		call tellertje(j,nlam)
 		C%Ksca(isize,j)=C%Ksca(isize,i-1)*(lam(i-1)/lam(j))**4
 		C%Kabs(isize,j)=C%Kabs(isize,i-1)*(lam(i-1)/lam(j))**2
 		C%Kext(isize,j)=C%Kabs(isize,j)+C%Ksca(isize,j)
-		if(readmatrix) C%F(isize,j)=C%F(isize,i-1)
 	enddo
 
-	do j=1,nlam
-		tot=0d0
-		tot2=0d0
-		do i=1,180
-			tot=tot+C%F(isize,j)%F11(i)*sin(pi*(real(i)-0.5)/180d0)
-			tot2=tot2+sin(pi*(real(i)-0.5)/180d0)
-		enddo
-		do i=1,180
-			C%F(isize,j)%F11(i)=tot2*C%F(isize,j)%F11(i)/tot
-			C%F(isize,j)%F12(i)=tot2*C%F(isize,j)%F12(i)/tot
-			C%F(isize,j)%F22(i)=tot2*C%F(isize,j)%F22(i)/tot
-			C%F(isize,j)%F33(i)=tot2*C%F(isize,j)%F33(i)/tot
-			C%F(isize,j)%F34(i)=tot2*C%F(isize,j)%F34(i)/tot
-			C%F(isize,j)%F44(i)=tot2*C%F(isize,j)%F44(i)/tot
-		enddo
-	enddo
 
 	deallocate(p0%Kabs)
 	deallocate(p0%Ksca)
 	deallocate(p0%Kext)
-	deallocate(p0%F)
 	deallocate(p1%Kabs)
 	deallocate(p1%Ksca)
 	deallocate(p1%Kext)
-	deallocate(p1%F)
 
 	deallocate(array)
 	deallocate(matrix)

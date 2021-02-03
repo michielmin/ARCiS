@@ -11,7 +11,6 @@
 	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i
 	integer ir,ilam,ig,i,iT,niter
 	logical docloud0(max(nclouds,1)),converged
-	type(Mueller) M	
 
 	if(doMCcompute.and.nTiter.gt.0) then
 		call MCDoComputeT(converged,f)
@@ -42,7 +41,6 @@
 	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:)
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax
 	logical docloud0(max(nclouds,1)),converged,stopscat
-	type(Mueller) M	
 	real*8 tauf(nr),Si(0:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff,TT
 	integer info,IWORK(10*(nr+1)*(nr+1)),NRHS,ii(3),iscat,nscat
 	real*8 tau1,tau2,ee0,ee1,ee2,tauR(0:nr),Ij(0:nr),Ih(0:nr),scale
@@ -186,14 +184,7 @@
 	Ca=0d0
 	do ir=1,nr
 		do ilam=1,nlam-1
-			call GetMatrix(ir,ilam,M,docloud0)
 			g=0d0
-			tot=0d0
-			do iphase=1,180
-				g=g+M%F11(iphase)*costheta(iphase)*sintheta(iphase)
-				tot=tot+M%F11(iphase)*sintheta(iphase)
-			enddo
-			g=g/tot
 			do ig=1,ng
 				call Crossections(ir,ilam,ig,Ca_HR(ilam,ig),Cs_HR(ilam,ig),docloud0)
 				Ca_HR(ilam,ig)=Ca_HR(ilam,ig)/dens(ir)

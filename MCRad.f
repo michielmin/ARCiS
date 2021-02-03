@@ -9,7 +9,6 @@
 	real*8 Eemit(nr),Femit(nr),xs,ys,zs,inp,Pb(nr+1)
 	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,irdark,j
 	logical docloud0(nclouds),goingup,hitR,onedge,hitR1,hitR2,dorw(nr)
-	type(Mueller) M(nr)
 	real*8 starttime,stoptime
 	logical hitplanet
 	
@@ -33,14 +32,7 @@ c		ct2=1d0-2d0*real(iphase)/real(nphase)
 	enddo
 
 	do ir=1,nr
-		call GetMatrix(ir,ilam,M(ir),docloud0)
 		g(ir)=0d0
-		tot=0d0
-		do iphase=1,180
-			g(ir)=g(ir)+M(ir)%F11(iphase)*costheta(iphase)*sintheta(iphase)
-			tot=tot+M(ir)%F11(iphase)*sintheta(iphase)
-		enddo
-		g(ir)=g(ir)/tot
 	enddo
 	
 	Pb(1)=P(1)
@@ -88,7 +80,7 @@ c		ct2=1d0-2d0*real(iphase)/real(nphase)
 			jr=ir
 			onedge=.false.
 			goingup=((x*dx+y*dy+z*dz).gt.0d0)
-			call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,0.5d0,Eabs,EJv)
+			call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,dorw,0.5d0,Eabs,EJv)
 			if(jr.gt.nr.and.nscat.gt.0) then
 				fluxg=fluxg+E*E0*wgg(ig)
 			endif
@@ -192,7 +184,7 @@ c		enddo
 				goingup=.false.
 				onedge=.true.
 				jr=nr
-				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,0.5d0,Eabs,EJv)
+				call travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,dorw,0.5d0,Eabs,EJv)
 				if(jr.gt.nr.and.nscat.gt.0) then
 					iphase=real(nphase)*(1d0-dz)/2d0+1
 					if(dz.gt.1d0) dz=1d0
@@ -258,7 +250,7 @@ c		enddo
 
 	
 	
-	subroutine travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,M,dorw,powstop,Eabs,EJv)
+	subroutine travel(x,y,z,dx,dy,dz,jr,onedge,goingup,E,nscat,Ce,Ca,Cs,Crw,g,dorw,powstop,Eabs,EJv)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
@@ -266,7 +258,6 @@ c		enddo
 	integer jr,nscat,jrnext,nscat0
 	logical onedge,goingup,hitR1,hitR2,hitR,RandomWalk,absorbed,dorw(nr)
 	real*8 tau,R1,R2,b,vR1,vR2,rr,v,tau_v,albedo,fstop,random,rho
-	type(Mueller) M(nr)
 
 	Eabs=1d0
 	E=1d0
@@ -362,7 +353,7 @@ c		enddo
 	else
 		return
 	endif
-	call scattangle(M(jr),dx,dy,dz)
+	call randomdirection(dx,dy,dz)
 	nscat=nscat+1
 	onedge=.false.
 	goto 1
@@ -399,103 +390,6 @@ c		enddo
 	return
 	end
 	
-	
-	subroutine GetMatrix(ir,ilam,M,docloud0)
-	use GlobalSetup
-	use Constants
-	IMPLICIT NONE
-	integer ir,i,ilam,icloud,isize
-	type(Mueller) M
-	logical docloud0(nclouds)
-	
-	M%F11=Rayleigh%F11*Csca(ir,ilam)*Ndens(ir)
-	M%IF11=Rayleigh%IF11*Csca(ir,ilam)*Ndens(ir)
-	do icloud=1,nclouds
-		if(docloud0(icloud)) then
-			if(Cloud(icloud)%standard.eq.'MIX') then
-				M%F11=M%F11+Cloud(icloud)%F(ir,ilam)%F11*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-				M%IF11=M%IF11+Cloud(icloud)%F(ir,ilam)%IF11*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-			else
-				do isize=1,Cloud(icloud)%nr
-					M%F11=M%F11+Cloud(icloud)%F(isize,ilam)%F11*
-     &					Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-					M%IF11=M%IF11+Cloud(icloud)%F(isize,ilam)%IF11*
-     &					Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-				enddo
-			endif
-		endif
-	enddo
-
-	return
-	end
-
-
-
-	subroutine scattangle(M,dx,dy,dz)
-	use GlobalSetup
-	use Constants
-	IMPLICIT NONE
-	integer i,it
-	real*8 dz,theta,Fr,Fi,random,dx,dy,x,y,z,rr,u,v,w,cost,sint
-	type(Mueller) M
-
-c	call randomdirection(dx,dy,dz)
-c	return
-
-	Fr=random(idum)*M%IF11(180)
-	it=0
-	call hunt(M%IF11,180,Fr,it)
-c	if(it.lt.1) it=1
-c	if(it.gt.180) it=180
-
-	if(it.lt.180.and.it.ge.1) then
-		theta=real(it)-0.5d0+(Fr-M%IF11(it))/(M%IF11(it+1)-M%IF11(it))
-	else if(it.lt.1) then
-		theta=0.5d0*(M%IF11(1)-Fr)/M%IF11(1)
-	else	
-		theta=180d0
-	endif
-	theta=theta*pi/180d0
-	cost=cos(theta)
-	sint=sin(theta)
-
-
-	x=dx
-	y=dy
-	z=dz
-
-	u=0d0
-	v=-dz
-	w=dy
-	rr=sqrt(u*u+v*v+w*w)
-	u=u/rr
-	v=v/rr
-	w=w/rr
-
-c	call rotate(dx,dy,dz,u,v,w,costheta(it),sintheta(it))
-	call rotate(dx,dy,dz,u,v,w,cost,sint)
-	rr=sqrt(dx*dx+dy*dy+dz*dz)
-	dx=dx/rr
-	dy=dy/rr
-	dz=dz/rr
-
-c	it=random(idum)*360d0
-c	it=it+1
-c	call rotate(dx,dy,dz,x,y,z,costheta(it),sintheta(it))
-	theta=random(idum)*2d0*pi
-	cost=cos(theta)
-	sint=sin(theta)
-	call rotate(dx,dy,dz,x,y,z,cost,sint)
-	rr=sqrt(dx*dx+dy*dy+dz*dz)
-	dx=dx/rr
-	dy=dy/rr
-	dz=dz/rr
-
-
-
-	return
-	end
-
 
 	subroutine reflectsurface(x,y,z,dx,dy,dz)
 	use GlobalSetup

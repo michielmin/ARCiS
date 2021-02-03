@@ -145,7 +145,7 @@
 		enddo
 		var3D(i,1:nlong,0)=beta3D_eq(1:nlong)
 		do j=1,n_Par3D
-			do ir=1,nlong
+			do ir=1,nlong-1
 				if(Par3D(j)%logscale) then
 					var3D(i,ir,j)=10d0**(log10(Par3D(j)%xmin)+
      &							  log10(Par3D(j)%xmax/Par3D(j)%xmin)*ibeta3D_eq(ir)**Par3D(j)%pow)
@@ -200,18 +200,20 @@
 
 		if(do3D.and.fulloutput3D) then
 			open(unit=26,file=trim(outputdir) // "beta3D_eq_limits",RECL=1000)
-			do ir=1,nlong
+			do ir=1,nlong-1
 				sorted(1:i)=var3D(1:i,ir,0)
 				call sort(sorted,i)
-				write(26,*) 180d0*long(ir)/pi,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+				write(26,*) 90d0*(long(ir)+long(ir+1))/pi,sorted(im3),sorted(im2),sorted(im1),
+     &								sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 			enddo
 			close(unit=26)
 			do j=1,n_Par3D
 				open(unit=26,file=trim(outputdir) // trim(Par3D(j)%keyword) // "_eq_limits",RECL=1000)
-				do ir=1,nlong
+				do ir=1,nlong-1
 					sorted(1:i)=var3D(1:i,ir,j)
 					call sort(sorted,i)
-					write(26,*) 180d0*long(ir)/pi,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+					write(26,*) 90d0*(long(ir)+long(ir+1))/pi,sorted(im3),sorted(im2),sorted(im1),
+     &								sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 				enddo
 				close(unit=26)
 			enddo

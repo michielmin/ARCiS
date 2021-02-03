@@ -13,7 +13,6 @@
 	integer iphot,ir,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,jr,jr0
 	integer iT1,iT2,iT,i,icount,iopenmp0,omp_get_thread_num,iter,niter
 	logical docloud0(max(nclouds,1)),goingup,onedge,converged,dorw(nr),RandomWalkT
-	type(Mueller),allocatable :: M(:,:)
 	
 	allocate(specsource_star(nlam-1))
 	allocate(specsource_planet(nlam-1))
@@ -22,7 +21,6 @@
 	allocate(Ce(nr,nlam,ng))
 	allocate(Cs(nr,nlam))
 	allocate(g(nr,nlam))
-	allocate(M(nr,nlam))
 
 	niter=10
 
@@ -54,14 +52,7 @@
 
 	do ir=1,nr
 		do ilam=1,nlam-1
-			call GetMatrix(ir,ilam,M(ir,ilam),docloud0)
 			g(ir,ilam)=0d0
-			tot=0d0
-			do iphase=1,180
-				g(ir,ilam)=g(ir,ilam)+M(ir,ilam)%F11(iphase)*costheta(iphase)*sintheta(iphase)
-				tot=tot+M(ir,ilam)%F11(iphase)*sintheta(iphase)
-			enddo
-			g(ir,ilam)=g(ir,ilam)/tot
 		enddo
 	enddo
 	do ilam=1,nlam
@@ -188,7 +179,7 @@ c		endif
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(iphot,x,y,z,dx,dy,dz,goingup,E0,jr,ilam,ig,onedge,EJv_omp,icount,rr,jr0,EJv_phot,EJv2_omp,
 !$OMP&		specsource_planet_omp,specsource_star_omp,spec_omp)
-!$OMP& SHARED(EJv,EJv2,M,Nphot,NphotPlanet,TeffP,specsource_planet,specsource_star,must,ng,nlam,nr,Crw,Cpl,Ce,Ca,Cs,g,
+!$OMP& SHARED(EJv,EJv2,Nphot,NphotPlanet,TeffP,specsource_planet,specsource_star,must,ng,nlam,nr,Crw,Cpl,Ce,Ca,Cs,g,
 !$OMP& 	dorw,E0_planet,E0_star,R,niter,iter,cwg,spec)
 	allocate(EJv_omp(nr))
 	EJv_omp=0d0
@@ -243,7 +234,7 @@ c		endif
 				if(RandomWalkT(x,y,z,dx,dy,dz,E0,Crw,Cpl,jr,EJv_phot,dorw)) goto 1
 			endif
 			call travelcomputeT(x,y,z,dx,dy,dz,E0,jr,onedge,goingup,
-     &			Ce,Ca,Cs,g,M,EJv_phot,ilam,ig)
+     &			Ce,Ca,Cs,g,EJv_phot,ilam,ig)
 			do jr=1,nr
 				if(z.ge.R(jr).and.z.lt.R(jr+1)) exit
 			enddo
@@ -349,7 +340,6 @@ c		T(ir)=T(ir)**(1d0-f)*T0(ir)**f
 	deallocate(Ce)
 	deallocate(Cs)
 	deallocate(g)
-	deallocate(M)
 
 	call WriteStructure
 
@@ -493,7 +483,7 @@ c	enddo
 
 
 
-	subroutine travelcomputeT(x,y,z,dx,dy,dz,E0,jr,onedge,goingup,Ce,Ca,Cs,g,M,EJv,ilam,ig)
+	subroutine travelcomputeT(x,y,z,dx,dy,dz,E0,jr,onedge,goingup,Ce,Ca,Cs,g,EJv,ilam,ig)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
@@ -501,7 +491,6 @@ c	enddo
 	integer jr,nscat,jrnext,nscat0,ilam,ig
 	logical onedge,goingup
 	real*8 tau,v,tau_v,albedo,random,znext
-	type(Mueller) M(nr,nlam)
 
 1	continue
 	tau=-log(random(idum))
@@ -547,7 +536,7 @@ c	enddo
 	if(random(idum).gt.albedo) then
 		return
 	else
-		call scattangle(M(jr,ilam),dx,dy,dz)
+		call randomdirection(dx,dy,dz)
 	endif
 	onedge=.false.
 	goto 1
