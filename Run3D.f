@@ -24,12 +24,13 @@
 	integer ir,ilam,ig,isize,iRmax,ndisk,nsub,nrtrace,nptrace,ipc,npc,nmol_count
 	logical recomputeopac
 	logical,allocatable :: hit(:,:)
-	real*8,allocatable :: rtrace(:),wrtrace(:)
+	real*8,allocatable :: rtrace(:),wrtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:)
 	real*8 x,y,z,vx,vy,vz,v
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),tauR(:,:,:),SiR(:,:,:),Ij(:),tauR1(:),SiR1(:)
 	real*8,allocatable :: tauc(:),Afact(:),vv(:,:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
-	real*8 g,tot,contr,tmp(nmol)
+	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random
+	integer nx_im,ix,iy,ni
 	character*500 file
 	real*8 tau1,fact1,exp_tau1
 
@@ -39,6 +40,7 @@
 	allocate(R3D2(n3D,nr+2))
 	allocate(T3D(n3D,0:nr))
 	allocate(mixrat3D(n3D,nr,nmol))
+	nx_im=200
 
 	if(retrieval) call SetOutputMode(.false.)
 
@@ -285,6 +287,10 @@ c	enddo
 
 	nrtrace=(nr-1)*nsub+ndisk
 	nptrace=nlatt
+	if(makeimage) then
+		allocate(rphi_image(nlam,nrtrace,nptrace))
+		allocate(xy_image(nx_im,nx_im,nlam))
+	endif
 	allocate(rtrace(nrtrace),wrtrace(nrtrace))
 
 	call gauleg(0d0,Rmax,rtrace,wrtrace,ndisk)
@@ -297,19 +303,22 @@ c	enddo
 	theta=2d0*pi*theta_phase(ipc)/360d0
 	if(theta.gt.2d0*pi) theta=theta-2d0*pi
 	fluxp=0d0
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(.false.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,
-!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,Ij,tau1,fact,exp_tau1,contr)
+!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,Ij,tau1,fact,exp_tau1,contr,ftot)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,inu3D,fulloutput3D,Rplanet,
+!$OMP&			rphi_image,makeimage,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
 	allocate(fluxp_omp(nlam))
+	allocate(ftot(nlam))
 	fluxp_omp=0d0
 !$OMP DO
 	do irtrace=1,nrtrace
 		A=2d0*pi*rtrace(irtrace)*wrtrace(irtrace)/real(nptrace)
 		do iptrace=1,nptrace
+			ftot=0d0
 			fact=1d0
 c Note we are here using the symmetry between North and South
 			phi=pi*(real(iptrace)-0.5)/real(nptrace)
@@ -342,7 +351,14 @@ c Note we are here using the symmetry between North and South
 			i1=nr+1
 			edgeNR=2
 			i=ibeta(i2,i3)
-			inu=inu3D(i2,i3)
+			la=(-x/sqrt(x**2+y**2+z**2))
+			if(la.lt.0d0) then
+				inu=nnu0
+			else
+				inu=(real(nnu0-2)*la+0.5d0)+1
+				if(inu.lt.1) inu=1
+				if(.not.inu.lt.nnu0) inu=nnu0
+			endif
 			if(fulloutput3D) then
 				PTaverage3D(ipc,1:nr)=PTaverage3D(ipc,1:nr)+T3D(i,1:nr)*A
 				mixrat_average3D(ipc,1:nr,1:nmol)=mixrat_average3D(ipc,1:nr,1:nmol)+mixrat3D(i,1:nr,1:nmol)*A
@@ -352,12 +368,19 @@ c Note we are here using the symmetry between North and South
 			if(i1next.le.0) then
 				j=j+1
 				i=ibeta(i2,i3)
-				inu=inu3D(i2,i3)
+				la=(-x/sqrt(x**2+y**2+z**2))
+				if(la.lt.0d0) then
+					inu=nnu0
+				else
+					inu=(real(nnu0-2)*la+0.5d0)+1
+					if(inu.lt.1) inu=1
+					if(.not.inu.lt.nnu0) inu=nnu0
+				endif
 				do ilam=1,nlam
 					if(lamemis(ilam)) then
 					do ig=1,ng
 						contr=Si(ilam,ig,0,inu,i)*abs(x*vx+y*vy+z*vz)/sqrt((x*x+y*y+z*z)*(vx*vx+vy*vy+vz*vz))
-						fluxp_omp(ilam)=fluxp_omp(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
+						ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
 					enddo
 					endif
 				enddo
@@ -366,13 +389,20 @@ c Note we are here using the symmetry between North and South
 			if(i1next.ge.nr+2) goto 2
 			if(i1.le.nr) then
 				i=ibeta(i2,i3)
-				inu=inu3D(i2,i3)
+				la=(-x/sqrt(x**2+y**2+z**2))
+				if(la.lt.0d0) then
+					inu=nnu0
+				else
+					inu=(real(nnu0-2)*la+0.5d0)+1
+					if(inu.lt.1) inu=1
+					if(.not.inu.lt.nnu0) inu=nnu0
+				endif
 				do ilam=1,nlam
 					if(lamemis(ilam)) then
 					do ig=1,ng
 						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
 						exp_tau1=exp(-tau1)
-						fluxp_omp(ilam)=fluxp_omp(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
+						ftot(ilam)=ftot(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
 						fact(ilam,ig)=fact(ilam,ig)*exp_tau1
 					enddo
 					endif
@@ -396,6 +426,8 @@ c Note we are here using the symmetry between North and South
 			edgeNR=edgenext
 			goto 1
 2			continue
+			fluxp_omp(1:nlam)=fluxp_omp(1:nlam)+ftot(1:nlam)
+			if(makeimage) rphi_image(1:nlam,irtrace,iptrace)=ftot(1:nlam)
 		enddo
 	enddo
 !$OMP END DO
@@ -404,6 +436,7 @@ c Note we are here using the symmetry between North and South
 	deallocate(fluxp_omp)
 !$OMP END CRITICAL
 	deallocate(fact)
+	deallocate(ftot)
 !$OMP FLUSH
 !$OMP END PARALLEL
 	fluxp=fluxp*1d23/distance**2
@@ -432,8 +465,50 @@ c	enddo
 c	tot=tot*distance**2/1d23
 c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*Rstar**2*Rplanet**2/(Dplanet**2))
 
+	if(makeimage) then
+		Rmin_im=0d0
+		xy_image=0d0
+		do irtrace=1,nrtrace
+			call tellertje(irtrace,nrtrace)
+			A=2d0*pi*rtrace(irtrace)*wrtrace(irtrace)
+			Rmax_im=sqrt((A+pi*Rmin_im**2)/pi)
+			do iptrace=1,nptrace
+				ni=5d6/real(nrtrace*nptrace)
+				do i=1,ni
+					rr=sqrt(Rmin_im**2+random(idum)*(Rmax_im**2-Rmin_im**2))
+					phi=pi*(real(iptrace)-random(idum))/real(nptrace)
+					x=rr*cos(phi)
+					y=rr*sin(phi)
+					ix=(x+Rmax)*real(nx_im)/(2d0*Rmax)+1
+					iy=(y+Rmax)*real(nx_im)/(2d0*Rmax)+1
+					if(ix.lt.1) ix=1
+					if(iy.lt.1) iy=1
+					if(ix.gt.nx_im) ix=nx_im
+					if(iy.gt.nx_im) iy=nx_im
+					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,iptrace)/real(ni*2)
+					ix=(x+Rmax)*real(nx_im)/(2d0*Rmax)+1
+					iy=(-y+Rmax)*real(nx_im)/(2d0*Rmax)+1
+					if(ix.lt.1) ix=1
+					if(iy.lt.1) iy=1
+					if(ix.gt.nx_im) ix=nx_im
+					if(iy.gt.nx_im) iy=nx_im
+					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,iptrace)/real(ni*2)
+				enddo
+			enddo
+			Rmin_im=Rmax_im
+		enddo
+		file=trim(outputdir) // "image" //  trim(int2string(int(theta_phase(ipc)),'(i0.3)')) // ".fits"
+		ni=nlam-1
+		if(useobsgrid) ni=nlam
+		call writefitsfile(file,xy_image,ni,nx_im)
+	endif
+
 	enddo
 	
+	if(makeimage) then
+		deallocate(rphi_image)
+		deallocate(xy_image)
+	endif
 	deallocate(rtrace,wrtrace)
 	deallocate(fluxp)
 	endif

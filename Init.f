@@ -989,6 +989,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) emisspec
 		case("transspec")
 			read(key%value,*) transspec
+		case("makeimage")
+			read(key%value,*) makeimage
 		case("orbit")
 			select case(key%key2)
 				case("p")
@@ -1299,6 +1301,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	par_tprofile=.false.
 	
 	Nphot0=2500
+	
+	makeimage=.false.
 	
 	surfacetype='BLACK'
 
