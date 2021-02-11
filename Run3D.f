@@ -179,7 +179,11 @@ c	enddo
 				if(useobsgrid) then
 					freq0=freq(ilam)
 				else
-					freq0=sqrt(freq(ilam)*freq(ilam+1))
+					if(ilam.lt.nlam) then
+						freq0=sqrt(freq(ilam)*freq(ilam+1))
+					else
+						freq0=freq(ilam)
+					endif
 				endif
 				BBr(ilam,ir,i)=Planck(T(ir),freq0)
 				Ca(ilam,1:ng,ir,i)=0d0
@@ -199,7 +203,7 @@ c	enddo
 				enddo
 				Ce(ilam,ir,i)=Ca(ilam,1,ir,i)+Cs(ilam,ir,i)+Cext_cont(ir,ilam)
 				Cs(ilam,ir,i)=Cs(ilam,ir,i)+Csca(ir,ilam)*Ndens(ir)
-				Ca(ilam,1:ng,ir,i)=Ca(ilam,1:ng,ir,i)+Cext_cont(ir,ilam)-Csca(ir,ilam)*Ndens(ir)
+				Ca(ilam,1:ng,ir,i)=Ca(ilam,1:ng,ir,i)+max(0d0,Cext_cont(ir,ilam)-Csca(ir,ilam)*Ndens(ir))
 
 				do ig=1,ng
 					Ca(ilam,ig,ir,i)=Ca(ilam,ig,ir,i)+Cabs(ir,ilam,ig)*Ndens(ir)
@@ -215,7 +219,11 @@ c	enddo
 			if(useobsgrid) then
 				freq0=freq(ilam)
 			else
-				freq0=sqrt(freq(ilam)*freq(ilam+1))
+				if(ilam.lt.nlam) then
+					freq0=sqrt(freq(ilam)*freq(ilam+1))
+				else
+					freq0=freq(ilam)
+				endif
 			endif
 			BBr(ilam,0,i)=Planck(T3D(i,0),freq0)
 		enddo
@@ -466,6 +474,8 @@ c	tot=tot*distance**2/1d23
 c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*Rstar**2*Rplanet**2/(Dplanet**2))
 
 	if(makeimage) then
+		file=trim(outputdir) // "image" //  trim(int2string(int(theta_phase(ipc)),'(i0.3)')) // ".fits"
+		call output("Creating image: " // trim(file))
 		Rmin_im=0d0
 		xy_image=0d0
 		do irtrace=1,nrtrace
@@ -497,7 +507,6 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 			enddo
 			Rmin_im=Rmax_im
 		enddo
-		file=trim(outputdir) // "image" //  trim(int2string(int(theta_phase(ipc)),'(i0.3)')) // ".fits"
 		ni=nlam-1
 		if(useobsgrid) ni=nlam
 		call writefitsfile(file,xy_image,ni,nx_im)

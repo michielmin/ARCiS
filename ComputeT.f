@@ -576,7 +576,6 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	enddo
 
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
-	print*,Tsurface
 
 	do ir=nr-1,1,-1
 		if(ir.lt.nr) then

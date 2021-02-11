@@ -137,11 +137,11 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			do i=1,nphase
 				specR(1:nlam-1)=Fstar(1:nlam-1)*1d23/distance**2
 				if(sin(pi-pi*theta(i)/180d0).lt.(Rstar/Dplanet)) then
-					if(theta(i).gt.90d0) then
+					if(theta(i).lt.90d0) then
 						specR(1:nlam-1)=((pi*Rstar**2-obsA(0,1:nlam-1))/(pi*Rstar**2))*Fstar(1:nlam-1)*1d23/distance**2
 					endif
 				endif
-				if(sin(pi*theta(i)/180d0).gt.(Rstar/Dplanet).or.theta(i).gt.90d0) then
+				if(sin(pi*theta(i)/180d0).gt.(Rstar/Dplanet).or.theta(i).lt.90d0) then
 					specR(1:nlam-1)=specR(1:nlam-1)+phase(i,0,1:nlam-1)+flux(0,1:nlam-1)
 				endif
 				x=0d0

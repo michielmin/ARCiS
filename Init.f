@@ -477,7 +477,7 @@ c allocate the arrays
 	if(n_ret.gt.0) n_ret=n_ret+RetPar(n_ret)%n-1
 
 	if(useobsgrid) then
-		if(computeT) useobsgrid=.false.
+c		if(computeT) useobsgrid=.false.
 		if(nobs.le.0) useobsgrid=.false.
 	endif
 
@@ -1833,7 +1833,7 @@ c				enddo
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 lam0,T0,Planck,tot,x,y,dy,dx
+	real*8 lam0,T0,Planck,tot,x,y,dy,dx,specres_LR
 	integer i,j,ilam,nj,jlam
 	
 	if(useobsgrid) then
@@ -1862,6 +1862,14 @@ c				enddo
 2					close(unit=30)
 			end select
 		enddo
+		specres_LR=min(specres/1.5,11d0)
+		lam0=lam1
+		nlam=nlam+1
+		do while(lam0.le.lam2)
+			lam0=lam0+lam0/specres_LR
+			nlam=nlam+1
+		enddo
+		nlam=nlam+1
 	else
 		lam0=lam1
 		nlam=1
@@ -1916,6 +1924,21 @@ c				enddo
 					nlam=ilam+1
 			end select
 		enddo
+		if(computeT) then
+			specres_LR=min(specres/1.5,11d0)
+			lam(nlam)=lam1
+			dlam(nlam)=lam(nlam)/specres_LR
+			do while(lam(nlam).le.lam2)
+				nlam=nlam+1
+				lam(nlam)=lam(nlam-1)+lam(nlam-1)/specres_LR
+				dlam(nlam)=lam(nlam)/specres_LR
+			enddo
+			nlam=nlam+1
+			lam(nlam)=lam2
+			dlam(nlam)=lam(nlam)/specres_LR
+			ilam=nlam
+			nlam=nlam+1
+		endif
 		call sortw(lam,dlam,ilam)
 		lam(ilam+1)=lam(ilam)+dlam(ilam)/2d0
 		dlam(ilam+1)=dlam(ilam)

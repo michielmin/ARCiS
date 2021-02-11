@@ -632,6 +632,8 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 		do i=1,n_ret
 			if(RetPar(i)%keyword.eq.'Rp'.or.RetPar(i)%keyword.eq.'rp') then
 				RetPar(i)%value=RetPar(i)%value*sqrt(scale)
+				if(.not.RetPar(i)%value.gt.RetPar(i)%xmin) RetPar(i)%value=RetPar(i)%xmin
+				if(RetPar(i)%value.gt.RetPar(i)%xmax) RetPar(i)%value=RetPar(i)%xmax
 				if(RetPar(i)%logscale) then
 c	log
 					var(i)=log10(RetPar(i)%value/RetPar(i)%xmin)/log10(RetPar(i)%xmax/RetPar(i)%xmin)
@@ -642,6 +644,8 @@ c	square
 c	linear
 					var(i)=(RetPar(i)%value-RetPar(i)%xmin)/(RetPar(i)%xmax-RetPar(i)%xmin)
 				endif
+				if(.not.var(i).gt.0d0) var(i)=0d0
+				if(var(i).gt.1d0) var(i)=1d0
 			endif
 		enddo
 		doscaleR2=.false.

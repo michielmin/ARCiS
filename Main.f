@@ -97,7 +97,7 @@ c terms of use
 	if(computeT.and.computeopac) then
 		nldtemp=nlamdust
 		srdtemp=specresdust
-		ldtemp=lamdust
+		ldtemp(1:nlamdust)=lamdust(1:nlamdust)
 		specresdust=10d0
 		if(useobsgrid) then
 			nlamdust=nlam
@@ -121,7 +121,7 @@ c terms of use
 			else
 				nlamdust=nldtemp
 				specresdust=srdtemp
-				lamdust=ldtemp
+				lamdust(1:nlamdust)=ldtemp(1:nlamdust)
 			endif
 		endif
 	endif
@@ -142,7 +142,7 @@ c			if(nTiter.ge.4) f=1d0/real(nTiter-2)**0.5+0.1
 			if(Tconverged.or.nTiter.gt.maxiter) then
 				nlamdust=nldtemp
 				specresdust=srdtemp
-				lamdust=ldtemp
+				lamdust(1:nlamdust)=ldtemp(1:nlamdust)
 			endif
 			call SetupStructure(.true.)
 			call SetupOpacities()
