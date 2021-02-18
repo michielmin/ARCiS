@@ -233,7 +233,7 @@ c	enddo
 			R3D(i,1:nr+1)=R3D(1,1:nr+1)
 			R3D2(i,1:nr+1)=R3D2(1,1:nr+1)
 			T3D(i,0:nr)=T3D(1,0:nr)
-			mixrat3D(i,ir,1:nmol)=mixrat3D(1,ir,1:nmol)
+			mixrat3D(i,1:nr,1:nmol)=mixrat3D(1,1:nr,1:nmol)
 			BBr(1:nlam,0:nr,i)=BBr(1:nlam,0:nr,1)
 			Ca(1:nlam,1:ng,1:nr,i)=Ca(1:nlam,1:ng,1:nr,1)
 			Cs(1:nlam,1:nr,i)=Cs(1:nlam,1:nr,1)
