@@ -358,5 +358,24 @@ cPoints for the temperature structure
 	end module RandomWalkModule
 
 	
+	module Struct3D
+	implicit none
+	integer nlong,nlatt
+	integer n3D,nnu0
+c	parameter(n3D=10,nnu0=10)
+c	parameter(nlong=36,nlatt=18)
+c	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
+c	real*8 tanx(nlong),tany(nlong)
+c	real*8 cost2(nlatt),beta3D_eq(nlong),ibeta3D_eq(nlong)
+c	integer ibeta(nlong,nlatt),inu3D(nlong,nlatt)
+
+	real*8,allocatable :: long(:),latt(:)	!(Lambda, Phi)
+	real*8,allocatable :: tanx(:),tany(:)
+	real*8,allocatable :: cost2(:),beta3D_eq(:),ibeta3D_eq(:)
+	integer,allocatable :: ibeta(:,:),inu3D(:,:)
+
+	real*8,allocatable :: R3D(:,:),R3D2(:,:)
+	end module Struct3D
+
 
 

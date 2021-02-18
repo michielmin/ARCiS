@@ -74,8 +74,8 @@ OBJS	= Modules.o \
 		easy_chem.o \
 		ComputeT.o \
 		DiffuseCloud.o \
-		Run3D.o \
 		Init.o \
+		Run3D.o \
 		diseq_diffusion.o \
 		diseq_rate.o \
 		diseq_timescale.o \
