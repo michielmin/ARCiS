@@ -425,6 +425,7 @@ c==============================================================================
 	use GlobalSetup
 	use Constants
 	use ReadKeywords
+	use Struct3D
 	IMPLICIT NONE
 	type(SettingKey),pointer :: key,first
 	type(SettingKey) keyret
@@ -638,6 +639,11 @@ c	condensates=(condensates.or.cloudcompute)
 	allocate(surface_emis(nlam))
 	surface_emis=1d0
 	
+	allocate(long(nlong),latt(nlatt))
+	allocate(tanx(nlong),tany(nlong))
+	allocate(cost2(nlatt),beta3D_eq(nlong),ibeta3D_eq(nlong))
+	allocate(ibeta(nlong,nlatt),inu3D(nlong,nlatt))
+
 	if(fulloutput3D) then
 		allocate(PTaverage3D(0:nphase,nr))
 		allocate(mixrat_average3D(0:nphase,nr,nmol))
@@ -651,6 +657,7 @@ c	condensates=(condensates.or.cloudcompute)
 	use GlobalSetup
 	use ReadKeywords
 	use CloudModule
+	use Struct3D
 	IMPLICIT NONE
 	type(SettingKey) key
 	integer i
@@ -913,10 +920,20 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) fDay
 		case("kxx")
 			read(key%value,*) Kxx
+		case("kyy")
+			read(key%value,*) Kyy
 		case("vxx")
 			read(key%value,*) vxx
 		case("night2day")
 			read(key%value,*) night2day
+		case("n3d")
+			read(key%value,*) n3D
+		case("nnu","nnustar")
+			read(key%value,*) nnu0
+		case("nlong")
+			read(key%value,*) nlong
+		case("nlatt")
+			read(key%value,*) nlatt
 		case("betapow")
 			read(key%value,*) betapow
 		case("fenrich","f_enrich","enrich","fdry","f_dry")
@@ -1250,6 +1267,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	use GlobalSetup
 	use Constants
 	use CloudModule
+	use Struct3D
 	IMPLICIT NONE
 	integer i
 	character*100 homedir
@@ -1278,7 +1296,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	fDay=0.5d0
 	betapow=1d0
-	Kxx=0d0
+	Kxx=1d-4
+	Kyy=1d0
 	vxx=0d0
 	night2day=0.5d0
 	
@@ -1376,6 +1395,11 @@ c	if(par_tprofile) call ComputeParamT(T)
 	beta3D_1=-0.2
 	beta3D_2=-0.1
 	long_shift=0d0
+
+	n3D=10
+	nnu0=10
+	nlong=36
+	nlatt=18
 
 	Kzz_deep=1d2
 	Kzz_1bar=-1d0

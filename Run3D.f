@@ -2,13 +2,19 @@
 	implicit none
 	integer nlong,nlatt
 	integer n3D,nnu0
-	parameter(n3D=10,nnu0=10)
-	parameter(nlong=36,nlatt=18)
-	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
-	real*8 tanx(nlong),tany(nlong)
-	real*8 cost2(nlatt),beta3D_eq(nlong),ibeta3D_eq(nlong)
+c	parameter(n3D=10,nnu0=10)
+c	parameter(nlong=36,nlatt=18)
+c	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
+c	real*8 tanx(nlong),tany(nlong)
+c	real*8 cost2(nlatt),beta3D_eq(nlong),ibeta3D_eq(nlong)
+c	integer ibeta(nlong,nlatt),inu3D(nlong,nlatt)
+
+	real*8,allocatable :: long(:),latt(:)	!(Lambda, Phi)
+	real*8,allocatable :: tanx(:),tany(:)
+	real*8,allocatable :: cost2(:),beta3D_eq(:),ibeta3D_eq(:)
+	integer,allocatable :: ibeta(:,:),inu3D(:,:)
+
 	real*8,allocatable :: R3D(:,:),R3D2(:,:)
-	integer ibeta(nlong,nlatt),inu3D(nlong,nlatt)
 	end module Struct3D
 
 	subroutine Run3D(recomputeopac)
@@ -33,6 +39,7 @@
 	integer nx_im,ix,iy,ni
 	character*500 file
 	real*8 tau1,fact1,exp_tau1
+	real*8,allocatable :: maxdet(:)
 
 	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr,n3D),Si(nlam,ng,0:nr,nnu0,n3D))
 	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce(nlam,nr,n3D))
@@ -58,7 +65,7 @@ c	recomputeopac=.true.
 	long0=long_shift*pi/180d0
 
 c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,betamax)
-	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,vxx,night2day,fDay,betamin,betamax)
+	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,night2day,fDay,betamin,betamax)
 
 	if(.not.retrieval) then
 		open(unit=20,file=trim(outputdir) // "structure3D.dat",RECL=6000)
@@ -162,19 +169,58 @@ c	do ilam=1,nlam
 c		Fstar(ilam)=Planck(Tstar,freq(ilam))*pi*Rstar**2
 c	enddo
 			call ComputeModel1D(recomputeopac)
-		endif
 
-		if(R(nr+1).gt.Rmax) then
-			Rmax=R(nr+1)
-			iRmax=i
-		endif
-		do ir=1,nr+1
-			R3D(i,ir)=R(ir)
-			R3D2(i,ir)=R(ir)**2
-		enddo
-		do ir=1,nr
-			T3D(i,ir)=T(ir)
-			mixrat3D(i,ir,1:nmol)=mixrat_r(ir,1:nmol)
+			if(R(nr+1).gt.Rmax) then
+				Rmax=R(nr+1)
+				iRmax=i
+			endif
+			do ir=1,nr+1
+				R3D(i,ir)=R(ir)
+				R3D2(i,ir)=R(ir)**2
+			enddo
+			do ir=1,nr
+				T3D(i,ir)=T(ir)
+				mixrat3D(i,ir,1:nmol)=mixrat_r(ir,1:nmol)
+				do ilam=1,nlam
+					if(useobsgrid) then
+						freq0=freq(ilam)
+					else
+						if(ilam.lt.nlam) then
+							freq0=sqrt(freq(ilam)*freq(ilam+1))
+						else
+							freq0=freq(ilam)
+						endif
+					endif
+					BBr(ilam,ir,i)=Planck(T(ir),freq0)
+					Ca(ilam,1:ng,ir,i)=0d0
+					Cs(ilam,ir,i)=0d0
+					do icloud=1,nclouds
+						if(Cloud(icloud)%standard.eq.'MIX') then
+							Ca(ilam,1:ng,ir,i)=Ca(ilam,1:ng,ir,i)+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+							Cs(ilam,ir,i)=Cs(ilam,ir,i)+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+						else
+							do isize=1,Cloud(icloud)%nr
+								Ca(ilam,1:ng,ir,i)=Ca(ilam,1:ng,ir,i)+
+     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+								Cs(ilam,ir,i)=Cs(ilam,ir,i)+
+     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+							enddo
+						endif
+					enddo
+					Ce(ilam,ir,i)=Ca(ilam,1,ir,i)+Cs(ilam,ir,i)+Cext_cont(ir,ilam)
+					Cs(ilam,ir,i)=Cs(ilam,ir,i)+Csca(ir,ilam)*Ndens(ir)
+					Ca(ilam,1:ng,ir,i)=Ca(ilam,1:ng,ir,i)+max(0d0,Cext_cont(ir,ilam)-Csca(ir,ilam)*Ndens(ir))	
+
+					do ig=1,ng
+						Ca(ilam,ig,ir,i)=Ca(ilam,ig,ir,i)+Cabs(ir,ilam,ig)*Ndens(ir)
+					enddo
+				enddo
+			enddo
+			if(computeT) then
+				T3D(i,0)=Tsurface
+			else
+				T3D(i,0)=T3D(i,1)
+			endif
 			do ilam=1,nlam
 				if(useobsgrid) then
 					freq0=freq(ilam)
@@ -185,65 +231,33 @@ c	enddo
 						freq0=freq(ilam)
 					endif
 				endif
-				BBr(ilam,ir,i)=Planck(T(ir),freq0)
-				Ca(ilam,1:ng,ir,i)=0d0
-				Cs(ilam,ir,i)=0d0
-				do icloud=1,nclouds
-					if(Cloud(icloud)%standard.eq.'MIX') then
-						Ca(ilam,1:ng,ir,i)=Ca(ilam,1:ng,ir,i)+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
-						Cs(ilam,ir,i)=Cs(ilam,ir,i)+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-					else
-						do isize=1,Cloud(icloud)%nr
-							Ca(ilam,1:ng,ir,i)=Ca(ilam,1:ng,ir,i)+
-     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-							Cs(ilam,ir,i)=Cs(ilam,ir,i)+
-     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+				BBr(ilam,0,i)=Planck(T3D(i,0),freq0)
+			enddo
+			do ir=1,nr
+				k=0
+				do imol=1,nmol
+					if(includemol(imol)) then
+						k=k+1
+						do ig=1,ng
+							do ilam=1,nlam
+								Ca_mol(ilam,ig,k,ir,i)=Cabs_mol(ir,ig,imol,ilam)
+							enddo
 						enddo
 					endif
 				enddo
-				Ce(ilam,ir,i)=Ca(ilam,1,ir,i)+Cs(ilam,ir,i)+Cext_cont(ir,ilam)
-				Cs(ilam,ir,i)=Cs(ilam,ir,i)+Csca(ir,ilam)*Ndens(ir)
-				Ca(ilam,1:ng,ir,i)=Ca(ilam,1:ng,ir,i)+max(0d0,Cext_cont(ir,ilam)-Csca(ir,ilam)*Ndens(ir))
-
-				do ig=1,ng
-					Ca(ilam,ig,ir,i)=Ca(ilam,ig,ir,i)+Cabs(ir,ilam,ig)*Ndens(ir)
-				enddo
+				nmol_count=k
 			enddo
-		enddo
-		if(computeT) then
-			T3D(i,0)=Tsurface
-		else
-			T3D(i,0)=T3D(i,1)
-		endif
-		do ilam=1,nlam
-			if(useobsgrid) then
-				freq0=freq(ilam)
-			else
-				if(ilam.lt.nlam) then
-					freq0=sqrt(freq(ilam)*freq(ilam+1))
-				else
-					freq0=freq(ilam)
-				endif
-			endif
-			BBr(ilam,0,i)=Planck(T3D(i,0),freq0)
-		enddo
-		do ir=1,nr
-			k=0
-			do imol=1,nmol
-				if(includemol(imol)) then
-					k=k+1
-					do ig=1,ng
-						do ilam=1,nlam
-							Ca_mol(ilam,ig,k,ir,i)=Cabs_mol(ir,ig,imol,ilam)
-						enddo
-					enddo
-				endif
-			enddo
-			nmol_count=k
-		enddo
-		if(i.eq.1.or.betamax.ne.betamin) then
 			if(emisspec) call ComputeScatter(BBr(1:nlam,0:nr,i),Si(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i),Cs(1:nlam,1:nr,i))
 		else
+			R3D(i,1:nr+1)=R3D(1,1:nr+1)
+			R3D2(i,1:nr+1)=R3D2(1,1:nr+1)
+			T3D(i,0:nr)=T3D(1,0:nr)
+			mixrat3D(i,ir,1:nmol)=mixrat3D(1,ir,1:nmol)
+			BBr(1:nlam,0:nr,i)=BBr(1:nlam,0:nr,1)
+			Ca(1:nlam,1:ng,1:nr,i)=Ca(1:nlam,1:ng,1:nr,1)
+			Cs(1:nlam,1:nr,i)=Cs(1:nlam,1:nr,1)
+			Ce(1:nlam,1:nr,i)=Ce(1:nlam,1:nr,1)
+			Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,i)=Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,1)
 			Si(1:nlam,1:ng,0:nr,1:nnu0,i)=Si(1:nlam,1:ng,0:nr,1:nnu0,1)
 		endif
 		if(.not.retrieval) call SetOutputMode(.true.)
@@ -295,13 +309,16 @@ c	enddo
 
 	nrtrace=(nr-1)*nsub+ndisk
 	nptrace=nlatt
+	
 	if(makeimage) then
+		nrtrace=nrtrace*5
+		nptrace=nptrace*5
 		allocate(rphi_image(nlam,nrtrace,nptrace))
 		allocate(xy_image(nx_im,nx_im,nlam))
 	endif
 	allocate(rtrace(nrtrace),wrtrace(nrtrace))
 
-	call gauleg(0d0,Rmax,rtrace,wrtrace,ndisk)
+	call gauleg(0d0,Rmax,rtrace,wrtrace,nrtrace)
 
 	allocate(fluxp(nlam))
 	npc=nphase
@@ -311,12 +328,12 @@ c	enddo
 	theta=2d0*pi*theta_phase(ipc)/360d0
 	if(theta.gt.2d0*pi) theta=theta-2d0*pi
 	fluxp=0d0
-!$OMP PARALLEL IF(.false.)
+!$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,Ij,tau1,fact,exp_tau1,contr,ftot)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,inu3D,fulloutput3D,Rplanet,
-!$OMP&			rphi_image,makeimage,
+!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
 	allocate(fluxp_omp(nlam))
@@ -510,6 +527,50 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 		ni=nlam-1
 		if(useobsgrid) ni=nlam
 		call writefitsfile(file,xy_image,ni,nx_im)
+
+		file=trim(outputdir) // "imageRGB" //  trim(int2string(int(theta_phase(ipc)),'(i0.3)')) // ".fits"
+		call output("Creating image: " // trim(file))
+		ni=nlam-1
+		tot=0d0
+		i=1
+		allocate(maxdet(3*nx_im*nx_im))
+		do ix=1,nx_im
+			do iy=1,nx_im
+				call SPECTOXYZ(xy_image(ix,iy,1:ni),lam(1:ni),ni,x,y,z)
+				xy_image(ix,iy,1)=x
+				xy_image(ix,iy,2)=y
+				xy_image(ix,iy,3)=z
+				i=i+1
+				maxdet(i)=x
+				i=i+1
+				maxdet(i)=y
+				i=i+1
+				maxdet(i)=z
+			enddo
+		enddo
+		ni=3*nx_im*nx_im
+		do i=1,ni/20
+			tot=0d0
+			do j=1,ni
+				if(maxdet(j).gt.tot) then
+					k=j
+					tot=maxdet(j)
+				endif
+			enddo
+			maxdet(k)=0d0
+		enddo
+		deallocate(maxdet)
+		xy_image(1:nx_im,1:nx_im,1:3)=xy_image(1:nx_im,1:nx_im,1:3)/tot
+		do ix=1,nx_im
+			do iy=1,nx_im
+				call XYZTORGB(xy_image(ix,iy,1),xy_image(ix,iy,2),xy_image(ix,iy,3),x,y,z)
+				xy_image(ix,iy,1)=x
+				xy_image(ix,iy,2)=y
+				xy_image(ix,iy,3)=z
+			enddo
+		enddo
+		ni=3
+		call writefitsfile(file,xy_image,ni,nx_im)
 	endif
 
 	enddo
@@ -570,7 +631,8 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(vv,tau,tauc,Afact,hit,irtrace,A,iptrace,phi,rr,x,y,z,vx,vy,vz,la,lo,i1,i2,i3,
 !$OMP&			edgeNR,v,i1next,i2next,i3next,edgenext,i,imol,ir,ig,obsA_omp)
-!$OMP& SHARED(nrtrace,nptrace,nmol_count,nr,nlam,ng,rtrace,ibeta,R3D2,Ce,Ca_mol,wgg,obsA,latt,long,Rmax)
+!$OMP& SHARED(nrtrace,nptrace,nmol_count,nr,nlam,ng,rtrace,ibeta,R3D2,Ce,Ca_mol,wgg,obsA,latt,long,Rmax,
+!$OMP&          nnu0,n3D,nlong,nlatt)
 	allocate(obsA_omp(nlam))
 	allocate(vv(nmol_count,nr,n3D))
 	allocate(tau(nlam,ng))
@@ -766,14 +828,14 @@ c Note we use the symmetry of the North and South here!
 	end
 	
 
-	subroutine Setup3D(beta,long,latt,nlong,nlatt,Kxx,vxx,night2day,f,betamin,betamax)
+	subroutine Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,night2day,f,betamin,betamax)
 	IMPLICIT NONE
 	integer i,j,nlong,nlatt
 	real*8 pi
 	parameter(pi=3.1415926536)
 	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
 	real*8 beta(nlong,nlatt),la,lo,albedo,p,f,tot1,tot2,b1,b2
-	real*8 Kxx,vxx,betamin,betamax,beta1(nlong),night2day
+	real*8 Kxx,vxx,betamin,betamax,beta1(nlong),night2day,Kyy
 
 	do i=1,nlong
 		long(i)=-pi+2d0*pi*real(i-1)/real(nlong-1)
@@ -785,7 +847,7 @@ c Note we use the symmetry of the North and South here!
 	betamin=1d0
 	betamax=0d0
 
-	call DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,vxx,night2day)
+	call DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,night2day)
 	beta=beta*f
 
 	do i=1,nlong-1
@@ -802,13 +864,13 @@ c Note we use the symmetry of the North and South here!
 	end
 	
 
-	subroutine DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,vxx,contrast)
+	subroutine DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,contrast)
 	IMPLICIT NONE
 	integer nlatt,nlong,NN
 	integer,allocatable :: IWORK(:)
 	integer i,info,j,NRHS,ii(nlong-1,nlatt-1)
 	real*8 beta(nlong,nlatt),Kxx,vxx,long(nlong),latt(nlatt),S(nlong-1,nlatt-1)
-	real*8 pi,tot,x((nlatt-1)*(nlong-1)),contrast,eps
+	real*8 pi,tot,x((nlatt-1)*(nlong-1)),contrast,eps,Kyy
 	parameter(eps=1d-4)
 	real*8 la(nlatt-1),lo(nlong-1),tp,tm,tot1,tot2,cmax,cmin
 	real*8,allocatable :: A(:,:)
@@ -816,7 +878,7 @@ c Note we use the symmetry of the North and South here!
 	parameter(pi=3.1415926536)
 	real*8 smax,smin,scale,betamin,betamax,contr
 
-	allocate(IWORK(50*nlatt*nlong*nlatt*nlong))
+	allocate(IWORK(nlatt*nlong))
 	allocate(A((nlatt-1)*(nlong-1),(nlatt-1)*(nlong-1)))
 
 	smax=-1d0
@@ -827,6 +889,8 @@ c Note we use the symmetry of the North and South here!
 	maxiter=10000
 	niter=0
 	do while(abs((contrast-contr)/(contrast+contr)).gt.eps.or.niter.gt.maxiter)
+	if(nlong*nlatt.gt.1600) print*,abs((contrast-contr)/(contrast+contr))/eps
+	
 	niter=niter+1
 	
 	do i=1,nlong-1
@@ -889,9 +953,9 @@ c Note we use the symmetry of the North and South here!
 				jp=ii(k,nlatt-1)
 				tp=latt(nlatt)
 			endif
-			A(j0,jp)=A(j0,jp)+Kxx*scale*real(nlatt*2)**2*cos(tp)/cos(la(j))
-			A(j0,jm)=A(j0,jm)+Kxx*scale*real(nlatt*2)**2*cos(tm)/cos(la(j))
-			A(j0,j0)=A(j0,j0)-Kxx*scale*real(nlatt*2)**2*(cos(tp)+cos(tm))/cos(la(j))
+			A(j0,jp)=A(j0,jp)+Kxx*Kyy*scale*real(nlatt*2)**2*cos(tp)/cos(la(j))
+			A(j0,jm)=A(j0,jm)+Kxx*Kyy*scale*real(nlatt*2)**2*cos(tm)/cos(la(j))
+			A(j0,j0)=A(j0,j0)-Kxx*Kyy*scale*real(nlatt*2)**2*(cos(tp)+cos(tm))/cos(la(j))
 		enddo
 	enddo
 
@@ -1504,7 +1568,7 @@ c-----------------------------------------------------------------------
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(tauR,Ij,ilam,ig,inu0,inu,contr,must)
-!$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar,lamemis)
+!$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar,lamemis,nnu0)
 	allocate(tauR(nr),Ij(nr))
 !$OMP DO
 	do ilam=1,nlam-1

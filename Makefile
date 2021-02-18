@@ -74,6 +74,7 @@ OBJS	= Modules.o \
 		easy_chem.o \
 		ComputeT.o \
 		DiffuseCloud.o \
+		Run3D.o \
 		Init.o \
 		diseq_diffusion.o \
 		diseq_rate.o \
@@ -127,11 +128,11 @@ OBJS	= Modules.o \
 		nasa_polynomial.o \
 		GGchem_linpack_q.o \
 		GGchem_is_nan.o \
-		Run3D.o \
 		PostEqualWeights.o \
 		TrendCompute.o \
 		MCComputeT.o \
-		LightCurve.o
+		LightCurve.o \
+		ConvertColors.o
 
 # program name and install location
 PROGRAM       = ARCiS
