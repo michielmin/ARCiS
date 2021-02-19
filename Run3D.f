@@ -862,15 +862,15 @@ c Note we use the symmetry of the North and South here!
 	allocate(IWORK(nlatt*nlong))
 	allocate(A((nlatt-1)*(nlong-1),(nlatt-1)*(nlong-1)))
 
-	smax=-1d0
-	smin=-1d0
+	smax=-sqrt(2.4)
+	smin=-sqrt(3.2)
 	scale=1d0
 	
 	contr=contrast*10d0
-	maxiter=10000
+	maxiter=500
 	niter=0
-	do while(abs((contrast-contr)/(contrast+contr)).gt.eps.or.niter.gt.maxiter)
-	if(nlong*nlatt.gt.1600) print*,abs((contrast-contr)/(contrast+contr))/eps
+	do while(abs((contrast-contr)/(contrast+contr)).gt.eps.and.abs((smax-smin)/(smax+smin)).gt.eps.and.niter.lt.maxiter)
+	if(nlong*nlatt.gt.1600) print*,((contrast-contr)/(contrast+contr))/eps,contr,scale
 	
 	niter=niter+1
 	
@@ -967,7 +967,7 @@ c Note we use the symmetry of the North and South here!
 		smin=scale
 		cmin=contr
 		if(smax.lt.0d0) then
-			scale=scale*2d0
+			scale=scale*10d0
 		else
 			scale=scale+(smax-scale)*(contrast-contr)/(cmax-contr)
 		endif
@@ -975,7 +975,7 @@ c Note we use the symmetry of the North and South here!
 		smax=scale
 		cmax=contr
 		if(smin.lt.0d0) then
-			scale=scale/2d0
+			scale=scale/10d0
 		else
 			scale=scale+(smin-scale)*(contrast-contr)/(cmin-contr)
 		endif
