@@ -14,7 +14,7 @@
 	real*8,allocatable :: rtrace(:),wrtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:)
 	real*8 x,y,z,vx,vy,vz,v
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
-	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),tauR(:,:,:),SiR(:,:,:),Ij(:),tauR1(:),SiR1(:)
+	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:)
 	real*8,allocatable :: tauc(:),Afact(:),vv(:,:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
 	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random
 	integer nx_im,ix,iy,ni
@@ -312,7 +312,7 @@ c	enddo
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,
-!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,Ij,tau1,fact,exp_tau1,contr,ftot)
+!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,inu3D,fulloutput3D,Rplanet,
 !$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
@@ -320,7 +320,7 @@ c	enddo
 	allocate(fluxp_omp(nlam))
 	allocate(ftot(nlam))
 	fluxp_omp=0d0
-!$OMP DO
+!$OMP DO SCHEDULE(DYNAMIC,1)
 	do irtrace=1,nrtrace
 		A=2d0*pi*rtrace(irtrace)*wrtrace(irtrace)/real(nptrace)
 		do iptrace=1,nptrace
@@ -513,7 +513,7 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 		call output("Creating image: " // trim(file))
 		ni=nlam-1
 		tot=0d0
-		i=1
+		i=0
 		allocate(maxdet(3*nx_im*nx_im))
 		do ix=1,nx_im
 			do iy=1,nx_im
@@ -538,6 +538,7 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 					tot=maxdet(j)
 				endif
 			enddo
+			if(k.gt.ni) k=ni
 			maxdet(k)=0d0
 		enddo
 		deallocate(maxdet)
@@ -723,6 +724,43 @@ c Note we use the symmetry of the North and South here!
 
 	if(retrieval) call SetOutputMode(.true.)
 	
+	return
+	end
+	
+
+	subroutine SolveIj3D(tauR_in,Si,ftot,nr)
+	IMPLICIT NONE
+	integer ir,nr,info
+	real*8 tauR_in(nr),Si(nr),fact,d,ftot
+	real*8 x(nr+2),y(nr+2),tauR(0:nr+1),Ma(nr+2),Mb(nr+2),Mc(nr+2)
+
+	x=0d0
+	do ir=1,nr
+		tauR(nr-ir+1)=tauR_in(ir)
+		x(nr+2-ir)=Si(ir)
+	enddo
+	tauR(0)=tauR(1)*2d0
+	tauR(nr+1)=0d0
+
+	Ma=0d0
+	Mb=0d0
+	Mc=0d0
+	ir=1
+	do ir=1,nr
+		fact=1d0/(0.5d0*(tauR(ir+1)+tauR(ir))-0.5d0*(tauR(ir)+tauR(ir-1)))
+		Mb(ir+1)=1d0+fact*(1d0/(tauR(ir+1)-tauR(ir))+1d0/(tauR(ir)-tauR(ir-1)))
+		Ma(ir+1)=-fact*1d0/(tauR(ir)-tauR(ir-1))
+		Mc(ir+1)=-fact*1d0/(tauR(ir+1)-tauR(ir))
+	enddo
+	Mb(1)=1d0+1d0/(tauR(0)-tauR(1))
+	Mc(1)=-1d0/(tauR(0)-tauR(1))
+	Ma(nr+2)=1d0/(tauR(nr))
+	Mb(nr+2)=-1d0-1d0/(tauR(nr))
+
+	info=0
+	call tridag(Ma,Mb,Mc,x,y,nr+2,info)
+	ftot=y(nr)
+
 	return
 	end
 	
@@ -937,6 +975,148 @@ c Note we use the symmetry of the North and South here!
 			A(j0,jp)=A(j0,jp)+Kxx*Kyy*scale*real(nlatt*2)**2*cos(tp)/cos(la(j))
 			A(j0,jm)=A(j0,jm)+Kxx*Kyy*scale*real(nlatt*2)**2*cos(tm)/cos(la(j))
 			A(j0,j0)=A(j0,j0)-Kxx*Kyy*scale*real(nlatt*2)**2*(cos(tp)+cos(tm))/cos(la(j))
+		enddo
+	enddo
+
+	NRHS=1
+	NN=(nlong-1)*(nlatt-1)
+	call DGESV( NN, NRHS, A, NN, IWORK, x, NN, info )
+
+	betamin=0d0
+	betamax=0d0
+	tot1=0d0
+	tot2=0d0
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			j0=ii(i,j)
+			beta(i,j)=x(j0)
+			tot1=tot1+beta(i,j)*cos(la(j))
+			tot2=tot2+cos(la(j))
+			if(abs(lo(i)).le.pi/2d0) then
+				betamax=betamax+beta(i,j)*abs(cos(la(j))*cos(lo(i)))
+			else
+				betamin=betamin+beta(i,j)*abs(cos(la(j))*cos(lo(i)))
+			endif
+		enddo
+	enddo
+	beta=beta*0.25*tot2/tot1
+	contr=betamin/betamax
+	if(contr.lt.contrast) then
+		smin=scale
+		cmin=contr
+		if(smax.lt.0d0) then
+			scale=scale*10d0
+		else
+			scale=scale+(smax-scale)*(contrast-contr)/(cmax-contr)
+		endif
+	else
+		smax=scale
+		cmax=contr
+		if(smin.lt.0d0) then
+			scale=scale/10d0
+		else
+			scale=scale+(smin-scale)*(contrast-contr)/(cmin-contr)
+		endif
+	endif
+	enddo
+	
+	return
+	end
+	
+
+
+	subroutine DiffuseBeta_new(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,contrast)
+	IMPLICIT NONE
+	integer nlatt,nlong,NN
+	integer,allocatable :: IWORK(:)
+	integer i,info,j,NRHS,ii(nlong-1,nlatt-1)
+	real*8 beta(nlong,nlatt),Kxx,vxx,long(nlong),latt(nlatt),S(nlong-1,nlatt-1)
+	real*8 pi,tot,x((nlatt-1)*(nlong-1)),contrast,eps,Kyy
+	parameter(eps=1d-4)
+	real*8 la(nlatt-1),lo(nlong-1),tp,tm,tot1,tot2,cmax,cmin
+	real*8,allocatable :: A(:,:)
+	integer j0,jm,jp,k,niter,maxiter
+	parameter(pi=3.1415926536)
+	real*8 smax,smin,scale,betamin,betamax,contr
+
+	allocate(IWORK(nlatt*nlong))
+	allocate(A((nlatt-1)*(nlong-1),(nlatt-1)*(nlong-1)))
+
+	smax=-sqrt(2.4)
+	smin=-sqrt(3.2)
+	scale=1d0
+	
+	contr=contrast*10d0
+	maxiter=500
+	niter=0
+	do while(abs((contrast-contr)/(contrast+contr)).gt.eps.and.abs((smax-smin)/(smax+smin)).gt.eps.and.niter.lt.maxiter)
+	if(nlong*nlatt.gt.1600) print*,((contrast-contr)/(contrast+contr))/eps,contr,scale
+	
+	niter=niter+1
+	
+	do i=1,nlong-1
+		lo(i)=(long(i)+long(i+1))/2d0
+	enddo
+	do j=1,nlatt-1
+		la(j)=(latt(j)+latt(j+1))/2d0
+	enddo
+	k=0
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			k=k+1
+			ii(i,j)=k
+		enddo
+	enddo
+	S=0d0
+	A=0d0
+	tot=0d0
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			if(abs(lo(i)).le.pi/2d0) S(i,j)=-cos(lo(i))*cos(la(j))
+		enddo
+	enddo
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			j0=ii(i,j)
+			x(j0)=S(i,j)
+			A(j0,j0)=A(j0,j0)-1d0
+			if(i.gt.1) then
+				jm=ii(i-1,j)
+			else
+				jm=ii(nlong-1,j)
+			endif
+			if(i.lt.nlong-2) then
+				jp=ii(i+1,j)
+			else
+				jp=ii(1,j)
+			endif
+			A(j0,jm)=A(j0,jm)+0.5d0*vxx*scale*real(nlong)/cos(la(j))
+			A(j0,jp)=A(j0,jp)-0.5d0*vxx*scale*real(nlong)/cos(la(j))
+			A(j0,jm)=A(j0,jm)+Kxx*scale*(real(nlong)/cos(la(j)))**2
+			A(j0,j0)=A(j0,j0)-2d0*Kxx*scale*(real(nlong)/cos(la(j)))**2
+			A(j0,jp)=A(j0,jp)+Kxx*scale*(real(nlong)/cos(la(j)))**2
+
+			if(j.gt.1) then
+				jm=ii(i,j-1)
+				tm=latt(j-1)
+			endif
+			if(j.lt.nlatt-2) then
+				jp=ii(i,j+1)
+				tp=latt(j+2)
+			endif
+
+			if(j.gt.1) then
+				A(j0,jm)=A(j0,jm)+Kxx*Kyy*scale*real(nlatt*2)**2*cos(tm)/cos(la(j))
+				A(j0,j0)=A(j0,j0)-Kxx*Kyy*scale*real(nlatt*2)**2*(cos(tm))/cos(la(j))
+			else
+				A(j0,j0)=A(j0,j0)-2d0*Kxx*Kyy*scale*real(nlatt*2)**2*(cos(tp))/cos(la(j))
+			endif
+			if(j.lt.nlatt-2) then
+				A(j0,jp)=A(j0,jp)+Kxx*Kyy*scale*real(nlatt*2)**2*cos(tp)/cos(la(j))
+				A(j0,j0)=A(j0,j0)-Kxx*Kyy*scale*real(nlatt*2)**2*(cos(tp))/cos(la(j))
+			else
+				A(j0,j0)=A(j0,j0)-2d0*Kxx*Kyy*scale*real(nlatt*2)**2*(cos(tm))/cos(la(j))
+			endif
 		enddo
 	enddo
 
