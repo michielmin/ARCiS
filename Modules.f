@@ -318,7 +318,7 @@ cPoints for the temperature structure
 
 	module modComputeT
 	IMPLICIT NONE
-	real*8,allocatable :: Si_prev(:,:,:)
+	real*8,allocatable :: Si_prev(:,:,:),Cp_prev(:)
 	integer iaverage
 	end module modComputeT
 	

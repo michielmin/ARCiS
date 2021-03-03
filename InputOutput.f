@@ -182,13 +182,13 @@ c GFORTRAN requires interface for this function
 		end function dbl2string
 	end INTERFACE
 	
-	f=int(20d0*dble(i)/dble(n))
+	f=int(100d0*dble(i)/dble(n))
 	
 	xx=100d0*dble(i)/dble(n)
 	if(i.eq.1) then
 		call output_erase(trim(dbl2string(xx,'(f5.1)')) // " %")
-	else if(20d0*dble(i-1)/dble(n).lt.dble(f)
-     &   .and.20d0*dble(i+1)/dble(n).gt.dble(f)) then
+	else if(100d0*dble(i-1)/dble(n).lt.dble(f)
+     &   .and.100d0*dble(i+1)/dble(n).gt.dble(f)) then
 		call output_erase(trim(dbl2string(xx,'(f5.1)')) // " %")
 	endif
 	if(i.eq.n) then

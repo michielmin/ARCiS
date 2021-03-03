@@ -119,7 +119,7 @@
 		dens(i3)=Ndens(i3)*mp*MMW(i3)
 
 		R(i+di)=R0+dz
-		if(R(i+di).lt.R0/5d0) R(i+di)=R0/5d0
+c		if(R(i+di).lt.R0/5d0) R(i+di)=R0/5d0
 		R0=R(i+di)
 		P0=Pb(i+di)
 	enddo

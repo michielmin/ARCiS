@@ -45,7 +45,7 @@
 	integer info,IWORK(10*(nr+1)*(nr+1)),NRHS,ii(3),iscat,nscat
 	real*8 tau1,tau2,ee0,ee1,ee2,tauR(0:nr),Ij(0:nr),Ih(0:nr),scale
 	integer nlam_LR
-	real*8 specres_LR,IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr)
+	real*8 specres_LR,IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact
 	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
 	integer i1,i2,ngF,j
 	real*8 ww,w1,w2,SurfStar,SurfStar_omp,FstarBottom
@@ -55,6 +55,9 @@
 	real*8,allocatable :: WS(:),nu(:),wnu(:),Hstar_lam(:),Hsurf_lam(:)
 	real*8,allocatable :: x_SIj(:),y_SIj(:),tauR_SIj(:),Ma_SIj(:),Mb_SIj(:),Mc_SIj(:)
 	character*500 file
+
+	if(.not.allocated(Cp_prev)) allocate(Cp_prev(nr))
+	maxfact=4d0
 	
 	allocate(IP(nr*4+2))
 	IP(1)=(2*(nr)+nr*3+(nr*2+2)*(nr+7))
@@ -269,6 +272,45 @@
 	deallocate(wtemp)
 
 	Ce=Ca+Cs
+
+	converged=.true.
+	j=0
+	Cp(1:nr)=0d0
+	do ir=1,nr
+		iT=T(ir)+1
+		if(iT.gt.nBB-1) iT=nBB-1
+		if(iT.lt.1) iT=1
+		scale=(T(ir)/real(iT))**4
+		do ilam=1,nlam_LR-1
+			do ig=1,ng
+				Cp(ir)=Cp(ir)+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)*Ce(ir,ilam,ig)
+			enddo
+		enddo
+		Cp(ir)=Cp(ir)/((2d0*(pi*kb*T(ir))**4)/(15d0*hplanck**3*clight**3))
+		if(nTiter.gt.0) then
+			if(Cp(ir).gt.maxfact*Cp_prev(ir)) then
+				scale=maxfact*Cp_prev(ir)/Cp(ir)
+c				Ce(ir,1:nlam_LR,1:ng)=Ce(ir,1:nlam_LR,1:ng)*scale
+c				Ca(ir,1:nlam_LR,1:ng)=Ca(ir,1:nlam_LR,1:ng)*scale
+c				Cs(ir,1:nlam_LR,1:ng)=Cs(ir,1:nlam_LR,1:ng)*scale
+c				Cp(ir)=Cp(ir)*scale
+				converged=.false.
+				j=j+1
+			endif
+			if(Cp(ir).lt.Cp_prev(ir)/maxfact) then
+				scale=Cp_prev(ir)/(Cp(ir)*maxfact)
+c				Ce(ir,1:nlam_LR,1:ng)=Ce(ir,1:nlam_LR,1:ng)*scale
+c				Ca(ir,1:nlam_LR,1:ng)=Ca(ir,1:nlam_LR,1:ng)*scale
+c				Cs(ir,1:nlam_LR,1:ng)=Cs(ir,1:nlam_LR,1:ng)*scale
+c				Cp(ir)=Cp(ir)*scale
+				converged=.false.
+				j=j+1
+			endif
+		endif
+		Cp_prev(ir)=Cp(ir)
+	enddo
+c	print*,converged,j
+
 
 	do ilam=1,nlam_LR-1
 		do ig=1,ng
@@ -588,7 +630,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		endif
 	enddo
 
-	converged=.true.
+c	converged=.true.
 	do ir=1,nr
 		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.epsiter) converged=.false.
 		T(ir)=Tinp(ir)*(1d0-f)+T(ir)*f

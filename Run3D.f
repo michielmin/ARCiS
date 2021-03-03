@@ -20,7 +20,7 @@
 	integer nx_im,ix,iy,ni
 	character*500 file
 	real*8 tau1,fact1,exp_tau1
-	real*8,allocatable :: maxdet(:)
+	real*8,allocatable :: maxdet(:,:)
 
 	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr,n3D),Si(nlam,ng,0:nr,nnu0,n3D))
 	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce(nlam,nr,n3D))
@@ -256,7 +256,6 @@ c	enddo
 		close(unit=20)
 	endif
 
-
 	call output("Raytracing over the planet disk in 3D")
 
 	do ilam=1,nlam
@@ -292,8 +291,8 @@ c	enddo
 	nptrace=nlatt
 	
 	if(makeimage) then
-		nrtrace=nrtrace*5
-		nptrace=nptrace*5
+		nrtrace=nrtrace*4
+		nptrace=nptrace*3
 		allocate(rphi_image(nlam,nrtrace,nptrace))
 		allocate(xy_image(nx_im,nx_im,nlam))
 	endif
@@ -514,7 +513,7 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 		ni=nlam-1
 		tot=0d0
 		i=0
-		allocate(maxdet(3*nx_im*nx_im))
+		allocate(maxdet(nx_im*nx_im,3))
 		do ix=1,nx_im
 			do iy=1,nx_im
 				call SPECTOXYZ(xy_image(ix,iy,1:ni),lam(1:ni),ni,x,y,z)
@@ -522,26 +521,40 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 				xy_image(ix,iy,2)=y
 				xy_image(ix,iy,3)=z
 				i=i+1
-				maxdet(i)=x
-				i=i+1
-				maxdet(i)=y
-				i=i+1
-				maxdet(i)=z
+				if(x.ge.y.and.x.ge.z) then
+					x=0d0
+				else if(y.ge.x.and.y.ge.z) then
+					y=0d0
+				else
+					z=0d0
+				endif
+				maxdet(i,1)=x
+				maxdet(i,2)=y
+				maxdet(i,3)=z
 			enddo
 		enddo
-		ni=3*nx_im*nx_im
+		ni=nx_im*nx_im
 		do i=1,ni/20
 			tot=0d0
 			do j=1,ni
-				if(maxdet(j).gt.tot) then
+				if(maxdet(j,1).gt.tot) then
 					k=j
-					tot=maxdet(j)
+					tot=maxdet(j,1)
+				endif
+				if(maxdet(j,2).gt.tot) then
+					k=j
+					tot=maxdet(j,2)
+				endif
+				if(maxdet(j,3).gt.tot) then
+					k=j
+					tot=maxdet(j,3)
 				endif
 			enddo
 			if(k.gt.ni) k=ni
-			maxdet(k)=0d0
+			maxdet(k,1:3)=0d0
 		enddo
 		deallocate(maxdet)
+		print*,int(theta_phase(ipc)),tot
 		xy_image(1:nx_im,1:nx_im,1:3)=xy_image(1:nx_im,1:nx_im,1:3)/tot
 		do ix=1,nx_im
 			do iy=1,nx_im
@@ -1502,8 +1515,8 @@ c Note we use the symmetry of the North and South here!
 	b=2d0*(x*vx+y*vy+z*vz)
 	a=vx**2+vy**2+vz**2
 
-	i1midplane=0!(i3.eq.(nlatt+1)/2)
-	i2midplane=0!((i3+1).eq.(nlatt+1)/2)
+	i1midplane=.false.!(i3.eq.(nlatt+1)/2)
+	i2midplane=.false.!((i3+1).eq.(nlatt+1)/2)
 
 	hitT1=.false.
 	hitT2=.false.
@@ -1593,8 +1606,11 @@ c Note we use the symmetry of the North and South here!
 		i1next=i1
 		i2next=i2
 		i3next=i3-1
-		if(i3next.lt.1) i3next=1
 		edgenext=4
+		if(i3next.lt.1) then
+			i3next=1
+			edgenext=3
+		endif
 	endif
 	if(hitT2.and.vT2.lt.v.and.vT2.gt.0d0) then
 		v=vT2
@@ -1674,7 +1690,7 @@ c-----------------------------------------------------------------------
 	use Struct3D
 	IMPLICIT NONE
 	integer inu,nnu,ilam,ir,ig,inu0,iter,niter,info,NRHS
-	parameter(nnu=5,niter=500)
+	parameter(nnu=10,niter=500)
 	real*8 tau,d,tauR_nu(nr,nlam,ng),contr,Jstar_nu(nr,nlam,ng)
 	real*8 Si(nlam,ng,0:nr,nnu0),BBr(nlam,0:nr),Ca(nlam,ng,nr),Cs(nlam,nr),Ce(nlam,ng,nr)
 	real*8 nu(nnu),wnu(nnu),must,tauRs(nr),Ijs(nr),eps,Planck,tot
