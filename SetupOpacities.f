@@ -85,18 +85,14 @@ c===============
 		endif
 		mixrat_tmp(1:nmol)=mixrat_r(ir,1:nmol)
 		do i=1,ncia
-			if(CIA(i)%nT.gt.1) then
-				if(T(ir).le.CIA(i)%T(1)) then
-					iT=1
-				else if(T(ir).ge.CIA(i)%T(CIA(i)%nT)) then
-					iT=CIA(i)%nT
-				else
-					do iT=1,CIA(i)%nT-1
-						if(T(ir).ge.CIA(i)%T(iT).and.T(ir).le.CIA(i)%T(iT+1)) exit
-					enddo
-				endif
-			else
+			if(T(ir).lt.CIA(i)%T(1)) then
 				iT=1
+			else if(T(ir).gt.CIA(i)%T(CIA(i)%nT)) then
+				iT=CIA(i)%nT-1
+			else
+				do iT=1,CIA(i)%nT-1
+					if(T(ir).ge.CIA(i)%T(iT).and.T(ir).le.CIA(i)%T(iT+1)) exit
+				enddo
 			endif
 			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*mixrat_tmp(CIA(i)%imol1)*mixrat_tmp(CIA(i)%imol2)
 		enddo

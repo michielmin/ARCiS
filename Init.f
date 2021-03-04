@@ -2305,8 +2305,8 @@ c not entirely correct...
 					read(value(i),*) Dplanet
 					Dplanet=Dplanet*1d2/AU
 				case('Planet_Mass_[Me]')
-					read(value(i),*) Mplanet
-					Mplanet=Mplanet*Mearth/MJup
+					read(value(i),*) Mp_prior
+					Mp_prior=Mp_prior*Mearth/MJup
 				case('Planet_Radius_[Re]')
 					read(value(i),*) Rplanet
 					Rplanet=Rplanet*Rearth/RJup
@@ -2322,6 +2322,12 @@ c not entirely correct...
 		logg=log10(Ggrav*(Mstar*Msun)/((Rstar*Rsun)**2))
 	enddo
 	call compactname(name,cname)
+
+	if(Mp_prior.le.0d0) then
+		massprior=.false.
+	else
+		Mplanet=Mp_prior
+	endif
 	
 	if(trim(cname).eq.trim(cplanetname)) then
 		close(unit=72)
@@ -2453,7 +2459,7 @@ c not entirely correct...
 	open(unit=72,file=planetparameterfile,RECL=6000)
 	read(72,*)
 1	read(72,*,end=2) name,Tstar,x,x,Zc,x,x,Mstar,x,x,Rstar,x,x,logg,x,x,x,x,x,orbit_P,orbit_e,x,x,Dplanet,x,x,
-     &					Mplanet,dM1,dM2,Rplanet,dR1,dR2
+     &					Mp_prior,dM1,dM2,Rplanet,dR1,dR2
 	if(Zc.eq.'-1') then
 		metallicity=0d0
 	else
@@ -2464,6 +2470,11 @@ c not entirely correct...
 		name(i:i)=' '
 	endif
 	orbit_P=orbit_P*86400d0
+	if(Mp_prior.le.0d0) then
+		massprior=.false.
+	else
+		Mplanet=Mp_prior
+	endif
 	Mp_prior=Mplanet
 	dMp_prior=sqrt(dM1**2+dM2**2)
 	if(trim(planetname).eq.trim(name)) then	
