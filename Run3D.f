@@ -19,7 +19,7 @@
 	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random
 	integer nx_im,ix,iy,ni
 	character*500 file
-	real*8 tau1,fact1,exp_tau1
+	real*8 tau1,fact1,exp_tau1,maximage
 	real*8,allocatable :: maxdet(:,:)
 
 	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr,n3D),Si(nlam,ng,0:nr,nnu0,n3D))
@@ -511,7 +511,6 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 		file=trim(outputdir) // "imageRGB" //  trim(int2string(int(theta_phase(ipc)),'(i0.3)')) // ".fits"
 		call output("Creating image: " // trim(file))
 		ni=nlam-1
-		tot=0d0
 		i=0
 		allocate(maxdet(nx_im*nx_im,3))
 		do ix=1,nx_im
@@ -533,29 +532,30 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 				maxdet(i,3)=z
 			enddo
 		enddo
+		if(ipc.eq.1) then
 		ni=nx_im*nx_im
 		do i=1,ni/20
-			tot=0d0
+			maximage=0d0
 			do j=1,ni
-				if(maxdet(j,1).gt.tot) then
+				if(maxdet(j,1).gt.maximage) then
 					k=j
-					tot=maxdet(j,1)
+					maximage=maxdet(j,1)
 				endif
-				if(maxdet(j,2).gt.tot) then
+				if(maxdet(j,2).gt.maximage) then
 					k=j
-					tot=maxdet(j,2)
+					maximage=maxdet(j,2)
 				endif
-				if(maxdet(j,3).gt.tot) then
+				if(maxdet(j,3).gt.maximage) then
 					k=j
-					tot=maxdet(j,3)
+					maximage=maxdet(j,3)
 				endif
 			enddo
 			if(k.gt.ni) k=ni
 			maxdet(k,1:3)=0d0
 		enddo
+		endif
 		deallocate(maxdet)
-		print*,int(theta_phase(ipc)),tot
-		xy_image(1:nx_im,1:nx_im,1:3)=xy_image(1:nx_im,1:nx_im,1:3)/tot
+		xy_image(1:nx_im,1:nx_im,1:3)=xy_image(1:nx_im,1:nx_im,1:3)/maximage
 		do ix=1,nx_im
 			do iy=1,nx_im
 				call XYZTORGB(xy_image(ix,iy,1),xy_image(ix,iy,2),xy_image(ix,iy,3),x,y,z)
@@ -566,6 +566,9 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 		enddo
 		ni=3
 		call writefitsfile(file,xy_image,ni,nx_im)
+		file=trim(outputdir) // "imageRGB" //  trim(int2string(int(theta_phase(ipc)),'(i0.3)')) // ".ppm"
+		call output("Creating image: " // trim(file))
+		call writeppmfile(file,xy_image,ni,nx_im)
 	endif
 
 	enddo
@@ -1112,10 +1115,20 @@ c Note we use the symmetry of the North and South here!
 			if(j.gt.1) then
 				jm=ii(i,j-1)
 				tm=latt(j-1)
+			else
+				k=i+nlong/2
+				if(k.gt.nlong-1) k=k-nlong+1
+				jm=ii(k,1)
+				tm=latt(1)
 			endif
 			if(j.lt.nlatt-2) then
 				jp=ii(i,j+1)
 				tp=latt(j+2)
+			else
+				k=i+nlong/2
+				if(k.gt.nlong-1) k=k-nlong+1
+				jp=ii(k,nlatt-1)
+				tp=latt(nlatt)
 			endif
 
 			if(j.gt.1) then

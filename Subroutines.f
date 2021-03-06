@@ -895,3 +895,31 @@ c        print*,'series failed in expint'
 	end
 
 
+	subroutine writeppmfile(filename,im,nlam,n)
+	IMPLICIT NONE
+	character*500 filename
+	integer n,nlam,cdepth,i,j,k,c
+	real*8 im(n,n,nlam)
+
+	cdepth=256
+
+	open(unit=35,file=filename,RECL=6000)
+	write(35,'("P3")')
+	write(35,'("# ",a)') trim(filename)
+	write(35,'(i5,i5)') n,n
+	write(35,'(i5)') cdepth
+	do i=1,n
+		do j=1,n
+			do k=1,nlam
+				c=im(j,i,k)*real(cdepth)
+				write(35,*) c
+			enddo
+		enddo
+	enddo
+	close(unit=35)
+	return
+	end
+	
+		
+	
+	
