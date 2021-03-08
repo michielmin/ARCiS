@@ -416,6 +416,7 @@ c Note we are here using the symmetry between North and South
 			x=x+v*vx
 			y=y+v*vy
 			z=z+v*vz
+			if(i2next.gt.nlong.or.i3next.gt.nlatt.or.i2next.lt.1.or.i3next.lt.1) goto 2
 			if(ibeta(i2,i3).ne.ibeta(i2next,i3next)) then
 				rr=x**2+y**2+z**2
 				i=ibeta(i2next,i3next)
@@ -680,6 +681,7 @@ c Note we use the symmetry of the North and South here!
 			x=x+v*vx
 			y=y+v*vy
 			z=z+v*vz
+			if(i2next.gt.nlong.or.i3next.gt.nlatt.or.i2next.lt.1.or.i3next.lt.1) goto 4
 			if(ibeta(i2,i3).ne.ibeta(i2next,i3next)) then
 				rr=x**2+y**2+z**2
 				i=ibeta(i2next,i3next)
