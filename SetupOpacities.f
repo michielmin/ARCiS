@@ -154,24 +154,14 @@ c===============
 				endif
 			enddo
 			else
-			ig_c=(ng_comp-n_nu_line*nmol)*random(idum)+1
-			k_line=0d0
+			kappa(1:ng)=0d0
 			tot=0d0
 			do imol=1,nmol
 				if(opacitymol(imol)) then
 					ktemp(1:ng)=kappa_mol(1:ng,i,imol)
 					tot=tot+sum(ktemp(1:ng)*wgg(1:ng))*mixrat_tmp(imol)
-					do j=1,n_nu_line
-						ig=ig_comp(ig_c)
-						ig_c=ig_c+1
-						k_line(j)=k_line(j)+ktemp(ig)*mixrat_tmp(imol)
-					enddo
+					kappa(1:ng)=kappa(1:ng)+ktemp(1:ng)*wgg(1:ng)*mixrat_tmp(imol)
 				endif
-			enddo
-			call sort(k_line,n_nu_line)
-			do ig=1,ng
-				j=real(n_nu_line)*gg(ig)+1
-				kappa(ig)=k_line(j)
 			enddo
 			endif
 

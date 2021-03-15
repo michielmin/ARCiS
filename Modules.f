@@ -104,7 +104,7 @@ c===============================================================================
 	logical didcondens_chem,coagulation,resume_multinest,doMCcompute,disequilibrium,const_eff_multinest
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
-	real*8 mixratHaze,PHaze,dPHaze,kappaHaze,Kzz,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,night2day
+	real*8 mixratHaze,PHaze,dPHaze,kappaHaze,Kzz,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,powvxx,night2day
 	real*8 Kzz_deep,Kzz_1bar,Kzz_P,SOratio,Tsurface
 	logical enhancecarbon,fast_chem,gamma_equal,dopostequalweights
 	logical transspec,emisspec,rainout,computeLC,doscaleR

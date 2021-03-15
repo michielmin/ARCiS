@@ -46,7 +46,7 @@ c	recomputeopac=.true.
 	long0=long_shift*pi/180d0
 
 c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,betamax)
-	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,night2day,fDay,betamin,betamax)
+	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,fDay,betamin,betamax)
 
 	if(.not.retrieval) then
 		open(unit=20,file=trim(outputdir) // "structure3D.dat",RECL=6000)
@@ -348,10 +348,10 @@ c Note we are here using the symmetry between North and South
 			lo=acos(x/sqrt(x**2+y**2))
 			if(y.gt.0d0) lo=2d0*pi-lo
 			do i2=1,nlong-1
-				if(lo.ge.long(i2).and.lo.le.long(i2+1)) exit
+				if(lo.ge.long(i2).and.lo.lt.long(i2+1)) exit
 			enddo
 			do i3=1,nlatt-1
-				if(la.ge.latt(i3).and.la.le.latt(i3+1)) exit
+				if(la.ge.latt(i3).and.la.lt.latt(i3+1)) exit
 			enddo
 			i1=nr+1
 			edgeNR=2
@@ -362,36 +362,15 @@ c Note we are here using the symmetry between North and South
 			else
 				inu=(real(nnu0-2)*la+0.5d0)+1
 				if(inu.lt.1) inu=1
-				if(.not.inu.lt.nnu0) inu=nnu0
+				if(.not.inu.lt.nnu0-1) inu=nnu0-1
 			endif
 			if(fulloutput3D) then
 				PTaverage3D(ipc,1:nr)=PTaverage3D(ipc,1:nr)+T3D(i,1:nr)*A
 				mixrat_average3D(ipc,1:nr,1:nmol)=mixrat_average3D(ipc,1:nr,1:nmol)+mixrat3D(i,1:nr,1:nmol)*A
 			endif
+			j=0
 1			continue
 			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nr,nlong,nlatt)
-			if(i1next.le.0) then
-				j=j+1
-				i=ibeta(i2,i3)
-				la=(-x/sqrt(x**2+y**2+z**2))
-				if(la.lt.0d0) then
-					inu=nnu0
-				else
-					inu=(real(nnu0-2)*la+0.5d0)+1
-					if(inu.lt.1) inu=1
-					if(.not.inu.lt.nnu0) inu=nnu0
-				endif
-				do ilam=1,nlam
-					if(lamemis(ilam)) then
-					do ig=1,ng
-						contr=Si(ilam,ig,0,inu,i)*abs(x*vx+y*vy+z*vz)/sqrt((x*x+y*y+z*z)*(vx*vx+vy*vy+vz*vz))
-						ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
-					enddo
-					endif
-				enddo
-				goto 2
-			endif
-			if(i1next.ge.nr+2) goto 2
 			if(i1.le.nr) then
 				i=ibeta(i2,i3)
 				la=(-x/sqrt(x**2+y**2+z**2))
@@ -400,7 +379,7 @@ c Note we are here using the symmetry between North and South
 				else
 					inu=(real(nnu0-2)*la+0.5d0)+1
 					if(inu.lt.1) inu=1
-					if(.not.inu.lt.nnu0) inu=nnu0
+					if(.not.inu.lt.nnu0-1) inu=nnu0-1
 				endif
 				do ilam=1,nlam
 					if(lamemis(ilam)) then
@@ -413,10 +392,31 @@ c Note we are here using the symmetry between North and South
 					endif
 				enddo
 			endif
+			if(i1next.le.0) then
+				i=ibeta(i2,i3)
+				la=(-x/sqrt(x**2+y**2+z**2))
+				if(la.lt.0d0) then
+					inu=nnu0
+				else
+					inu=(real(nnu0-2)*la+0.5d0)+1
+					if(inu.lt.1) inu=1
+					if(.not.inu.lt.nnu0-1) inu=nnu0-1
+				endif
+				do ilam=1,nlam
+					if(lamemis(ilam)) then
+					do ig=1,ng
+						contr=Si(ilam,ig,0,inu,i)*abs(x*vx+y*vy+z*vz)/sqrt((x*x+y*y+z*z)*(vx*vx+vy*vy+vz*vz))
+						ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
+					enddo
+					endif
+				enddo
+				goto 2
+			endif
+			if(i1next.ge.nr+2) goto 2
 			x=x+v*vx
 			y=y+v*vy
 			z=z+v*vz
-			if(i2next.gt.nlong.or.i3next.gt.nlatt.or.i2next.lt.1.or.i3next.lt.1) goto 2
+			if(i2next.gt.nlong-1.or.i3next.gt.nlatt-1.or.i2next.lt.1.or.i3next.lt.1) goto 2
 			if(ibeta(i2,i3).ne.ibeta(i2next,i3next)) then
 				rr=x**2+y**2+z**2
 				i=ibeta(i2next,i3next)
@@ -430,7 +430,8 @@ c Note we are here using the symmetry between North and South
 			i2=i2next
 			i3=i3next
 			edgeNR=edgenext
-			goto 1
+			j=j+1
+			if(j.lt.(nr*nlatt*nlong)) goto 1
 2			continue
 			fluxp_omp(1:nlam)=fluxp_omp(1:nlam)+ftot(1:nlam)
 			if(makeimage) rphi_image(1:nlam,irtrace,iptrace)=ftot(1:nlam)
@@ -865,14 +866,14 @@ c Note we use the symmetry of the North and South here!
 	end
 	
 
-	subroutine Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,night2day,f,betamin,betamax)
+	subroutine Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,f,betamin,betamax)
 	IMPLICIT NONE
 	integer i,j,nlong,nlatt
 	real*8 pi
 	parameter(pi=3.1415926536)
 	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
 	real*8 beta(nlong,nlatt),la,lo,albedo,p,f,tot1,tot2,b1,b2
-	real*8 Kxx,vxx,betamin,betamax,beta1(nlong),night2day,Kyy
+	real*8 Kxx,vxx,betamin,betamax,beta1(nlong),night2day,Kyy,powvxx
 
 	do i=1,nlong
 		long(i)=-pi+2d0*pi*real(i-1)/real(nlong-1)
@@ -884,7 +885,7 @@ c Note we use the symmetry of the North and South here!
 	betamin=1d0
 	betamax=0d0
 
-	call DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,night2day)
+	call DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day)
 	beta=beta*f
 
 	do i=1,nlong-1
@@ -901,19 +902,49 @@ c Note we use the symmetry of the North and South here!
 	end
 	
 
-	subroutine DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,contrast)
+	subroutine DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,contrast)
 	IMPLICIT NONE
 	integer nlatt,nlong,NN
 	integer,allocatable :: IWORK(:)
 	integer i,info,j,NRHS,ii(nlong-1,nlatt-1)
 	real*8 beta(nlong,nlatt),Kxx,vxx,long(nlong),latt(nlatt),S(nlong-1,nlatt-1)
-	real*8 pi,tot,x((nlatt-1)*(nlong-1)),contrast,eps,Kyy
+	real*8 pi,tot,x((nlatt-1)*(nlong-1)),contrast,eps,Kyy,powvxx
 	parameter(eps=1d-4)
 	real*8 la(nlatt-1),lo(nlong-1),tp,tm,tot1,tot2,cmax,cmin
 	real*8,allocatable :: A(:,:)
 	integer j0,jm,jp,k,niter,maxiter
 	parameter(pi=3.1415926536)
 	real*8 smax,smin,scale,betamin,betamax,contr
+
+	do i=1,nlong-1
+		lo(i)=(long(i)+long(i+1))/2d0
+	enddo
+	do j=1,nlatt-1
+		la(j)=(latt(j)+latt(j+1))/2d0
+	enddo
+	k=0
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			k=k+1
+			ii(i,j)=k
+		enddo
+	enddo
+	if(contrast.le.0d0) then
+		beta=0d0
+		do i=1,nlong-1
+			do j=1,nlatt-1
+				if(abs(lo(i)).le.pi/2d0) beta(i,j)=abs(cos(lo(i))*cos(la(j)))
+			enddo
+		enddo
+		return
+	else if(contrast.ge.1d0.and.vxx.eq.0d0) then
+		do i=1,nlong-1
+			do j=1,nlatt-1
+				beta(i,j)=0.25
+			enddo
+		enddo
+		return
+	endif
 
 	allocate(IWORK(nlatt*nlong))
 	allocate(A((nlatt-1)*(nlong-1),(nlatt-1)*(nlong-1)))
@@ -930,19 +961,6 @@ c Note we use the symmetry of the North and South here!
 	
 	niter=niter+1
 	
-	do i=1,nlong-1
-		lo(i)=(long(i)+long(i+1))/2d0
-	enddo
-	do j=1,nlatt-1
-		la(j)=(latt(j)+latt(j+1))/2d0
-	enddo
-	k=0
-	do i=1,nlong-1
-		do j=1,nlatt-1
-			k=k+1
-			ii(i,j)=k
-		enddo
-	enddo
 	S=0d0
 	A=0d0
 	tot=0d0
@@ -961,29 +979,29 @@ c Note we use the symmetry of the North and South here!
 			else
 				jm=ii(nlong-1,j)
 			endif
-			if(i.lt.nlong-2) then
+			if(i.lt.nlong-1) then
 				jp=ii(i+1,j)
 			else
 				jp=ii(1,j)
 			endif
-			A(j0,jm)=A(j0,jm)+0.5d0*vxx*scale*real(nlong)/cos(la(j))
-			A(j0,jp)=A(j0,jp)-0.5d0*vxx*scale*real(nlong)/cos(la(j))
+			A(j0,jm)=A(j0,jm)+0.5d0*vxx*scale*real(nlong)*cos(la(j))**(powvxx-1d0)
+			A(j0,jp)=A(j0,jp)-0.5d0*vxx*scale*real(nlong)*cos(la(j))**(powvxx-1d0)
 			A(j0,jm)=A(j0,jm)+Kxx*scale*(real(nlong)/cos(la(j)))**2
 			A(j0,j0)=A(j0,j0)-2d0*Kxx*scale*(real(nlong)/cos(la(j)))**2
 			A(j0,jp)=A(j0,jp)+Kxx*scale*(real(nlong)/cos(la(j)))**2
 
 			if(j.gt.1) then
 				jm=ii(i,j-1)
-				tm=latt(j-1)
+				tm=latt(j)
 			else
 				k=i+nlong/2
 				if(k.gt.nlong-1) k=k-nlong+1
 				jm=ii(k,1)
 				tm=latt(1)
 			endif
-			if(j.lt.nlatt-2) then
+			if(j.lt.nlatt-1) then
 				jp=ii(i,j+1)
-				tp=latt(j+2)
+				tp=latt(j+1)
 			else
 				k=i+nlong/2
 				if(k.gt.nlong-1) k=k-nlong+1
@@ -1056,6 +1074,7 @@ c Note we use the symmetry of the North and South here!
 	integer j0,jm,jp,k,niter,maxiter
 	parameter(pi=3.1415926536)
 	real*8 smax,smin,scale,betamin,betamax,contr
+	real*8 f1m,f1p,f2m,f2p,am,ap,a0,bm,bp,b0
 
 	allocate(IWORK(nlatt*nlong))
 	allocate(A((nlatt-1)*(nlong-1),(nlatt-1)*(nlong-1)))
@@ -1116,35 +1135,39 @@ c Note we use the symmetry of the North and South here!
 
 			if(j.gt.1) then
 				jm=ii(i,j-1)
-				tm=latt(j-1)
+				tm=la(j-1)
 			else
 				k=i+nlong/2
 				if(k.gt.nlong-1) k=k-nlong+1
 				jm=ii(k,1)
-				tm=latt(1)
+				tm=-la(1)
 			endif
-			if(j.lt.nlatt-2) then
+			if(j.lt.nlatt-1) then
 				jp=ii(i,j+1)
-				tp=latt(j+2)
+				tp=la(j+1)
 			else
 				k=i+nlong/2
 				if(k.gt.nlong-1) k=k-nlong+1
 				jp=ii(k,nlatt-1)
-				tp=latt(nlatt)
+				tp=-la(nlatt-1)
 			endif
+		f1m=tm-la(j)
+		f1p=tp-la(j)
+		f2m=tm**2-la(j)**2
+		f2p=tp**2-la(j)**2
 
-			if(j.gt.1) then
-				A(j0,jm)=A(j0,jm)+Kxx*Kyy*scale*real(nlatt*2)**2*cos(tm)/cos(la(j))
-				A(j0,j0)=A(j0,j0)-Kxx*Kyy*scale*real(nlatt*2)**2*(cos(tm))/cos(la(j))
-			else
-				A(j0,j0)=A(j0,j0)-2d0*Kxx*Kyy*scale*real(nlatt*2)**2*(cos(tp))/cos(la(j))
-			endif
-			if(j.lt.nlatt-2) then
-				A(j0,jp)=A(j0,jp)+Kxx*Kyy*scale*real(nlatt*2)**2*cos(tp)/cos(la(j))
-				A(j0,j0)=A(j0,j0)-Kxx*Kyy*scale*real(nlatt*2)**2*(cos(tp))/cos(la(j))
-			else
-				A(j0,j0)=A(j0,j0)-2d0*Kxx*Kyy*scale*real(nlatt*2)**2*(cos(tm))/cos(la(j))
-			endif
+		am=1d0/((f2m/f1m-f2p/f1p)*f1m)
+		ap=1d0/((f2p/f1p-f2m/f1m)*f1p)
+		a0=(1d0/(f2m/f1m-f2p/f1p))*(1d0/f1p-1d0/f1m)
+
+		bm=1d0/((f1m/f2m-f1p/f2p)*f2m)
+		bp=1d0/((f1p/f2p-f1m/f2m)*f2p)
+		b0=(1d0/(f1m/f2m-f1p/f2p))*(1d0/f2p-1d0/f2m)
+
+		A(j0,jm)=A(j0,jm)-Kxx*(2d0*am-(2d0*am*la(j)+bm)*tan(la(j)))/(2d0*pi)
+		A(j0,jp)=A(j0,jp)-Kxx*(2d0*ap-(2d0*ap*la(j)+bp)*tan(la(j)))/(2d0*pi)
+		A(j0,j0)=A(j0,j0)-Kxx*(2d0*a0-(2d0*a0*la(j)+b0)*tan(la(j)))/(2d0*pi)
+
 		enddo
 	enddo
 
