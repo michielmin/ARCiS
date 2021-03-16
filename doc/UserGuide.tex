@@ -1,4 +1,5 @@
 \documentclass[12pt]{article}
+\usepackage{natbib}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{graphicx}
@@ -48,7 +49,20 @@ By using ARCiS you agree to the following:
 \item You are not permitted to pass (parts of) the code to anyone else. If anyone else is interested, let him/her drop me an email: M.Min@sron.nl
 \item You offer me co-author rights on any paper that uses results computed with ARCiS
 \end{itemize}
-The most important reason for this is to make sure that ARCiS is used in a correct way and the result are scientifically useful. ARCiS is a complex code which can do a lot of things, this also means things can go wrong.
+The most important reason for this is to make sure that ARCiS is used in a correct way and the result are scientifically useful. ARCiS is a complex code which can do a lot of things, this also means things can go wrong. Please refer to \cite{2020A&A...642A..28M} for the first full description of the fundamental properties of the code.
+
+Note that there are several parts of the code from different developers:
+\begin{itemize}
+\item Cloud formation framework: \cite{2019A&A...622A.121O}
+\item Optical properties of cloud particles computed using DHS: \cite{2005A&A...432..909M, 1981ApOpt..20.3657T}
+\item Refractive indices for the cloud species, see references in \cite{2020A&A...642A..28M}
+\item Molecular opacities: \cite{2021A&A...646A..21C} and references therein
+\item Multinest Retrieval tools: \cite{2008MNRAS.384..449F, 2009MNRAS.398.1601F, 2019OJAp....2E..10F}
+\item GGchem when including chemistry: \cite{2018A&A...614A...1W}
+\item Disequilibrium chemistry implementation: Kawashima et al. (in prep)
+\item Diffusion implementation for 3D structures: Chubb et al. (in prep)
+\item Coupling with planet formation parameters: Khorshid et al. (in prep)
+\end{itemize}
 
 \section{Installing ARCiS}
 
@@ -88,7 +102,8 @@ Next fetch the git source code from:
 %
 This creates the ARCiS binary, which you can put in any path accessible (/usr/bin or something like that).
 
-You also need data files to be stored under \texttt{\$(HOME)/ARCiS/Data/}
+You also need data files to be stored under: \texttt{\$(HOME)/ARCiS/Data/}\\
+These data files can be downloaded from \url{http://www.exoclouds.com} using the provided passcode.
 
 \section{Using ARCiS}
 
@@ -105,6 +120,8 @@ There are several options included in ARCiS. These are given as keywords in the 
 Any number of keys can be set on the command line. Just make sure the first argument of the command line is the name of your input file. Note that ARCiS always takes the last keyword value it encounters, first reading the input file, next the command line keywords one by one.
 
 \section{Keywords}
+
+There are many keywords for a variety of different setups. Chemistry or not, cloud formation or not, various temperature structures, perform retrievals, 3D or 1D structure, and many more options. Below are some very basic setups discussed. The runtime of a single forward model can vary from 0.01 second to 15 minutes depending on your choices. For more information it is best to get in contact.
 
 \subsection{Base properties}
 
@@ -262,7 +279,30 @@ File containing the input file for the best fitting model when retrieval was don
 
 \section{Examples}
 
-There are a few examples on the VirtualBox VM, retrieval and forward modelling.
+There are a few examples in the Example directory downloaded with the git repository for retrieval and forward modelling.
+
+\begin{thebibliography}{91}
+
+\bibitem[\protect\citeauthoryear{Min et al.}{2020}]{2020A&A...642A..28M} Min M., Ormel C.~W., Chubb K., Helling C., Kawashima Y., 2020, A\&A, 642, A28. doi:10.1051/0004-6361/201937377
+
+\bibitem[\protect\citeauthoryear{Woitke et al.}{2018}]{2018A&A...614A...1W} Woitke P., Helling C., Hunter G.~H., Millard J.~D., Turner G.~E., Worters M., Blecic J., et al., 2018, A\&A, 614, A1. doi:10.1051/0004-6361/201732193
+
+\bibitem[\protect\citeauthoryear{Ormel \& Min}{2019}]{2019A&A...622A.121O} Ormel C.~W., Min M., 2019, A\&A, 622, A121. doi:10.1051/0004-6361/201833678
+
+\bibitem[\protect\citeauthoryear{Min, Hovenier, \& de Koter}{2005}]{2005A&A...432..909M} Min M., Hovenier J.~W., de Koter A., 2005, A\&A, 432, 909. doi:10.1051/0004-6361:20041920
+
+\bibitem[\protect\citeauthoryear{Toon \& Ackerman}{1981}]{1981ApOpt..20.3657T} Toon O.~B., Ackerman T.~P., 1981, ApOpt, 20, 3657. doi:10.1364/AO.20.003657
+
+\bibitem[\protect\citeauthoryear{Chubb et al.}{2021}]{2021A&A...646A..21C} Chubb K.~L., Rocchetto M., Yurchenko S.~N., Min M., Waldmann I., Barstow J.~K., Molli{\`e}re P., et al., 2021, A\&A, 646, A21. doi:10.1051/0004-6361/202038350
+
+%multinest
+\bibitem[\protect\citeauthoryear{Feroz \& Hobson}{2008}]{2008MNRAS.384..449F} Feroz F., Hobson M.~P., 2008, MNRAS, 384, 449. doi:10.1111/j.1365-2966.2007.12353.x
+
+\bibitem[\protect\citeauthoryear{Feroz, Hobson, \& Bridges}{2009}]{2009MNRAS.398.1601F} Feroz F., Hobson M.~P., Bridges M., 2009, MNRAS, 398, 1601. doi:10.1111/j.1365-2966.2009.14548.x
+
+\bibitem[\protect\citeauthoryear{Feroz et al.}{2019}]{2019OJAp....2E..10F} Feroz F., Hobson M.~P., Cameron E., Pettitt A.~N., 2019, OJAp, 2, 10. doi:10.21105/astro.1306.2144
+
+\end{thebibliography}
 
 \end{document}
 
