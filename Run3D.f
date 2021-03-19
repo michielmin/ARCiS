@@ -84,7 +84,7 @@ c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,b
 			if(betamax.eq.betamin.or.(night2day.eq.1d0.and.vxx.eq.0d0)) then
 				ibeta(i,j)=1
 			else
-				ibeta(i,j)=(real(n3D-1)*((beta(i,j)-betamin)/(betamax-betamin))+0.5d0)+1
+				ibeta(i,j)=(real(n3D)*((beta(i,j)-betamin)/(betamax-betamin)))+1
 				if(ibeta(i,j).gt.n3D) ibeta(i,j)=n3D
 				if(.not.ibeta(i,j).gt.1) ibeta(i,j)=1
 			endif
@@ -115,7 +115,7 @@ c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,b
 	call tellertje_perc(0,n3D)
 	do i=1,n3D
 		call SetOutputMode(.false.)
-		beta3D(i)=betamin+(betamax-betamin)*real(i-1)/real(n3D-1)
+		beta3D(i)=betamin+(betamax-betamin)*(real(i)-0.5)/real(n3D)
 		do j=1,n_Par3D
 			if(Par3D(j)%logscale) then
 c				Par3D(j)%x=10d0**(log10(Par3D(j)%xmin)+log10(Par3D(j)%xmax/Par3D(j)%xmin)*beta3D(i))
@@ -1421,7 +1421,7 @@ c Note we use the symmetry of the North and South here!
 			hitRin=.true.
 		endif
 	endif
-	if(v.lt.0d0) hitRin=.false.
+	if(.not.v.gt.0d0) hitRin=.false.
 
 	return
 	end
@@ -1453,7 +1453,7 @@ c Note we use the symmetry of the North and South here!
 			hitRout=.true.
 		endif
 	endif
-	if(v.lt.0d0) hitRout=.false.
+	if(.not.v.gt.0d0) hitRout=.false.
 	return
 	end
 
@@ -1507,7 +1507,7 @@ c Note we use the symmetry of the North and South here!
 	bt=Thet*b-2d0*z*vz
 	at=Thet*a-vz**2
 	v=-bt/at
-	if(v.le.0d0) hitTsame=.false.
+	if(.not.v.gt.0d0) hitTsame=.false.
 
 	return
 	end
@@ -1517,9 +1517,9 @@ c Note we use the symmetry of the North and South here!
 	real*8 tanx,tany,x0,vx,y0,vy,v
 	
 	hitP=.true.
-	v=(tany*y0-tanx*x0)/(tanx*vx-tany*vy)
+	v=(-tany*y0-tanx*x0)/(tanx*vx+tany*vy)
 	
-	if(v.lt.0d0) hitP=.false.
+	if(.not.v.gt.0d0) hitP=.false.
 	
 	return
 	end
@@ -1553,8 +1553,8 @@ c Note we use the symmetry of the North and South here!
 	b=2d0*(x*vx+y*vy+z*vz)
 	a=vx**2+vy**2+vz**2
 
-	i1midplane=.false.!(i3.eq.(nlatt+1)/2)
-	i2midplane=.false.!((i3+1).eq.(nlatt+1)/2)
+	i1midplane=(i3.eq.(nlatt+1)/2)
+	i2midplane=((i3+1).eq.(nlatt+1)/2)
 
 	hitT1=.false.
 	hitT2=.false.
@@ -1655,15 +1655,18 @@ c Note we use the symmetry of the North and South here!
 		i1next=i1
 		i2next=i2
 		i3next=i3+1
-		if(i3next.gt.n3) i3next=n3
 		edgenext=3
+		if(i3next.ge.n3) then
+			i3next=n3
+			edgenext=4
+		endif
 	endif
 	if(hitP1.and.vP1.lt.v.and.vP1.gt.0d0) then
 		v=vP1
 		i1next=i1
 		i2next=i2-1
 		i3next=i3
-		if(i2next.lt.1) i2next=nlong-1
+		if(i2next.lt.1) i2next=n2-1
 		edgenext=6
 	endif
 	if(hitP2.and.vP2.lt.v.and.vP2.gt.0d0) then
@@ -1671,7 +1674,7 @@ c Note we use the symmetry of the North and South here!
 		i1next=i1
 		i2next=i2+1
 		i3next=i3
-		if(i2next.ge.nlong) i2next=1
+		if(i2next.ge.n2) i2next=1
 		edgenext=5
 	endif
 

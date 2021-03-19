@@ -316,14 +316,6 @@ cPoints for the temperature structure
 	end module GlobalSetup
 	
 
-	module modComputeT
-	IMPLICIT NONE
-	real*8,allocatable :: Si_prev(:,:,:),Cp_prev(:)
-	integer iaverage
-	end module modComputeT
-	
-
-
 	module CloudModule
 	IMPLICIT NONE
 	integer nr_cloud

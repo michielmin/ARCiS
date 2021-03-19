@@ -1302,7 +1302,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	fDay=0.5d0
 	betapow=1d0
-	Kxx=1d-4
+	Kxx=1d0
 	Kyy=1d0
 	vxx=0d0
 	powvxx=0d0

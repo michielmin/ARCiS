@@ -1,7 +1,6 @@
 	subroutine DoComputeT(converged,f)
 	use GlobalSetup
 	use Constants
-	use modComputeT
 	use CloudModule
 	IMPLICIT NONE
 	integer iphase,Titer
@@ -29,10 +28,9 @@
 	use GlobalSetup
 	use Constants
 	use CloudModule
-	use modComputeT
 	IMPLICIT NONE
 	integer iphase,iter
-	real*8 tau_V,tau_T,Planck,Cp(nr),f
+	real*8 tau_V,tau_T,Planck,f
 	real*8 g,dlnT,dlnP,d,tau,tautot,fact,contr,tau_a,exp_tau
 	real*8,allocatable :: Ce(:,:,:),Ca(:,:,:),Cs(:,:,:),taustar(:,:),tauR_nu(:,:,:)
 	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i,E,E0,Tinp(nr)
@@ -56,7 +54,6 @@
 	real*8,allocatable :: x_SIj(:),y_SIj(:),tauR_SIj(:),Ma_SIj(:),Mb_SIj(:),Mc_SIj(:)
 	character*500 file
 
-	if(.not.allocated(Cp_prev)) allocate(Cp_prev(nr))
 	maxfact=4d0
 	
 	allocate(IP(nr*4+2))
@@ -274,42 +271,6 @@
 	Ce=Ca+Cs
 
 	converged=.true.
-	j=0
-	Cp(1:nr)=0d0
-	do ir=1,nr
-		iT=T(ir)+1
-		if(iT.gt.nBB-1) iT=nBB-1
-		if(iT.lt.1) iT=1
-		scale=(T(ir)/real(iT))**4
-		do ilam=1,nlam_LR-1
-			do ig=1,ng
-				Cp(ir)=Cp(ir)+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)*Ce(ir,ilam,ig)
-			enddo
-		enddo
-		Cp(ir)=Cp(ir)/((2d0*(pi*kb*T(ir))**4)/(15d0*hplanck**3*clight**3))
-		if(nTiter.gt.0) then
-			if(Cp(ir).gt.maxfact*Cp_prev(ir)) then
-				scale=maxfact*Cp_prev(ir)/Cp(ir)
-c				Ce(ir,1:nlam_LR,1:ng)=Ce(ir,1:nlam_LR,1:ng)*scale
-c				Ca(ir,1:nlam_LR,1:ng)=Ca(ir,1:nlam_LR,1:ng)*scale
-c				Cs(ir,1:nlam_LR,1:ng)=Cs(ir,1:nlam_LR,1:ng)*scale
-c				Cp(ir)=Cp(ir)*scale
-				converged=.false.
-				j=j+1
-			endif
-			if(Cp(ir).lt.Cp_prev(ir)/maxfact) then
-				scale=Cp_prev(ir)/(Cp(ir)*maxfact)
-c				Ce(ir,1:nlam_LR,1:ng)=Ce(ir,1:nlam_LR,1:ng)*scale
-c				Ca(ir,1:nlam_LR,1:ng)=Ca(ir,1:nlam_LR,1:ng)*scale
-c				Cs(ir,1:nlam_LR,1:ng)=Cs(ir,1:nlam_LR,1:ng)*scale
-c				Cp(ir)=Cp(ir)*scale
-				converged=.false.
-				j=j+1
-			endif
-		endif
-		Cp_prev(ir)=Cp(ir)
-	enddo
-c	print*,converged,j
 
 
 	do ilam=1,nlam_LR-1

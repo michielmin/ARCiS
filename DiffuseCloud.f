@@ -3,7 +3,6 @@
 	use Constants
 	use AtomsModule
 	use CloudModule
-	use modComputeT
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),xtot(:),vth(:),vthv(:)
 	real*8,allocatable :: Sc(:),Sn(:),rpart(:),mpart(:),xMgO(:)
