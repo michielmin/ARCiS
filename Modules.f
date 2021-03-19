@@ -227,7 +227,7 @@ c===============================================================================
 	real*8,allocatable :: flux(:,:),obsA(:,:),phase(:,:,:),obsLightCurve(:,:)
 	real*8,allocatable :: timeLightCurve(:),theta_phase(:)
 	integer ncc,nphase,n2d,i2d,nLightCurve
-	logical cloudcompute,useDRIFT,singlecloud,makeimage
+	logical cloudcompute,useDRIFT,singlecloud,makeimage,makemovie
 	logical,allocatable :: docloud(:,:)
 	real*8,allocatable :: cloudfrac(:),XCloud(:,:),XeqCloud(:,:),XeqCloud_old(:,:)
 	real*8,allocatable :: nabla_ad(:),grav(:)

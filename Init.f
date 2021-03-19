@@ -639,6 +639,8 @@ c	condensates=(condensates.or.cloudcompute)
 	allocate(surface_emis(nlam))
 	surface_emis=1d0
 	
+	if(makemovie) makeimage=.true.
+	
 	allocate(long(nlong),latt(nlatt))
 	allocate(tanx(nlong),tany(nlong))
 	allocate(cost2(nlatt),beta3D_eq(nlong),ibeta3D_eq(nlong))
@@ -1010,6 +1012,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) transspec
 		case("makeimage")
 			read(key%value,*) makeimage
+		case("makemovie")
+			read(key%value,*) makemovie
 		case("orbit")
 			select case(key%key2)
 				case("p")
@@ -1325,6 +1329,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Nphot0=2500
 	
 	makeimage=.false.
+	makemovie=.false.
 	
 	surfacetype='BLACK'
 

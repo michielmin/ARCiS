@@ -22,7 +22,8 @@
 	real*16 kross,kplanck
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime,cwg(ng),w1
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:),mixrat_tmp(:),w_line(:),kappa(:)
-	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:),ktemp(:)
+	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:),ktemp(:),kappa_tot(:,:)
+	logical,allocatable :: fulladd(:)
 	integer n_nu_line,iT
 	integer i,j,ir,k,nl,ig,ig_c,imol0
 	integer,allocatable :: inu1(:),inu2(:)
@@ -32,6 +33,7 @@
 	allocate(kaver(nlam))
 	allocate(opac_tot(nlam,ng))
 	allocate(kappa_mol(ng,nlam,nmol))
+	allocate(kappa_tot(0:nmol,nlam))
 	allocate(mixrat_tmp(nmol))
 
 	j=0
@@ -97,32 +99,51 @@ c===============
 			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*mixrat_tmp(CIA(i)%imol1)*mixrat_tmp(CIA(i)%imol2)
 		enddo
 		kappa_mol=0d0
+		kappa_tot(0:nmol,1:nlam)=0d0
+		kappa_tot(0,1:nlam)=cont_tot(1:nlam)
 		do imol=1,nmol
-			call ReadOpacityFITS(kappa_mol,imol,ir)
+			if(includemol(imol)) then
+				call ReadOpacityFITS(kappa_mol,imol,ir)
+				do i=1,nlam-1
+					do ig=1,ng
+						kappa_tot(imol,i)=kappa_tot(imol,i)+wgg(ig)*kappa_mol(ig,i,imol)*mixrat_tmp(imol)
+					enddo
+					kappa_tot(0,i)=kappa_tot(0,i)+kappa_tot(imol,i)
+				enddo
+			endif
 		enddo
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,j,k_line,imol,ig,kappa,ktemp,ig_c,tot,tot2,imol0,w1,w_line)
+!$OMP& PRIVATE(i,j,k_line,imol,ig,kappa,ktemp,ig_c,tot,tot2,imol0,w1,w_line,fulladd)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,
-!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid)
+!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid,
+!$OMP&        kappa_tot)
 		allocate(k_line(n_nu_line))
 		allocate(ktemp(ng))
 		allocate(kappa(ng))
 		allocate(w_line(n_nu_line))
+		allocate(fulladd(nmol))
 !$OMP DO SCHEDULE(DYNAMIC,1)
 		do i=1,nlam-1
 			if((emisspec.or.computeT).and.(.not.useobsgrid.or.lamemis(i))) then
-			tot=0d0
 			do imol=1,nmol
 				if(opacitymol(imol)) then
+					fulladd(imol)=(kappa_tot(imol,i).gt.0.01*kappa_tot(0,i))
+				endif
+			enddo
+			tot=0d0
+			kappa(1:ng)=0d0
+			do imol=1,nmol
+				if(opacitymol(imol).and.fulladd(imol)) then
 					kappa(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 					tot=tot+sum(kappa(1:ng)*wgg(1:ng))
 					exit
 				endif
 			enddo
 			imol0=imol
-			do imol=imol0+1,nmol
-				if(opacitymol(imol)) then
+			if(imol0.lt.nmol) then
+			do imol=1,nmol
+				if(opacitymol(imol).and.fulladd(imol).and.imol.ne.imol0) then
 					ktemp(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 					ig_c=0
 					tot=tot+sum(ktemp(1:ng)*wgg(1:ng))
@@ -153,6 +174,14 @@ c===============
 					enddo
 				endif
 			enddo
+			endif
+			do imol=1,nmol
+				if(opacitymol(imol).and..not.fulladd(imol)) then
+					ktemp(1:ng)=kappa_mol(1:ng,i,imol)
+					tot=tot+sum(ktemp(1:ng)*wgg(1:ng))*mixrat_tmp(imol)
+					kappa(1:ng)=kappa(1:ng)+ktemp(1:ng)*mixrat_tmp(imol)
+				endif
+			enddo
 			else
 			kappa(1:ng)=0d0
 			tot=0d0
@@ -160,7 +189,7 @@ c===============
 				if(opacitymol(imol)) then
 					ktemp(1:ng)=kappa_mol(1:ng,i,imol)
 					tot=tot+sum(ktemp(1:ng)*wgg(1:ng))*mixrat_tmp(imol)
-					kappa(1:ng)=kappa(1:ng)+ktemp(1:ng)*wgg(1:ng)*mixrat_tmp(imol)
+					kappa(1:ng)=kappa(1:ng)+ktemp(1:ng)*mixrat_tmp(imol)
 				endif
 			enddo
 			endif
@@ -182,7 +211,7 @@ c===============
 		deallocate(k_line)
 		deallocate(w_line)
 		deallocate(ktemp)
-		deallocate(kappa)
+		deallocate(kappa,fulladd)
 !$OMP FLUSH
 !$OMP END PARALLEL
 		Cext_cont(ir,1:nlam)=(cont_tot(1:nlam)+Csca(ir,1:nlam))*Ndens(ir)

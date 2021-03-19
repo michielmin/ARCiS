@@ -565,7 +565,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	recomputeopac=.true.
 	if(dopostequalweights) doscaleR2=.false.
 	imodel=imodel+1
-	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel.or.do3D) call output("model number: " 
+	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel.or.(do3D.and.night2day.ne.1d0)) call output("model number: " 
      &				// int2string(imodel,'(i7)') // dbl2string(bestlike,'(f10.2)'))
 
 	var=var_in

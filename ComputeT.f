@@ -43,7 +43,7 @@
 	logical docloud0(max(nclouds,1)),converged,stopscat
 	real*8 tauf(nr),Si(0:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff,TT
 	integer info,IWORK(10*(nr+1)*(nr+1)),NRHS,ii(3),iscat,nscat
-	real*8 tau1,tau2,ee0,ee1,ee2,tauR(0:nr),Ij(0:nr),Ih(0:nr),scale
+	real*8 tau1,tau2,ee0,ee1,ee2,tauR(0:nr),Ij(0:nr),Ih(0:nr),scale,dtauR(0:nr)
 	integer nlam_LR
 	real*8 specres_LR,IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact
 	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
@@ -579,15 +579,16 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	do ilam=1,nlam_LR-1
 		do ig=1,ng
 			do inu=1,nnu
-				tauR(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
-				Ij(0:nr)=nu(inu)*2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*exp(-(tauR(1)-tauR(0:nr)))
-				tauR(0:nr)=dtauR_nu(0:nr,ilam,ig)/abs(nu(inu))
+				tauR(0:nr)=(tauR_nu(1,ilam,ig)-tauR_nu(0:nr,ilam,ig))/abs(nu(inu))
+				dtauR(0:nr)=dtauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 				do ir=1,nr
 					iT=T(ir)+1
 					if(iT.gt.nBB-1) iT=nBB-1
 					if(iT.lt.1) iT=1
 					scale=(T(ir)/real(iT))**4
-					E=E+Ij(ir)*scale*BB_LR(iT,ilam)*(1d0-exp(-tauR(ir)))*SurfEmis_LR(ilam)*Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
+					contr=nu(inu)*2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*exp(-tauR(ir))
+					E=E+contr*scale*BB_LR(iT,ilam)*(1d0-exp(-dtauR(ir)))*SurfEmis_LR(ilam)*Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
+					if(tauR(ir).gt.10d0) exit
 				enddo
 			enddo
 		enddo

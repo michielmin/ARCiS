@@ -1044,11 +1044,20 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 	if(planetform) then
 
 	Z0=sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))
-		
+	
+	if((planetform_fdust+planetform_fplan).ge.1d0) then	
+		scale=planetform_fdust+planetform_fplan
+		planetform_fdust=planetform_fdust/scale
+		planetform_fplan=planetform_fplan/scale
+	endif
+	
 	call getenv('HOME',homedir) 
-	write(command,'("python ",a,"/ARCiS/Data/planetform/elements.py ",a,"/atomic.dat ",6es15.4)') 
+	write(command,'("python3 ",a,"/ARCiS/Data/planetform/elements.py ",a,"/atomic.dat ",6es15.4)') 
      &	trim(homedir),trim(outputdir),Dplanet/AU,Mplanet/Mearth,planetform_Rstart,planetform_Mstart,planetform_fdust,planetform_fplan
-	call system(command)
+	if(trim(command).ne.trim(formationcommand)) then
+		call system(command)
+		formationcommand=command
+	endif
 
 	molfracs_atoms=1d-200
 	open(unit=43,file=trim(outputdir) // 'atomic.dat')

@@ -1225,6 +1225,7 @@ END MODULE nrutil
 	DOUBLE PRECISION             :: molfracs_atoms(N_atoms)
 	DOUBLE PRECISION             :: mass_atoms(N_atoms)
 	real*8 :: gas_atoms(N_atoms),solid_atoms(N_atoms)
+	character*500 formationcommand
 	
 	end module AtomsModule
 

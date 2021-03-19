@@ -15,7 +15,7 @@
 	real*8 x,y,z,vx,vy,vz,v
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:)
-	real*8,allocatable :: tauc(:),Afact(:),vv(:,:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
+	real*8,allocatable :: tauc(:),Afact(:),vv(:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
 	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random
 	integer nx_im,ix,iy,ni
 	character*500 file
@@ -534,7 +534,7 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 				maxdet(i,3)=z
 			enddo
 		enddo
-		if(ipc.eq.1) then
+		if(ipc.eq.1.or..not.makemovie) then
 		ni=nx_im*nx_im
 		do i=1,ni/20
 			maximage=0d0
@@ -634,7 +634,7 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 !$OMP& SHARED(nrtrace,nptrace,nmol_count,nr,nlam,ng,rtrace,ibeta,R3D2,Ce,Ca_mol,wgg,obsA,latt,long,Rmax,
 !$OMP&          nnu0,n3D,nlong,nlatt)
 	allocate(obsA_omp(nlam))
-	allocate(vv(nmol_count,nr,n3D))
+	allocate(vv(nr,n3D))
 	allocate(tau(nlam,ng))
 	allocate(tauc(nlam),Afact(nlam))
 	allocate(hit(nr+2,n3D))
@@ -675,7 +675,7 @@ c Note we use the symmetry of the North and South here!
 			if(i1next.ge.nr+2) goto 4
 			if(i1.le.nr) then
 				i=ibeta(i2,i3)
-				vv(1:nmol_count,i1,i)=vv(1:nmol_count,i1,i)+v
+				vv(i1,i)=vv(i1,i)+v
 				hit(i1,i)=.true.
 				tauc(1:nlam)=tauc(1:nlam)+v*Ce(1:nlam,i1,i)
 			endif
@@ -704,7 +704,7 @@ c Note we use the symmetry of the North and South here!
 				do i=1,n3D
 					do ir=1,nr
 						if(hit(ir,i)) then
-							tau(1:nlam,1:ng)=tau(1:nlam,1:ng)+vv(imol,ir,i)*Ca_mol(1:nlam,1:ng,imol,ir,i)
+							tau(1:nlam,1:ng)=tau(1:nlam,1:ng)+vv(ir,i)*Ca_mol(1:nlam,1:ng,imol,ir,i)
 						endif
 					enddo
 				enddo
