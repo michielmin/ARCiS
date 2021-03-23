@@ -454,7 +454,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	scale=(Tsurface/real(iT))**4
 	do ir=1,nr
 		do ilam=1,nlam_LR-1
-			Fl(ir)=Fl(ir)-IntHnu(ilam,ir,0)*scale*BB_LR(iT,ilam)*SurfEmis_LR(ilam)
+			Fl(ir)=Fl(ir)-abs(IntHnu(ilam,ir,0))*scale*BB_LR(iT,ilam)*SurfEmis_LR(ilam)
 		enddo
 	enddo
 	do ir=1,nr
