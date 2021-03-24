@@ -1,3 +1,4 @@
+#ifdef USE_MULTINEST
 	subroutine getloglike(Cube,ndims,nPar,lnew) 					!subroutine which gives lnew=loglike(Cube(ndims))
 	IMPLICIT NONE								!distribution, parameter constraints, max loglike & log evidence values
 	integer ndims,nPar
@@ -126,3 +127,12 @@
 	return
 	end
 
+#else
+	subroutine doMultiNest
+	use GlobalSetup
+	IMPLICIT NONE
+	call output("ARCiS was compiled without MultiNest")
+	stop
+	return
+	end
+#endif

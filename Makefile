@@ -41,14 +41,19 @@ ifeq ($(multi),true)
 	endif
 endif
 
+ifeq ($(multinest),false)
+  LIBS_MN      = -DNO_MULTINEST
+else
+  LIBS_MN      = -lmultinest -DUSE_MULTINEST
+endif
 
 # Platform specific compilation options
 ifeq ($(gfort),true)
-  FLAG_ALL      = -O5 -g $(MULTICORE) -lgfortran -I$(HOME)/include -I/usr/local/modules
+  FLAG_ALL      = -O5 -g $(MULTICORE) -lgfortran -I$(HOME)/include -I/usr/local/modules $(LIBS_MN)
   FLAG_LINUX    = -ffixed-line-length-132 -cpp
   FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else
-  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(MULTICORE) -assume buffered_io -I/usr/local/modules -fp-model strict -heap-arrays
+  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(MULTICORE) -assume buffered_io -I/usr/local/modules -fp-model strict -heap-arrays $(LIBS_MN)
   FLAG_LINUX    = -xHOST -fpp
   FLAG_MAC      = -xHOST -opt-prefetch -static-intel -fpp -heap-arrays 
 endif
@@ -58,11 +63,11 @@ LIBS_FITS		= -lcfitsio
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -diag-disable vec $(DEBUGGING) 
   LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -I$(HOME)/include $(DEBUGGING) 
-  LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) -llapack -lmultinest Version.f 
+  LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) $(LIBS_MN) -llapack Version.f 
 else
-  FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) 
+  FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING)  
   LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) 
-  LIBS    =  -L/usr/local/lib $(LIBS_FITS) -lmultinest Version.f
+  LIBS    =  -L/usr/local/lib $(LIBS_FITS) $(LIBS_MN) Version.f
 endif
 
 
