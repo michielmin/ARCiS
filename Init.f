@@ -20,10 +20,17 @@ c==============================================================================
 	type(SettingKey),pointer :: key
 	integer ncla	! number of command line arguments
 	character*1000 readline,inputfile,command
-	logical readfile
+	logical readfile,exist
 
 	call getarg(1,inputfile)
 	if(inputfile.eq.' ') inputfile='input.dat'
+
+	inquire(file=inputfile,exist=exist)
+	if(.not.exist) then
+		call output("Input file does not exist!")
+		call output("filename: " // trim(inputfile))
+		stop
+	endif
 
 	open(unit=20,file=inputfile,RECL=1000)
 
