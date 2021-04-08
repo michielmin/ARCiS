@@ -246,12 +246,14 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 	Otot=0d0
 	Ctot=0d0
 	Htot=0d0
+	metallicity=0d0
 	do i=1,nr
 		do imol=1,nmol
 			if(includemol(imol)) then
 				Otot=Otot+Ndens(i)*mixrat_r(i,imol)*real(Oatoms(imol))
 				Ctot=Ctot+Ndens(i)*mixrat_r(i,imol)*real(Catoms(imol))
 				Htot=Htot+Ndens(i)*mixrat_r(i,imol)*real(Hatoms(imol))
+				metallicity=metallicity+Ndens(i)*mixrat_r(i,imol)*real(tot_atoms(imol)-Hatoms(imol))
 			endif
 		enddo
 	enddo
@@ -263,7 +265,13 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 
 	if(.not.PTchemAbun.and..not.dochemistry) then
 		COratio=COret
-		metallicity=log10((Ctot+Otot)/Htot)-log10((0.0002478241+0.0004509658)/0.9207539305)
+		if(includemol(48)) then
+			do i=1,nr
+				Htot=Htot+Ndens(i)*mixrat_r(i,48)
+				metallicity=metallicity-Ndens(i)*mixrat_r(i,48)
+			enddo
+		endif
+		metallicity=log10(metallicity/Htot)+3.0565202503263760
 	endif
 
 	if(.not.retrieval) then
@@ -1072,7 +1080,7 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 2	close(unit=43)
 
 	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))
-	
+
 	CO=molfracs_atoms(3)/molfracs_atoms(5)
 	SiO=molfracs_atoms(4)/molfracs_atoms(5)
 	NO=molfracs_atoms(9)/molfracs_atoms(5)

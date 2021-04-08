@@ -532,7 +532,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	enddo
 
 	do ir=1,nr
-		T(ir)=0.5d0*(T(ir)+Ts(ir))
+		T(ir)=ff*Ts(ir)+(1d0-ff)*T(ir)
 	enddo
 
 	E0=(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
