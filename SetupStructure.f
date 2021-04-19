@@ -243,27 +243,27 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		enddo
 	endif
 
-	Otot=0d0
-	Ctot=0d0
-	Htot=0d0
-	metallicity=0d0
-	do i=1,nr
-		do imol=1,nmol
-			if(includemol(imol)) then
-				Otot=Otot+Ndens(i)*mixrat_r(i,imol)*real(Oatoms(imol))
-				Ctot=Ctot+Ndens(i)*mixrat_r(i,imol)*real(Catoms(imol))
-				Htot=Htot+Ndens(i)*mixrat_r(i,imol)*real(Hatoms(imol))
-				metallicity=metallicity+Ndens(i)*mixrat_r(i,imol)*real(tot_atoms(imol)-Hatoms(imol))
-			endif
-		enddo
-	enddo
-	COret=Ctot/Otot
-	if(Tform.gt.0d0) COret=COratio
-	call output("C/O: " // dbl2string(COret,'(f8.3)'))
-	call output("[O]: " // dbl2string(log10(Otot/Htot)-log10(0.0004509658/0.9207539305),'(f8.3)'))
-	call output("[C]: " // dbl2string(log10(Ctot/Htot)-log10(0.0002478241/0.9207539305),'(f8.3)'))
-
 	if(.not.PTchemAbun.and..not.dochemistry) then
+		Otot=0d0
+		Ctot=0d0
+		Htot=0d0
+		metallicity=0d0
+		do i=1,nr
+			do imol=1,nmol
+				if(includemol(imol)) then
+					Otot=Otot+Ndens(i)*mixrat_r(i,imol)*real(Oatoms(imol))
+					Ctot=Ctot+Ndens(i)*mixrat_r(i,imol)*real(Catoms(imol))
+					Htot=Htot+Ndens(i)*mixrat_r(i,imol)*real(Hatoms(imol))
+					metallicity=metallicity+Ndens(i)*mixrat_r(i,imol)*real(tot_atoms(imol)-Hatoms(imol))
+				endif
+			enddo
+		enddo
+		COret=Ctot/Otot
+		if(Tform.gt.0d0) COret=COratio
+		call output("C/O: " // dbl2string(COret,'(f8.3)'))
+		call output("[O]: " // dbl2string(log10(Otot/Htot)-log10(0.0004509658/0.9207539305),'(f8.3)'))
+		call output("[C]: " // dbl2string(log10(Ctot/Htot)-log10(0.0002478241/0.9207539305),'(f8.3)'))
+
 		COratio=COret
 		if(includemol(48)) then
 			do i=1,nr

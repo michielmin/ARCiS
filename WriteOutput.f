@@ -10,6 +10,8 @@
 	logical,allocatable :: docloud0(:,:)
 	real*8,allocatable :: spec(:,:),specR(:),lamR(:),specRexp(:),specErr(:),Fstar_obs(:)
 	real*8 x,specres_obs,expspecres_obs,gasdev,tot,Dmirror,f_phot,noisefloor,molweight(nmol),Tweight,Pweight
+	real*8 lam_out(nlam)
+	integer nlam_out
 	integer ilam,j,nj,nlamR,i_instr,k,ir
 	character*1000 line,instr_add
 	character*10 side
@@ -18,6 +20,16 @@
 		side=" "
 	else
 		write(side,'("_",i0.2)') i2d
+	endif
+
+	if(useobsgrid) then
+		lam_out(1:nlam)=lam(1:nlam)/micron
+		nlam_out=nlam-1
+	else
+		nlam_out=nlam-1
+		do i=1,nlam_out
+			lam_out(i)=sqrt(lam(i)*lam(i+1))/micron
+		enddo
 	endif
 
 	allocate(docloud0(max(nclouds,1),ncc))
@@ -35,8 +47,8 @@
 	open(unit=30,file=filename,RECL=1000)
 	write(30,'("#",a13,a19)') "lambda [mu]","flux_star[Jy]"
 	form='(f14.6,es19.7E3)'
-	do i=1,nlam-1
-		write(30,form) sqrt(lam(i)*lam(i+1))/micron,Fstar(i)*1d23/distance**2
+	do i=1,nlam_out
+		write(30,form) lam_out(i),Fstar(i)*1d23/distance**2
 	enddo
 	close(unit=30)
 
@@ -54,8 +66,8 @@
 		write(30,'("#",a13,a19)') "lambda [mu]","flux [Jy]"
 	endif
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
-	do i=1,nlam-1
-		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+	do i=1,nlam_out
+		write(30,form) lam_out(i),
 c     &					flux(0:ncc,i)
 c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam(i+1))
      &					(phase(1,j,i)+flux(j,i),j=0,ncc)
@@ -74,8 +86,8 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 		write(30,'("#",a13,a19)') "lambda [mu]","flux/flux_star"
 	endif
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
-	do i=1,nlam-1
-		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+	do i=1,nlam_out
+		write(30,form) lam_out(i),
 c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
      &					((phase(1,j,i)+flux(j,i))/(Fstar(i)*1d23/distance**2),j=0,ncc)
 	enddo
@@ -97,8 +109,8 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		write(30,'("#",a13,a19)') "lambda [mu]","Rp^2/Rstar^2"
 	endif
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
-	do i=1,nlam-1
-		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+	do i=1,nlam_out
+		write(30,form) lam_out(i),
      &					obsA(0:ncc,i)/(pi*Rstar**2)
 	enddo
 	close(unit=30)
@@ -116,8 +128,8 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
      &				 '("   flux(",f5.1,") [Jy]"),"         fstar [Jy]")'
 			write(30,form) "lambda [mu]",theta(1:nphase)
 			form='(f14.6,' // int2string(nphase+2,'(i3)') // 'es19.7E3)'
-			do i=1,nlam-1
-				write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+			do i=1,nlam_out
+				write(30,form) lam_out(i),
      &					phase(1:nphase,0,i)+flux(0,i),
      &					Fstar(i)*1d23/distance**2,
      &					(pi*Rplanet**2)*Fstar(i)*1d23/distance**2/(4d0*Dplanet**2)
@@ -130,28 +142,28 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			filename=trim(outputdir) // "phasecurve" // trim(side)
 			call output("Writing phasecurve to: " // trim(filename))
 			open(unit=30,file=filename,RECL=6000)
-			form='("#",a13,' // '"       fint [Jy]",'// trim(int2string(nlam-1,'(i4)')) // 
+			form='("#",a13,' // '"       fint [Jy]",'// trim(int2string(nlam_out,'(i4)')) // 
      &				 '("      F(",es8.1E3,")"),"      fstar [Jy]")'
-			write(30,form) "lambda [mu]",lam(1:nlam-1)
+			write(30,form) "lambda [mu]",lam(1:nlam_out)
 			form='(f14.6,' // int2string(nlam+1,'(i3)') // 'es17.9E3)'
 			do i=1,nphase
-				specR(1:nlam-1)=Fstar(1:nlam-1)*1d23/distance**2
+				specR(1:nlam_out)=Fstar(1:nlam_out)*1d23/distance**2
 				if(sin(pi-pi*theta(i)/180d0).lt.(Rstar/Dplanet)) then
 					if(theta(i).lt.90d0) then
-						specR(1:nlam-1)=((pi*Rstar**2-obsA(0,1:nlam-1))/(pi*Rstar**2))*Fstar(1:nlam-1)*1d23/distance**2
+						specR(1:nlam_out)=((pi*Rstar**2-obsA(0,1:nlam_out))/(pi*Rstar**2))*Fstar(1:nlam_out)*1d23/distance**2
 					endif
 				endif
 				if(sin(pi*theta(i)/180d0).gt.(Rstar/Dplanet).or.theta(i).lt.90d0) then
-					specR(1:nlam-1)=specR(1:nlam-1)+phase(i,0,1:nlam-1)+flux(0,1:nlam-1)
+					specR(1:nlam_out)=specR(1:nlam_out)+phase(i,0,1:nlam_out)+flux(0,1:nlam_out)
 				endif
 				x=0d0
 				tot=0d0
-				do j=1,nlam-1
+				do j=1,nlam_out
 					x=x+dfreq(j)*specR(j)
 					tot=tot+dfreq(j)
 				enddo
 				x=x/tot
-				write(30,form) theta(i),x,specR(1:nlam-1),Fstar(i)*1d23/distance**2
+				write(30,form) theta(i),x,specR(1:nlam_out),Fstar(i)*1d23/distance**2
 			enddo
 			close(unit=30)
 			deallocate(specR)
@@ -172,8 +184,8 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		write(30,'("#",a13,a19)') "lambda [mu]","P [bar]"
 	endif
 	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7E3)'
-	do i=1,nlam-1
-		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+	do i=1,nlam_out
+		write(30,form) lam_out(i),
      &					tau1depth(1:ncc,i)
 	enddo
 	close(unit=30)
@@ -191,8 +203,8 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		write(30,'("#",a13,a19)') "lambda [mu]","optical depth"
 	endif
 	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7E3)'
-	do i=1,nlam-1
-		write(30,form) sqrt(lam(i)*lam(i+1))/micron,
+	do i=1,nlam_out
+		write(30,form) lam_out(i),
      &					cloudtau(1:ncc,i)
 	enddo
 	close(unit=30)
@@ -279,7 +291,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	end select
 	allocate(spec(nphase,nlamR))
 	allocate(Fstar_obs(nlamR))
-	call regridspecres(lam,Fstar(1:nlam-1),nlam-1,
+	call regridspecres(lam,Fstar(1:nlam_out),nlam_out,
      &						lamR,Fstar_obs(1:nlamR),specR,specRexp,nlamR)
 	if(instr_add.ne."simulated".and.instr_add(1:3).ne."obs") then
 		do i=1,nlamR
@@ -299,8 +311,8 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		tot=0d0
 		do ir=1,nr
 			wr(ir)=0d0
-			if(sum(obsA_contr(ir,1:nlam-1)).gt.0d0) then
-				call regridspecres(lam,obsA_contr(ir,1:nlam-1),nlam-1,lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
+			if(sum(obsA_contr(ir,1:nlam_out)).gt.0d0) then
+				call regridspecres(lam,obsA_contr(ir,1:nlam_out),nlam_out,lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
 				do j=1,nlamR
 					x=(spec(1,j)/specErr(j))**2
 					tot=tot+x
@@ -346,8 +358,8 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		tot=0d0
 		do ir=1,nr
 			wr(ir)=0d0
-			if(sum(obsA_contr(ir,1:nlam-1)).gt.0d0) then
-				call regridspecres(lam,flux_contr(ir,1:nlam-1),nlam-1,lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
+			if(sum(obsA_contr(ir,1:nlam_out)).gt.0d0) then
+				call regridspecres(lam,flux_contr(ir,1:nlam_out),nlam_out,lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
 				do j=1,nlamR
 					x=(spec(1,j)/specErr(j))**2
 					tot=tot+x
@@ -386,7 +398,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		close(unit=30)
 	endif
 
-	call regridspecres(lam,obsA(0,1:nlam-1),nlam-1,
+	call regridspecres(lam,obsA(0,1:nlam_out),nlam_out,
      &					lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
 	spec=spec/(pi*Rstar**2)
 
@@ -438,10 +450,10 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	close(unit=30)
 
 	do i=1,nphase
-		call regridspecres(lam,phase(i,0,1:nlam-1)+flux(0,1:nlam-1),nlam-1,
+		call regridspecres(lam,phase(i,0,1:nlam_out)+flux(0,1:nlam_out),nlam_out,
      &						lamR,spec(i,1:nlamR),specR,specRexp,nlamR)
 	enddo
-	call regridspecres(lam,Fstar(1:nlam-1),nlam-1,
+	call regridspecres(lam,Fstar(1:nlam_out),nlam_out,
      &						lamR,Fstar_obs(1:nlamR),specR,specRexp,nlamR)
 	filename=trim(outputdir) // "obs_emis_" // trim(instr_add) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
