@@ -1250,16 +1250,17 @@ c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(
 	IMPLICIT NONE
 	character*500 filename
 	integer nlamR,ilam,i,n
-	character*1000 line,key(100),value(100)
+	character*6000 line
+	character*1000 key(100),value(100)
 	
 	open(unit=20,file=filename,RECL=6000)
 
-1	read(20,'(a1000)',end=3) line
+1	read(20,'(a6000)',end=3) line
 	call getkeys(line,key,n)
 	if(line(1:1).eq.' '.or.key(1)(1:1).eq.'#') goto 1
 
 	ilam=0
-2	read(20,'(a1000)',end=3) line
+2	read(20,'(a6000)',end=3) line
 	call getkeys(line,value,n)
 	if(value(1).eq.' ') goto 2
 	ilam=ilam+1
@@ -1278,18 +1279,19 @@ c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(
 	integer nlamR,ilam,i,n
 	real*8 lamR(nlamR),specR(nlamR),specRexp(nlamR),specErr(nlamR)
 	real*8 TRSignal,TRSNR
-	character*1000 line,key(100),value(100)
+	character*6000 line
+	character*1000 key(100),value(100)
 	
 	specRexp=20d0
 
 	open(unit=20,file=filename,RECL=6000)
 
-4	read(20,'(a1000)',end=6) line
+4	read(20,'(a6000)',end=6) line
 	call getkeys(line,key,n)
 	if(line(1:1).eq.' '.or.line(1:1).eq.'#') goto 4
 
 	ilam=0
-5	read(20,'(a1000)',end=6) line
+5	read(20,'(a6000)',end=6) line
 	call getkeys(line,value,n)
 	if(value(1).eq.' ') goto 5
 	ilam=ilam+1

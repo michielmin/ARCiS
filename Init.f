@@ -1116,7 +1116,7 @@ c	endif
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j,n
+	integer i,j,k,n
 	real*8 g,dp,dz,P0(nr),T0(nr),pp,tt,mr0(nr,nmol),mm(nmol),yp1,ypn
 	real*8,allocatable :: y2(:)
 	character*10 names(nmol)
@@ -1209,6 +1209,20 @@ c	endif
 		T(i)=T0(nr+1-i)
 		P(i)=P0(nr+1-i)
 	enddo
+	do j=1,nclouds
+		if(Cloud(j)%simplecloud) then
+			dp=abs(P(i)-Cloud(j)%P)
+			k=1
+			do i=2,nr
+				if(abs(P(i)-Cloud(j)%P).lt.dp) then
+					dp=abs(P(i)-Cloud(j)%P)
+					k=i
+				endif
+			enddo
+			P(k)=Cloud(j)%P
+		endif
+	enddo
+
 c	if(par_tprofile) call ComputeParamT(T)
 	do i=1,nr
 		if(retrieve_profile) then
@@ -2189,7 +2203,7 @@ c-----------------------------------------------------------------------
 		case("COMPUTE","DRIFT")
 			computelamcloud=.true.
 			tautot=0d0
-			restrictcomputecloud=(nlam.eq.nlamdust.and..not.computeT)
+			restrictcomputecloud=(nlam.eq.nlamdust.and..not.computeT.and..not.scattering)
 			do is=Cloud(ii)%nr,1,-1
 				call tellertje(Cloud(ii)%nr-is+1,Cloud(ii)%nr)
 				call ComputePart(Cloud(ii),ii,is,computelamcloud)
@@ -2291,46 +2305,57 @@ c not entirely correct...
 	character*500 name,namestar,cname,cplanetname
 	integer i,n
 	character*10 Zc
-	character*1000 line,key(100),value(100)
+	character*1000 key(1000),value(1000)
+	character*6000 line
 
 	open(unit=72,file=planetparameterfile,RECL=6000)
-	read(72,'(a1000)') line
+	read(72,'(a6000)') line
 	call getkeys(line,key,n)
 
 	call compactname(planetname,cplanetname)
 
-1	read(72,'(a1000)',end=2) line
+	dMp_prior=0d0
+1	read(72,'(a6000)',end=2) line
 	call getkeys(line,value,n)
 	do i=1,n
 		if(value(i).ne.' ') then
 			select case(key(i))
-				case('Planet_Name')
+				case('Planet_Name','name')
 					name=trim(value(i))
-				case('Star_Temperature_[K]')
+				case('Star_Temperature_[K]','star_teff')
 					read(value(i),*) Tstar
-				case('Star_Metallicity')
+				case('Star_Metallicity','star_metallicity')
 					read(value(i),*) Zc
-				case('Star_Mass_[Ms]')
+				case('Star_Mass_[Ms]','star_mass')
 					read(value(i),*) Mstar
-				case('Star_Radius_[Rs]')
+				case('Star_Radius_[Rs]','star_radius')
 					read(value(i),*) Rstar
-				case('Star_Distance_[pc]')
+				case('Star_Distance_[pc]','star_distance')
 					read(value(i),*) Distance
 				case('Planet_Semi-major_Axis_[m]')
 					read(value(i),*) Dplanet
 					Dplanet=Dplanet*1d2/AU
+				case('semi_major_axis')
+					read(value(i),*) Dplanet
 				case('Planet_Mass_[Me]')
 					read(value(i),*) Mp_prior
 					Mp_prior=Mp_prior*Mearth/MJup
+				case('mass')
+					read(value(i),*) Mp_prior
+				case('mass_error_min','mass_error_max')
+					read(value(i),*) x
+					dMp_prior=sqrt((dMp_prior**2+x**2)/2d0)
 				case('Planet_Radius_[Re]')
 					read(value(i),*) Rplanet
 					Rplanet=Rplanet*Rearth/RJup
-				case('Planet_Period_[days]')
+				case('radius')
+					read(value(i),*) Rplanet
+				case('Planet_Period_[days]','orbital_period')
 					read(value(i),*) orbit_P
 					orbit_P=orbit_P*86400d0
-				case('Eccentricity')
+				case('Eccentricity','eccentricity')
 					read(value(i),*) orbit_e
-				case('Planet_Temperature_[K]')
+				case('Planet_Temperature_[K]','temp_calculated')
 					read(value(i),*) TP0
 			end select
 		endif
@@ -2380,7 +2405,9 @@ c not entirely correct...
 		dM2=Mplanet*0.2
 
 		Mp_prior=Mplanet
-		dMp_prior=sqrt(dM1**2+dM2**2)
+		if(dMp_prior.le.0d0) then
+			dMp_prior=sqrt(dM1**2+dM2**2)
+		endif
 		do i=1,n_ret
 			select case(RetPar(i)%keyword)
 				case("Rp","rp","RP")
@@ -2416,17 +2443,16 @@ c not entirely correct...
 	end
 	
 	
-	
 	subroutine getkeys(line,key,n)
-	character*1000 line
-	character*1000 key(100)
+	character*6000 line
+	character*1000 key(1000)
 	integer icomma,i,l,n,j
 
 	icomma=1
 	l=0
 	i=1
 	do while(icomma.ne.0)
-		icomma=index(line(l+1:1000),',')
+		icomma=index(line(l+1:6000),',')
 		if(icomma.ne.0) then
 			key(i)=line(l+1:l+icomma-1)
 			do j=1,icomma-1
@@ -2435,7 +2461,7 @@ c not entirely correct...
 			i=i+1
 			l=l+icomma
 		else
-			key(i)=trim(line(l+1:1000))
+			key(i)=trim(line(l+1:l+1000))
 			do j=1,len_trim(key(i))
 				if(key(i)(j:j).eq.' ') key(i)(j:j)='_'
 			enddo

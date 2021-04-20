@@ -8,11 +8,11 @@
 	real*8 beta(nlong,nlatt),Planck,phi,la,lo,A,rr
 	real*8 long0,b1,b2,betamin,betamax,freq0,Rmax,theta
 	real*8,allocatable :: Ca(:,:,:,:),Cs(:,:,:),BBr(:,:,:),Si(:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce(:,:,:)
-	integer ir,ilam,ig,isize,iRmax,ndisk,nsub,nrtrace,nptrace,ipc,npc,nmol_count
+	integer ir,ilam,ig,isize,iRmax,ndisk,nsub,nrtrace,nptrace,ipc,npc,nmol_count,iv,nv
 	logical recomputeopac
 	logical,allocatable :: hit(:,:)
 	real*8,allocatable :: rtrace(:),wrtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:)
-	real*8 x,y,z,vx,vy,vz,v
+	real*8 x,y,z,vx,vy,vz,v,w1,w2
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:)
 	real*8,allocatable :: tauc(:),Afact(:),vv(:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
@@ -101,6 +101,7 @@ c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,b
 		enddo
 	enddo
 	Rmax=0d0
+	iRmax=1
 
 	if(fulloutput3D) then
 		j=nlatt/2
@@ -288,11 +289,13 @@ c	enddo
 	nsub=0
 
 	nrtrace=(nr-1)*nsub+ndisk
-	nptrace=nlatt
+	nptrace=nlatt+1
 	
+	nv=1
 	if(makeimage) then
 		nrtrace=nrtrace*4
 		nptrace=nptrace*3
+		nv=5
 		allocate(rphi_image(nlam,nrtrace,nptrace))
 		allocate(xy_image(nx_im,nx_im,nlam))
 	endif
@@ -310,10 +313,10 @@ c	enddo
 	fluxp=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,
+!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,iv,w1,w2,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,inu3D,fulloutput3D,Rplanet,
-!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,
+!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,nv,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
 	allocate(fluxp_omp(nlam))
@@ -384,10 +387,17 @@ c Note we are here using the symmetry between North and South
 				do ilam=1,nlam
 					if(lamemis(ilam)) then
 					do ig=1,ng
-						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
+						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))/real(nv)
 						exp_tau1=exp(-tau1)
-						ftot(ilam)=ftot(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
-						fact(ilam,ig)=fact(ilam,ig)*exp_tau1
+						do iv=1,nv
+							rr=sqrt((x+vx*v*(real(iv)-0.5)/real(nv))**2+(y+vy*v*(real(iv)-0.5)/real(nv))**2
+     &										+(z+vz*v*(real(iv)-0.5)/real(nv))**2)
+							w1=(R3D(i,i1+1)-rr)/(R3D(i,i1+1)-R3D(i,i1))
+							w2=1d0-w1
+							ftot(ilam)=ftot(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)*w1
+							ftot(ilam)=ftot(ilam)+A*wgg(ig)*Si(ilam,ig,i1+1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)*w2
+							fact(ilam,ig)=fact(ilam,ig)*exp_tau1
+						enddo
 					enddo
 					endif
 				enddo
@@ -792,6 +802,7 @@ c Note we use the symmetry of the North and South here!
 	type(SettingKey) key
 	character*1000 readline
 	integer i
+	real*8 Z0
 	
 	Rplanet=Rplanet/Rjup
 	Mplanet=Mplanet/Mjup
@@ -804,14 +815,14 @@ c Note we use the symmetry of the North and South here!
 	r_nuc=r_nuc/micron
 	orbit_inc=orbit_inc*180d0/pi
 
-	metallicity=metallicity0
+	if(dochemistry) metallicity=metallicity0
 	do i=1,n_Par3D
 		readline=trim(Par3D(i)%keyword) // "=" // trim(dbl2string(Par3D(i)%x,'(es14.7)'))
 		call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2,key%key2d)
 		call ReadAndSetKey(key)
 	enddo
 	call ConvertUnits()
-	metallicity0=metallicity
+	if(dochemistry) metallicity0=metallicity
 
 	return
 	end
@@ -1624,6 +1635,11 @@ c Note we use the symmetry of the North and South here!
 			hitP2=hitP(tanx2,tany2,x,vx,y,vy,vP2)
 	end select
 
+c	hitT1=.false.
+c	hitT2=.false.
+c	hitP1=.false.
+c	hitP2=.false.
+
 	v=1d200
 	if(hitR1.and.vR1.lt.v.and.vR1.gt.0d0) then
 		v=vR1
@@ -1657,7 +1673,7 @@ c Note we use the symmetry of the North and South here!
 		i3next=i3+1
 		edgenext=3
 		if(i3next.ge.n3) then
-			i3next=n3
+			i3next=n3-1
 			edgenext=4
 		endif
 	endif
