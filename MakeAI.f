@@ -5,11 +5,21 @@
 	integer i,j,k
 	real*8 var(n_ret),dvar(2,n_ret),chi2,random
 	character*500 outputdir0,command
-	logical exist,saneplanet
+	logical exist,saneplanet,usefile
 	
 	write(outputdir0,'(a)') trim(outputdir)
 
-	do i=1,nai
+	if(parametergridfile.ne.' ') then
+		open(unit=53,file=parametergridfile,RECL=6000)
+		usefile=.true.
+	else
+		usefile=.false.
+	endif
+
+	i=0
+	do while(i.lt.nai.or.usefile)
+		i=i+1
+		if(usefile) read(53,*,end=2) var(1:n_ret)
 		call output("Model number: " // int2string(i,'(i0.6)'))
 		write(outputdir,'(a,"model",i0.6,"/")') trim(outputdir0),i
 		write(command,'("mkdir -p ",a)') trim(outputdir)
@@ -18,12 +28,19 @@
 
 1		chi2=0d0
 		modelsucces=.true.
-		do j=1,n_ret
-			var(j)=random(idum)
-		enddo
+
+		if(.not.usefile) then
+			do j=1,n_ret
+				var(j)=random(idum)
+			enddo
+		endif
 
 		if(.not.exist) then
-			call MapRetrieval(var,dvar)
+			if(usefile) then
+				call MapRetrievalMN(var,dvar)
+			else
+				call MapRetrieval(var,dvar)
+			endif
 			if(mapCOratio.and..not.dochemistry) call DoMapCOratio()
 			call WriteAI(i,var)
 			call InitDens()
@@ -32,7 +49,7 @@
 				call output("This is an insane planet...")
 				call output("Radius: " // dbl2string(Rplanet/Rjup,'(es10.4)'))
 				call output("Mass:   " // dbl2string(Mplanet/Mjup,'(es10.4)'))
-				goto 1
+				if(.not.usefile) goto 1
 			endif
 			call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
 			Fstar=Fstar*pi*Rstar**2
@@ -71,12 +88,14 @@
 				call SetOutputMode(.true.)
 				call output("something is wrong...")
 				call output("try different set of parameters")
-				goto 1
+				if(.not.usefile) goto 1
 			endif
 		else
 			chi2=random(idum)
 		endif
 	enddo
+2	continue
+	if(usefile) close(unit=53)
 	
 	return
 	end
@@ -226,9 +245,7 @@ c		f=f/tot
 	integer i,imodel,j
 	character*500 command
 
-	call MapRetrieval(var,error)
-
-	if(Tform.gt.0d0) call FormAbun(Tform,f_dry,f_wet,scale_fe,COratio,metallicity0,metallicity)
+c	call MapRetrieval(var,error)
 
 98	open(unit=20,file=trim(outputdir) // "parameters",RECL=1000,ERR=99)
 	goto 100
@@ -249,15 +266,6 @@ c	linear/squared
 	enddo
 	if(.not.dochemistry) then
 		write(20,'(a15," = ",es14.7)') 'COratio',COret
-	endif
-	if(Tform.gt.0d0) then
-		if(domakeai.and..not.retrieval) then
-			write(20,'(a15," = ",es14.7)') 'Tform',Tform
-			write(20,'(a15," = ",es14.7)') 'f_dry',f_dry
-			write(20,'(a15," = ",es14.7)') 'f_wet',f_wet
-		endif
-		write(20,'(a15," = ",es14.7)') 'COratio',COratio
-		write(20,'(a15," = ",es14.7)') 'metallicity',metallicity
 	endif
 	if(mapCOratio) then
 		do i=1,nmol

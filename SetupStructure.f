@@ -1095,7 +1095,7 @@ c			call set_molfracs_atoms(COratio,metallicity,TiScale,enhancecarbon)
 
 c	adjust C/O ratio
 	CO0=molfracs_atoms(3)/molfracs_atoms(5)
-	if(CO.lt.CO0) then
+	if((.not.inverseCOratio.and.CO.lt.CO0).or.(inverseCOratio.and.CO.gt.CO0)) then
 		molfracs_atoms(3)=molfracs_atoms(5)*CO
 	else
 		molfracs_atoms(5)=molfracs_atoms(3)/CO

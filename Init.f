@@ -597,7 +597,6 @@ c	condensates=(condensates.or.cloudcompute)
 
 	call ReadDataCIA()
 
-	if(Pform.lt.0d0) Pform=-Pform*82.05736*1.01325*Tform/(mp*2.2*Avogadro)
 	if(PTchemAbun.and.Tchem.le.0d0) Tchem=sqrt(Rstar/(2d0*Dplanet))*Tstar
 
 	if(retrieval) then
@@ -849,8 +848,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) SOratio
 		case("tiscale")
 			read(key%value,*) TiScale
-		case("enhancecarbon")
-			read(key%value,*) enhancecarbon
+		case("inversecoratio")
+			read(key%value,*) inverseCOratio
 		case("elementfile")
 			element_abun_file=key%value
 		case("condensates")
@@ -921,10 +920,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) speclimits
 		case("adiabatic","adiabatic_tprofile")
 			read(key%value,*) adiabatic_tprofile
-		case("tform")
-			read(key%value,*) Tform
-		case("pform")
-			read(key%value,*) Pform
 		case("fday")
 			read(key%value,*) fDay
 		case("kxx")
@@ -947,12 +942,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) nlatt
 		case("betapow")
 			read(key%value,*) betapow
-		case("fenrich","f_enrich","enrich","fdry","f_dry")
-			read(key%value,*) f_dry
-		case("fwet","f_wet")
-			read(key%value,*) f_wet
-		case("scalefe","scale_fe","f_fe")
-			read(key%value,*) scale_fe
 		case("tchem")
 			read(key%value,*) Tchem
 		case("pchem")
@@ -961,11 +950,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) PTchemAbun
 		case("rnuc","r_nuc")
 			read(key%value,*) r_nuc
-		case("rhoform","densform")
-			read(key%value,*) Pform
-			Pform=-Pform
 		case("makeai")
 			read(key%value,*) domakeai
+		case("parametergridfile")
+			read(key%value,*) parametergridfile
 		case("pew","postequalweights")
 			read(key%value,*) dopostequalweights
 		case("mapcoratio")
@@ -1365,7 +1353,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	NOratio=0.13803841820153123
 	SOratio=0.026915346428939845
 	TiScale=1d0
-	enhancecarbon=.false.
+	inverseCOratio=.false.
 	element_abun_file=' '
 	rainout=.false.
 	mixP=0d0
@@ -1396,12 +1384,6 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	faircoverage=.false.
 
-	Tform=-10d0
-	Pform=1d0
-	f_dry=1d0
-	f_wet=1d0
-	scale_fe=1d0
-	
 	r_nuc=1d-3
 	
 	PTchemAbun=.false.
@@ -1411,6 +1393,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	adiabatic_tprofile=.false.
 
 	domakeai=.false.
+	parametergridfile=' '
 	nai=1000
 	dopostequalweights=.false.
 	npew=-1
@@ -1506,6 +1489,8 @@ c		Cloud(i)%P=0.0624d0
 		RetPar(i)%squarescale=.false.
 		RetPar(i)%opacitycomp=.true.
 		RetPar(i)%increase=.false.
+		RetPar(i)%xmin=0d0
+		RetPar(i)%xmax=1d0		
 	enddo
 	do i=1,n_Par3D
 		Par3D(i)%logscale=.false.
