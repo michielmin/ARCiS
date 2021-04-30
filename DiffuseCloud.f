@@ -234,16 +234,6 @@ c	atoms_cloud(i,3)=1
 	molfracs_atoms0=molfracs_atoms
 	xv_bot=xv_bot*mu*CSnmol/mutot
 
-	if(Tform.le.0d0.and..not.trend_compute) then
-		do iCS=1,nCS
-			if(ice(iCS)) then
-				xv_bot(iCS)=xv_bot(iCS)*f_wet
-			else
-				xv_bot(iCS)=xv_bot(iCS)*f_dry
-			endif
-		enddo
-	endif
-
 	if(rainout) then
 		densv(1,1:nCS)=(mu*mp/(kb*T(1)))*exp(BTP-ATP/T(1))
 		do iCS=1,nCS

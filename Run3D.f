@@ -293,9 +293,9 @@ c	enddo
 	
 	nv=1
 	if(makeimage) then
-		nrtrace=nrtrace*4
-		nptrace=nptrace*3
-		nv=5
+c		nrtrace=nrtrace*4
+c		nptrace=nptrace*3
+c		nv=5
 		allocate(rphi_image(nlam,nrtrace,nptrace))
 		allocate(xy_image(nx_im,nx_im,nlam))
 	endif
