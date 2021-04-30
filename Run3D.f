@@ -387,6 +387,7 @@ c Note we are here using the symmetry between North and South
 				do ilam=1,nlam
 					if(lamemis(ilam)) then
 					do ig=1,ng
+						if(i1.lt.nr) then
 						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))/real(nv)
 						exp_tau1=exp(-tau1)
 						do iv=1,nv
@@ -398,6 +399,14 @@ c Note we are here using the symmetry between North and South
 							ftot(ilam)=ftot(ilam)+A*wgg(ig)*Si(ilam,ig,i1+1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)*w2
 							fact(ilam,ig)=fact(ilam,ig)*exp_tau1
 						enddo
+						else
+						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
+						exp_tau1=exp(-tau1)
+						rr=sqrt((x+vx*v*(real(iv)-0.5)/real(nv))**2+(y+vy*v*(real(iv)-0.5)/real(nv))**2
+     &										+(z+vz*v*(real(iv)-0.5)/real(nv))**2)
+						ftot(ilam)=ftot(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
+						fact(ilam,ig)=fact(ilam,ig)*exp_tau1
+						endif
 					enddo
 					endif
 				enddo
