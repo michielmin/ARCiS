@@ -256,6 +256,7 @@ c	atoms_cloud(i,3)=1
 			if(densv(1,iCS).lt.dens(i)*xv_bot(iCS)) cloudsform=.true.
 		enddo
 	enddo
+	if(Cloud(ii)%haze) cloudsform=.true.
 	if(.not.cloudsform) then!.or.(computeT.and.nTiter.lt.min(2,maxiter/2))) then
 		cloud_dens=0d0
 		do i=1,nr

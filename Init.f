@@ -1287,6 +1287,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	integer i
 	character*100 homedir
 	
+	parametergridfile=" "
 	idum0=42
 	randomseed=.true.
 
@@ -1393,7 +1394,6 @@ c	if(par_tprofile) call ComputeParamT(T)
 	adiabatic_tprofile=.false.
 
 	domakeai=.false.
-	parametergridfile=' '
 	nai=1000
 	dopostequalweights=.false.
 	npew=-1
