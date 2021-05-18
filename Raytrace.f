@@ -453,7 +453,7 @@
 							Ag=Ag+exp(-tautot)*wgg(ig)
 8							continue
 						enddo
-						A=A*Ag
+						A=A*min(Ag,1d0)
 						endif
 					enddo
 9					continue

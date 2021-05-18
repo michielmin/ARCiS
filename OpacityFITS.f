@@ -354,6 +354,7 @@ C	 create the new empty FITS file
 				do ig=1,Ktable(imol)%ng
 					ngF=ngF+1
 					temp(ngF)=Ktemp(i,ig,iT,iP)
+					if(.not.temp(ngF).gt.0d0) temp(ngF)=0d0
 					wtemp(ngF)=ww*Ktable(imol)%wg(ig)
 				enddo
 			enddo
