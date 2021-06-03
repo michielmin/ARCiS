@@ -3,10 +3,9 @@
 	use Constants
 	use Struct3D
 	IMPLICIT NONE
-	real*8 beta3D(n3D),Kzz3D(n3D),Sdot3D(n3D)
 	integer i,j,icloud,k,irtrace,iptrace,inu,imol
 	real*8 beta(nlong,nlatt),Planck,phi,la,lo,A,rr
-	real*8 long0,b1,b2,betamin,betamax,freq0,Rmax,theta
+	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta
 	real*8,allocatable :: Ca(:,:,:,:),Cs(:,:,:),BBr(:,:,:),Si(:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce(:,:,:)
 	integer ir,ilam,ig,isize,iRmax,ndisk,nsub,nrtrace,nptrace,ipc,npc,nmol_count,iv,nv
 	logical recomputeopac
@@ -14,12 +13,12 @@
 	real*8,allocatable :: rtrace(:),wrtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:)
 	real*8 x,y,z,vx,vy,vz,v,w1,w2
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
-	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:)
+	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),obsA_split_omp(:,:)
 	real*8,allocatable :: tauc(:),Afact(:),vv(:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
 	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random
 	integer nx_im,ix,iy,ni
 	character*500 file
-	real*8 tau1,fact1,exp_tau1,maximage
+	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig
 	real*8,allocatable :: maxdet(:,:)
 
 	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr,n3D),Si(nlam,ng,0:nr,nnu0,n3D))
@@ -36,16 +35,6 @@ c	recomputeopac=.true.
 	docloud=.true.
 	cloudfrac=1d0
 
-	if(beta3D_1.ge.0d0) then
-		b1=beta3D_1	! evening limb, limited to 0-0.25
-		b2=beta3D_2	! morning limb, limited to 0-0.25
-	else
-		b1=betaT
-		b2=betaT
-	endif
-	long0=long_shift*pi/180d0
-
-c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,betamax)
 	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,fDay,betamin,betamax)
 
 	if(.not.retrieval) then
@@ -88,26 +77,28 @@ c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,b
 				if(ibeta(i,j).gt.n3D) ibeta(i,j)=n3D
 				if(.not.ibeta(i,j).gt.1) ibeta(i,j)=1
 			endif
-			la=0.5d0*(latt(j)+latt(j+1))-pi/2d0
-			lo=0.5d0*(long(i)+long(i+1))-pi
-			x=cos(lo)*cos(la)
-			if(x.lt.0d0) then
-				inu3D(i,j)=nnu0
-			else
-				inu3D(i,j)=(real(nnu0-2)*x+0.5d0)+1
-				if(inu3D(i,j).lt.1) inu3D(i,j)=1
-				if(.not.inu3D(i,j).lt.nnu0) inu3D(i,j)=nnu0
-			endif				
 		enddo
 	enddo
 	Rmax=0d0
 	iRmax=1
 
+
+	beta_c=0d0
+	i=nlong/4+1
+	do j=1,nlatt-1
+		beta_c=beta_c+beta(i,j)
+	enddo
+	i=3*nlong/4+1
+	do j=1,nlatt-1
+		beta_c=beta_c+beta(i,j)
+	enddo
+	beta_c=beta_c/real(2*(nlatt-1))	
+
 	if(fulloutput3D) then
 		j=nlatt/2
 		do i=1,nlong-1
 			beta3D_eq(i)=beta(i,j)
-			ibeta3D_eq(i)=(beta(i,j)-betamin)/(betamax-betamin)
+			x3D_eq(i)=NormSig(beta3D_eq(i),par3Dsteepness,beta_c,betamin,betamax)
 		enddo
 	endif
 
@@ -117,14 +108,12 @@ c	call Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,betapow,fDay,betamin,b
 	do i=1,n3D
 		call SetOutputMode(.false.)
 		beta3D(i)=betamin+(betamax-betamin)*(real(i)-0.5)/real(n3D)
+		x3D(i)=NormSig(beta3D(i),par3Dsteepness,beta_c,betamin,betamax)
 		do j=1,n_Par3D
 			if(Par3D(j)%logscale) then
-c				Par3D(j)%x=10d0**(log10(Par3D(j)%xmin)+log10(Par3D(j)%xmax/Par3D(j)%xmin)*beta3D(i))
-				Par3D(j)%x=10d0**(log10(Par3D(j)%xmin)+
-     &							  log10(Par3D(j)%xmax/Par3D(j)%xmin)*(real(i-1)/real(n3D-1))**Par3D(j)%pow)
+				Par3D(j)%x=10d0**(log10(Par3D(j)%xmin)+log10(Par3D(j)%xmax/Par3D(j)%xmin)*x3D(i))
 			else
-c				Par3D(j)%x=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*beta3D(i)
-				Par3D(j)%x=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*(real(i-1)/real(n3D-1))**Par3D(j)%pow
+				Par3D(j)%x=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*x3D(i)
 			endif
 		enddo
 		call MapPar3D()
@@ -315,7 +304,7 @@ c	enddo
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,iv,w1,w2,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot)
-!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,inu3D,fulloutput3D,Rplanet,
+!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,fulloutput3D,Rplanet,
 !$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,nv,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
@@ -646,18 +635,21 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 		enddo
 	enddo
 	obsA=0d0
+	obsA_split=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(vv,tau,tauc,Afact,hit,irtrace,A,iptrace,phi,rr,x,y,z,vx,vy,vz,la,lo,i1,i2,i3,
-!$OMP&			edgeNR,v,i1next,i2next,i3next,edgenext,i,imol,ir,ig,obsA_omp)
+!$OMP&			edgeNR,v,i1next,i2next,i3next,edgenext,i,imol,ir,ig,obsA_omp,obsA_split_omp)
 !$OMP& SHARED(nrtrace,nptrace,nmol_count,nr,nlam,ng,rtrace,ibeta,R3D2,Ce,Ca_mol,wgg,obsA,latt,long,Rmax,
-!$OMP&          nnu0,n3D,nlong,nlatt)
+!$OMP&          nnu0,n3D,nlong,nlatt,obsA_split)
 	allocate(obsA_omp(nlam))
+	allocate(obsA_split_omp(nlam,2))
 	allocate(vv(nr,n3D))
 	allocate(tau(nlam,ng))
 	allocate(tauc(nlam),Afact(nlam))
 	allocate(hit(nr+2,n3D))
 	obsA_omp=0d0
+	obsA_split_omp=0d0
 !$OMP DO
 	do irtrace=1,nrtrace-1
 		A=pi*(rtrace(irtrace+1)**2-rtrace(irtrace)**2)/real(nptrace)
@@ -737,13 +729,19 @@ c Note we use the symmetry of the North and South here!
 				tauc=0d0
 			enddo
 			obsA_omp(1:nlam)=obsA_omp(1:nlam)+A*(1d0-Afact(1:nlam))
+			if(y.lt.0d0) then
+				obsA_split_omp(1:nlam,1)=obsA_split_omp(1:nlam,1)+A*(1d0-Afact(1:nlam))
+			else
+				obsA_split_omp(1:nlam,2)=obsA_split_omp(1:nlam,2)+A*(1d0-Afact(1:nlam))
+			endif
 		enddo
 	enddo
 !$OMP END DO
 !$OMP CRITICAL
 	obsA(0,1:nlam)=obsA(0,1:nlam)+obsA_omp(1:nlam)
+	obsA_split(1:nlam,1:2)=obsA_split(1:nlam,1:2)+obsA_split_omp(1:nlam,1:2)
 !$OMP END CRITICAL
-	deallocate(obsA_omp)
+	deallocate(obsA_omp,obsA_split_omp)
 	deallocate(vv)
 	deallocate(tau)
 	deallocate(tauc,Afact)
@@ -832,55 +830,6 @@ c Note we use the symmetry of the North and South here!
 	enddo
 	call ConvertUnits()
 	if(dochemistry) metallicity0=metallicity
-
-	return
-	end
-	
-
-	subroutine Setup3D_old(beta,long,latt,nlong,nlatt,long0,b1,b2,p,f,betamin,betamax)
-	IMPLICIT NONE
-	integer i,j,nlong,nlatt
-	real*8 pi
-	parameter(pi=3.1415926536)
-	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
-	real*8 beta(nlong,nlatt),la,lo,albedo,p
-	real*8 long0,b1,b2,f,firr1,firr2,betamin,betamax
-
-	do i=1,nlong
-		long(i)=-pi+2d0*pi*real(i-1)/real(nlong-1)
-	enddo
-	do j=1,nlatt
-		latt(j)=-pi/2d0+pi*real(j-1)/real(nlatt-1)
-	enddo
-	
-	betamin=1d0
-	betamax=0d0
-	do i=1,nlong-1
-		do j=1,nlatt-1
-			lo=(long(i)+long(i+1))/2d0
-			la=(latt(j)+latt(j+1))/2d0
-			if(abs(lo).lt.pi/2d0) then	! dayside
-				firr1=b1+(b2-b1)*((lo+pi/2d0)/pi)**p
-			else if(lo.lt.(-pi/2d0)) then
-				firr1=b1+(b2-b1)*((-lo-pi/2d0)/pi)**p
-			else
-				firr1=b1+(b2-b1)*(1d0-(lo-pi/2d0)/pi)**p
-			endif
-			firr2=0d0
-			if(lo.gt.(-pi/2d0).and.lo.lt.(long0)) then
-				firr2=f*cos((lo-long0)*(pi/2d0)/(pi/2d0+long0))
-			else if(lo.lt.(pi/2d0).and.lo.gt.(long0)) then
-				firr2=f*cos((lo-long0)*(pi/2d0)/(pi/2d0-long0))
-			endif
-			beta(i,j)=abs((b1+(b2-b1)/(p+1d0))
-     &		+(firr1+firr2-(b1+(b2-b1)/(p+1d0)))*cos(la))
-			if(beta(i,j).gt.betamax) betamax=beta(i,j)
-			if(beta(i,j).lt.betamin) betamin=beta(i,j)
-		enddo
-	enddo
-	
-	latt=latt+pi/2d0
-	long=long+pi
 
 	return
 	end
@@ -2154,4 +2103,20 @@ c=========================================
 
 
 
+
+	real*8 function NormSig(x,a,c,x0,x1)
+	IMPLICIT NONE
+	real*8 x,a,y1,y2,xx,c,x0,x1
+
+	xx=(0d0-c)*a
+	y1=1d0/(1d0+exp(-xx))
+	xx=(1d0-c)*a
+	y2=1d0/(1d0+exp(-xx))
+
+	xx=(x-x0)/(x1-x0)
+	xx=(xx-c)*a
+	NormSig=(1d0/(1d0+exp(-xx))-y1)/(y2-y1)
+	
+	return
+	end
 

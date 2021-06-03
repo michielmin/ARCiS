@@ -162,13 +162,7 @@ c			if(domakeai.or.retrieval) return
 	enddo
 
 	if(domakeai) then
-		modelsucces=.false.
-		do i=1,nr
-			if(T(i).lt.Tmax.and.Tmax.gt.0d0) modelsucces=.true.
-		enddo
-		do i=1,nr
-			if(T(i).lt.Tmin.and.Tmin.gt.0d0) modelsucces=.false.
-		enddo
+		modelsucces=.true.
 		if(.not.modelsucces) return
 	endif
 

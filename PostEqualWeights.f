@@ -148,9 +148,9 @@
 			do ir=1,nlong-1
 				if(Par3D(j)%logscale) then
 					var3D(i,ir,j)=10d0**(log10(Par3D(j)%xmin)+
-     &							  log10(Par3D(j)%xmax/Par3D(j)%xmin)*ibeta3D_eq(ir)**Par3D(j)%pow)
+     &							  log10(Par3D(j)%xmax/Par3D(j)%xmin)*x3D_eq(ir))
 				else
-					var3D(i,ir,j)=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*ibeta3D_eq(ir)**Par3D(j)%pow
+					var3D(i,ir,j)=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*x3D_eq(ir)
 				endif
 			enddo
 		enddo

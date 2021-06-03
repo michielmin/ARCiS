@@ -127,8 +127,7 @@ c===============================================================================
 	real*8,allocatable :: BB(:,:)						! nBB,nlam
 
 	logical do3D
-	real*8 Kzz3D_1,Kzz3D_2,beta3D_1,beta3D_2,Sdot3D_1,Sdot3D_2,long_shift
-	real*8 kappa3D_1,kappa3D_2,gamma3D_1,gamma3D_2
+	real*8 par3Dsteepness
 
 	integer nmol_data
 	parameter(nmol_data=112)
@@ -241,7 +240,7 @@ c===============================================================================
 	real*8 alphaZ
 
 	real*8,allocatable :: flux(:,:),obsA(:,:),phase(:,:,:),obsLightCurve(:,:)
-	real*8,allocatable :: timeLightCurve(:),theta_phase(:)
+	real*8,allocatable :: timeLightCurve(:),theta_phase(:),obsA_split(:,:)
 	integer ncc,nphase,n2d,i2d,nLightCurve
 	logical cloudcompute,useDRIFT,singlecloud,makeimage,makemovie
 	logical,allocatable :: docloud(:,:)
@@ -306,7 +305,7 @@ cPoints for the temperature structure
 
 	type Parameter3D
 		character*500 keyword
-		real*8 xmin,xmax,x,pow
+		real*8 xmin,xmax,x
 		logical logscale
 	end type Parameter3D
 
@@ -370,17 +369,12 @@ cPoints for the temperature structure
 	implicit none
 	integer nlong,nlatt
 	integer n3D,nnu0
-c	parameter(n3D=10,nnu0=10)
-c	parameter(nlong=36,nlatt=18)
-c	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
-c	real*8 tanx(nlong),tany(nlong)
-c	real*8 cost2(nlatt),beta3D_eq(nlong),ibeta3D_eq(nlong)
-c	integer ibeta(nlong,nlatt),inu3D(nlong,nlatt)
 
 	real*8,allocatable :: long(:),latt(:)	!(Lambda, Phi)
 	real*8,allocatable :: tanx(:),tany(:)
-	real*8,allocatable :: cost2(:),beta3D_eq(:),ibeta3D_eq(:)
-	integer,allocatable :: ibeta(:,:),inu3D(:,:)
+	real*8,allocatable :: cost2(:),beta3D_eq(:),x3D_eq(:)
+	real*8,allocatable :: beta3D(:),x3D(:)
+	integer,allocatable :: ibeta(:,:)
 
 	real*8,allocatable :: R3D(:,:),R3D2(:,:)
 	end module Struct3D

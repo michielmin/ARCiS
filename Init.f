@@ -649,8 +649,9 @@ c	condensates=(condensates.or.cloudcompute)
 	
 	allocate(long(nlong),latt(nlatt))
 	allocate(tanx(nlong),tany(nlong))
-	allocate(cost2(nlatt),beta3D_eq(nlong),ibeta3D_eq(nlong))
-	allocate(ibeta(nlong,nlatt),inu3D(nlong,nlatt))
+	allocate(cost2(nlatt),beta3D_eq(nlong),x3D_eq(nlong))
+	allocate(ibeta(nlong,nlatt))
+	allocate(beta3D(n3D),x3D(n3D))
 
 	if(fulloutput3D) then
 		allocate(PTaverage3D(0:nphase,nr))
@@ -934,6 +935,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) night2day
 		case("n3d")
 			read(key%value,*) n3D
+		case("par3dsteepness","steepness3d")
+			read(key%value,*) par3Dsteepness
 		case("nnu","nnustar")
 			read(key%value,*) nnu0
 		case("nlong")
@@ -988,17 +991,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) do3D
 		case("output3d")
 			read(key%value,*) fulloutput3D
-		case("kzz3d")
-			if(key%nr1.eq.1) read(key%value,*) Kzz3D_1
-			if(key%nr1.eq.2) read(key%value,*) Kzz3D_2
-		case("sdot3d")
-			if(key%nr1.eq.1) read(key%value,*) Sdot3D_1
-			if(key%nr1.eq.2) read(key%value,*) Sdot3D_2
-		case("beta3d")
-			if(key%nr1.eq.1) read(key%value,*) beta3D_1
-			if(key%nr1.eq.2) read(key%value,*) beta3D_2
-		case("longshift")
-			read(key%value,*) long_shift
 		case("iwolk")
 			read(key%value,*) iWolk
 		case("emisspec")
@@ -1400,13 +1392,6 @@ c	if(par_tprofile) call ComputeParamT(T)
 	nboot=1
 
 	do3D=.false.
-	Kzz3D_1=-1d8
-	Kzz3D_2=-1d6
-	Sdot3D_1=-1d-12
-	Sdot3D_2=-1d-15
-	beta3D_1=-0.2
-	beta3D_2=-0.1
-	long_shift=0d0
 
 	n3D=10
 	nnu0=10
@@ -1494,8 +1479,8 @@ c		Cloud(i)%P=0.0624d0
 	enddo
 	do i=1,n_Par3D
 		Par3D(i)%logscale=.false.
-		Par3D(i)%pow=1d0
 	enddo
+	par3Dsteepness=1d-4
 	npop=30
 	ngen=0
 	gene_cross=.false.
@@ -1603,6 +1588,7 @@ c number of cloud/nocloud combinations
 	allocate(cloudfrac(ncc))
 	allocate(flux(0:ncc,nlam))
 	allocate(obsA(0:ncc,nlam))
+	allocate(obsA_split(nlam,2))
 	allocate(tau1depth(ncc,nlam))
 	allocate(cloudtau(ncc,nlam))
 	allocate(phase(nphase,0:ncc,nlam))
@@ -1780,8 +1766,6 @@ c				enddo
 			read(key%value,*) Par3D(i)%xmin
 		case("max","xmax")
 			read(key%value,*) Par3D(i)%xmax
-		case("pow")
-			read(key%value,*) Par3D(i)%pow
 		case("log","logscale")
 			read(key%value,*) Par3D(i)%logscale
 		case default

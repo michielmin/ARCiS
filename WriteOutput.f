@@ -115,6 +115,19 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	enddo
 	close(unit=30)
 
+	if(do3D) then
+	filename=trim(outputdir) // "trans_split" // trim(side)
+	call output("Writing spectrum to: " // trim(filename))
+	open(unit=30,file=filename,RECL=1000)
+	write(30,'("#",a13,3a19)') "lambda [mu]","Morning","Evening","Rp^2/Rstar^2"
+	form='(f14.6,3es19.7E3)'
+	do i=1,nlam_out
+		write(30,form) lam_out(i),obsA_split(i,1:2)/(pi*Rstar**2),
+     &					obsA(0,i)/(pi*Rstar**2)
+	enddo
+	close(unit=30)
+	endif
+
 	endif
 
 	if(emisspec) then
