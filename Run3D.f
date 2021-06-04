@@ -84,11 +84,11 @@ c	recomputeopac=.true.
 
 
 	beta_c=0d0
-	i=nlong/4+1
+	i=nlong/4
 	do j=1,nlatt-1
 		beta_c=beta_c+beta(i,j)
 	enddo
-	i=3*nlong/4+1
+	i=3*nlong/4
 	do j=1,nlatt-1
 		beta_c=beta_c+beta(i,j)
 	enddo
