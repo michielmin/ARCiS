@@ -1217,20 +1217,6 @@ END MODULE nrutil
 
 
 
-	module AtomsModule
-	IMPLICIT NONE
-
-	INTEGER,parameter            :: N_atoms = 18
-	CHARACTER*40                 :: names_atoms(N_atoms)
-	DOUBLE PRECISION             :: molfracs_atoms(N_atoms)
-	DOUBLE PRECISION             :: mass_atoms(N_atoms)
-	real*8 :: gas_atoms(N_atoms),solid_atoms(N_atoms)
-	character*500 formationcommand
-	
-	end module AtomsModule
-
-
-
 !===================================================================================
 !=================== Main routine calling easychem =================================
 !===================================================================================

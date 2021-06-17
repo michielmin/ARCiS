@@ -80,5 +80,30 @@
 
 	end
 	
+
 	
+	subroutine ReadDataCIA()
+	use GlobalSetup
+	IMPLICIT NONE
+	integer i
+		
+	if(ncia.gt.0) call output("Reading CIA opacities")
+	do i=1,ncia
+		call InitCIA(i)
+		call output("CIA: " // trim(molname(CIA(i)%imol1)) // "-" // trim(molname(CIA(i)%imol2)))
+	enddo
+
+	cia_mixrat=-1d0
+	do i=1,nmol
+		cia_mixrat(i)=mixrat(i)
+	enddo
+c add Helium (arbitrary value for now...)
+	cia_mixrat(48)=0.1
+c set default for H2 to 1.0
+	if(cia_mixrat(45).lt.0d0) cia_mixrat(45)=1d0
+	
+	return
+	end
+
+
 	

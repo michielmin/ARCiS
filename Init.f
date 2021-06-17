@@ -585,15 +585,10 @@ c	condensates=(condensates.or.cloudcompute)
 
 	call output("==================================================================")
 
-	if(compute_opac) then
-		opacitymol=.true.
-		call ReadData()
-	else
-		do i=1,nmol
-			opacitymol(i)=.false.
-			if(includemol(i)) call InitReadOpacityFITS(i)
-		enddo
-	endif
+	do i=1,nmol
+		opacitymol(i)=.false.
+		if(includemol(i)) call InitReadOpacityFITS(i)
+	enddo
 
 	call ReadDataCIA()
 
@@ -657,6 +652,8 @@ c	condensates=(condensates.or.cloudcompute)
 		allocate(PTaverage3D(0:nphase,nr))
 		allocate(mixrat_average3D(0:nphase,nr,nmol))
 	endif
+
+	if(planetform) call InitFormation(Mstar)
 		
 	return
 	end
@@ -674,6 +671,8 @@ c	condensates=(condensates.or.cloudcompute)
 	if(key%key2d.eq.i2d.or.key%key2d.eq.0) then
 
 	select case(key%key1)
+		case("compute")
+			call output("keyword 'compute' no longer supported")
 		case("nr")
 c is already set in CountStuff
 c			read(key%value,*) nr
@@ -787,8 +786,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) ng
 		case("distance")
 			read(key%value,*) distance
-		case("hitemp")
-			read(key%value,*) HITEMP
 		case("cloud")
 			call ReadCloud(key)
 		case("rainout")
@@ -805,8 +802,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) scattering
 		case("scattstar","starscatt")
 			read(key%value,*) scattstar
-		case("compute","compute_opac","computeopac")
-			read(key%value,*) compute_opac
 		case("opacitymode")
 			read(key%value,*) opacitymode
 		case("np")
@@ -1190,7 +1185,7 @@ c	endif
 		P(i)=P0(nr+1-i)
 	enddo
 	do j=1,nclouds
-		if(Cloud(j)%simplecloud) then
+		if(Cloud(j)%simplecloud.and.Cloud(j)%P.lt.pmax.and.Cloud(j)%P.gt.pmin) then
 			dp=abs(P(i)-Cloud(j)%P)
 			k=1
 			do i=2,nr
@@ -1509,11 +1504,6 @@ c		Cloud(i)%P=0.0624d0
 
 	call getenv('HOME',homedir) 
 
-	HITRANdir=trim(homedir) // '/HITRAN/'
-	HITEMPdir=trim(homedir) // '/HITEMP/'
-
-	HITEMP=.false.
-
 	planetparameterfile=trim(homedir) // '/ARCiS/Data/allplanets-ascii.txt'
 	planetname=' '
 
@@ -1533,8 +1523,6 @@ c		Cloud(i)%P=0.0624d0
 	
 	scattering=.false.
 	scattstar=.false.
-	
-	compute_opac=.false.
 	
 	opacitymode=.false.
 	opacitydir=trim(homedir) // '/ARCiS/Data/Opacities'
@@ -2572,3 +2560,21 @@ c	HG=(1d0-g**2)/((1d0-2d0*g*cos(theta)+g**2)**(3.0/2.0))/2d0
 	return
 	end
 
+
+	subroutine InitFormation(Ms)
+	use FormationModule
+	IMPLICIT NONE
+	real*8 Ms
+
+	call getenv('HOME',diskabundances) 
+
+	diskabundances=trim(diskabundances) // '/ARCiS/Data/SimAB/molec_ab.txt'
+	
+	Mstar=Ms
+	call SetupAtoms
+
+	call SetupPPdisk
+
+	return
+	end
+	

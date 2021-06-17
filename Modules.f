@@ -92,7 +92,7 @@ c===============================================================================
 	real*8,allocatable :: Jscat(:,:)						! radius, angle
 	integer nT,np,nr,nmol,nlam		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines,ng,ncia,nclouds,nTiter
-	character*500 outputdir,HITRANdir,HITEMPdir
+	character*500 outputdir
 	integer idum,maxiter,Nphot0,idum0,nlamdust,iWolk
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib
@@ -125,6 +125,7 @@ c===============================================================================
 	integer nBB
 	parameter(nBB=10000)
 	real*8,allocatable :: BB(:,:)						! nBB,nlam
+	character*500 formationcommand
 
 	logical do3D
 	real*8 par3Dsteepness
@@ -226,7 +227,7 @@ c===============================================================================
      &				 4,3 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt,n_instr
-	logical HITEMP,opacitymode,compute_opac,Mp_from_logg,trend_compute
+	logical opacitymode,Mp_from_logg,trend_compute
 	integer nPom,nTom
 	character*500 opacitydir,specresfile,starfile
 	character*500,allocatable :: instrument(:)
@@ -380,4 +381,39 @@ cPoints for the temperature structure
 	end module Struct3D
 
 
+c===================================================================================
+c Module containing the setup for the formation subroutine
+c===================================================================================
+	module FormationModule
+	IMPLICIT NONE
+c Disk setup
+	integer Nr_disk
+c Static settings for the disk temperature and atomic abundances
+	real*8,allocatable :: R_disk(:),T_disk(:)
+c The abun_???(:,:) arrays contain the elemental abundances in each of the disk components: 
+c			gas, dust, planetessimals
+c Units are number of atoms per unit gram. This way we can easily accrete a given mass and 
+c compute what this means for the total number of atoms for every element
+	real*8,allocatable :: abun_gas(:,:),abun_dust(:,:),abun_planet(:,:)
+c Disk density setup where the dust and planet densities are the max values possible
+	real*8,allocatable :: d2g_disk(:),p2g_disk(:)
+	real*8 Mstar,mu,kappa_r,alpha_disk,M_acc,d2g_T
+	character*500 diskabundances
+	
+	end module
 
+
+c===================================================================================
+c Module containing the abundances of the atoms and their names
+c===================================================================================
+	module AtomsModule
+	IMPLICIT NONE
+
+	INTEGER,parameter            :: N_atoms = 18
+	CHARACTER*40                 :: names_atoms(N_atoms)
+	DOUBLE PRECISION             :: molfracs_atoms(N_atoms)
+	DOUBLE PRECISION             :: mass_atoms(N_atoms)
+	
+	end module AtomsModule
+c===================================================================================
+c===================================================================================

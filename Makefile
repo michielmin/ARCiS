@@ -90,11 +90,7 @@ OBJS	= Modules.o \
 		SetupOpacities.o \
 		Raytrace.o \
 		WriteOutput.o \
-		AdjustParameters.o \
-		ReadData.o \
 		Subroutines.o \
-		Voigt.o \
-		TIPS_2011_v1p0_sub.o \
 		CIA.o \
 		ComputePart.o \
 		ReadParticleFits.o \
@@ -117,7 +113,6 @@ OBJS	= Modules.o \
 		LabradoriteData.o \
 		KuruczData.o \
 		MCRad.o \
-		polyPartition.o \
 		Retrieval.o \
 		Genetic.o \
 		MakeAI.o \
@@ -134,10 +129,10 @@ OBJS	= Modules.o \
 		GGchem_linpack_q.o \
 		GGchem_is_nan.o \
 		PostEqualWeights.o \
-		TrendCompute.o \
 		MCComputeT.o \
 		LightCurve.o \
-		ConvertColors.o
+		ConvertColors.o \
+		Formation.o
 
 # program name and install location
 PROGRAM       = ARCiS
