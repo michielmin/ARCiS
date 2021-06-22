@@ -903,14 +903,27 @@ c Setup names and weights of the elements
 	SO=molfracs_atoms(11)/molfracs_atoms(5)
 	Z=log10(sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))/Z0)
 
-	print*,CO
-
 	call output("SimAB abundances:")
 	call output("C/O: " // dbl2string(CO,'(f7.3)'))
 	call output("Si/O:" // dbl2string(SiO,'(f7.3)'))
 	call output("N/O: " // dbl2string(NO,'(f7.3)'))
 	call output("S/O: " // dbl2string(SO,'(f7.3)'))
 	call output("[Z]: " // dbl2string(Z,'(f7.3)'))
+
+	if(.not.retrieval) then
+	open(unit=50,file=trim(outputdir) // 'atomic.dat')
+	write(50,'("SimAB abundances:")')
+	write(50,'(a6,f7.3)') "C/O:",CO
+	write(50,'(a6,f7.3)') "Si/O:",SiO
+	write(50,'(a6,f7.3)') "N/O:",NO
+	write(50,'(a6,f7.3)') "S/O:",SO
+	write(50,'(a6,f7.3)') "[Z]:",Z
+	write(50,'("=============")')
+	do i=1,18
+		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
+	enddo
+	close(unit=50)
+	endif
 
 	return
 
