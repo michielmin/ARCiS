@@ -37,6 +37,10 @@ c	recomputeopac=.true.
 
 	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,fDay,betamin,betamax)
 
+	call DetermineShift(long,beta,nlong,nlatt,hotspotshift)
+	hotspotshift=hotspotshift-180d0
+	call output("hotspot shift: " // dbl2string(hotspotshift,'(f6.2)') // " degrees")
+
 	if(.not.retrieval) then
 		open(unit=20,file=trim(outputdir) // "structure3D.dat",RECL=6000)
 		do j=1,nlatt-1
@@ -869,7 +873,52 @@ c Note we use the symmetry of the North and South here!
 
 	return
 	end
+
+	subroutine DetermineShift(long,beta,nlong,nlatt,shift)
+	IMPLICIT NONE
+	integer nlong,nlatt,i,j,k
+	real*8 shift,beta(nlong,nlatt),max,x1,x2,x3,y1,y2,y3,pi,long(nlong)
+	parameter(pi=3.1415926536)
 	
+	j=nlatt/2
+	max=0d0
+	k=nlong/2
+	do i=1,nlong-1
+		if(beta(i,j).gt.max) then
+			max=beta(i,j)
+			k=i
+		endif
+	enddo
+	if(k.eq.1) then
+		y1=beta(nlong-1,j)
+		y2=beta(k,j)
+		y3=beta(k+1,j)
+		x1=(long(nlong-1)+long(nlong))/2d0
+		x2=(long(k)+long(k+1))/2d0
+		x3=(long(k+1)+long(k+2))/2d0
+	else if(k.eq.nlong-1) then
+		y1=beta(k-1,j)
+		y2=beta(k,j)
+		y3=beta(1,j)
+		x1=(long(k-1)+long(k))/2d0
+		x2=(long(k)+long(k+1))/2d0
+		x3=(long(1)+long(2))/2d0
+	else
+		y1=beta(k-1,j)
+		y2=beta(k,j)
+		y3=beta(k+1,j)
+		x1=(long(k-1)+long(k))/2d0
+		x2=(long(k)+long(k+1))/2d0
+		x3=(long(k+1)+long(k+2))/2d0
+	endif
+	shift=-(((y1-y2)/(x1-x2))*((x1*x1-x2*x2)/(x1-x2)-(x2*x2-x3*x3)/(x2-x3))/((y1-y2)/(x1-x2)-(y2-y3)/(x2-x3))
+     &		-(x1*x1-x2*x2)/(x1-x2))/2d0
+	
+	shift=shift*180d0/pi
+	
+	return
+	end
+
 
 	subroutine DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,contrast)
 	IMPLICIT NONE

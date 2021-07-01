@@ -4,7 +4,7 @@
 	use Struct3D
 	IMPLICIT NONE
 	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime,sig,aver
-	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:)
+	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:),hotspotshift_der(:)
 	real*8,allocatable :: PTstruct(:,:),var(:,:),values(:,:),COratio_der(:),Z_der(:)
 	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j,iphase,imol
 	logical,allocatable :: done(:)
@@ -27,6 +27,7 @@
 	allocate(values(0:nmodels,n_ret))
 	allocate(COratio_der(0:nmodels))
 	allocate(Z_der(0:nmodels))
+	if(do3D) allocate(hotspotshift_der(0:nmodels))
 	allocate(sorted(nmodels))
 	allocate(done(nmodels))
 	allocate(var(nmodels,n_ret))
@@ -99,6 +100,7 @@
 	enddo
 	COratio_der(i)=COratio
 	Z_der(i)=metallicity
+	if(do3D) hotspotshift_der(i)=hotspotshift
 	call SetOutputMode(.true.)
 
 	call InitDens()
@@ -272,7 +274,6 @@
 			enddo
 		endif
 
-
 		open(unit=26,file=trim(outputdir) // "retrieval",RECL=1000)
 		do j=1,n_ret
 			sorted(1:i)=values(1:i,j)
@@ -285,6 +286,12 @@
 		sorted(1:i)=Z_der(1:i)
 		call sort(sorted,i)
 		write(26,'(a10,3es12.4)') "[Z]",sorted(ime),sorted(im1),sorted(ip1)
+		if(do3D) then
+			sorted(1:i)=hotspotshift_der(1:i)
+			call sort(sorted,i)
+			write(26,'(a10,3es12.4)') "hotspot",sorted(ime),sorted(im1),sorted(ip1)
+		endif
+			
 		close(unit=26)
 
 		open(unit=26,file=trim(outputdir) // "trans_sigma",RECL=1000)
@@ -318,6 +325,7 @@
 	deallocate(values)
 	deallocate(COratio_der)
 	deallocate(Z_der)
+	if(do3D) deallocate(hotspotshift_der)
 	deallocate(done)
 	deallocate(var)
 	if(do3D.and.fulloutput3D) deallocate(PTstruct3D,mixrat3D,phase3D,phase3DR)

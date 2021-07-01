@@ -378,6 +378,7 @@ cPoints for the temperature structure
 	integer,allocatable :: ibeta(:,:)
 
 	real*8,allocatable :: R3D(:,:),R3D2(:,:)
+	real*8 hotspotshift
 	end module Struct3D
 
 
