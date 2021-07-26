@@ -49,7 +49,7 @@ endif
 
 # Platform specific compilation options
 ifeq ($(gfort),true)
-  FLAG_ALL      = -O5 -g $(MULTICORE) -lgfortran -I$(HOME)/include -I/usr/local/modules $(LIBS_MN)
+  FLAG_ALL      = -O5 -g -fbacktrace $(MULTICORE) -lgfortran -I$(HOME)/include -I/usr/local/modules $(LIBS_MN)
   FLAG_LINUX    = -ffixed-line-length-132 -cpp
   FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else
@@ -111,6 +111,7 @@ OBJS	= Modules.o \
 		Soot.o \
 		TholinData.o \
 		LabradoriteData.o \
+		H2SO4.o \
 		KuruczData.o \
 		MCRad.o \
 		Retrieval.o \
@@ -124,6 +125,21 @@ OBJS	= Modules.o \
 		mrqmin.o \
 		truncated_normal.o \
 		amoeba.o \
+		ggchem/datamod.o \
+		ggchem/database.o \
+		ggchem/supersat.o \
+		ggchem/stindex.o \
+		ggchem/smchem16.o \
+		ggchem/smchem8.o \
+		ggchem/nucleation.o \
+		ggchem/ggchem.o \
+		ggchem/init_dustchem.o \
+		ggchem/init_chemistry.o \
+		ggchem/gauss_nm.o \
+		ggchem/gauss8.o \
+		ggchem/gauss16.o \
+		ggchem/equil_cond.o \
+		ggchem/upper.o \
 		GGchemARCiS.o \
 		nasa_polynomial.o \
 		GGchem_linpack_q.o \

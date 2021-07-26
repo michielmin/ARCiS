@@ -535,6 +535,13 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		T(ir)=ff*Ts(ir)+(1d0-ff)*T(ir)
 	enddo
 
+c	Ts(1)=Tsurface/(exp(nabla_ad(1))+P(1)/P(2))
+c	T(1)=(T(1)**4+Ts(1)**4)**0.25d0
+c	do ir=2,nr
+c		Ts(ir)=Ts(ir-1)/(exp(nabla_ad(ir))+P(ir-1)/P(ir))
+c		T(ir)=(T(ir)**4+Ts(ir)**4)**0.25d0
+c	enddo
+
 	E0=(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
 	E=SurfStar+E0
 	do ilam=1,nlam_LR-1
@@ -581,25 +588,25 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
 
-c	do ir=nr-1,1,-1
-c		if(ir.lt.nr) then
-c			dlnP=log(P(ir+1)/P(ir))
-c			dlnT=log(T(ir+1)/T(ir))
-c			if((dlnT/dlnP).gt.nabla_ad(ir)) then
-c				dlnT=(nabla_ad(ir))*dlnP
-c				T(ir)=T(ir+1)/exp(dlnT)
-c			endif
-c		endif
-c	enddo
-
-	do ir=1,nr-1
-		dlnP=log(P(ir+1)/P(ir))
-		dlnT=log(T(ir+1)/T(ir))
-		if((dlnT/dlnP).gt.nabla_ad(ir)) then
-			dlnT=(nabla_ad(ir))*dlnP
-			T(ir+1)=T(ir)*exp(dlnT)
+	do ir=nr-1,1,-1
+		if(ir.lt.nr) then
+			dlnP=log(P(ir+1)/P(ir))
+			dlnT=log(T(ir+1)/T(ir))
+			if((dlnT/dlnP).gt.nabla_ad(ir)) then
+				dlnT=(nabla_ad(ir))*dlnP
+				T(ir)=T(ir+1)/exp(dlnT)
+			endif
 		endif
 	enddo
+
+c	do ir=1,nr-1
+c		dlnP=log(P(ir+1)/P(ir))
+c		dlnT=log(T(ir+1)/T(ir))
+c		if((dlnT/dlnP).gt.nabla_ad(ir)) then
+c			dlnT=(nabla_ad(ir))*dlnP
+c			T(ir+1)=T(ir)*exp(dlnT)
+c		endif
+c	enddo
 
 c	converged=.true.
 	do ir=1,nr

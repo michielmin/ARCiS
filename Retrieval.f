@@ -452,11 +452,11 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	real*8 var0(nvar),var1(nvar)
 	
 	var1=var0
-	do i=1,nvar
-		if(.not.var1(i).lt.1d0) var1(i)=1d0
-		if(.not.var1(i).gt.0d0) var1(i)=0d0
-	enddo
-	return
+c	do i=1,nvar
+c		if(.not.var1(i).lt.1d0) var1(i)=1d0
+c		if(.not.var1(i).gt.0d0) var1(i)=0d0
+c	enddo
+c	return
 	
 	do i=1,nvar
 1		continue
