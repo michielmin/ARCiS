@@ -10,7 +10,6 @@
 	character*500 cloudspecies(max(nclouds,1))
 	real*8 starttime,stoptime,chemtime
 
-
 	chemtime=0d0
 		
 	do i=1,nclouds
@@ -18,19 +17,6 @@
 	enddo
 
 	ini = .TRUE.
-
-	call SetAbun
-	nabla_ad=2d0/7d0
-
-	if(PTchemAbun) then
-		call call_chemistry(Tchem,Pchem,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(1),MMW_form,didcondens_chem,includemol)
-		do i=2,nr
-			mixrat_r(i,1:nmol)=mixrat_r(1,1:nmol)
-			nabla_ad(i)=nabla_ad(1)
-		enddo
-		mixrat(1:nmol)=mixrat_r(1,1:nmol)		
-   	endif
 
 	minZ=-5d0
 
@@ -47,6 +33,9 @@
 	if(compute_mixrat) nabla_ad=2d0/7d0
 	grav=Ggrav*Mplanet/(Rplanet)**2
 	if(par_tprofile.or.(computeT.and.nTiter.eq.0)) call ComputeParamT(T)
+
+	call SetAbun
+	nabla_ad=2d0/7d0
 
 	Rscale=1d0
 
@@ -132,10 +121,10 @@
 	Mtot=Mplanet
 	do i=1,nr
 		RHill=(Dplanet*(Mtot/(3d0*Mstar))**(1d0/3d0))
-		if(R(i+1).gt.RHill) then
-			call output("layer" // dbl2string(P(i),'(es10.3E3)') // "is beyond the Hill Sphere")
-			R(i+1)=sqrt(R(i)*RHill)
-		endif
+c		if(R(i+1).gt.RHill) then
+c			call output("layer" // dbl2string(P(i),'(es10.3E3)') // "is beyond the Hill Sphere")
+c			R(i+1)=sqrt(R(i)*RHill)
+c		endif
 		Mtot=Mtot+dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
 		grav(i)=Ggrav*Mtot/(R(i)*R(i+1))
 	enddo
@@ -237,7 +226,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		enddo
 	endif
 
-	if(.not.PTchemAbun.and..not.dochemistry) then
+	if(.not.dochemistry) then
 		Otot=0d0
 		Ctot=0d0
 		Htot=0d0
@@ -771,20 +760,50 @@ c use Ackerman & Marley 2001 cloud computation
 	subroutine SetAbun()
 	use GlobalSetup
 	use Constants
+	use AtomsModule
 	IMPLICIT NONE
-	real*8 Zout
+	real*8 Zout,abun_dust(N_atoms)
+	integer i
+
+	if(secondary_atmosphere) then
+		if(.not.computeT) Tsurface=T(1)
+		if(Toutgas.eq.Tsurface.and.Poutgas.eq.P(1)) then
+			molfracs_atoms(1:N_atoms)=molfracs_atoms_outgas(1:N_atoms)
+			return
+		endif
+	endif
 
 	if(element_abun_file.ne.' ') then
 		call read_molfracs_atoms(element_abun_file,COratio,metallicity)
-		return
+	else
+		call set_molfracs_atoms(COratio,SiOratio,NOratio,SOratio,metallicity)
 	endif
 
-	call set_molfracs_atoms(COratio,SiOratio,NOratio,SOratio,metallicity)
+	if(secondary_atmosphere) then
+		Toutgas=Tsurface
+		Poutgas=P(1)
+		call SplitGasDust(Toutgas,Poutgas,molfracs_atoms,molfracs_atoms_outgas,abun_dust)
+	endif
 	
 	return
 	end
 
 
+	subroutine SplitGasDust(Temp,Pres,abun_total,abun_gas,abun_dust)
+	use GlobalSetup
+	use Constants
+	use AtomsModule
+	IMPLICIT NONE
+	real*8 mutemp,mol_abun(nmol),abun_total(N_atoms),abun_gas(N_atoms),abun_dust(N_atoms)
+	real*8 Pres,Temp
+
+	call call_GGchem(Temp,Pres,names_atoms,abun_total,N_atoms,molname(1:nmol),
+     &			mol_abun,nmol,mutemp,.true.,abun_gas)
+	abun_dust=abun_total-abun_gas	
+
+	return
+	end
+	
 
 	subroutine set_molfracs_atoms(CO,SiO,NO,SO,Z)
 	use GlobalSetup
@@ -1206,12 +1225,12 @@ c	close(unit=50)
 	integer Ncloud,i,imol
 	real*8 Xcloud(max(Ncloud,1)),MMW,Tg
 	character*500 cloudspecies(max(Ncloud,1)),namecloud
-	real*8 P1,P2,abun_temp(nmol),M
+	real*8 P1,P2,abun_temp(nmol),M,gas_atoms(N_atoms)
 
 	Tg=min(max(Tin,100d0),30000d0)
 
 	Xcloud=0d0
-	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates)
+	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates,gas_atoms)
 
 c	call readBaud(mol_abun,nmol,Pin,MMW)
 

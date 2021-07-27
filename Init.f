@@ -592,8 +592,6 @@ c	condensates=(condensates.or.cloudcompute)
 
 	call ReadDataCIA()
 
-	if(PTchemAbun.and.Tchem.le.0d0) Tchem=sqrt(Rstar/(2d0*Dplanet))*Tstar
-
 	if(retrieval) then
 		do i=1,n_ret
 			if(RetPar(i)%x0.lt.-1d150) then
@@ -617,7 +615,13 @@ c	condensates=(condensates.or.cloudcompute)
 		enddo			
 	endif
 
-	if(dochemistry.or.PTchemAbun) call init_GGchem(molname,nmol,condensates)
+	if(dochemistry.or.secondary_atmosphere) then
+		if(secondary_atmosphere) then
+			call init_GGchem(molname,nmol,.true.)
+		else
+			call init_GGchem(molname,nmol,condensates)
+		endif
+	endif
 
 	if(iWolk.gt.0) then
 		open(unit=50,file=trim(outputdir) // "/Wolk.dat",RECL=6000)
@@ -850,6 +854,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			element_abun_file=key%value
 		case("condensates")
 			read(key%value,*) condensates
+		case("secondary_atmosphere")
+			read(key%value,*) secondary_atmosphere
 		case("cloudcompute")
 			read(key%value,*) cloudcompute
 		case("usedrift")
@@ -940,12 +946,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) nlatt
 		case("betapow")
 			read(key%value,*) betapow
-		case("tchem")
-			read(key%value,*) Tchem
-		case("pchem")
-			read(key%value,*) Pchem
-		case("chemabun","ptchemabun")
-			read(key%value,*) PTchemAbun
 		case("rnuc","r_nuc")
 			read(key%value,*) r_nuc
 		case("makeai")
@@ -1212,6 +1212,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 		endif
 		if(IsNaN(T(i))) T(i)=sqrt(minTprofile*maxTprofile)
 	enddo
+	Tsurface=T(1)
 
 	return
 	end	
@@ -1374,9 +1375,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 
 	r_nuc=1d-3
 	
-	PTchemAbun=.false.
-	Tchem=-500d0
-	Pchem=1d0
+	secondary_atmosphere=.false.
+	Poutgas=0d0
+	Toutgas=0d0
 	
 	adiabatic_tprofile=.false.
 

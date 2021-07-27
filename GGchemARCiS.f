@@ -6,7 +6,6 @@
       end MODULE ARCiS_GGCHEM
 
 
-
 ***********************************************************************
 	subroutine init_GGchem(mol_names_in,n_mol_in,condensates)
 ***********************************************************************
@@ -314,7 +313,8 @@
 
 
 ***********************************************************************
-	subroutine call_GGchem(Tin,Pin,atom_names_in,atom_abuns_in,n_atom_in,mol_names_in,mol_abuns_in,n_mol_in,MMW,condensates)
+	subroutine call_GGchem(Tin,Pin,atom_names_in,atom_abuns_in,n_atom_in,mol_names_in,mol_abuns_in,n_mol_in,
+     >							MMW,condensates,atom_abuns_out)
 ***********************************************************************
       use PARAMETERS,ONLY: elements,abund_pick,model_dim,model_pconst,
      >                     model_struc,model_eqcond,Npoints,useDatabase,
@@ -333,7 +333,7 @@
       use ARCiS_GGCHEM
       implicit none
 	integer :: n_atom_in,n_mol_in,verbose,i,j
-	real*8 :: Tin,Pin,atom_abuns_in(n_atom_in),mol_abuns_in(n_mol_in),MMW
+	real*8 :: Tin,Pin,atom_abuns_in(n_atom_in),mol_abuns_in(n_mol_in),MMW,atom_abuns_out(n_atom_in)
 	character*40 :: atom_names_in(n_atom_in)
 	character*10 :: mol_names_in(n_mol_in),uppername,elnam_UPPER
 
@@ -380,7 +380,7 @@ c      write(*,'("C/O =",0pF6.3)') eps(C)/eps(O)
 
         do it=1,999
           if (model_pconst) nHges = p*mu/(bk*Tg)/muH
-          if (model_eqcond) then
+          if (condensates) then
             call EQUIL_COND(nHges,Tg,eps,Sat,eldust,verbose)
           endif
           call GGCHEM(nHges,Tg,eps,.false.,verbose)
@@ -415,6 +415,17 @@ c          print '("p-it=",i3,"  mu=",2(1pE20.12))',it,mu/amu,dmu/mu
 		if (.not.ABS(dmu/mu).gt.1.E-10) exit
         enddo  
 
+
+	if(condensates) then
+		atom_abuns_out=1d-50
+		do i=1,n_atom_in
+			do j=1,NELEM
+				if(trim(elnam(j)).eq.trim(atom_names_in(i))) then
+					atom_abuns_out(i)=eps(j)
+				endif
+			enddo
+		enddo
+	endif
 
 	tot=sum(nmol(1:NMOLE))+sum(nat(1:NELEM))
 

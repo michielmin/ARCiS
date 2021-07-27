@@ -99,8 +99,8 @@ c===============================================================================
 	logical dochemistry,retrieve_profile,condensates,faircoverage,speclimits,mapCOratio,randomseed
 	logical,allocatable :: includemol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust,twind,epsiter
-	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Tchem,Pchem,Psimplecloud,metallicity0
-	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,PTchemAbun,useobsgrid
+	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Psimplecloud,metallicity0
+	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid
 	logical didcondens_chem,coagulation,resume_multinest,doMCcompute,disequilibrium,const_eff_multinest
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file
 	character*500 parametergridfile
@@ -115,6 +115,11 @@ c===============================================================================
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	real*8 planetform_fdust,planetform_fplan,planetform_Rstart,planetform_Mstart
 	logical planetform,massprior
+c for exchange when computing secondary atmosphere
+	real*8 Toutgas,Poutgas
+	real*8 molfracs_atoms_outgas(18)
+	logical secondary_atmosphere
+
 	real*8 Mp_prior,dMp_prior
 	character*20 surfacetype
 	integer nTZ,nspike,nai,nboot,npew

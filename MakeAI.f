@@ -55,20 +55,7 @@
 			Fstar=Fstar*pi*Rstar**2
 			call SetOutputMode(.false.)
 			call ComputeModel(.true.)
-			if(PTchemAbun) then
-				do k=1,n_ret
-					do j=1,nmol
-						if(RetPar(k)%keyword.eq.molname(j)) then
-							RetPar(k)%value=mixrat(j)
-						endif
-					enddo
-				enddo
-				call MapRetrievalInverse(var)
-				do k=1,n_ret
-					if(var(k).lt.0d0) var(k)=0d0
-					if(var(k).gt.1d0) var(k)=1d0
-				enddo
-			else if(.not.dochemistry) then
+			if(.not.dochemistry) then
 				do k=1,n_ret
 					if(RetPar(k)%keyword.eq.'COratio'.or.RetPar(k)%keyword.eq.'coratio') then
 						RetPar(k)%value=COratio
