@@ -291,9 +291,21 @@
 				endif
 				if(tau.lt.1d-6) then
 					tau=1d-6
+					scale=Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
+					if(.not.scale.gt.0d0) scale=0d0
+					if(.not.scale.lt.1d0) scale=1d0
+					Ce(ir,ilam,ig)=tau/d
+					Ca(ir,ilam,ig)=scale*Ce(ir,ilam,ig)
+					Cs(ir,ilam,ig)=max(0d0,Ce(ir,ilam,ig)-Ca(ir,ilam,ig))
 				endif
-				if(tau.gt.1d10) then
-					tau=1d10
+				if(tau.gt.1d6) then
+					tau=1d6
+					scale=Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
+					if(.not.scale.gt.0d0) scale=0d0
+					if(.not.scale.lt.1d0) scale=1d0
+					Ce(ir,ilam,ig)=tau/d
+					Ca(ir,ilam,ig)=scale*Ce(ir,ilam,ig)
+					Cs(ir,ilam,ig)=max(0d0,Ce(ir,ilam,ig)-Ca(ir,ilam,ig))
 				endif
 				if(ir.lt.nr) then
 					tauR(jr)=tauR(jr+1)+tau
@@ -359,14 +371,17 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 			SurfStar_omp=SurfStar_omp+dfreq_LR(ilam)*wgg(ig)*abs(Ih_omp(0))*SurfEmis_LR(ilam)
 			FstarBottom=abs(Ih_omp(0))
 
+c Si_omp(0:nr,0) is the direct stellar contribution
 			Si_omp(1:nr,0)=(Ij_omp(1:nr)*Cs(1:nr,ilam,ig)/Ce(1:nr,ilam,ig))
 			Si_omp(0,0)=Ij_omp(0)*(1d0-SurfEmis_LR(ilam))
 
+c Si_omp(0:nr,1:nr) is the direct contribution from the atmosphere
 			do ir=1,nr
 				Si_omp(0:nr,ir)=0d0
 				Si_omp(ir,ir)=Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
 			enddo
 
+c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			Si_omp(0:nr,nr+1)=0d0
 			do inu=1,nnu
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
@@ -408,7 +423,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 			enddo
 
 			do ir=0,nr
-				Hstar_omp(ir)=Hstar_omp(ir)+min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0)
+				Hstar_omp(ir)=Hstar_omp(ir)+min(min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0),0d0)
 			enddo
 		enddo
 	enddo
@@ -517,15 +532,6 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 !$OMP FLUSH
 !$OMP END PARALLEL
 
-	do ir=nr,1,-1
-		if(.not.Ts(ir).gt.3d0) then
-			if(ir.eq.nr) then
-				Ts(ir)=T(ir)
-			else
-				Ts(ir)=Ts(ir+1)
-			endif
-		endif
-	enddo
 	converged=.true.
 	do ir=1,nr
 		if(abs(T(ir)-Ts(ir))/(T(ir)+Ts(ir)).gt.epsiter) converged=.false.
