@@ -3,6 +3,7 @@
 **********************************************************************
       implicit none
       integer,allocatable :: linkmol(:),linkele(:)
+      logical GGCHEM_P_iter
       end MODULE ARCiS_GGCHEM
 
 
@@ -24,7 +25,7 @@
 
       use CHEMISTRY,ONLY: NewBackIt,NewFullIt,NewBackFac,NewPreMethod,
      >                    NewFastLevel,dispol_file,NMOLE,NELM,cmol,Natmax
-      use DUST_DATA,ONLY: DustChem_file,NELEM,eps=>eps0,mass,muH,elnam,amu,bar,MEarth,REarth
+      use DUST_DATA,ONLY: DustChem_file,NELEM,eps=>eps0,mass,muH,elnam,amu,bar,MEarth,REarth,dust_nam
       use ARCiS_GGCHEM
       implicit none
       integer,parameter :: qp=selected_real_kind(33,4931)
@@ -48,7 +49,7 @@
       dispol_file(2) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_StockKitzmann_withoutTsuji.dat'
       dispol_file(3) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_WoitkeRefit.dat'
       dispol_file(4) = trim(homedir) // '/ARCiS/src/dispol_Burcat.dat'
-      DustChem_file  = trim(homedir) // '/ARCiS/Data/GGchem/DustChem_GGchem.dat'
+      DustChem_file  = trim(homedir) // '/ARCiS/Data/GGchem/DustChem.dat'
 
       elements     = 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V el'
 
@@ -70,9 +71,9 @@
       abund_pick   = 3
       model_eqcond = condensates
       remove_condensates = condensates
-      phyllosilicates    = .true.
+      phyllosilicates    = condensates
       model_dim    = 0
-      model_pconst = .true.
+      model_pconst = GGCHEM_P_iter
       model_struc  = 0
       initchem_info      = .false.
       Npoints      = 100
@@ -285,7 +286,7 @@
   
 
       call INIT_CHEMISTRY
-      call INIT_DUSTCHEM
+      if(condensates) call INIT_DUSTCHEM
 
 	if(.not.allocated(linkmol)) then
 		allocate(linkmol(n_mol_in))
@@ -485,4 +486,79 @@ c		enddo
 	end
 
 
+	subroutine call_SuperSat_ARCiS(Tg)
+	use CloudModule
+	use AtomsModule
+	use EXCHANGE,ONLY: nat,nmol
+	use DUST_DATA,ONLY: NDUST,dust_nam
+	implicit none
+	integer,parameter :: qp = selected_real_kind ( 33, 4931 )
+	real(kind=qp) :: Sat(NDUST)
+	integer i,j,l
+	real*8 :: Tg
+	
+	nCS=10
+	if(.not.allocated(SatRat)) then
+		allocate(SatRat(nCS))
+		allocate(ATP(nCS))
+		allocate(BTP(nCS))
+		allocate(rhodust(nCS))
+		allocate(atoms_cloud(nCS,N_atoms))
+		allocate(maxT(nCS))
+		allocate(xv_bot(nCS))
+		allocate(mu(nCS))
+		allocate(CSname(nCS))
+		allocate(CSnmol(nCS))
+		allocate(ice(nCS))
+
+		i=0
+c TiO2
+		i=i+1
+		CSname(i)='TiO2'
+c VO
+		i=i+1
+		CSname(i)='VO'
+c Al2O3
+		i=i+1
+		CSname(i)='Al2O3'
+c SiO2
+		i=i+1
+		CSname(i)='SiO2'
+c Silicates
+		i=i+1
+		CSname(i)='MgSiO3'
+c H2O
+		i=i+1
+		CSname(i)='H2O'
+c Fe
+		i=i+1
+		CSname(i)='Fe'
+c FeS
+		i=i+1
+		CSname(i)='FeS'
+c C
+		i=i+1
+		CSname(i)='C'
+c SiC
+		i=i+1
+		CSname(i)='SiC'
+
+		nCS=i
+	endif
+
+
+	call SUPERSAT(Tg,nat,nmol,Sat)
+	SatRat(1:nCS)=1d-100
+	do j=1,nCS
+		l=len_trim(CSname(j))
+		do i=1,NDUST
+			if(CSname(j)(1:l).eq.dust_nam(i)(1:l)) then
+				if(Sat(i).gt.SatRat(j)) SatRat(j)=Sat(i)
+			endif
+		enddo
+		write(*,'(a10,se20.4)') CSname(j),SatRat(j)
+	enddo
+
+	return
+	end
 

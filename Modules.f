@@ -340,7 +340,7 @@ cPoints for the temperature structure
 	module CloudModule
 	IMPLICIT NONE
 	integer nr_cloud
-	real*8,allocatable :: CloudP(:),CloudT(:),CloudR(:),Clouddens(:),CSnmol(:)
+	real*8,allocatable :: CloudP(:),CloudT(:),CloudR(:),Clouddens(:),CSnmol(:),SatRat(:)
 	real*8,allocatable :: ATP(:),BTP(:),rhodust(:),atoms_cloud(:,:),maxT(:),mu(:),xv_bot(:)
 	character*25,allocatable :: CSname(:)
 	integer nCS,nnr

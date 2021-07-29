@@ -98,6 +98,18 @@ c	recomputeopac=.true.
 	enddo
 	beta_c=beta_c/real(2*(nlatt-1))	
 
+	if(.not.retrieval.and..not.domakeai) then
+		open(unit=20,file=trim(outputdir) // "parameter3D.dat",RECL=6000)
+		do j=1,nlatt-1
+			do i=1,nlong-1
+				beta3D_eq(i)=beta(i,j)
+				x3D_eq(i)=NormSig(beta(i,j),par3Dsteepness,beta_c,betamin,betamax)
+			enddo
+			write(20,*) x3D_eq(1:nlong-1)
+		enddo
+		close(unit=20)
+	endif
+
 	if(fulloutput3D) then
 		j=nlatt/2
 		do i=1,nlong-1

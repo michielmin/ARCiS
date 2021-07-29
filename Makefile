@@ -79,7 +79,6 @@ OBJS	= Modules.o \
 		easy_chem.o \
 		ComputeT.o \
 		DiffuseCloud.o \
-		Init.o \
 		Run3D.o \
 		diseq_diffusion.o \
 		diseq_rate.o \
@@ -144,6 +143,7 @@ OBJS	= Modules.o \
 		nasa_polynomial.o \
 		GGchem_linpack_q.o \
 		GGchem_is_nan.o \
+		Init.o \
 		PostEqualWeights.o \
 		MCComputeT.o \
 		LightCurve.o \

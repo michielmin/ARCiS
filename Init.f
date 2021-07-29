@@ -668,6 +668,7 @@ c	condensates=(condensates.or.cloudcompute)
 	use ReadKeywords
 	use CloudModule
 	use Struct3D
+	use ARCiS_GGCHEM
 	IMPLICIT NONE
 	type(SettingKey) key
 	integer i
@@ -826,6 +827,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) dochemistry
 		case("diseq")
 			read(key%value,*) disequilibrium
+		case("ggchem_piter")
+			read(key%value,*) GGCHEM_P_iter
 		case("kzz")
 			read(key%value,*) Kzz
 		case("kzz_deep")
@@ -1271,6 +1274,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	use Constants
 	use CloudModule
 	use Struct3D
+	use ARCiS_GGCHEM
 	IMPLICIT NONE
 	integer i
 	character*100 homedir
@@ -1378,6 +1382,10 @@ c	if(par_tprofile) call ComputeParamT(T)
 	secondary_atmosphere=.false.
 	Poutgas=0d0
 	Toutgas=0d0
+
+c This parameter should be true! Only set this to false to reproduce earlier computations when
+c  GGchem was still implemented slightly wrong.
+	GGCHEM_P_iter=.true.
 	
 	adiabatic_tprofile=.false.
 

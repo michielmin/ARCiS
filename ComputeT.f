@@ -289,8 +289,8 @@
 					Ce(ir,ilam,ig)=tau/d
 					Ca(ir,ilam,ig)=Ce(ir,ilam,ig)-Cs(ir,ilam,ig)
 				endif
-				if(tau.lt.1d-6) then
-					tau=1d-6
+				if(tau.lt.1d-10) then
+					tau=1d-10
 					scale=Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
 					if(.not.scale.gt.0d0) scale=0d0
 					if(.not.scale.lt.1d0) scale=1d0
@@ -298,8 +298,8 @@
 					Ca(ir,ilam,ig)=scale*Ce(ir,ilam,ig)
 					Cs(ir,ilam,ig)=max(0d0,Ce(ir,ilam,ig)-Ca(ir,ilam,ig))
 				endif
-				if(tau.gt.1d6) then
-					tau=1d6
+				if(tau.gt.1d10) then
+					tau=1d10
 					scale=Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
 					if(.not.scale.gt.0d0) scale=0d0
 					if(.not.scale.lt.1d0) scale=1d0
@@ -595,6 +595,11 @@ c	enddo
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
 
 	do ir=nr-1,1,-1
+		if(abs(Hstar(ir)).lt.abs(Hstar(nr)/2.718d0)) exit
+	enddo
+	j=min(max(ir,2),nr-1)
+
+	do ir=nr-1,j,-1
 		if(ir.lt.nr) then
 			dlnP=log(P(ir+1)/P(ir))
 			dlnT=log(T(ir+1)/T(ir))
@@ -605,14 +610,14 @@ c	enddo
 		endif
 	enddo
 
-c	do ir=1,nr-1
-c		dlnP=log(P(ir+1)/P(ir))
-c		dlnT=log(T(ir+1)/T(ir))
-c		if((dlnT/dlnP).gt.nabla_ad(ir)) then
-c			dlnT=(nabla_ad(ir))*dlnP
-c			T(ir+1)=T(ir)*exp(dlnT)
-c		endif
-c	enddo
+	do ir=j,nr-1
+		dlnP=log(P(ir+1)/P(ir))
+		dlnT=log(T(ir+1)/T(ir))
+		if((dlnT/dlnP).gt.nabla_ad(ir)) then
+			dlnT=(nabla_ad(ir))*dlnP
+			T(ir+1)=T(ir)*exp(dlnT)
+		endif
+	enddo
 
 c	converged=.true.
 	do ir=1,nr
