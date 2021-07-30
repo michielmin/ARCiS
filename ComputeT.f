@@ -595,11 +595,11 @@ c	enddo
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
 
 	do ir=nr-1,1,-1
-		if(abs(Hstar(ir)).lt.abs(Hstar(nr)/2.718d0)) exit
+		if(abs(Hstar(ir)).lt.abs(Hstar(nr)/10d0)) exit
 	enddo
 	j=min(max(ir,2),nr-1)
 
-	do ir=nr-1,j,-1
+	do ir=j-1,1,-1
 		if(ir.lt.nr) then
 			dlnP=log(P(ir+1)/P(ir))
 			dlnT=log(T(ir+1)/T(ir))
@@ -611,11 +611,11 @@ c	enddo
 	enddo
 
 	do ir=j,nr-1
-		dlnP=log(P(ir+1)/P(ir))
-		dlnT=log(T(ir+1)/T(ir))
+		dlnP=log(P(ir)/P(ir-1))
+		dlnT=log(T(ir)/T(ir-1))
 		if((dlnT/dlnP).gt.nabla_ad(ir)) then
 			dlnT=(nabla_ad(ir))*dlnP
-			T(ir+1)=T(ir)*exp(dlnT)
+			T(ir)=T(ir-1)*exp(dlnT)
 		endif
 	enddo
 
