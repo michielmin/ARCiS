@@ -79,7 +79,6 @@ OBJS	= Modules.o \
 		easy_chem.o \
 		ComputeT.o \
 		DiffuseCloud.o \
-		Run3D.o \
 		diseq_diffusion.o \
 		diseq_rate.o \
 		diseq_timescale.o \
@@ -113,7 +112,6 @@ OBJS	= Modules.o \
 		H2SO4.o \
 		KuruczData.o \
 		MCRad.o \
-		Retrieval.o \
 		Genetic.o \
 		MakeAI.o \
 		dlsei.o \
@@ -144,6 +142,8 @@ OBJS	= Modules.o \
 		GGchem_linpack_q.o \
 		GGchem_is_nan.o \
 		Init.o \
+		Run3D.o \
+		Retrieval.o \
 		PostEqualWeights.o \
 		MCComputeT.o \
 		LightCurve.o \

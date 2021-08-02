@@ -837,6 +837,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Kzz_1bar
 		case("kzz_p")
 			read(key%value,*) Kzz_P
+		case("kzz_max")
+			read(key%value,*) Kzz_max
 		case("fastchem","fast_chem")
 			read(key%value,*) fast_chem
 		case("metallicity")
@@ -1405,6 +1407,7 @@ c  GGchem was still implemented slightly wrong.
 	Kzz_deep=1d2
 	Kzz_1bar=-1d0
 	Kzz_P=0.5d0
+	Kzz_max=1d50
 
 	computecontrib=.false.
 	

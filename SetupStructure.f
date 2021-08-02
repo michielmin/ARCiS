@@ -204,6 +204,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 			if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
 				do i=1,nr
 					Kzz_r(i)=Kzz_deep+Kzz_1bar/(P(i)**Kzz_P)
+					if(Kzz_r(i).gt.Kzz_max) Kzz_r(i)=Kzz_max
 				enddo
 			else
 				Kzz_r=Kzz

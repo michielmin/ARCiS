@@ -430,6 +430,7 @@ c          print '("p-it=",i3,"  mu=",2(1pE20.12))',it,mu/amu,dmu/mu
 
 	tot=sum(nmol(1:NMOLE))+sum(nat(1:NELEM))
 
+c		print*,Pin,Tin
 c		do i=1,NMOLE
 c			if(nmol(i)/tot.gt.1d-8) then
 c				print*,nmol(i)/tot,trim(cmol(i))

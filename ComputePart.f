@@ -39,7 +39,7 @@
 	real*8 Kabs(nlamdust),Ksca(nlamdust),Kext(nlamdust)
 	real*8 F11_HR(nlam),F12_HR(nlam),F22_HR(nlam),F33_HR(nlam),F34_HR(nlam),F44_HR(nlam)
 	logical fcomputed,computelam(nlam)
-	real*8 csmie_fcomp,cemie_fcomp
+	real*8 csmie_fcomp,cemie_fcomp,gasdev
 	real*8,allocatable :: Mief11_fcomp(:),Mief12_fcomp(:)
 	real*8,allocatable :: Mief33_fcomp(:),Mief34_fcomp(:)
 

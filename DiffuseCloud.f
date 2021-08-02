@@ -366,6 +366,7 @@ c	atoms_cloud(i,3)=1
 	if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
 		do i=1,nnr
 			Kd(i)=Kzz_deep+Kzz_1bar/(CloudP(i)**Kzz_P)
+			if(Kd(i).gt.Kzz_max) Kd(i)=Kzz_max
 		enddo
 	else if(Cloud(ii)%Kzz.gt.0d0) then
 		Kd=Cloud(ii)%Kzz
@@ -917,6 +918,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 		if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
 			do i=1,nr
 				Kzz_r(i)=Kzz_deep+Kzz_1bar/(P(i)**Kzz_P)
+				if(Kzz_r(i).gt.Kzz_max) Kzz_r(i)=Kzz_max
 			enddo
 		else
 			Kzz_r=Kzz
