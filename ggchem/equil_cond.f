@@ -304,7 +304,7 @@
           print'(3x,A2,2(1pE15.6))',elnam(i),eps(i),eps(i)/eps0(i)
         enddo
       endif  
-      if (worst>1.Q-8) stop "*** worst>1.Q-8 in equil_cond"
+      if (worst>1.Q-8) print*, "*** worst>1.Q-8 in equil_cond"
 
       !----------------------------------------------------------
       ! ***  compute maximum possible dust abundances dscale  ***
@@ -530,7 +530,7 @@
                     ioff = dk
                   endif  
                 enddo
-                if (ioff==0) stop "*** ioff=0 should not occur"
+                if (ioff==0) print*, "*** ioff=0 should not occur"
                 amount = ddust(ioff)
                 ok = .true.
                 do i=1,Nlin
@@ -669,7 +669,7 @@
             e_num(el) = e_num(el)+1
           enddo  
         enddo  
-        if (Nind-1<Nact) stop "*** Nind<Nact in equil_cond."
+        if (Nind-1<Nact) print*, "*** Nind<Nact in equil_cond."
         Nall = Nind-1
         Nind = Nact                         ! truncate at number of condensates
         if (verbose>1) print'(99(A3))',(elnam(Iindex(j)),j=1,Nall)
@@ -800,7 +800,7 @@
             endif
             if (.not.found) then
               print*,"*** no alternative element selection found."
-              stop 
+              return 
             endif   
             goto 200 
           endif 
@@ -1060,7 +1060,7 @@
               dtry = dtry+1
               dtry_break = .true.
               if (dtry<Nind) exit
-              stop
+              return
             endif  
             if (Nunsolved==Nvar1+Nvar2) then
               DF = 0.Q0 
@@ -1098,7 +1098,7 @@
                 do i=1,Nunsolved
                   print'(99(1pE12.3))',(DFsav(i,j),j=1,Nunsolved)
                 enddo
-                stop
+                return
               endif   
               do i=1,Nvar1
                 dk = var(i)
@@ -1133,7 +1133,7 @@
             endif
             if (dtry>0.and.dtry_break) exit
           endif    
-          if (itry==100) stop "*** itry==100"
+          if (itry==100) print*, "*** itry==100"
         enddo
         if (.not.solved) then
           if (dtry==1) goto 200   ! may work by relaxing the depletion-criterium
@@ -1168,7 +1168,7 @@
             goto 210
           endif
           write(*,*) "*** couldn't resolve the conversion matrix."
-          stop
+          return
         endif   
         do i=1,Nind
           el = Iindex(i) 
@@ -1403,7 +1403,7 @@
             print*,"trying eqcond_method 2 ..."
             goto 50
           endif  
-          stop
+          return
         endif
   
         !--- re-scale ---
@@ -1810,7 +1810,7 @@
             print*,"trying eqcond_method 1 ..."
             goto 50
           endif  
-          stop
+          return
         endif
         dstep = 0.Q0                 ! the NR-step in condensate abundances 
         do ii=1,Nsolve
@@ -1832,7 +1832,8 @@
               print'(99(1pE13.6))',DFsav(i,1:Nsolve),Fsav(i)
             enddo  
             print'(99(1pE13.6))',dx(1:Nsolve)
-            stop "*** dx=NaN"
+        	print*, "*** dx=NaN"
+            return
           endif  
         enddo  
         xstep = 0.Q0                 ! the corresponding NR-step in element abundances
@@ -1990,7 +1991,7 @@
       else
         write(*,'("*** EQUIL_COND failed after ",I3," iter,  time =",
      >            0pF9.4," CPU sec.")') it,time1-time0 
-        stop
+        return
       endif
 
       !-------------------------
@@ -2000,17 +2001,17 @@
         if (ddust(i)>0.Q0.and.Sat(i)<0.9999) then
           print*,"*** error: ddust>0 but S<1"
           print*,dust_nam(i),REAL(ddust(i)),REAL(Sat(i))
-          stop
+          return
         endif
         if (Sat(i)>1.00001) then
           print*,"*** error: S>1"
           print*,dust_nam(i),REAL(ddust(i)),REAL(Sat(i))
-          stop
+          return
         endif
         if (ddust(i)<-10*small*dscale(i)) then
           print*,"*** error: ddust<0"
           print*,dust_nam(i),REAL(ddust(i)),REAL(Sat(i))
-          stop
+          return
         endif  
       enddo  
 
@@ -2029,7 +2030,7 @@
         if (ABS(1.Q0-check(el)/eps00(el))>1.Q-8) then
           print*,"*** element conservation error 1"
           print*,elnam(el),check(el),eps0(el),eps00(el)
-          stop
+          return
         endif  
       enddo
 
@@ -2086,7 +2087,7 @@
         el = elnum(i)
         if (eps1(el).le.0.Q0) then
           write(*,*) "*** negative el.abund. SUPER",elnam(el),eps1(el)
-          stop
+          return
         endif  
       enddo
       

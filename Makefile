@@ -28,7 +28,7 @@ ifeq ($(multi),true)
 	ifeq ($(gfort),true)
 		MULTICORE = -fopenmp -DUSE_OPENMP
 	else
-		MULTICORE = -openmp -fp-model strict -DUSE_OPENMP
+		MULTICORE = -qopenmp -parallel -fp-model strict -DUSE_OPENMP
 		ifeq ($(shell uname),Linux)
 			MULTICORE = -qopenmp -fp-model strict -DUSE_OPENMP
 		endif
@@ -49,13 +49,13 @@ endif
 
 # Platform specific compilation options
 ifeq ($(gfort),true)
-  FLAG_ALL      = -O5 -g -fbacktrace $(MULTICORE) -lgfortran -I$(HOME)/include -I/usr/local/modules $(LIBS_MN)
+  FLAG_ALL      = -O5 -finit-local-zero $(MULTICORE) -I$(HOME)/include -I/usr/local/modules $(LIBS_MN)
   FLAG_LINUX    = -ffixed-line-length-132 -cpp
   FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else
   FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(MULTICORE) -assume buffered_io -I/usr/local/modules -fp-model strict -heap-arrays $(LIBS_MN)
   FLAG_LINUX    = -xHOST -fpp
-  FLAG_MAC      = -xHOST -opt-prefetch -static-intel -fpp -heap-arrays 
+  FLAG_MAC      = -xHOST -qopt-prefetch -static-intel -fpp -heap-arrays 
 endif
 
 LIBS_FITS		= -lcfitsio

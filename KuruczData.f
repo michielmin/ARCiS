@@ -13326,7 +13326,6 @@ c	scale=((Tk/real(kuruczT(i0)))**4)*3.1415926536/3.336e11
 	do i=1,nlam
 		scale=Planck(Tk,1d4/lam(i))/Planck(1d0*real(kuruczT(i0)),1d4/lam(i))
 		flux(i)=flux(i)*scale
-	write(92,*) lam(i),flux(i)
 	enddo
 
 	return

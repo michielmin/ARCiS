@@ -326,6 +326,10 @@ c			beta_used=max
 		tau=kappaT*1d6*P(i)/grav(i)
 		if(tau.lt.0d0) tau=0d0
 		x(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)
+		if(deepRedist) then
+			print*,'warning! deep redistribution does not work properly with parameterised T-structure'
+			x(i)=x(i)+(3d0*Tirr**4*exp(-tau)/4d0/sqrt(2d0))*(2d0/3d0+tau)*(f_deepredist-beta_used)
+		endif
 		x(i)=x(i)+(3d0*Tirr**4/4d0)*beta_used*
      &	(2d0/3d0+1d0/(sqrt(3d0)*gammaT1)+(gammaT1/sqrt(3d0)-1d0/(sqrt(3d0)*gammaT1))*exp(-gammaT1*tau*sqrt(3d0)))
 

@@ -211,7 +211,8 @@
           print*,eps
           print*,ido
           print*,done
-          stop "*** should not occur."
+          print*, "*** should not occur."
+          return
         endif  
         if (verbose>1) print*,'estimate p'//trim(catm(enew))//' ...'
         if (enew.ne.pkey(ido)) ptake=.false.
@@ -319,7 +320,7 @@
               f  = f  + coeff(l)*pp**l
               fs = fs + coeff(l)*l*pp**(l-1)
             enddo
-            if (fs==0.Q0) stop "*** fs=0 in smchem16 1d-pre-it."
+            if (fs==0.Q0) print*, "*** fs=0 in smchem16 1d-pre-it."
             delta = f/fs
             pp = pp-delta
             if (verbose>1) print'(A2,I3,1pE25.15,1pE10.2)',
@@ -1037,7 +1038,7 @@
             anmono(i) = MAX(nold/fak,MIN(nold*fak,nold+delp))
           enddo
           if (it>itmax-10) then
-            verbose = 2
+c            verbose = 2
             do ii=1,Nact
               i = act_to_all(ii) 
               delp = -dp(ii)/(anmono(i)*kT)
@@ -1062,7 +1063,7 @@
             badness   = 1.Q0
             pcorr     = 1.Q0
             ifatal    = ifatal+1
-            if (ifatal==2) verbose=2
+c            if (ifatal==2) verbose=2
             goto 100        ! try again from scratch before giving up
           endif  
           goto 1000
@@ -1248,7 +1249,7 @@
             endif  
             from_merk = .false.
             ansave = anmono
-            verbose=2
+c            verbose=2
             goto 200
           endif
         enddo
@@ -1280,7 +1281,8 @@
       enddo  
       write(12,*) anhges,Tg
       close(12)
-      stop "***  giving up."
+      print*, "***  giving up."
+      return
 
 
       CONTAINS       ! internal functions - not visible to other units 

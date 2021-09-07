@@ -16,7 +16,7 @@
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),obsA_split_omp(:,:)
 	real*8,allocatable :: tauc(:),Afact(:),vv(:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
 	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random
-	integer nx_im,ix,iy,ni
+	integer nx_im,ix,iy,ni,ilatt,ilong
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig
 	real*8,allocatable :: maxdet(:,:)
@@ -135,8 +135,27 @@ c	recomputeopac=.true.
 		call MapPar3D()
 
 		betaT=beta3D(i)
+		if(deepRedist) then
+			betaT=0d0
+			j=0
+			tot=0d0
+			do ilong=1,nlong-1
+				do ilatt=1,nlatt-1
+					if(ibeta(ilong,ilatt).eq.i) then
+						lo=-pi+2d0*pi*(real(ilong)-0.5d0)/real(nlong-1)
+						la=-pi/2d0+pi*(real(ilatt)-0.5d0)/real(nlatt-1)
+						if(abs(lo).le.pi/2d0) betaT=betaT+cos(lo)*cos(la)*cos(la)
+						tot=tot+cos(la)
+						j=j+1
+					endif
+				enddo
+			enddo
+			if(j.gt.0) betaT=betaT/tot
+			print*,beta3D(i),betaT
+			f_deepredist=beta3D(i)
+		endif
 
-		if(((vxx.ne.0d0.or.night2day.ne.1d0).and.betamax.ne.betamin).or.i.eq.1) then
+		if(((vxx.ne.0d0.or.night2day.ne.1d0).and.betamax.ne.betamin).or.i.eq.1.or.deepRedist) then
 			call InitDens()
 			call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
 			Fstar=Fstar*pi*Rstar**2

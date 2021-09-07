@@ -46,7 +46,7 @@
 	real*8 specres_LR,IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact
 	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
 	integer i1,i2,ngF,j
-	real*8 ww,w1,w2,SurfStar,SurfStar_omp,FstarBottom
+	real*8 ww,w1,w2,SurfStar,SurfStar_omp,FstarBottom,tauRoss
 	real*8,allocatable :: Si_omp(:,:),Ih_omp(:),Ij_omp(:),tauR_omp(:),Hsurf(:,:),Hstar_omp(:)
 	real*8,allocatable :: temp_a(:),wtemp(:),Ca_HR(:,:),Cs_HR(:,:),Fstar_LR(:),SurfEmis_LR(:)
 	integer,allocatable :: IP(:)
@@ -462,6 +462,30 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 		enddo
 	enddo
 
+c=========== begin experimental redistribution ===========================================
+	if(deepredist) then
+
+	E0=(Rstar/Dplanet)**2*((2d0*(pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*(f_deepredist-must)
+	do ir=1,nr
+		iT=T(ir)+1
+		if(iT.gt.nBB-1) iT=nBB-1
+		if(iT.lt.1) iT=1
+		tauRoss=0d0
+		E=0d0
+		do ilam=1,nlam_LR
+			do ig=1,ng
+				tauRoss=tauRoss+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)/max(tauR_nu(ir,ilam,ig),1d-6)
+				E=E+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)
+			enddo
+		enddo
+		tauRoss=E/tauRoss
+		Hedd(ir)=Hedd(ir)+E0*exp(-tauRoss)
+	enddo
+
+	endif
+c=========== end experimental redistribution =============================================
+
+
 	Fl=0d0
 	iT=Tsurface+1
 	if(iT.gt.nBB-1) iT=nBB-1
@@ -537,8 +561,53 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		if(abs(T(ir)-Ts(ir))/(T(ir)+Ts(ir)).gt.epsiter) converged=.false.
 	enddo
 
+	do ir=nr-1,1,-1
+		if(abs(Hstar(ir)).lt.abs(Hstar(nr)/10d0).and.P(ir).gt.1d0) exit
+	enddo
+	j=min(max(ir,2),nr-1)
+
+	do ir=j-1,1,-1
+		if(ir.lt.nr) then
+			dlnP=log(P(ir+1)/P(ir))
+			dlnT=log(Ts(ir+1)/Ts(ir))
+			if((dlnT/dlnP).gt.nabla_ad(ir)) then
+				dlnT=(nabla_ad(ir))*dlnP
+				Ts(ir)=Ts(ir+1)/exp(dlnT)
+			endif
+		endif
+	enddo
+
+	do ir=j,nr-1
+		dlnP=log(P(ir)/P(ir-1))
+		dlnT=log(Ts(ir)/Ts(ir-1))
+		if((dlnT/dlnP).gt.nabla_ad(ir)) then
+			dlnT=(nabla_ad(ir))*dlnP
+			Ts(ir)=Ts(ir-1)*exp(dlnT)
+		endif
+	enddo
+
 	do ir=1,nr
 		T(ir)=ff*Ts(ir)+(1d0-ff)*T(ir)
+	enddo
+
+	do ir=j-1,1,-1
+		if(ir.lt.nr) then
+			dlnP=log(P(ir+1)/P(ir))
+			dlnT=log(T(ir+1)/T(ir))
+			if((dlnT/dlnP).gt.nabla_ad(ir)) then
+				dlnT=(nabla_ad(ir))*dlnP
+				T(ir)=T(ir+1)/exp(dlnT)
+			endif
+		endif
+	enddo
+
+	do ir=j,nr-1
+		dlnP=log(P(ir)/P(ir-1))
+		dlnT=log(T(ir)/T(ir-1))
+		if((dlnT/dlnP).gt.nabla_ad(ir)) then
+			dlnT=(nabla_ad(ir))*dlnP
+			T(ir)=T(ir-1)*exp(dlnT)
+		endif
 	enddo
 
 c	Ts(1)=Tsurface/(exp(nabla_ad(1))+P(1)/P(2))
@@ -593,31 +662,6 @@ c	enddo
 	enddo
 
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
-
-	do ir=nr-1,1,-1
-		if(abs(Hstar(ir)).lt.abs(Hstar(nr)/10d0)) exit
-	enddo
-	j=min(max(ir,2),nr-1)
-
-	do ir=j-1,1,-1
-		if(ir.lt.nr) then
-			dlnP=log(P(ir+1)/P(ir))
-			dlnT=log(T(ir+1)/T(ir))
-			if((dlnT/dlnP).gt.nabla_ad(ir)) then
-				dlnT=(nabla_ad(ir))*dlnP
-				T(ir)=T(ir+1)/exp(dlnT)
-			endif
-		endif
-	enddo
-
-	do ir=j,nr-1
-		dlnP=log(P(ir)/P(ir-1))
-		dlnT=log(T(ir)/T(ir-1))
-		if((dlnT/dlnP).gt.nabla_ad(ir)) then
-			dlnT=(nabla_ad(ir))*dlnP
-			T(ir)=T(ir-1)*exp(dlnT)
-		endif
-	enddo
 
 c	converged=.true.
 	do ir=1,nr

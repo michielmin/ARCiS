@@ -991,6 +991,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) do3D
 		case("output3d")
 			read(key%value,*) fulloutput3D
+		case("deepredist")
+			read(key%value,*) deepredist
 		case("iwolk")
 			read(key%value,*) iWolk
 		case("emisspec")
@@ -1403,6 +1405,9 @@ c  GGchem was still implemented slightly wrong.
 	nnu0=10
 	nlong=36
 	nlatt=18
+	
+	deepRedist=.false.
+	f_deepredist=0d0
 
 	Kzz_deep=1d2
 	Kzz_1bar=-1d0
