@@ -835,7 +835,7 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Kzz_deep
 		case("kzz_1bar","kzz_up")
 			read(key%value,*) Kzz_1bar
-		case("kzz_p")
+		case("kzz_p","kzz_pow")
 			read(key%value,*) Kzz_P
 		case("kzz_max")
 			read(key%value,*) Kzz_max
@@ -939,6 +939,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) powvxx
 		case("night2day")
 			read(key%value,*) night2day
+		case("hotspotshift")
+			read(key%value,*) hotspotshift0
 		case("n3d")
 			read(key%value,*) n3D
 		case("par3dsteepness","steepness3d")
@@ -1313,6 +1315,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	vxx=0d0
 	powvxx=0d0
 	night2day=0.5d0
+	hotspotshift0=-1d5
 	
 	orbit_P=-1d0
 	orbit_e=0d0

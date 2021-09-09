@@ -20,6 +20,8 @@
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig
 	real*8,allocatable :: maxdet(:,:)
+	logical iterateshift
+	real*8 vxxmin,vxxmax
 
 	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr,n3D),Si(nlam,ng,0:nr,nnu0,n3D))
 	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce(nlam,nr,n3D))
@@ -35,11 +37,52 @@ c	recomputeopac=.true.
 	docloud=.true.
 	cloudfrac=1d0
 
+	iterateshift=.false.
+	if(hotspotshift0.ge.-180d0.and.hotspotshift0.le.180d0) then
+		iterateshift=.true.
+		vxxmin=-4d0
+		vxxmax=10d0
+		vxx=10d0**((vxxmin+vxxmax)/2d0)
+		if(hotspotshift0.lt.0d0) vxx=-vxx
+		if(hotspotshift0.eq.0d0) then
+			vxx=0d0
+			iterateshift=.false.
+		endif
+	endif
+
+	i=0
+	do while((iterateshift.and.
+     &		abs(hotspotshift-hotspotshift0).gt.5d-3.and.
+     &		abs((vxxmax-vxxmin)/(vxxmax+vxxmin)).gt.1d-4.and.
+     &		i.lt.999).
+     &		or.i.eq.0)
+
 	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,fDay,betamin,betamax)
 
 	call DetermineShift(long,beta,nlong,nlatt,hotspotshift)
 	hotspotshift=hotspotshift-180d0
+
+	if(iterateshift) then
+		if(abs(hotspotshift).gt.abs(hotspotshift0)) then
+			vxxmax=log10(abs(vxx))
+			vxx=10d0**((vxxmin+vxxmax)/2d0)
+		else
+			vxxmin=log10(abs(vxx))
+			if(i.eq.0) then
+				vxx=10d0**vxxmax
+			else
+				vxx=10d0**((vxxmin+vxxmax)/2d0)
+			endif
+		endif
+		if(hotspotshift0.lt.0d0) vxx=-vxx
+	endif
+	i=i+1
+
+	enddo
+
 	call output("hotspot shift: " // dbl2string(hotspotshift,'(f6.2)') // " degrees")
+
+	if(iterateshift.and.abs(hotspotshift-hotspotshift0).gt.5d-3) call output("Desired hotspot shift could not be obtained!!")
 
 	if(.not.retrieval) then
 		open(unit=20,file=trim(outputdir) // "structure3D.dat",RECL=6000)
