@@ -67,10 +67,12 @@
 	endif
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
+		if(lamemis(i)) then
 		write(30,form) lam_out(i),
 c     &					flux(0:ncc,i)
 c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam(i+1))
      &					(phase(1,j,i)+flux(j,i),j=0,ncc)
+		endif
 	enddo
 	close(unit=30)
 
@@ -87,9 +89,11 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 	endif
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
+		if(lamemis(i)) then
 		write(30,form) lam_out(i),
 c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
      &					((phase(1,j,i)+flux(j,i))/(Fstar(i)*1d23/distance**2),j=0,ncc)
+		endif
 	enddo
 	close(unit=30)
 
@@ -142,10 +146,12 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			write(30,form) "lambda [mu]",theta(1:nphase)
 			form='(f14.6,' // int2string(nphase+2,'(i3)') // 'es19.7E3)'
 			do i=1,nlam_out
+				if(lamemis(i)) then
 				write(30,form) lam_out(i),
      &					phase(1:nphase,0,i)+flux(0,i),
      &					Fstar(i)*1d23/distance**2,
      &					(pi*Rplanet**2)*Fstar(i)*1d23/distance**2/(4d0*Dplanet**2)
+				endif
 			enddo
 			close(unit=30)
 		endif

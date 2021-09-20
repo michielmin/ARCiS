@@ -1147,6 +1147,9 @@ c Note we use the symmetry of the North and South here!
 		endif
 	endif
 	enddo
+
+	deallocate(IWORK)
+	deallocate(A)
 	
 	return
 	end

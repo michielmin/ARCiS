@@ -452,11 +452,11 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	real*8 var0(nvar),var1(nvar)
 	
 	var1=var0
-c	do i=1,nvar
-c		if(.not.var1(i).lt.1d0) var1(i)=1d0
-c		if(.not.var1(i).gt.0d0) var1(i)=0d0
-c	enddo
-c	return
+	do i=1,nvar
+		if(.not.var1(i).lt.1d0) var1(i)=1d0
+		if(.not.var1(i).gt.0d0) var1(i)=0d0
+	enddo
+	return
 	
 	do i=1,nvar
 1		continue
@@ -490,6 +490,11 @@ c	return
 
 	recomputeopac=.true.
 
+	do i=1,nvars
+		if(var0(i).gt.1d0) var0(i)=1d0
+		if(var0(i).lt.0d0) var0(i)=0d0
+	enddo
+
 	var=var0
 	if(what.eq.1) then
 		call mrqcomputeY(var,ymod,nvars,ny,chi2_0,scale)
@@ -504,9 +509,11 @@ c	return
 3		ii=ii+1
 		if(dvarq(i).gt.0.1d0) dvarq(i)=0.1d0
 		if(dvarq(i).lt.1d-5) dvarq(i)=1d-5
-		var1=var
+4		var1=var
 		dd=gasdev(idum)
 		var1(i)=var(i)+dd*dvarq(i)
+		if(var1(i).gt.1d0) goto 4
+		if(var1(i).lt.0d0) goto 4
 		if(abs(var(i)-var1(i)).lt.1d-5) goto 3
 		call mrqcomputeY(var1,y1,nvars,ny,chi2_1,scale)
 		obsA1(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
