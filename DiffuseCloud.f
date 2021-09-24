@@ -281,9 +281,9 @@ c	atoms_cloud(i,3)=1
 	Sigmadot=Cloud(ii)%Sigmadot
 	
 	select case(Cloud(ii)%hazetype)
-		case("SOOT","soot")
+		case("SOOT","soot","Soot")
 			rho_nuc=1.00
-		case("THOLIN","tholin")
+		case("THOLIN","tholin","Tholin")
 			rho_nuc=1.00
 		case("SiC")
 			rho_nuc=3.22
@@ -297,6 +297,8 @@ c	atoms_cloud(i,3)=1
 			rho_nuc=2.18
 		case("TiO2")
 			rho_nuc=4.23
+		case("Enstatite","enstatite","ENSTATITE")
+			rho_nuc=3.20
 		case("MIX")
 			tot=Cloud(ii)%fHazeSiO+Cloud(ii)%fHazeAl2O3+Cloud(ii)%fHazeTiO2+Cloud(ii)%fHazeTholin+Cloud(ii)%fHazeFe
 			Cloud(ii)%fHazeSiO=Cloud(ii)%fHazeSiO/tot

@@ -1,0 +1,106 @@
+Output dir: output/
+==================================================================
+         ARtful modelling code for exoplanet Science - ARCiS
+==================================================================
+By using ARCiS you agree to the terms of use.
+It basically means you offer us co-author rights on any paper
+that uses results computed with ARCiS.
+==================================================================
+Let's get the show on the road!!
+ARCiS version ae03a44b2dff55a0ae74a9efd2b0aee63a801070
+==================================================================
+input file: input.dat
+Number of molecules:         10
+Number of clouds:             1
+Number of collision pairs:    2
+Number of observations:       0
+keyword 'compute' no longer supported
+Planet logg:    3.414
+==================================================================
+Setting up cloud:    1
+==================================================================
+Reading in correlated k-tables for H2O
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for CO2
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for CO
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for CH4
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for NH3
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for H2
+   wavelength range: 5.00E-01 - 3.50E+01 micron
+     pressure range: 1.00E-07 - 1.00E+03 bar
+  temperature range: 7.10E+01 - 2.90E+03 K
+Opacity file not available: /Users/michielm/ARCiS/Data/Opacities/opacity_He.fits.gz
+setting opacities to 0
+Reading in correlated k-tables for SiO
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for Na
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for K
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading CIA opacities
+Reading file:/Users/michielm/ARCiS/Data/CIA/H2-H2_2011.cia
+CIA: H2-H2
+Reading file:/Users/michielm/ARCiS/Data/CIA/H2-He_2011.cia
+CIA: H2-He
+==================================================================
+Initialisation time:      35.38 s
+==================================================================
+log(g) [cgs]:    3.414
+Mean molecular weight:    2.323
+==================================================================
+Computing chemistry using GGchem by Peter Woitke
+....................
+....................
+==================================================================
+log(g) [cgs]:    3.414
+Mean molecular weight:    2.334
+log(g) [cgs]:    3.414
+Mean molecular weight:    2.334
+....................
+....................
+....................
+....................
+Computing inhomogeneous cloud particles
+....................
+....................
+Cloud mass:   5.6600E-006        Mearth
+Chemistry runtime:        0.29 s
+....................
+....................
+Opacity computation:       4.55 s
+==================================================================
+Raytracing over the planet disk
+Model runtime:             5.87 s
+==================================================================
+Writing spectrum to: output/star
+Writing spectrum to: output/emis
+Writing spectrum to: output/emisR
+Writing spectrum to: output/trans
+Writing spectrum to: output/phase
+Writing tau1depth to: output/tau1depth
+Writing cloud optical depth to: output/cloudtau
+==================================================================
+==================================================================
+Total runtime:            41.31 s
+All done!
+==================================================================

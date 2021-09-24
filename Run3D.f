@@ -1307,6 +1307,9 @@ c Note we use the symmetry of the North and South here!
 		endif
 	endif
 	enddo
+
+	deallocate(IWORK)
+	deallocate(A)
 	
 	return
 	end
@@ -1407,6 +1410,9 @@ c Note we use the symmetry of the North and South here!
 		enddo
 	enddo
 	beta=beta*0.25*tot2/tot1
+
+	deallocate(IWORK)
+	deallocate(A)
 	
 	return
 	end

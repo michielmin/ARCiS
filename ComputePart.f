@@ -578,7 +578,7 @@ c changed this to mass fractions (11-05-2010)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
 		select case(C%hazetype)
-			case("SOOT","soot")
+			case("SOOT","soot","Soot")
 				i=i+1
 				filename(i)='Soot'
 				rho(i)=1.00
@@ -586,7 +586,7 @@ c changed this to mass fractions (11-05-2010)
 				frac(i)=frac(i)/rho(i)
 				e1(i,1:nlamdust)=e1d(1:nlamdust)
 				e2(i,1:nlamdust)=e2d(1:nlamdust)
-			case("THOLIN","tholin")
+			case("THOLIN","tholin","Tholin")
 				i=i+1
 				filename(i)='Tholin'
 				rho(i)=1.00
@@ -626,6 +626,13 @@ c changed this to mass fractions (11-05-2010)
 				frac(1)=frac(1)+frac(i)/rho(i)/3d0
 				frac(2)=frac(2)+frac(i)/rho(i)/3d0
 				frac(3)=frac(3)+frac(i)/rho(i)/3d0
+			case("Enstatite","enstatite","ENSTATITE")
+				i=i+1
+				rho(i)=3.20
+				nm=nm-1
+				frac(13)=frac(13)+frac(i)/rho(i)/3d0
+				frac(14)=frac(14)+frac(i)/rho(i)/3d0
+				frac(15)=frac(15)+frac(i)/rho(i)/3d0
 			case("MIX")
 				tot=C%fHazeSiO+C%fHazeAl2O3+C%fHazeTiO2+C%fHazeTholin+C%fHazeFe
 				C%fHazeSiO=C%fHazeSiO/tot

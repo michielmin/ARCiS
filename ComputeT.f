@@ -479,7 +479,7 @@ c=========== begin experimental redistribution =================================
 			enddo
 		enddo
 		tauRoss=E/tauRoss
-		Hedd(ir)=Hedd(ir)+E0*exp(-tauRoss)
+		Hedd(ir)=Hedd(ir)+max(-abs(Hstar(ir)),E0*exp(-tauRoss))
 	enddo
 
 	endif
@@ -574,6 +574,10 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 				dlnT=(nabla_ad(ir))*dlnP
 				Ts(ir)=Ts(ir+1)/exp(dlnT)
 			endif
+			if((dlnT/dlnP).lt.-nabla_ad(ir)) then
+				dlnT=(-nabla_ad(ir))*dlnP
+				Ts(ir)=Ts(ir+1)/exp(dlnT)
+			endif
 		endif
 	enddo
 
@@ -582,6 +586,10 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		dlnT=log(Ts(ir)/Ts(ir-1))
 		if((dlnT/dlnP).gt.nabla_ad(ir)) then
 			dlnT=(nabla_ad(ir))*dlnP
+			Ts(ir)=Ts(ir-1)*exp(dlnT)
+		endif
+		if((dlnT/dlnP).lt.-nabla_ad(ir)) then
+			dlnT=(-nabla_ad(ir))*dlnP
 			Ts(ir)=Ts(ir-1)*exp(dlnT)
 		endif
 	enddo
@@ -598,6 +606,10 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 				dlnT=(nabla_ad(ir))*dlnP
 				T(ir)=T(ir+1)/exp(dlnT)
 			endif
+			if((dlnT/dlnP).lt.-nabla_ad(ir)) then
+				dlnT=(-nabla_ad(ir))*dlnP
+				T(ir)=T(ir+1)/exp(dlnT)
+			endif
 		endif
 	enddo
 
@@ -606,6 +618,10 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		dlnT=log(T(ir)/T(ir-1))
 		if((dlnT/dlnP).gt.nabla_ad(ir)) then
 			dlnT=(nabla_ad(ir))*dlnP
+			T(ir)=T(ir-1)*exp(dlnT)
+		endif
+		if((dlnT/dlnP).lt.-nabla_ad(ir)) then
+			dlnT=(-nabla_ad(ir))*dlnP
 			T(ir)=T(ir-1)*exp(dlnT)
 		endif
 	enddo
