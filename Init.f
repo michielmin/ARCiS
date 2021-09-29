@@ -564,6 +564,7 @@ c	condensates=(condensates.or.cloudcompute)
 				allocate(Cloud(i)%w(Cloud(i)%nr))
 				if(Cloud(i)%species.eq.' ') call NameCloudSpecies(Cloud(i)%standard,Cloud(i)%species)
 			endif
+			if(Cloud(i)%tau.gt.0d0) Cloud(i)%column=1d0
 		enddo
 	endif
 
