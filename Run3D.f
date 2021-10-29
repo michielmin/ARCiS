@@ -322,6 +322,15 @@ c	enddo
 			write(20,*) T3D(ibeta(1:nlong-1,j),0)
 		enddo
 		close(unit=20)
+		if(fulloutput3D) then
+			do ir=1,nr
+				open(unit=20,file=trim(outputdir) // "temp3D_P" // trim(dbl2string(P(ir),'(es8.2)')) // ".dat",RECL=6000)
+				do j=1,nlatt-1
+					write(20,*) T3D(ibeta(1:nlong-1,j),ir)
+				enddo
+				close(unit=20)
+			enddo
+		endif
 	endif
 
 	call output("Raytracing over the planet disk in 3D")
@@ -2213,7 +2222,7 @@ c=========================================
 		case("BLACK","black")
 			surface_emis(1:nlam)=1.0
 		case("GREY","grey")
-			surface_emis(1:nlam)=0.5
+			surface_emis(1:nlam)=1d0-surfacealbedo
 		case("WHITE","white")
 			surface_emis(1:nlam)=1d-4
 	end select

@@ -1031,6 +1031,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) planetform_Mstart
 		case("surfacetype")
 			read(key%value,*) surfacetype
+		case("surfacealbedo")
+			read(key%value,*) surfacealbedo
 		case default
 			do i=1,nmol_data
 				if(key%key.eq.molname(i)) then
@@ -1342,6 +1344,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	makemovie=.false.
 	
 	surfacetype='BLACK'
+	surfacealbedo=0.5d0
 
 	dochemistry=.false.
 	fast_chem=.false.
