@@ -292,6 +292,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 
 	if(.not.gamma_equal) then
 		call ComputeParamT2(x)
+		Tsurface=x(1)
 		return
 	endif
 
@@ -353,6 +354,7 @@ c			beta_used=max
 			endif
 		endif
 	enddo
+	Tsurface=x(1)
 
 	return
 	end
