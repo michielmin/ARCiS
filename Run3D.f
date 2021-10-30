@@ -500,7 +500,7 @@ c Note we are here using the symmetry between North and South
 				do ilam=1,nlam
 					if(lamemis(ilam)) then
 					do ig=1,ng
-						contr=Si(ilam,ig,0,inu,i)*abs(x*vx+y*vy+z*vz)/sqrt((x*x+y*y+z*z)*(vx*vx+vy*vy+vz*vz))
+						contr=Si(ilam,ig,0,inu,i)
 						ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
 					enddo
 					endif

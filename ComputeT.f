@@ -35,7 +35,7 @@
 	real*8,allocatable :: Ce(:,:,:),Ca(:,:,:),Cs(:,:,:),taustar(:,:),tauR_nu(:,:,:)
 	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i,E,E0,Tinp(nr)
 	real*8 z,Hstar(0:nr),Jtot,Htot,Ktot
-	real*8 fedd(nr),Hedd(0:nr),lH1,lH2,P1,P2
+	real*8 fedd(nr),Hedd(0:nr),lH1,lH2,P1,P2,directHstar(0:nr)
 	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:)
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax
 	logical docloud0(max(nclouds,1)),converged,stopscat
@@ -50,7 +50,7 @@
 	real*8,allocatable :: Si_omp(:,:),Ih_omp(:),Ij_omp(:),tauR_omp(:),Hsurf(:,:),Hstar_omp(:)
 	real*8,allocatable :: temp_a(:),wtemp(:),Ca_HR(:,:),Cs_HR(:,:),Fstar_LR(:),SurfEmis_LR(:)
 	integer,allocatable :: IP(:)
-	real*8,allocatable :: WS(:),nu(:),wnu(:),Hstar_lam(:),Hsurf_lam(:)
+	real*8,allocatable :: WS(:),nu(:),wnu(:),Hstar_lam(:),Hsurf_lam(:),directHstar_omp(:)
 	real*8,allocatable :: x_SIj(:),y_SIj(:),tauR_SIj(:),Ma_SIj(:),Mb_SIj(:),Mc_SIj(:)
 	character*500 file
 
@@ -341,20 +341,22 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	T0(1:nr)=T(1:nr)
 
 	Hstar(0:nr)=0d0
+	directHstar(0:nr)=0d0
 	SurfStar=0d0
 	IntHnu(1:nlam_LR,0:nr,0:nr)=0d0
 	
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(x_SIj,y_SIj,tauR_SIj,Ma_SIj,Mb_SIj,Mc_SIj,Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,
-!$OMP&			Hstar_omp,SurfStar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam)
+!$OMP&			Hstar_omp,SurfStar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,directHstar_omp)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,
-!$OMP&			Hstar,SurfStar,Dplanet,Fstar_LR,must)
+!$OMP&			Hstar,SurfStar,Dplanet,Fstar_LR,must,directHstar)
 	allocate(x_SIj(nr+2),y_SIj(nr+2),tauR_SIj(0:nr+1),Ma_SIj(nr+2),Mb_SIj(nr+2),Mc_SIj(nr+2))
 	allocate(Si_omp(0:nr,0:nr+1),tauR_omp(0:nr),Ih_omp(0:nr),Ij_omp(0:nr))
-	allocate(Hstar_omp(0:nr),Hstar_lam(0:nr),Hsurf_lam(0:nr))
+	allocate(Hstar_omp(0:nr),Hstar_lam(0:nr),Hsurf_lam(0:nr),directHstar_omp(0:nr))
 	Hstar_omp=0d0
 	SurfStar_omp=0d0
+	directHstar_omp=0d0
 !$OMP DO
 	do ilam=1,nlam_LR-1
 		call tellertje(ilam,nlam_LR-1)
@@ -368,6 +370,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 			Ih_omp(nr)=-must*contr*exp(-tauR_omp(nr))
 
 			Hstar_lam(0:nr)=Hstar_lam(0:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
+			directHstar_omp(0:nr)=directHstar_omp(0:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
 			SurfStar_omp=SurfStar_omp+dfreq_LR(ilam)*wgg(ig)*abs(Ih_omp(0))*SurfEmis_LR(ilam)
 			FstarBottom=abs(Ih_omp(0))
 
@@ -430,11 +433,12 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 !$OMP END DO
 !$OMP CRITICAL
 	Hstar(0:nr)=Hstar(0:nr)+Hstar_omp(0:nr)
+	directHstar(0:nr)=directHstar(0:nr)+directHstar_omp(0:nr)
 	SurfStar=SurfStar+SurfStar_omp
 !$OMP END CRITICAL
 	deallocate(x_SIj,y_SIj,tauR_SIj,Ma_SIj,Mb_SIj,Mc_SIj)
 	deallocate(Si_omp,tauR_omp,Ih_omp,Ij_omp)
-	deallocate(Hstar_omp,Hstar_lam,Hsurf_lam)
+	deallocate(Hstar_omp,Hstar_lam,Hsurf_lam,directHstar_omp)
 !$OMP FLUSH
 !$OMP END PARALLEL
 
@@ -479,7 +483,7 @@ c=========== begin experimental redistribution =================================
 			enddo
 		enddo
 		tauRoss=E/tauRoss
-		Hedd(ir)=Hedd(ir)+max(-abs(Hstar(ir)),E0*exp(-tauRoss))
+		Hedd(ir)=Hedd(ir)+max(-abs(directHstar(ir)),E0*exp(-tauRoss))
 	enddo
 
 	endif
