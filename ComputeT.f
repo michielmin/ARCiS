@@ -289,8 +289,8 @@
 					Ce(ir,ilam,ig)=tau/d
 					Ca(ir,ilam,ig)=Ce(ir,ilam,ig)-Cs(ir,ilam,ig)
 				endif
-				if(tau.lt.1d-10) then
-					tau=1d-10
+				if(tau.lt.1d-6) then
+					tau=1d-6
 					scale=Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
 					if(.not.scale.gt.0d0) scale=0d0
 					if(.not.scale.lt.1d0) scale=1d0
@@ -298,8 +298,8 @@
 					Ca(ir,ilam,ig)=scale*Ce(ir,ilam,ig)
 					Cs(ir,ilam,ig)=max(0d0,Ce(ir,ilam,ig)-Ca(ir,ilam,ig))
 				endif
-				if(tau.gt.1d10) then
-					tau=1d10
+				if(tau.gt.1d6) then
+					tau=1d6
 					scale=Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
 					if(.not.scale.gt.0d0) scale=0d0
 					if(.not.scale.lt.1d0) scale=1d0
@@ -404,7 +404,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			do inu=1,nnu
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 				call SolveIj(tauR_omp(0:nr),Si_omp(0:nr,0),Ij_omp(0:nr),nr,x_SIj,y_SIj,tauR_SIj(0:nr+1),Ma_SIj,Mb_SIj,Mc_SIj)
-				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),-Ij_omp(nr))
+				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
 				Hstar_lam(0:nr)=Hstar_lam(0:nr)+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
 				SurfStar_omp=SurfStar_omp+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1)*SurfEmis_LR(ilam)
 			enddo
@@ -421,7 +421,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			do inu=1,nnu
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 				call SolveIj(tauR_omp(0:nr),Si_omp(0:nr,nr+1),Ij_omp(0:nr),nr,x_SIj,y_SIj,tauR_SIj(0:nr+1),Ma_SIj,Mb_SIj,Mc_SIj)
-				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,Ij_omp(0),Ij_omp(nr))
+				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
 				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+8d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)
 				Hsurf_lam(0:nr)=Hsurf_lam(0:nr)+FstarBottom*8d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)*(1d0-SurfEmis_LR(ilam))
 			enddo
