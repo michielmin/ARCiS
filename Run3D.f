@@ -566,6 +566,7 @@ c		tot=tot+phase(ipc,0,ilam)*dfreq(ilam)
 c	enddo
 c	tot=tot*distance**2/1d23
 c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*Rstar**2*Rplanet**2/(Dplanet**2))
+c	print*,Tstar*(Rstar/Dplanet)**0.5
 
 	if(makeimage) then
 		file=trim(outputdir) // "image" //  trim(int2string(int(theta_phase(ipc)),'(i0.3)')) // ".fits"
