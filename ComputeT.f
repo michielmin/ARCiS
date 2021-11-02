@@ -393,7 +393,8 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				Ih_omp(0:nr)=Ij_omp(0:nr)
 				Si_omp(0:nr,nr+1)=Si_omp(0:nr,nr+1)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(0:nr)/(4d0*pi)
 				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
-				Hsurf_lam(0:nr)=Hsurf_lam(0:nr)+FstarBottom*2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)*(1d0-SurfEmis_LR(ilam))
+				Hsurf_lam(0:nr)=Hsurf_lam(0:nr)+FstarBottom*2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
+     & 								Ih_omp(0:nr)*(1d0-SurfEmis_LR(ilam))
 			enddo
 			Si_omp(0,nr+1)=0d0
 			Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)*Cs(1:nr,ilam,ig)/Ce(1:nr,ilam,ig)
