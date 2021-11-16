@@ -271,7 +271,8 @@ c				if(key%nr1.eq.0) key%nr1=1
 			case("retpar","fitpar")
 				if(key%key2.eq.'keyword') then
 					if(key%value.eq.'tprofile') then
-						n_ret=n_ret+nr+2
+						free_tprofile=.true.
+						n_ret=n_ret+nr
 					else
 						n_ret=n_ret+1
 					endif
@@ -324,6 +325,7 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(P_point(max(n_points,1)))
 	allocate(T_point(max(n_points,1)))
 	allocate(RetPar(max(n_ret,1)))
+	allocate(d2T(nr))
 	allocate(ObsSpec(max(nobs,1)))
 	allocate(Tin(nr))
 	allocate(instrument(max(n_instr,1)))
@@ -482,8 +484,6 @@ c allocate the arrays
 !$OMP END PARALLEL
 #endif
 
-	if(n_ret.gt.0) n_ret=n_ret+RetPar(n_ret)%n-1
-
 	if(useobsgrid) then
 c		if(computeT) useobsgrid=.false.
 		if(nobs.le.0) useobsgrid=.false.
@@ -596,14 +596,10 @@ c	condensates=(condensates.or.cloudcompute)
 	if(retrieval) then
 		do i=1,n_ret
 			if(RetPar(i)%x0.lt.-1d150) then
-				if(RetPar(i)%keyword(1:6).eq.'tvalue') then
-					RetPar(i)%x0=0d0
+				if(RetPar(i)%logscale) then
+					RetPar(i)%x0=sqrt(RetPar(i)%xmax*RetPar(i)%xmin)
 				else
-					if(RetPar(i)%logscale) then
-						RetPar(i)%x0=sqrt(RetPar(i)%xmax*RetPar(i)%xmin)
-					else
-						RetPar(i)%x0=0.5d0*(RetPar(i)%xmax+RetPar(i)%xmin)
-					endif
+					RetPar(i)%x0=0.5d0*(RetPar(i)%xmax+RetPar(i)%xmin)
 				endif
 			endif
 			if(RetPar(i)%dx.lt.0d0) then
@@ -918,10 +914,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) tol_multinest
 		case("retrievaltype")
 			read(key%value,*) retrievaltype
-		case("tvalue")
-			read(key%value,*) Tin(key%nr1)
-		case("retrieve_profile")
-			read(key%value,*) retrieve_profile
+		case("d2t")
+			read(key%value,*) d2T(key%nr1)
+		case("free_tprofile")
+			read(key%value,*) free_tprofile
 		case("faircoverage")
 			read(key%value,*) faircoverage
 		case("speclimits")
@@ -1212,7 +1208,7 @@ c	endif
 
 c	if(par_tprofile) call ComputeParamT(T)
 	do i=1,nr
-		if(retrieve_profile) then
+		if(free_tprofile) then
 			T(i)=T(i)+Tin(i)
 			if(T(i).gt.maxTprofile) T(i)=maxTprofile
 			if(T(i).lt.minTprofile) T(i)=minTprofile
@@ -1376,6 +1372,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	TPfile=' '
 	mixratfile=.false.
 	Tin=0d0
+
+	d2T=0d0
 
 	starfile=' '
 	
@@ -1566,7 +1564,7 @@ c		Cloud(i)%P=0.0624d0
 	betaT=1d0
 	alphaT=1d0
 	
-	retrieve_profile=.false.
+	free_tprofile=.false.
 	chimax=1d0
 	
 	maxTprofile=1d6
@@ -1642,89 +1640,32 @@ c number of cloud/nocloud combinations
 	
 	select case(key%key2)
 		case("keyword","parameter")
-			if(i.eq.0) then
-				n_ret=n_ret+1
-			else
-				n_ret=n_ret+RetPar(i)%n
-			endif
+			n_ret=n_ret+1
 			i=n_ret
 			read(key%value,*) RetPar(i)%keyword
 			if(RetPar(i)%keyword.eq.'tprofile') then
-				RetPar(i)%n=nr+2
-				retrieve_profile=.true.
-			else
-				RetPar(i)%n=1
-			endif
-			if(RetPar(i)%keyword.eq.'tprofile') then
-				do j=1,nr
-					RetPar(i+j-1)%keyword='tvalue' // trim(int2string(j,'(i0.3)'))
+ 				free_tprofile=.true.
+				n_ret=n_ret+nr-1
+ 				do j=1,nr
+					RetPar(i+j-1)%keyword='d2T' // trim(int2string(j,'(i0.3)'))
 				enddo
-				RetPar(i+nr)%keyword='tp'
-				RetPar(i+nr+1)%keyword='dtp'
 			endif
 		case("min","xmin")
 			read(key%value,*) RetPar(i)%xmin
-			do j=1,RetPar(i)%n
-				RetPar(i+j-1)%xmin=RetPar(i)%xmin
-			enddo
-			if(RetPar(i)%keyword.eq.'tvalue001') then
-				minTprofile=RetPar(i)%xmin
-				RetPar(i+RetPar(i)%n-1)%xmin=-0.2
-			endif
 		case("max","xmax")
 			read(key%value,*) RetPar(i)%xmax
-			do j=1,RetPar(i)%n
-				RetPar(i+j-1)%xmax=RetPar(i)%xmax
-			enddo
-			if(RetPar(i)%keyword.eq.'tvalue001') then
-c				do j=1,nr
-c					RetPar(i+j-1)%xmin=-RetPar(i)%xmax
-c				enddo
-				maxTprofile=RetPar(i)%xmax
-				RetPar(i+RetPar(i)%n-1)%xmax=0.2
-			endif
 		case("init","x")
 			read(key%value,*) RetPar(i)%x0
-			do j=1,RetPar(i)%n
-				RetPar(i+j-1)%x0=RetPar(i)%x0
-			enddo
-			if(RetPar(i)%keyword.eq.'tvalue001') then
-				RetPar(i+RetPar(i)%n-1)%x0=0d0
-			endif
 		case("spread","width","dx")
 			read(key%value,*) RetPar(i)%dx
-			do j=1,RetPar(i)%n
-				RetPar(i+j-1)%dx=RetPar(i)%dx
-			enddo
-			if(RetPar(i)%keyword.eq.'tvalue001') then
-				RetPar(i+RetPar(i)%n-1)%dx=1d0
-			endif
 		case("log","logscale")
 			read(key%value,*) RetPar(i)%logscale
-			do j=1,RetPar(i)%n
-				RetPar(i+j-1)%logscale=RetPar(i)%logscale
-			enddo
-			if(RetPar(i)%keyword.eq.'tvalue001') then
-				do j=1,RetPar(i)%n
-					RetPar(i+j-1)%logscale=.false.
-				enddo
-				read(key%value,*) RetPar(i+RetPar(i)%n-2)%logscale
-			endif
 		case("square","squarescale")
 			read(key%value,*) RetPar(i)%squarescale
-			do j=1,RetPar(i)%n
-				RetPar(i+j-1)%squarescale=RetPar(i)%squarescale
-			enddo
 		case("opacity","opacitycomp")
 			read(key%value,*) RetPar(i)%opacitycomp
-			do j=1,RetPar(i)%n
-				RetPar(i+j-1)%opacitycomp=RetPar(i)%opacitycomp
-			enddo
 		case("increase")
 			read(key%value,*) RetPar(i)%increase
-			do j=1,RetPar(i)%n
-				RetPar(i+j-1)%increase=RetPar(i)%increase
-			enddo
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

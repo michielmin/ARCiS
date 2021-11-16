@@ -33,6 +33,10 @@
 	if(compute_mixrat) nabla_ad=2d0/7d0
 	grav=Ggrav*Mplanet/(Rplanet)**2
 	if(par_tprofile.or.(computeT.and.nTiter.eq.0)) call ComputeParamT(T)
+	if(free_tprofile) then
+		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT+gammaT1/2d0))**0.25
+		call MakePTstruct(P,T,d2T,nr,Tc)
+	endif
 
 	call SetAbun
 	nabla_ad=2d0/7d0
@@ -144,6 +148,10 @@ c			if(domakeai.or.retrieval) return
 	enddo
 
 	if(par_tprofile.or.(computeT.and.nTiter.eq.0)) call ComputeParamT(T)
+	if(free_tprofile) then
+		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT+gammaT1/2d0))**0.25
+		call MakePTstruct(P,T,d2T,nr,Tc)
+	endif
 	do i=1,nr
 		if(T(i).gt.maxTprofile) T(i)=maxTprofile
 		if(T(i).lt.3d0) T(i)=3d0
@@ -1327,3 +1335,62 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	return
 	end
 	
+
+
+
+	subroutine MakePTstruct(P,T,d2T,np,T0)
+	IMPLICIT NONE
+	integer np,i
+	real*8 P(np),T(np),d2T(np),T0
+	real*8 dlnP,dT(np)
+	
+	dT(np)=0d0
+	dlnP=log(P(np)/P(np-1))
+	dT(np-1)=d2T(np)*dlnP
+	do i=np-2,1,-1
+		dlnP=log(P(i+2)/P(i))/2d0
+		dT(i)=d2T(i+1)*dlnP+dT(i+1)
+	enddo
+	do i=1,np
+		if(dT(i).gt.2d0/7d0) dT(i)=2d0/7d0
+		if(dT(i).lt.-2d0/7d0) dT(i)=-2d0/7d0
+	enddo
+	T(np)=T0
+	do i=np-1,1,-1
+		dlnP=log(P(i+1)/P(i))
+		T(i)=T(i+1)*exp(-dT(i)*dlnP)
+	enddo
+	
+	return
+	end
+	
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+
+
+	real*8 function erfinv(x)
+	IMPLICIT NONE
+	real*8 x,f,eps,y,pi,ck(0:100)
+	integer k,m
+	parameter(pi=3.141592653589793238462643383279502884)
+	parameter(eps=1d-8)
+	y=sqrt(pi)*x/2d0
+
+	erfinv=0d0
+	k=0
+	ck(0)=1d0
+1	continue
+	f=ck(k)*(y**(2d0*real(k)+1d0))/(2d0*real(k)+1d0)
+	erfinv=erfinv+f
+	if(abs(f).gt.eps.and.k.lt.100) then
+		k=k+1
+		ck(k)=0d0
+		do m=0,k-1
+			ck(k)=ck(k)+ck(m)*ck(k-1-m)/real((m+1)*(2*m+1))
+		enddo
+		goto 1
+	endif
+
+	return
+	end

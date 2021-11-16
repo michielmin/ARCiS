@@ -1631,7 +1631,7 @@ c			vec(i)=gasdev(idum)
 	type(SettingKey) key
 	character*1000 readline
 	integer i,j,k
-	real*8 var(n_ret),dvar(2,n_ret),x,xx
+	real*8 var(n_ret),dvar(2,n_ret),x,xx,erfinv
 
 	do k=1,2
 
@@ -1639,37 +1639,9 @@ c			vec(i)=gasdev(idum)
 		if(i.gt.1.and.RetPar(i)%increase) then
 			RetPar(i)%xmin=RetPar(i-1)%value
 		endif
-		if(RetPar(i)%keyword(1:6).eq.'tvalue') then
-			read(RetPar(i)%keyword(7:len_trim(RetPar(i)%keyword)),*) j
-			xx=10d0**(log10(TP0)+dTP*log10(P(j)))
+		if(RetPar(i)%keyword(1:3).eq.'d2T') then
 			x=var(i)
-			if(x.gt.0.5) then
-				x=(x-0.5)*2d0
-				RetPar(i)%value=(RetPar(i)%xmax-xx)*x
-			else
-				x=(0.5-x)*2d0
-				RetPar(i)%value=(RetPar(i)%xmin-xx)*x
-			endif
-			x=var(i)+dvar(1,i)
-			if(x.gt.0.5) then
-				x=(x-0.5)*2d0
-				RetPar(i)%error1=(RetPar(i)%xmax-xx)*x
-				RetPar(i)%error1=RetPar(i)%error1-RetPar(i)%value
-			else
-				x=(0.5-x)*2d0
-				RetPar(i)%error1=(RetPar(i)%xmin-xx)*x
-				RetPar(i)%error1=RetPar(i)%error1-RetPar(i)%value
-			endif
-			x=var(i)+dvar(2,i)
-			if(x.gt.0.5) then
-				x=(x-0.5)*2d0
-				RetPar(i)%error2=(RetPar(i)%xmax-xx)*x
-				RetPar(i)%error2=RetPar(i)%error2-RetPar(i)%value
-			else
-				x=(0.5-x)*2d0
-				RetPar(i)%error2=(RetPar(i)%xmin-xx)*x
-				RetPar(i)%error2=RetPar(i)%error2-RetPar(i)%value
-			endif
+			RetPar(i)%value=0.05d0*erfinv((x-0.5d0)*2d0)*sqrt(2d0)
 		else if(RetPar(i)%logscale) then
 c	log
 			x=var(i)
@@ -1793,24 +1765,8 @@ c	linear, square
 		if(i.gt.1.and.RetPar(i)%increase) then
 			RetPar(i)%xmin=RetPar(i-1)%value
 		endif
-		if(RetPar(i)%keyword(1:6).eq.'tvalue') then
-			read(RetPar(i)%keyword(7:len_trim(RetPar(i)%keyword)),*) j
-			xx=10d0**(log10(TP0)+dTP*log10(P(j)))
-			if(RetPar(i)%value.lt.0d0) then
-				if(xx.lt.RetPar(i)%xmin) then
-					var(i)=0d0
-				else
-					x=RetPar(i)%value/(RetPar(i)%xmin-xx)
-					var(i)=0.5d0-x/2d0
-				endif
-			else
-				if(xx.gt.RetPar(i)%xmax) then
-					var(i)=1d0
-				else
-					x=RetPar(i)%value/(RetPar(i)%xmax-xx)
-					var(i)=0.5d0+x/2d0
-				endif
-			endif
+		if(RetPar(i)%keyword(1:3).eq.'d2T') then
+			var(i)=erf(RetPar(i)%value/(sqrt(2d0)*0.05d0))/2d0+0.5d0
 		else if(RetPar(i)%logscale) then
 c	log
 			var(i)=log10(RetPar(i)%value/RetPar(i)%xmin)/log10(RetPar(i)%xmax/RetPar(i)%xmin)

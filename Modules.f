@@ -96,7 +96,7 @@ c===============================================================================
 	integer idum,maxiter,Nphot0,idum0,nlamdust,iWolk
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib
-	logical dochemistry,retrieve_profile,condensates,faircoverage,speclimits,mapCOratio,randomseed
+	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed
 	logical,allocatable :: includemol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust,twind,epsiter
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Psimplecloud,metallicity0
@@ -124,7 +124,7 @@ c for exchange when computing secondary atmosphere
 	character*20 surfacetype
 	integer nTZ,nspike,nai,nboot,npew
 	integer,allocatable :: niso(:),instr_nobs(:)
-	real*8,allocatable :: MMW(:)
+	real*8,allocatable :: MMW(:),d2T(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
 	logical fulloutput3D,deepRedist
 	real*8 f_deepredist
@@ -304,7 +304,6 @@ cPoints for the temperature structure
 		character*500 keyword
 		real*8 xmin,xmax,x0,dx,value,error1,error2
 		logical logscale,squarescale,opacitycomp,increase
-		integer n
 	end type RetrievalPar
 
 	type(RetrievalPar),allocatable :: RetPar(:)
