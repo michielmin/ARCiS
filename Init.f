@@ -223,6 +223,16 @@ c===============================================================================
 		key=>key%next
 	enddo
 
+	nd2T=nr
+	key => firstkey
+	do while(.not.key%last)
+		select case(key%key1)
+			case("nd2t","nfreet")
+				read(key%value,*) nd2T
+		end select
+		key=>key%next
+	enddo
+
 	key => firstkey
 	do while(.not.key%last)
 		select case(key%key1)
@@ -272,7 +282,7 @@ c				if(key%nr1.eq.0) key%nr1=1
 				if(key%key2.eq.'keyword') then
 					if(key%value.eq.'tprofile') then
 						free_tprofile=.true.
-						n_ret=n_ret+nr
+						n_ret=n_ret+nd2T*2
 					else
 						n_ret=n_ret+1
 					endif
@@ -325,7 +335,8 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(P_point(max(n_points,1)))
 	allocate(T_point(max(n_points,1)))
 	allocate(RetPar(max(n_ret,1)))
-	allocate(d2T(nr))
+	allocate(d2T(nd2T))
+	allocate(Pd2T(nd2T))
 	allocate(ObsSpec(max(nobs,1)))
 	allocate(Tin(nr))
 	allocate(instrument(max(n_instr,1)))
@@ -655,6 +666,8 @@ c	condensates=(condensates.or.cloudcompute)
 	endif
 
 	if(planetform) call InitFormation(Mstar)
+
+	if(nd2T.eq.nr) Pd2T(1:nr)=P(1:nr)
 		
 	return
 	end
@@ -916,6 +929,11 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) retrievaltype
 		case("d2t")
 			read(key%value,*) d2T(key%nr1)
+		case("pd2t")
+			read(key%value,*) Pd2T(key%nr1)
+		case("nd2t","nfreet")
+c is already set in CountStuff
+c			read(key%value,*) nd2T
 		case("free_tprofile")
 			read(key%value,*) free_tprofile
 		case("faircoverage")
@@ -1645,9 +1663,16 @@ c number of cloud/nocloud combinations
 			read(key%value,*) RetPar(i)%keyword
 			if(RetPar(i)%keyword.eq.'tprofile') then
  				free_tprofile=.true.
-				n_ret=n_ret+nr-1
- 				do j=1,nr
+				n_ret=n_ret+nd2T*2-1
+ 				do j=1,nd2T
 					RetPar(i+j-1)%keyword='d2T' // trim(int2string(j,'(i0.3)'))
+				enddo
+ 				do j=1,nd2T
+					RetPar(i+nd2T+j-1)%keyword='Pd2T' // trim(int2string(j,'(i0.3)'))
+					RetPar(i+nd2T+j-1)%xmin=pmin
+					RetPar(i+nd2T+j-1)%xmax=pmax
+					RetPar(i+nd2T+j-1)%logscale=.true.
+c					if(j.ne.1) RetPar(i+nd2T+j-1)%increase=.true.
 				enddo
 			endif
 		case("min","xmin")

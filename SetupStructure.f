@@ -34,8 +34,8 @@
 	grav=Ggrav*Mplanet/(Rplanet)**2
 	if(par_tprofile.or.(computeT.and.nTiter.eq.0)) call ComputeParamT(T)
 	if(free_tprofile) then
-		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT+gammaT1/2d0))**0.25
-		call MakePTstruct(P,T,d2T,nr,Tc)
+		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
+		call MakePTstruct(P,T,nr,Pd2T,d2T,nd2T,Tc)
 	endif
 
 	call SetAbun
@@ -149,8 +149,8 @@ c			if(domakeai.or.retrieval) return
 
 	if(par_tprofile.or.(computeT.and.nTiter.eq.0)) call ComputeParamT(T)
 	if(free_tprofile) then
-		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT+gammaT1/2d0))**0.25
-		call MakePTstruct(P,T,d2T,nr,Tc)
+		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
+		call MakePTstruct(P,T,nr,Pd2T,d2T,nd2T,Tc)
 	endif
 	do i=1,nr
 		if(T(i).gt.maxTprofile) T(i)=maxTprofile
@@ -1338,7 +1338,65 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 
 
 
-	subroutine MakePTstruct(P,T,d2T,np,T0)
+
+	subroutine MakePTstruct(Pin,Tin,npin,Pd2T_in,d2T_in,npd2T,T0)
+	IMPLICIT NONE
+	integer np,i,npd2t,npin
+	real*8 Pin(npin),Tin(npin),d2T_in(npd2t),T0,Pd2T(npd2t)
+	real*8 P(npin+npd2T),T(npin+npd2T)
+	real*8 dlnP,dT(npin+npd2T),Pd2T_in(npd2t),d2TLR(0:npd2t+1),d2T(npin+npd2T)
+	real*8 logP(npin+npd2T),logPd2T(0:npd2t+1)
+
+	Pd2T(1:npd2T)=-Pd2T_in(1:npd2T)	
+	d2TLR(1:npd2T)=d2T_in(1:npd2T)
+	call sortw(Pd2T,d2TLR(1:npd2T),npd2t)
+
+	P(1:npin)=Pin(1:npin)
+	np=npin+npd2T
+	P(npin+1:np)=Pd2T_in(1:npd2T)
+	P=-P
+	call sort(P,np)
+	P=-P
+
+	logP=-log(P)
+	logPd2T(1:npd2T)=-log(-Pd2T(1:npd2T))
+	logPd2T(0)=logP(1)
+	logPd2T(npd2t+1)=logP(np)
+	d2TLR(0)=0d0
+	d2TLR(npd2t+1)=0d0
+	i=npd2t+2
+	call regridarray(logPd2T(0:npd2t+1),d2TLR(0:npd2t+1),i,logP,d2T,np)
+
+	dT(np)=0d0
+	dlnP=log(P(np)/P(np-1))
+	dT(np-1)=d2T(np)*dlnP
+	do i=np-2,1,-1
+		dlnP=log(P(i+2)/P(i))/2d0
+		dT(i)=d2T(i+1)*dlnP+dT(i+1)
+	enddo
+	do i=1,np
+c		if(abs(dT(i)).gt.2d0/7d0) print*,i,dT(i)
+		if(dT(i).gt.2d0/7d0) dT(i)=2d0/7d0
+		if(dT(i).lt.-2d0/7d0) dT(i)=-2d0/7d0
+	enddo
+	T(np)=T0
+	do i=np-1,1,-1
+		dlnP=log(P(i+1)/P(i))
+		T(i)=T(i+1)*exp(-dT(i)*dlnP)
+	enddo
+
+	P=-P
+	Pin=-Pin
+	call regridarray(P,T,np,Pin,Tin,npin)
+	P=-P
+	Pin=-Pin
+	
+	return
+	end
+	
+
+
+	subroutine MakePTstructOld(P,T,d2T,np,T0)
 	IMPLICIT NONE
 	integer np,i
 	real*8 P(np),T(np),d2T(np),T0
