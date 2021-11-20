@@ -1383,6 +1383,7 @@ c		if(abs(dT(i)).gt.2d0/7d0) print*,i,dT(i)
 	do i=np-1,1,-1
 		dlnP=log(P(i+1)/P(i))
 		T(i)=T(i+1)*exp(-dT(i)*dlnP)
+		if(T(i).lt.10d0) T(i)=10d0
 	enddo
 
 	P=-P

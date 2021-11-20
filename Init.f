@@ -282,7 +282,7 @@ c				if(key%nr1.eq.0) key%nr1=1
 				if(key%key2.eq.'keyword') then
 					if(key%value.eq.'tprofile') then
 						free_tprofile=.true.
-						n_ret=n_ret+nd2T*2
+						n_ret=n_ret+nd2T
 					else
 						n_ret=n_ret+1
 					endif
@@ -667,7 +667,9 @@ c	condensates=(condensates.or.cloudcompute)
 
 	if(planetform) call InitFormation(Mstar)
 
-	if(nd2T.eq.nr) Pd2T(1:nr)=P(1:nr)
+	do i=1,nd2T
+		Pd2T(i)=exp(log(Pmax)+log(Pmin/Pmax)*real(i-1)/real(nd2T-1))
+	enddo
 		
 	return
 	end
@@ -929,8 +931,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) retrievaltype
 		case("d2t")
 			read(key%value,*) d2T(key%nr1)
-		case("pd2t")
-			read(key%value,*) Pd2T(key%nr1)
+c		case("pd2t")
+c			read(key%value,*) Pd2T(key%nr1)
 		case("nd2t","nfreet")
 c is already set in CountStuff
 c			read(key%value,*) nd2T
@@ -1663,17 +1665,16 @@ c number of cloud/nocloud combinations
 			read(key%value,*) RetPar(i)%keyword
 			if(RetPar(i)%keyword.eq.'tprofile') then
  				free_tprofile=.true.
-				n_ret=n_ret+nd2T*2-1
+				n_ret=n_ret+nd2T-1
  				do j=1,nd2T
 					RetPar(i+j-1)%keyword='d2T' // trim(int2string(j,'(i0.3)'))
 				enddo
- 				do j=1,nd2T
-					RetPar(i+nd2T+j-1)%keyword='Pd2T' // trim(int2string(j,'(i0.3)'))
-					RetPar(i+nd2T+j-1)%xmin=pmin
-					RetPar(i+nd2T+j-1)%xmax=pmax
-					RetPar(i+nd2T+j-1)%logscale=.true.
-c					if(j.ne.1) RetPar(i+nd2T+j-1)%increase=.true.
-				enddo
+c 				do j=1,nd2T
+c					RetPar(i+nd2T+j-1)%keyword='Pd2T' // trim(int2string(j,'(i0.3)'))
+c					RetPar(i+nd2T+j-1)%xmin=pmin
+c					RetPar(i+nd2T+j-1)%xmax=pmax
+c					RetPar(i+nd2T+j-1)%logscale=.true.
+c				enddo
 			endif
 		case("min","xmin")
 			read(key%value,*) RetPar(i)%xmin
