@@ -35,7 +35,7 @@
 	if(par_tprofile.or.(computeT.and.nTiter.eq.0)) call ComputeParamT(T)
 	if(free_tprofile) then
 		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
-		call MakePTstruct(P,T,nr,Pd2T,d2T,nd2T,Tc)
+		call MakePTstruct(P,T,nr,PdT,dT,ndT,Tc)
 	endif
 
 	call SetAbun
@@ -150,7 +150,7 @@ c			if(domakeai.or.retrieval) return
 	if(par_tprofile.or.(computeT.and.nTiter.eq.0)) call ComputeParamT(T)
 	if(free_tprofile) then
 		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
-		call MakePTstruct(P,T,nr,Pd2T,d2T,nd2T,Tc)
+		call MakePTstruct(P,T,nr,PdT,dT,ndT,Tc)
 	endif
 	do i=1,nr
 		if(T(i).gt.maxTprofile) T(i)=maxTprofile
@@ -1338,8 +1338,42 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 
 
 
+	subroutine MakePTstruct(P,T,np,Pp,dTp_in,nT,T0)
+	IMPLICIT NONE
+	integer np,i,nT
+	real*8 P(np),T(np),Pp(nT),d2T(nT),dTp(nT)
+	real*8 logPp(nT),logTp(nT),logP(np),logT(np),T0,dTp_in(nT)
 
-	subroutine MakePTstruct(Pin,Tin,npin,Pd2T_in,d2T_in,npd2T,T0)
+	logPp=log(Pp)
+	dTp=dTp_in
+	call sortw(logPp,dTp,nT)
+
+	logTp(1)=log(T0)
+	d2T(1)=0d0
+	do i=1,nT-1
+		logTp(i+1)=(dTp(i)+(logPp(i+1)-logPp(i))*d2T(i)/3d0)*(logPp(i+1)-logPp(i))+logTp(i)
+		d2T(i+1)=(dTp(i+1)-(logTp(i+1)-logTp(i))/(logPp(i+1)-logPp(i)))*3d0/(logPp(i+1)-logPp(i))
+	enddo
+
+	logP=log(P)
+	do i=1,np
+		if(logP(i).lt.logPp(1)) then
+			logT(i)=logTp(1)
+		else if(logP(i).gt.logPp(nT)) then
+			logT(i)=logTp(nT)+(logP(i)-logPp(nT))*dTp(nT)
+		else
+			call splint(logPp,logTp,d2T,nT,logP(i),logT(i))
+		endif
+		T(i)=exp(logT(i))
+	enddo
+	
+	return
+	end
+	
+
+
+
+	subroutine MakePTstruct_d2T(Pin,Tin,npin,Pd2T_in,d2T_in,npd2T,T0)
 	IMPLICIT NONE
 	integer np,i,npd2t,npin
 	real*8 Pin(npin),Tin(npin),d2T_in(npd2t),T0,Pd2T(npd2t)

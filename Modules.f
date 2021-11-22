@@ -122,9 +122,9 @@ c for exchange when computing secondary atmosphere
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo
 	character*20 surfacetype
-	integer nTZ,nspike,nai,nboot,npew,nd2T
+	integer nTZ,nspike,nai,nboot,npew,ndT
 	integer,allocatable :: niso(:),instr_nobs(:)
-	real*8,allocatable :: MMW(:),d2T(:),Pd2T(:)
+	real*8,allocatable :: MMW(:),dT(:),PdT(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
 	logical fulloutput3D,deepRedist
 	real*8 f_deepredist
@@ -295,10 +295,6 @@ c simple cloud from Jo
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 
-
-cPoints for the temperature structure
-	real*8,allocatable :: P_point(:),T_point(:)
-	integer n_points
 
 	type RetrievalPar
 		character*500 keyword

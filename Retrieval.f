@@ -1639,10 +1639,7 @@ c			vec(i)=gasdev(idum)
 		if(i.gt.1.and.RetPar(i)%increase) then
 			RetPar(i)%xmin=RetPar(i-1)%value
 		endif
-		if(RetPar(i)%keyword(1:3).eq.'d2T') then
-			x=var(i)
-			RetPar(i)%value=0.05d0*erfinv((x-0.5d0)*2d0)*sqrt(2d0)
-		else if(RetPar(i)%logscale) then
+		if(RetPar(i)%logscale) then
 c	log
 			x=var(i)
 			RetPar(i)%value=10d0**(log10(RetPar(i)%xmin)+log10(RetPar(i)%xmax/RetPar(i)%xmin)*x)
@@ -1765,9 +1762,7 @@ c	linear, square
 		if(i.gt.1.and.RetPar(i)%increase) then
 			RetPar(i)%xmin=RetPar(i-1)%value
 		endif
-		if(RetPar(i)%keyword(1:3).eq.'d2T') then
-			var(i)=erf(RetPar(i)%value/(sqrt(2d0)*0.05d0))/2d0+0.5d0
-		else if(RetPar(i)%logscale) then
+		if(RetPar(i)%logscale) then
 c	log
 			var(i)=log10(RetPar(i)%value/RetPar(i)%xmin)/log10(RetPar(i)%xmax/RetPar(i)%xmin)
 		else if(RetPar(i)%squarescale) then

@@ -202,7 +202,6 @@ c===============================================================================
 	nobs=0
 	ncia=0
 	nclouds=0
-	n_points=0
 	n_ret=0
 	n_Par3D=0
 	n_instr=0
@@ -223,12 +222,12 @@ c===============================================================================
 		key=>key%next
 	enddo
 
-	nd2T=nr
+	ndT=nr
 	key => firstkey
 	do while(.not.key%last)
 		select case(key%key1)
-			case("nd2t","nfreet")
-				read(key%value,*) nd2T
+			case("ndt","nfreet")
+				read(key%value,*) ndT
 		end select
 		key=>key%next
 	enddo
@@ -274,15 +273,11 @@ c				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr1.gt.nclouds) nclouds=key%nr1
 			case("fcloud")
 				read(key%value,*) fcloud_default
-			case("point")
-				if(key%nr1.eq.0) key%nr1=1
-				if(key%nr2.eq.0) key%nr2=1
-				if(key%nr1.gt.n_points) n_points=key%nr1
 			case("retpar","fitpar")
 				if(key%key2.eq.'keyword') then
 					if(key%value.eq.'tprofile') then
 						free_tprofile=.true.
-						n_ret=n_ret+nd2T
+						n_ret=n_ret+ndT
 					else
 						n_ret=n_ret+1
 					endif
@@ -332,11 +327,9 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(XeqCloud(nr,max(nclouds,1)))
 	allocate(XeqCloud_old(nr,max(nclouds,1)))
 	allocate(XCloud(nr,max(nclouds,1)))
-	allocate(P_point(max(n_points,1)))
-	allocate(T_point(max(n_points,1)))
 	allocate(RetPar(max(n_ret,1)))
-	allocate(d2T(nd2T))
-	allocate(Pd2T(nd2T))
+	allocate(dT(ndT))
+	allocate(PdT(ndT))
 	allocate(ObsSpec(max(nobs,1)))
 	allocate(Tin(nr))
 	allocate(instrument(max(n_instr,1)))
@@ -667,8 +660,8 @@ c	condensates=(condensates.or.cloudcompute)
 
 	if(planetform) call InitFormation(Mstar)
 
-	do i=1,nd2T
-		Pd2T(i)=exp(log(Pmax)+log(Pmin/Pmax)*real(i-1)/real(nd2T-1))
+	do i=1,ndT
+		PdT(i)=exp(log(Pmax)+log(Pmin/Pmax)*real(i-1)/real(ndT-1))
 	enddo
 		
 	return
@@ -889,8 +882,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Nphot0
 		case("domccompute","mccompute","mccomputet")
 			read(key%value,*) doMCcompute
-		case("point")
-			call ReadPoint(key)
 		case("retpar","fitpar")
 			call ReadRetrieval(key)
 		case("obs")
@@ -929,13 +920,13 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) tol_multinest
 		case("retrievaltype")
 			read(key%value,*) retrievaltype
-		case("d2t")
-			read(key%value,*) d2T(key%nr1)
-c		case("pd2t")
-c			read(key%value,*) Pd2T(key%nr1)
-		case("nd2t","nfreet")
+		case("dt")
+			read(key%value,*) dT(key%nr1)
+c		case("pdt")
+c			read(key%value,*) PdT(key%nr1)
+		case("ndt","nfreet")
 c is already set in CountStuff
-c			read(key%value,*) nd2T
+c			read(key%value,*) ndT
 		case("free_tprofile")
 			read(key%value,*) free_tprofile
 		case("faircoverage")
@@ -1179,20 +1170,6 @@ c	endif
 		enddo
 		if(TPfile.ne.' ') then
 			call regridlog(TPfile,P0,T0,nr)
-		else if(n_points.gt.1) then
-			P_point=log10(P_point)
-			T_point=log10(T_point)
-			allocate(y2(n_points))
-			yp1=0d0
-			ypn=0d0
-			call spline(P_point,T_point,n_points,yp1,ypn,y2)
-			do i=1,nr
-				call splint(P_point,T_point,y2,n_points,log10(P0(i)),T0(i))
-				T0(i)=10d0**T0(i)
-			enddo
-			deallocate(y2)
-			P_point=10d0**P_point
-			T_point=10d0**T_point
 		else
 			do i=1,nr
 				T0(i)=10d0**(log10(TP0)+dTP*log10(P0(i)))
@@ -1393,7 +1370,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	mixratfile=.false.
 	Tin=0d0
 
-	d2T=0d0
+	dT=0d0
 
 	starfile=' '
 	
@@ -1628,27 +1605,6 @@ c number of cloud/nocloud combinations
 	
 	
 	
-	subroutine ReadPoint(key)
-	use GlobalSetup
-	use Constants
-	use ReadKeywords
-	IMPLICIT NONE
-	type(SettingKey) key
-	integer i
-	i=key%nr1
-	
-	select case(key%key2)
-		case("p")
-			read(key%value,*) P_point(i)
-		case("t")
-			read(key%value,*) T_point(i)
-		case default
-			call output("Keyword not recognised: " // trim(key%key2))
-	end select
-	
-	return
-	end
-
 	subroutine ReadRetrieval(key)
 	use GlobalSetup
 	use Constants
@@ -1665,16 +1621,17 @@ c number of cloud/nocloud combinations
 			read(key%value,*) RetPar(i)%keyword
 			if(RetPar(i)%keyword.eq.'tprofile') then
  				free_tprofile=.true.
-				n_ret=n_ret+nd2T-1
- 				do j=1,nd2T
-					RetPar(i+j-1)%keyword='d2T' // trim(int2string(j,'(i0.3)'))
+				n_ret=n_ret+ndT-1
+ 				do j=1,ndT
+					RetPar(i+j-1)%keyword='dT' // trim(int2string(j,'(i0.3)'))
+					if(j.eq.1) then
+						RetPar(i+j-1)%xmin=0d0
+					else
+						RetPar(i+j-1)%xmin=-2d0/7d0
+					endif
+					RetPar(i+j-1)%xmax=2d0/7d0
+					RetPar(i+j-1)%logscale=.false.
 				enddo
-c 				do j=1,nd2T
-c					RetPar(i+nd2T+j-1)%keyword='Pd2T' // trim(int2string(j,'(i0.3)'))
-c					RetPar(i+nd2T+j-1)%xmin=pmin
-c					RetPar(i+nd2T+j-1)%xmax=pmax
-c					RetPar(i+nd2T+j-1)%logscale=.true.
-c				enddo
 			endif
 		case("min","xmin")
 			read(key%value,*) RetPar(i)%xmin
