@@ -1338,7 +1338,41 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 
 
 
+
 	subroutine MakePTstruct(P,T,np,Pp,dTp_in,nT,T0)
+	IMPLICIT NONE
+	integer np,i,nT
+	real*8 P(np),T(np),Pp(nT),d2T(nT),dTp(nT),yp1,ypn,dT
+	real*8 logPp(nT),logTp(nT),logP(np),logT(np),T0,dTp_in(nT)
+
+	logPp=log(Pp)
+	dTp=dTp_in
+	call sortw(logPp,dTp,nT)
+
+	yp1=1d100
+	ypn=1d100
+	call spline(logPp,dTp,nT,yp1,ypn,d2T)
+
+	logP=log(P)
+	logT(np)=log(T0)
+	T(np)=T0
+	do i=np-1,1,-1
+		if(logP(i).lt.logPp(1)) then
+			dT=dTp(1)
+		else if(logP(i).gt.logPp(nT)) then
+			dT=dTp(nT)
+		else
+			call splint(logPp,dTp,d2T,nT,logP(i),dT)
+		endif
+		logT(i)=logT(i+1)+(logP(i)-logP(i+1))*dT
+		T(i)=exp(logT(i))
+	enddo
+	
+	return
+	end
+
+
+	subroutine MakePTstruct_weird(P,T,np,Pp,dTp_in,nT,T0)
 	IMPLICIT NONE
 	integer np,i,nT
 	real*8 P(np),T(np),Pp(nT),d2T(nT),dTp(nT)
