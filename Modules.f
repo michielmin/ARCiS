@@ -102,8 +102,7 @@ c===============================================================================
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Psimplecloud,metallicity0
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid
 	logical didcondens_chem,coagulation,resume_multinest,doMCcompute,disequilibrium,const_eff_multinest
-	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file
-	character*500 parametergridfile
+	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file,pargridfile
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
 	real*8 mixratHaze,PHaze,dPHaze,kappaHaze,Kzz,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,powvxx,night2day
 	real*8 Kzz_deep,Kzz_1bar,Kzz_P,Kzz_max,SOratio,Tsurface,hotspotshift0
@@ -279,9 +278,9 @@ c for exchange when computing secondary atmosphere
 		real*8 coverage,frain
 		real*8,allocatable :: rv(:),w(:),M(:)					! dimension nsize
 		real*8,allocatable :: frac(:,:),sigma(:)
-		real*8 rho,amin,amax,fmax,porosity,fcarbon,reff,veff
+		real*8 rho,amin,amax,fmax,porosity,reff,veff
 		logical blend,haze,condensates
-		real*8 fcond,mixrat,tau,lam
+		real*8 fcond,mixrat,tau,lam,mixrathaze
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
 		character*500 file,Kzzfile
 		character*20 standard,ptype,type
@@ -291,7 +290,9 @@ c for exchange when computing secondary atmosphere
 		real*8 tmix,betamix,Kzz,Kscale,Sigmadot
 c simple cloud from Jo
 		real*8 ff,g1,g2,kappa,albedo,kappa_haze,albedo_haze
-		logical simplecloud
+		logical simplecloud,simplecloudpart
+		real*8 fRutile,fForsterite,fSiO,fSiO2,fIron,fCorrundum,fFeO,fMgO,fEnstatite,fCarbon,fSiC,fWater
+c			   1,2,3,  4,5,6,      7,   8,    9,    10,        11,  12,  13,14,15,  16,     17,  18
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 

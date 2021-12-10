@@ -136,57 +136,55 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 
 	if(emisspec) then
 
-	if(.not.domakeai) then
-		if(nphase.le.310) then
-			filename=trim(outputdir) // "phase" // trim(side)
-			call output("Writing spectrum to: " // trim(filename))
-			open(unit=30,file=filename,RECL=6000)
-			form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
+	if(nphase.le.310) then
+		filename=trim(outputdir) // "phase" // trim(side)
+		call output("Writing spectrum to: " // trim(filename))
+		open(unit=30,file=filename,RECL=6000)
+		form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         fstar [Jy]")'
-			write(30,form) "lambda [mu]",theta(1:nphase)
-			form='(f14.6,' // int2string(nphase+2,'(i3)') // 'es19.7E3)'
-			do i=1,nlam_out
-				if(lamemis(i)) then
-				write(30,form) lam_out(i),
+		write(30,form) "lambda [mu]",theta(1:nphase)
+		form='(f14.6,' // int2string(nphase+2,'(i3)') // 'es19.7E3)'
+		do i=1,nlam_out
+			if(lamemis(i)) then
+			write(30,form) lam_out(i),
      &					phase(1:nphase,0,i)+flux(0,i),
      &					Fstar(i)*1d23/distance**2,
      &					(pi*Rplanet**2)*Fstar(i)*1d23/distance**2/(4d0*Dplanet**2)
-				endif
-			enddo
-			close(unit=30)
-		endif
+			endif
+		enddo
+		close(unit=30)
+	endif
 
-		if(nlam.lt.350) then
-			allocate(specR(nlam))
-			filename=trim(outputdir) // "phasecurve" // trim(side)
-			call output("Writing phasecurve to: " // trim(filename))
-			open(unit=30,file=filename,RECL=6000)
-			form='("#",a13,' // '"       fint [Jy]",'// trim(int2string(nlam_out,'(i4)')) // 
+	if(nlam.lt.350) then
+		allocate(specR(nlam))
+		filename=trim(outputdir) // "phasecurve" // trim(side)
+		call output("Writing phasecurve to: " // trim(filename))
+		open(unit=30,file=filename,RECL=6000)
+		form='("#",a13,' // '"       fint [Jy]",'// trim(int2string(nlam_out,'(i4)')) // 
      &				 '("      F(",es8.1E3,")"),"      fstar [Jy]")'
-			write(30,form) "lambda [mu]",lam(1:nlam_out)
-			form='(f14.6,' // int2string(nlam+1,'(i3)') // 'es17.9E3)'
-			do i=1,nphase
-				specR(1:nlam_out)=Fstar(1:nlam_out)*1d23/distance**2
-				if(sin(pi-pi*theta(i)/180d0).lt.(Rstar/Dplanet)) then
-					if(theta(i).lt.90d0) then
-						specR(1:nlam_out)=((pi*Rstar**2-obsA(0,1:nlam_out))/(pi*Rstar**2))*Fstar(1:nlam_out)*1d23/distance**2
-					endif
+		write(30,form) "lambda [mu]",lam(1:nlam_out)
+		form='(f14.6,' // int2string(nlam+1,'(i3)') // 'es17.9E3)'
+		do i=1,nphase
+			specR(1:nlam_out)=Fstar(1:nlam_out)*1d23/distance**2
+			if(sin(pi-pi*theta(i)/180d0).lt.(Rstar/Dplanet)) then
+				if(theta(i).lt.90d0) then
+					specR(1:nlam_out)=((pi*Rstar**2-obsA(0,1:nlam_out))/(pi*Rstar**2))*Fstar(1:nlam_out)*1d23/distance**2
 				endif
-				if(sin(pi*theta(i)/180d0).gt.(Rstar/Dplanet).or.theta(i).lt.90d0) then
-					specR(1:nlam_out)=specR(1:nlam_out)+phase(i,0,1:nlam_out)+flux(0,1:nlam_out)
-				endif
-				x=0d0
-				tot=0d0
-				do j=1,nlam_out
-					x=x+dfreq(j)*specR(j)
-					tot=tot+dfreq(j)
-				enddo
-				x=x/tot
-				write(30,form) theta(i),x,specR(1:nlam_out),Fstar(i)*1d23/distance**2
+			endif
+			if(sin(pi*theta(i)/180d0).gt.(Rstar/Dplanet).or.theta(i).lt.90d0) then
+				specR(1:nlam_out)=specR(1:nlam_out)+phase(i,0,1:nlam_out)+flux(0,1:nlam_out)
+			endif
+			x=0d0
+			tot=0d0
+			do j=1,nlam_out
+				x=x+dfreq(j)*specR(j)
+				tot=tot+dfreq(j)
 			enddo
-			close(unit=30)
-			deallocate(specR)
-		endif
+			x=x/tot
+			write(30,form) theta(i),x,specR(1:nlam_out),Fstar(i)*1d23/distance**2
+		enddo
+		close(unit=30)
+		deallocate(specR)
 	endif
 
 	endif

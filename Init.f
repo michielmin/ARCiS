@@ -966,7 +966,7 @@ c			read(key%value,*) ndT
 		case("makeai")
 			read(key%value,*) domakeai
 		case("parametergridfile")
-			read(key%value,*) parametergridfile
+			pargridfile=key%value
 		case("pew","postequalweights")
 			read(key%value,*) dopostequalweights
 		case("mapcoratio")
@@ -1281,7 +1281,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	integer i
 	character*100 homedir
 	
-	parametergridfile=" "
+	pargridfile=" "
 	idum0=42
 	randomseed=.true.
 
@@ -1452,11 +1452,23 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%species=''
 		Cloud(i)%haze=.false.
 		Cloud(i)%hazetype='SOOT'
-		Cloud(i)%fHazeSiO=0d0
+		Cloud(i)%fHazeSiO=1d-10
 		Cloud(i)%fHazeTiO2=0d0
 		Cloud(i)%fHazeAl2O3=0d0
 		Cloud(i)%fHazeFe=0d0
 		Cloud(i)%fHazeTholin=0d0
+		Cloud(i)%fRutile=0d0
+		Cloud(i)%fForsterite=0d0
+		Cloud(i)%fSiO=0d0
+		Cloud(i)%fSiO2=0d0
+		Cloud(i)%fIron=0d0
+		Cloud(i)%fCorrundum=0d0
+		Cloud(i)%fFeO=0d0
+		Cloud(i)%fMgO=0d0
+		Cloud(i)%fEnstatite=1d-10
+		Cloud(i)%fCarbon=0d0
+		Cloud(i)%fSiC=0d0
+		Cloud(i)%fWater=0d0
 		Cloud(i)%condensates=.true.
 		Cloud(i)%tmix=300d0
 		Cloud(i)%betamix=2.2
@@ -1464,6 +1476,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%Kzz=-1d0
 		Cloud(i)%Sigmadot=1d-17
 		Cloud(i)%simplecloud=.false.
+		Cloud(i)%simplecloudpart=.false.
 		Cloud(i)%ff=0.9d0
 		Cloud(i)%g1=0.99d0
 		Cloud(i)%g2=-0.9d0
@@ -2033,6 +2046,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%condensates
 		case("mixrat")
 			read(key%value,*) Cloud(j)%mixrat
+		case("mixrathaze")
+			read(key%value,*) Cloud(j)%mixrathaze
 		case("fcond")
 			read(key%value,*) Cloud(j)%fcond
 		case("tmix")
@@ -2049,6 +2064,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%Sigmadot
 		case("simple")
 			read(key%value,*) Cloud(j)%simplecloud
+		case("simplepart")
+			read(key%value,*) Cloud(j)%simplecloudpart
 		case("f")
 			read(key%value,*) Cloud(j)%ff
 		case("g")
@@ -2072,6 +2089,32 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%fHazeAl2O3
 		case("fhazefe","fhazeiron")
 			read(key%value,*) Cloud(j)%fHazeFe
+		case("frutile")
+			read(key%value,*) Cloud(j)%fRutile
+		case("fforsterite")
+			read(key%value,*) Cloud(j)%fForsterite
+		case("fsio")
+			if(key%nr2.eq.2) then
+				read(key%value,*) Cloud(j)%fSiO2
+			else
+				read(key%value,*) Cloud(j)%fSiO
+			endif
+		case("firon")
+			read(key%value,*) Cloud(j)%fIron
+		case("fcorrundum")
+			read(key%value,*) Cloud(j)%fCorrundum
+		case("ffeo")
+			read(key%value,*) Cloud(j)%fFeO
+		case("fmgo")
+			read(key%value,*) Cloud(j)%fMgO
+		case("fenstatite")
+			read(key%value,*) Cloud(j)%fEnstatite
+c		case("fcarbon")
+c			read(key%value,*) Cloud(j)%fCarbon
+		case("fsic")
+			read(key%value,*) Cloud(j)%fSiC
+		case("fwater")
+			read(key%value,*) Cloud(j)%fWater
 		case("type")
 			Cloud(j)%type=trim(key%value)
 		case default
@@ -2122,24 +2165,71 @@ c-----------------------------------------------------------------------
 				endif
 			enddo
 		case("SIMPLE")
-			Cloud(ii)%Kabs(1:nr,1:nlam)=0d0
-			Cloud(ii)%Ksca(1:nr,1:nlam)=0d0
-			Cloud(ii)%Kext(1:nr,1:nlam)=0d0
-			do is=1,nr
-				cloud_dens(is,ii)=dens(is)
-				if(P(is).ge.Cloud(ii)%P) then
-					Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%kappa*(1d0-Cloud(ii)%albedo)
-					Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%kappa*Cloud(ii)%albedo
-					Cloud(ii)%Kext(is,1:nlam)=Cloud(ii)%kappa
-				endif
-				do ilam=1,nlam
-					kabs=Cloud(ii)%kappa_haze*(1d0-Cloud(ii)%albedo_haze)/(lam(ilam)*1d4)
-					ksca=Cloud(ii)%kappa_haze*Cloud(ii)%albedo_haze/(lam(ilam)*1d4)**4
-					Cloud(ii)%Kabs(is,ilam)=Cloud(ii)%Kabs(is,ilam)+kabs
-					Cloud(ii)%Ksca(is,ilam)=Cloud(ii)%Ksca(is,ilam)+ksca
-					Cloud(ii)%Kext(is,ilam)=Cloud(ii)%Kext(is,ilam)+ksca+kabs
+			if(Cloud(ii)%simplecloudpart) then
+c compute cloud particles
+				computelamcloud=.true.
+				is=1
+				Cloud(ii)%frac(is,1:3)=Cloud(ii)%fRutile/3d0
+				Cloud(ii)%frac(is,4:6)=Cloud(ii)%fForsterite/3d0
+				Cloud(ii)%frac(is,7)=Cloud(ii)%fSiO
+				Cloud(ii)%frac(is,8)=Cloud(ii)%fSiO2
+				Cloud(ii)%frac(is,9)=Cloud(ii)%fIron
+				Cloud(ii)%frac(is,10)=Cloud(ii)%fCorrundum
+				Cloud(ii)%frac(is,11)=Cloud(ii)%fFeO
+				Cloud(ii)%frac(is,12)=Cloud(ii)%fMgO
+				Cloud(ii)%frac(is,13:15)=Cloud(ii)%fEnstatite/3d0
+				Cloud(ii)%frac(is,16)=Cloud(ii)%fCarbon
+				Cloud(ii)%frac(is,17)=Cloud(ii)%fSiC
+				Cloud(ii)%frac(is,18)=Cloud(ii)%fWater
+				Cloud(ii)%frac(is,19)=0d0
+				Cloud(ii)%rv(is)=Cloud(ii)%reff
+				Cloud(ii)%sigma(is)=1d-10
+				call ComputePart(Cloud(ii),ii,is,computelamcloud)
+				computelamcloud=.true.
+				is=nr
+				Cloud(ii)%hazetype='MIX'
+				Cloud(ii)%frac(is,1:18)=0d0
+				Cloud(ii)%frac(is,19)=1d0
+				Cloud(ii)%rv(is)=r_nuc*1d4
+				Cloud(ii)%sigma(is)=1d-10
+				call ComputePart(Cloud(ii),ii,is,computelamcloud)
+
+				cloud_dens(1,ii)=dens(1)*Cloud(ii)%mixrat
+				cloud_dens(nr,ii)=dens(nr)*Cloud(ii)%mixrathaze
+				Cloud(ii)%Kabs(1,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze
+				Cloud(ii)%Ksca(1,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze
+				do is=2,nr-1
+					if(P(is).ge.Cloud(ii)%P) then
+						cloud_dens(is,ii)=dens(is)
+						Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)
+						Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)
+					else
+						cloud_dens(is,ii)=dens(is)*Cloud(ii)%mixrathaze
+						Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%Kabs(nr,1:nlam)
+						Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(nr,1:nlam)
+					endif
+					Cloud(ii)%Kext(is,1:nlam)=Cloud(ii)%Kabs(is,1:nlam)+Cloud(ii)%Ksca(is,1:nlam)
 				enddo
-			enddo
+			else
+				Cloud(ii)%Kabs(1:nr,1:nlam)=0d0
+				Cloud(ii)%Ksca(1:nr,1:nlam)=0d0
+				Cloud(ii)%Kext(1:nr,1:nlam)=0d0
+				do is=1,nr
+					cloud_dens(is,ii)=dens(is)
+					if(P(is).ge.Cloud(ii)%P) then
+						Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%kappa*(1d0-Cloud(ii)%albedo)
+						Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%kappa*Cloud(ii)%albedo
+						Cloud(ii)%Kext(is,1:nlam)=Cloud(ii)%kappa
+					endif
+					do ilam=1,nlam
+						kabs=Cloud(ii)%kappa_haze*(1d0-Cloud(ii)%albedo_haze)/(lam(ilam)*1d4)
+						ksca=Cloud(ii)%kappa_haze*Cloud(ii)%albedo_haze/(lam(ilam)*1d4)**4
+						Cloud(ii)%Kabs(is,ilam)=Cloud(ii)%Kabs(is,ilam)+kabs
+						Cloud(ii)%Ksca(is,ilam)=Cloud(ii)%Ksca(is,ilam)+ksca
+						Cloud(ii)%Kext(is,ilam)=Cloud(ii)%Kext(is,ilam)+ksca+kabs
+					enddo
+				enddo
+			endif
 c		case("PARTFILE")
 c			call ReadParticle(Cloud(ii),ii)
 		case default

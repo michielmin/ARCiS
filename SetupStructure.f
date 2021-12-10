@@ -515,16 +515,16 @@ c			beta_used=max
 	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau,P_SI1,P_SI2,veff,frac(nr,10)
 	logical cl
 
+	if(.not.allocated(Cloud(ii)%rv)) then
+		allocate(Cloud(ii)%rv(nr))
+		allocate(Cloud(ii)%sigma(nr))
+	endif
 	if(Cloud(ii)%simplecloud) then
 		Cloud(ii)%ptype='SIMPLE'
 		call SetupPartCloud(ii)
 		Cloud(ii)%w=1d0
 		return
 	else if(cloudcompute) then
-		if(.not.allocated(Cloud(ii)%rv)) then
-			allocate(Cloud(ii)%rv(nr))
-			allocate(Cloud(ii)%sigma(nr))
-		endif
 		call DiffuseCloud(ii)
 		Cloud(ii)%rv=Cloud(ii)%rv*1d4
 		Cloud(ii)%sigma=1d-10
@@ -543,10 +543,6 @@ c			beta_used=max
 		if(useDRIFT) then
 		
 		call regridN(Cloud(ii)%file,P*1d6,frac,nr,2,9,10,4,.true.,.true.)
-		if(.not.allocated(Cloud(ii)%rv)) then
-			allocate(Cloud(ii)%rv(nr))
-			allocate(Cloud(ii)%sigma(nr))
-		endif
 		Cloud(ii)%frac(1:nr,1)=frac(1:nr,1)/3d0
 		Cloud(ii)%frac(1:nr,2)=frac(1:nr,1)/3d0
 		Cloud(ii)%frac(1:nr,3)=frac(1:nr,1)/3d0
@@ -579,10 +575,6 @@ c			beta_used=max
 		else
 
 		call regridN(Cloud(ii)%file,P,cloud_dens(1:nr,ii),nr,2,6,1,1,.false.,.false.)
-		if(.not.allocated(Cloud(ii)%rv)) then
-			allocate(Cloud(ii)%rv(nr))
-			allocate(Cloud(ii)%sigma(nr))
-		endif
 		call regridN(Cloud(ii)%file,P,Cloud(ii)%rv(1:nr),nr,2,5,1,1,.false.,.true.)
 
 

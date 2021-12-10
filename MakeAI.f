@@ -9,8 +9,9 @@
 	
 	write(outputdir0,'(a)') trim(outputdir)
 
-	if(parametergridfile.ne.' ') then
-		open(unit=53,file=parametergridfile,RECL=6000)
+	if(pargridfile.ne." ") then
+		print*,pargridfile
+		open(unit=53,file=pargridfile,RECL=6000)
 		usefile=.true.
 	else
 		usefile=.false.
@@ -251,8 +252,9 @@ c	linear/squared
 			write(20,'(a15," = ",es14.7)') trim(RetPar(i)%keyword),RetPar(i)%value
 		endif
 	enddo
-	if(.not.dochemistry) then
-		write(20,'(a15," = ",es14.7)') 'COratio',COret
+	if(.not.dochemistry.or.planetform) then
+		write(20,'(a15," = ",es14.7)') 'COratio',COratio
+		write(20,'(a15," = ",es14.7)') 'metallicity',metallicity
 	endif
 	if(mapCOratio) then
 		do i=1,nmol
