@@ -209,8 +209,6 @@ c===============================================================================
 	j=0
 	mixratfile=.false.
 	fcloud_default=1d0
-	Pmin=1d-6
-	Pmax=1d+3
 
 	i2d=0
 
@@ -267,10 +265,6 @@ c===============================================================================
 				read(key%value,*) mixratfile
 			case("diseq")
 				read(key%value,*) disequilibrium
-			case("pmin")
-				read(key%value,*) pmin
-			case("pmax")
-				read(key%value,*) pmax
 			case("tpfile")
 				read(key%value,'(a)') TPfile
 			case("cloud")
@@ -283,7 +277,7 @@ c				if(key%nr1.eq.0) key%nr1=1
 				if(key%key2.eq.'keyword') then
 					if(key%value.eq.'tprofile') then
 						free_tprofile=.true.
-						n_ret=n_ret+ndT+(ndT-2)
+						n_ret=n_ret+ndT
 					else
 						n_ret=n_ret+1
 					endif
@@ -665,6 +659,10 @@ c	condensates=(condensates.or.cloudcompute)
 	endif
 
 	if(planetform) call InitFormation(Mstar)
+
+	do i=1,ndT
+		PdT(i)=exp(log(Pmax)+log(Pmin/Pmax)*real(i-1)/real(ndT-1))
+	enddo
 		
 	return
 	end
@@ -739,11 +737,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) lam1
 		case("lmax")
 			read(key%value,*) lam2
-c both already set in countstuff
 		case("pmin")
-c			read(key%value,*) pmin
+			read(key%value,*) pmin
 		case("pmax")
-c			read(key%value,*) pmax
+			read(key%value,*) pmax
 		case("pcloud","psimplecloud")
 			read(key%value,*) psimplecloud
 		case("tmin")
@@ -925,8 +922,8 @@ c			read(key%value,*) pmax
 			read(key%value,*) retrievaltype
 		case("dt")
 			read(key%value,*) dT(key%nr1)
-		case("pdt")
-			read(key%value,*) PdT(key%nr1)
+c		case("pdt")
+c			read(key%value,*) PdT(key%nr1)
 		case("ndt","nfreet")
 c is already set in CountStuff
 c			read(key%value,*) ndT
@@ -1374,9 +1371,6 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Tin=0d0
 
 	dT=0d0
-	do i=1,ndT
-		PdT(i)=exp(log(Pmax)+log(Pmin/Pmax)*real(i-1)/real(ndT-1))
-	enddo
 
 	starfile=' '
 	
@@ -1537,6 +1531,9 @@ c		Cloud(i)%P=0.0624d0
 	TeffP=600d0
 	outputopacity=.false.
 
+	Pmin=1d-6
+	Pmax=1d+3
+
 	call getenv('HOME',homedir) 
 
 	planetparameterfile=trim(homedir) // '/ARCiS/Data/allplanets-ascii.txt'
@@ -1637,7 +1634,7 @@ c number of cloud/nocloud combinations
 			read(key%value,*) RetPar(i)%keyword
 			if(RetPar(i)%keyword.eq.'tprofile') then
  				free_tprofile=.true.
-				n_ret=n_ret+ndT-1+(ndT-2)
+				n_ret=n_ret+ndT-1
  				do j=1,ndT
 					RetPar(i+j-1)%keyword='dT' // trim(int2string(j,'(i0.3)'))
 					if(j.eq.1) then
@@ -1647,12 +1644,6 @@ c number of cloud/nocloud combinations
 					endif
 					RetPar(i+j-1)%xmax=2d0/7d0
 					RetPar(i+j-1)%logscale=.false.
-				enddo
- 				do j=2,ndT-1
-					RetPar(i+j-1+ndT-1)%keyword='PdT' // trim(int2string(j,'(i0.3)'))
-					RetPar(i+j-1+ndT-1)%xmin=1.0001*exp(log(Pmax)+log(Pmin/Pmax)*real(j-1)/real(ndT-2))
-					RetPar(i+j-1+ndT-1)%xmax=0.999*exp(log(Pmax)+log(Pmin/Pmax)*real(j-2)/real(ndT-2))
-					RetPar(i+j-1+ndT-1)%logscale=.true.
 				enddo
 			endif
 		case("min","xmin")

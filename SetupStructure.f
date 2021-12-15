@@ -1339,18 +1339,7 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 
 	logPp=log(Pp)
 	dTp=dTp_in
-1	call sortw(logPp,dTp,nT)
-	do i=1,nT-1
-		if(logPp(i).eq.logPp(i+1)) then
-			if(i.eq.1) then
-				logPp(i+1)=logPp(i+2)*0.01+logPp(i+1)*0.99
-			else
-				logPp(i)=logPp(i-1)*0.01+logPp(i)*0.99
-			endif
-			goto 1
-		endif
-	enddo
-			
+	call sortw(logPp,dTp,nT)
 
 	yp1=1d100
 	ypn=1d100
@@ -1366,13 +1355,11 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 			dT=dTp(nT)
 		else
 			call splint(logPp,dTp,d2T,nT,logP(i),dT)
-			if(dT.gt.2d0/7d0) dT=2d0/7d0
-			if(dT.lt.-2d0/7d0) dT=-2d0/7d0
 		endif
 		logT(i)=logT(i+1)+(logP(i)-logP(i+1))*dT
 		T(i)=exp(logT(i))
 	enddo
-
+	
 	return
 	end
 
