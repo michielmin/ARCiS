@@ -587,7 +587,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		endif
 	enddo
 
-	do ir=j,nr-1
+	do ir=j,nr
 		dlnP=log(P(ir)/P(ir-1))
 		dlnT=log(Ts(ir)/Ts(ir-1))
 		if((dlnT/dlnP).gt.nabla_ad(ir)) then
@@ -619,7 +619,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		endif
 	enddo
 
-	do ir=j,nr-1
+	do ir=j,nr
 		dlnP=log(P(ir)/P(ir-1))
 		dlnT=log(T(ir)/T(ir-1))
 		if((dlnT/dlnP).gt.nabla_ad(ir)) then

@@ -439,6 +439,7 @@ c changed this to mass fractions (11-05-2010)
 		allocate(e1d(nlamdust))
 		allocate(e2d(nlamdust))
 		frac(1:nm)=C%frac(isize,1:nm)
+c Rutile: 1,2,3
 		i=i+1
 		filename(i)='Rutile_xy'
 		rho(i)=4.23
@@ -461,6 +462,7 @@ c changed this to mass fractions (11-05-2010)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
+c Forsterite: 4,5,6
 		i=i+1
 		filename(i)='Forsterite_X'
 		rho(i)=3.21
@@ -483,6 +485,7 @@ c changed this to mass fractions (11-05-2010)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
+c SiO: 7
 		i=i+1
 		filename(i)='SiO'
 		rho(i)=2.18
@@ -491,6 +494,7 @@ c changed this to mass fractions (11-05-2010)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
+c SiO2: 8
 		i=i+1
 		filename(i)='SiO2'
 		rho(i)=2.648
@@ -499,6 +503,7 @@ c changed this to mass fractions (11-05-2010)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
+c Iron: 9
 		i=i+1
 		filename(i)='Iron'
 		rho(i)=7.87
@@ -507,6 +512,7 @@ c changed this to mass fractions (11-05-2010)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
+c Al2O3: 10
 		i=i+1
 		filename(i)='Corrundum'
 		rho(i)=3.97
@@ -515,6 +521,7 @@ c changed this to mass fractions (11-05-2010)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
+c FeO: 11
 		i=i+1
 		filename(i)='FeO'
 		rho(i)=5.7
@@ -523,6 +530,7 @@ c changed this to mass fractions (11-05-2010)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
+c MgO:12
 		i=i+1
 		filename(i)='MgO'
 		rho(i)=3.58
@@ -531,6 +539,7 @@ c changed this to mass fractions (11-05-2010)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
+c Enstatite: 13,14,15
 		i=i+1
 		filename(i)='Enstatite_X'
 		rho(i)=3.19
@@ -553,6 +562,7 @@ c changed this to mass fractions (11-05-2010)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
+c Carbon: 16
 		i=i+1
 		filename(i)='Carbon_BE_Zubko1996'
 		rho(i)=1.80
@@ -561,6 +571,7 @@ c changed this to mass fractions (11-05-2010)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
+c SiC: 17
 		i=i+1
 		filename(i)='SiC'		! Laor & Draine 1993
 		rho(i)=3.22
@@ -569,6 +580,7 @@ c changed this to mass fractions (11-05-2010)
 		e1(i,1:nlamdust)=e1d(1:nlamdust)
 		e2(i,1:nlamdust)=e2d(1:nlamdust)
 
+c H2O: 18
 		i=i+1
 		filename(i)='Water'
 		rho(i)=1.00
@@ -634,12 +646,15 @@ c changed this to mass fractions (11-05-2010)
 				frac(14)=frac(14)+frac(i)/rho(i)/3d0
 				frac(15)=frac(15)+frac(i)/rho(i)/3d0
 			case("MIX")
-				tot=C%fHazeSiO+C%fHazeAl2O3+C%fHazeTiO2+C%fHazeTholin+C%fHazeFe
+				tot=C%fHazeSiO+C%fHazeAl2O3+C%fHazeTiO2+C%fHazeTholin+C%fHazeFe+C%fHazeEnstatite+C%fHazeForsterite+C%fHazeSiO2
 				C%fHazeSiO=C%fHazeSiO/tot
 				C%fHazeAl2O3=C%fHazeAl2O3/tot
 				C%fHazeTiO2=C%fHazeTiO2/tot
 				C%fHazeTholin=C%fHazeTholin/tot
 				C%fHazeFe=C%fHazeFe/tot
+				C%fHazeEnstatite=C%fHazeEnstatite/tot
+				C%fHazeForsterite=C%fHazeForsterite/tot
+				C%fHazeSiO2=C%fHazeSiO2/tot
 				i=i+1
 
 				rho(i)=3.97
@@ -651,10 +666,23 @@ c changed this to mass fractions (11-05-2010)
 				rho(i)=2.18
 				frac(7)=frac(7)+C%fHazeSiO*frac(i)/rho(i)
 
+				rho(i)=2.648
+				frac(8)=frac(8)+C%fHazeSiO2*frac(i)/rho(i)
+
 				rho(i)=4.23
 				frac(1)=frac(1)+C%fHazeTiO2*frac(i)/rho(i)/3d0
 				frac(2)=frac(2)+C%fHazeTiO2*frac(i)/rho(i)/3d0
 				frac(3)=frac(3)+C%fHazeTiO2*frac(i)/rho(i)/3d0
+
+				rho(i)=3.19
+				frac(13)=frac(13)+C%fHazeEnstatite*frac(i)/rho(i)/3d0
+				frac(14)=frac(14)+C%fHazeEnstatite*frac(i)/rho(i)/3d0
+				frac(15)=frac(15)+C%fHazeEnstatite*frac(i)/rho(i)/3d0
+
+				rho(i)=3.21
+				frac(4)=frac(4)+C%fHazeForsterite*frac(i)/rho(i)/3d0
+				frac(5)=frac(5)+C%fHazeForsterite*frac(i)/rho(i)/3d0
+				frac(6)=frac(6)+C%fHazeForsterite*frac(i)/rho(i)/3d0
 
 				filename(i)='Tholin'
 				rho(i)=1.00
@@ -662,6 +690,8 @@ c changed this to mass fractions (11-05-2010)
 				frac(i)=C%fHazeTholin*frac(i)/rho(i)
 				e1(i,1:nlamdust)=e1d(1:nlamdust)
 				e2(i,1:nlamdust)=e2d(1:nlamdust)
+				rho(i)=1d0/(C%fHazeSiO/2.18+C%fHazeAl2O3/3.97+C%fHazeTiO2/4.23+C%fHazeTholin/1.0+
+     &					C%fHazeFe/7.87+C%fHazeEnstatite/3.19+C%fHazeForsterite/3.21+C%fHazeSiO2/2.648)
 			case default
 				call output("hazetype unknown")
 				stop

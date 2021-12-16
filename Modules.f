@@ -286,6 +286,7 @@ c for exchange when computing secondary atmosphere
 		character*20 standard,ptype,type
 		character*500 species,hazetype
 		real*8 fHazeSiO,fHazeTiO2,fHazeTholin,fHazeAl2O3,fHazeFe
+		real*8 fHazeEnstatite,fHazeForsterite,fHazeSiO2
 		integer nr,nsubgrains
 		real*8 tmix,betamix,Kzz,Kscale,Sigmadot
 c simple cloud from Jo

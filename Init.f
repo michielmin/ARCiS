@@ -1457,6 +1457,9 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%fHazeAl2O3=0d0
 		Cloud(i)%fHazeFe=0d0
 		Cloud(i)%fHazeTholin=0d0
+		Cloud(i)%fHazeEnstatite=0d0
+		Cloud(i)%fHazeForsterite=0d0
+		Cloud(i)%fHazeSiO2=0d0
 		Cloud(i)%fRutile=0d0
 		Cloud(i)%fForsterite=0d0
 		Cloud(i)%fSiO=0d0
@@ -2080,7 +2083,11 @@ c number of cloud/nocloud combinations
 		case("albedo_haze")
 			read(key%value,*) Cloud(j)%albedo_haze
 		case("fhazesio")
-			read(key%value,*) Cloud(j)%fHazeSiO
+			if(key%nr2.eq.2) then
+				read(key%value,*) Cloud(j)%fHazeSiO2
+			else
+				read(key%value,*) Cloud(j)%fHazeSiO
+			endif
 		case("fhazetholin")
 			read(key%value,*) Cloud(j)%fHazeTholin
 		case("fhazetio","fhazerutile")
@@ -2089,6 +2096,10 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%fHazeAl2O3
 		case("fhazefe","fhazeiron")
 			read(key%value,*) Cloud(j)%fHazeFe
+		case("fhazeenstatite")
+			read(key%value,*) Cloud(j)%fHazeEnstatite
+		case("fhazeforsterite")
+			read(key%value,*) Cloud(j)%fHazeForsterite
 		case("frutile")
 			read(key%value,*) Cloud(j)%fRutile
 		case("fforsterite")
@@ -2194,22 +2205,23 @@ c compute cloud particles
 				Cloud(ii)%sigma(is)=1d-10
 				call ComputePart(Cloud(ii),ii,is,computelamcloud)
 
-				cloud_dens(1,ii)=dens(1)*Cloud(ii)%mixrat
-				cloud_dens(nr,ii)=dens(nr)*Cloud(ii)%mixrathaze
-				Cloud(ii)%Kabs(1,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze
-				Cloud(ii)%Ksca(1,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze
+				cloud_dens(1:nr,ii)=dens(1:nr)
 				do is=2,nr-1
 					if(P(is).ge.Cloud(ii)%P) then
-						cloud_dens(is,ii)=dens(is)
-						Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)
-						Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)
+						Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat
+						Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat
 					else
-						cloud_dens(is,ii)=dens(is)*Cloud(ii)%mixrathaze
-						Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%Kabs(nr,1:nlam)
-						Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(nr,1:nlam)
+						Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat
+     &								*exp(-(log(P(is)/Cloud(ii)%P)/log(Cloud(ii)%dP))**2)
+						Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat
+     &								*exp(-(log(P(is)/Cloud(ii)%P)/log(Cloud(ii)%dP))**2)
 					endif
+					Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%Kabs(is,1:nlam)+Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze
+					Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(is,1:nlam)+Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze
 					Cloud(ii)%Kext(is,1:nlam)=Cloud(ii)%Kabs(is,1:nlam)+Cloud(ii)%Ksca(is,1:nlam)
 				enddo
+				Cloud(ii)%Kabs(1,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze
+				Cloud(ii)%Ksca(1,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze
 			else
 				Cloud(ii)%Kabs(1:nr,1:nlam)=0d0
 				Cloud(ii)%Ksca(1:nr,1:nlam)=0d0
