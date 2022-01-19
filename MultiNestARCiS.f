@@ -50,7 +50,7 @@
 	real*8 var(nvars),chi2obs(nobs),error(2,nvars),lnew,scale
 	real*8,allocatable :: spec(:)
 	logical recomputeopac
-	real*16 tot,xx
+	real*8 tot
 
 	k=0
 	do i=1,nobs

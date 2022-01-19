@@ -94,6 +94,7 @@ c terms of use
 	call cpu_time(starttime)
 	Tconverged=.false.
 	nTiter=0
+	fiter=1d0
 	if(computeT.and.computeopac) then
 		nldtemp=nlamdust
 		srdtemp=specresdust
@@ -136,6 +137,7 @@ c terms of use
 			f=max(min(1d0/real(nTiter+1)+0.2d0,1d0),1d-2)
 c			f=0.9
 c			if(nTiter.ge.4) f=1d0/real(nTiter-2)**0.5+0.1
+			fiter=f
 			call DoComputeT(Tconverged,f)
 			par_tprofile=.false.
 			nTiter=nTiter+1

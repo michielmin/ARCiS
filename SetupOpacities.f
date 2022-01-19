@@ -15,7 +15,7 @@
 	IMPLICIT NONE
 	integer imol
 	real*8 nu1,nu2,tanscale,ll,tot,tot2
-	real*16 kross,kplanck
+	real*8 kross,kplanck
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime,cwg(ng),w1
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:),mixrat_tmp(:),w_line(:),kappa(:)
 	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:),ktemp(:),kappa_tot(:,:)
@@ -326,9 +326,9 @@ c============================
 	use Constants
 	IMPLICIT NONE
 	integer i,ilam,ig,imol
-	real*16 kross,kplanck,c1,c2
+	real*8 kross,kplanck,c1,c2
 	real*8 Planck,dPlanck
-	real*16 nu1,nu2,s1,s2,tross,tplanck,bb1,bb2,dbb1,dbb2
+	real*8 nu1,nu2,s1,s2,tross,tplanck,bb1,bb2,dbb1,dbb2
 	
 	kross=0d0
 	kplanck=0d0

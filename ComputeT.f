@@ -150,7 +150,7 @@
 	
 	niter=50
 	nscat=10
-	epsiter=1d-3
+	epsiter=1d-2
 
 	must=betaT
 	if(i2d.ne.0) then

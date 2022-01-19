@@ -779,7 +779,8 @@ c end the loop
 
 	k=1
 	do i=1,nr
-		cloud_dens(i,ii)=0d0
+		cloud_dens(i,ii)=cloud_dens(i,ii)*(1d0-fiter)/fiter!0d0
+		if(nTiter.eq.0) cloud_dens(i,ii)=0d0
 		Cloud(ii)%rv(i)=0d0
 		Cloud(ii)%frac(i,1:19)=1d-200
 		do j=1,nr_cloud
@@ -860,6 +861,8 @@ CCloud(ii)%frac(i,17)=0d0
 		enddo
 		tot=sum(Cloud(ii)%frac(i,1:19))
 		Cloud(ii)%frac(i,1:19)=Cloud(ii)%frac(i,1:19)/tot
+
+		cloud_dens(i,ii)=cloud_dens(i,ii)*fiter
 	enddo
 
 	if(.not.retrieval) then

@@ -675,8 +675,8 @@ c use Ackerman & Marley 2001 cloud computation
 	veff=Cloud(ii)%veff
 1	tot=0d0
 	do i=1,Cloud(ii)%nr
-		Cloud(ii)%w(i)=(1q4*Cloud(ii)%rv(i))**(1q0+(1q0-3q0*veff)/veff)*
-     &					exp(-1q0*Cloud(ii)%rv(i)/(Cloud(ii)%reff*veff))
+		Cloud(ii)%w(i)=(1d4*Cloud(ii)%rv(i))**(1d0+(1d0-3d0*veff)/veff)*
+     &					exp(-1d0*Cloud(ii)%rv(i)/(Cloud(ii)%reff*veff))
 		Cloud(ii)%w(i)=Cloud(ii)%w(i)*Cloud(ii)%rv(i)**3
 		tot=tot+Cloud(ii)%w(i)
 	enddo

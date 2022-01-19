@@ -547,7 +547,6 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	IMPLICIT NONE
 	integer ny,i
 	real*8 ymod(ny),var(n_ret),chi2,scale
-	real*16 x
 
 	call mrqcomputeY(var,ymod,n_ret,ny,chi2,scale)
 	amoebafunk=chi2
@@ -564,7 +563,6 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars),spectemp(nlam),specsave(nobs,nlam)
 	real*8,allocatable :: spec(:),allspec(:,:)
 	logical recomputeopac,truefalse,doscaleR2
-	real*16 x
 	real*8 xx,xy,scale
 	character*100 command
 

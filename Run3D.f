@@ -311,6 +311,11 @@ c	enddo
 		endif
 		if(.not.retrieval) call SetOutputMode(.true.)
 		call tellertje_perc(i,n3D)
+		open(unit=20,file=trim(outputdir) // "mixrat" // trim(int2string(i,'(i0.3)')),RECL=6000)
+		do j=1,nr
+			write(20,*) T(j),P(j)
+		enddo
+		close(unit=20)
 	enddo
 	Rmax=Rmax*1.001
 	R3D(1:n3D,nr+2)=Rmax
