@@ -104,7 +104,7 @@
 	call SetOutputMode(.true.)
 
 	call InitDens()
-	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
+	call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
 	Fstar=Fstar*pi*Rstar**2
 	call SetOutputMode(.false.)
 	call ComputeModel(.true.)

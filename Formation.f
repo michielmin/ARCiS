@@ -84,6 +84,7 @@ c===============================================================================
 	IMPLICIT NONE
 	character*10 el_name(100),dummy
 	real*8 el_abun(100),gasmass,dustmass,planetmass,const
+	real*8 const2,r1,r2
 	integer n_el,i,j,k
 	logical infile(100)
 	mu=2.5
@@ -144,7 +145,13 @@ c dtg precalculated, Nr_disk = regions
 
 		const = (3.*mu*mp*kappa_r)/(128.*pi**2.*alpha_disk*kb*sigma)
 		const = const*d2g_T
-		R_disk(i) = ((const*M_acc**2/T_disk(i)**5)**(2./3)*Ggrav*Mstar)**(1./3)
+      const2 = 150.*(Lstar/Lsun)**(2./7)*(Mstar/Msun)**(-1./7)*(1/AU)**(-3./7)
+      r1 = ((const*M_acc**2/T_disk(i)**5)**(2./3)*Ggrav*Mstar)**(1./3)
+      r2 = (const2/T_disk(i))**(7./3)
+		
+		
+		
+		R_disk(i) = max(r1,r2)
 	enddo
 		
 	return
@@ -157,7 +164,7 @@ c===============================================================================
 c===================================================================================
 c Main subroutine computing the formation of the atmosphere during accretion
 c===================================================================================
-	subroutine Formation(Mplanet,Mcore,Rstart,Rend,f_dust,f_planet,flag_converge)
+	subroutine Formation(Mplanet,Mcore,Rstart,Rend,f_dust,f_planet,flag_converge)!,Mtot,R,alpha_d)
 	use FormationModule
 	use Constants
 	use AtomsModule
@@ -213,7 +220,7 @@ c				- Mtot
 c				alpha_d has a good value
 				flag_converge = .true.
 				exit
-		else if (j.lt.counter) then
+		else if ((j+1).lt.counter) then
 			if(Mtot.gt.Mplanet) then
 c				Adjust accretion to go faster
 				alpha_d_min = alpha_d
@@ -285,11 +292,13 @@ c===============================================================================
 	use Constants
 	IMPLICIT NONE
 	real*8 R,alpha_d,Mtot,surfacedens,drdt,dMdt,Rhill
-	real*8 T_local,Cs,scalehight,ang_v
+	real*8 T_local,Cs,scalehight,ang_v,T_irr,T_vis
 	real*8 const
 	integer izone
 	const=(3.*mu*mp*kappa_r*d2g_T)/(128.*pi**(2.)*alpha_disk*kb*sigma)
-	T_local = (const*M_acc**2*(Ggrav*Mstar/R**3)**(3./2))**(1./5)
+	T_vis = (const*M_acc**2*(Ggrav*Mstar/R**3)**(3./2))**(1./5)
+	T_irr = 150.*(Lstar/Lsun)**(2./7)*(Mstar/Msun)**(-1./7)*(r/AU)**(-3./7)
+	T_local =max(T_irr,T_vis)
 	Cs =(kb*T_local/(mu*mp))**(1./2)
 	ang_v = (Ggrav*Mstar/R**3.)**(1./2)
 	scalehight=Cs/ang_v

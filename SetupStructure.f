@@ -35,7 +35,7 @@
 	if(par_tprofile.or.(computeT.and.nTiter.eq.0)) call ComputeParamT(T)
 	if(free_tprofile) then
 		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
-		call MakePTstruct(P,T,nr,PdT,dT,ndT,Tc)
+		call MakePTstruct(P,T,nr,Ppoint,Tpoint,nTpoints)
 	endif
 
 	call SetAbun
@@ -150,7 +150,7 @@ c			if(domakeai.or.retrieval) return
 	if(par_tprofile.or.(computeT.and.nTiter.eq.0)) call ComputeParamT(T)
 	if(free_tprofile) then
 		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
-		call MakePTstruct(P,T,nr,PdT,dT,ndT,Tc)
+		call MakePTstruct(P,T,nr,Ppoint,Tpoint,nTpoints)
 	endif
 	do i=1,nr
 		if(T(i).gt.maxTprofile) T(i)=maxTprofile
@@ -405,17 +405,17 @@ c			beta_used=max
 		if(tau.lt.0d0) tau=0d0
 		x(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)
 		if(tau.lt.100d0) then
-			eta=2d0/3d0+(2d0/(3d0*gammaT1))*(1d0+(gammaT1*tau/2d0-1)*exp(-gammaT1*tau))
+			eta=2d0/3d0+(2d0/(3d0*gammaT1))*(1d0+(gammaT1*tau/2d0-1d0)*exp(-gammaT1*tau))
      &					+(2d0*gammaT1/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT1*tau)
 		else
-			eta=(2d0/3d0+1d0/(sqrt(3d0)*gammaT1)+(gammaT1/sqrt(3d0)-1d0/(sqrt(3d0)*gammaT1))*exp(-gammaT1*tau*sqrt(3d0)))
+			eta=2d0/3d0+(2d0/(3d0*gammaT1))
 		endif
 		x(i)=x(i)+(3d0*Tirr**4/4d0)*(1d0-alphaT)*eta
 		if(tau.lt.100d0) then
-			eta=2d0/3d0+(2d0/(3d0*gammaT2))*(1d0+(gammaT2*tau/2d0-1)*exp(-gammaT2*tau))
+			eta=2d0/3d0+(2d0/(3d0*gammaT2))*(1d0+(gammaT2*tau/2d0-1d0)*exp(-gammaT2*tau))
      &					+(2d0*gammaT2/3d0)*(1d0-tau**2/2d0)*expint(2,gammaT2*tau)
 		else
-			eta=(2d0/3d0+1d0/(sqrt(3d0)*gammaT2)+(gammaT2/sqrt(3d0)-1d0/(sqrt(3d0)*gammaT2))*exp(-gammaT2*tau*sqrt(3d0)))
+			eta=2d0/3d0+(2d0/(3d0*gammaT2))
 		endif
 		x(i)=x(i)+(3d0*Tirr**4/4d0)*alphaT*eta
 		x(i)=x(i)**0.25d0
@@ -1331,7 +1331,36 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 
 
 
-	subroutine MakePTstruct(P,T,np,Pp,dTp_in,nT,T0)
+	subroutine MakePTstruct(P,T,np,Pp,Tp_in,nT)
+	IMPLICIT NONE
+	integer np,i,nT
+	real*8 P(np),T(np),Pp(nT),d2T(nT),yp1,ypn
+	real*8 logPp(nT),logTp(nT),logP(np),logT(np),Tp_in(nT)
+
+	logPp=log(Pp)
+	logTp=log(Tp_in)
+	call sortw(logPp,logTp,nT)
+
+	yp1=1d100
+	ypn=1d100
+	call spline(logPp,logTp,nT,yp1,ypn,d2T)
+
+	logP=log(P)
+	do i=np,1,-1
+		if(logP(i).lt.logPp(1)) then
+			logT(i)=logTp(1)
+		else if(logP(i).gt.logPp(nT)) then
+			logT(i)=logTp(nT)
+		else
+			call splint(logPp,logTp,d2T,nT,logP(i),logT(i))
+		endif
+		T(i)=exp(logT(i))
+	enddo
+
+	return
+	end
+
+	subroutine MakePTstruct_dT(P,T,np,Pp,dTp_in,nT,T0)
 	IMPLICIT NONE
 	integer np,i,nT
 	real*8 P(np),T(np),Pp(nT),d2T(nT),dTp(nT),yp1,ypn,dT

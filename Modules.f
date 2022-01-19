@@ -100,7 +100,7 @@ c===============================================================================
 	logical,allocatable :: includemol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust,twind,epsiter
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Psimplecloud,metallicity0
-	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid
+	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid,blackbodystar
 	logical didcondens_chem,coagulation,resume_multinest,doMCcompute,disequilibrium,const_eff_multinest
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file,pargridfile
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
@@ -121,9 +121,9 @@ c for exchange when computing secondary atmosphere
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo
 	character*20 surfacetype
-	integer nTZ,nspike,nai,nboot,npew,ndT
+	integer nTZ,nspike,nai,nboot,npew,nTpoints
 	integer,allocatable :: niso(:),instr_nobs(:)
-	real*8,allocatable :: MMW(:),dT(:),PdT(:)
+	real*8,allocatable :: MMW(:),Tpoint(:),Ppoint(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
 	logical fulloutput3D,deepRedist
 	real*8 f_deepredist
@@ -401,7 +401,7 @@ c compute what this means for the total number of atoms for every element
 	real*8,allocatable :: abun_gas(:,:),abun_dust(:,:),abun_planet(:,:)
 c Disk density setup where the dust and planet densities are the max values possible
 	real*8,allocatable :: d2g_disk(:),p2g_disk(:)
-	real*8 Mstar,mu,kappa_r,alpha_disk,M_acc,d2g_T
+	real*8 Mstar,Lstar,mu,kappa_r,alpha_disk,M_acc,d2g_T
 	character*500 diskabundances
 	
 	end module

@@ -200,7 +200,7 @@ c	recomputeopac=.true.
 
 		if(((vxx.ne.0d0.or.night2day.ne.1d0).and.betamax.ne.betamin).or.i.eq.1.or.deepRedist) then
 			call InitDens()
-			call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
+			call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
 			Fstar=Fstar*pi*Rstar**2
 c===============================================================
 c quick thing to read in a file!

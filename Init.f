@@ -209,6 +209,8 @@ c===============================================================================
 	j=0
 	mixratfile=.false.
 	fcloud_default=1d0
+	Pmin=1d-6
+	Pmax=1d+3
 
 	i2d=0
 
@@ -222,12 +224,12 @@ c===============================================================================
 		key=>key%next
 	enddo
 
-	ndT=nr
+	nTpoints=nr
 	key => firstkey
 	do while(.not.key%last)
 		select case(key%key1)
-			case("ndt","nfreet")
-				read(key%value,*) ndT
+			case("ntpoints","nfreet")
+				read(key%value,*) nTpoints
 		end select
 		key=>key%next
 	enddo
@@ -277,11 +279,15 @@ c				if(key%nr1.eq.0) key%nr1=1
 				if(key%key2.eq.'keyword') then
 					if(key%value.eq.'tprofile') then
 						free_tprofile=.true.
-						n_ret=n_ret+ndT
+						n_ret=n_ret+nTpoints+nTpoints-2
 					else
 						n_ret=n_ret+1
 					endif
 				endif
+			case("pmin")
+				read(key%value,*) pmin
+			case("pmax")
+				read(key%value,*) pmax
 			case default
 				do i=1,nmol_data
 					if(key%key.eq.molname(i)) then
@@ -328,8 +334,8 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(XeqCloud_old(nr,max(nclouds,1)))
 	allocate(XCloud(nr,max(nclouds,1)))
 	allocate(RetPar(max(n_ret,1)))
-	allocate(dT(ndT))
-	allocate(PdT(ndT))
+	allocate(Tpoint(nTpoints))
+	allocate(Ppoint(nTpoints))
 	allocate(ObsSpec(max(nobs,1)))
 	allocate(Tin(nr))
 	allocate(instrument(max(n_instr,1)))
@@ -337,6 +343,10 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(instr_nobs(max(n_instr,1)))
 	allocate(Par3D(max(n_Par3D,1)))
 	allocate(theta_phase(max(nphase,1)))
+
+	do i=1,nTpoints
+		Ppoint(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nTpoints-1))
+	enddo
 
 	ncia0=0
 	existh2h2=.false.
@@ -424,7 +434,6 @@ c		endif
 	call output('Number of collision pairs: ' // int2string(ncia,'(i4)'))
 	call output('Number of observations:    ' // int2string(nobs,'(i4)'))
 	
-
 	return
 	end subroutine CountStuff
 	
@@ -585,7 +594,7 @@ c	condensates=(condensates.or.cloudcompute)
 	enddo
 
 	allocate(Fstar(nlam))
-	call ReadKurucz(Tstar,logg,1d4*lam,Fstar,nlam,starfile)
+	call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
 	Fstar=Fstar*pi*Rstar**2
 
 	call output("==================================================================")
@@ -659,10 +668,6 @@ c	condensates=(condensates.or.cloudcompute)
 	endif
 
 	if(planetform) call InitFormation(Mstar)
-
-	do i=1,ndT
-		PdT(i)=exp(log(Pmax)+log(Pmin/Pmax)*real(i-1)/real(ndT-1))
-	enddo
 		
 	return
 	end
@@ -710,6 +715,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			starfile=key%value
 		case("logg")
 			read(key%value,*) logg
+		case("bbstar")
+			read(key%value,*) blackbodystar
 		case("dp","dplanet")
 			read(key%value,*) Dplanet
 		case("retrieval")
@@ -738,9 +745,9 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		case("lmax")
 			read(key%value,*) lam2
 		case("pmin")
-			read(key%value,*) pmin
+c			read(key%value,*) pmin
 		case("pmax")
-			read(key%value,*) pmax
+c			read(key%value,*) pmax
 		case("pcloud","psimplecloud")
 			read(key%value,*) psimplecloud
 		case("tmin")
@@ -920,13 +927,13 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) tol_multinest
 		case("retrievaltype")
 			read(key%value,*) retrievaltype
-		case("dt")
-			read(key%value,*) dT(key%nr1)
-c		case("pdt")
-c			read(key%value,*) PdT(key%nr1)
-		case("ndt","nfreet")
+		case("tpoint")
+			read(key%value,*) Tpoint(key%nr1)
+		case("ppoint")
+			read(key%value,*) Ppoint(key%nr1)
+		case("ntpoints","nfreet")
 c is already set in CountStuff
-c			read(key%value,*) ndT
+c			read(key%value,*) nTpoints
 		case("free_tprofile")
 			read(key%value,*) free_tprofile
 		case("faircoverage")
@@ -1303,6 +1310,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Mstar=1d0
 	Dplanet=1d0
 	logg=4.5d0
+	blackbodystar=.false.
 	
 	fDay=0.5d0
 	betapow=1d0
@@ -1370,7 +1378,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	mixratfile=.false.
 	Tin=0d0
 
-	dT=0d0
+	Tpoint=1000d0
 
 	starfile=' '
 	
@@ -1534,9 +1542,6 @@ c		Cloud(i)%P=0.0624d0
 	TeffP=600d0
 	outputopacity=.false.
 
-	Pmin=1d-6
-	Pmax=1d+3
-
 	call getenv('HOME',homedir) 
 
 	planetparameterfile=trim(homedir) // '/ARCiS/Data/allplanets-ascii.txt'
@@ -1637,16 +1642,23 @@ c number of cloud/nocloud combinations
 			read(key%value,*) RetPar(i)%keyword
 			if(RetPar(i)%keyword.eq.'tprofile') then
  				free_tprofile=.true.
-				n_ret=n_ret+ndT-1
- 				do j=1,ndT
-					RetPar(i+j-1)%keyword='dT' // trim(int2string(j,'(i0.3)'))
-					if(j.eq.1) then
-						RetPar(i+j-1)%xmin=0d0
+				n_ret=n_ret+nTpoints-1+nTpoints-2
+ 				do j=1,nTpoints
+					RetPar(i+j-1)%keyword='Tpoint' // trim(int2string(j,'(i0.3)'))
+					RetPar(i+j-1)%xmin=10d0
+					RetPar(i+j-1)%xmax=10000d0
+					RetPar(i+j-1)%logscale=.true.
+				enddo
+ 				do j=2,nTpoints-1
+					RetPar(i+nTpoints+j-2)%keyword='Ppoint' // trim(int2string(j,'(i0.3)'))
+					RetPar(i+nTpoints+j-2)%xmin=pmin
+					RetPar(i+nTpoints+j-2)%xmax=pmax
+					RetPar(i+nTpoints+j-2)%logscale=.true.
+					if(j.gt.2) then
+						RetPar(i+nTpoints+j-2)%increase=.true.
 					else
-						RetPar(i+j-1)%xmin=-2d0/7d0
+						RetPar(i+nTpoints+j-2)%increase=.false.
 					endif
-					RetPar(i+j-1)%xmax=2d0/7d0
-					RetPar(i+j-1)%logscale=.false.
 				enddo
 			endif
 		case("min","xmin")

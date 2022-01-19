@@ -13255,16 +13255,21 @@
 
 
 
-	subroutine ReadKurucz(Tk,loggk,lam,flux,nlam,file)
+	subroutine StarSpecSetup(Tk,loggk,lam,flux,nlam,file,blackbody)
 	use Kurucz
 	IMPLICIT NONE
 	integer nlam
 	real*8 Tk,loggk,Planck,lam(nlam),flux(nlam),x0,y0,x1,y1,scale
 	integer iTk,iloggk,i,i0,minT,ming,j,k
 	character*500 file
-	logical usefile
-	
-	if(file.ne.' ') then
+	logical usefile,blackbody
+
+	if(blackbody) then
+		do i=1,nlam
+			flux(i)=Planck(Tk,1d4/lam(i))
+		enddo
+		return
+	else if(file.ne.' ') then
 		call regridlog(file,lam,flux,nlam)
 		return
 	endif
