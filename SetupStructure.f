@@ -482,7 +482,7 @@ c			beta_used=max
 		endif
 	enddo
 
-	open(unit=50,file=trim(outputdir) // 'mixingratios' // trim(side) // '.dat',RECL=1000)
+	open(unit=50,file=trim(outputdir) // 'mixingratios' // trim(side) // '.dat',RECL=6000)
 	form='("#",a9,a13,' // trim(int2string(nmix,'(i2)')) // 'a15)'
 	write(50,form) "T [K]","P [bar]",namemix(1:nmix)
 	form='(f10.3,es13.3E3,' // trim(int2string(nmix,'(i2)')) // 'es15.4E3)'
@@ -492,7 +492,7 @@ c			beta_used=max
 	close(unit=50)
 
 	do ii=1,nclouds
-		open(unit=50,file=trim(outputdir) // 'clouddens' // trim(int2string(ii,'(i0.2)')) // trim(side) // '.dat',RECL=1000)
+		open(unit=50,file=trim(outputdir) // 'clouddens' // trim(int2string(ii,'(i0.2)')) // trim(side) // '.dat',RECL=6000)
 		form='("#",a12,a15,a15,a15)'
 		write(50,form) "P [bar]","dens [g/cm^3]","Eq. dens","gas dens"
 		form='(es13.3,es15.3E3,es15.3E3,es15.3E3)'
