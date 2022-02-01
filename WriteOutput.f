@@ -153,6 +153,22 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			endif
 		enddo
 		close(unit=30)
+
+		if(computealbedo) then
+			filename=trim(outputdir) // "albedo" // trim(side)
+			call output("Writing albedo to: " // trim(filename))
+			open(unit=30,file=filename,RECL=6000)
+			form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
+     &				 '("      albedo(",f5.1,")"),"         fstar [Jy]")'
+			write(30,form) "lambda [mu]",theta(1:nphase)
+			form='(f14.6,' // int2string(nphase+1,'(i3)') // 'es19.7E3)'
+			do i=1,nlam_out
+				if(lamemis(i)) then
+				write(30,form) lam_out(i),planet_albedo(1:nphase,i),Fstar(i)*1d23/distance**2
+				endif
+			enddo
+			close(unit=30)
+		endif
 	endif
 
 	if(nlam.lt.350) then

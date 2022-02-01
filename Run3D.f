@@ -6,11 +6,11 @@
 	integer i,j,icloud,k,irtrace,iptrace,inu,imol
 	real*8 beta(nlong,nlatt),Planck,phi,la,lo,A,rr
 	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta
-	real*8,allocatable :: Ca(:,:,:,:),Cs(:,:,:),BBr(:,:,:),Si(:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce(:,:,:)
+	real*8,allocatable :: Ca(:,:,:,:),Cs(:,:,:),BBr(:,:),Si(:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce(:,:,:)
 	integer ir,ilam,ig,isize,iRmax,ndisk,nsub,nrtrace,nptrace,ipc,npc,nmol_count,iv,nv
 	logical recomputeopac
 	logical,allocatable :: hit(:,:)
-	real*8,allocatable :: rtrace(:),wrtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:)
+	real*8,allocatable :: rtrace(:),wrtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:),cloud3D(:,:)
 	real*8 x,y,z,vx,vy,vz,v,w1,w2
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),obsA_split_omp(:,:)
@@ -19,15 +19,17 @@
 	integer nx_im,ix,iy,ni,ilatt,ilong
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig
-	real*8,allocatable :: maxdet(:,:)
+	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:)
 	logical iterateshift
 	real*8 vxxmin,vxxmax
 
-	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr,n3D),Si(nlam,ng,0:nr,nnu0,n3D))
+	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D))
+	if(computealbedo) allocate(SiSc(nlam,ng,0:nr,nnu0,n3D))
 	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce(nlam,nr,n3D))
 	allocate(R3D(n3D,nr+2))
 	allocate(R3D2(n3D,nr+2))
 	allocate(T3D(n3D,0:nr))
+	if(.not.retrieval.and.fulloutput3D) allocate(cloud3D(n3D,0:nr))
 	allocate(mixrat3D(n3D,nr,nmol))
 	nx_im=200
 
@@ -241,6 +243,7 @@ c	enddo
 			do ir=1,nr
 				T3D(i,ir)=T(ir)
 				mixrat3D(i,ir,1:nmol)=mixrat_r(ir,1:nmol)
+				if(.not.retrieval.and.fulloutput3D) cloud3D(i,ir)=sum(cloud_dens(ir,1:nclouds))
 				do ilam=1,nlam
 					if(useobsgrid) then
 						freq0=freq(ilam)
@@ -251,7 +254,7 @@ c	enddo
 							freq0=freq(ilam)
 						endif
 					endif
-					BBr(ilam,ir,i)=Planck(T(ir),freq0)
+					BBr(ilam,ir)=Planck(T(ir),freq0)
 					Ca(ilam,1:ng,ir,i)=0d0
 					Cs(ilam,ir,i)=0d0
 					do icloud=1,nclouds
@@ -291,7 +294,7 @@ c	enddo
 						freq0=freq(ilam)
 					endif
 				endif
-				BBr(ilam,0,i)=Planck(T3D(i,0),freq0)
+				BBr(ilam,0)=Planck(T3D(i,0),freq0)
 			enddo
 			do ir=1,nr
 				k=0
@@ -307,18 +310,25 @@ c	enddo
 				enddo
 				nmol_count=k
 			enddo
-			if(emisspec) call ComputeScatter(BBr(1:nlam,0:nr,i),Si(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i),Cs(1:nlam,1:nr,i))
+			if(emisspec) call ComputeScatter(BBr(1:nlam,0:nr),Si(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i),Cs(1:nlam,1:nr,i))
+			if(computealbedo) then
+				BBr(1:nlam,0:nr)=0d0
+				Fstar=1d0
+				call ComputeScatter(BBr(1:nlam,0:nr),SiSc(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i),Cs(1:nlam,1:nr,i))
+				call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
+				Fstar=Fstar*pi*Rstar**2
+			endif
 		else
 			R3D(i,1:nr+1)=R3D(1,1:nr+1)
 			R3D2(i,1:nr+1)=R3D2(1,1:nr+1)
 			T3D(i,0:nr)=T3D(1,0:nr)
 			mixrat3D(i,1:nr,1:nmol)=mixrat3D(1,1:nr,1:nmol)
-			BBr(1:nlam,0:nr,i)=BBr(1:nlam,0:nr,1)
 			Ca(1:nlam,1:ng,1:nr,i)=Ca(1:nlam,1:ng,1:nr,1)
 			Cs(1:nlam,1:nr,i)=Cs(1:nlam,1:nr,1)
 			Ce(1:nlam,1:nr,i)=Ce(1:nlam,1:nr,1)
 			Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,i)=Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,1)
 			Si(1:nlam,1:ng,0:nr,1:nnu0,i)=Si(1:nlam,1:ng,0:nr,1:nnu0,1)
+			if(computealbedo) SiSc(1:nlam,1:ng,0:nr,1:nnu0,i)=SiSc(1:nlam,1:ng,0:nr,1:nnu0,1)
 		endif
 		if(.not.retrieval) call SetOutputMode(.true.)
 		call tellertje_perc(i,n3D)
@@ -328,6 +338,8 @@ c	enddo
 		enddo
 		close(unit=20)
 	enddo
+
+
 	Rmax=Rmax*1.001
 	R3D(1:n3D,nr+2)=Rmax
 	R3D2(1:n3D,nr+2)=Rmax**2
@@ -343,6 +355,11 @@ c	enddo
 				open(unit=20,file=trim(outputdir) // "temp3D_P" // trim(dbl2string(P(ir),'(es8.2)')) // ".dat",RECL=6000)
 				do j=1,nlatt-1
 					write(20,*) T3D(ibeta(1:nlong-1,j),ir)
+				enddo
+				close(unit=20)
+				open(unit=20,file=trim(outputdir) // "cloud3D_P" // trim(dbl2string(P(ir),'(es8.2)')) // ".dat",RECL=6000)
+				do j=1,nlatt-1
+					write(20,*) cloud3D(ibeta(1:nlong-1,j),ir)
 				enddo
 				close(unit=20)
 			enddo
@@ -406,14 +423,16 @@ c	enddo
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,iv,w1,w2,
-!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot)
+!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,fulloutput3D,Rplanet,
-!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,nv,
+!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,nv,planet_albedo,SiSc,computealbedo,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
 	allocate(fluxp_omp(nlam))
 	allocate(ftot(nlam))
+	if(computealbedo) allocate(alb_omp(nlam))
 	fluxp_omp=0d0
+	alb_omp=0d0
 !$OMP DO SCHEDULE(DYNAMIC,1)
 	do irtrace=1,nrtrace
 		A=2d0*pi*rtrace(irtrace)*wrtrace(irtrace)/real(nptrace)
@@ -489,6 +508,10 @@ c Note we are here using the symmetry between North and South
 							w2=1d0-w1
 							ftot(ilam)=ftot(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)*w1
 							ftot(ilam)=ftot(ilam)+A*wgg(ig)*Si(ilam,ig,i1+1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)*w2
+							if(computealbedo) then
+								alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*SiSc(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)*w1
+								alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*SiSc(ilam,ig,i1+1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)*w2
+							endif
 							fact(ilam,ig)=fact(ilam,ig)*exp_tau1
 						enddo
 						else
@@ -497,6 +520,7 @@ c Note we are here using the symmetry between North and South
 						rr=sqrt((x+vx*v*(real(iv)-0.5)/real(nv))**2+(y+vy*v*(real(iv)-0.5)/real(nv))**2
      &										+(z+vz*v*(real(iv)-0.5)/real(nv))**2)
 						ftot(ilam)=ftot(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
+						if(computealbedo) alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*SiSc(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
 						fact(ilam,ig)=fact(ilam,ig)*exp_tau1
 						endif
 					enddo
@@ -518,6 +542,7 @@ c Note we are here using the symmetry between North and South
 					do ig=1,ng
 						contr=Si(ilam,ig,0,inu,i)
 						ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
+						if(computealbedo) alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*SiSc(ilam,ig,0,inu,i)*fact(ilam,ig)
 					enddo
 					endif
 				enddo
@@ -551,6 +576,10 @@ c Note we are here using the symmetry between North and South
 !$OMP END DO
 !$OMP CRITICAL
 	fluxp(1:nlam)=fluxp(1:nlam)+fluxp_omp(1:nlam)
+	if(computealbedo) then
+		planet_albedo(ipc,1:nlam)=planet_albedo(ipc,1:nlam)+alb_omp(1:nlam)
+		deallocate(alb_omp)
+	endif
 	deallocate(fluxp_omp)
 !$OMP END CRITICAL
 	deallocate(fact)
@@ -857,10 +886,12 @@ c Note we use the symmetry of the North and South here!
 	endif
 	
 	deallocate(Ca,Cs,BBr,Si)
+	if(computealbedo) deallocate(SiSc)
 	deallocate(Ca_mol,Ce)
 	deallocate(R3D)
 	deallocate(R3D2)
 	deallocate(T3D,mixrat3D)
+	if(.not.retrieval.and.fulloutput3D) deallocate(cloud3D)
 
 	if(retrieval) call SetOutputMode(.true.)
 	

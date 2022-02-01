@@ -110,7 +110,7 @@ c===============================================================================
 	logical transspec,emisspec,rainout,computeLC,doscaleR
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),lamdust(:),dlam(:),surface_emis(:)
-	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:)
+	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:),planet_albedo(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	real*8 planetform_fdust,planetform_fplan,planetform_Rstart,planetform_Mstart,fiter
 	logical planetform,massprior
@@ -125,7 +125,7 @@ c for exchange when computing secondary atmosphere
 	integer,allocatable :: niso(:),instr_nobs(:)
 	real*8,allocatable :: MMW(:),Tpoint(:),Ppoint(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
-	logical fulloutput3D,deepRedist,readFull3D
+	logical fulloutput3D,deepRedist,readFull3D,computealbedo
 	real*8 f_deepredist
 	integer nBB
 	parameter(nBB=10000)
