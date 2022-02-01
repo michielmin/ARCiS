@@ -117,12 +117,16 @@ c	recomputeopac=.true.
 	ibeta=1
 	do i=1,nlong-1
 		do j=1,nlatt-1
-			if(betamax.eq.betamin.or.(night2day.eq.1d0.and.vxx.eq.0d0)) then
-				ibeta(i,j)=1
+			if(readFull3D) then
+				ibeta(i,j)=(i-1)*(nlatt-1)+j
 			else
-				ibeta(i,j)=(real(n3D)*((beta(i,j)-betamin)/(betamax-betamin)))+1
-				if(ibeta(i,j).gt.n3D) ibeta(i,j)=n3D
-				if(.not.ibeta(i,j).gt.1) ibeta(i,j)=1
+				if(betamax.eq.betamin.or.(night2day.eq.1d0.and.vxx.eq.0d0)) then
+					ibeta(i,j)=1
+				else
+					ibeta(i,j)=(real(n3D)*((beta(i,j)-betamin)/(betamax-betamin)))+1
+					if(ibeta(i,j).gt.n3D) ibeta(i,j)=n3D
+					if(.not.ibeta(i,j).gt.1) ibeta(i,j)=1
+				endif
 			endif
 		enddo
 	enddo
@@ -196,6 +200,13 @@ c	recomputeopac=.true.
 			if(j.gt.0) betaT=betaT/tot
 			print*,beta3D(i),betaT
 			f_deepredist=beta3D(i)
+		endif
+
+c Now call the setup for the readFull3D part
+		if(readFull3D) then
+			ilong=i/(nlatt-1)+1
+			ilatt=i-(ilong-1)*(nlatt-1)
+			call DoReadFull3D(i,ilong,ilatt)
 		endif
 
 		if(((vxx.ne.0d0.or.night2day.ne.1d0).and.betamax.ne.betamin).or.i.eq.1.or.deepRedist) then

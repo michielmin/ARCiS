@@ -143,6 +143,7 @@ OBJS	= Modules.o \
 		GGchem_is_nan.o \
 		Init.o \
 		Run3D.o \
+		ReadFull3D.o \
 		Retrieval.o \
 		PostEqualWeights.o \
 		MCComputeT.o \

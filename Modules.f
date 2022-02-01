@@ -125,7 +125,7 @@ c for exchange when computing secondary atmosphere
 	integer,allocatable :: niso(:),instr_nobs(:)
 	real*8,allocatable :: MMW(:),Tpoint(:),Ppoint(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
-	logical fulloutput3D,deepRedist
+	logical fulloutput3D,deepRedist,readFull3D
 	real*8 f_deepredist
 	integer nBB
 	parameter(nBB=10000)

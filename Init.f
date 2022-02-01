@@ -655,6 +655,22 @@ c	condensates=(condensates.or.cloudcompute)
 	surface_emis=1d0
 	
 	if(makemovie) makeimage=.true.
+
+c If reading in a full 3D model (from e.g. a GCM model) the number of 3D models needs to be equal to nlatt*nlong
+	if(readFull3D) then
+		n3D=(nlong-1)*(nlatt-1)
+		call output("Full 3D mode: Number of 1D models:  " // int2string(n3D,'(i4)'))
+		call output("              Number of longitudes: " // int2string(nlong,'(i4)'))
+		call output("              Number of latitudes:  " // int2string(nlatt,'(i4)'))
+c In this case the beta map should be the static one. Make sure this is set properly.
+		night2day=0d0
+		vxx=0d0
+		fDay=1d0
+		Kxx=1d0
+		Kyy=1d0
+		powvxx=0d0
+		hotspotshift0=-1d5
+	endif
 	
 	allocate(long(nlong),latt(nlatt))
 	allocate(tanx(nlong),tany(nlong))
@@ -1010,6 +1026,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) fulloutput3D
 		case("deepredist")
 			read(key%value,*) deepredist
+		case("readfull3d")
+			read(key%value,*) readFull3D
 		case("iwolk")
 			read(key%value,*) iWolk
 		case("emisspec")
@@ -1418,6 +1436,8 @@ c  GGchem was still implemented slightly wrong.
 	
 	deepRedist=.false.
 	f_deepredist=0d0
+
+	readFull3D=.false.
 
 	Kzz_deep=1d2
 	Kzz_1bar=-1d0
