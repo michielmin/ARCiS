@@ -234,7 +234,7 @@ c	atoms_cloud(i,3)=1
 	molfracs_atoms0=molfracs_atoms
 	xv_bot=xv_bot*mu*CSnmol/mutot
 
-	if(rainout) then
+	if(rainout.and.(.not.computeT.or.nTiter.gt.0)) then
 		densv(1,1:nCS)=(mu*mp/(kb*T(1)))*exp(BTP-ATP/T(1))
 		do iCS=1,nCS
 			if(T(1).gt.maxT(iCS)) densv(1,iCS)=densv(1,iCS)+(mu(iCS)*mp/(kb*T(1)*10d0))*exp(BTP(iCS)-ATP(iCS)/(T(1)*10d0))
@@ -780,7 +780,7 @@ c end the loop
 	k=1
 	do i=1,nr
 		cloud_dens(i,ii)=cloud_dens(i,ii)*(1d0-fiter)/fiter!0d0
-		if(nTiter.eq.0) cloud_dens(i,ii)=0d0
+		if(nTiter.le.1) cloud_dens(i,ii)=0d0
 		Cloud(ii)%rv(i)=0d0
 		Cloud(ii)%frac(i,1:19)=1d-200
 		do j=1,nr_cloud
@@ -862,7 +862,7 @@ CCloud(ii)%frac(i,17)=0d0
 		tot=sum(Cloud(ii)%frac(i,1:19))
 		Cloud(ii)%frac(i,1:19)=Cloud(ii)%frac(i,1:19)/tot
 
-		cloud_dens(i,ii)=cloud_dens(i,ii)*fiter
+		if(nTiter.gt.1) cloud_dens(i,ii)=cloud_dens(i,ii)*fiter
 	enddo
 
 	if(.not.retrieval) then
