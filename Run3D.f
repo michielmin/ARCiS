@@ -15,7 +15,7 @@
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),obsA_split_omp(:,:)
 	real*8,allocatable :: tauc(:),Afact(:),vv(:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
-	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random
+	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random,xmin,xmax
 	integer nx_im,ix,iy,ni,ilatt,ilong
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig
@@ -175,10 +175,16 @@ c	recomputeopac=.true.
 		beta3D(i)=betamin+(betamax-betamin)*(real(i)-0.5)/real(n3D)
 		x3D(i)=NormSig(beta3D(i),par3Dsteepness,beta_c,betamin,betamax)
 		do j=1,n_Par3D
-			if(Par3D(j)%logscale) then
-				Par3D(j)%x=10d0**(log10(Par3D(j)%xmin)+log10(Par3D(j)%xmax/Par3D(j)%xmin)*x3D(i))
+			xmin=Par3D(j)%xmin
+			if(Par3D(j)%multiply) then
+				xmax=xmin*Par3D(j)%xmax
 			else
-				Par3D(j)%x=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*x3D(i)
+				xmax=Par3D(j)%xmax
+			endif
+			if(Par3D(j)%logscale) then
+				Par3D(j)%x=10d0**(log10(xmin)+log10(xmax/xmin)*x3D(i))
+			else
+				Par3D(j)%x=xmin+(xmax-xmin)*x3D(i)
 			endif
 		enddo
 		call MapPar3D()

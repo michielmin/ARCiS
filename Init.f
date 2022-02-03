@@ -1540,6 +1540,7 @@ c		Cloud(i)%P=0.0624d0
 	enddo
 	do i=1,n_Par3D
 		Par3D(i)%logscale=.false.
+		Par3D(i)%multiply=.false.
 	enddo
 	par3Dsteepness=1d-4
 	npop=30
@@ -1756,6 +1757,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Par3D(i)%xmax
 		case("log","logscale")
 			read(key%value,*) Par3D(i)%logscale
+		case("relative","multiply")
+			read(key%value,*) Par3D(i)%multiply
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

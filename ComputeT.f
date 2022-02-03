@@ -568,7 +568,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	enddo
 
 	do ir=nr-1,1,-1
-		if(abs(Hstar(ir)).lt.abs(Hstar(nr)/10d0).and.P(ir).gt.1d0) exit
+		if(abs(Hstar(ir)).lt.abs(Hstar(nr)/10d0)) exit
 	enddo
 	j=min(max(ir,2),nr-1)
 

@@ -310,7 +310,7 @@ c			   1,2,3,  4,5,6,      7,   8,    9,    10,        11,  12,  13,14,15,  16, 
 	type Parameter3D
 		character*500 keyword
 		real*8 xmin,xmax,x
-		logical logscale
+		logical logscale,multiply
 	end type Parameter3D
 
 	type(Parameter3D),allocatable :: Par3D(:)

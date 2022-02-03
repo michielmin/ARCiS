@@ -3,7 +3,7 @@
 	use Constants
 	use Struct3D
 	IMPLICIT NONE
-	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime,sig,aver
+	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime,sig,aver,xmin,xmax
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:),hotspotshift_der(:)
 	real*8,allocatable :: PTstruct(:,:),var(:,:),values(:,:),COratio_der(:),Z_der(:)
 	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j,iphase,imol
@@ -147,12 +147,18 @@
 		enddo
 		var3D(i,1:nlong,0)=beta3D_eq(1:nlong)
 		do j=1,n_Par3D
+			xmin=Par3D(j)%xmin
+			if(Par3D(j)%multiply) then
+				xmax=xmin*Par3D(j)%xmax
+			else
+				xmax=Par3D(j)%xmax
+			endif			
 			do ir=1,nlong-1
 				if(Par3D(j)%logscale) then
-					var3D(i,ir,j)=10d0**(log10(Par3D(j)%xmin)+
-     &							  log10(Par3D(j)%xmax/Par3D(j)%xmin)*x3D_eq(ir))
+					var3D(i,ir,j)=10d0**(log10(xmin)+
+     &							  log10(xmax/xmin)*x3D_eq(ir))
 				else
-					var3D(i,ir,j)=Par3D(j)%xmin+(Par3D(j)%xmax-Par3D(j)%xmin)*x3D_eq(ir)
+					var3D(i,ir,j)=xmin+(xmax-xmin)*x3D_eq(ir)
 				endif
 			enddo
 		enddo
