@@ -18,7 +18,7 @@
 	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random,xmin,xmax
 	integer nx_im,ix,iy,ni,ilatt,ilong
 	character*500 file
-	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig
+	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam)
 	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:)
 	logical iterateshift
 	real*8 vxxmin,vxxmax
@@ -219,23 +219,6 @@ c Now call the setup for the readFull3D part
 
 		if(((vxx.ne.0d0.or.night2day.ne.1d0).and.betamax.ne.betamin).or.i.eq.1.or.deepRedist) then
 			call InitDens()
-			call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
-			Fstar=Fstar*pi*Rstar**2
-c===============================================================
-c quick thing to read in a file!
-c	file='sedlhs.txt'
-c	call regridlog(file,1d4*lam,Fstar,nlam)
-c	Fstar=Fstar*distance**2/1e23
-c===============================================================
-c===============================================================
-c quick thing to read in a file!
-c	file='houghtonsolarwl.dat'
-c	call regridlog(file,1d4*lam,Fstar,nlam)
-c	Fstar=Fstar*lam**2/4d0
-c===============================================================
-c	do ilam=1,nlam
-c		Fstar(ilam)=Planck(Tstar,freq(ilam))*pi*Rstar**2
-c	enddo
 			call ComputeModel1D(recomputeopac)
 
 			if(R(nr+1).gt.Rmax) then
@@ -319,10 +302,10 @@ c	enddo
 			if(emisspec) call ComputeScatter(BBr(1:nlam,0:nr),Si(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i),Cs(1:nlam,1:nr,i))
 			if(computealbedo) then
 				BBr(1:nlam,0:nr)=0d0
+				Fstar_temp(1:nlam)=Fstar(1:nlam)
 				Fstar=1d0
 				call ComputeScatter(BBr(1:nlam,0:nr),SiSc(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i),Cs(1:nlam,1:nr,i))
-				call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
-				Fstar=Fstar*pi*Rstar**2
+				Fstar(1:nlam)=Fstar_temp(1:nlam)
 			endif
 		else
 			R3D(i,1:nr+1)=R3D(1,1:nr+1)
@@ -336,13 +319,15 @@ c	enddo
 			Si(1:nlam,1:ng,0:nr,1:nnu0,i)=Si(1:nlam,1:ng,0:nr,1:nnu0,1)
 			if(computealbedo) SiSc(1:nlam,1:ng,0:nr,1:nnu0,i)=SiSc(1:nlam,1:ng,0:nr,1:nnu0,1)
 		endif
-		if(.not.retrieval) call SetOutputMode(.true.)
+		if(.not.retrieval) then
+			call SetOutputMode(.true.)
+			open(unit=20,file=trim(outputdir) // "mixrat" // trim(int2string(i,'(i0.3)')),RECL=6000)
+			do j=1,nr
+				write(20,*) T(j),P(j)
+			enddo
+			close(unit=20)
+		endif
 		call tellertje_perc(i,n3D)
-		open(unit=20,file=trim(outputdir) // "mixrat" // trim(int2string(i,'(i0.3)')),RECL=6000)
-		do j=1,nr
-			write(20,*) T(j),P(j)
-		enddo
-		close(unit=20)
 	enddo
 
 

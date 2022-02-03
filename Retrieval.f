@@ -600,8 +600,10 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	call SetOutputMode(.true.)
 
 	call InitDens()
-	call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
-	Fstar=Fstar*pi*Rstar**2
+	if(retrievestar) then
+		call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
+		Fstar=Fstar*pi*Rstar**2
+	endif
 	call SetOutputMode(.false.)
 	call ComputeModel(recomputeopac)
 	call SetOutputMode(.true.)

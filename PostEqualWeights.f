@@ -104,8 +104,10 @@
 	call SetOutputMode(.true.)
 
 	call InitDens()
-	call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
-	Fstar=Fstar*pi*Rstar**2
+	if(retrievestar) then
+		call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
+		Fstar=Fstar*pi*Rstar**2
+	endif
 	call SetOutputMode(.false.)
 	call ComputeModel(.true.)
 	call SetOutputMode(.true.)

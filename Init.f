@@ -622,6 +622,10 @@ c	condensates=(condensates.or.cloudcompute)
 					RetPar(i)%dx=5d0*(RetPar(i)%xmax-RetPar(i)%xmin)
 				endif
 			endif
+			if(RetPar(i)%keyword.eq.'Tstar'.or.RetPar(i)%keyword.eq.'tstar'.or.RetPar(i)%keyword.eq.'Rstar'
+     &	.or.RetPar(i)%keyword.eq.'rstar'.or.RetPar(i)%keyword.eq.'logg'.or.RetPar(i)%keyword.eq.'TStar'
+     &	.or.RetPar(i)%keyword.eq.'TSTAR'.or.RetPar(i)%keyword.eq.'RStar'.or.RetPar(i)%keyword.eq.'RSTAR'
+     &	.or.RetPar(i)%keyword.eq.'LOGG') retrievetstar=.true.
 		enddo			
 	endif
 
@@ -1026,6 +1030,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) fulloutput3D
 		case("deepredist")
 			read(key%value,*) deepredist
+		case("f_deepredist")
+			read(key%value,*) f_deepredist
 		case("readfull3d")
 			read(key%value,*) readFull3D
 		case("computealbedo","planetalbedo")
@@ -1331,6 +1337,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Dplanet=1d0
 	logg=4.5d0
 	blackbodystar=.false.
+	retrievestar=.false.
 	
 	fDay=0.5d0
 	betapow=1d0
