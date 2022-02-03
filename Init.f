@@ -625,7 +625,7 @@ c	condensates=(condensates.or.cloudcompute)
 			if(RetPar(i)%keyword.eq.'Tstar'.or.RetPar(i)%keyword.eq.'tstar'.or.RetPar(i)%keyword.eq.'Rstar'
      &	.or.RetPar(i)%keyword.eq.'rstar'.or.RetPar(i)%keyword.eq.'logg'.or.RetPar(i)%keyword.eq.'TStar'
      &	.or.RetPar(i)%keyword.eq.'TSTAR'.or.RetPar(i)%keyword.eq.'RStar'.or.RetPar(i)%keyword.eq.'RSTAR'
-     &	.or.RetPar(i)%keyword.eq.'LOGG') retrievetstar=.true.
+     &	.or.RetPar(i)%keyword.eq.'LOGG') retrievestar=.true.
 		enddo			
 	endif
 
