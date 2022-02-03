@@ -20,7 +20,7 @@
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam)
 	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:)
-	logical iterateshift
+	logical iterateshift,actually1D
 	real*8 vxxmin,vxxmax
 
 	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D))
@@ -81,6 +81,9 @@ c	recomputeopac=.true.
 	i=i+1
 
 	enddo
+
+	actually1D=.true.
+	if(((vxx.ne.0d0.or.night2day.ne.1d0).and.betamax.ne.betamin).or.deepRedist) actually1D=.false.
 
 	call output("hotspot shift: " // dbl2string(hotspotshift,'(f6.2)') // " degrees")
 
@@ -217,7 +220,7 @@ c Now call the setup for the readFull3D part
 			call DoReadFull3D(i,ilong,ilatt)
 		endif
 
-		if(((vxx.ne.0d0.or.night2day.ne.1d0).and.betamax.ne.betamin).or.i.eq.1.or.deepRedist) then
+		if((.not.actually1D).or.i.eq.1) then
 			call InitDens()
 			call ComputeModel1D(recomputeopac)
 
@@ -390,6 +393,7 @@ c Now call the setup for the readFull3D part
 
 	nrtrace=(nr-1)*nsub+ndisk
 	nptrace=nlatt+1
+	if(actually1D.and.nphase.eq.1.and.theta_phase(1).eq.180d0) nptrace=1
 	
 	nv=1
 	if(makeimage) then
@@ -745,6 +749,7 @@ c	print*,Tstar*(Rstar/Dplanet)**0.5
 
 	nrtrace=(nr-1)*nsub+ndisk
 	nptrace=nlatt
+	if(actually1D) nptrace=1
 	allocate(rtrace(nrtrace))
 
 	k=0
