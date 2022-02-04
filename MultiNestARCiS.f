@@ -51,6 +51,9 @@
 	real*8,allocatable :: spec(:)
 	logical recomputeopac
 	real*8 tot
+	character*500 keyword
+	real*8 Ptemp(nTpoints)
+	integer iPtemp(nTpoints)
 
 	k=0
 	do i=1,nobs
@@ -60,6 +63,20 @@
 	enddo
 	ny=k
 	allocate(spec(ny))
+
+	do i=1,nvars
+		do j=1,nTpoints
+			keyword='Ppoint' // trim(int2string(j,'(i0.3)'))
+			if(RetPar(i)%keyword.eq.keyword) then
+				Ptemp(j)=var(i)
+				iPtemp(j)=i
+			endif
+		enddo
+	enddo
+	call sort(Ptemp,nTpoints)
+	do i=1,nTpoints
+		var(iPtemp(i))=Ptemp(i)
+	enddo
 
 	call mrqcomputeY(var,spec,nvars,ny,lnew,scale)
 
