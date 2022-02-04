@@ -279,7 +279,7 @@ c				if(key%nr1.eq.0) key%nr1=1
 				if(key%key2.eq.'keyword') then
 					if(key%value.eq.'tprofile') then
 						free_tprofile=.true.
-						n_ret=n_ret+nTpoints+nTpoints-2
+						n_ret=n_ret+nTpoints+nTpoints
 					else
 						n_ret=n_ret+1
 					endif
@@ -1674,23 +1674,18 @@ c number of cloud/nocloud combinations
 			read(key%value,*) RetPar(i)%keyword
 			if(RetPar(i)%keyword.eq.'tprofile') then
  				free_tprofile=.true.
-				n_ret=n_ret+nTpoints-1+nTpoints-2
+				n_ret=n_ret+nTpoints-1+nTpoints
  				do j=1,nTpoints
 					RetPar(i+j-1)%keyword='Tpoint' // trim(int2string(j,'(i0.3)'))
-					RetPar(i+j-1)%xmin=10d0
-					RetPar(i+j-1)%xmax=10000d0
-					RetPar(i+j-1)%logscale=.true.
+					RetPar(i+j-1)%xmin=-2d0/7d0
+					RetPar(i+j-1)%xmax=2d0/7d0
+					RetPar(i+j-1)%logscale=.false.
 				enddo
- 				do j=2,nTpoints-1
-					RetPar(i+nTpoints+j-2)%keyword='Ppoint' // trim(int2string(j,'(i0.3)'))
-					RetPar(i+nTpoints+j-2)%xmin=pmin
-					RetPar(i+nTpoints+j-2)%xmax=pmax
-					RetPar(i+nTpoints+j-2)%logscale=.true.
-c					if(j.gt.2) then
-c						RetPar(i+nTpoints+j-2)%increase=.true.
-c					else
-c						RetPar(i+nTpoints+j-2)%increase=.false.
-c					endif
+ 				do j=1,nTpoints
+					RetPar(i+nTpoints+j-1)%keyword='Ppoint' // trim(int2string(j,'(i0.3)'))
+					RetPar(i+nTpoints+j-1)%xmin=pmin
+					RetPar(i+nTpoints+j-1)%xmax=pmax
+					RetPar(i+nTpoints+j-1)%logscale=.true.
 				enddo
 			endif
 		case("min","xmin")
