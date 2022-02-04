@@ -1331,15 +1331,28 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 
 
 
-	subroutine MakePTstruct(P,T,np,Pp,Tp_in,nT)
+	subroutine MakePTstruct(P,T,np,Pp,Tp_in,nT_in)
 	IMPLICIT NONE
-	integer np,i,nT
-	real*8 P(np),T(np),Pp(nT),d2T(nT),yp1,ypn
-	real*8 logPp(nT),logTp(nT),logP(np),logT(np),Tp_in(nT)
+	integer np,i,nT,nT_in,j
+	real*8 P(np),T(np),Pp(nT_in),d2T(nT_in),yp1,ypn
+	real*8 logPp(nT_in),logTp(nT_in),logP(np),logT(np),Tp_in(nT_in)
 
 	logPp=log(Pp)
 	logTp=log(Tp_in)
+
+	nT=nT_in
 	call sortw(logPp,logTp,nT)
+1	continue
+	do i=1,nT-1
+		if(logPp(i).eq.logPp(i+1)) then
+			do j=i,nT-1
+				logPp(j)=logPp(j+1)
+				logTp(j)=logTp(j+1)
+			enddo
+			nT=nT-1
+			goto 1
+		endif
+	enddo
 
 	yp1=1d100
 	ypn=1d100
