@@ -1413,6 +1413,8 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 		else
 			call splint(logPp,dTp,d2T,nT,logP(i),dT)
 		endif
+		if(dT.gt.2d0/7d0) dT=2d0/7d0
+		if(dT.lt.-2d0/7d0) dT=-2d0/7d0
 		logT(i)=logT(i+1)+(logP(i)-logP(i+1))*dT
 		T(i)=exp(logT(i))
 	enddo
