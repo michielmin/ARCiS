@@ -174,6 +174,7 @@ c	recomputeopac=.true.
 
 	call tellertje_perc(0,n3D)
 	do i=1,n3D
+		i3D=i
 		call SetOutputMode(.false.)
 		beta3D(i)=betamin+(betamax-betamin)*(real(i)-0.5)/real(n3D)
 		x3D(i)=NormSig(beta3D(i),par3Dsteepness,beta_c,betamin,betamax)

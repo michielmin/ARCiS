@@ -8,14 +8,14 @@
 	real*8,allocatable :: Sc(:),Sn(:),rpart(:),mpart(:),xMgO(:)
 	real*8,allocatable :: An(:,:),y(:,:),xv(:,:),xn(:),xc(:,:),xm(:)
 	real*8,allocatable :: Aomp(:,:),xomp(:)
-	real*8,allocatable :: drho(:),drhovsed(:),tcinv(:),rho_av(:),densv(:,:),Kd(:)
+	real*8,allocatable :: drhoKd(:),drhovsed(:),tcinv(:),rho_av(:),densv(:,:),Kd(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t
 	integer info,i,j,iter,NN,NRHS,niter,ii,k
 	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm
 	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr)
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),IWORKomp(:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
-	logical quadratic,ini,Tconverged,cloudsform
+	logical ini,Tconverged,cloudsform
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:)
 	logical,allocatable :: dospecies(:)
@@ -69,8 +69,6 @@
 		allocate(CSnmol(nCS))
 		allocate(ice(nCS))
 	endif
-
-	quadratic=.false.
 
 	call SetAbun
 
@@ -321,7 +319,7 @@ c	atoms_cloud(i,3)=1
 	allocate(y(nnr,5))
 	allocate(Sn(nnr))
 	allocate(vth(nnr))
-	allocate(drho(nnr))
+	allocate(drhoKd(nnr))
 	allocate(drhovsed(nnr))
 	allocate(xv(nCS,nnr))
 	allocate(xc(nCS,nnr))
@@ -405,21 +403,11 @@ c	atoms_cloud(i,3)=1
 			if(densv(i,iCS).lt.Clouddens(i)*xv_bot(iCS)) dospecies(iCS)=.true.
 		enddo
 		if(i.eq.1) then
-			drho(i)=(Clouddens(i+1)-Clouddens(i))/(CloudR(i+1)-CloudR(i))
+			drhoKd(i)=(Kd(i+1)*Clouddens(i+1)-Kd(i)*Clouddens(i))/(CloudR(i+1)-CloudR(i))
 		else if(i.eq.nnr) then
-			drho(i)=(Clouddens(i)-Clouddens(i-1))/(CloudR(i)-CloudR(i-1))
+			drhoKd(i)=(Kd(i)*Clouddens(i)-Kd(i-1)*Clouddens(i-1))/(CloudR(i)-CloudR(i-1))
 		else
-			if(quadratic) then
-			f1=(CloudR(i-1)**2-CloudR(i)**2)/(CloudR(i+1)**2-CloudR(i)**2)
-			f2=(CloudR(i-1)-CloudR(i))/(CloudR(i+1)-CloudR(i))
-			af=((Clouddens(i-1)-Clouddens(i))-f2*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)**2-CloudR(i)**2)-
-     &					f2*(CloudR(i+1)**2-CloudR(i)**2))
-			bf=((Clouddens(i-1)-Clouddens(i))-f1*(Clouddens(i+1)-Clouddens(i)))/((CloudR(i-1)-CloudR(i))-
-     &					f1*(CloudR(i+1)-CloudR(i)))
-			drho(i)=2d0*af*CloudR(i)+bf
-			else
-			drho(i)=(Clouddens(i+1)-Clouddens(i-1))/(CloudR(i+1)-CloudR(i-1))
-			endif
+			drhoKd(i)=(Kd(i+1)*Clouddens(i+1)-Kd(i-1)*Clouddens(i-1))/(CloudR(i+1)-CloudR(i-1))
 		endif
 
 		gz=Ggrav*Mplanet/CloudR(i)**2
@@ -445,17 +433,7 @@ c start the loop
 		else if(i.eq.nnr) then
 			drhovsed(i)=(vsed(i)*Clouddens(i)-vsed(i-1)*Clouddens(i-1))/(CloudR(i)-CloudR(i-1))
 		else
-			if(quadratic) then
-			f1=(CloudR(i-1)**2-CloudR(i)**2)/(CloudR(i+1)**2-CloudR(i)**2)
-			f2=(CloudR(i-1)-CloudR(i))/(CloudR(i+1)-CloudR(i))
-			af=((vsed(i-1)*Clouddens(i-1)-vsed(i)*Clouddens(i))-f2*(vsed(i+1)*Clouddens(i+1)-vsed(i)*Clouddens(i)))/
-     &				((CloudR(i-1)**2-CloudR(i)**2)-f2*(CloudR(i+1)**2-CloudR(i)**2))
-			bf=((vsed(i-1)*Clouddens(i-1)-vsed(i)*Clouddens(i))-f1*(vsed(i+1)*Clouddens(i+1)-vsed(i)*Clouddens(i)))/
-     &				((CloudR(i-1)-CloudR(i))-f1*(CloudR(i+1)-CloudR(i)))
-			drhovsed(i)=2d0*af*CloudR(i)+bf
-			else
 			drhovsed(i)=(vsed(i+1)*Clouddens(i+1)-vsed(i-1)*Clouddens(i-1))/(CloudR(i+1)-CloudR(i-1))
-			endif
 		endif
 	enddo
 	
@@ -471,27 +449,12 @@ c equations for number of Nuclii
 
 		An(j,i)=An(j,i)-drhovsed(i)
 
-		if(quadratic) then
-		f1=(CloudR(i-1)**2-CloudR(i)**2)/(CloudR(i+1)**2-CloudR(i)**2)
-		f2=(CloudR(i-1)-CloudR(i))/(CloudR(i+1)-CloudR(i))
-		af=1d0/((CloudR(i-1)**2-CloudR(i)**2)-f2*(CloudR(i+1)**2-CloudR(i)**2))
-		bf=1d0/((CloudR(i-1)-CloudR(i))-f1*(CloudR(i+1)-CloudR(i)))
-
-		An(j,i-1)=An(j,i-1)+(2d0*af*CloudR(i)+bf)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
-		An(j,i+1)=An(j,i+1)-(2d0*af*f2*CloudR(i)+bf*f1)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
-		An(j,i)=An(j,i)+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
-
-		An(j,i-1)=An(j,i-1)+2d0*af*Clouddens(i)*Kd(i)
-		An(j,i+1)=An(j,i+1)-2d0*f2*af*Clouddens(i)*Kd(i)
-		An(j,i)=An(j,i)+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
-		else
-		An(j,i+1)=An(j,i+1)+(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
-		An(j,i-1)=An(j,i-1)-(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
+		An(j,i+1)=An(j,i+1)+(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
+		An(j,i-1)=An(j,i-1)-(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
 
 		An(j,i+1)=An(j,i+1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
 		An(j,i-1)=An(j,i-1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
 		An(j,i)=An(j,i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
-		endif
 
 		x(j)=-Sn(i)
 
@@ -554,27 +517,12 @@ c equations for mass in Nuclii
 
 			An(j,i)=An(j,i)-drhovsed(i)
 
-			if(quadratic) then
-			f1=(CloudR(i-1)**2-CloudR(i)**2)/(CloudR(i+1)**2-CloudR(i)**2)
-			f2=(CloudR(i-1)-CloudR(i))/(CloudR(i+1)-CloudR(i))
-			af=1d0/((CloudR(i-1)**2-CloudR(i)**2)-f2*(CloudR(i+1)**2-CloudR(i)**2))
-			bf=1d0/((CloudR(i-1)-CloudR(i))-f1*(CloudR(i+1)-CloudR(i)))
-
-			An(j,i-1)=An(j,i-1)+(2d0*af*CloudR(i)+bf)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
-			An(j,i+1)=An(j,i+1)-(2d0*af*f2*CloudR(i)+bf*f1)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
-			An(j,i)=An(j,i)+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
-
-			An(j,i-1)=An(j,i-1)+2d0*af*Clouddens(i)*Kd(i)
-			An(j,i+1)=An(j,i+1)-2d0*f2*af*Clouddens(i)*Kd(i)
-			An(j,i)=An(j,i)+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
-			else
-			An(j,i+1)=An(j,i+1)+(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
-			An(j,i-1)=An(j,i-1)-(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
+			An(j,i+1)=An(j,i+1)+(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
+			An(j,i-1)=An(j,i-1)-(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
 
 			An(j,i+1)=An(j,i+1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
 			An(j,i-1)=An(j,i-1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
 			An(j,i)=An(j,i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
-			endif
 
 			x(j)=-Sn(i)
 		enddo
@@ -610,7 +558,7 @@ c equations for mass in Nuclii
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(Sc,vthv,cs,Aomp,xomp,IWORKomp,iCS,i,j,dz,f1,f2,af,bf,NRHS,INFO)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,
-!$OMP&		NN,rpart,ixc,quadratic,vsed,drho,ixv,m_nuc,mpart,xv_bot,xc,xv,dospecies)
+!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,dospecies)
 	allocate(vthv(nnr))
 	allocate(Sc(nnr))
 	allocate(xomp(NN))
@@ -645,23 +593,13 @@ c equations for material
 
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-drhovsed(i)
 
-		if(quadratic) then
-		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))+(2d0*af*CloudR(i)+bf)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
-		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))-(2d0*af*f2*CloudR(i)+bf*f1)*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))
-
-		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))+2d0*af*Clouddens(i)*Kd(i)
-		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))-2d0*f2*af*Clouddens(i)*Kd(i)
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
-		else
-		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))+(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
-		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))-(-Clouddens(i)*vsed(i)+Kd(i)*drho(i))/dz
+		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))+(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
+		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))-(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
 
 		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
 		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))
      &					+1d0/(dz*(CloudR(i)-CloudR(i-1))))
-		endif
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Sc(i)*densv(i,iCS)/mpart(i)
@@ -669,23 +607,13 @@ c equations for material
 
 		j=j+1
 
-		if(quadratic) then
-		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))+(2d0*af*CloudR(i)+bf)*(Kd(i)*drho(i))
-		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))-(2d0*af*f2*CloudR(i)+bf*f1)*(Kd(i)*drho(i))
-		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+(2d0*af*(f2-1d0)*CloudR(i)+bf*(f1-1d0))*(Kd(i)*drho(i))
-
-		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))+2d0*af*Clouddens(i)*Kd(i)
-		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))-2d0*f2*af*Clouddens(i)*Kd(i)
-		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+2d0*(f2-1d0)*af*Clouddens(i)*Kd(i)
-		else
-		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))+(Kd(i)*drho(i))/dz
-		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))-(Kd(i)*drho(i))/dz
+		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))+(drhoKd(i))/dz
+		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))-(drhoKd(i))/dz
 
 		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
 		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))
      &					+1d0/(dz*(CloudR(i)-CloudR(i-1))))
-		endif
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-Sc(i)*xn(i)*Clouddens(i)
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Sc(i)*densv(i,iCS)/mpart(i)
@@ -938,7 +866,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(y)
 	deallocate(Sn)
 	deallocate(vth)
-	deallocate(drho)
+	deallocate(drhoKd)
 	deallocate(drhovsed)
 	deallocate(xv)
 	deallocate(xc)

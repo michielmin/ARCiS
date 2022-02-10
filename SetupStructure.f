@@ -32,7 +32,7 @@
 
 	if(compute_mixrat) nabla_ad=2d0/7d0
 	grav=Ggrav*Mplanet/(Rplanet)**2
-	if(par_tprofile.or.(computeT.and.nTiter.eq.0)) call ComputeParamT(T)
+	if(par_tprofile.or.(computeT.and.nTiter.eq.0.and.i3D.eq.1)) call ComputeParamT(T)
 	if(free_tprofile) then
 		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
 c		call MakePTstruct(P,T,nr,Ppoint,Tpoint,nTpoints)
@@ -148,7 +148,7 @@ c			if(domakeai.or.retrieval) return
 		endif
 	enddo
 
-	if(par_tprofile.or.(computeT.and.nTiter.eq.0)) call ComputeParamT(T)
+	if(par_tprofile.or.(computeT.and.nTiter.eq.0.and.i3D.eq.1)) call ComputeParamT(T)
 	if(free_tprofile) then
 		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
 c		call MakePTstruct(P,T,nr,Ppoint,Tpoint,nTpoints)
