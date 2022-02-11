@@ -1385,15 +1385,11 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	dTp=dTp_in
 
 	nT=nT_in
-	call sortw(logPp,dTp,nT)
+	call sort(logPp,nT)
 1	continue
 	do i=1,nT-1
 		if(logPp(i).eq.logPp(i+1)) then
-			do j=i,nT-1
-				logPp(j)=logPp(j+1)
-				dTp(j)=dTp(j+1)
-			enddo
-			nT=nT-1
+			logPp(i)=logPp(i)-1d-4
 			goto 1
 		endif
 	enddo

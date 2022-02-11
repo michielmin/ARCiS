@@ -64,20 +64,6 @@
 	ny=k
 	allocate(spec(ny))
 
-	do i=1,nvars
-		do j=1,nTpoints
-			keyword='Ppoint' // trim(int2string(j,'(i0.3)'))
-			if(RetPar(i)%keyword.eq.keyword) then
-				Ptemp(j)=var(i)
-				iPtemp(j)=i
-			endif
-		enddo
-	enddo
-	call sort(Ptemp,nTpoints)
-	do i=1,nTpoints
-		var(iPtemp(i))=Ptemp(i)
-	enddo
-
 	call mrqcomputeY(var,spec,nvars,ny,lnew,scale)
 
 	do i=1,nvars
