@@ -11,7 +11,7 @@
 	real*8,allocatable :: drhoKd(:),drhovsed(:),tcinv(:),rho_av(:),densv(:,:),Kd(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t
 	integer info,i,j,iter,NN,NRHS,niter,ii,k
-	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm
+	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm,ComputeKzz
 	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr)
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),IWORKomp(:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
@@ -363,15 +363,12 @@ c	atoms_cloud(i,3)=1
 	CloudR(k)=R(nr)
 	Clouddens(k)=dens(nr)
 
-	if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
+	if((Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0).or.Cloud(ii)%Kzz.le.0d0) then
 		do i=1,nnr
-			Kd(i)=Kzz_deep+Kzz_1bar/(CloudP(i)**Kzz_P)
-			if(Kd(i).gt.Kzz_max) Kd(i)=Kzz_max
+			Kd(i)=ComputeKzz(CloudP(i))
 		enddo
-	else if(Cloud(ii)%Kzz.gt.0d0) then
-		Kd=Cloud(ii)%Kzz
 	else
-		Kd=Kzz
+		Kd=Cloud(ii)%Kzz
 	endif
 
 	f=0.1d0
@@ -848,14 +845,9 @@ c       Kzz_r(1:nr) : Diffusion coefficient
 c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now set to equilibrium abundances.
 	   call output("==================================================================")
 	   call output("Computing disequilibrium chemistry")
-		if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
-			do i=1,nr
-				Kzz_r(i)=Kzz_deep+Kzz_1bar/(P(i)**Kzz_P)
-				if(Kzz_r(i).gt.Kzz_max) Kzz_r(i)=Kzz_max
-			enddo
-		else
-			Kzz_r=Kzz
-		endif
+		do i=1,nr
+			Kzz_r(i)=ComputeKzz(P(i))
+		enddo
 	   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))
 	endif
 

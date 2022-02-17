@@ -21,7 +21,7 @@
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam)
 	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:)
 	logical iterateshift,actually1D
-	real*8 vxxmin,vxxmax
+	real*8 vxxmin,vxxmax,ComputeKzz
 
 	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D))
 	if(computealbedo) allocate(SiSc(nlam,ng,0:nr,nnu0,n3D))
@@ -326,8 +326,9 @@ c Now call the setup for the readFull3D part
 		if(.not.retrieval) then
 			call SetOutputMode(.true.)
 			open(unit=20,file=trim(outputdir) // "mixrat" // trim(int2string(i,'(i0.3)')),RECL=6000)
+			write(20,'("#",a9,a13,a13)') "T[K]","P[bar]","Kzz[cm^2/s]"
 			do j=1,nr
-				write(20,*) T(j),P(j)
+				write(20,'(f10.3,2es13.3E3)') T(j),P(j),ComputeKzz(P(j))
 			enddo
 			close(unit=20)
 		endif

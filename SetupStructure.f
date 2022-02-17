@@ -8,7 +8,7 @@
 	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
-	real*8 starttime,stoptime,chemtime
+	real*8 starttime,stoptime,chemtime,ComputeKzz
 
 	chemtime=0d0
 		
@@ -211,14 +211,9 @@ c			Kzz_r(1:nr) : Diffusion coefficient
 c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now set to equilibrium abundances.
 		   call output("==================================================================")
 		   call output("Computing disequilibrium chemistry")
-			if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
-				do i=1,nr
-					Kzz_r(i)=Kzz_deep+Kzz_1bar/(P(i)**Kzz_P)
-					if(Kzz_r(i).gt.Kzz_max) Kzz_r(i)=Kzz_max
-				enddo
-			else
-				Kzz_r=Kzz
-			endif
+			do i=1,nr
+				Kzz_r(i)=ComputeKzz(P(i))
+			enddo
 		   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))
 		   
 		endif
@@ -447,7 +442,7 @@ c			beta_used=max
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 mix(nr,nmol)
+	real*8 mix(nr,nmol),ComputeKzz
 	integer i,imol,nmix,ii
 	character*1000 form
 	character*10 namemix(nmol)
@@ -490,6 +485,15 @@ c			beta_used=max
 	form='(f10.3,es13.3E3,' // trim(int2string(nmix,'(i2)')) // 'es15.4E3)'
 	do i=1,nr
 		write(50,form) T(i),P(i),mix(i,1:nmix)
+	enddo
+	close(unit=50)
+
+	open(unit=50,file=trim(outputdir) // 'Kzz' // trim(side) // '.dat',RECL=6000)
+	form='("#",a12,a13)'
+	write(50,form) "Kzz [cm^2/s]","P [bar]"
+	form='(es13.3E3,es13.3E3)'
+	do i=1,nr
+		write(50,form) ComputeKzz(P(i)),P(i)
 	enddo
 	close(unit=50)
 
@@ -1568,3 +1572,21 @@ c-----------------------------------------------------------------------
 
 	return
 	end
+
+
+
+	real*8 function ComputeKzz(x)
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 x
+
+	if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
+		if(Kzz_contrast.gt.0d0) Kzz_max=Kzz_deep*Kzz_contrast	
+		ComputeKzz=1d0/(1d0/Kzz_max+1d0/(Kzz_deep+Kzz_1bar/x**Kzz_P))
+	else
+		ComputeKzz=Kzz
+	endif
+	
+	return
+	end
+	

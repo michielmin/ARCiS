@@ -871,6 +871,8 @@ c			read(key%value,*) pmax
 			read(key%value,*) Kzz_P
 		case("kzz_max")
 			read(key%value,*) Kzz_max
+		case("kzz_contrast")
+			read(key%value,*) Kzz_contrast
 		case("fastchem","fast_chem")
 			read(key%value,*) fast_chem
 		case("metallicity")
@@ -1453,6 +1455,7 @@ c  GGchem was still implemented slightly wrong.
 	Kzz_1bar=-1d0
 	Kzz_P=0.5d0
 	Kzz_max=1d50
+	Kzz_contrast=-1d0
 
 	computecontrib=.false.
 	
