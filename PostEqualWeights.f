@@ -5,7 +5,7 @@
 	IMPLICIT NONE
 	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime,sig,aver,xmin,xmax
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:),hotspotshift_der(:)
-	real*8,allocatable :: PTstruct(:,:),var(:,:),values(:,:),COratio_der(:),Z_der(:)
+	real*8,allocatable :: PTstruct(:,:),var(:,:),values(:,:),COratio_der(:),Z_der(:),cloudstruct(:,:)
 	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j,iphase,imol
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
@@ -24,6 +24,7 @@
 	allocate(specemis(0:nmodels,nlam))
 	allocate(specemisR(0:nmodels,nlam))
 	allocate(PTstruct(0:nmodels,nr))
+	allocate(cloudstruct(0:nmodels,nr))
 	allocate(values(0:nmodels,n_ret))
 	allocate(COratio_der(0:nmodels))
 	allocate(Z_der(0:nmodels))
@@ -43,6 +44,7 @@
 	specemis=0d0
 	specemisR=0d0
 	PTstruct=0d0
+	cloudstruct=0d0
 
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
 
@@ -139,6 +141,7 @@
 	i2d=i2d+1
 	if(i2d.le.n2d) goto 3
 	PTstruct(i,1:nr)=T(1:nr)
+	cloudstruct(i,1:nr)=cloud_dens(1:nr,1)
 	
 	if(do3D.and.fulloutput3D) then
 		PTstruct3D(i,0:nphase,1:nr)=PTaverage3D(0:nphase,1:nr)
@@ -203,6 +206,14 @@
 		open(unit=26,file=trim(outputdir) // "PT_limits",RECL=1000)
 		do ir=1,nr
 			sorted(1:i)=PTstruct(1:i,ir)
+			call sort(sorted,i)
+			write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+		enddo
+		close(unit=26)
+
+		open(unit=26,file=trim(outputdir) // "cloud_limits",RECL=1000)
+		do ir=1,nr
+			sorted(1:i)=cloudstruct(1:i,ir)
 			call sort(sorted,i)
 			write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 		enddo
