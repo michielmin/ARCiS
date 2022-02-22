@@ -36,7 +36,7 @@
 	if(free_tprofile) then
 		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
 c		call MakePTstruct(P,T,nr,Ppoint,Tpoint,nTpoints)
-		call MakePTstruct_dT(P,T,nr,Ppoint,Tpoint,nTpoints,Tc)
+		call MakePTstruct_dT(P,T,nr,Ppoint,Tpoint,nTpoints,Tc,PrefTpoint)
 	endif
 
 	call SetAbun
@@ -152,7 +152,7 @@ c			if(domakeai.or.retrieval) return
 	if(free_tprofile) then
 		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
 c		call MakePTstruct(P,T,nr,Ppoint,Tpoint,nTpoints)
-		call MakePTstruct_dT(P,T,nr,Ppoint,Tpoint,nTpoints,Tc)
+		call MakePTstruct_dT(P,T,nr,Ppoint,Tpoint,nTpoints,Tc,PrefTpoint)
 	endif
 	do i=1,nr
 		if(T(i).gt.maxTprofile) T(i)=maxTprofile
@@ -1379,10 +1379,10 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	return
 	end
 
-	subroutine MakePTstruct_dT(P,T,np,Pp,dTp_in,nT_in,T0)
+	subroutine MakePTstruct_dT(P,T,np,Pp,dTp_in,nT_in,T0,P0)
 	IMPLICIT NONE
-	integer np,i,nT,nT_in,j
-	real*8 P(np),T(np),Pp(nT_in),d2T(nT_in),dTp(nT_in),yp1,ypn,dT
+	integer np,i,nT,nT_in,j,i0
+	real*8 P(np),T(np),Pp(nT_in),d2T(nT_in),dTp(nT_in),yp1,ypn,dT,P0,logT1,logP1
 	real*8 logPp(nT_in),logTp(nT_in),logP(np),logT(np),T0,dTp_in(nT_in)
 
 	logPp=log(Pp)
@@ -1403,9 +1403,21 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	call spline(logPp,dTp,nT,yp1,ypn,d2T)
 
 	logP=log(P)
-	logT(np)=log(T0)
-	T(np)=T0
-	do i=np-1,1,-1
+
+	if(P0.le.P(np)) then
+		i0=np
+	else if(P0.ge.P(1)) then
+		i0=0
+	else
+		do i0=1,np-1
+			if(P0.le.P(i0).and.P0.gt.P(i0+1)) exit
+		enddo
+	endif
+	
+
+	logT1=log(T0)
+	logP1=log(P0)
+	do i=i0,1,-1
 		if(logP(i).lt.logPp(1)) then
 			dT=dTp(1)
 		else if(logP(i).gt.logPp(nT)) then
@@ -1415,7 +1427,27 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 		endif
 		if(dT.gt.2d0/7d0) dT=2d0/7d0
 		if(dT.lt.-2d0/7d0) dT=-2d0/7d0
-		logT(i)=logT(i+1)+(logP(i)-logP(i+1))*dT
+		logT(i)=logT1+(logP(i)-logP1)*dT
+		logT1=logT(i)
+		logP1=logP(i)
+		T(i)=exp(logT(i))
+	enddo
+
+	logT1=log(T0)
+	logP1=log(P0)
+	do i=i0+1,np
+		if(logP(i).lt.logPp(1)) then
+			dT=dTp(1)
+		else if(logP(i).gt.logPp(nT)) then
+			dT=dTp(nT)
+		else
+			call splint(logPp,dTp,d2T,nT,logP(i),dT)
+		endif
+		if(dT.gt.2d0/7d0) dT=2d0/7d0
+		if(dT.lt.-2d0/7d0) dT=-2d0/7d0
+		logT(i)=logT1-(logP1-logP(i))*dT
+		logT1=logT(i)
+		logP1=logP(i)
 		T(i)=exp(logT(i))
 	enddo
 	

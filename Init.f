@@ -347,6 +347,7 @@ c select at least the species relevant for disequilibrium chemistry
 	do i=1,nTpoints
 		Ppoint(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nTpoints-1))
 	enddo
+	PrefTpoint=Pmin
 
 	ncia0=0
 	existh2h2=.false.
@@ -956,6 +957,8 @@ c			read(key%value,*) pmax
 		case("ntpoints","nfreet")
 c is already set in CountStuff
 c			read(key%value,*) nTpoints
+		case("preftpoint","pref")
+			read(key%value,*) PrefTpoint
 		case("free_tprofile")
 			read(key%value,*) free_tprofile
 		case("faircoverage")

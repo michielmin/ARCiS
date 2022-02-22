@@ -142,6 +142,17 @@
 	if(i2d.le.n2d) goto 3
 	PTstruct(i,1:nr)=T(1:nr)
 	cloudstruct(i,1:nr)=cloud_dens(1:nr,1)
+	if(Cloud(1)%simplecloudpart) then
+	do j=1,nr
+		if(P(j).ge.Cloud(1)%P) then
+			cloudstruct(i,j)=cloudstruct(i,j)*Cloud(1)%mixrat
+		else
+			cloudstruct(i,j)=cloudstruct(i,j)*Cloud(1)%mixrat*exp(-(log(P(j)/Cloud(1)%P)/log(Cloud(1)%dP))**2)
+		endif
+		cloudstruct(i,j)=cloudstruct(i,j)+Cloud(1)%mixrathaze*cloud_dens(j,1)
+	enddo
+	endif
+	cloudstruct(i,1:nr)=cloudstruct(i,1:nr)/dens(1:nr)
 	
 	if(do3D.and.fulloutput3D) then
 		PTstruct3D(i,0:nphase,1:nr)=PTaverage3D(0:nphase,1:nr)

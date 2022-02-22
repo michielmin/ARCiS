@@ -119,7 +119,7 @@ c for exchange when computing secondary atmosphere
 	real*8 molfracs_atoms_outgas(18)
 	logical secondary_atmosphere
 
-	real*8 Mp_prior,dMp_prior,surfacealbedo
+	real*8 Mp_prior,dMp_prior,surfacealbedo,PrefTpoint
 	character*20 surfacetype
 	integer nTZ,nspike,nai,nboot,npew,nTpoints
 	integer,allocatable :: niso(:),instr_nobs(:)
