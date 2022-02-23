@@ -9,6 +9,7 @@
 	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j,iphase,imol
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
+	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:)
 	
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
 	
@@ -24,6 +25,7 @@
 	allocate(specemis(0:nmodels,nlam))
 	allocate(specemisR(0:nmodels,nlam))
 	allocate(PTstruct(0:nmodels,nr))
+	allocate(dPTstruct(0:nmodels,nr))
 	allocate(cloudstruct(0:nmodels,nr))
 	allocate(values(0:nmodels,n_ret))
 	allocate(COratio_der(0:nmodels))
@@ -34,6 +36,7 @@
 	allocate(var(nmodels,n_ret))
 	if(do3D.and.fulloutput3D) then
 		allocate(PTstruct3D(0:nmodels,0:nphase,nr))
+		allocate(dPTstruct3D(0:nmodels,0:nphase,nr))
 		allocate(mixrat3D(0:nmodels,0:nphase,nr,nmol))
 		allocate(phase3D(0:nmodels,1:nphase,nlam))
 		allocate(phase3DR(0:nmodels,1:nphase,nlam))
@@ -44,6 +47,7 @@
 	specemis=0d0
 	specemisR=0d0
 	PTstruct=0d0
+	dPTstruct=0d0
 	cloudstruct=0d0
 
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
@@ -141,6 +145,11 @@
 	i2d=i2d+1
 	if(i2d.le.n2d) goto 3
 	PTstruct(i,1:nr)=T(1:nr)
+	dPTstruct(i,1)=log(T(2)/T(1))/log(P(2)/P(1))
+	do j=2,nr-1
+		dPTstruct(i,j)=log(T(j+1)/T(j-1))/log(P(j+1)/P(j-1))
+	enddo
+	dPTstruct(i,nr)=log(T(nr)/T(nr-1))/log(P(nr)/P(nr-1))
 	cloudstruct(i,1:nr)=cloud_dens(1:nr,1)
 	if(Cloud(1)%simplecloudpart) then
 	do j=1,nr
@@ -156,6 +165,11 @@
 	
 	if(do3D.and.fulloutput3D) then
 		PTstruct3D(i,0:nphase,1:nr)=PTaverage3D(0:nphase,1:nr)
+		dPTstruct3D(i,0:nphase,1)=log(PTaverage3D(0:nphase,2)/PTaverage3D(0:nphase,1))/log(P(2)/P(1))
+		do j=2,nr-1
+			dPTstruct3D(i,0:nphase,j)=log(PTaverage3D(0:nphase,j+1)/PTaverage3D(0:nphase,j-1))/log(P(j+1)/P(j-1))
+		enddo
+		dPTstruct3D(i,0:nphase,nr)=log(PTaverage3D(0:nphase,nr)/PTaverage3D(0:nphase,nr-1))/log(P(nr)/P(nr-1))
 		mixrat3D(i,0:nphase,1:nr,1:nmol)=mixrat_average3D(0:nphase,1:nr,1:nmol)
 		do iphase=1,nphase
 			phase3D(i,iphase,1:nlam)=phase(iphase,0,1:nlam)+flux(0,1:nlam)
@@ -221,6 +235,13 @@
 			write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 		enddo
 		close(unit=26)
+		open(unit=26,file=trim(outputdir) // "dPT_limits",RECL=1000)
+		do ir=1,nr
+			sorted(1:i)=dPTstruct(1:i,ir)
+			call sort(sorted,i)
+			write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+		enddo
+		close(unit=26)
 
 		open(unit=26,file=trim(outputdir) // "cloud_limits",RECL=1000)
 		do ir=1,nr
@@ -256,6 +277,13 @@
 				write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 			enddo
 			close(unit=26)
+			open(unit=26,file=trim(outputdir) // "dPT_trans_limits",RECL=1000)
+			do ir=1,nr
+				sorted(1:i)=dPTstruct3D(1:i,0,ir)
+				call sort(sorted,i)
+				write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+			enddo
+			close(unit=26)
 			do imol=1,nmol
 				if(includemol(imol)) then
 					open(unit=26,file=trim(outputdir) // trim(molname(imol)) // "_trans_limits",RECL=1000)
@@ -271,6 +299,13 @@
 				open(unit=26,file=trim(outputdir) // "PT" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",RECL=1000)
 				do ir=1,nr
 					sorted(1:i)=PTstruct3D(1:i,iphase,ir)
+					call sort(sorted,i)
+					write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+				enddo
+				close(unit=26)
+				open(unit=26,file=trim(outputdir) // "dPT" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",RECL=1000)
+				do ir=1,nr
+					sorted(1:i)=dPTstruct3D(1:i,iphase,ir)
 					call sort(sorted,i)
 					write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 				enddo
