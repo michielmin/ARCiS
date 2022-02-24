@@ -1447,6 +1447,10 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	real*8 P(np),T(np),Pp(nT_in),dT(np),dTp(nT_in),yp1,ypn,P0,logT1,logP1,d2T(nT_in)
 	real*8 logPp(nT_in),logTp(nT_in),logP(np),logT(np),T0,dTp_in(nT_in),dT1,dT0
 	logical SKIP
+
+c	call MakePTstruct_dT_Spline(P,T,np,Pp,dTp_in,nT_in,T0,P0)
+c	return
+	
 	SKIP=.false.
 	INCFD=1
 
@@ -1454,7 +1458,7 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	dTp=dTp_in
 
 	nT=nT_in
-	call sort(logPp,nT)
+	call sortw(logPp,dTp,nT)
 1	continue
 	do i=1,nT-1
 		if(logPp(i).eq.logPp(i+1)) then
@@ -1469,6 +1473,11 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 
 	call DPCHIM(nT,logPp,dTp,d2T,INCFD)
 	call DPCHFE (nT, logPp, dTp, d2T, INCFD, SKIP, np, logP, dT, IERR)
+	
+	do i=1,np
+		if(logP(i).lt.logPp(1)) dT(i)=dTp(1)
+		if(logP(i).gt.logPp(nT)) dT(i)=dTp(nT)
+	enddo
 
 	logP=-logP
 
