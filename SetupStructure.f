@@ -1379,7 +1379,138 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	return
 	end
 
+	subroutine MakePTstruct_dT_linear(P,T,np,Pp,dTp_in,nT_in,T0,P0)
+	IMPLICIT NONE
+	integer np,i,nT,nT_in,j,i0
+	real*8 P(np),T(np),Pp(nT_in),dT(np),dTp(nT_in),yp1,ypn,P0,logT1,logP1
+	real*8 logPp(nT_in),logTp(nT_in),logP(np),logT(np),T0,dTp_in(nT_in),dT1,dT0
+
+	logPp=log(Pp)
+	dTp=dTp_in
+
+	nT=nT_in
+	call sort(logPp,nT)
+1	continue
+	do i=1,nT-1
+		if(logPp(i).eq.logPp(i+1)) then
+			logPp(i)=logPp(i)-1d-4
+			goto 1
+		endif
+	enddo
+
+	logP=log(P)
+
+	call regridarray(logPp,dTp,nT,logP,dT,np)
+
+	if(P0.le.P(np)) then
+		i0=np
+		dT0=dT(np)
+	else if(P0.ge.P(1)) then
+		i0=0
+		dT0=dT(1)
+	else
+		do i0=1,np-1
+			if(P0.le.P(i0).and.P0.gt.P(i0+1)) exit
+		enddo
+		dT0=dT(i0)+(dT(i0+1)-dT(i0))*(P(i0)-P0)/(P(i0)-P(i0+1))
+	endif
+
+	logT1=log(T0)
+	logP1=log(P0)
+	dT1=dT0
+	do i=i0,1,-1
+		logT(i)=logT1+(logP(i)-logP1)*dT1
+		logT1=logT(i)
+		logP1=logP(i)
+		dT1=dT(i)
+		T(i)=exp(logT(i))
+	enddo
+
+	logT1=log(T0)
+	logP1=log(P0)
+	dT1=dT0
+	do i=i0+1,np
+		logT(i)=logT1-(logP1-logP(i))*dT1
+		logT1=logT(i)
+		logP1=logP(i)
+		dT1=dT(i)
+		T(i)=exp(logT(i))
+	enddo
+	
+	return
+	end
+
+
 	subroutine MakePTstruct_dT(P,T,np,Pp,dTp_in,nT_in,T0,P0)
+	IMPLICIT NONE
+	integer np,i,nT,nT_in,j,i0,INCFD,IERR
+	real*8 P(np),T(np),Pp(nT_in),dT(np),dTp(nT_in),yp1,ypn,P0,logT1,logP1,d2T(nT_in)
+	real*8 logPp(nT_in),logTp(nT_in),logP(np),logT(np),T0,dTp_in(nT_in),dT1,dT0
+	logical SKIP
+	SKIP=.false.
+	INCFD=1
+
+	logPp=log(Pp)
+	dTp=dTp_in
+
+	nT=nT_in
+	call sort(logPp,nT)
+1	continue
+	do i=1,nT-1
+		if(logPp(i).eq.logPp(i+1)) then
+			logPp(i)=logPp(i)-1d-4
+			goto 1
+		endif
+	enddo
+
+	logPp=-logPp
+	call sortw(logPp,dTp,nT)
+	logP=-log(P)
+
+	call DPCHIM(nT,logPp,dTp,d2T,INCFD)
+	call DPCHFE (nT, logPp, dTp, d2T, INCFD, SKIP, np, logP, dT, IERR)
+
+	logP=-logP
+
+	if(P0.le.P(np)) then
+		i0=np
+		dT0=dT(np)
+	else if(P0.ge.P(1)) then
+		i0=0
+		dT0=dT(1)
+	else
+		do i0=1,np-1
+			if(P0.le.P(i0).and.P0.gt.P(i0+1)) exit
+		enddo
+		dT0=dT(i0)+(dT(i0+1)-dT(i0))*(P(i0)-P0)/(P(i0)-P(i0+1))
+	endif
+
+	logT1=log(T0)
+	logP1=log(P0)
+	dT1=dT0
+	do i=i0,1,-1
+		logT(i)=logT1+(logP(i)-logP1)*dT1
+		logT1=logT(i)
+		logP1=logP(i)
+		dT1=dT(i)
+		T(i)=exp(logT(i))
+	enddo
+
+	logT1=log(T0)
+	logP1=log(P0)
+	dT1=dT0
+	do i=i0+1,np
+		logT(i)=logT1-(logP1-logP(i))*dT1
+		logT1=logT(i)
+		logP1=logP(i)
+		dT1=dT(i)
+		T(i)=exp(logT(i))
+	enddo
+	
+	return
+	end
+
+	subroutine MakePTstruct_dT_spline(P,T,np,Pp,dTp_in,nT_in,T0,P0)
 	IMPLICIT NONE
 	integer np,i,nT,nT_in,j,i0
 	real*8 P(np),T(np),Pp(nT_in),d2T(nT_in),dTp(nT_in),yp1,ypn,dT,P0,logT1,logP1
