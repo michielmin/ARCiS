@@ -140,11 +140,11 @@ c	recomputeopac=.true.
 
 
 	beta_c=0d0
-	i=nlong/4
+	i=max(1,nlong/4)
 	do j=1,nlatt-1
 		beta_c=beta_c+beta(i,j)
 	enddo
-	i=3*nlong/4
+	i=max(1,3*nlong/4)
 	do j=1,nlatt-1
 		beta_c=beta_c+beta(i,j)
 	enddo
@@ -429,7 +429,7 @@ c Now call the setup for the readFull3D part
 	allocate(ftot(nlam))
 	if(computealbedo) allocate(alb_omp(nlam))
 	fluxp_omp=0d0
-	alb_omp=0d0
+	if(computealbedo) alb_omp=0d0
 !$OMP DO SCHEDULE(DYNAMIC,1)
 	do irtrace=1,nrtrace
 		A=2d0*pi*rtrace(irtrace)*wrtrace(irtrace)/real(nptrace)
