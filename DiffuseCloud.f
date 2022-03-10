@@ -10,7 +10,7 @@
 	real*8,allocatable :: Aomp(:,:),xomp(:)
 	real*8,allocatable :: drhoKd(:),drhovsed(:),tcinv(:),rho_av(:),densv(:,:),Kd(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t
-	integer info,i,j,iter,NN,NRHS,niter,ii,k
+	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze
 	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm,ComputeKzz
 	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr)
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),IWORKomp(:)
@@ -83,7 +83,7 @@
 
 	atoms_cloud=0
 	i=0
-c TiO2
+c TiO2: 1
 	i=i+1
 	CSname(i)='TiO2'
 	ATP(i)=77365.	! Al2O3 for now
@@ -93,7 +93,7 @@ c TiO2
 	rhodust(i)=7.0d0	! moet ik nog checken
 	CSnmol(i)=1d0
 	ice(i)=.false.
-c VO
+c VO: 2
 	i=i+1
 	CSname(i)='VO'
 	ATP(i)=77365.	! Al2O3 for now
@@ -103,7 +103,7 @@ c VO
 	rhodust(i)=7.0d0	! moet ik nog checken
 	CSnmol(i)=1d0
 	ice(i)=.false.
-c Al2O3
+c Al2O3: 3
 	i=i+1
 	CSname(i)='Al2O3'
 	ATP(i)=77365.
@@ -113,7 +113,7 @@ c Al2O3
 	rhodust(i)=4.0d0
 	CSnmol(i)=2d0
 	ice(i)=.false.
-c SiO2
+c SiO2: 4
 	i=i+1
 	CSname(i)='SiO2'
 	ATP(i)=69444.
@@ -123,7 +123,7 @@ c SiO2
 	rhodust(i)=2.2d0
 	CSnmol(i)=1d0
 	ice(i)=.false.
-c Silicates
+c Silicates: 5
 	i=i+1
 	ATP(i)=68908.	! MgSiO3 for now
 	BTP(i)=38.1
@@ -150,7 +150,7 @@ c==================
 	rhodust(i)=2.0d0
 	CSnmol(i)=3d0
 	ice(i)=.false.
-c H2O
+c H2O: 6
 	i=i+1
 	CSname(i)='H2O'
 	ATP(i)=6511.
@@ -160,7 +160,7 @@ c H2O
 	rhodust(i)=1.0d0
 	CSnmol(i)=1d0
 	ice(i)=.true.
-c Fe
+c Fe: 7
 	i=i+1
 	CSname(i)='Fe'
 	ATP(i)=48354.
@@ -169,7 +169,7 @@ c Fe
 	rhodust(i)=7.8d0
 	CSnmol(i)=1d0
 	ice(i)=.false.
-c FeS
+c FeS: 8
 	i=i+1
 	CSname(i)='FeS'
 	ATP(i)=48354.
@@ -180,7 +180,7 @@ c	atoms_cloud(i,17)=1
 	maxT(i)=680d0
 	CSnmol(i)=1d0
 	ice(i)=.false.
-c C
+c C: 9
 	i=i+1
 	CSname(i)='C'
 	ATP(i)=93646.
@@ -189,7 +189,7 @@ c C
 	rhodust(i)=1.8d0
 	CSnmol(i)=1d0
 	ice(i)=.false.
-c SiC
+c SiC: 10
 	i=i+1
 	CSname(i)='SiC'
 	ATP(i)=78462.
@@ -281,22 +281,31 @@ c	atoms_cloud(i,3)=1
 	select case(Cloud(ii)%hazetype)
 		case("SOOT","soot","Soot")
 			rho_nuc=1.00
+			ihaze=9
 		case("THOLIN","tholin","Tholin")
 			rho_nuc=1.00
+			ihaze=9
 		case("SiC")
 			rho_nuc=3.22
+			ihaze=10
 		case("CARBON","Carbon","carbon")
 			rho_nuc=1.80
+			ihaze=9
 		case("CORRUNDUM","Corrundum","corrundum","Al2O3")
 			rho_nuc=3.97
+			ihaze=3
 		case("IRON","Iron","iron","Fe")
 			rho_nuc=7.87
+			ihaze=7
 		case("SiO")
 			rho_nuc=2.18
+			ihaze=4
 		case("TiO2")
 			rho_nuc=4.23
+			ihaze=1
 		case("Enstatite","enstatite","ENSTATITE")
 			rho_nuc=3.20
+			ihaze=5
 		case("MIX")
 			tot=Cloud(ii)%fHazeSiO+Cloud(ii)%fHazeAl2O3+Cloud(ii)%fHazeTiO2+Cloud(ii)%fHazeTholin+Cloud(ii)%fHazeFe
 			Cloud(ii)%fHazeSiO=Cloud(ii)%fHazeSiO/tot
@@ -306,6 +315,7 @@ c	atoms_cloud(i,3)=1
 			Cloud(ii)%fHazeFe=Cloud(ii)%fHazeFe/tot
 			rho_nuc=1d0/(Cloud(ii)%fHazeSiO/2.18+Cloud(ii)%fHazeAl2O3/3.97+Cloud(ii)%fHazeTiO2/4.23+
      &					Cloud(ii)%fHazeTholin/1.00+Cloud(ii)%fHazeFe/7.87)
+			ihaze=1
 		case default
 			call output("hazetype unknown")
 			stop
@@ -454,6 +464,10 @@ c equations for number of Nuclii
 		An(j,i)=An(j,i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 
 		x(j)=-Sn(i)
+		if(Cloud(ii)%haze) then
+			x(j)=x(j)+xn(i)*Clouddens(i)*
+     &			(4d0*pi*rpart(i)**2*densv(i,ihaze)/rho_nuc)*sqrt(mu(ihaze)*mp/(2d0*pi*kb*CloudT(i)))
+		endif
 
 c coagulation
 		if(coagulation) then
@@ -522,6 +536,10 @@ c equations for mass in Nuclii
 			An(j,i)=An(j,i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 
 			x(j)=-Sn(i)
+			if(Cloud(ii)%haze) then
+				x(j)=x(j)+xn(i)*Clouddens(i)*
+     &				(4d0*pi*rpart(i)**2*densv(i,ihaze)/rho_nuc)*sqrt(mu(ihaze)*mp/(2d0*pi*kb*CloudT(i)))
+			endif
 		enddo
 		i=nnr
 		j=j+1
