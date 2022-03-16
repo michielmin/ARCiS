@@ -9,7 +9,7 @@
 	real*8,allocatable :: An(:,:),y(:,:),xv(:,:),xn(:),xc(:,:),xm(:)
 	real*8,allocatable :: Aomp(:,:),xomp(:)
 	real*8,allocatable :: drhoKd(:),drhovsed(:),tcinv(:),rho_av(:),densv(:,:),Kd(:)
-	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t
+	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze
 	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm,ComputeKzz
 	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr)
@@ -510,7 +510,11 @@ c rewritten for better convergence
 	do i=1,nnr
 		if(.not.x(i).gt.0d0) x(i)=0d0
 	enddo
-	xn(1:nnr)=x(1:nnr)/m_nuc
+	if(iter.eq.1) then
+		xn(1:nnr)=x(1:nnr)/m_nuc
+	else
+		xn(1:nnr)=sqrt(xn(1:nnr)*x(1:nnr)/m_nuc)
+	endif
 
 	do i=1,nnr
 		if(xn(i).lt.0d0) xn(i)=0d0
@@ -558,7 +562,11 @@ c equations for mass in Nuclii
 		do i=1,nnr
 			if(.not.x(i).gt.0d0) x(i)=0d0
 		enddo
-		xm(1:nnr)=x(1:nnr)
+		if(iter.eq.1) then
+			xm(1:nnr)=x(1:nnr)
+		else
+			xm(1:nnr)=sqrt(x(1:nnr)*xm(1:nnr))
+		endif
 
 		do i=1,nnr
 			if(xm(i).lt.0d0) xm(i)=0d0
@@ -573,7 +581,7 @@ c equations for mass in Nuclii
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(Sc,vthv,cs,Aomp,xomp,IWORKomp,iCS,i,j,dz,f1,f2,af,bf,NRHS,INFO)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,
-!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,dospecies)
+!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,dospecies,iter)
 	allocate(vthv(nnr))
 	allocate(Sc(nnr))
 	allocate(xomp(NN))
@@ -662,11 +670,17 @@ c equations for material
 		if(.not.xomp(i).gt.1d-200) xomp(i)=1d-200
 	enddo
 
-	do i=1,nnr
-		xc(iCS,i)=xomp(ixc(iCS,i))
-		xv(iCS,i)=xomp(ixv(iCS,i))
-	enddo
-
+	if(iter.eq.1) then
+		do i=1,nnr
+			xc(iCS,i)=xomp(ixc(iCS,i))
+			xv(iCS,i)=xomp(ixv(iCS,i))
+		enddo
+	else
+		do i=1,nnr
+			xc(iCS,i)=sqrt(xc(iCS,i)*xomp(ixc(iCS,i)))
+			xv(iCS,i)=sqrt(xv(iCS,i)*xomp(ixv(iCS,i)))
+		enddo
+	endif
 	do i=1,nnr
 		if(xc(iCS,i).lt.0d0) xc(iCS,i)=0d0
 		if(xv(iCS,i).lt.0d0) xv(iCS,i)=0d0
@@ -726,7 +740,16 @@ c end the loop
 		if(nTiter.le.1) cloud_dens(i,ii)=0d0
 		Cloud(ii)%rv(i)=0d0
 		Cloud(ii)%frac(i,1:19)=1d-200
+		tot1=0d0
+		tot2=0d0
+		tot3=0d0
 		do j=1,nr_cloud
+			tot1=tot1+xm(k)/rho_nuc
+			do iCS=1,nCS
+				tot1=tot1+xc(iCS,k)/rhodust(iCS)
+			enddo
+			tot3=tot3+xn(k)
+
 c correction for silicates
 			f=mu(4)*CSnmol(4)+mu(5)*CSnmol(5)
 			mm=(f/(mu(5)*CSnmol(5))-1d0)*xc(5,k)
@@ -804,6 +827,14 @@ CCloud(ii)%frac(i,17)=0d0
 		enddo
 		tot=sum(Cloud(ii)%frac(i,1:19))
 		Cloud(ii)%frac(i,1:19)=Cloud(ii)%frac(i,1:19)/tot
+
+		if(tot3.gt.0d0) then
+			rr=((3d0*tot1)/(4d0*pi*tot3))**(1d0/3d0)
+			if(.not.rr.gt.r_nuc) rr=r_nuc
+		else
+			rr=r_nuc
+		endif
+		Cloud(ii)%rv(i)=rr
 
 		if(nTiter.gt.1) cloud_dens(i,ii)=cloud_dens(i,ii)*fiter
 	enddo
