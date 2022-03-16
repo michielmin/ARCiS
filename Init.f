@@ -766,9 +766,9 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		case("lmax")
 			read(key%value,*) lam2
 		case("pmin")
-c			read(key%value,*) pmin
+			read(key%value,*) pmin
 		case("pmax")
-c			read(key%value,*) pmax
+			read(key%value,*) pmax
 		case("pcloud","psimplecloud")
 			read(key%value,*) psimplecloud
 		case("tmin")

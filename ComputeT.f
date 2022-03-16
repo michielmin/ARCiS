@@ -445,7 +445,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 !$OMP END PARALLEL
 
 
-	do iter=1,50
+	do iter=1,niter
 
 	Ts(1:nr)=T(1:nr)
 
@@ -685,9 +685,9 @@ c	enddo
 
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
 
-c	converged=.true.
+	converged=.true.
 	do ir=1,nr
-		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.epsiter) converged=.false.
+		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.3d0*epsiter) converged=.false.
 		T(ir)=Tinp(ir)*(1d0-f)+T(ir)*f
 	enddo
 
