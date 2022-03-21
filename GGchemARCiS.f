@@ -77,7 +77,7 @@
       model_struc  = 0
       initchem_info      = .false.
       Npoints      = 100
-      Tfast        = 9000.d0
+      Tfast        = 1000.d0
       Tmin         = 100.d0
       Tmax         = 6000.d0
       pmin         = 1.d0*bar
