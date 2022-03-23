@@ -793,7 +793,7 @@ c	print*,Tstar*(Rstar/Dplanet)**0.5
 	nsub=3
 
 	nrtrace=(nr-1)*nsub+ndisk
-	nptrace=nlatt
+	nptrace=2*((nlatt+1)/2)
 	if(actually1D) nptrace=1
 	allocate(rtrace(nrtrace))
 
