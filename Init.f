@@ -677,6 +677,10 @@ c In this case the beta map should be the static one. Make sure this is set prop
 		hotspotshift0=-1d5
 	endif
 	
+	if(deepRedist) then
+		n3D=n3D*n_deepRedist
+	endif
+	
 	allocate(long(nlong),latt(nlatt))
 	allocate(tanx(nlong),tany(nlong))
 	allocate(cost2(nlatt),beta3D_eq(nlong),x3D_eq(nlong))
@@ -1035,8 +1039,10 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) fulloutput3D
 		case("deepredist")
 			read(key%value,*) deepredist
-		case("f_deepredist")
+		case("f_deepredist","fdeepredist")
 			read(key%value,*) f_deepredist
+		case("n_deepredist","ndeepredist")
+			read(key%value,*) n_deepRedist
 		case("readfull3d")
 			read(key%value,*) readFull3D
 		case("computealbedo","planetalbedo")
@@ -1450,6 +1456,7 @@ c  GGchem was still implemented slightly wrong.
 	
 	deepRedist=.false.
 	f_deepredist=0d0
+	n_deepRedist=1
 
 	readFull3D=.false.
 	computealbedo=.false.

@@ -86,8 +86,8 @@
       nHmax        = 4.d+19
       UseDataBase  = .true.
       NewFullIt    = .true.
-      NewBackIt    = 5
-      NewBackFac   = 1.E+2
+      NewBackIt    = 10
+      NewBackFac   = 1.E+10
       NewFastLevel = 1
       NewPreMethod = 2
 

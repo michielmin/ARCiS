@@ -16,11 +16,11 @@
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),obsA_split_omp(:,:)
 	real*8,allocatable :: tauc(:),Afact(:),vv(:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
 	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random,xmin,xmax
-	integer nx_im,ix,iy,ni,ilatt,ilong
+	integer nx_im,ix,iy,ni,ilatt,ilong,imustar
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam)
 	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:)
-	logical iterateshift,actually1D
+	logical iterateshift,actually1D,do_ibeta(n3D)
 	real*8 vxxmin,vxxmax,ComputeKzz
 
 	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D))
@@ -120,10 +120,27 @@ c	recomputeopac=.true.
 	enddo
 
 	ibeta=1
+	do_ibeta=.false.
 	do i=1,nlong-1
 		do j=1,nlatt-1
 			if(readFull3D) then
 				ibeta(i,j)=(i-1)*(nlatt-1)+j
+			else if(deepRedist) then
+				lo=-pi+2d0*pi*(real(i)-0.5d0)/real(nlong-1)
+				la=-pi/2d0+pi*(real(j)-0.5d0)/real(nlatt-1)
+				betaT=0d0
+				if(abs(lo).le.pi/2d0) then
+					betaT=cos(lo)*cos(la)
+					imustar=betaT*real(n_deepRedist)+1
+					imustar=min(max(2,imustar),n_deepRedist)
+				else
+					imustar=1
+				endif
+				i3D=(real(n3D/n_deepRedist)*((beta(i,j)-betamin)/(betamax-betamin)))+1
+				if(i3D.gt.n3D/n_deepRedist) i3D=n3D/n_deepRedist
+				ibeta(i,j)=i3D+(imustar-1)*n3D/n_deepRedist
+				if(ibeta(i,j).gt.n3D) ibeta(i,j)=n3D
+				if(.not.ibeta(i,j).gt.1) ibeta(i,j)=1
 			else
 				if(betamax.eq.betamin.or.(night2day.eq.1d0.and.vxx.eq.0d0)) then
 					ibeta(i,j)=1
@@ -133,6 +150,7 @@ c	recomputeopac=.true.
 					if(.not.ibeta(i,j).gt.1) ibeta(i,j)=1
 				endif
 			endif
+			do_ibeta(ibeta(i,j))=.true.
 		enddo
 	enddo
 	Rmax=0d0
@@ -180,9 +198,16 @@ c	recomputeopac=.true.
 
 	call tellertje_perc(0,n3D)
 	do i=1,n3D
-		i3D=i
+		print*,do_ibeta(i)
 		call SetOutputMode(.false.)
-		beta3D(i)=betamin+(betamax-betamin)*(real(i)-0.5)/real(n3D)
+		if(deepRedist) then
+			imustar=(i-1)*n_deepRedist/n3D+1
+			i3D=i-(imustar-1)*n3D/n_deepRedist
+			beta3D(i)=betamin+(betamax-betamin)*(real(i3D)-0.5)/real(n3D/n_deepRedist)
+		else
+			i3D=i
+			beta3D(i)=betamin+(betamax-betamin)*(real(i3D)-0.5)/real(n3D)
+		endif
 		x3D(i)=NormSig(beta3D(i),par3Dsteepness,beta_c,betamin,betamax)
 		do j=1,n_Par3D
 			xmin=Par3D(j)%xmin
@@ -208,23 +233,28 @@ c	recomputeopac=.true.
 
 		betaT=beta3D(i)
 		if(deepRedist) then
-			betaT=0d0
-			j=0
-			tot=0d0
-			do ilong=1,nlong-1
-				do ilatt=1,nlatt-1
-					if(ibeta(ilong,ilatt).eq.i) then
-						lo=-pi+2d0*pi*(real(ilong)-0.5d0)/real(nlong-1)
-						la=-pi/2d0+pi*(real(ilatt)-0.5d0)/real(nlatt-1)
-						if(abs(lo).le.pi/2d0) betaT=betaT+cos(lo)*cos(la)*cos(la)
-						tot=tot+cos(la)
-						j=j+1
-					endif
+			if(n_deepRedist.eq.1) then
+				betaT=0d0
+				j=0
+				tot=0d0
+				do ilong=1,nlong-1
+					do ilatt=1,nlatt-1
+						if(ibeta(ilong,ilatt).eq.i3D) then
+							lo=-pi+2d0*pi*(real(ilong)-0.5d0)/real(nlong-1)
+							la=-pi/2d0+pi*(real(ilatt)-0.5d0)/real(nlatt-1)
+							if(abs(lo).le.pi/2d0) betaT=betaT+cos(lo)*cos(la)*cos(la)
+							tot=tot+cos(la)
+							j=j+1
+						endif
+					enddo
 				enddo
-			enddo
-			if(j.gt.0) betaT=betaT/tot
-			print*,beta3D(i),betaT
+				if(j.gt.0) betaT=betaT/tot
+				print*,beta3D(i),betaT
+			else
+				betaT=real(imustar-1)/real(n_deepRedist-1)
+			endif
 			f_deepredist=beta3D(i)
+			print*,i,imustar,i3D,beta3D(i),betaT
 		endif
 
 c Now call the setup for the readFull3D part
@@ -234,7 +264,7 @@ c Now call the setup for the readFull3D part
 			call DoReadFull3D(i,ilong,ilatt)
 		endif
 
-		if((.not.actually1D).or.i.eq.1) then
+		if((.not.actually1D.and.do_ibeta(i)).or.i.eq.1) then
 			call InitDens()
 			call ComputeModel1D(recomputeopac)
 
