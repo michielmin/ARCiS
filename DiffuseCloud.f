@@ -464,10 +464,6 @@ c equations for number of Nuclii
 		An(j,i)=An(j,i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 
 		x(j)=-Sn(i)
-		if(Cloud(ii)%haze) then
-			x(j)=x(j)+xn(i)*Clouddens(i)*
-     &			(4d0*pi*rpart(i)**2*densv(i,ihaze)/rho_nuc)*sqrt(mu(ihaze)*mp/(2d0*pi*kb*CloudT(i)))
-		endif
 
 c coagulation
 		if(coagulation) then
@@ -540,10 +536,6 @@ c equations for mass in Nuclii
 			An(j,i)=An(j,i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 
 			x(j)=-Sn(i)
-			if(Cloud(ii)%haze) then
-				x(j)=x(j)+xn(i)*Clouddens(i)*
-     &				(4d0*pi*rpart(i)**2*densv(i,ihaze)/rho_nuc)*sqrt(mu(ihaze)*mp/(2d0*pi*kb*CloudT(i)))
-			endif
 		enddo
 		i=nnr
 		j=j+1
@@ -573,6 +565,11 @@ c equations for mass in Nuclii
 		enddo
 	else
 		xm=0d0
+	endif
+	if(Cloud(ii)%haze.and..false.) then
+		do i=1,nnr
+			xm(i)=xm(i)*max(0d0,1d0-densv(i,ihaze)/(dens(i)*xv_bot(ihaze)))
+		enddo
 	endif
 
 	if(Cloud(ii)%condensates) then
