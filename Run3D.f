@@ -254,6 +254,8 @@ c	recomputeopac=.true.
 				betaT=real(imustar-1)/real(n_deepRedist-1)
 			endif
 			f_deepredist=beta3D(i)
+			betaT=(1d0-f_deep0)*f_deepredist+f_deep0*betaT
+			if(betaT.gt.f_deepredist) betaT=f_deepredist
 			print*,i,imustar,i3D,beta3D(i),betaT
 		endif
 

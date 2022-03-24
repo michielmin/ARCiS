@@ -471,28 +471,22 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 c=========== begin experimental redistribution ===========================================
 	if(deepredist) then
 
-	if(f_deepredist.ge.must.or.must.eq.0d0) then
-		E0=(Rstar/Dplanet)**2*((2d0*(pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*(f_deepredist-must)
-		do ir=1,nr
-			iT=T(ir)+1
-			if(iT.gt.nBB-1) iT=nBB-1
-			if(iT.lt.1) iT=1
-			tauRoss=0d0
-			E=0d0
-			do ilam=1,nlam_LR
-				do ig=1,ng
-					tauRoss=tauRoss+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)/max(tauR_nu(ir,ilam,ig),1d-6)
-					E=E+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)
-				enddo
+	E0=(Rstar/Dplanet)**2*((2d0*(pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*(f_deepredist-must)
+	do ir=1,nr
+		iT=T(ir)+1
+		if(iT.gt.nBB-1) iT=nBB-1
+		if(iT.lt.1) iT=1
+		tauRoss=0d0
+		E=0d0
+		do ilam=1,nlam_LR
+			do ig=1,ng
+				tauRoss=tauRoss+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)/max(tauR_nu(ir,ilam,ig),1d-6)
+				E=E+dfreq_LR(ilam)*wgg(ig)*BB_LR(iT,ilam)
 			enddo
-			tauRoss=E/tauRoss
-			Hedd(ir)=Hedd(ir)+E0*exp(-tauRoss)
 		enddo
-	else
-		do ir=0,nr
-			Hedd(ir)=Hedd(ir)-abs(Hstar(ir))*(1d0-f_deepredist/must)
-		enddo
-	endif
+		tauRoss=E/tauRoss
+		Hedd(ir)=Hedd(ir)+max(-abs(Hstar(ir)),E0*exp(-tauRoss))
+	enddo
 
 	endif
 c=========== end experimental redistribution =============================================

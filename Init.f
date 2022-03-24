@@ -679,6 +679,7 @@ c In this case the beta map should be the static one. Make sure this is set prop
 	
 	if(deepRedist) then
 		n3D=n3D*n_deepRedist
+		f_deepredist=f_deep0
 	endif
 	
 	allocate(long(nlong),latt(nlatt))
@@ -1039,8 +1040,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) fulloutput3D
 		case("deepredist")
 			read(key%value,*) deepredist
-		case("f_deepredist","fdeepredist")
-			read(key%value,*) f_deepredist
+		case("f_deepredist","fdeepredist","fdeep","f_deep")
+			read(key%value,*) f_deep0
 		case("n_deepredist","ndeepredist")
 			read(key%value,*) n_deepRedist
 		case("readfull3d")
@@ -1455,7 +1456,7 @@ c  GGchem was still implemented slightly wrong.
 	nlatt=18
 	
 	deepRedist=.false.
-	f_deepredist=0d0
+	f_deep0=0.5d0
 	n_deepRedist=1
 
 	readFull3D=.false.

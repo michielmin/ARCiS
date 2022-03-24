@@ -126,7 +126,7 @@ c for exchange when computing secondary atmosphere
 	real*8,allocatable :: MMW(:),Tpoint(:),Ppoint(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
 	logical fulloutput3D,deepRedist,readFull3D,computealbedo
-	real*8 f_deepredist
+	real*8 f_deepredist,f_deep0
 	integer nBB
 	parameter(nBB=10000)
 	real*8,allocatable :: BB(:,:)						! nBB,nlam
