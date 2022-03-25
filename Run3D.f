@@ -439,13 +439,21 @@ c Now call the setup for the readFull3D part
 	nsub=0
 
 	nrtrace=(nr-1)*nsub+ndisk
-	nptrace=nlatt+1
+	if(2*(nlatt/2).eq.nlatt) then
+		nptrace=(nlatt-1)*2
+	else
+		nptrace=nlatt-1
+	endif
 	if(actually1D.and.nphase.eq.1.and.theta_phase(1).eq.180d0) nptrace=1
 	
 	nv=1
 	if(makeimage) then
 		nrtrace=nrtrace*4
-		nptrace=nptrace*3
+		if(2*(nlatt/2).eq.nlatt) then
+			nptrace=(nlatt-1)*4
+		else
+			nptrace=(nlatt-1)*3
+		endif
 		nv=5
 		allocate(rphi_image(nlam,nrtrace,nptrace))
 		allocate(xy_image(nx_im,nx_im,nlam))
@@ -795,7 +803,11 @@ c	print*,Tstar*(Rstar/Dplanet)**0.5
 	nsub=3
 
 	nrtrace=(nr-1)*nsub+ndisk
-	nptrace=2*((nlatt+1)/2)
+	if(2*(nlatt/2).eq.nlatt) then
+		nptrace=(nlatt-1)*2
+	else
+		nptrace=nlatt-1
+	endif
 	if(actually1D) nptrace=1
 	allocate(rtrace(nrtrace))
 
