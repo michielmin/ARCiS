@@ -1250,7 +1250,6 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	do i=1,nmol
 		if(.not.mol_abun(i).gt.0d0) mol_abun(i)=0d0
 	enddo
-	mol_abun(1:nmol)=1d0/real(nmol)
 
 	nabla_ad=2d0/7d0
 
