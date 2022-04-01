@@ -323,10 +323,10 @@ c			beta_used=max
 
 	tau=0d0
 	Tirr=sqrt(Rstar/(Dplanet))*Tstar
-	if(computeT) then
-		x=(Tirr**4/sqrt(2d0)+TeffP**4)**0.25
-		return
-	endif
+c	if(computeT) then
+c		x=(Tirr**4/sqrt(2d0)+TeffP**4)**0.25
+c		return
+c	endif
 	
 	do i=nr,1,-1
 		tau=kappaT*1d6*P(i)/grav(i)
@@ -1250,6 +1250,7 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	do i=1,nmol
 		if(.not.mol_abun(i).gt.0d0) mol_abun(i)=0d0
 	enddo
+	mol_abun(1:nmol)=1d0/real(nmol)
 
 	nabla_ad=2d0/7d0
 

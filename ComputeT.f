@@ -272,7 +272,6 @@
 
 	converged=.true.
 
-
 	do ilam=1,nlam_LR-1
 		do ig=1,ng
 			do jr=nr,0,-1

@@ -198,7 +198,6 @@ c	recomputeopac=.true.
 
 	call tellertje_perc(0,n3D)
 	do i=1,n3D
-		print*,do_ibeta(i)
 		call SetOutputMode(.false.)
 		if(deepRedist) then
 			imustar=(i-1)*n_deepRedist/n3D+1

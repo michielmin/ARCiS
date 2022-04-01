@@ -9,7 +9,8 @@
 	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j,iphase,imol
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
-	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:)
+	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:)
+	real*8 ComputeKzz
 	
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
 	
@@ -26,6 +27,8 @@
 	allocate(specemisR(0:nmodels,nlam))
 	allocate(PTstruct(0:nmodels,nr))
 	allocate(dPTstruct(0:nmodels,nr))
+	allocate(Kzz_struct(0:nmodels,nr))
+	if(dochemistry) allocate(mol_struct(0:nmodels,nr,nmol))
 	allocate(cloudstruct(0:nmodels,nr))
 	allocate(values(0:nmodels,n_ret))
 	allocate(COratio_der(0:nmodels))
@@ -146,6 +149,11 @@
 	if(i2d.le.n2d) goto 3
 	PTstruct(i,1:nr)=T(1:nr)
 	dPTstruct(i,1)=log(T(2)/T(1))/log(P(2)/P(1))
+	do j=1,nr
+		Kzz_struct(i,j)=ComputeKzz(P(j))
+		if(dochemistry) mol_struct(i,j,1:nmol)=mixrat_r(j,1:nmol)
+	enddo
+
 	do j=2,nr-1
 		dPTstruct(i,j)=log(T(j+1)/T(j-1))/log(P(j+1)/P(j-1))
 	enddo
@@ -242,6 +250,27 @@
 			write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 		enddo
 		close(unit=26)
+		open(unit=26,file=trim(outputdir) // "Kzz_limits",RECL=1000)
+		do ir=1,nr
+			sorted(1:i)=Kzz_struct(1:i,ir)
+			call sort(sorted,i)
+			write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+		enddo
+		close(unit=26)
+
+		if(dochemistry) then
+		do imol=1,nmol
+			if(includemol(imol)) then
+				open(unit=26,file=trim(outputdir) // trim(molname(imol)) // "_limits",RECL=1000)
+				do ir=1,nr
+					sorted(1:i)=mol_struct(1:i,ir,imol)
+					call sort(sorted,i)
+					write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+				enddo
+				close(unit=26)
+			endif
+		enddo
+		endif
 
 		open(unit=26,file=trim(outputdir) // "cloud_limits",RECL=1000)
 		do ir=1,nr
@@ -386,6 +415,7 @@
 	deallocate(specemis)
 	deallocate(specemisR)
 	deallocate(PTstruct)
+	deallocate(Kzz_struct)
 	deallocate(sorted)
 	deallocate(values)
 	deallocate(COratio_der)

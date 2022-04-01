@@ -562,6 +562,7 @@ c	condensates=(condensates.or.cloudcompute)
 		allocate(mixrat_r(nr,nmol))
 		allocate(mixrat_old_r(nr,nmol))
 		allocate(cloud_dens(nr,max(nclouds,1)))
+		cloud_dens=0d0
 		call InitDens()
 		call InitObs()
 		do i=1,nclouds
