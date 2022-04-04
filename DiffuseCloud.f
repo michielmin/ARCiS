@@ -383,12 +383,6 @@ c	atoms_cloud(i,3)=1
 	CloudR(k)=R(nr)
 	Clouddens(k)=dens(nr)
 
-	open(unit=60,file='cloudlin.dat',RECL=6000)
-	do i=1,nnr
-		write(60,*) CloudP(i),CloudR(i),CloudT(i),Clouddens(i)
-	enddo
-	close(unit=60)
-
 	logP(1:nr)=-log(P(1:nr))
 	logCloudP(1:nnr)=-log(CloudP(1:nnr))
 
@@ -413,12 +407,6 @@ c	atoms_cloud(i,3)=1
 	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudR,IERR)
 	CloudR(1:nnr)=exp(CloudR(1:nnr))
 
-	open(unit=60,file='cloudspline.dat',RECL=6000)
-	do i=1,nnr
-		write(60,*) CloudP(i),CloudR(i),CloudT(i),Clouddens(i)
-	enddo
-	close(unit=60)
-	
 	if((Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0).or.Cloud(ii)%Kzz.le.0d0) then
 		do i=1,nnr
 			Kd(i)=ComputeKzz(CloudP(i))
