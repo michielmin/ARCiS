@@ -1455,6 +1455,7 @@ c  GGchem was still implemented slightly wrong.
 	nnu0=10
 	nlong=36
 	nlatt=19
+	i3D=1
 	
 	deepRedist=.false.
 	f_deep0=0.5d0

@@ -694,6 +694,7 @@ c use Ackerman & Marley 2001 cloud computation
 			goto 1
 		else
 			tot=1d0
+			Cloud(ii)%w(1:Cloud(ii)%nr)=1d0
 		endif
 	endif
 	Cloud(ii)%w=Cloud(ii)%w/tot
@@ -1472,7 +1473,7 @@ c	return
 	logP=-log(P)
 
 	call DPCHIM(nT,logPp,dTp,d2T,INCFD)
-	call DPCHFE (nT, logPp, dTp, d2T, INCFD, SKIP, np, logP, dT, IERR)
+	call DPCHFE(nT,logPp,dTp,d2T,INCFD,SKIP,np,logP,dT,IERR)
 	
 	do i=1,np
 		if(logP(i).lt.logPp(1)) dT(i)=dTp(1)
