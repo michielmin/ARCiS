@@ -534,11 +534,7 @@ c rewritten for better convergence
 	do i=1,nnr
 		if(.not.x(i).gt.0d0) x(i)=0d0
 	enddo
-	if(iter.eq.1) then
-		xn(1:nnr)=x(1:nnr)/m_nuc
-	else
-		xn(1:nnr)=sqrt(xn(1:nnr)*x(1:nnr)/m_nuc)
-	endif
+	xn(1:nnr)=x(1:nnr)/m_nuc
 
 	do i=1,nnr
 		if(xn(i).lt.0d0) xn(i)=0d0
@@ -582,11 +578,7 @@ c equations for mass in Nuclii
 		do i=1,nnr
 			if(.not.x(i).gt.0d0) x(i)=0d0
 		enddo
-		if(iter.eq.1) then
-			xm(1:nnr)=x(1:nnr)
-		else
-			xm(1:nnr)=sqrt(x(1:nnr)*xm(1:nnr))
-		endif
+		xm(1:nnr)=x(1:nnr)
 
 		do i=1,nnr
 			if(xm(i).lt.0d0) xm(i)=0d0
@@ -753,7 +745,7 @@ c equations for material
 		else
 			rr=r_nuc
 		endif
-		rpart(i)=sqrt(rr*rpart(i))
+		rpart(i)=rr		!sqrt(rr*rpart(i))
 	enddo
 
 	enddo

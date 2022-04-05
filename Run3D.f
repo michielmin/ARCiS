@@ -489,7 +489,15 @@ c Now call the setup for the readFull3D part
 			ftot=0d0
 			fact=1d0
 c Note we are here using the symmetry between North and South
-			phi=pi*(real(iptrace)-0.5)/real(nptrace)
+			if(nptrace.eq.1) then
+				if(2*(nlatt/2).eq.nlatt) then
+					phi=pi*(real(iptrace)-0.5)/real((nlatt-1)*2)
+				else
+					phi=pi*(real(iptrace)-0.5)/real(nlatt-1)
+				endif
+			else
+				phi=pi*(real(iptrace)-0.5)/real(nptrace)
+			endif
 			rr=rtrace(irtrace)
 			y=rr*cos(phi)
 			z=rr*sin(phi)
