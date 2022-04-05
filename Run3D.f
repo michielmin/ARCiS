@@ -1957,6 +1957,18 @@ c-----------------------------------------------------------------------
 	real*8,allocatable :: tauR(:),Ij(:),Itot(:),Linv(:,:),Lmat(:,:),Iprev(:)
 	integer,allocatable :: IWORKomp(:)
 
+	do ir=1,nr
+		do ig=1,ng
+			do ilam=1,nlam
+				Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
+				if(Ca(ilam,ig,ir)/Ce(ilam,ig,ir).lt.1d-4) then
+					Ca(ilam,ig,ir)=Cs(ilam,ir)/(1d4-1d0)
+					Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
+				endif
+			enddo
+		enddo
+	enddo
+
 	do inu0=1,nnu0
 		do ig=1,ng
 			Si(1:nlam,ig,1:nr,inu0)=BBr(1:nlam,1:nr)*Ca(1:nlam,ig,1:nr)/(Ca(1:nlam,ig,1:nr)+Cs(1:nlam,1:nr))
@@ -1964,14 +1976,6 @@ c-----------------------------------------------------------------------
 		enddo
 	enddo
 	if(.not.scattering) return
-
-	do ir=1,nr
-		do ig=1,ng
-			do ilam=1,nlam
-				Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
-			enddo
-		enddo
-	enddo
 
 	tauR_nu=0d0
 	do ilam=1,nlam-1

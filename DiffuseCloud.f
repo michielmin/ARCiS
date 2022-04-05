@@ -12,14 +12,14 @@
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze
 	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm,ComputeKzz
-	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),fitermin(nr)
+	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr)
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),IWORKomp(:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
 	logical ini,Tconverged,cloudsform
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:)
 	logical,allocatable :: dospecies(:)
-	integer iCS
+	integer iCS,ir,nrdo
 	real*8 logP(nr),logx(nr),dlogx(nr)
 	real*8,allocatable :: logCloudP(:)
 	integer INCFD,IERR
@@ -31,12 +31,6 @@
 		allocate(CloudT(nnr))
 		allocate(CloudR(nnr))
 		allocate(Clouddens(nnr))
-		fitermin=1d0
-	else
-		do i=1,nr
-			fitermin(i)=min(max(fiter,abs(CloudT(i)**4-T(i)**4)/min(CloudT(i)**4,T(i)**4)),1d0)
-		enddo
-		fitermin=maxval(fitermin(1:nr))
 	endif
 	allocate(Kd(nnr))
 	allocate(logCloudP(nnr))
@@ -767,13 +761,15 @@ c end the loop
 
 	k=1
 	do i=1,nr
-		cloud_dens(i,ii)=cloud_dens(i,ii)*(1d0-fitermin(i))/fitermin(i)!0d0
+		cloud_dens(i,ii)=0d0
 		Cloud(ii)%rv(i)=0d0
 		Cloud(ii)%frac(i,1:20)=1d-200
 		tot1=0d0
 		tot2=0d0
 		tot3=0d0
-		do j=1,nr_cloud
+		nrdo=nr_cloud
+		if(i.eq.1.or.i.eq.nr) nrdo=nr_cloud/2
+		do j=1,nrdo
 			tot1=tot1+xm(k)*Clouddens(k)/rho_nuc
 			do iCS=1,nCS
 				tot1=tot1+xc(iCS,k)*Clouddens(k)/rhodust(iCS)
@@ -824,11 +820,11 @@ c correction for SiC
 				endif
 			endif
 
-			cloud_dens(i,ii)=cloud_dens(i,ii)+xm(k)*Clouddens(k)/real(nr_cloud)
+			cloud_dens(i,ii)=cloud_dens(i,ii)+xm(k)*Clouddens(k)/real(nrdo)
 			do iCS=1,nCS
-				cloud_dens(i,ii)=cloud_dens(i,ii)+xc(iCS,k)*Clouddens(k)/real(nr_cloud)
+				cloud_dens(i,ii)=cloud_dens(i,ii)+xc(iCS,k)*Clouddens(k)/real(nrdo)
 			enddo
-			Cloud(ii)%rv(i)=Cloud(ii)%rv(i)+rpart(k)/real(nr_cloud)
+			Cloud(ii)%rv(i)=Cloud(ii)%rv(i)+rpart(k)/real(nrdo)
 			Cloud(ii)%frac(i,1:3)=Cloud(ii)%frac(i,1:3)+xc(1,k)*Clouddens(k)/3d0		! TiO
 			Cloud(ii)%frac(i,10)=Cloud(ii)%frac(i,10)+xc(3,k)*Clouddens(k)			! Al2O3
 			Cloud(ii)%frac(i,13:15)=Cloud(ii)%frac(i,13:15)+xc(5,k)*Clouddens(k)/3d0	! Silicates
@@ -871,8 +867,6 @@ CCloud(ii)%frac(i,17)=0d0
 			rr=r_nuc
 		endif
 		Cloud(ii)%rv(i)=rr
-
-		cloud_dens(i,ii)=cloud_dens(i,ii)*fitermin(i)
 	enddo
 
 	if(.not.retrieval) then
@@ -892,18 +886,31 @@ CCloud(ii)%frac(i,17)=0d0
 
 c	open(unit=20,file=trim(outputdir) // '/atoms.dat',RECL=6000)
 	ini=.true.
+	k=1
 	do i=1,nr
 		call tellertje(i,nr)
-		molfracs_atoms=molfracs_atoms0
-		do iCS=1,nCS
-			do j=1,N_atoms
-				molfracs_atoms(j)=molfracs_atoms(j)+xv(iCS,(i-1)*nr_cloud+1)*mutot*atoms_cloud(iCS,j)/(mu(iCS)*CSnmol(iCS))
+		molfracs_atoms=0d0
+		tot=0d0
+		nrdo=nr_cloud
+		if(i.eq.1.or.i.eq.nr) nrdo=nr_cloud/2
+		do ir=1,nrdo
+			tot=tot+Clouddens(k)
+			do iCS=1,nCS
+				do j=1,N_atoms
+					molfracs_atoms(j)=molfracs_atoms(j)+xv(iCS,k)*Clouddens(k)*mutot*atoms_cloud(iCS,j)/(mu(iCS)*CSnmol(iCS))
+				enddo
 			enddo
+			k=k+1
+			if(k.gt.nnr) k=nnr
 		enddo
+		molfracs_atoms=molfracs_atoms/tot+molfracs_atoms0
+
 		molfracs_atoms(3)=molfracs_atoms(3)+COabun
 		molfracs_atoms(5)=molfracs_atoms(5)+COabun
 		do j=1,N_atoms
-			if(.not.molfracs_atoms(j).gt.1d-50) molfracs_atoms(j)=1d-50
+			if(.not.molfracs_atoms(j).gt.1d-50) then
+				molfracs_atoms(j)=1d-50
+			endif
 		enddo
 		tot=sum(molfracs_atoms(1:N_atoms))
 		molfracs_atoms=molfracs_atoms/tot

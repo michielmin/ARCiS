@@ -269,6 +269,16 @@
 	deallocate(wtemp)
 
 	Ce=Ca+Cs
+	do ir=1,nr
+		do ilam=1,nlam_LR
+			do ig=1,ng
+				if(Ca(ir,ilam,ig)/Ce(ir,ilam,ig).lt.1d-4) then
+					Ca(ir,ilam,ig)=Cs(ir,ilam,ig)/(1d4-1d0)
+					Ce(ir,ilam,ig)=Ca(ir,ilam,ig)+Cs(ir,ilam,ig)
+				endif
+			enddo
+		enddo
+	enddo
 
 	converged=.true.
 
@@ -1293,7 +1303,7 @@ c
 	allocate(IWORKomp(10*nr*nr))
 
 	do ir=1,nr
-		albedo(ir)=min(0.99d0,Cs(ir)/Ce(ir))
+		albedo(ir)=min(1d0/(1d0+1d-4),Cs(ir)/Ce(ir))
 	enddo
 
 	Linv=0d0
