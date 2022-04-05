@@ -741,8 +741,8 @@ c equations for material
 		if(xn(i).gt.0d0) then
 			tot=sum(xc(1:nCS,i))+xm(i)
 			rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
-			if(.not.rr.ge.r_nuc) then
-				rr=r_nuc
+			if(.not.rr.ge.r_nuc/2d0) then
+				rr=r_nuc/2d0
 				xn(i)=0d0
 				xm(i)=0d0
 				xc(1:nCS,i)=0d0
