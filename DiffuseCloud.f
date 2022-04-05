@@ -512,7 +512,7 @@ c rewritten for better convergence
 
 			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
 
-			tcinv(i)=(tcinv(i)+tcoaginv)/2d0
+			tcinv(i)=tcoaginv
 
 			An(j,i)=An(j,i)-Clouddens(i)*tcinv(i)
 		endif
@@ -741,9 +741,17 @@ c equations for material
 		if(xn(i).gt.0d0) then
 			tot=sum(xc(1:nCS,i))+xm(i)
 			rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
-			if(.not.rr.gt.r_nuc) rr=r_nuc
+			if(.not.rr.ge.r_nuc) then
+				rr=r_nuc
+				xn(i)=0d0
+				xm(i)=0d0
+				xc(1:nCS,i)=0d0
+			endif
 		else
 			rr=r_nuc
+			xn(i)=0d0
+			xm(i)=0d0
+			xc(1:nCS,i)=0d0
 		endif
 		rpart(i)=rr		!sqrt(rr*rpart(i))
 	enddo
