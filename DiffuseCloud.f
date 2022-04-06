@@ -512,7 +512,7 @@ c rewritten for better convergence
 
 			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
 
-			tcinv(i)=tcoaginv
+			tcinv(i)=(tcoaginv+tcinv(i))/2d0
 
 			An(j,i)=An(j,i)-Clouddens(i)*tcinv(i)
 		endif
@@ -687,17 +687,10 @@ c equations for material
 		if(.not.xomp(i).gt.1d-200) xomp(i)=1d-200
 	enddo
 
-	if(iter.eq.1) then
-		do i=1,nnr
-			xc(iCS,i)=xomp(ixc(iCS,i))
-			xv(iCS,i)=xomp(ixv(iCS,i))
-		enddo
-	else
-		do i=1,nnr
-			xc(iCS,i)=sqrt(xc(iCS,i)*xomp(ixc(iCS,i)))
-			xv(iCS,i)=sqrt(xv(iCS,i)*xomp(ixv(iCS,i)))
-		enddo
-	endif
+	do i=1,nnr
+		xc(iCS,i)=xomp(ixc(iCS,i))
+		xv(iCS,i)=xomp(ixv(iCS,i))
+	enddo
 	do i=1,nnr
 		if(xc(iCS,i).lt.0d0) xc(iCS,i)=0d0
 		if(xv(iCS,i).lt.0d0) xv(iCS,i)=0d0
@@ -741,17 +734,11 @@ c equations for material
 		if(xn(i).gt.0d0) then
 			tot=sum(xc(1:nCS,i))+xm(i)
 			rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
-			if(.not.rr.ge.r_nuc/2d0) then
-				rr=r_nuc/2d0
-				xn(i)=0d0
-				xm(i)=0d0
-				xc(1:nCS,i)=0d0
+			if(.not.rr.ge.r_nuc) then
+				rr=r_nuc
 			endif
 		else
 			rr=r_nuc
-			xn(i)=0d0
-			xm(i)=0d0
-			xc(1:nCS,i)=0d0
 		endif
 		rpart(i)=rr		!sqrt(rr*rpart(i))
 	enddo
