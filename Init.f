@@ -1041,8 +1041,6 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) fulloutput3D
 		case("deepredist")
 			read(key%value,*) deepredist
-		case("f_deepredist","fdeepredist","fdeep","f_deep")
-			read(key%value,*) f_deep0
 		case("n_deepredist","ndeepredist")
 			read(key%value,*) n_deepRedist
 		case("readfull3d")
@@ -1479,6 +1477,7 @@ c  GGchem was still implemented slightly wrong.
 	enddo
 
 	nr_cloud=10
+	EvapCooling=.true.
 
 	do i=1,nclouds
 		Cloud(i)%P=1d-4

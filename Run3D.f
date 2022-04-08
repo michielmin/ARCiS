@@ -21,7 +21,7 @@
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam)
 	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:)
 	logical iterateshift,actually1D,do_ibeta(n3D)
-	real*8 vxxmin,vxxmax,ComputeKzz
+	real*8 vxxmin,vxxmax,ComputeKzz,betamin_term
 
 	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D))
 	if(computealbedo) allocate(SiSc(nlam,ng,0:nr,nnu0,n3D))
@@ -158,15 +158,19 @@ c	recomputeopac=.true.
 
 
 	beta_c=0d0
+	betamin_term=1d0
 	i=max(1,nlong/4)
 	do j=1,nlatt-1
 		beta_c=beta_c+beta(i,j)
+		if(beta(i,j).lt.betamin_term) betamin_term=beta(i,j)
 	enddo
 	i=max(1,3*nlong/4)
 	do j=1,nlatt-1
 		beta_c=beta_c+beta(i,j)
+		if(beta(i,j).lt.betamin_term) betamin_term=beta(i,j)
 	enddo
 	beta_c=beta_c/real(2*(nlatt-1))	
+	print*,betamin_term
 
 	if(.not.retrieval.and..not.domakeai) then
 		open(unit=20,file=trim(outputdir) // "parameter3D.dat",RECL=6000)
@@ -248,14 +252,17 @@ c	recomputeopac=.true.
 					enddo
 				enddo
 				if(j.gt.0) betaT=betaT/tot
-				print*,beta3D(i),betaT
 			else
 				betaT=real(imustar-1)/real(n_deepRedist-1)
+			endif
+			if(beta3D(i).lt.betamin_term) then
+				f_deep0=1d0
+			else
+				f_deep0=1d0-(beta3D(i)-betamin_term)/(betamax-betamin_term)
 			endif
 			f_deepredist=beta3D(i)
 			betaT=(1d0-f_deep0)*f_deepredist+f_deep0*betaT
 			if(betaT.gt.f_deepredist) betaT=f_deepredist
-			print*,i,imustar,i3D,beta3D(i),betaT
 		endif
 
 c Now call the setup for the readFull3D part

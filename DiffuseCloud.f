@@ -72,6 +72,8 @@
 		allocate(CSname(nCS))
 		allocate(CSnmol(nCS))
 		allocate(ice(nCS))
+		allocate(Tevap(nr,nCS))
+		allocate(CloudMatFrac(nr,nCS))
 	endif
 
 	call SetAbun
@@ -236,7 +238,9 @@ c	atoms_cloud(i,3)=1
 	molfracs_atoms0=molfracs_atoms
 	xv_bot=xv_bot*mu*CSnmol/mutot
 
-	if(rainout.and.(.not.computeT.or.nTiter.gt.0)) then
+	if((.not.(retrieval.or.domakeai)).or.EvapCooling) call ComputeTevap
+
+	if(rainout.and.(.not.computeT.or.nTiter.gt.1)) then
 		densv(1,1:nCS)=(mu*mp/(kb*T(1)))*exp(BTP(1:nCS)-ATP(1:nCS)/T(1))
 		do iCS=1,nCS
 			if(T(1).gt.maxT(iCS)) densv(1,iCS)=densv(1,iCS)+(mu(iCS)*mp/(kb*T(1)*10d0))*exp(BTP(iCS)-ATP(iCS)/(T(1)*10d0))
@@ -740,7 +744,7 @@ c equations for material
 		else
 			rr=r_nuc
 		endif
-		rpart(i)=rr		!sqrt(rr*rpart(i))
+		rpart(i)=sqrt(rr*rpart(i))
 	enddo
 
 	enddo
@@ -751,6 +755,7 @@ c end the loop
 		cloud_dens(i,ii)=0d0
 		Cloud(ii)%rv(i)=0d0
 		Cloud(ii)%frac(i,1:20)=1d-200
+		CloudMatFrac(i,1:nCS)=0d0
 		tot1=0d0
 		tot2=0d0
 		tot3=0d0
@@ -822,6 +827,8 @@ c correction for SiC
 			Cloud(ii)%frac(i,16)=Cloud(ii)%frac(i,16)+xc(9,k)*Clouddens(k)			! C
 			Cloud(ii)%frac(i,12)=Cloud(ii)%frac(i,12)+xMgO(k)*Clouddens(k)			! MgO
 			Cloud(ii)%frac(i,19)=Cloud(ii)%frac(i,19)+xm(k)*Clouddens(k)			! seed particles
+			CloudMatFrac(i,1:nCS)=CloudMatFrac(i,1:nCS)+xc(1:nCS,k)*Clouddens(k)/real(nrdo)
+			if(Cloud(ii)%haze) CloudMatFrac(i,ihaze)=CloudMatFrac(i,ihaze)+xm(k)*Clouddens(k)/real(nrdo)
 			k=k+1
 			if(k.gt.nnr) k=nnr
 
@@ -847,6 +854,8 @@ CCloud(ii)%frac(i,17)=0d0
 		tot=sum(Cloud(ii)%frac(i,1:20))
 		Cloud(ii)%frac(i,1:20)=Cloud(ii)%frac(i,1:20)/tot
 
+		tot=sum(CloudMatFrac(i,1:nCS))
+		CloudMatFrac(i,1:nCS)=CloudMatFrac(i,1:nCS)/tot
 		if(tot3.gt.0d0) then
 			rr=((3d0*tot1)/(4d0*pi*tot3))**(1d0/3d0)
 			if(.not.rr.gt.r_nuc) rr=r_nuc
@@ -866,8 +875,6 @@ CCloud(ii)%frac(i,17)=0d0
 		enddo
 		close(unit=20)
 	endif
-
-	if(.not.(retrieval.or.domakeai)) call ComputeTevap
 
 	T=T0
 
@@ -959,3 +966,49 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	end
 	
 	
+
+
+	subroutine ComputeTevap()
+	use GlobalSetup
+	use Constants
+	use CloudModule
+	use AtomsModule
+	IMPLICIT NONE
+	real*8 dens0(nCS),densv(nCS),Tmini(nCS),Tmaxi(nCS),T0(nCS)
+	integer ir,iCS,iter
+	character*500 form
+	
+	open(unit=36,file=trim(outputdir) // "/Tevap.dat",RECL=1000)
+	form='("#",a18,' // trim(int2string(nCS,'(i4)')) // 'a23,a19)'
+	write(36,form) "P[bar]",CSname(1:nCS),"T[K]"
+	form='(es19.7E3,' // trim(int2string(nCS,'(i4)')) // 'es23.7E3,es19.7E3)'
+	
+	do ir=1,nr
+		Tmini=3d0
+		Tmaxi=3d5
+		dens0=xv_bot*dens(ir)
+		do iter=1,1000
+			T0=(Tmini+Tmaxi)/2d0
+			densv=(mu*mp/(kb*T0))*exp(BTP-ATP/T0)
+			do iCS=1,nCS
+				if(densv(iCS).gt.dens0(iCS)) then
+					Tmaxi(iCS)=T0(iCS)
+				else
+					Tmini(iCS)=T0(iCS)
+				endif
+			enddo
+		enddo
+		Tevap(ir,1:nCS)=T0(1:nCS)
+		write(36,form) P(ir),T0(1:nCS)
+	enddo
+
+	close(unit=36)
+
+	return
+	end
+
+
+
+
+
+

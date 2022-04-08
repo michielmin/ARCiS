@@ -126,30 +126,32 @@ c terms of use
 			endif
 		endif
 	endif
-	call SetupStructure(computeopac)
-	if(domakeai.and..not.modelsucces) return
-	if(computeopac) call SetupOpacities()
 	if(computeT.and.computeopac) then
+		EvapCooling=.true.
 		temp=par_tprofile
 		do while(.not.Tconverged.and.nTiter.le.maxiter)
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
      &					// trim(int2string(maxiter,'(i3)')) // ")")
-			f=max(min(1d0/real(nTiter+1)+0.2d0,1d0),1d-2)
-c			f=0.9
-c			if(nTiter.ge.4) f=1d0/real(nTiter-2)**0.5+0.1
+			f=max(min(1d0/(real(nTiter)+0.1)**2+0.2d0,1d0),1d-2)
 			fiter=f
-			call DoComputeT(Tconverged,f)
 			par_tprofile=.false.
 			nTiter=nTiter+1
 			if(Tconverged.or.nTiter.gt.maxiter) then
 				nlamdust=nldtemp
 				specresdust=srdtemp
 				lamdust(1:nlamdust)=ldtemp(1:nlamdust)
+				EvapCooling=.false.
+				f=1d0
 			endif
 			call SetupStructure(.true.)
 			call SetupOpacities()
+			call DoComputeT(Tconverged,f)
 		enddo
 		par_tprofile=temp
+	else
+		call SetupStructure(computeopac)
+		if(domakeai.and..not.modelsucces) return
+		if(computeopac) call SetupOpacities()
 	endif
 	call cpu_time(stoptime)
 	call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")

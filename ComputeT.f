@@ -53,6 +53,9 @@
 	real*8,allocatable :: WS(:),nu(:),wnu(:),Hstar_lam(:),Hsurf_lam(:),directHstar_omp(:)
 	real*8,allocatable :: x_SIj(:),y_SIj(:),tauR_SIj(:),Ma_SIj(:),Mb_SIj(:),Mc_SIj(:)
 	character*500 file
+	real*8,allocatable :: CaCloud_HR(:),CaCloud(:,:),MaxCoolCloud(:)
+	real*8 FlEvap(nr),MinFlEvap(nr)
+	integer icloud
 
 	maxfact=4d0
 	
@@ -182,6 +185,7 @@
 	Fstar_LR=0d0
 	Cs=0d0
 	Ca=0d0
+	if(EvapCooling) allocate(CaCloud_HR(nlam),CaCloud(nr,nlam_LR),MaxCoolCloud(nr))
 	do ir=1,nr
 		do ilam=1,nlam-1
 			g=0d0
@@ -191,6 +195,25 @@
 				Cs_HR(ilam,ig)=Cs_HR(ilam,ig)*(1d0-g)/dens(ir)
 			enddo
 		enddo
+		if(EvapCooling) then
+		do ilam=1,nlam-1
+			CaCloud_HR(ilam)=0d0
+			do icloud=1,nclouds
+				if(docloud0(icloud)) then
+					if(Cloud(icloud)%standard.eq.'MIX') then
+						CaCloud_HR(ilam)=CaCloud_HR(ilam)+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+					else
+						do i=1,Cloud(icloud)%nr
+							CaCloud_HR(ilam)=CaCloud_HR(ilam)+
+     &		Cloud(icloud)%Kabs(i,ilam)*Cloud(icloud)%w(i)*cloud_dens(ir,icloud)
+						enddo
+					endif
+				endif
+			enddo
+		enddo
+		CaCloud_HR=CaCloud_HR/dens(ir)
+		endif
+
 		do ilam=1,nlam_LR-1
 			i1=0
 			i2=0
@@ -205,6 +228,7 @@
 				tot=0d0
 				Fstar_LR(ilam)=0d0
 				Cs(ir,ilam,1:ng)=0d0
+				if(EvapCooling) CaCloud(ir,ilam)=0d0
 				do i=i1,i2
 					if(i1.eq.i2) then
 						ww=1d0
@@ -222,10 +246,12 @@
 					enddo
 					Fstar_LR(ilam)=Fstar_LR(ilam)+ww*Fstar(i)
 					Cs(ir,ilam,1:ng)=Cs(ir,ilam,1:ng)+ww*Cs_HR(i,1:ng)
+					if(EvapCooling) CaCloud(ir,ilam)=CaCloud(ir,ilam)+ww*CaCloud_HR(i)
 					tot=tot+ww
 				enddo
 				Fstar_LR(ilam)=Fstar_LR(ilam)/tot
 				Cs(ir,ilam,1:ng)=Cs(ir,ilam,1:ng)/tot
+				if(EvapCooling) CaCloud(ir,ilam)=CaCloud(ir,ilam)/tot
 				tot=0d0
 				do ig=1,ngF
 					tot=tot+temp_a(ig)*wtemp(ig)
@@ -261,6 +287,7 @@
 			else
 				Ca(ir,ilam,1:ng)=0d0
 				Cs(ir,ilam,1:ng)=0d0
+				if(EvapCooling) CaCloud(ir,ilam)=0d0
 				Fstar_LR(ilam)=0d0
 			endif
 		enddo
@@ -326,6 +353,24 @@
 			tauR_nu(0:nr,ilam,ig)=tauR(0:nr)
 		enddo
 	enddo
+
+	if(EvapCooling) then
+		MaxCoolCloud=0d0
+		FlEvap=0d0
+		MinFlEvap=0d0
+		do ir=1,nr
+			do i=1,nCS
+				iT=Tevap(ir,i)+1
+				if(iT.gt.nBB-1) iT=nBB-1
+				if(iT.lt.1) iT=1
+				scale=(Tevap(ir,i)/real(iT))**4
+				do ilam=1,nlam_LR-1
+					ww=CloudMatFrac(ir,i)*dfreq_LR(ilam)
+					MaxCoolCloud(ir)=MaxCoolCloud(ir)+ww*scale*BB_LR(iT,ilam)*CaCloud(ir,ilam)
+				enddo
+			enddo
+		enddo
+	endif
 
 	nnu=5
 	allocate(nu(nnu),wnu(nnu))
@@ -515,6 +560,36 @@ c=========== end experimental redistribution ===================================
 		Fl(ir)=Fl(ir)+Hedd(ir)
 	enddo
 	
+	if(EvapCooling) then
+		do ir=1,nr
+			E0=0d0
+			iT=T(ir)+1
+			if(iT.gt.nBB-1) iT=nBB-1
+			if(iT.lt.1) iT=1
+			scale=(T(ir)/real(iT))**4
+			do ilam=1,nlam_LR-1
+				E0=E0+dfreq_LR(ilam)*scale*BB_LR(iT,ilam)*CaCloud(ir,ilam)
+			enddo
+			if(E0.gt.MaxCoolCloud(ir)) then
+				MinFlEvap(ir)=FlEvap(ir)
+				E=0d0
+				do ilam=1,nlam_LR-1
+					iT=T(ir)+1
+					if(iT.gt.nBB-1) iT=nBB-1
+					if(iT.lt.1) iT=1
+					scale=(T(ir)/real(iT))**4
+					do ig=1,ng
+						E=E+dfreq_LR(ilam)*wgg(ig)*scale*BB_LR(iT,ilam)*Ca(ir,ilam,ig)
+					enddo
+				enddo
+				FlEvap(ir)=FlEvap(ir)-((E0-MaxCoolCloud(ir))/E)
+			else
+				FlEvap(ir)=(FlEvap(ir)+MinFlEvap(ir))/2d0
+			endif
+			Fl(1:nr)=Fl(1:nr)+IntH(1:nr,ir)*FlEvap(ir)
+		enddo
+	endif
+
 	minFl=0.8d0
 	maxFl=1.2d0
 
@@ -696,8 +771,8 @@ c	enddo
 
 	converged=.true.
 	do ir=1,nr
-		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.3d0*epsiter) converged=.false.
-		T(ir)=Tinp(ir)*(1d0-f)+T(ir)*f
+		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.epsiter) converged=.false.
+		T(ir)=Tinp(ir)**(1d0-f)*T(ir)**f
 	enddo
 
 	call tellertje(niter,niter)
@@ -716,6 +791,7 @@ c	enddo
 	deallocate(Fstar_LR)
 	deallocate(tauR_nu)
 	deallocate(IntHnu)
+	if(EvapCooling) deallocate(CaCloud_HR,CaCloud,MaxCoolCloud)
 
 	return
 	end
@@ -1147,49 +1223,6 @@ c
 
 	return
 	end
-
-
-
-
-	subroutine ComputeTevap()
-	use GlobalSetup
-	use Constants
-	use CloudModule
-	use AtomsModule
-	IMPLICIT NONE
-	real*8 dens0(nCS),densv(nCS),Tmini(nCS),Tmaxi(nCS),T0(nCS)
-	integer ir,iCS,iter
-	character*500 form
-	
-	open(unit=36,file=trim(outputdir) // "/Tevap.dat",RECL=1000)
-	form='("#",a18,' // trim(int2string(nCS,'(i4)')) // 'a23,a19)'
-	write(36,form) "P[bar]",CSname(1:nCS),"T[K]"
-	form='(es19.7E3,' // trim(int2string(nCS,'(i4)')) // 'es23.7E3,es19.7E3)'
-	
-	do ir=1,nnr
-		Tmini=3d0
-		Tmaxi=3d5
-		dens0=xv_bot*Clouddens(ir)
-		do iter=1,1000
-			T0=(Tmini+Tmaxi)/2d0
-			densv=(mu*mp/(kb*T0))*exp(BTP-ATP/T0)
-			do iCS=1,nCS
-				if(densv(iCS).gt.dens0(iCS)) then
-					Tmaxi(iCS)=T0(iCS)
-				else
-					Tmini(iCS)=T0(iCS)
-				endif
-			enddo
-		enddo
-		write(36,form) CloudP(ir),T0(1:nCS)
-	enddo
-
-	close(unit=36)
-
-	return
-	end
-
-
 
 
 
