@@ -238,8 +238,6 @@ c	atoms_cloud(i,3)=1
 	molfracs_atoms0=molfracs_atoms
 	xv_bot=xv_bot*mu*CSnmol/mutot
 
-	if((.not.(retrieval.or.domakeai)).or.EvapCooling) call ComputeTevap
-
 	if(rainout.and.(.not.computeT.or.nTiter.gt.1)) then
 		densv(1,1:nCS)=(mu*mp/(kb*T(1)))*exp(BTP(1:nCS)-ATP(1:nCS)/T(1))
 		do iCS=1,nCS
@@ -253,6 +251,8 @@ c	atoms_cloud(i,3)=1
 			endif
 		enddo
 	endif
+
+	if((.not.(retrieval.or.domakeai)).or.EvapCooling) call ComputeTevap
 
 	cloudsform=.false.
 	do i=1,nr
