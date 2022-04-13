@@ -36,7 +36,7 @@
 	allocate(logCloudP(nnr))
 
 	T0=T
-
+	
 	niter=20
 
 	w_atoms(1) = 1.00794		!'H'
@@ -212,7 +212,6 @@ c	atoms_cloud(i,3)=1
 		mu(i)=sum(w_atoms(1:N_atoms)*atoms_cloud(i,1:N_atoms))/CSnmol(i)
 	enddo
 
-
 	mutot=0d0
 	xv_bot=1d200
 	do i=1,N_atoms
@@ -251,7 +250,7 @@ c	atoms_cloud(i,3)=1
 			endif
 		enddo
 	endif
-
+	
 	if((.not.(retrieval.or.domakeai)).or.EvapCooling) call ComputeTevap
 
 	cloudsform=.false.
@@ -602,7 +601,7 @@ c equations for mass in Nuclii
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(Sc,vthv,cs,Aomp,xomp,IWORKomp,iCS,i,j,dz,f1,f2,af,bf,NRHS,INFO)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,
-!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,dospecies,iter)
+!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,dospecies,iter,nTiter,i3D)
 	allocate(vthv(nnr))
 	allocate(Sc(nnr))
 	allocate(xomp(NN))
@@ -685,6 +684,7 @@ c equations for material
 	xomp(j)=0d0!Mc_top/Clouddens(i)
 
 	NRHS=1
+	info=0
 	call DGESV( NN, NRHS, Aomp, NN, IWORKomp, xomp, NN, info )
 
 	do i=1,NN
@@ -822,7 +822,7 @@ c correction for SiC
 			Cloud(ii)%frac(i,13:15)=Cloud(ii)%frac(i,13:15)+xc(5,k)*Clouddens(k)/3d0	! Silicates
 			Cloud(ii)%frac(i,8)=Cloud(ii)%frac(i,8)+xc(4,k)*Clouddens(k)				! SiO2
 			Cloud(ii)%frac(i,18)=Cloud(ii)%frac(i,18)+xc(6,k)*Clouddens(k)			! H2O			
-			Cloud(ii)%frac(i,9)=Cloud(ii)%frac(i,9)+xc(7,k)+xc(8,k)*Clouddens(k)		! Fe + FeS
+			Cloud(ii)%frac(i,9)=Cloud(ii)%frac(i,9)+(xc(7,k)+xc(8,k))*Clouddens(k)		! Fe + FeS
 			Cloud(ii)%frac(i,17)=Cloud(ii)%frac(i,17)+xc(10,k)*Clouddens(k)			! SiC			
 			Cloud(ii)%frac(i,16)=Cloud(ii)%frac(i,16)+xc(9,k)*Clouddens(k)			! C
 			Cloud(ii)%frac(i,12)=Cloud(ii)%frac(i,12)+xMgO(k)*Clouddens(k)			! MgO
@@ -936,7 +936,6 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 		enddo
 	   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))
 	endif
-	CloudT(1:nr)=T(1:nr)
 
 	deallocate(densv)
 	deallocate(rpart)

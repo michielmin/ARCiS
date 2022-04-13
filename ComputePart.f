@@ -924,6 +924,12 @@ c H2O: 18
 	F34(ilam,1:180)=0d0
 	F44(ilam,1:180)=1d0
 
+	Kext(ilam)=Kabs(ilam)+Ksca(ilam)
+	if(Kabs(ilam)/Kext(ilam).lt.1d-4) then
+		Kabs(ilam)=Kext(ilam)*1d-4
+		Kext(ilam)=Kabs(ilam)+Ksca(ilam)
+	endif
+
 11	continue
 
 	enddo
@@ -931,14 +937,14 @@ c H2O: 18
 !$OMP FLUSH
 !$OMP END PARALLEL
 
-	if(useobsgrid.or.nlam.eq.nlamdust) then
+	if(nlam.eq.nlamdust) then
 		C%Kabs(isize,1:nlam)=Kabs(1:nlamdust)
 		C%Kext(isize,1:nlam)=Kext(1:nlamdust)
 		C%Ksca(isize,1:nlam)=Ksca(1:nlamdust)
 	else
 		call regridarray(lamdust,Kabs,nlamdust,lam,C%Kabs(isize,1:nlam),nlam)
-		call regridarray(lamdust,Kext,nlamdust,lam,C%Kext(isize,1:nlam),nlam)
 		call regridarray(lamdust,Ksca,nlamdust,lam,C%Ksca(isize,1:nlam),nlam)
+		C%Kext(isize,1:nlam)=C%Kabs(isize,1:nlam)+C%Ksca(isize,1:nlam)
 	endif
 	
 300	continue	

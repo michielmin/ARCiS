@@ -6,7 +6,7 @@
 	integer i,j,icloud,k,irtrace,iptrace,inu,imol
 	real*8 beta(nlong,nlatt),Planck,phi,la,lo,A,rr
 	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta,Tpoint0(max(1,nTpoints)),Ppoint0(max(1,nTpoints))
-	real*8,allocatable :: Ca(:,:,:,:),Cs(:,:,:),BBr(:,:),Si(:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce(:,:,:)
+	real*8,allocatable :: Ca(:,:,:,:),Cs(:,:,:),BBr(:,:),Si(:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce_cont(:,:,:)
 	integer ir,ilam,ig,isize,iRmax,ndisk,nsub,nrtrace,nptrace,ipc,npc,nmol_count,iv,nv
 	logical recomputeopac
 	logical,allocatable :: hit(:,:)
@@ -21,11 +21,12 @@
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam)
 	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:)
 	logical iterateshift,actually1D,do_ibeta(n3D)
-	real*8 vxxmin,vxxmax,ComputeKzz,betamin_term
-
+	real*8 vxxmin,vxxmax,ComputeKzz,betamin_term,tot1,tot2
+	logical docloud0(max(nclouds,1))
+	
 	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D))
 	if(computealbedo) allocate(SiSc(nlam,ng,0:nr,nnu0,n3D))
-	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce(nlam,nr,n3D))
+	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce_cont(nlam,nr,n3D))
 	allocate(R3D(n3D,nr+2))
 	allocate(R3D2(n3D,nr+2))
 	allocate(T3D(n3D,0:nr))
@@ -36,8 +37,11 @@
 	if(retrieval) call SetOutputMode(.false.)
 
 c	recomputeopac=.true.
-	docloud=.true.
 	cloudfrac=1d0
+	docloud0=.false.
+	do i=1,nclouds
+		if(Cloud(i)%coverage.gt.0.5) docloud0(i)=.true.
+	enddo
 
 	iterateshift=.false.
 	if(hotspotshift0.ge.-180d0.and.hotspotshift0.le.180d0) then
@@ -170,7 +174,6 @@ c	recomputeopac=.true.
 		if(beta(i,j).lt.betamin_term) betamin_term=beta(i,j)
 	enddo
 	beta_c=beta_c/real(2*(nlatt-1))	
-	print*,betamin_term
 
 	if(.not.retrieval.and..not.domakeai) then
 		open(unit=20,file=trim(outputdir) // "parameter3D.dat",RECL=6000)
@@ -299,27 +302,8 @@ c Now call the setup for the readFull3D part
 						endif
 					endif
 					BBr(ilam,ir)=Planck(T(ir),freq0)
-					Ca(ilam,1:ng,ir,i)=0d0
-					Cs(ilam,ir,i)=0d0
-					do icloud=1,nclouds
-						if(Cloud(icloud)%standard.eq.'MIX') then
-							Ca(ilam,1:ng,ir,i)=Ca(ilam,1:ng,ir,i)+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
-							Cs(ilam,ir,i)=Cs(ilam,ir,i)+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-						else
-							do isize=1,Cloud(icloud)%nr
-								Ca(ilam,1:ng,ir,i)=Ca(ilam,1:ng,ir,i)+
-     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-								Cs(ilam,ir,i)=Cs(ilam,ir,i)+
-     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-							enddo
-						endif
-					enddo
-					Ce(ilam,ir,i)=Ca(ilam,1,ir,i)+Cs(ilam,ir,i)+Cext_cont(ir,ilam)
-					Cs(ilam,ir,i)=Cs(ilam,ir,i)+Csca(ir,ilam)*Ndens(ir)
-					Ca(ilam,1:ng,ir,i)=Ca(ilam,1:ng,ir,i)+max(0d0,Cext_cont(ir,ilam)-Csca(ir,ilam)*Ndens(ir))	
-
 					do ig=1,ng
-						Ca(ilam,ig,ir,i)=Ca(ilam,ig,ir,i)+Cabs(ir,ilam,ig)*Ndens(ir)
+						call Crossections(ir,ilam,ig,Ca(ilam,ig,ir,i),Cs(ilam,ir,i),docloud0)
 					enddo
 				enddo
 			enddo
@@ -342,12 +326,19 @@ c Now call the setup for the readFull3D part
 			enddo
 			do ir=1,nr
 				k=0
+				do ilam=1,nlam
+					Ce_cont(ilam,ir,i)=0d0
+					do ig=1,ng
+						Ce_cont(ilam,ir,i)=Ce_cont(ilam,ir,i)+wgg(ig)*Ca(ilam,ig,ir,i)
+					enddo
+				enddo
 				do imol=1,nmol
 					if(includemol(imol)) then
 						k=k+1
 						do ig=1,ng
 							do ilam=1,nlam
 								Ca_mol(ilam,ig,k,ir,i)=Cabs_mol(ir,ig,imol,ilam)
+								Ce_cont(ilam,ir,i)=Ce_cont(ilam,ir,i)-wgg(ig)*Ca_mol(ilam,ig,k,ir,i)
 							enddo
 						enddo
 					endif
@@ -369,12 +360,12 @@ c Now call the setup for the readFull3D part
 			mixrat3D(i,1:nr,1:nmol)=mixrat3D(1,1:nr,1:nmol)
 			Ca(1:nlam,1:ng,1:nr,i)=Ca(1:nlam,1:ng,1:nr,1)
 			Cs(1:nlam,1:nr,i)=Cs(1:nlam,1:nr,1)
-			Ce(1:nlam,1:nr,i)=Ce(1:nlam,1:nr,1)
+			Ce_cont(1:nlam,1:nr,i)=Ce_cont(1:nlam,1:nr,1)
 			Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,i)=Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,1)
 			Si(1:nlam,1:ng,0:nr,1:nnu0,i)=Si(1:nlam,1:ng,0:nr,1:nnu0,1)
 			if(computealbedo) SiSc(1:nlam,1:ng,0:nr,1:nnu0,i)=SiSc(1:nlam,1:ng,0:nr,1:nnu0,1)
 		endif
-		if(.not.retrieval) then
+		if(.not.retrieval.or..true.) then
 			call SetOutputMode(.true.)
 			open(unit=20,file=trim(outputdir) // "mixrat" // trim(int2string(i,'(i0.3)')),RECL=6000)
 			write(20,'("#",a9,a13,a13)') "T[K]","P[bar]","Kzz[cm^2/s]"
@@ -563,7 +554,19 @@ c Note we are here using the symmetry between North and South
 					if(lamemis(ilam)) then
 					do ig=1,ng
 						if(i1.lt.nr) then
-						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))/real(nv)
+						nv=1
+						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
+						if(makeimage) nv=5
+						if(tau1.lt.0.1) then
+							nv=1
+						else if(tau1.lt.1d0) then
+							nv=10
+						else if(tau1.lt.10d0) then
+							nv=tau1*3+10
+						else
+							nv=1
+						endif
+						tau1=tau1/real(nv)
 						exp_tau1=exp(-tau1)
 						do iv=1,nv
 							rr=sqrt((x+vx*v*(real(iv)-0.5)/real(nv))**2+(y+vy*v*(real(iv)-0.5)/real(nv))**2
@@ -842,7 +845,7 @@ c	print*,Tstar*(Rstar/Dplanet)**0.5
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(vv,tau,tauc,Afact,hit,irtrace,A,iptrace,phi,rr,x,y,z,vx,vy,vz,la,lo,i1,i2,i3,
 !$OMP&			edgeNR,v,i1next,i2next,i3next,edgenext,i,imol,ir,ig,obsA_omp,obsA_split_omp)
-!$OMP& SHARED(nrtrace,nptrace,nmol_count,nr,nlam,ng,rtrace,ibeta,R3D2,Ce,Ca_mol,wgg,obsA,latt,long,Rmax,
+!$OMP& SHARED(nrtrace,nptrace,nmol_count,nr,nlam,ng,rtrace,ibeta,R3D2,Ce_cont,Ca_mol,wgg,obsA,latt,long,Rmax,
 !$OMP&          nnu0,n3D,nlong,nlatt,obsA_split)
 	allocate(obsA_omp(nlam))
 	allocate(obsA_split_omp(nlam,2))
@@ -890,7 +893,7 @@ c Note we use the symmetry of the North and South here!
 				i=ibeta(i2,i3)
 				vv(i1,i)=vv(i1,i)+v
 				hit(i1,i)=.true.
-				tauc(1:nlam)=tauc(1:nlam)+v*Ce(1:nlam,i1,i)
+				tauc(1:nlam)=tauc(1:nlam)+v*Ce_cont(1:nlam,i1,i)
 			endif
 			x=x+v*vx
 			y=y+v*vy
@@ -956,7 +959,7 @@ c Note we use the symmetry of the North and South here!
 	
 	deallocate(Ca,Cs,BBr,Si)
 	if(computealbedo) deallocate(SiSc)
-	deallocate(Ca_mol,Ce)
+	deallocate(Ca_mol,Ce_cont)
 	deallocate(R3D)
 	deallocate(R3D2)
 	deallocate(T3D,mixrat3D)
@@ -1976,10 +1979,10 @@ c-----------------------------------------------------------------------
 		do ig=1,ng
 			do ilam=1,nlam
 				Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
-				if(Ca(ilam,ig,ir)/Ce(ilam,ig,ir).lt.1d-4) then
-					Ca(ilam,ig,ir)=Cs(ilam,ir)/(1d4-1d0)
-					Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
-				endif
+c				if(Ca(ilam,ig,ir)/Ce(ilam,ig,ir).lt.1d-4) then
+c					Ca(ilam,ig,ir)=Cs(ilam,ir)/(1d4-1d0)
+c					Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
+c				endif
 			enddo
 		enddo
 	enddo

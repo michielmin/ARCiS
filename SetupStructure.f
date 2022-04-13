@@ -32,7 +32,7 @@
 
 	if(compute_mixrat) nabla_ad=2d0/7d0
 	grav=Ggrav*Mplanet/(Rplanet)**2
-	if(par_tprofile.or.(computeT.and.nTiter.eq.0.and.i3D.eq.1)) call ComputeParamT(T)
+	if(par_tprofile.or.(computeT.and.nTiter.le.1.and.i3D.eq.1)) call ComputeParamT(T)
 	if(free_tprofile) then
 		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
 c		call MakePTstruct(P,T,nr,Ppoint,Tpoint,nTpoints)
@@ -51,6 +51,7 @@ c		call MakePTstruct(P,T,nr,Ppoint,Tpoint,nTpoints)
 	if(.not.mixratfile.and.(.not.dochemistry.or.j.eq.1)) then
 	do i=1,nr
 		tot=0d0
+		mixrat_r(i,1:nmol)=mixrat(1:nmol)
 		do imol=1,nmol
 			if(mixrat_r(i,imol).gt.0d0) tot=tot+mixrat_r(i,imol)
 		enddo
@@ -148,7 +149,7 @@ c			if(domakeai.or.retrieval) return
 		endif
 	enddo
 
-	if(par_tprofile.or.(computeT.and.nTiter.eq.0.and.i3D.eq.1)) call ComputeParamT(T)
+	if(par_tprofile.or.(computeT.and.nTiter.le.1.and.i3D.eq.1)) call ComputeParamT(T)
 	if(free_tprofile) then
 		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
 c		call MakePTstruct(P,T,nr,Ppoint,Tpoint,nTpoints)
@@ -699,7 +700,7 @@ c use Ackerman & Marley 2001 cloud computation
 	endif
 	Cloud(ii)%w=Cloud(ii)%w/tot
 	
-	if(Cloud(ii)%tau.gt.0d0) then
+	if(Cloud(ii)%tau.gt.0d0.and..not.cloudcompute) then
 		tau=0d0
 		do ilam=nlam-1,1,-1
 			if((lam(ilam)*1d4).lt.Cloud(ii)%lam.and.(lam(ilam+1)*1d4).ge.Cloud(ii)%lam) exit
