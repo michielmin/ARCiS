@@ -51,7 +51,7 @@
 	real*8,allocatable :: temp_a(:),wtemp(:),Ca_HR(:,:),Cs_HR(:,:),Fstar_LR(:),SurfEmis_LR(:)
 	integer,allocatable :: IP(:)
 	real*8,allocatable :: WS(:),nu(:),wnu(:),Hstar_lam(:),Hsurf_lam(:),directHstar_omp(:)
-	real*8,allocatable :: x_SIj(:),y_SIj(:),tauR_SIj(:),Ma_SIj(:),Mb_SIj(:),Mc_SIj(:),Lmat(:,:)
+	real*8,allocatable :: x_SIj(:),y_SIj(:),tauR_SIj(:),Ma_SIj(:),Mb_SIj(:),Mc_SIj(:)
 	character*500 file
 	real*8,allocatable :: CaCloud_HR(:),CaCloud(:,:),MaxCoolCloud(:)
 	real*8 FlEvap(nr),MinFlEvap(nr)
@@ -407,13 +407,12 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(x_SIj,y_SIj,tauR_SIj,Ma_SIj,Mb_SIj,Mc_SIj,Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,
-!$OMP&			Hstar_omp,SurfStar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,directHstar_omp,Lmat,j)
+!$OMP&			Hstar_omp,SurfStar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,directHstar_omp)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,
 !$OMP&			Hstar,SurfStar,Dplanet,Fstar_LR,must,directHstar)
 	allocate(x_SIj(nr+2),y_SIj(nr+2),tauR_SIj(0:nr+1),Ma_SIj(nr+2),Mb_SIj(nr+2),Mc_SIj(nr+2))
 	allocate(Si_omp(0:nr,0:nr+1),tauR_omp(0:nr),Ih_omp(0:nr),Ij_omp(0:nr))
 	allocate(Hstar_omp(0:nr),Hstar_lam(0:nr),Hsurf_lam(0:nr),directHstar_omp(0:nr))
-	allocate(Lmat(nr,nr))
 	Hstar_omp=0d0
 	SurfStar_omp=0d0
 	directHstar_omp=0d0
@@ -464,35 +463,24 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 
 			do inu=1,nnu
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
-				call InvertIj(tauR_omp(1:nr),Lmat(1:nr,1:nr),nr)
-
-				Ij_omp(0:nr)=0d0
-				do i=1,nr
-					do j=1,nr
-						Ij_omp(i)=Ij_omp(i)+Si_omp(j,0)*Lmat(i,j)
-					enddo
-				enddo
+				call SolveIj(tauR_omp(0:nr),Si_omp(0:nr,0),Ij_omp(0:nr),nr,x_SIj,y_SIj,tauR_SIj(0:nr+1),Ma_SIj,Mb_SIj,Mc_SIj)
 				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
 				Hstar_lam(0:nr)=Hstar_lam(0:nr)+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
 				SurfStar_omp=SurfStar_omp+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1)*SurfEmis_LR(ilam)
+			enddo
 
-				do ir=1,nr
-					Ij_omp(0:nr)=0d0
-					do i=1,nr
-						do j=1,nr
-							Ij_omp(i)=Ij_omp(i)+Si_omp(j,ir)*Lmat(i,j)
-						enddo
-					enddo
+			do ir=1,nr
+				do inu=1,nnu
+					tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
+					call SolveIj(tauR_omp(0:nr),Si_omp(0:nr,ir),Ij_omp(0:nr),nr,x_SIj,y_SIj,tauR_SIj(0:nr+1),Ma_SIj,Mb_SIj,Mc_SIj)
 					call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
 					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 				enddo
+			enddo
 
-				Ij_omp(0:nr)=0d0
-				do i=1,nr
-					do j=1,nr
-						Ij_omp(i)=Ij_omp(i)+Si_omp(j,nr+1)*Lmat(i,j)
-					enddo
-				enddo
+			do inu=1,nnu
+				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
+				call SolveIj(tauR_omp(0:nr),Si_omp(0:nr,nr+1),Ij_omp(0:nr),nr,x_SIj,y_SIj,tauR_SIj(0:nr+1),Ma_SIj,Mb_SIj,Mc_SIj)
 				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
 				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+8d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)
 				Hsurf_lam(0:nr)=Hsurf_lam(0:nr)+FstarBottom*8d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)*(1d0-SurfEmis_LR(ilam))
@@ -512,7 +500,6 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 	deallocate(x_SIj,y_SIj,tauR_SIj,Ma_SIj,Mb_SIj,Mc_SIj)
 	deallocate(Si_omp,tauR_omp,Ih_omp,Ij_omp)
 	deallocate(Hstar_omp,Hstar_lam,Hsurf_lam,directHstar_omp)
-	deallocate(Lmat)
 !$OMP FLUSH
 !$OMP END PARALLEL
 
