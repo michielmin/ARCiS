@@ -664,7 +664,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	do ir=1,nr
 		T(ir)=ff*Ts(ir)+(1d0-ff)*T(ir)
 	enddo
-	T(nr)=T(nr-1)
+c	T(nr)=T(nr-1)
 
 	if(iter.eq.niter) then
 	do ir=nr-1,1,-1
