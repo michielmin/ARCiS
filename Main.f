@@ -127,7 +127,7 @@ c terms of use
 		endif
 	endif
 	if(computeT.and.computeopac) then
-		EvapCooling=.true.
+		EvapCooling=.false.
 		temp=par_tprofile
 		par_tprofile=.false.
 		do nTiter=1,maxiter

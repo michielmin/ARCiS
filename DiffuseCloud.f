@@ -250,7 +250,7 @@ c	atoms_cloud(i,3)=1
 			endif
 		enddo
 	endif
-	
+	EvapCooling=.true.
 	if((.not.(retrieval.or.domakeai)).or.EvapCooling) call ComputeTevap
 
 	cloudsform=.false.
