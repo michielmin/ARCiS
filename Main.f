@@ -133,16 +133,20 @@ c terms of use
 		do nTiter=1,maxiter
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
      &					// trim(int2string(maxiter,'(i3)')) // ")")
-			fiter=1d0-real(nTiter-1)/real(maxiter-1)
+			fiter=1d0-real(nTiter-1)/real(maxiter)
 			f=1d0-3d0*(fiter*(1d0-fiter))
 			call SetupStructure(.true.)
 			call SetupOpacities()
 			call DoComputeT(Tconverged,f)
 		enddo
+		fiter=0d0
+		f=1d0
 		nlamdust=nldtemp
 		specresdust=srdtemp
 		lamdust(1:nlamdust)=ldtemp(1:nlamdust)
+		call SetupStructure(.true.)
 		call SetupOpacities()
+		call DoComputeT(Tconverged,f)
 		par_tprofile=temp
 	else
 		call SetupStructure(computeopac)
