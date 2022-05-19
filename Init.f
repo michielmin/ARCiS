@@ -694,7 +694,7 @@ c In this case the beta map should be the static one. Make sure this is set prop
 		allocate(mixrat_average3D(0:nphase,nr,nmol))
 	endif
 
-	if(planetform) call InitFormation(Mstar)
+	if(planetform) call InitFormation(Mstar,planetform_SolidC)
 		
 	return
 	end
@@ -1080,6 +1080,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) planetform_Rstart
 		case("mstart","mcore")
 			read(key%value,*) planetform_Mstart
+		case("sootline","solidc","fsolidc")
+			read(key%value,*) planetform_SolidC
 		case("surfacetype")
 			read(key%value,*) surfacetype
 		case("surfacealbedo")
@@ -1645,6 +1647,7 @@ c		Cloud(i)%P=0.0624d0
 	planetform_fplan=0.1
 	planetform_Rstart=15d0
 	planetform_Mstart=10d0
+	planetform_SolidC=0d0
 	
 	return
 	end
@@ -2674,19 +2677,15 @@ c	HG=(1d0-g**2)/((1d0-2d0*g*cos(theta)+g**2)**(3.0/2.0))/2d0
 	end
 
 
-	subroutine InitFormation(Ms)
+	subroutine InitFormation(Ms,frac_SolidC)
 	use FormationModule
 	IMPLICIT NONE
-	real*8 Ms
+	real*8 Ms,frac_SolidC
 
-	call getenv('HOME',diskabundances) 
-
-	diskabundances=trim(diskabundances) // '/ARCiS/Data/SimAB/molec_ab.txt'
-	
 	Mstar=Ms
 	call SetupAtoms
 
-	call SetupPPdisk
+	call SetupPPdisk(frac_SolidC)
 
 	return
 	end

@@ -112,7 +112,7 @@ c===============================================================================
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),lamdust(:),dlam(:),surface_emis(:)
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:),planet_albedo(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
-	real*8 planetform_fdust,planetform_fplan,planetform_Rstart,planetform_Mstart,fiter
+	real*8 planetform_fdust,planetform_fplan,planetform_Rstart,planetform_Mstart,fiter,planetform_SolidC
 	logical planetform,massprior,retrievestar
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
@@ -403,7 +403,6 @@ c compute what this means for the total number of atoms for every element
 c Disk density setup where the dust and planet densities are the max values possible
 	real*8,allocatable :: d2g_disk(:),p2g_disk(:)
 	real*8 Mstar,Lstar,mu,kappa_r,alpha_disk,M_acc,d2g_T
-	character*500 diskabundances
 	
 	end module
 

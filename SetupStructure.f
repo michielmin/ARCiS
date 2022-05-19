@@ -925,6 +925,7 @@ c Setup names and weights of the elements
 	Mcore=planetform_Mstart*Mearth
 	Rstart=planetform_Rstart*AU
 
+	call InitFormation(Mstar,planetform_SolidC)
 	call Formation(Mplanet,Mcore,Rstart,Dplanet,planetform_fdust,planetform_fplan,flag_converge)
 
 	endif

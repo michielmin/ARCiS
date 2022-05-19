@@ -77,14 +77,14 @@ c===============================================================================
 c===================================================================================
 c Subroutine to setup the properties of the pp disk in which the planet forms
 c===================================================================================
-	subroutine SetupPPdisk()
+	subroutine SetupPPdisk(frac_SolidC)
 	use FormationModule
 	use Constants
 	use AtomsModule
 	IMPLICIT NONE
 	character*10 el_name(100),dummy
 	real*8 el_abun(100),gasmass,dustmass,planetmass,const
-	real*8 const2,r1,r2
+	real*8 const2,r1,r2,frac_SolidC
 	integer n_el,i,j,k
 	logical infile(100)
 	mu=2.5
@@ -95,21 +95,29 @@ c===============================================================================
 
 c Compute the abudances in gas phase, solid phase and planetessimals
 c	...
-	open(file=diskabundances,unit=35,RECL=6000)
-	read(35,*) dummy,n_el,dummy,Nr_disk
+c	open(file=diskabundances,unit=35,RECL=6000)
+c	read(35,*) dummy,n_el,dummy,Nr_disk
+	n_el=18
+	Nr_disk=15
 
 c dtg precalculated, Nr_disk = regions
 	if(.not.allocated(R_disk)) then
 		allocate(R_disk(Nr_disk),T_disk(Nr_disk),d2g_disk(Nr_disk),p2g_disk(Nr_disk))
 		allocate(abun_gas(N_atoms,Nr_disk),abun_dust(N_atoms,Nr_disk),abun_planet(N_atoms,Nr_disk))
-		abun_dust=0d0
-		abun_planet=0d0
-		abun_gas=0d0
 	endif
-	read(35,*) dummy,el_name(1:n_el)
+	abun_dust=0d0
+	abun_planet=0d0
+	abun_gas=0d0
+c	read(35,*) dummy,el_name(1:n_el)
+	el_name(1:n_el)=(/'H','He','C','N','O','Na','Mg','Al','Si','P','S','Cl','K','Ca','Ti','V','Fe','Ni'/)
 	infile=.false.
+c	T_disk=(/3,20,47,120,131,500,650,800,850,1150,1200,1250,1400,1550,1600/)
+c   Temperatures adjusted to be just below the temperature boundaries to ensure the composition is for the region beyond that.
+	T_disk=(/2.7,19.9,46.9,119.9,130.9,499.9,649.9,799.9,849.9,1149.9,1199.9,1249.9,1399.9,1549.9,1599.9/)
 	do i=1,Nr_disk
-		read(35,*) T_disk(i),el_abun(1:n_el)
+c		read(35,*) T_disk(i),el_abun(1:n_el)
+		call SplitAtoms(T_disk(i),frac_SolidC)
+		el_abun(1:n_el)=molfracs_atoms(1:n_el)
 		do j=1,N_atoms
 			do k=1,n_el
 				if(el_name(k).eq.names_atoms(j)) then
@@ -122,7 +130,7 @@ c dtg precalculated, Nr_disk = regions
 			endif
 		enddo
 	enddo
-	close(unit=35)
+c	close(unit=35)
 	do i=1,Nr_disk-1
 		abun_dust(1:N_atoms,i)=abun_gas(1:N_atoms,Nr_disk)-abun_gas(1:N_atoms,i)
 		abun_planet(1:N_atoms,i)=abun_dust(1:N_atoms,i)
@@ -305,15 +313,204 @@ c===============================================================================
 	const=mu*mp/(3*pi*alpha_disk*kb)
 	surfacedens=(const/T_local)*M_acc*(Ggrav*Mstar/R**3)**(1./2)
 
-	Rhill = (Mtot/(3*Mstar))**(1./3)*R
+	Rhill = (Mtot/(3.*Mstar))**(1./3)*R
 	drdt = (3.*alpha_d*Cs**2.)/(2*R*ang_v)
-	dMdt = scalehight**2*ang_v*surfacedens*min(3*pi*alpha_disk,(Rhill/scalehight)**(9./2))
+	dMdt = scalehight**2*ang_v*surfacedens*min(3.*pi*alpha_disk,(Rhill/scalehight)**(9./2))
 
 	return
 	end
 
+	
 c===================================================================================
 c===================================================================================
 
 	
+	subroutine SplitAtoms(T,frac_solidC)
+	use AtomsModule
+	IMPLICIT NONE
+	real*8 T,limit(N_atoms),lockCO2,lockCO,mol(N_atoms)
+	real*8 solidC,frac_solidC,removeH2O
+	integer H,He,C,N,O,Na,Mg,Al,Si,P,S,Cl,K,Ca,Ti,V,Fe,Ni
+	parameter(H=1)
+	parameter(He=2)
+	parameter(C=3)
+	parameter(N=4)
+	parameter(O=5)
+	parameter(Na=6)
+	parameter(Mg=7)
+	parameter(Al=8)
+	parameter(Si=9)
+	parameter(P=10)
+	parameter(S=11)
+	parameter(Cl=12)
+	parameter(K=13)
+	parameter(Ca=14)
+	parameter(Ti=15)
+	parameter(V=16)
+	parameter(Fe=17)
+	parameter(Ni=18)
+	
+c	frac_solidC=0d0
+	
+c First set Solar abundances
+	call SetupAtoms
+	molfracs_atoms=1e12*molfracs_atoms/molfracs_atoms(1)
+
+	solidC=frac_solidC*molfracs_atoms(C)
+		
+c Follow recipe according to Khorshid+ 2022
+	if(T.lt.850d0) then
+		mol=0
+		limit=1d0
+		mol(Na)=1
+		mol(Al)=1
+		mol(Si)=3
+		mol(O)=8
+		call remove(mol,limit)
+	endif
+	if(T.lt.850d0) then
+		mol=0
+		limit=1d0
+		mol(K)=1
+		mol(Al)=1
+		mol(Si)=3
+		mol(O)=8
+		call remove(mol,limit)
+	endif
+	if(T.lt.1250d0) then
+		mol=0
+		limit=1d0
+		mol(Mg)=1
+		mol(Al)=2
+		mol(O)=4
+		limit(Al)=0.5
+		call remove(mol,limit)
+	endif
+	if(T.lt.1550d0) then
+		mol=0
+		limit=1d0
+		mol(Al)=2
+		mol(O)=3
+		call remove(mol,limit)
+	endif
+c Additionally remove TiO2 and VO
+	if(T.lt.1550d0) then
+		mol=0
+		limit=1d0
+		mol(Ti)=1
+		mol(O)=2
+		call remove(mol,limit)
+	endif
+	if(T.lt.1550d0) then
+		mol=0
+		limit=1d0
+		mol(V)=1
+		mol(O)=1
+		call remove(mol,limit)
+	endif
+	if(T.lt.1150d0) then
+		mol=0
+		limit=1d0
+		mol(Mg)=1
+		mol(Si)=1
+		mol(O)=3
+		limit(Si)=0.83
+		call remove(mol,limit)
+	endif
+	if(T.lt.1200d0) then
+		mol=0
+		limit=1d0
+		mol(Mg)=2
+		mol(Si)=1
+		mol(O)=4
+		call remove(mol,limit)
+	endif
+	if(T.lt.1400d0) then
+		mol=0
+		limit=1d0
+		mol(Si)=1
+		mol(O)=2
+		call remove(mol,limit)
+	endif
+	if(T.lt.650d0) then
+		mol=0
+		limit=1d0
+		mol(Fe)=1
+		mol(S)=1
+		call remove(mol,limit)
+	endif
+	if(T.lt.1200d0) then
+		mol=0
+		limit=1d0
+		mol(Fe)=1
+		call remove(mol,limit)
+	endif
+	
+c Soot line: remove solidC fraction of the carbon atoms into soot when T<800K
+	if(T.lt.800d0) then
+c Meteoritic abundances
+		if(T.lt.500d0) then
+			solidC=max(solidC,10.0**7.39)
+			molfracs_atoms(6:N_atoms)=0d0
+			molfracs_atoms(He)=max(0d0,molfracs_atoms(He)-10.0**1.29)
+			molfracs_atoms(N)=max(0d0,molfracs_atoms(N)-10.0**6.26)
+			removeH2O=10.0**8.4-(10.0**8.69-molfracs_atoms(O))
+			molfracs_atoms(H)=max(0d0,molfracs_atoms(H)-removeH2O*2d0)
+		endif
+		molfracs_atoms(C)=max(0d0,molfracs_atoms(C)-solidC)
+	endif
+
+c Adjust lockCO2 and lockCO according to limiting values to make sure abundances do not drop below 0
+	lockCO2=min(0.15*molfracs_atoms(C),2d0*molfracs_atoms(O))
+	molfracs_atoms(C)=molfracs_atoms(C)-lockCO2
+	molfracs_atoms(O)=molfracs_atoms(O)-2d0*lockCO2
+
+	lockCO=min(molfracs_atoms(C),molfracs_atoms(O))
+	molfracs_atoms(C)=molfracs_atoms(C)-lockCO
+	molfracs_atoms(O)=molfracs_atoms(O)-lockCO
+
+	if(T.lt.120d0) then
+		mol=0
+		limit=1d0
+		mol(H)=2
+		mol(O)=1
+		call remove(mol,limit)
+	endif
+
+c Possibility to add NH3 snowline (this might need to be adjusted for N2 iceline if needed)
+	if(T.lt.131d0) then
+		mol=0
+		limit=1d0
+		mol(H)=3
+		mol(N)=1
+		call remove(mol,limit)
+	endif
+
+c Add CO and/or CO2 back to the gas phase if temperature is too high
+	if(T.gt.47d0) then
+		molfracs_atoms(C)=molfracs_atoms(C)+lockCO2
+		molfracs_atoms(O)=molfracs_atoms(O)+2d0*lockCO2
+	endif
+	if(T.gt.20d0) then
+		molfracs_atoms(C)=molfracs_atoms(C)+lockCO
+		molfracs_atoms(O)=molfracs_atoms(O)+lockCO
+	endif
+	
+	
+	return
+	end
+	
+	
+	subroutine remove(mol,limit)
+	use AtomsModule
+	IMPLICIT NONE
+	real*8 f,mol(N_atoms),limit(N_atoms)
+	
+	f=minval(molfracs_atoms*limit/mol)
+	molfracs_atoms=molfracs_atoms-mol*f
+	
+	return
+	end
+	
+
 
