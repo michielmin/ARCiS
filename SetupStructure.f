@@ -910,8 +910,8 @@ c Setup names and weights of the elements
 	Z0=sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))
 
 	CO=molfracs_atoms(3)/molfracs_atoms(5)
-	SiO=molfracs_atoms(4)/molfracs_atoms(5)
-	NO=molfracs_atoms(9)/molfracs_atoms(5)
+	SiO=molfracs_atoms(9)/molfracs_atoms(5)
+	NO=molfracs_atoms(4)/molfracs_atoms(5)
 	SO=molfracs_atoms(11)/molfracs_atoms(5)
 	Z=log10(sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))/Z0)
 
@@ -933,8 +933,8 @@ c Setup names and weights of the elements
 	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))
 
 	CO=molfracs_atoms(3)/molfracs_atoms(5)
-	SiO=molfracs_atoms(4)/molfracs_atoms(5)
-	NO=molfracs_atoms(9)/molfracs_atoms(5)
+	SiO=molfracs_atoms(9)/molfracs_atoms(5)
+	NO=molfracs_atoms(4)/molfracs_atoms(5)
 	SO=molfracs_atoms(11)/molfracs_atoms(5)
 	Z=log10(sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))/Z0)
 
