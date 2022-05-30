@@ -472,7 +472,7 @@ c Now call the setup for the readFull3D part
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,iv,w1,w2,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,fulloutput3D,Rplanet,
-!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,nv,planet_albedo,SiSc,computealbedo,
+!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,nv,planet_albedo,SiSc,computealbedo,orbit_inc,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
 	allocate(fluxp_omp(nlam))
@@ -494,7 +494,7 @@ c Note we are here using the symmetry between North and South
 					phi=pi*(real(iptrace)-0.5)/real(nlatt-1)
 				endif
 			else
-				phi=pi*(real(iptrace)-0.5)/real(nptrace)
+				phi=2d0*pi*(real(iptrace)-0.5)/real(nptrace)
 			endif
 			rr=rtrace(irtrace)
 			y=rr*cos(phi)
@@ -503,11 +503,21 @@ c Note we are here using the symmetry between North and South
 			vx=-1d0
 			vy=0d0
 			vz=0d0
+			call rotateY3D(x,y,z,pi/2d0-orbit_inc)
+			rr=sqrt(x**2+y**2+z**2)
+			x=x*Rmax/rr
+			y=y*Rmax/rr
+			z=z*Rmax/rr
 			call rotateZ3D(x,y,z,theta)
 			rr=sqrt(x**2+y**2+z**2)
 			x=x*Rmax/rr
 			y=y*Rmax/rr
 			z=z*Rmax/rr
+			call rotateY3D(vx,vy,vz,pi/2d0-orbit_inc)
+			rr=sqrt(vx**2+vy**2+vz**2)
+			vx=vx/rr
+			vy=vy/rr
+			vz=vz/rr
 			call rotateZ3D(vx,vy,vz,theta)
 			rr=sqrt(vx**2+vy**2+vz**2)
 			vx=vx/rr
@@ -693,7 +703,7 @@ c	print*,Tstar*(Rstar/Dplanet)**0.5
 				ni=5d6/real(nrtrace*nptrace)
 				do i=1,ni
 					rr=sqrt(Rmin_im**2+random(idum)*(Rmax_im**2-Rmin_im**2))
-					phi=pi*(real(iptrace)-random(idum))/real(nptrace)
+					phi=2d0*pi*(real(iptrace)-random(idum))/real(nptrace)
 					x=rr*cos(phi)
 					y=rr*sin(phi)
 					ix=(x+Rmax)*real(nx_im)/(2d0*Rmax)+1
@@ -703,13 +713,13 @@ c	print*,Tstar*(Rstar/Dplanet)**0.5
 					if(ix.gt.nx_im) ix=nx_im
 					if(iy.gt.nx_im) iy=nx_im
 					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,iptrace)/real(ni*2)
-					ix=(x+Rmax)*real(nx_im)/(2d0*Rmax)+1
-					iy=(-y+Rmax)*real(nx_im)/(2d0*Rmax)+1
-					if(ix.lt.1) ix=1
-					if(iy.lt.1) iy=1
-					if(ix.gt.nx_im) ix=nx_im
-					if(iy.gt.nx_im) iy=nx_im
-					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,iptrace)/real(ni*2)
+c					ix=(x+Rmax)*real(nx_im)/(2d0*Rmax)+1
+c					iy=(-y+Rmax)*real(nx_im)/(2d0*Rmax)+1
+c					if(ix.lt.1) ix=1
+c					if(iy.lt.1) iy=1
+c					if(ix.gt.nx_im) ix=nx_im
+c					if(iy.gt.nx_im) iy=nx_im
+c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,iptrace)/real(ni*2)
 				enddo
 			enddo
 			Rmin_im=Rmax_im
@@ -860,7 +870,15 @@ c	print*,Tstar*(Rstar/Dplanet)**0.5
 		A=pi*(rtrace(irtrace+1)**2-rtrace(irtrace)**2)/real(nptrace)
 		do iptrace=1,nptrace
 c Note we use the symmetry of the North and South here!
-			phi=pi*(real(iptrace)-0.5)/real(nptrace)
+			if(nptrace.eq.1) then
+				if(2*(nlatt/2).eq.nlatt) then
+					phi=pi*(real(iptrace)-0.5)/real((nlatt-1)*2)
+				else
+					phi=pi*(real(iptrace)-0.5)/real(nlatt-1)
+				endif
+			else
+				phi=2d0*pi*(real(iptrace)-0.5)/real(nptrace)
+			endif
 			rr=0.5d0*(rtrace(irtrace)+rtrace(irtrace+1))
 			y=rr*cos(phi)
 			z=rr*sin(phi)
