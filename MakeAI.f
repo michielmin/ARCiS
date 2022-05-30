@@ -2,10 +2,12 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j,k
-	real*8 var(n_ret),dvar(2,n_ret),chi2,random
+	integer i,j,k,iobs
+	real*8 var(n_ret),dvar(2,n_ret),random
 	character*500 outputdir0,command
 	logical exist,saneplanet,usefile
+	real*8 spectemp(nlam),tot,lnew
+	real*8,allocatable :: spec(:)
 	
 	write(outputdir0,'(a)') trim(outputdir)
 
@@ -27,8 +29,7 @@
 		call system(command)
 		inquire(file=trim(outputdir) // "parameters",exist=exist)
 
-1		chi2=0d0
-		modelsucces=.true.
+1		modelsucces=.true.
 
 		if(.not.usefile) then
 			do j=1,n_ret
@@ -43,7 +44,8 @@
 				call MapRetrieval(var,dvar)
 			endif
 			if(mapCOratio.and..not.dochemistry) call DoMapCOratio()
-			call WriteAI(i,var)
+			lnew=0d0
+			call WriteAI(i,var,lnew)
 			call InitDens()
 			call CheckPlanet(saneplanet)
 			if(.not.saneplanet) then
@@ -67,9 +69,29 @@
 				enddo
 				call MapRetrievalInverse(var)
 			endif
+			if(nobs.gt.0) then
+				do iobs=1,nobs
+					allocate(spec(ObsSpec(iobs)%ndata))
+					call RemapObs(iobs,spec,spectemp)
+					deallocate(spec)
+				enddo
+				tot=0d0
+				lnew=0d0
+				do iobs=1,nobs
+					do j=1,ObsSpec(iobs)%ndata
+						tot=tot-log(sqrt(2d0*pi)*ObsSpec(iobs)%dy(j))
+						lnew=lnew+((ObsSpec(iobs)%model(j)-ObsSpec(iobs)%y(j))/ObsSpec(iobs)%dy(j))**2
+					enddo
+				enddo
+				if(massprior) then
+					lnew=lnew+((Mplanet/Mjup-Mp_prior)/dMp_prior)**2
+					tot=tot-log(sqrt(2d0*pi)*dMp_prior)
+				endif
+				lnew=-lnew/2d0+tot
+			endif
 			if(modelsucces) then
 				call SetOutputMode(.true.)
-				call WriteAI(i,var)
+				call WriteAI(i,var,lnew)
 				call WriteStructure()
 				call WriteOutput()
 			else
@@ -78,8 +100,6 @@
 				call output("try different set of parameters")
 				if(.not.usefile) goto 1
 			endif
-		else
-			chi2=random(idum)
 		endif
 	enddo
 2	continue
@@ -226,10 +246,10 @@ c		f=f/tot
 
 
 
-	subroutine WriteAI(imodel,var)
+	subroutine WriteAI(imodel,var,like)
 	use GlobalSetup
 	IMPLICIT NONE
-	real*8 var(n_ret),error(2,n_ret)
+	real*8 var(n_ret),error(2,n_ret),like
 	integer i,imodel,j
 	character*500 command
 
@@ -261,6 +281,7 @@ c	linear/squared
 			if(mixrat_r(1,i).gt.0d0) write(20,'(a15," = ",es14.7)') trim(molname(i)),mixrat_r(1,i)
 		enddo
 	endif
+	if(nobs.gt.0.and.like.ne.0d0) write(20,'(a15," = ",es14.7)') 'likelyhood',like
 
 	close(unit=20)
 
