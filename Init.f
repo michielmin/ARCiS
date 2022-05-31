@@ -694,7 +694,7 @@ c In this case the beta map should be the static one. Make sure this is set prop
 		allocate(mixrat_average3D(0:nphase,nr,nmol))
 	endif
 
-	if(planetform) call InitFormation(Mstar,planetform_SolidC)
+	if(planetform) call InitFormation(Mstar,planetform_SolidC,planetform_Macc)
 		
 	return
 	end
@@ -731,6 +731,8 @@ c			read(key%value,*) nr
 		case("loggp")
 			Mp_from_logg=.true.
 			read(key%value,*) loggPlanet
+		case("constant_g")
+			read(key%value,*) constant_g
 		case("rstar")
 			read(key%value,*) Rstar
 		case("mstar")
@@ -1082,6 +1084,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) planetform_Mstart
 		case("sootline","solidc","fsolidc")
 			read(key%value,*) planetform_SolidC
+		case("mdotdisk")
+			read(key%value,*) planetform_Macc
 		case("surfacetype")
 			read(key%value,*) surfacetype
 		case("surfacealbedo")
@@ -1343,6 +1347,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Pplanet=10d0
 	loggPlanet=2.5d0
 	Mp_from_logg=.false.
+	constant_g=.false.
 	
 	Tstar=5777d0
 	Rstar=1d0
@@ -1648,6 +1653,7 @@ c		Cloud(i)%P=0.0624d0
 	planetform_Rstart=15d0
 	planetform_Mstart=10d0
 	planetform_SolidC=0d0
+	planetform_Macc=1d-7
 	
 	return
 	end
@@ -2677,15 +2683,15 @@ c	HG=(1d0-g**2)/((1d0-2d0*g*cos(theta)+g**2)**(3.0/2.0))/2d0
 	end
 
 
-	subroutine InitFormation(Ms,frac_SolidC)
+	subroutine InitFormation(Ms,frac_SolidC,Macc_in)
 	use FormationModule
 	IMPLICIT NONE
-	real*8 Ms,frac_SolidC
+	real*8 Ms,frac_SolidC,Macc_in
 
 	Mstar=Ms
 	call SetupAtoms
 
-	call SetupPPdisk(frac_SolidC)
+	call SetupPPdisk(frac_SolidC,Macc_in)
 
 	return
 	end

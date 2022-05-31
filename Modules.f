@@ -113,11 +113,12 @@ c===============================================================================
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:),planet_albedo(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	real*8 planetform_fdust,planetform_fplan,planetform_Rstart,planetform_Mstart,fiter,planetform_SolidC
+	real*8 planetform_Macc
 	logical planetform,massprior,retrievestar
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
 	real*8 molfracs_atoms_outgas(18)
-	logical secondary_atmosphere,EvapCooling
+	logical secondary_atmosphere,EvapCooling,constant_g
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,PrefTpoint
 	character*20 surfacetype

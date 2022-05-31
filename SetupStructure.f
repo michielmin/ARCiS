@@ -134,6 +134,7 @@ c		endif
 		Mtot=Mtot+dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
 		grav(i)=Ggrav*Mtot/(R(i)*R(i+1))
 	enddo
+c	if(constant_g) grav=Ggrav*Mplanet/(Rplanet)**2
 	do i=nr,1,-1
 		vescape=sqrt(2d0*Ggrav*Mplanet/R(i))
 		vtherm=sqrt(3d0*kb*T(i)/(mp*MMW(i)))
@@ -292,6 +293,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 
 	subroutine ComputeParamT(x)
 	use GlobalSetup
+	use Constants
 	IMPLICIT NONE
 	real*8 x(nr),tau,Tirr,eta,expint,dlnT,dlnP,beta_used,max
 	integer i
@@ -324,13 +326,18 @@ c			beta_used=max
 
 	tau=0d0
 	Tirr=sqrt(Rstar/(Dplanet))*Tstar
+	call output("Irradiation temperature: " // dbl2string(Tirr,'(f8.1)'))
 c	if(computeT) then
 c		x=(Tirr**4/sqrt(2d0)+TeffP**4)**0.25
 c		return
 c	endif
 	
 	do i=nr,1,-1
-		tau=kappaT*1d6*P(i)/grav(i)
+		if(constant_g) then
+			tau=kappaT*1d6*P(i)/(Ggrav*Mplanet/(Rplanet)**2)
+		else
+			tau=kappaT*1d6*P(i)/grav(i)
+		endif
 		if(tau.lt.0d0) tau=0d0
 		x(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)
 c		if(deepRedist) then
@@ -367,6 +374,7 @@ c		endif
 
 	subroutine ComputeParamT2(x)
 	use GlobalSetup
+	use Constants
 	IMPLICIT NONE
 	real*8 x(nr),tau,Tirr,eta,expint,dlnT,dlnP,beta_used,max
 	integer i
@@ -393,13 +401,18 @@ c			beta_used=max
 
 	tau=0d0
 	Tirr=(beta_used*4d0)**0.25*sqrt(Rstar/(2d0*Dplanet))*Tstar
+	call output("Irradiation temperature: " // dbl2string(Tirr,'(f8.1)'))
 	if(computeT) then
 		x=(Tirr**4+TeffP**4)**0.25
 		return
 	endif
 	
 	do i=nr,1,-1
-		tau=kappaT*1d6*P(i)/grav(i)
+		if(constant_g) then
+			tau=kappaT*1d6*P(i)/(Ggrav*Mplanet/(Rplanet)**2)
+		else
+			tau=kappaT*1d6*P(i)/grav(i)
+		endif
 		if(tau.lt.0d0) tau=0d0
 		x(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)
 		if(tau.lt.100d0) then
@@ -925,7 +938,7 @@ c Setup names and weights of the elements
 	Mcore=planetform_Mstart*Mearth
 	Rstart=planetform_Rstart*AU
 
-	call InitFormation(Mstar,planetform_SolidC)
+	call InitFormation(Mstar,planetform_SolidC,planetform_Macc)
 	call Formation(Mplanet,Mcore,Rstart,Dplanet,planetform_fdust,planetform_fplan,flag_converge)
 
 	endif
@@ -1443,24 +1456,17 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	return
 	end
 
-
 	subroutine MakePTstruct_dT(P,T,np,Pp,dTp_in,nT_in,T0,P0)
 	IMPLICIT NONE
-	integer np,i,nT,nT_in,j,i0,INCFD,IERR
+	integer np,i,nT,nT_in,j,i0
 	real*8 P(np),T(np),Pp(nT_in),dT(np),dTp(nT_in),yp1,ypn,P0,logT1,logP1,d2T(nT_in)
-	real*8 logPp(nT_in),logTp(nT_in),logP(np),logT(np),T0,dTp_in(nT_in),dT1,dT0
-	logical SKIP
-
-c	call MakePTstruct_dT_Spline(P,T,np,Pp,dTp_in,nT_in,T0,P0)
-c	return
-	
-	SKIP=.false.
-	INCFD=1
+	real*8 logPp(nT_in),logP(np),logT(np),T0,dTp_in(nT_in),dT1,dT0,logTh
 
 	logPp=log(Pp)
 	dTp=dTp_in
 
 	nT=nT_in
+	
 	call sortw(logPp,dTp,nT)
 1	continue
 	do i=1,nT-1
@@ -1474,15 +1480,15 @@ c	return
 	call sortw(logPp,dTp,nT)
 	logP=-log(P)
 
-	call DPCHIM(nT,logPp,dTp,d2T,INCFD)
-	call DPCHFE(nT,logPp,dTp,d2T,INCFD,SKIP,np,logP,dT,IERR)
+	call regridarray(logPp,dTp,nT,logP,dT,np)
 	
 	do i=1,np
 		if(logP(i).lt.logPp(1)) dT(i)=dTp(1)
-		if(logP(i).gt.logPp(nT)) dT(i)=dTp(nT)
+		if(logP(i).gt.logPp(nT)) dT(i)=dTp(nT)*P(i)
 	enddo
 
 	logP=-logP
+	logPp=-logPp
 
 	if(P0.le.P(np)) then
 		i0=np
@@ -1501,7 +1507,7 @@ c	return
 	logP1=log(P0)
 	dT1=dT0
 	do i=i0,1,-1
-		logT(i)=logT1+(logP(i)-logP1)*dT1
+		call extrapolate(logP1,logP(i),logT1,logT(i),dT1,dT(i))
 		logT1=logT(i)
 		logP1=logP(i)
 		dT1=dT(i)
@@ -1512,15 +1518,44 @@ c	return
 	logP1=log(P0)
 	dT1=dT0
 	do i=i0+1,np
-		logT(i)=logT1-(logP1-logP(i))*dT1
-		logT1=logT(i)
-		logP1=logP(i)
-		dT1=dT(i)
-		T(i)=exp(logT(i))
+		if(logP(i).gt.logPp(nT)) then
+			call extrapolate(logP1,logP(i),logT1,logT(i),dT1,dT(i))
+			logT1=logT(i)
+			logP1=logP(i)
+			dT1=dT(i)
+			T(i)=exp(logT(i))
+		else
+			exit
+		endif
 	enddo
+	if(i.le.np) then
+		call extrapolate(logP1,logPp(nT),logT1,logTh,dT1,dTp(nT))
+		i0=i
+		dT1=dTp(nT)/exp(logPp(nT))
+		logTh=logTh-dTp(nT)
+		do i=i0,np
+			logT(i)=logTh+dT1*P(i)
+			T(i)=exp(logT(i))
+		enddo
+	endif		
 	
 	return
 	end
+
+	subroutine extrapolate(x1,x2,y1,y2,dy1,dy2)
+	IMPLICIT NONE
+	real*8 x1,x2,y1,y2,dy1,dy2
+	real*8 a,b,c
+	
+	a=(dy1-dy2)/(2d0*(x1-x2))
+	b=dy1-2d0*a*x1
+	c=y1-c-b*x1-a*x1**2
+	
+	y2=a*x2**2+b*x2+c
+	
+	return
+	end
+	
 
 	subroutine MakePTstruct_dT_spline(P,T,np,Pp,dTp_in,nT_in,T0,P0)
 	IMPLICIT NONE

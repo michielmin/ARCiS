@@ -77,19 +77,19 @@ c===============================================================================
 c===================================================================================
 c Subroutine to setup the properties of the pp disk in which the planet forms
 c===================================================================================
-	subroutine SetupPPdisk(frac_SolidC)
+	subroutine SetupPPdisk(frac_SolidC,Macc_in)
 	use FormationModule
 	use Constants
 	use AtomsModule
 	IMPLICIT NONE
 	real*8 el_abun(100),gasmass,dustmass,planetmass,const
-	real*8 const2,r1,r2,frac_SolidC
+	real*8 const2,r1,r2,frac_SolidC,Macc_in
 	integer i,j,k
 	mu=2.5
 	d2g_T=0.01
 	kappa_r=508d0	! cm^2/g
 	alpha_disk=0.1d0
-	M_acc=1d-7*Msun/year
+	M_acc=Macc_in*Msun/year
 
 c Compute the abudances in gas phase, solid phase and planetessimals
 c	...
