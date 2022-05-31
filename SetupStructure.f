@@ -1456,13 +1456,14 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	return
 	end
 
-	subroutine MakePTstruct_dT(P,T,np,Pp,dTp_in,nT_in,T0,P0)
+	subroutine MakePTstruct_dT(P,T,np,Pp_in,dTp_in,nT_in,T0,P0)
 	IMPLICIT NONE
 	integer np,i,nT,nT_in,j,i0
-	real*8 P(np),T(np),Pp(nT_in),dT(np),dTp(nT_in),yp1,ypn,P0,logT1,logP1,d2T(nT_in)
-	real*8 logPp(nT_in),logP(np),logT(np),T0,dTp_in(nT_in),dT1,dT0,logTh
+	real*8 P(np),T(np),Pp_in(nT_in),dTp_in(nT_in),dTp(nT_in),P0,Pp(nT_in)
+	real*8 logPp(nT_in),logP(np),logT(np),logT0,T0,logTp(nT_in),dT0,Tp(nT_in),logP0
+	real*8 a,b,c
 
-	logPp=log(Pp)
+	logPp=log(Pp_in)
 	dTp=dTp_in
 
 	nT=nT_in
@@ -1478,84 +1479,82 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 
 	logPp=-logPp
 	call sortw(logPp,dTp,nT)
-	logP=-log(P)
-
-	call regridarray(logPp,dTp,nT,logP,dT,np)
-	
-	do i=1,np
-		if(logP(i).lt.logPp(1)) dT(i)=dTp(1)
-		if(logP(i).gt.logPp(nT)) dT(i)=dTp(nT)*P(i)
-	enddo
-
-	logP=-logP
 	logPp=-logPp
+	Pp=exp(logPp)
 
-	if(P0.le.P(np)) then
-		i0=np
-		dT0=dT(np)
-	else if(P0.ge.P(1)) then
-		i0=0
-		dT0=dT(1)
-	else
-		do i0=1,np-1
-			if(P0.le.P(i0).and.P0.gt.P(i0+1)) exit
+	logP0=log(P0)
+	logT0=log(T0)
+	logP=log(P)
+
+	if(logP0.le.logPp(nT)) then
+		a=dTp(nT)/Pp(nT)
+		b=logT0-a*P0
+		logTp(nT)=a*Pp(nT)+b
+		do i=nT-1,1,-1
+			a=(dTp(i+1)-dTp(i))/(2d0*(logPp(i+1)-logPp(i)))
+			b=dTp(i+1)-2d0*a*logPp(i+1)
+			c=logTp(i+1)-b*logPp(i+1)-a*logPp(i+1)**2
+			logTp(i)=a*logPp(i)**2+b*logPp(i)+c
 		enddo
-		dT0=dT(i0)+(dT(i0+1)-dT(i0))*(P(i0)-P0)/(P(i0)-P(i0+1))
+	else if(logP0.ge.logPp(1)) then
+		a=dTp(1)
+		b=logT0-a*logP0
+		logTp(1)=a*logPp(1)+b
+		do i=2,nT
+			a=(dTp(i-1)-dTp(i))/(2d0*(logPp(i-1)-logPp(i)))
+			b=dTp(i-1)-2d0*a*logPp(i-1)
+			c=logTp(i-1)-b*logPp(i-1)-a*logPp(i-1)**2
+			logTp(i)=a*logPp(i)**2+b*logPp(i)+c
+		enddo
+	else
+		do i0=1,nT-1
+			if(logP0.le.logPp(i0).and.logP0.gt.logPp(i0+1)) exit
+		enddo
+		a=(dTp(i0)-dTp(i0+1))/(2d0*(logPp(i0)-logPp(i0+1)))
+		b=dTp(i0)-2d0*a*logPp(i0)
+		c=logT0-b*logP0-a*logP0**2
+		logTp(i0)=a*logPp(i0)**2+b*logPp(i0)+c
+		do i=i0-1,1,-1
+			a=(dTp(i+1)-dTp(i))/(2d0*(logPp(i+1)-logPp(i)))
+			b=dTp(i+1)-2d0*a*logPp(i+1)
+			c=logTp(i+1)-b*logPp(i+1)-a*logPp(i+1)**2
+			logTp(i)=a*logPp(i)**2+b*logPp(i)+c
+		enddo
+		do i=i0+1,nT
+			a=(dTp(i-1)-dTp(i))/(2d0*(logPp(i-1)-logPp(i)))
+			b=dTp(i-1)-2d0*a*logPp(i-1)
+			c=logTp(i-1)-b*logPp(i-1)-a*logPp(i-1)**2
+			logTp(i)=a*logPp(i)**2+b*logPp(i)+c
+		enddo
 	endif
 
-	logT1=log(T0)
-	logP1=log(P0)
-	dT1=dT0
-	do i=i0,1,-1
-		call extrapolate(logP1,logP(i),logT1,logT(i),dT1,dT(i))
-		logT1=logT(i)
-		logP1=logP(i)
-		dT1=dT(i)
+	do i=1,nT
+		print*,Pp(i),exp(logTp(i))
+	enddo
+
+	do i=np,1,-1
+		if(logP(i).le.logPp(nT)) then
+			a=dTp(nT)/Pp(nT)
+			b=logTp(nT)-a*Pp(nT)
+			logT(i)=a*P(i)+b
+		else if(logP(i).ge.logPp(1)) then
+			a=dTp(1)
+			b=logTp(1)-a*logPp(1)
+			logT(i)=a*logP(i)+b
+		else
+			do i0=1,nT-1
+				if(logP(i).le.logPp(i0).and.logP(i).gt.logPp(i0+1)) exit
+			enddo
+			a=(dTp(i0)-dTp(i0+1))/(2d0*(logPp(i0)-logPp(i0+1)))
+			b=dTp(i0)-2d0*a*logPp(i0)
+			c=logTp(i0)-b*logPp(i0)-a*logPp(i0)**2
+			logT(i)=a*logP(i)**2+b*logP(i)+c
+		endif
 		T(i)=exp(logT(i))
 	enddo
-
-	logT1=log(T0)
-	logP1=log(P0)
-	dT1=dT0
-	do i=i0+1,np
-		if(logP(i).gt.logPp(nT)) then
-			call extrapolate(logP1,logP(i),logT1,logT(i),dT1,dT(i))
-			logT1=logT(i)
-			logP1=logP(i)
-			dT1=dT(i)
-			T(i)=exp(logT(i))
-		else
-			exit
-		endif
-	enddo
-	if(i.le.np) then
-		call extrapolate(logP1,logPp(nT),logT1,logTh,dT1,dTp(nT))
-		i0=i
-		dT1=dTp(nT)/exp(logPp(nT))
-		logTh=logTh-dTp(nT)
-		do i=i0,np
-			logT(i)=logTh+dT1*P(i)
-			T(i)=exp(logT(i))
-		enddo
-	endif		
 	
 	return
 	end
-
-	subroutine extrapolate(x1,x2,y1,y2,dy1,dy2)
-	IMPLICIT NONE
-	real*8 x1,x2,y1,y2,dy1,dy2
-	real*8 a,b,c
-	
-	a=(dy1-dy2)/(2d0*(x1-x2))
-	b=dy1-2d0*a*x1
-	c=y1-c-b*x1-a*x1**2
-	
-	y2=a*x2**2+b*x2+c
-	
-	return
-	end
-	
 
 	subroutine MakePTstruct_dT_spline(P,T,np,Pp,dTp_in,nT_in,T0,P0)
 	IMPLICIT NONE
