@@ -1528,10 +1528,6 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 		enddo
 	endif
 
-	do i=1,nT
-		print*,Pp(i),exp(logTp(i))
-	enddo
-
 	do i=np,1,-1
 		if(logP(i).le.logPp(nT)) then
 			a=dTp(nT)/Pp(nT)
