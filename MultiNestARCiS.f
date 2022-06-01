@@ -64,15 +64,6 @@
 	ny=k
 	allocate(spec(ny))
 
-	do i=1,nvars
-		if(RetPar(i)%keyword(1:6).eq."Ppoint") then
-			read(RetPar(i)%keyword(7:len(RetPar(i)%keyword)),*) j
-			if(j.eq.1) then
-				call sort(var(i:i+nTpoints-1),nTpoints)
-			endif
-		endif
-	enddo
-
 	call mrqcomputeY(var,spec,nvars,ny,lnew,scale)
 
 	do i=1,nvars
