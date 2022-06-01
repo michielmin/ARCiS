@@ -1642,10 +1642,10 @@ c			vec(i)=gasdev(idum)
 		if(RetPar(i)%logscale) then
 c	log
 			x=var(i)
-c			if(RetPar(i)%keyword(1:6).eq."Ppoint") then
-c				read(RetPar(i)%keyword(7:len(RetPar(i)%keyword)),*) j
-c				x=1d0-x**(1d0/(real(nTpoints-j+1)))
-c			endif
+			if(RetPar(i)%keyword(1:6).eq."Ppoint") then
+				read(RetPar(i)%keyword(7:len(RetPar(i)%keyword)),*) j
+				x=1d0-x**(1d0/(real(nTpoints-j+1)))
+			endif
 			RetPar(i)%value=10d0**(log10(RetPar(i)%xmin)+log10(RetPar(i)%xmax/RetPar(i)%xmin)*x)
 			x=var(i)+dvar(1,i)
 			RetPar(i)%error1=10d0**(log10(RetPar(i)%xmin)+log10(RetPar(i)%xmax/RetPar(i)%xmin)*x)
@@ -1769,10 +1769,10 @@ c	linear, square
 		if(RetPar(i)%logscale) then
 c	log
 			var(i)=log10(RetPar(i)%value/RetPar(i)%xmin)/log10(RetPar(i)%xmax/RetPar(i)%xmin)
-c			if(RetPar(i)%keyword(1:6).eq."Ppoint") then
-c				read(RetPar(i)%keyword(7:len(RetPar(i)%keyword)),*) j
-c				var(i)=(1d0-var(i))**(real(nTpoints-j+1))
-c			endif
+			if(RetPar(i)%keyword(1:6).eq."Ppoint") then
+				read(RetPar(i)%keyword(7:len(RetPar(i)%keyword)),*) j
+				var(i)=(1d0-var(i))**(real(nTpoints-j+1))
+			endif
 		else if(RetPar(i)%squarescale) then
 c	square
 			var(i)=(RetPar(i)%value**2-RetPar(i)%xmin**2)/(RetPar(i)%xmax**2-RetPar(i)%xmin**2)

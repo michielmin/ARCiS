@@ -1710,11 +1710,11 @@ c number of cloud/nocloud combinations
 					RetPar(i+nTpoints+j-1)%xmin=pmin
 					RetPar(i+nTpoints+j-1)%xmax=pmax
 					RetPar(i+nTpoints+j-1)%logscale=.true.
-c					if(j.eq.1) then
+					if(j.eq.1) then
 						RetPar(i+nTpoints+j-1)%increase=.false.
-c					else
-c						RetPar(i+nTpoints+j-1)%increase=.true.
-c					endif
+					else
+						RetPar(i+nTpoints+j-1)%increase=.true.
+					endif
 				enddo
 			endif
 		case("min","xmin")
