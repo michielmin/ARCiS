@@ -139,7 +139,7 @@ c terms of use
 			call SetupStructure(.true.)
 			call SetupOpacities()
 			call DoComputeT(Tconverged,f)
-			if(Tconverged) exit
+			if(Tconverged.and.nTiter.gt.4) exit
 		enddo
 		nlamdust=nldtemp
 		specresdust=srdtemp
