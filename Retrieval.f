@@ -1633,15 +1633,6 @@ c			vec(i)=gasdev(idum)
 	integer i,j,k
 	real*8 var(n_ret),dvar(2,n_ret),x,xx,erfinv
 
-	do i=1,n_ret
-		if(RetPar(i)%keyword(1:6).eq."Ppoint") then
-			read(RetPar(i)%keyword(7:len(RetPar(i)%keyword)),*) j
-			if(j.eq.1) then
-				call sort(var(i:i+n_ret-1),n_ret)
-			endif
-		endif
-	enddo
-
 	do k=1,2
 
 	do i=1,n_ret
