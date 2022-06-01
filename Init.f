@@ -1710,11 +1710,11 @@ c number of cloud/nocloud combinations
 					RetPar(i+nTpoints+j-1)%xmin=pmin
 					RetPar(i+nTpoints+j-1)%xmax=pmax
 					RetPar(i+nTpoints+j-1)%logscale=.true.
-					if(j.eq.1) then
+c					if(j.eq.1) then
 						RetPar(i+nTpoints+j-1)%increase=.false.
-					else
-						RetPar(i+nTpoints+j-1)%increase=.true.
-					endif
+c					else
+c						RetPar(i+nTpoints+j-1)%increase=.true.
+c					endif
 				enddo
 			endif
 		case("min","xmin")
