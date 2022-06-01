@@ -1484,7 +1484,6 @@ c  GGchem was still implemented slightly wrong.
 	enddo
 
 	nr_cloud=10
-	EvapCooling=.true.
 
 	do i=1,nclouds
 		Cloud(i)%P=1d-4

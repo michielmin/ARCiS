@@ -94,7 +94,6 @@ c terms of use
 	call cpu_time(starttime)
 	Tconverged=.false.
 	nTiter=0
-	fiter=1d0
 	if(computeT.and.computeopac) then
 		nldtemp=nlamdust
 		srdtemp=specresdust
@@ -127,26 +126,26 @@ c terms of use
 		endif
 	endif
 	if(computeT.and.computeopac) then
-		EvapCooling=.false.
 		temp=par_tprofile
 		par_tprofile=.false.
 		do nTiter=1,maxiter
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
      &					// trim(int2string(maxiter,'(i3)')) // ")")
-			fiter=1d0-real(nTiter-1)/real(maxiter)
-			f=1d0-3d0*(fiter*(1d0-fiter))
+			if(nTiter.le.2.and.maxiter.ge.4) then
+				f=1d0
+			else
+				f=1d0/real(nTiter-2)
+			endif
 			call SetupStructure(.true.)
 			call SetupOpacities()
 			call DoComputeT(Tconverged,f)
+			if(Tconverged) exit
 		enddo
-		fiter=0d0
-		f=1d0
 		nlamdust=nldtemp
 		specresdust=srdtemp
 		lamdust(1:nlamdust)=ldtemp(1:nlamdust)
 		call SetupStructure(.true.)
 		call SetupOpacities()
-		call DoComputeT(Tconverged,f)
 		par_tprofile=temp
 	else
 		call SetupStructure(computeopac)
