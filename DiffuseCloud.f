@@ -8,7 +8,7 @@
 	real*8,allocatable :: Sc(:),Sn(:),rpart(:),mpart(:),xMgO(:)
 	real*8,allocatable :: An(:,:),y(:,:),xv(:,:),xn(:),xc(:,:),xm(:)
 	real*8,allocatable :: Aomp(:,:),xomp(:)
-	real*8,allocatable :: drhoKd(:),drhovsed(:),tcinv(:),rho_av(:),densv(:,:),Kd(:)
+	real*8,allocatable :: drhoKd(:),drhovsed(:),tcinv(:,:),rho_av(:),densv(:,:),Kd(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze
 	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm,ComputeKzz
@@ -340,7 +340,7 @@ c	atoms_cloud(i,3)=1
 	allocate(xc(nCS,nnr))
 	allocate(xn(nnr))
 	allocate(xm(nnr))
-	allocate(tcinv(nnr))
+	allocate(tcinv(maxiter,nnr))
 	allocate(vsed(nnr))
 
 	allocate(ixv(nCS,nnr))
@@ -514,9 +514,11 @@ c rewritten for better convergence
 
 			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
 
-			tcinv(i)=(tcoaginv+tcinv(i))/2d0
+			tcinv(iter,i)=tcoaginv
+			
+			call computemedian(tcinv(1:iter,i),iter,tcoaginv)
 
-			An(j,i)=An(j,i)-Clouddens(i)*tcinv(i)
+			An(j,i)=An(j,i)-Clouddens(i)*tcoaginv
 		endif
 	enddo
 	i=nnr
@@ -536,7 +538,7 @@ c rewritten for better convergence
 	do i=1,nnr
 		if(.not.x(i).gt.0d0) x(i)=0d0
 	enddo
-	xn(1:nnr)=x(1:nnr)/m_nuc
+	xn(1:nnr)=(xn(1:nnr)+x(1:nnr)/m_nuc)/2d0
 
 	do i=1,nnr
 		if(xn(i).lt.0d0) xn(i)=0d0

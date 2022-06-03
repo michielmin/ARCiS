@@ -118,7 +118,9 @@ c===============================================================================
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
 	real*8 molfracs_atoms_outgas(18)
-	logical secondary_atmosphere,constant_g
+	logical secondary_atmosphere,constant_g,forceEbalance
+	real*8,allocatable :: Tcomp_iter(:,:)
+	integer nTcomp_iter
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,PrefTpoint
 	character*20 surfacetype

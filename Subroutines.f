@@ -921,5 +921,54 @@ c        print*,'series failed in expint'
 	end
 	
 		
+	subroutine computemedian(x,n,xm)
+	IMPLICIT NONE
+	integer i,n
+	real*8 x(n),xm
+	
+	call sort(x,n)
+	if((n/2)*2.eq.n) then
+		i=n/2
+		xm=(x(i)+x(i+1))/2d0
+	else
+		i=n/2+1
+		xm=x(i)
+	endif
+	
+	return
+	end
+	
+	subroutine computeav50(x,n,xm)
+	IMPLICIT NONE
+	integer i,n,i1,i2
+	real*8 x(n),xm,tot,w,sig,c
+	
+	call sort(x,n)
+	xm=0d0
+	tot=0d0
+	c=real(n)/2d0+0.5
+	sig=real(n)/8d0
+	if(n.lt.5) then
+		i1=1
+		i2=n
+	else if(n.lt.9) then
+		i1=2
+		i2=n-1
+	else if(n.lt.11) then
+		i1=3
+		i2=n-2
+	else
+		i1=4
+		i2=n-3
+	endif
+	do i=i1,i2
+		w=exp(-((c-real(i))/sig)**2)
+		tot=tot+w
+		xm=xm+w*x(i)
+	enddo
+	xm=xm/tot
+	
+	return
+	end
 	
 	

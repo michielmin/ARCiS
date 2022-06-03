@@ -599,6 +599,8 @@ c	condensates=(condensates.or.cloudcompute)
 	call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
 	Fstar=Fstar*pi*Rstar**2
 
+	if(computeT) allocate(Tcomp_iter(maxiter,nr))
+
 	call output("==================================================================")
 
 	do i=1,nmol
@@ -858,6 +860,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			opacitydir=trim(key%value)
 		case("computet")
 			read(key%value,*) computeT
+		case("forceebalance")
+			read(key%value,*) forceEbalance
 		case("teffp","tplanet")
 			read(key%value,*) TeffP
 		case("maxiter")
@@ -1593,6 +1597,7 @@ c		Cloud(i)%P=0.0624d0
 	doMCcompute=.false.
 	TeffP=600d0
 	outputopacity=.false.
+	forceEbalance=.false.
 
 	call getenv('HOME',homedir) 
 

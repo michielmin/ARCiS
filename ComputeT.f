@@ -522,7 +522,7 @@ c=========== end experimental redistribution ===================================
 		Fl(ir)=Fl(ir)+Hedd(ir)
 	enddo
 	
-	ww=f*real(iter)/real(niter)
+	ww=real(iter)/real(niter)
 	do ir=1,nr
 		Fl(ir)=ww*Fl(ir)+(1d0-ww)*sum(IntH(ir,1:nr))
 	enddo
@@ -680,11 +680,21 @@ c	if(converged.and.iter.gt.5) exit
 
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
 
-	converged=.true.
-	do ir=1,nr
-		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.epsiter) converged=.false.
-		T(ir)=Tinp(ir)*(1d0-f)+T(ir)*f
-	enddo
+	converged=.false.
+	if(f.le.1d0) then
+		nTcomp_iter=nTcomp_iter+1
+		do ir=1,nr
+			if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.epsiter) converged=.false.
+			Tcomp_iter(nTcomp_iter,ir)=T(ir)
+			call computeav50(Tcomp_iter(1:nTcomp_iter,ir),nTcomp_iter,T(ir))
+			T(ir)=T(ir)*f+Tinp(ir)*(1d0-f)
+c			call computemedian(Tcomp_iter(1:nTcomp_iter,ir),nTcomp_iter,T(ir))
+		enddo
+	else
+		do ir=1,nr
+			if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.epsiter) converged=.false.
+		enddo
+	endif		
 
 	call tellertje(niter,niter)
 	call WriteStructure
