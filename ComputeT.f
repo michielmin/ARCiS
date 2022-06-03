@@ -292,36 +292,28 @@
 	do ilam=1,nlam_LR-1
 		do ig=1,ng
 			do jr=nr,0,-1
-				if(jr.le.1) then
+				if(jr.eq.nr) then
+					ir=jr
+					d=abs((P(ir+1)-P(ir)))*1d6/grav(ir)
+					tau=d*Ce(ir,ilam,ig)
+				else if(jr.le.1) then
 					ir=1
-					d=abs(P(ir+1)-P(ir))*1d6/grav(ir)
+					d=abs(sqrt(P(ir+2)*P(ir+1))-P(ir+1))*1d6/grav(ir)
+					tau=d*Ce(ir+1,ilam,ig)
+					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
+					tau=tau+d*Ce(ir,ilam,ig)
 				else
 					ir=jr
-					d=abs(P(ir+1)-P(ir))*1d6/grav(ir)
+					d=abs(sqrt(P(ir+2)*P(ir+1))-P(ir+1))*1d6/grav(ir)
+					tau=d*Ce(ir+1,ilam,ig)
+					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
+					tau=tau+d*Ce(ir,ilam,ig)
 				endif
-				tau=d*Ce(ir,ilam,ig)
 				if(P(ir).gt.Psimplecloud) then
 					tau=tau+1d4
-					Ce(ir,ilam,ig)=tau/d
-					Ca(ir,ilam,ig)=Ce(ir,ilam,ig)-Cs(ir,ilam,ig)
 				endif
 				if(tau.lt.1d-6) then
 					tau=1d-6
-					scale=Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
-					if(.not.scale.gt.0d0) scale=0d0
-					if(.not.scale.lt.1d0) scale=1d0
-					Ce(ir,ilam,ig)=tau/d
-					Ca(ir,ilam,ig)=scale*Ce(ir,ilam,ig)
-					Cs(ir,ilam,ig)=max(0d0,Ce(ir,ilam,ig)-Ca(ir,ilam,ig))
-				endif
-				if(tau.gt.1d6) then
-					tau=1d6
-					scale=Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
-					if(.not.scale.gt.0d0) scale=0d0
-					if(.not.scale.lt.1d0) scale=1d0
-					Ce(ir,ilam,ig)=tau/d
-					Ca(ir,ilam,ig)=scale*Ce(ir,ilam,ig)
-					Cs(ir,ilam,ig)=max(0d0,Ce(ir,ilam,ig)-Ca(ir,ilam,ig))
 				endif
 				if(ir.lt.nr) then
 					tauR(jr)=tauR(jr+1)+tau
@@ -681,18 +673,17 @@ c	if(converged.and.iter.gt.5) exit
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
 
 	converged=.false.
-	if(f.le.1d0) then
+	if(f.lt.0d0) then
 		nTcomp_iter=nTcomp_iter+1
 		do ir=1,nr
 			if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.epsiter) converged=.false.
 			Tcomp_iter(nTcomp_iter,ir)=T(ir)
 			call computeav50(Tcomp_iter(1:nTcomp_iter,ir),nTcomp_iter,T(ir))
-			T(ir)=T(ir)*f+Tinp(ir)*(1d0-f)
-c			call computemedian(Tcomp_iter(1:nTcomp_iter,ir),nTcomp_iter,T(ir))
 		enddo
 	else
 		do ir=1,nr
 			if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.epsiter) converged=.false.
+			T(ir)=Tinp(ir)*(1d0-f)+T(ir)*f
 		enddo
 	endif		
 

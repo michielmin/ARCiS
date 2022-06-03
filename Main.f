@@ -135,7 +135,7 @@ c terms of use
 			if(nTiter.le.maxiter/3.or.(nTiter.le.2.and.maxiter.gt.4)) then
 				f=1d0
 			else
-				f=1d0/real(nTiter-2)
+				f=-1d0
 			endif
 			call SetupStructure(.true.)
 			call SetupOpacities()
@@ -148,7 +148,7 @@ c terms of use
 		call SetupStructure(.true.)
 		call SetupOpacities()
 		if(forceEbalance) then
-			f=2d0
+			f=1d0
 			call DoComputeT(Tconverged,f)
 		endif
 		par_tprofile=temp

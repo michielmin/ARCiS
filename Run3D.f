@@ -7,7 +7,7 @@
 	real*8 beta(nlong,nlatt),Planck,phi,la,lo,A,rr
 	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta,Tpoint0(max(1,nTpoints)),Ppoint0(max(1,nTpoints))
 	real*8,allocatable :: Ca(:,:,:,:),Cs(:,:,:),BBr(:,:),Si(:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce_cont(:,:,:)
-	integer ir,ilam,ig,isize,iRmax,ndisk,nsub,nrtrace,nptrace,ipc,npc,nmol_count,iv,nv
+	integer ir,ilam,ig,isize,iRmax,ndisk,nsub,nrtrace,nptrace,ipc,npc,nmol_count
 	logical recomputeopac
 	logical,allocatable :: hit(:,:)
 	real*8,allocatable :: rtrace(:),wrtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:),cloud3D(:,:)
@@ -439,11 +439,9 @@ c Now call the setup for the readFull3D part
 	nptrace=(nlatt-1)*2
 	if(actually1D.and.nphase.eq.1.and.theta_phase(1).eq.180d0) nptrace=1
 	
-	nv=1
 	if(makeimage) then
 		nrtrace=nrtrace*4
 		nptrace=(nlatt-1)*8
-		nv=5
 		allocate(rphi_image(nlam,nrtrace,nptrace))
 		allocate(xy_image(nx_im,nx_im,nlam))
 	endif
@@ -461,10 +459,10 @@ c Now call the setup for the readFull3D part
 	fluxp=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,iv,w1,w2,
+!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,fulloutput3D,Rplanet,
-!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,nv,planet_albedo,SiSc,computealbedo,orbit_inc,
+!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
 	allocate(fluxp_omp(nlam))
@@ -555,43 +553,11 @@ c Note we are here using the symmetry between North and South
 				do ilam=1,nlam
 					if(lamemis(ilam)) then
 					do ig=1,ng
-						if(i1.lt.nr) then
-						nv=1
-						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
-						if(makeimage) nv=5
-						if(tau1.lt.0.1) then
-							nv=1
-						else if(tau1.lt.1d0) then
-							nv=10
-						else if(tau1.lt.10d0) then
-							nv=tau1*3+10
-						else
-							nv=1
-						endif
-						tau1=tau1/real(nv)
-						exp_tau1=exp(-tau1)
-						do iv=1,nv
-							rr=sqrt((x+vx*v*(real(iv)-0.5)/real(nv))**2+(y+vy*v*(real(iv)-0.5)/real(nv))**2
-     &										+(z+vz*v*(real(iv)-0.5)/real(nv))**2)
-							w1=(R3D(i,i1+1)-rr)/(R3D(i,i1+1)-R3D(i,i1))
-							w2=1d0-w1
-							ftot(ilam)=ftot(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)*w1
-							ftot(ilam)=ftot(ilam)+A*wgg(ig)*Si(ilam,ig,i1+1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)*w2
-							if(computealbedo) then
-								alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*SiSc(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)*w1
-								alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*SiSc(ilam,ig,i1+1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)*w2
-							endif
-							fact(ilam,ig)=fact(ilam,ig)*exp_tau1
-						enddo
-						else
 						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
 						exp_tau1=exp(-tau1)
-						rr=sqrt((x+vx*v*(real(iv)-0.5)/real(nv))**2+(y+vy*v*(real(iv)-0.5)/real(nv))**2
-     &										+(z+vz*v*(real(iv)-0.5)/real(nv))**2)
 						ftot(ilam)=ftot(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
 						if(computealbedo) alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*SiSc(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
 						fact(ilam,ig)=fact(ilam,ig)*exp_tau1
-						endif
 					enddo
 					endif
 				enddo
@@ -2009,8 +1975,20 @@ c				endif
 	do ilam=1,nlam-1
 		do ig=1,ng
 			do ir=nr,1,-1
-				d=abs(P(ir+1)-P(ir))*1d6/grav(ir)
-				tau=d*Ce(ilam,ig,ir)/dens(ir)
+				if(ir.eq.nr) then
+					d=abs((P(ir+1)-P(ir)))*1d6/grav(ir)
+					tau=d*Ce(ilam,ig,ir)/dens(ir)
+				else if(ir.le.1) then
+					d=abs(sqrt(P(ir+2)*P(ir+1))-P(ir+1))*1d6/grav(ir)
+					tau=d*Ce(ilam,ig,ir+1)/dens(ir+1)
+					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
+					tau=tau+d*Ce(ilam,ig,ir)/dens(ir)
+				else
+					d=abs(sqrt(P(ir+2)*P(ir+1))-P(ir+1))*1d6/grav(ir)
+					tau=d*Ce(ilam,ig,ir+1)/dens(ir+1)
+					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
+					tau=tau+d*Ce(ilam,ig,ir)/dens(ir)
+				endif
 				if(P(ir).gt.Psimplecloud) then
 					tau=tau+1d4
 				endif
