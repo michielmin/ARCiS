@@ -340,7 +340,7 @@ c	atoms_cloud(i,3)=1
 	allocate(xc(nCS,nnr))
 	allocate(xn(nnr))
 	allocate(xm(nnr))
-	allocate(tcinv(maxiter,nnr))
+	allocate(tcinv(niter,nnr))
 	allocate(vsed(nnr))
 
 	allocate(ixv(nCS,nnr))
