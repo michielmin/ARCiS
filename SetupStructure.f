@@ -843,7 +843,6 @@ c use Ackerman & Marley 2001 cloud computation
 	character*500 command,homedir
 	character*10 name
 	real*8 abun,Mcore,Rstart
-	logical flag_converge
 
 	names_atoms(1) = 'H'
 	names_atoms(2) = 'He'
@@ -939,7 +938,11 @@ c Setup names and weights of the elements
 	Rstart=planetform_Rstart*AU
 
 	call InitFormation(Mstar,planetform_SolidC,planetform_Macc)
-	call Formation(Mplanet,Mcore,Rstart,Dplanet,planetform_fdust,planetform_fplan,flag_converge)
+	call Formation(Mplanet,Mcore,Rstart,Dplanet,planetform_fdust,planetform_fplan,simAb_converge)
+	if(.not.simAb_converge) then
+		call output("WARNING: SimAb did not converge!")
+		call output("WARNING: using Solar abundances")
+	endif
 
 	endif
 

@@ -695,6 +695,7 @@ c	linear
 			ObsSpec(i)%model(j)=allspec(i,j)
 		enddo
 	enddo
+	if(planetform.and..not.simAb_converge) lnew=lnew*1d10
 	if(massprior) then
 		lnew=lnew+((Mplanet/Mjup-Mp_prior)/dMp_prior)**2
 		k=k+1
