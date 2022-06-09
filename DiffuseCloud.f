@@ -253,7 +253,6 @@ c	atoms_cloud(i,3)=1
 				xv_bot(iCS)=(xv_bot(iCS)+xv_bot_prev(iCS)*real(nTiter-1))/real(nTiter)
 			endif
 			xv_bot_prev(iCS)=xv_bot(iCS)
-			print*,xv_bot(iCS)
 		enddo
 	endif
 	if((.not.(retrieval.or.domakeai))) call ComputeTevap

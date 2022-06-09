@@ -680,10 +680,8 @@ c	if(converged.and.iter.gt.5) exit
 	enddo
 	Tcomp_iter(nTcomp_iter,1:nr)=Tinp(1:nr)
 	Tcomp_iter(nTcomp_iter,0)=inpErr
-	call SetOutputMode(.true.)
 	call output("Maximum error on T-struct: " // dbl2string(tot*100d0,'(f5.1)') // "%")
 	call output("Error on output flux:      " // dbl2string(inpErr*100d0,'(f5.1)') // "%")
-	call SetOutputMode(.false.)
 	if(converged) then
 		T(1:nr)=Tinp(1:nr)
 	else
