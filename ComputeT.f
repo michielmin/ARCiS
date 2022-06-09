@@ -156,7 +156,7 @@
 	
 	niter=50
 	nscat=10
-	epsiter=1d-2
+	epsiter=3d-2
 
 	must=betaT
 	if(i2d.ne.0) then
@@ -671,7 +671,7 @@ c	if(converged.and.iter.gt.5) exit
 
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
 
-	converged=(abs(inpErr).lt.5d0*epsiter)
+	converged=(abs(inpErr).lt.epsiter)
 	nTcomp_iter=nTcomp_iter+1
 	tot=0d0
 	do ir=1,nr-1
@@ -690,8 +690,8 @@ c	if(converged.and.iter.gt.5) exit
 				tot=0d0
 				Tinp(ir)=0d0
 				do j=1,nTcomp_iter
-					Tinp(ir)=Tinp(ir)+Tcomp_iter(j,ir)*exp(-(Tcomp_iter(j,0)/epsiter)**2)*exp(-real(nTcomp_iter-j)/10d0)
-					tot=tot+exp(-(Tcomp_iter(j,0)/epsiter)**2)*exp(-real(nTcomp_iter-j)/10d0)
+					Tinp(ir)=Tinp(ir)+Tcomp_iter(j,ir)*exp(-(Tcomp_iter(j,0)/epsiter)**2)
+					tot=tot+exp(-(Tcomp_iter(j,0)/epsiter)**2)
 				enddo
 				Tinp(ir)=Tinp(ir)/tot
 			enddo
