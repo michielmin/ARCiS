@@ -129,13 +129,15 @@ c terms of use
 		temp=par_tprofile
 		par_tprofile=.false.
 		nTcomp_iter=0
+		f=1d0
 		do nTiter=1,maxiter
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
      &					// trim(int2string(maxiter,'(i3)')) // ")")
-			if(nTiter.le.maxiter/3.or.(nTiter.le.2.and.maxiter.gt.4)) then
+			if(nTiter.le.4) then
 				f=1d0
 			else
-				f=-1d0
+c				f=0.5d0!1d0-0.8d0*real(nTiter)/real(maxiter)
+				f=0.2d0+0.8*exp(-real(nTiter-3)/10d0)
 			endif
 			call SetupStructure(.true.)
 			call SetupOpacities()
@@ -145,12 +147,8 @@ c terms of use
 		nlamdust=nldtemp
 		specresdust=srdtemp
 		lamdust(1:nlamdust)=ldtemp(1:nlamdust)
-		call SetupStructure(.true.)
+		if(.not.forceEbalance) call SetupStructure(.true.)
 		call SetupOpacities()
-		if(forceEbalance) then
-			f=1d0
-			call DoComputeT(Tconverged,f)
-		endif
 		par_tprofile=temp
 	else
 		call SetupStructure(computeopac)

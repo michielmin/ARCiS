@@ -39,7 +39,7 @@
 	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:)
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax
 	logical docloud0(max(nclouds,1)),converged,stopscat
-	real*8 tauf(nr),Si(0:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff,TT
+	real*8 tauf(nr),Si(0:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff,TT,inpErr
 	integer info,IWORK(10*(nr+1)*(nr+1)),NRHS,ii(3),iscat,nscat
 	real*8 tau1,tau2,ee0,ee1,ee2,tauR(0:nr),Ij(0:nr),Ih(0:nr),scale,dtauR(0:nr)
 	integer nlam_LR
@@ -514,10 +514,9 @@ c=========== end experimental redistribution ===================================
 		Fl(ir)=Fl(ir)+Hedd(ir)
 	enddo
 	
-	ww=real(iter)/real(niter)
-	do ir=1,nr
-		Fl(ir)=ww*Fl(ir)+(1d0-ww)*sum(IntH(ir,1:nr))
-	enddo
+	if(iter.eq.1) then
+		inpErr=(sum(IntH(nr,1:nr))-Fl(nr))/(sum(IntH(nr,1:nr))+Fl(nr))
+	endif
 
 	minFl=0.5
 	maxFl=2.0
@@ -672,20 +671,37 @@ c	if(converged.and.iter.gt.5) exit
 
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
 
-	converged=.false.
-	if(f.lt.0d0) then
-		nTcomp_iter=nTcomp_iter+1
-		do ir=1,nr
-			if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.epsiter) converged=.false.
-			Tcomp_iter(nTcomp_iter,ir)=T(ir)
-			call computeav50(Tcomp_iter(1:nTcomp_iter,ir),nTcomp_iter,T(ir))
-		enddo
+	converged=(abs(inpErr).lt.5d0*epsiter)
+	nTcomp_iter=nTcomp_iter+1
+	tot=0d0
+	do ir=1,nr-1
+		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.tot) tot=abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir))
+		if(tot.gt.epsiter) converged=.false.
+	enddo
+	Tcomp_iter(nTcomp_iter,1:nr)=Tinp(1:nr)
+	Tcomp_iter(nTcomp_iter,0)=inpErr
+	call SetOutputMode(.true.)
+	call output("Maximum error on T-struct: " // dbl2string(tot*100d0,'(f5.1)') // "%")
+	call output("Error on output flux:      " // dbl2string(inpErr*100d0,'(f5.1)') // "%")
+	call SetOutputMode(.false.)
+	if(converged) then
+		T(1:nr)=Tinp(1:nr)
 	else
+		if(nTiter.gt.2) then
+			do ir=1,nr
+				tot=0d0
+				Tinp(ir)=0d0
+				do j=1,nTcomp_iter
+					Tinp(ir)=Tinp(ir)+Tcomp_iter(j,ir)*exp(-(Tcomp_iter(j,0)/epsiter)**2)*exp(-real(nTcomp_iter-j)/10d0)
+					tot=tot+exp(-(Tcomp_iter(j,0)/epsiter)**2)*exp(-real(nTcomp_iter-j)/10d0)
+				enddo
+				Tinp(ir)=Tinp(ir)/tot
+			enddo
+		endif
 		do ir=1,nr
-			if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.epsiter) converged=.false.
-			T(ir)=Tinp(ir)*(1d0-f)+T(ir)*f
+			T(ir)=f*T(ir)+(1d0-f)*Tinp(ir)
 		enddo
-	endif		
+	endif
 
 	call tellertje(niter,niter)
 	call WriteStructure

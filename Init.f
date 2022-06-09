@@ -599,7 +599,7 @@ c	condensates=(condensates.or.cloudcompute)
 	call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
 	Fstar=Fstar*pi*Rstar**2
 
-	if(computeT) allocate(Tcomp_iter(maxiter,nr))
+	if(computeT) allocate(Tcomp_iter(maxiter,0:nr))
 
 	call output("==================================================================")
 
@@ -932,6 +932,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadPar3D(key)
 		case("useobsgrid")
 			read(key%value,*) useobsgrid
+		case("logemis","log_emis")
+			read(key%value,*) log_emis
 		case("massprior")
 			read(key%value,*) massprior
 		case("mp_prior")
@@ -1560,6 +1562,7 @@ c		Cloud(i)%P=0.0624d0
 	doscaleR=.false.
 	massprior=.false.
 	useobsgrid=.false.
+	log_emis=.true.
 	do i=1,n_ret
 		RetPar(i)%x0=-1d200
 		RetPar(i)%dx=-1d0

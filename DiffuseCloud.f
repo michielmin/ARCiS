@@ -68,6 +68,7 @@
 		allocate(atoms_cloud(nCS,N_atoms))
 		allocate(maxT(nCS))
 		allocate(xv_bot(nCS))
+		allocate(xv_bot_prev(nCS))
 		allocate(mu(nCS))
 		allocate(CSname(nCS))
 		allocate(CSnmol(nCS))
@@ -237,7 +238,7 @@ c	atoms_cloud(i,3)=1
 	molfracs_atoms0=molfracs_atoms
 	xv_bot=xv_bot*mu*CSnmol/mutot
 
-	if(rainout.and.(.not.computeT.or.nTiter.gt.1)) then
+	if(rainout) then
 		densv(1,1:nCS)=(mu*mp/(kb*T(1)))*exp(BTP(1:nCS)-ATP(1:nCS)/T(1))
 		do iCS=1,nCS
 			if(T(1).gt.maxT(iCS)) densv(1,iCS)=densv(1,iCS)+(mu(iCS)*mp/(kb*T(1)*10d0))*exp(BTP(iCS)-ATP(iCS)/(T(1)*10d0))
@@ -248,6 +249,11 @@ c	atoms_cloud(i,3)=1
      &		trim(dbl2string(100d0*(1d0-densv(1,iCS)/(dens(1)*xv_bot(iCS))),'(f5.1)')) // " %)")
 				xv_bot(iCS)=densv(1,iCS)/dens(1)
 			endif
+			if(computeT.and.nTiter.gt.1) then
+				xv_bot(iCS)=(xv_bot(iCS)+xv_bot_prev(iCS)*real(nTiter-1))/real(nTiter)
+			endif
+			xv_bot_prev(iCS)=xv_bot(iCS)
+			print*,xv_bot(iCS)
 		enddo
 	endif
 	if((.not.(retrieval.or.domakeai))) call ComputeTevap

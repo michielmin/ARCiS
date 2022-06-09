@@ -151,8 +151,10 @@
 						ObsSpec(i)%lam(ilam)=x*1d-4
 						if(ObsSpec(i)%type.eq."emisa".or.ObsSpec(i)%type.eq."emis".or.ObsSpec(i)%type.eq."emission"
      &								.or.ObsSpec(i)%type.eq."phase") then
-							dy=dy/y
-							ObsSpec(i)%y(ilam)=log(y)
+							if(log_emis) then
+								dy=dy/y
+								ObsSpec(i)%y(ilam)=log(y)
+							endif
 						else
 							ObsSpec(i)%y(ilam)=y
 						endif
@@ -1594,7 +1596,7 @@ c			vec(i)=gasdev(idum)
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
      		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
-			spec(1:ObsSpec(i)%ndata)=log(spec(1:ObsSpec(i)%ndata))
+			if(log_emis) spec(1:ObsSpec(i)%ndata)=log(spec(1:ObsSpec(i)%ndata))
 		case("tprofile")
 			call ComputeParamT(spec(1:nr))
 			spec(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)*ObsSpec(i)%beta

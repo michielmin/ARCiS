@@ -114,7 +114,7 @@ c===============================================================================
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	real*8 planetform_fdust,planetform_fplan,planetform_Rstart,planetform_Mstart,planetform_SolidC
 	real*8 planetform_Macc
-	logical planetform,massprior,retrievestar,simAb_converge
+	logical planetform,massprior,retrievestar,simAb_converge,log_emis
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
 	real*8 molfracs_atoms_outgas(18)
@@ -346,7 +346,7 @@ c			   1,2,3,  4,5,6,      7,   8,    9,    10,        11,  12,  13,14,15,  16, 
 	character*25,allocatable :: CSname(:)
 	integer nCS,nnr
 	logical,allocatable :: ice(:)
-	real*8,allocatable :: Tevap(:,:),CloudMatFrac(:,:)
+	real*8,allocatable :: Tevap(:,:),CloudMatFrac(:,:),xv_bot_prev(:)
 
 	end module
 
