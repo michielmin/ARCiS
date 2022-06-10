@@ -238,6 +238,13 @@
 					tot=tot+temp_a(ig)*wtemp(ig)
 				enddo
 				tot=tot/sum(wtemp(1:ngF))
+
+				tot=0d0
+				do ig=1,ngF
+					tot=tot+wtemp(ig)/temp_a(ig)
+				enddo
+				tot=sum(wtemp(1:ngF))/tot
+
 				call sortw(temp_a,wtemp,ngF)
 				if(ng.eq.1) then
 					Ca(ir,ilam,1)=tot
@@ -257,12 +264,11 @@
 					enddo
 					tot2=0d0
 					do ig=1,ng
-						tot2=tot2+wgg(ig)*Ca(ir,ilam,ig)
+						tot2=tot2+wgg(ig)/Ca(ir,ilam,ig)
 					enddo
-					if(tot2.ne.0d0) then
+					tot2=1d0/tot2
+					if(tot2.gt.0d0.and.tot.gt.0d0) then
 						Ca(ir,ilam,1:ng)=Ca(ir,ilam,1:ng)*tot/tot2
-					else
-						Ca(ir,ilam,1:ng)=tot
 					endif
 				endif
 			else
