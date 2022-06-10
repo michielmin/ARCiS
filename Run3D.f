@@ -1978,10 +1978,10 @@ c				endif
 				if(ir.eq.nr) then
 					d=abs((P(ir+1)-P(ir)))*1d6/grav(ir)
 					tau=d*Ce(ilam,ig,ir)/dens(ir)
-				else if(ir.le.1) then
-					d=abs(sqrt(P(ir+2)*P(ir+1))-P(ir+1))*1d6/grav(ir)
-					tau=d*Ce(ilam,ig,ir+1)/dens(ir+1)
-					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
+				else if(ir.eq.0) then
+					d=abs(sqrt(P(ir+1)*P(ir))-P(ir))*1d6/grav(ir)
+					tau=d*Ce(ilam,ig,ir)/dens(ir+1)
+					d=abs(P(ir)*sqrt(P(ir)/P(ir+1))-P(ir))*1d6/grav(ir)
 					tau=tau+d*Ce(ilam,ig,ir)/dens(ir)
 				else
 					d=abs(sqrt(P(ir+2)*P(ir+1))-P(ir+1))*1d6/grav(ir)
@@ -1992,11 +1992,11 @@ c				endif
 				if(P(ir).gt.Psimplecloud) then
 					tau=tau+1d4
 				endif
-				if(.not.tau.gt.1d-10) then
-					tau=1d-10
+				if(.not.tau.gt.1d-8) then
+					tau=1d-8
 				endif
-				if(tau.gt.1d10) then
-					tau=1d10
+				if(tau.gt.1d8) then
+					tau=1d8
 				endif
 				if(ir.eq.nr) then
 					tauR_nu(ir,ilam,ig)=tau

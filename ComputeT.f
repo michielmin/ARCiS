@@ -296,11 +296,11 @@
 					ir=jr
 					d=abs((P(ir+1)-P(ir)))*1d6/grav(ir)
 					tau=d*Ce(ir,ilam,ig)
-				else if(jr.le.1) then
+				else if(jr.eq.0) then
 					ir=1
-					d=abs(sqrt(P(ir+2)*P(ir+1))-P(ir+1))*1d6/grav(ir)
-					tau=d*Ce(ir+1,ilam,ig)
-					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
+					d=abs(sqrt(P(ir+1)*P(ir))-P(ir))*1d6/grav(ir)
+					tau=d*Ce(ir,ilam,ig)
+					d=abs(P(ir)*sqrt(P(ir)/P(ir+1))-P(ir))*1d6/grav(ir)
 					tau=tau+d*Ce(ir,ilam,ig)
 				else
 					ir=jr
@@ -312,8 +312,11 @@
 				if(P(ir).gt.Psimplecloud) then
 					tau=tau+1d4
 				endif
-				if(tau.lt.1d-6) then
-					tau=1d-6
+				if(tau.lt.1d-8) then
+					tau=1d-8
+				endif
+				if(tau.gt.1d8) then
+					tau=1d8
 				endif
 				if(ir.lt.nr) then
 					tauR(jr)=tauR(jr+1)+tau
@@ -689,7 +692,7 @@ c	enddo
 			do ir=1,nr
 				tot=0d0
 				Tinp(ir)=0d0
-				do j=1,nTcomp_iter
+				do j=2,nTcomp_iter
 					Tinp(ir)=Tinp(ir)+Tcomp_iter(j,ir)*exp(-(Tcomp_iter(j,0)/epsiter)**2)
 					tot=tot+exp(-(Tcomp_iter(j,0)/epsiter)**2)
 				enddo
