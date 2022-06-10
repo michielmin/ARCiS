@@ -5,13 +5,13 @@
 	use CloudModule
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),xtot(:),vth(:),vthv(:)
-	real*8,allocatable :: Sc(:),Sn(:),rpart(:),mpart(:),xMgO(:)
-	real*8,allocatable :: An(:,:),y(:,:),xv(:,:),xn(:),xc(:,:),xm(:)
+	real*8,allocatable :: Sc(:),Sn(:),mpart(:),xMgO(:)
+	real*8,allocatable :: An(:,:),y(:,:)
 	real*8,allocatable :: Aomp(:,:),xomp(:)
 	real*8,allocatable :: drhoKd(:),drhovsed(:),tcinv(:,:),rho_av(:),densv(:,:),Kd(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze
-	real*8 cs,err,maxerr,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm,ComputeKzz
+	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm,ComputeKzz,err,maxerr
 	real*8 af,bf,f1,f2,Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr)
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),IWORKomp(:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
@@ -26,18 +26,31 @@
 	logical SKIP
 
 	nnr=(nr-1)*nr_cloud+1
+	nCS=10
 	if(.not.allocated(CloudP)) then
 		allocate(CloudP(nnr))
 		allocate(CloudT(nnr))
 		allocate(CloudR(nnr))
 		allocate(Clouddens(nnr))
+		allocate(xv(nCS,nnr))
+		allocate(xc(nCS,nnr))
+		allocate(xn(nnr))
+		allocate(xm(nnr))
+		allocate(rpart(nnr))
 	endif
 	allocate(Kd(nnr))
 	allocate(logCloudP(nnr))
 
 	T0=T
 	
-	niter=20
+	niter=100
+	if(computeT) then
+		if(nTiter.eq.1) then
+			niter=20
+		else if(nTiter.le.3) then
+			niter=50
+		endif
+	endif
 
 	w_atoms(1) = 1.00794		!'H'
 	w_atoms(2) = 4.002602		!'He'
@@ -58,7 +71,6 @@
 	w_atoms(17) = 55.845 		!'Fe'
 	w_atoms(18) = 58.6934 		!'Ni'
 	
-	nCS=10
 	allocate(densv(nnr,nCS))
 
 	if(.not.allocated(ATP)) then
@@ -333,7 +345,6 @@ c	atoms_cloud(i,3)=1
 
 	m_nuc=4d0*pi*r_nuc**3*rho_nuc/3d0
 
-	allocate(rpart(nnr))
 	allocate(mpart(nnr))
 	allocate(rho_av(nnr))
 	allocate(y(nnr,5))
@@ -341,10 +352,6 @@ c	atoms_cloud(i,3)=1
 	allocate(vth(nnr))
 	allocate(drhoKd(nnr))
 	allocate(drhovsed(nnr))
-	allocate(xv(nCS,nnr))
-	allocate(xc(nCS,nnr))
-	allocate(xn(nnr))
-	allocate(xm(nnr))
 	allocate(tcinv(niter,nnr))
 	allocate(vsed(nnr))
 
@@ -417,7 +424,6 @@ c	atoms_cloud(i,3)=1
 	endif
 
 	f=0.1d0
-	rpart=r_nuc
 
 	NN=2*nnr
 	allocate(x(NN))
@@ -425,10 +431,13 @@ c	atoms_cloud(i,3)=1
 
 	allocate(An(nnr,nnr))
 
-	xn=0d0
-	xm=0d0
-	xv=0d0
-	xc=0d0
+	if(.not.computeT.or.nTiter.le.1) then
+		rpart=r_nuc
+		xn=0d0
+		xm=0d0
+		xv=0d0
+		xc=0d0
+	endif
 	do j=1,nCS
 		do i=1,nnr
 			xv(j,i)=xv_bot(j)
@@ -731,6 +740,7 @@ c equations for material
 	enddo
 	endif
 
+	maxerr=0d0
 	do i=1,nnr
 		tot=xm(i)/rho_nuc
 		do iCS=1,nCS
@@ -750,9 +760,11 @@ c equations for material
 		else
 			rr=r_nuc
 		endif
+		err=abs(rr-rpart(i))/(rr+rpart(i))
+		if(err.gt.maxerr) maxerr=err
 		rpart(i)=sqrt(rr*rpart(i))
 	enddo
-
+	if(maxerr.lt.1d-3) exit
 	enddo
 c end the loop
 
@@ -944,7 +956,6 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	endif
 
 	deallocate(densv)
-	deallocate(rpart)
 	deallocate(mpart)
 	deallocate(rho_av)
 	deallocate(y)
@@ -952,9 +963,6 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(vth)
 	deallocate(drhoKd)
 	deallocate(drhovsed)
-	deallocate(xv)
-	deallocate(xc)
-	deallocate(xn)
 	deallocate(tcinv)
 	deallocate(vsed)
 	deallocate(ixv)

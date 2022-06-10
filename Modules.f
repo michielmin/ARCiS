@@ -342,6 +342,7 @@ c			   1,2,3,  4,5,6,      7,   8,    9,    10,        11,  12,  13,14,15,  16, 
 	IMPLICIT NONE
 	integer nr_cloud
 	real*8,allocatable :: CloudP(:),CloudT(:),CloudR(:),Clouddens(:),CSnmol(:),SatRat(:)
+	real*8,allocatable :: xv(:,:),xn(:),xc(:,:),xm(:),rpart(:)
 	real*8,allocatable :: ATP(:),BTP(:),rhodust(:),atoms_cloud(:,:),maxT(:),mu(:),xv_bot(:)
 	character*25,allocatable :: CSname(:)
 	integer nCS,nnr

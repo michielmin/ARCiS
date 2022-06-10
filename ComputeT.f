@@ -576,7 +576,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 
 	converged=.true.
 	do ir=1,nr
-		if(abs(T(ir)-Ts(ir))/(T(ir)+Ts(ir)).gt.epsiter) converged=.false.
+		if(abs(T(ir)-Ts(ir))/(T(ir)+Ts(ir)).gt.epsiter/5d0) converged=.false.
 	enddo
 
 	do ir=1,nr
@@ -666,7 +666,7 @@ c	enddo
 
 	if(.not.Tsurface.gt.3d0.or.E0.eq.0d0) Tsurface=3d0
 
-c	if(converged.and.iter.gt.5) exit
+	if(converged.and.iter.gt.5) exit
 	enddo
 
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
