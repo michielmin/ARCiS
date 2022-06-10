@@ -154,6 +154,8 @@
 							if(log_emis) then
 								dy=dy/y
 								ObsSpec(i)%y(ilam)=log(y)
+							else
+								ObsSpec(i)%y(ilam)=y
 							endif
 						else
 							ObsSpec(i)%y(ilam)=y
