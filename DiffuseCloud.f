@@ -43,12 +43,12 @@
 
 	T0=T
 	
-	niter=100
+	niter=500
 	if(computeT) then
 		if(nTiter.eq.1) then
 			niter=20
-		else if(nTiter.le.3) then
-			niter=50
+		else if(nTiter.le.4) then
+			niter=100
 		endif
 	endif
 
@@ -552,7 +552,7 @@ c rewritten for better convergence
 	do i=1,nnr
 		if(.not.x(i).gt.0d0) x(i)=0d0
 	enddo
-	xn(1:nnr)=(xn(1:nnr)+x(1:nnr)/m_nuc)/2d0
+	xn(1:nnr)=x(1:nnr)/m_nuc
 
 	do i=1,nnr
 		if(xn(i).lt.0d0) xn(i)=0d0
@@ -762,7 +762,7 @@ c equations for material
 		endif
 		err=abs(rr-rpart(i))/(rr+rpart(i))
 		if(err.gt.maxerr) maxerr=err
-		rpart(i)=sqrt(rr*rpart(i))
+		rpart(i)=rr
 	enddo
 	if(maxerr.lt.1d-3) exit
 	enddo
