@@ -136,7 +136,7 @@ c terms of use
 			if(nTiter.le.4) then
 				f=1d0
 			else
-				f=1d0-0.8d0*real(nTiter)/real(maxiter)
+				f=0.8d0-0.6d0*real(nTiter)/real(maxiter)
 			endif
 			call SetupStructure(.true.)
 			call SetupOpacities()
