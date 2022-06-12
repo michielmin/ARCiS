@@ -247,6 +247,11 @@
 
 				call sortw(temp_a,wtemp,ngF)
 				if(ng.eq.1) then
+					tot=0d0
+					do ig=1,ngF
+						tot=tot+temp_a(ig)*wtemp(ig)
+					enddo
+					tot=tot/sum(wtemp(1:ngF))
 					Ca(ir,ilam,1)=tot
 				else
 					do ig=2,ngF
@@ -300,12 +305,14 @@
 			do jr=nr,0,-1
 				if(jr.eq.nr) then
 					ir=jr
-					d=P(ir)*1d6/grav(ir)
+					d=0.5*P(ir)*1d6/grav(ir)
 					tau=d*Ce(ir,ilam,ig)
 				else if(jr.eq.nr-1) then
 					ir=jr
+					d=abs(0.5*P(ir+1)-P(ir+1))*1d6/grav(ir)
+					tau=d*Ce(ir+1,ilam,ig)
 					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
-					tau=d*Ce(ir,ilam,ig)
+					tau=tau+d*Ce(ir,ilam,ig)
 				else if(jr.eq.0) then
 					ir=1
 					d=abs(sqrt(P(ir+1)*P(ir))-P(ir))*1d6/grav(ir)
@@ -322,7 +329,7 @@
 				if(P(ir).gt.Psimplecloud) then
 					tau=tau+1d4
 				endif
-				if(tau.lt.1d-8) then
+				if(.not.tau.gt.1d-8) then
 					tau=1d-8
 				endif
 				if(tau.gt.1d8) then

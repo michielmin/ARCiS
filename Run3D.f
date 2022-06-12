@@ -1976,11 +1976,13 @@ c				endif
 		do ig=1,ng
 			do ir=nr,1,-1
 				if(ir.eq.nr) then
-					d=P(ir)*1d6/grav(ir)
+					d=0.5*P(ir)*1d6/grav(ir)
 					tau=d*Ce(ilam,ig,ir)/dens(ir)
 				else if(ir.eq.nr-1) then
+					d=abs(0.5*P(ir+1)-P(ir+1))*1d6/grav(ir)
+					tau=d*Ce(ilam,ig,ir+1)/dens(ir+1)
 					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
-					tau=d*Ce(ilam,ig,ir)/dens(ir)
+					tau=tau+d*Ce(ilam,ig,ir)/dens(ir)
 				else
 					d=abs(sqrt(P(ir+2)*P(ir+1))-P(ir+1))*1d6/grav(ir)
 					tau=d*Ce(ilam,ig,ir+1)/dens(ir+1)
