@@ -233,17 +233,6 @@
 				enddo
 				Fstar_LR(ilam)=Fstar_LR(ilam)/tot
 				Cs(ir,ilam,1:ng)=Cs(ir,ilam,1:ng)/tot
-				tot=0d0
-				do ig=1,ngF
-					tot=tot+temp_a(ig)*wtemp(ig)
-				enddo
-				tot=tot/sum(wtemp(1:ngF))
-
-				tot=0d0
-				do ig=1,ngF
-					tot=tot+wtemp(ig)/temp_a(ig)
-				enddo
-				tot=sum(wtemp(1:ngF))/tot
 
 				call sortw(temp_a,wtemp,ngF)
 				if(ng.eq.1) then
@@ -267,14 +256,6 @@
 							Ca(ir,ilam,ig)=temp_a(j)*w1+temp_a(j+1)*(1d0-w1)
 						endif
 					enddo
-					tot2=0d0
-					do ig=1,ng
-						tot2=tot2+wgg(ig)/Ca(ir,ilam,ig)
-					enddo
-					tot2=1d0/tot2
-					if(tot2.gt.0d0.and.tot.gt.0d0) then
-						Ca(ir,ilam,1:ng)=Ca(ir,ilam,1:ng)*tot/tot2
-					endif
 				endif
 			else
 				Ca(ir,ilam,1:ng)=0d0
