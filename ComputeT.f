@@ -300,7 +300,11 @@
 			do jr=nr,0,-1
 				if(jr.eq.nr) then
 					ir=jr
-					d=abs((P(ir+1)-P(ir)))*1d6/grav(ir)
+					d=P(ir)*1d6/grav(ir)
+					tau=d*Ce(ir,ilam,ig)
+				else if(jr.eq.nr-1) then
+					ir=jr
+					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
 					tau=d*Ce(ir,ilam,ig)
 				else if(jr.eq.0) then
 					ir=1
