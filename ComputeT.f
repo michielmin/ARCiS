@@ -33,7 +33,7 @@
 	real*8 tau_V,tau_T,Planck,f
 	real*8 g,dlnT,dlnP,d,tau,tautot,fact,contr,tau_a,exp_tau
 	real*8,allocatable :: Ce(:,:,:),Ca(:,:,:),Cs(:,:,:),taustar(:,:),tauR_nu(:,:,:)
-	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i,E,E0,Tinp(nr)
+	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),T1(nr),must_i,E,E0,Tinp(nr)
 	real*8 z,Hstar(0:nr),Jtot,Htot,Ktot
 	real*8 fedd(nr),Hedd(0:nr),lH1,lH2,P1,P2,directHstar(0:nr)
 	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:)
@@ -361,8 +361,6 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	
 	ff=0.5d0
 	
-	T0(1:nr)=T(1:nr)
-
 	Hstar(0:nr)=0d0
 	directHstar(0:nr)=0d0
 	SurfStar=0d0
@@ -697,22 +695,38 @@ c	enddo
 	Tcomp_iter(nTcomp_iter,0)=inpErr
 	call output("Maximum error on T-struct: " // dbl2string(tot*100d0,'(f5.1)') // "%")
 	call output("Error on output flux:      " // dbl2string(inpErr*100d0,'(f5.1)') // "%")
-	if(converged) then
+	if(converged.and.nTiter.gt.4) then
 		T(1:nr)=Tinp(1:nr)
 	else
+		T0(1:nr)=Tinp(1:nr)
+		T1(1:nr)=T(1:nr)
 		if(nTiter.gt.2) then
 			do ir=1,nr
 				tot=0d0
-				Tinp(ir)=0d0
+				T0(ir)=0d0
 				do j=2,nTcomp_iter
-					Tinp(ir)=Tinp(ir)+Tcomp_iter(j,ir)*exp(-(Tcomp_iter(j,0)/epsiter)**2)
+					T0(ir)=T0(ir)+Tcomp_iter(j,ir)*exp(-(Tcomp_iter(j,0)/epsiter)**2)
 					tot=tot+exp(-(Tcomp_iter(j,0)/epsiter)**2)
 				enddo
-				Tinp(ir)=Tinp(ir)/tot
+				if(tot.gt.epsiter) then
+					T0(ir)=T0(ir)/tot
+				else
+					T0(ir)=Tinp(ir)
+				endif
 			enddo
 		endif
-		do ir=1,nr
-			T(ir)=f*T(ir)+(1d0-f)*Tinp(ir)
+		j=0
+		tot=0d0
+		do while(tot.lt.epsiter.and.j.lt.100)
+			j=j+1
+			tot=0d0
+			do ir=1,nr-1
+				if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.tot) tot=abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir))
+			enddo
+			do ir=1,nr
+				T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
+			enddo
+			T0(1:nr)=T(1:nr)
 		enddo
 	endif
 
