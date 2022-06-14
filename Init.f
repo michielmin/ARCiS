@@ -599,8 +599,6 @@ c	condensates=(condensates.or.cloudcompute)
 	call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
 	Fstar=Fstar*pi*Rstar**2
 
-	if(computeT) allocate(Tcomp_iter(maxiter,0:nr))
-
 	call output("==================================================================")
 
 	do i=1,nmol

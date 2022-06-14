@@ -39,7 +39,7 @@
 	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:)
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax
 	logical docloud0(max(nclouds,1)),converged,stopscat
-	real*8 tauf(nr),Si(0:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff,TT,inpErr
+	real*8 tauf(nr),Si(0:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff,TT,maxErr
 	integer info,IWORK(10*(nr+1)*(nr+1)),NRHS,ii(3),iscat,nscat
 	real*8 tau1,tau2,ee0,ee1,ee2,tauR(0:nr),Ij(0:nr),Ih(0:nr),scale,dtauR(0:nr)
 	integer nlam_LR
@@ -359,7 +359,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	scale=pi*Rstar**2*((2d0*(pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))/E
 	Fstar_LR=Fstar_LR*scale
 	
-	ff=0.5d0
+	ff=1d0
 	
 	Hstar(0:nr)=0d0
 	directHstar(0:nr)=0d0
@@ -527,10 +527,6 @@ c=========== end experimental redistribution ===================================
 		Fl(ir)=Fl(ir)+Hedd(ir)
 	enddo
 	
-	if(iter.eq.1) then
-		inpErr=(sum(IntH(nr,1:nr))-Fl(nr))/(sum(IntH(nr,1:nr))+Fl(nr))
-	endif
-
 	minFl=0.5
 	maxFl=2.0
 
@@ -587,13 +583,45 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 !$OMP FLUSH
 !$OMP END PARALLEL
 
-	converged=.true.
-	do ir=1,nr
-		if(abs(T(ir)-Ts(ir))/(T(ir)+Ts(ir)).gt.epsiter/5d0) converged=.false.
+	do ir=nr-1,1,-1
+		if(P(ir).gt.Pplanet) exit
+	enddo
+	j=min(max(ir,2),nr-1)
+	do ir=j-1,1,-1
+		if(ir.lt.nr) then
+			dlnP=log(P(ir+1)/P(ir))
+			dlnT=log(Ts(ir+1)/Ts(ir))
+			if((dlnT/dlnP).gt.nabla_ad(ir)) then
+				dlnT=(nabla_ad(ir))*dlnP
+				Ts(ir)=Ts(ir+1)/exp(dlnT)
+			endif
+			if((dlnT/dlnP).lt.-nabla_ad(ir)) then
+				dlnT=(-nabla_ad(ir))*dlnP
+				Ts(ir)=Ts(ir+1)/exp(dlnT)
+			endif
+		endif
+	enddo
+
+	do ir=j,nr
+		dlnP=log(P(ir)/P(ir-1))
+		dlnT=log(Ts(ir)/Ts(ir-1))
+		if((dlnT/dlnP).gt.nabla_ad(ir)) then
+			dlnT=(nabla_ad(ir))*dlnP
+			Ts(ir)=Ts(ir-1)*exp(dlnT)
+		endif
+		if((dlnT/dlnP).lt.-nabla_ad(ir)) then
+			dlnT=(-nabla_ad(ir))*dlnP
+			Ts(ir)=Ts(ir-1)*exp(dlnT)
+		endif
+	enddo
+
+	maxErr=0d0
+	do ir=1,nr-1
+		if(abs(T(ir)-Ts(ir))/(T(ir)+Ts(ir)).gt.maxErr) maxErr=abs(T(ir)-Ts(ir))/(T(ir)+Ts(ir))
 	enddo
 
 	do ir=1,nr
-		T(ir)=ff*Ts(ir)+(1d0-ff)*T(ir)
+		T(ir)=(Ts(ir)+T(ir))/2d0
 	enddo
 
 	E0=(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
@@ -637,25 +665,17 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 
 	if(.not.Tsurface.gt.3d0.or.E0.eq.0d0) Tsurface=3d0
 
-	if(converged.and.iter.gt.5) exit
+	if(maxErr.lt.(epsiter/5d0).and.iter.gt.5) exit
 	enddo
 
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
 
-	converged=(abs(inpErr).lt.epsiter)
-	nTcomp_iter=nTcomp_iter+1
-	tot=0d0
+	maxErr=0d0
 	do ir=1,nr-1
-		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.tot) tot=abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir))
-		if(tot.gt.epsiter) converged=.false.
+		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.maxErr) maxErr=abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir))
+		if(maxErr.gt.epsiter) converged=.false.
 	enddo
-	Tcomp_iter(nTcomp_iter,1:nr)=Tinp(1:nr)
-	Tcomp_iter(nTcomp_iter,0)=inpErr
-	call SetOutputMode(.true.)
-	print*,nTiter,f,iter
-	call output("Maximum error on T-struct: " // dbl2string(tot*100d0,'(f5.1)') // "%")
-	call output("Error on output flux:      " // dbl2string(inpErr*100d0,'(f5.1)') // "%")
-	call SetOutputMode(.false.)
+	call output("Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%")
 	T0(1:nr)=Tinp(1:nr)
 	T1(1:nr)=T(1:nr)
 	do ir=1,nr

@@ -128,7 +128,6 @@ c terms of use
 	if(computeT.and.computeopac) then
 		temp=par_tprofile
 		par_tprofile=.false.
-		nTcomp_iter=0
 		f=1d0
 		do nTiter=1,maxiter
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
@@ -137,7 +136,7 @@ c terms of use
 			call SetupOpacities()
 			call DoComputeT(Tconverged,f)
 			if(Tconverged.and.nTiter.gt.4) exit
-			f=0.2d0+0.7d0*exp(-real(nTiter-1)/2d0)
+			f=0.05d0+0.95d0*exp(-real(nTiter-1)/5d0)
 		enddo
 		nlamdust=nldtemp
 		specresdust=srdtemp
