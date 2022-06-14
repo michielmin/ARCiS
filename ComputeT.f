@@ -577,7 +577,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 			if(iT.gt.nBB) iT=nBB
 		enddo
 		Ts(ir)=real(iT)*(E/E0)**0.25
-		if(.not.Ts(ir).gt.3d0) Ts(ir)=3d0
+		if(.not.Ts(ir).gt.0d0) Ts(ir)=T(ir)
 	enddo
 !$OMP END DO
 !$OMP FLUSH
