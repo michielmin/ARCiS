@@ -658,21 +658,6 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	call SetOutputMode(.false.)
 	T0(1:nr)=Tinp(1:nr)
 	T1(1:nr)=T(1:nr)
-	if(nTiter.gt.4) then
-		do ir=1,nr
-			tot=0d0
-			T0(ir)=0d0
-			do j=2,nTcomp_iter
-				T0(ir)=T0(ir)+Tcomp_iter(j,ir)*exp(-(Tcomp_iter(j,0)/(epsiter))**2)*exp(-(real(nTcomp_iter-j)/2d0)**2)
-				tot=tot+exp(-(Tcomp_iter(j,0)/(epsiter))**2)*exp(-(real(nTcomp_iter-j)/2d0)**2)
-			enddo
-			if(tot.gt.epsiter) then
-				T0(ir)=T0(ir)/tot
-			else
-				T0(ir)=Tinp(ir)
-			endif
-		enddo
-	endif
 	do ir=1,nr
 		T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
 	enddo
