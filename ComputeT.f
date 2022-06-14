@@ -595,48 +595,6 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	do ir=1,nr
 		T(ir)=ff*Ts(ir)+(1d0-ff)*T(ir)
 	enddo
-c	T(nr)=T(nr-1)
-
-	if(iter.eq.niter) then
-	do ir=nr-1,1,-1
-		if(abs(Hstar(ir)).lt.abs(Hstar(nr)/10d0)) exit
-	enddo
-	j=min(max(ir,2),nr-1)
-	do ir=j-1,1,-1
-		if(ir.lt.nr) then
-			dlnP=log(P(ir+1)/P(ir))
-			dlnT=log(T(ir+1)/T(ir))
-			if((dlnT/dlnP).gt.nabla_ad(ir)) then
-				dlnT=(nabla_ad(ir))*dlnP
-				T(ir)=T(ir+1)/exp(dlnT)
-			endif
-			if((dlnT/dlnP).lt.-nabla_ad(ir)) then
-				dlnT=(-nabla_ad(ir))*dlnP
-				T(ir)=T(ir+1)/exp(dlnT)
-			endif
-		endif
-	enddo
-
-	do ir=j,nr
-		dlnP=log(P(ir)/P(ir-1))
-		dlnT=log(T(ir)/T(ir-1))
-		if((dlnT/dlnP).gt.nabla_ad(ir)) then
-			dlnT=(nabla_ad(ir))*dlnP
-			T(ir)=T(ir-1)*exp(dlnT)
-		endif
-		if((dlnT/dlnP).lt.-nabla_ad(ir)) then
-			dlnT=(-nabla_ad(ir))*dlnP
-			T(ir)=T(ir-1)*exp(dlnT)
-		endif
-	enddo
-	endif
-
-c	Ts(1)=Tsurface/(exp(nabla_ad(1))+P(1)/P(2))
-c	T(1)=(T(1)**4+Ts(1)**4)**0.25d0
-c	do ir=2,nr
-c		Ts(ir)=Ts(ir-1)/(exp(nabla_ad(ir))+P(ir-1)/P(ir))
-c		T(ir)=(T(ir)**4+Ts(ir)**4)**0.25d0
-c	enddo
 
 	E0=(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
 	E=SurfStar+E0
@@ -694,21 +652,19 @@ c	enddo
 	Tcomp_iter(nTcomp_iter,1:nr)=Tinp(1:nr)
 	Tcomp_iter(nTcomp_iter,0)=inpErr
 	call SetOutputMode(.true.)
-	print*,nTiter,f
+	print*,nTiter,f,iter
 	call output("Maximum error on T-struct: " // dbl2string(tot*100d0,'(f5.1)') // "%")
 	call output("Error on output flux:      " // dbl2string(inpErr*100d0,'(f5.1)') // "%")
 	call SetOutputMode(.false.)
 	T0(1:nr)=Tinp(1:nr)
 	T1(1:nr)=T(1:nr)
-	if(nTiter.gt.4.and..false.) then
+	if(nTiter.gt.4) then
 		do ir=1,nr
 			tot=0d0
 			T0(ir)=0d0
 			do j=2,nTcomp_iter
-				if(Tcomp_iter(j,0).lt.3d0*epsiter) then
-					T0(ir)=T0(ir)+Tcomp_iter(j,ir)*exp(-(Tcomp_iter(j,0)/(epsiter*5d0))**2)
-					tot=tot+exp(-(Tcomp_iter(j,0)/(epsiter*5d0))**2)
-				endif
+				T0(ir)=T0(ir)+Tcomp_iter(j,ir)*exp(-(Tcomp_iter(j,0)/(epsiter))**2)*exp(-(real(nTcomp_iter-j)/2d0)**2)
+				tot=tot+exp(-(Tcomp_iter(j,0)/(epsiter))**2)*exp(-(real(nTcomp_iter-j)/2d0)**2)
 			enddo
 			if(tot.gt.epsiter) then
 				T0(ir)=T0(ir)/tot
