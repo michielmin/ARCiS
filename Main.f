@@ -133,15 +133,11 @@ c terms of use
 		do nTiter=1,maxiter
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
      &					// trim(int2string(maxiter,'(i3)')) // ")")
-			if(nTiter.le.4) then
-				f=1d0
-			else
-				f=0.2d0+0.6d0*exp(-real(nTiter-5)/2d0)
-			endif
 			call SetupStructure(.true.)
 			call SetupOpacities()
 			call DoComputeT(Tconverged,f)
 			if(Tconverged.and.nTiter.gt.4) exit
+			f=0.2d0+0.7d0*exp(-real(nTiter-1)/2d0)
 		enddo
 		nlamdust=nldtemp
 		specresdust=srdtemp

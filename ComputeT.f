@@ -693,42 +693,33 @@ c	enddo
 	enddo
 	Tcomp_iter(nTcomp_iter,1:nr)=Tinp(1:nr)
 	Tcomp_iter(nTcomp_iter,0)=inpErr
+	call SetOutputMode(.true.)
+	print*,nTiter,f
 	call output("Maximum error on T-struct: " // dbl2string(tot*100d0,'(f5.1)') // "%")
 	call output("Error on output flux:      " // dbl2string(inpErr*100d0,'(f5.1)') // "%")
-	if(converged.and.nTiter.gt.4) then
-		T(1:nr)=Tinp(1:nr)
-	else
-		T0(1:nr)=Tinp(1:nr)
-		T1(1:nr)=T(1:nr)
-		if(nTiter.gt.2) then
-			do ir=1,nr
-				tot=0d0
-				T0(ir)=0d0
-				do j=2,nTcomp_iter
-					T0(ir)=T0(ir)+Tcomp_iter(j,ir)*exp(-(Tcomp_iter(j,0)/epsiter)**2)
-					tot=tot+exp(-(Tcomp_iter(j,0)/epsiter)**2)
-				enddo
-				if(tot.gt.epsiter) then
-					T0(ir)=T0(ir)/tot
-				else
-					T0(ir)=Tinp(ir)
+	call SetOutputMode(.false.)
+	T0(1:nr)=Tinp(1:nr)
+	T1(1:nr)=T(1:nr)
+	if(nTiter.gt.4.and..false.) then
+		do ir=1,nr
+			tot=0d0
+			T0(ir)=0d0
+			do j=2,nTcomp_iter
+				if(Tcomp_iter(j,0).lt.3d0*epsiter) then
+					T0(ir)=T0(ir)+Tcomp_iter(j,ir)*exp(-(Tcomp_iter(j,0)/(epsiter*5d0))**2)
+					tot=tot+exp(-(Tcomp_iter(j,0)/(epsiter*5d0))**2)
 				endif
 			enddo
-		endif
-		j=0
-		tot=0d0
-		do while(tot.lt.epsiter.and.j.lt.100)
-			j=j+1
-			tot=0d0
-			do ir=1,nr-1
-				if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.tot) tot=abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir))
-			enddo
-			do ir=1,nr
-				T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
-			enddo
-			T0(1:nr)=T(1:nr)
+			if(tot.gt.epsiter) then
+				T0(ir)=T0(ir)/tot
+			else
+				T0(ir)=Tinp(ir)
+			endif
 		enddo
 	endif
+	do ir=1,nr
+		T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
+	enddo
 
 	call tellertje(niter,niter)
 	call WriteStructure
