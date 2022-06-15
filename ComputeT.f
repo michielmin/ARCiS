@@ -159,18 +159,7 @@
 	epsiter=3d-2
 
 	must=betaT
-	if(i2d.ne.0) then
-		if(i2d.eq.1) then
-			call ComputeBeta(90d0,twind,must)
-		else if(i2d.eq.2) then
-			call ComputeBeta(270d0,twind,must)
-		else if(i2d.eq.3) then
-			call ComputeBeta(0d0,twind,must)
-		else if(i2d.eq.4) then
-			call ComputeBeta(180d0,twind,must)
-		endif
-		must=must*betaT
-	endif
+	if(must.lt.1d-5) must=1d-5
 
 	do ir=nr,1,-1
 		if(T(ir).gt.0d0) then
@@ -369,7 +358,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(x_SIj,y_SIj,tauR_SIj,Ma_SIj,Mb_SIj,Mc_SIj,Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,
-!$OMP&			Hstar_omp,SurfStar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,directHstar_omp)
+!$OMP&			Hstar_omp,SurfStar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,directHstar_omp,tot)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,
 !$OMP&			Hstar,SurfStar,Dplanet,Fstar_LR,must,directHstar)
 	allocate(x_SIj(nr+2),y_SIj(nr+2),tauR_SIj(0:nr+1),Ma_SIj(nr+2),Mb_SIj(nr+2),Mc_SIj(nr+2))
@@ -423,6 +412,8 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			call AddScatter(Si_omp(1:nr,0:nr+1),tauR_nu(1:nr,ilam,ig),
      &					Ca(1:nr,ilam,ig),Cs(1:nr,ilam,ig),Ce(1:nr,ilam,ig),nr,nu,wnu,nnu,nr+2)
 
+			tot=sum(Si_omp(0:nr,0))
+			if(tot.gt.0d0.or.tot.lt.0d0) then
 			do inu=1,nnu
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 				call SolveIj(tauR_omp(0:nr),Si_omp(0:nr,0),Ij_omp(0:nr),nr,x_SIj,y_SIj,tauR_SIj(0:nr+1),Ma_SIj,Mb_SIj,Mc_SIj)
@@ -430,16 +421,22 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				Hstar_lam(0:nr)=Hstar_lam(0:nr)+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
 				SurfStar_omp=SurfStar_omp+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1)*SurfEmis_LR(ilam)
 			enddo
+			endif
 
 			do ir=1,nr
+				tot=sum(Si_omp(0:nr,ir))
+				if(tot.gt.0d0.or.tot.lt.0d0) then
 				do inu=1,nnu
 					tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 					call SolveIj(tauR_omp(0:nr),Si_omp(0:nr,ir),Ij_omp(0:nr),nr,x_SIj,y_SIj,tauR_SIj(0:nr+1),Ma_SIj,Mb_SIj,Mc_SIj)
 					call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
 					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 				enddo
+				endif
 			enddo
 
+			tot=sum(Si_omp(0:nr,nr+1))
+			if(tot.gt.0d0.or.tot.lt.0d0) then
 			do inu=1,nnu
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 				call SolveIj(tauR_omp(0:nr),Si_omp(0:nr,nr+1),Ij_omp(0:nr),nr,x_SIj,y_SIj,tauR_SIj(0:nr+1),Ma_SIj,Mb_SIj,Mc_SIj)
@@ -447,6 +444,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+8d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)
 				Hsurf_lam(0:nr)=Hsurf_lam(0:nr)+FstarBottom*8d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)*(1d0-SurfEmis_LR(ilam))
 			enddo
+			endif
 
 			do ir=0,nr
 				Hstar_omp(ir)=Hstar_omp(ir)+min(min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0),0d0)

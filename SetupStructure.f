@@ -305,24 +305,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 	endif
 
 	beta_used=betaT
-	if(i2d.ne.0) then
-		if(i2d.eq.1) then
-			call ComputeBeta(90d0,twind,beta_used)
-		else if(i2d.eq.2) then
-			call ComputeBeta(270d0,twind,beta_used)
-		else if(i2d.eq.3) then
-c			max=0d0
-c			do i=0,90
-c				call ComputeBeta(real(i)*1d0,twind,beta_used)
-c				if(beta_used.gt.max) max=beta_used
-c			enddo
-c			beta_used=max
-			call ComputeBeta(0d0,twind,beta_used)
-		else if(i2d.eq.4) then
-			call ComputeBeta(180d0,twind,beta_used)
-		endif
-		beta_used=beta_used*betaT
-	endif
+	if(deepredist) beta_used=f_deepredist
 
 	tau=0d0
 	Tirr=sqrt(Rstar/(Dplanet))*Tstar
@@ -380,24 +363,7 @@ c		endif
 	integer i
 
 	beta_used=betaT
-	if(i2d.ne.0) then
-		if(i2d.eq.1) then
-			call ComputeBeta(90d0,twind,beta_used)
-		else if(i2d.eq.2) then
-			call ComputeBeta(270d0,twind,beta_used)
-		else if(i2d.eq.3) then
-c			max=0d0
-c			do i=0,90
-c				call ComputeBeta(real(i)*1d0,twind,beta_used)
-c				if(beta_used.gt.max) max=beta_used
-c			enddo
-c			beta_used=max
-			call ComputeBeta(0d0,twind,beta_used)
-		else if(i2d.eq.4) then
-			call ComputeBeta(180d0,twind,beta_used)
-		endif
-		beta_used=beta_used*betaT
-	endif
+	if(deepredist) beta_used=f_deepredist
 
 	tau=0d0
 	Tirr=(beta_used*4d0)**0.25*sqrt(Rstar/(2d0*Dplanet))*Tstar
