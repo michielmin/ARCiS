@@ -811,22 +811,38 @@ c H2O: 18
 		endif
 	enddo
 
+	Mass=0d0
+	Vol=0d0
+	Ntot=0d0
+	do l=1,nm
+		if(frac(l).gt.0d0) then
+			do k=1,ns
+				r1=r0(k)
+				do i=1,nf
+					Mass=Mass+wf(i)*nr0(l,k)*rho(l)*4d0*pi*r1**3/3d0
+					Vol=Vol+wf(i)*nr0(l,k)*4d0*pi*r1**3/3d0
+					Ntot=Ntot+wf(i)*nr0(l,k)
+				enddo
+			enddo
+		endif
+	enddo
+	C%M(isize)=Mass*(1d-4)**3/Ntot
+	C%rho=Mass/Vol
+	rho_av=Mass/Vol
+
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,csca0,cabs0,cext0,Mass,Vol,theta,i,l,tot,k,Err,spheres,toolarge,
+!$OMP& PRIVATE(ilam,csca0,cabs0,cext0,theta,i,l,tot,k,Err,spheres,toolarge,
 !$OMP&         rad,wvno,m,r1,rcore,qext,qsca,qbs,gqsc,rmie,lmie,e1mie,e2mie,
-!$OMP&         csmie,cemie,MieF11,MieF12,MieF33,MieF34,Mief22,Mief44,tot2,j,Ntot,fcomputed,
+!$OMP&         csmie,cemie,MieF11,MieF12,MieF33,MieF34,Mief22,Mief44,tot2,j,fcomputed,
 !$OMP&         MieF11_fcomp,MieF12_fcomp,MieF33_fcomp,MieF34_fcomp,M1,M2,S21,D21)
-!$OMP& SHARED(C,nlamdust,na,nm,ns,frac,minlog,maxlog,f,mu0,e1,e2,wf,min,isize,computelam,
-!$OMP&        rho_av,pow,lamdust,meth,rho,nf,r0,nr0,Kabs,Ksca,Kext,F11,F12,F22,F33,F34,F44,LLmax)
+!$OMP& SHARED(C,nlamdust,na,nm,ns,frac,minlog,maxlog,f,mu0,e1,e2,wf,isize,computelam,Mass,
+!$OMP&        pow,lamdust,rho,nf,r0,nr0,Kabs,Ksca,Kext,F11,F12,F22,F33,F34,F44)
 !$OMP DO
 !$OMP& SCHEDULE(STATIC,1)
 	do ilam=1,nlamdust
 	
 	if(.not.computelam(ilam)) then
-		C%M(isize)=1d0
-		C%rho=1d0
-		rho_av=1d0
 		Kabs(ilam)=1d-10
 		Ksca(ilam)=1d-10
 		Kext(ilam)=1d-10
@@ -841,9 +857,6 @@ c H2O: 18
 	csca0=0d0
 	cabs0=0d0
 	cext0=0d0
-	Mass=0d0
-	Vol=0d0
-	Ntot=0d0
 
 	do l=1,nm
 	if(frac(l).eq.0d0) goto 10
@@ -902,17 +915,10 @@ c H2O: 18
 		cext0=cext0+wf(i)*nr0(l,k)*cemie
 		csca0=csca0+wf(i)*nr0(l,k)*csmie
 	   	cabs0=cabs0+wf(i)*nr0(l,k)*(cemie-csmie)
-		Mass=Mass+wf(i)*nr0(l,k)*rho(l)*4d0*pi*r1**3/3d0
-		Vol=Vol+wf(i)*nr0(l,k)*4d0*pi*r1**3/3d0
-		Ntot=Ntot+wf(i)*nr0(l,k)
 	enddo
 	enddo
 10	continue
 	enddo
-
-	C%M(isize)=Mass*(1d-4)**3/Ntot
-	C%rho=Mass/Vol
-	rho_av=Mass/Vol
 
 	Kabs(ilam)=1d4*cabs0/Mass
 	Ksca(ilam)=1d4*csca0/Mass

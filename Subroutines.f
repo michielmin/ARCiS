@@ -423,6 +423,7 @@ c-----------------------------------------------------------------------
       PARAMETER (M=7,NSTACK=50)
       INTEGER i,ir,j,jstack,k,l,istack(NSTACK)
       REAL*8 a,temp
+	if(n.le.1) return
       jstack=0
       l=1
       ir=n
@@ -498,6 +499,8 @@ c-----------------------------------------------------------------------
 	real*8 array(n),warray(n)
 	integer i,j
 	real*8 temp,wtemp
+	
+	if(n.le.1) return
 
 	do i=2,n
 		temp=array(i)
@@ -522,6 +525,7 @@ c-----------------------------------------------------------------------
       PARAMETER (M=7,NSTACK=50)
       INTEGER i,ir,j,jstack,k,l,istack(NSTACK)
       REAL*8 a,b,temp
+	if(n.le.1) return
       jstack=0
       l=1
       ir=n
@@ -925,7 +929,12 @@ c        print*,'series failed in expint'
 	IMPLICIT NONE
 	integer i,n
 	real*8 x(n),xm
-	
+
+	if(n.eq.1) then
+		xm=x(1)
+		return
+	endif
+
 	call sort(x,n)
 	if((n/2)*2.eq.n) then
 		i=n/2
@@ -943,6 +952,11 @@ c        print*,'series failed in expint'
 	integer i,n,i1,i2
 	real*8 x(n),xm,tot,w,sig,c
 	
+	if(n.eq.1) then
+		xm=x(1)
+		return
+	endif
+
 	call sort(x,n)
 	xm=0d0
 	tot=0d0
