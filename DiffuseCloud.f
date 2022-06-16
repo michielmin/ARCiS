@@ -552,13 +552,9 @@ c rewritten for better convergence
 	do i=1,nnr
 		if(.not.x(i).gt.0d0) x(i)=0d0
 	enddo
-	xn(1:nnr)=x(1:nnr)/m_nuc
+	xn(1:nnr)=x(1:nnr)
 
-	do i=1,nnr
-		if(xn(i).lt.0d0) xn(i)=0d0
-	enddo
-
-	if(Cloud(ii)%haze) then
+	if(coagulation) then
 c equations for mass in Nuclii
 		An=0d0
 		x=0d0
@@ -584,7 +580,7 @@ c equations for mass in Nuclii
 		dz=CloudR(i)-CloudR(i-1)
 		An(j,i)=Kd(i)/dz-vsed(i)
 		An(j,i-1)=-Kd(i)/dz
-		x(j)=0d0!-Mn_top/Clouddens(i)
+		x(j)=0d0
 		i=1
 		j=j+1
 		An(j,i)=1d0
@@ -599,16 +595,22 @@ c equations for mass in Nuclii
 		xm(1:nnr)=x(1:nnr)
 
 		do i=1,nnr
-			if(xm(i).lt.0d0) xm(i)=0d0
+			if(xn(i).gt.xm(i)) then
+				xn(i)=xm(i)
+			endif
 		enddo
 	else
-		xm=0d0
+		xm=xn
 	endif
+
 	if(Cloud(ii)%haze) then
 		do i=1,nnr
 			xm(i)=xm(i)*max(0d0,1d0-densv(i,ihaze)/(Clouddens(i)*xv_bot(ihaze)))
 		enddo
+	else
+		xm=0d0
 	endif
+	xn(1:nnr)=xn(1:nnr)/m_nuc
 
 	if(Cloud(ii)%condensates) then
 
