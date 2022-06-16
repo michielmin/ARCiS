@@ -519,6 +519,7 @@ c coagulation
 c			tcoaginv=npart*pi*(2d0*rpart(i))**2*abs(vsed(i))
 c rewritten for better convergence
 			tcoaginv=sqrt(pi)*3d0*(sum(xc(1:nCS,i))+xm(i))*Ggrav*Mplanet/(8d0*vth(i)*CloudR(i)**2)
+			tcoaginv=tcoaginv*exp(-(vsed(i)/vfrag)**2)
 
 			if(sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))*rpart(i).lt.Dp) then
 				tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))

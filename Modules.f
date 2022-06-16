@@ -99,7 +99,7 @@ c===============================================================================
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed
 	logical,allocatable :: includemol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust,twind,epsiter
-	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Psimplecloud,metallicity0
+	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Psimplecloud,metallicity0,vfrag
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid,blackbodystar
 	logical didcondens_chem,coagulation,resume_multinest,doMCcompute,disequilibrium,const_eff_multinest
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file,pargridfile

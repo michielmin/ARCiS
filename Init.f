@@ -1029,6 +1029,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) singlecloud
 		case("coagulation")
 			read(key%value,*) coagulation
+		case("vfrag")
+			read(key%value,*) vfrag
 		case("parameterfile","planetparameterfile")
 			planetparameterfile=trim(key%value)
 		case("planetname")
@@ -1418,6 +1420,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Psimplecloud=1d9
 	coagulation=.true.
 	singlecloud=.false.
+	vfrag=100d0	!cm/s
 	
 	twind=-1d0
 	
