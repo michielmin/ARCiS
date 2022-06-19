@@ -313,9 +313,6 @@
 				if(P(ir).gt.Psimplecloud) then
 					tau=tau+1d4
 				endif
-				if(.not.tau.gt.1d-8) then
-					tau=1d-8
-				endif
 				if(.not.tau.gt.0d0) then
 					tau=0d0
 				endif
