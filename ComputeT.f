@@ -316,9 +316,11 @@
 				if(.not.tau.gt.1d-8) then
 					tau=1d-8
 				endif
-				if(tau.gt.1d8) then
-					tau=1d8
+				if(.not.tau.gt.0d0) then
+					tau=0d0
 				endif
+				tau=tau+1d-8
+				tau=1d0/(1d0/tau+1d-8)
 				if(ir.lt.nr) then
 					tauR(jr)=tauR(jr+1)+tau
 				else

@@ -1955,10 +1955,10 @@ c-----------------------------------------------------------------------
 		do ig=1,ng
 			do ilam=1,nlam
 				Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
-c				if(Ca(ilam,ig,ir)/Ce(ilam,ig,ir).lt.1d-4) then
-c					Ca(ilam,ig,ir)=Cs(ilam,ir)/(1d4-1d0)
-c					Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
-c				endif
+				if(Ca(ilam,ig,ir)/Ce(ilam,ig,ir).lt.1d-4) then
+					Ca(ilam,ig,ir)=Cs(ilam,ir)/(1d4-1d0)
+					Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
+				endif
 			enddo
 		enddo
 	enddo
@@ -1992,12 +1992,11 @@ c				endif
 				if(P(ir).gt.Psimplecloud) then
 					tau=tau+1d4
 				endif
-				if(.not.tau.gt.1d-8) then
-					tau=1d-8
+				if(.not.tau.gt.0d0) then
+					tau=0d0
 				endif
-				if(tau.gt.1d8) then
-					tau=1d8
-				endif
+				tau=tau+1d-8
+				tau=1d0/(1d0/tau+1d-8)
 				if(ir.eq.nr) then
 					tauR_nu(ir,ilam,ig)=tau
 				else
