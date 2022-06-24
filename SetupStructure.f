@@ -219,6 +219,11 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))
 		   
 		endif
+		do i=1,nr
+			do imol=1,nmol
+				if(.not.mixrat_r(i,imol).gt.0d0) mixrat_r(i,imol)=0d0
+			enddo
+		enddo
 		call output("==================================================================")
 	else
 		mixrat_r=mixrat_old_r

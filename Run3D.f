@@ -2103,7 +2103,7 @@ c-----------------------------------------------------------------------
 	end
 	
 
-	subroutine SolveIjStar(tauR_in,Ij,nr)
+	subroutine SolveIjStar_old(tauR_in,Ij,nr)
 	IMPLICIT NONE
 	integer ir,nr
 	real*8 tauR_in(nr),Ij(nr),x(nr+2),y(nr+2),fact,d,tauR(0:nr+1)

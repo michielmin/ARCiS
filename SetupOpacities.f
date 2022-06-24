@@ -190,12 +190,12 @@ c===============
 			enddo
 			endif
 
-			tot2=sum(kappa(1:ng)*wgg(1:ng))
+			tot2=sum(kappa(1:ng)*wgg(1:ng))+cont_tot(i)
+			tot=tot+cont_tot(i)
+			kappa=kappa+cont_tot(i)
 			if(tot2.gt.0d0) then
 				kappa=kappa*tot/tot2
 			endif
-			kappa=kappa+cont_tot(i)
-	
 			Cabs(ir,i,1:ng)=kappa(1:ng)
 			call RayleighScattering(Csca(ir,i),ir,i)
 			do ig=1,ng

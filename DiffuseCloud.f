@@ -957,6 +957,11 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 		enddo
 	   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))
 	endif
+	do i=1,nr
+		do j=1,nmol
+			if(.not.mixrat_r(i,j).gt.0d0) mixrat_r(i,j)=0d0
+		enddo
+	enddo
 
 	deallocate(densv)
 	deallocate(mpart)

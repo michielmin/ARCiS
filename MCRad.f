@@ -371,6 +371,9 @@ c		enddo
 
 	Ca=Cabs(ir,ilam,ig)*Ndens(ir)
 	Cs=Csca(ir,ilam)*Ndens(ir)
+	if(.not.Ca.gt.0d0) Ca=0d0
+	if(.not.Cs.gt.0d0) Cs=0d0
+
 	do icloud=1,nclouds
 		if(docloud0(icloud)) then
 			if(Cloud(icloud)%standard.eq.'MIX') then
@@ -386,6 +389,8 @@ c		enddo
 			endif
 		endif
 	enddo
+	if(.not.Ca.gt.0d0) Ca=0d0
+	if(.not.Cs.gt.0d0) Cs=0d0
 
 	return
 	end
