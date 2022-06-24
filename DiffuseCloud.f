@@ -719,7 +719,7 @@ c equations for material
 	enddo
 	else
 	do i=1,nnr
-		xc(iCS,i)=0d0
+		xc(iCS,i)=1d-200
 		xv(iCS,i)=xv_bot(iCS)
 	enddo
 	endif
@@ -907,7 +907,8 @@ c	open(unit=20,file=trim(outputdir) // '/atoms.dat',RECL=6000)
 		molfracs_atoms=0d0
 		tot=0d0
 		nrdo=nr_cloud
-		if(i.eq.1.or.i.eq.nr) nrdo=nr_cloud/2
+		if(i.eq.1.or.i.eq.nr) nrdo=nr_cloud/2+1
+		if(i.eq.2) k=nr_cloud/2+1
 		do ir=1,nrdo
 			tot=tot+Clouddens(k)
 			do iCS=1,nCS

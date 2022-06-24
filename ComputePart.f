@@ -1407,7 +1407,7 @@ C conclusion: we are indeed retaining enough terms in series!
 
       NSTOP=NINT(XSTOP)
 
-      IF(NMX.GT.NMXX)THEN
+      IF(NMX.GT.NMXX.or..not.NMX.gt.0)THEN
 c         WRITE(0,*)'Error: NMX > NMXX=',NMXX,' for |m|x=',YMOD
          Err=1
          return
@@ -2174,7 +2174,7 @@ c                                      ** Test for convergence of sums
 
          N  = N + 1
 
-         IF( N.GT.NMX2 ) then
+         IF( N.GT.NMX2 .or..not.N.gt.0) then
 		Err=1
 		return
 	   	CALL ERRMSG(
