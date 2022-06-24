@@ -29,7 +29,7 @@
 	use Constants
 	use CloudModule
 	IMPLICIT NONE
-	integer iphase,iter
+	integer iphase,iter,iter2
 	real*8 tau_V,tau_T,Planck,f
 	real*8 g,dlnT,dlnP,d,tau,tautot,fact,contr,tau_a,exp_tau
 	real*8,allocatable :: Ce(:,:,:),Ca(:,:,:),Cs(:,:,:),taustar(:,:),tauR_nu(:,:,:)
@@ -468,7 +468,10 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 !$OMP END PARALLEL
 
 
-	do iter=1,niter
+	iter=1
+	iter2=1
+	do while(iter.le.niter.and.iter2.le.niter*5)
+	iter=iter+1
 
 	Ts(1:nr)=T(1:nr)
 
@@ -535,12 +538,13 @@ c=========== end experimental redistribution ===================================
 	Convec=.false.
 
 1	continue
+	iter2=iter2+1
 
 	call DGESV( nr, NRHS, IntH, nr, IWORK, Fl, nr, info )
 c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 
 	do ir=nr,1
-		Fl(ir)=min(max(0.5d0,Fl(ir)),20d0)
+		Fl(ir)=min(max(0.5d0,Fl(ir)),2d0)
 	enddo
 
 	maxErr=0d0

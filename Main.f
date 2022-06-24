@@ -141,8 +141,12 @@ c terms of use
 		nlamdust=nldtemp
 		specresdust=srdtemp
 		lamdust(1:nlamdust)=ldtemp(1:nlamdust)
-		if(.not.forceEbalance) call SetupStructure(.true.)
+		call SetupStructure(.true.)
 		call SetupOpacities()
+		if(forceEbalance) then
+			f=1d0
+			call DoComputeT(Tconverged,f)
+		endif
 		par_tprofile=temp
 	else
 		call SetupStructure(computeopac)
