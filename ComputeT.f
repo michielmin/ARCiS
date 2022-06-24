@@ -715,6 +715,8 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		else if(ir.ne.1) then
 			if(Convec(ir-1)) then
 				write(26,*) T(ir),P(ir)
+			else
+				write(26,*)
 			endif
 		else
 			write(26,*)
