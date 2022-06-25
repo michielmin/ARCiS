@@ -525,7 +525,13 @@ c-----------------------------------------------------------------------
 	real*8 T,nu,x
 
 	x=hplanck*nu*clight/(kb*T)
-	Planck=(2d0*hplanck*nu**3*clight)/(exp(x)-1d0)
+	if (x.gt.40d0) then
+		Planck=(2d0*hplanck*nu**3*clight)*exp(-x)
+	else if (x.lt.0.1) then
+		Planck=(2d0*hplanck*nu**3*clight)*(-0.5d0+1.d0/x+x/12.d0-x**3/720.d0)
+	else
+		Planck=(2d0*hplanck*nu**3*clight)/(exp(x)-1d0)
+	endif
 
 	return
 	end

@@ -400,7 +400,7 @@ c      write(*,'("C/O =",0pF6.3)') eps(C)/eps(O)
             mu = nHges/pgas*(bk*Tg)*muH
             dmu = mu-muold
             if (.not.model_pconst) exit
-          else
+          else if(mu.ne.muold) then
             dfdmu = (ff-fold)/(mu-muold)
             dmu   = -ff/dfdmu
             !write(98,'(I3,99(1pE14.7))') it,muold,mu,fold,ff,dfdmu,dmu/mu
@@ -410,6 +410,8 @@ c      write(*,'("C/O =",0pF6.3)') eps(C)/eps(O)
             else
               mu = nHges/pgas*(bk*Tg)*muH
             endif  
+		  else
+			dmu=0d0
           endif
           fold = ff
 c          print '("p-it=",i3,"  mu=",2(1pE20.12))',it,mu/amu,dmu/mu

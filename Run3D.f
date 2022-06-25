@@ -65,8 +65,12 @@ c	recomputeopac=.true.
 
 	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,fDay,betamin,betamax)
 
-	call DetermineShift(long,beta,nlong,nlatt,hotspotshift)
-	hotspotshift=hotspotshift-180d0
+	if(vxx.eq.0d0) then
+		hotspotshift=0d0
+	else
+		call DetermineShift(long,beta,nlong,nlatt,hotspotshift)
+		hotspotshift=hotspotshift-180d0
+	endif
 
 	if(iterateshift) then
 		if(abs(hotspotshift).gt.abs(hotspotshift0)) then
@@ -2358,16 +2362,49 @@ c=========================================
 
 	real*8 function NormSig(x,a,c,x0,x1)
 	IMPLICIT NONE
-	real*8 x,a,y1,y2,xx,c,x0,x1
+	real*8 x,a,y1,y2,xx,c,x0,x1,yy
 
 	xx=(0d0-c)*a
-	y1=1d0/(1d0+exp(-xx))
+	if(xx.lt.-40d0) then
+		y1=exp(xx)
+	else if(xx.gt.40d0) then
+		y1=1d0
+	else if(abs(xx).lt.0.1) then
+		y1=0.5d0+xx/4d0-xx**3/48d0
+	else
+		y1=1d0/(exp(-xx)+1d0)
+	endif
 	xx=(1d0-c)*a
-	y2=1d0/(1d0+exp(-xx))
+	if(xx.lt.-40d0) then
+		y2=exp(xx)
+	else if(xx.gt.40d0) then
+		y2=1d0
+	else if(abs(xx).lt.0.1) then
+		y2=0.5d0+xx/4d0-xx**3/48d0
+	else
+		y2=1d0/(exp(-xx)+1d0)
+	endif
 
-	xx=(x-x0)/(x1-x0)
-	xx=(xx-c)*a
-	NormSig=(1d0/(1d0+exp(-xx))-y1)/(y2-y1)
+	if(x1.eq.x0) then
+		yy=1d0
+	else
+		xx=(x-x0)/(x1-x0)
+		xx=(xx-c)*a
+		if(xx.lt.-40d0) then
+			yy=exp(xx)
+		else if(xx.gt.40d0) then
+			yy=1d0
+		else if(abs(xx).lt.0.1) then
+			yy=0.5d0+xx/4d0-xx**3/48d0
+		else
+			yy=1d0/(exp(-xx)+1d0)
+		endif
+	endif
+	if(y2.eq.y1) then
+		NormSig=1d0
+	else
+		NormSig=(yy-y1)/(y2-y1)
+	endif
 	
 	return
 	end

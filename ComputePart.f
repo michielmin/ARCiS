@@ -862,9 +862,10 @@ c H2O: 18
 	if(frac(l).eq.0d0) goto 10
 	do k=1,ns
 	r1=r0(k)
-	if(.not.r1.gt.0d0) r1=0.001d0
-	if(.not.e1(l,ilam).gt.0d0) e1(l,ilam)=1.1d+0
-	if(.not.e2(l,ilam).gt.0d0) e2(l,ilam)=1.0d-6
+	if(.not.r1.gt.0.001d0) r1=0.001d0
+	if(.not.e1(l,ilam).gt.1d-6) e1(l,ilam)=1.0d-6
+	if(e1(l,ilam).eq.1d0) e1(l,ilam)=1.001d0
+	if(.not.e2(l,ilam).gt.1d-6) e2(l,ilam)=1.0d-6
 	Err=0
 	spheres=0
 	toolarge=0
@@ -887,10 +888,10 @@ c H2O: 18
 		lmie=lamdust(ilam)*1d4
 		e1mie=e1(l,ilam)
 		e2mie=e2(l,ilam)
-		if(rmie/lmie.lt.100d0) then
+		if(rmie/lmie.lt.10d0) then
 			call callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,Err)
 		else
-			lmie=rmie/100d0
+			lmie=rmie/10d0
 			call callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,Err)
 		endif
 		if(.not.csmie.gt.0d0) then
@@ -904,10 +905,10 @@ c H2O: 18
 			e1mie=e1(l,ilam)
 			e2mie=e2(l,ilam)
 			if(Err.eq.1.or.i.eq.1) then
-				if(rmie/lmie.lt.100d0) then
+				if(rmie/lmie.lt.10d0) then
 					call callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie)
 				else
-					lmie=rmie/100d0
+					lmie=rmie/10d0
 					call callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie)
 				endif
 			endif
@@ -1879,12 +1880,12 @@ c     ..
 c	allocate(w(3,LL))
 c	allocate(acap(LL))
 
-      IF( PASS1 ) THEN
+c      IF( PASS1 ) THEN
 
          PINUM  = TWO*ASIN( ONE )
          PASS1  = .False.
 
-      END IF
+c      END IF
 
       XSHELL = RSHELL*WVNO
       XCORE  = RCORE*WVNO

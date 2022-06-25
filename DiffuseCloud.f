@@ -751,14 +751,20 @@ c equations for material
 		else
 			rho_av(i)=sum(rhodust(1:nCS))/real(nCS)
 		endif
+		tot=sum(xc(1:nCS,i))+xm(i)
 		if(xn(i).gt.0d0) then
-			tot=sum(xc(1:nCS,i))+xm(i)
 			rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
 			if(.not.rr.ge.r_nuc) then
 				rr=r_nuc
+				xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
+			endif
+			if(.not.rr.le.1d0) then
+				rr=1d0
+				xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
 			endif
 		else
 			rr=r_nuc
+			xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
 		endif
 		err=abs(rr-rpart(i))/(rr+rpart(i))
 		if(err.gt.maxerr) maxerr=err
@@ -877,6 +883,7 @@ CCloud(ii)%frac(i,17)=0d0
 		if(tot3.gt.0d0) then
 			rr=((3d0*tot1)/(4d0*pi*tot3))**(1d0/3d0)
 			if(.not.rr.gt.r_nuc) rr=r_nuc
+			if(.not.rr.lt.1d0) rr=1d0
 		else
 			rr=r_nuc
 		endif

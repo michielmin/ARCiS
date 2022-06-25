@@ -18,7 +18,7 @@ ifeq ($(debug),true)
   ifeq ($(gfort),true)
     DEBUGGING = -Wall -Wno-unused-variable -fbounds-check -fbacktrace -fcheck=all
   else	
-    DEBUGGING = -check all -g -traceback -check bounds -check uninit -O0
+    DEBUGGING = -check all -g -traceback -check bounds -check uninit -O0 -ftrapuv -fpe0 -ftz
   endif
 endif
 
@@ -31,12 +31,6 @@ ifeq ($(multi),true)
 		MULTICORE = -qopenmp -parallel -fp-model strict -DUSE_OPENMP
 		ifeq ($(shell uname),Linux)
 			MULTICORE = -qopenmp -fp-model strict -DUSE_OPENMP
-		endif
-	endif
-	ifeq ($(debug),true)
-		MULTICORE = -fopenmp -DUSE_OPENMP
-		ifeq ($(shell uname),Linux)
-			MULTICORE = -fopenmp -DUSE_OPENMP
 		endif
 	endif
 endif

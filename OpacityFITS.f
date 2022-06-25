@@ -192,7 +192,7 @@ C	 create the new empty FITS file
 	
 	type databaseKtable
 		real*8,allocatable :: ktable(:,:,:,:),P(:),T(:)
-		real*8,allocatable :: g(:),wg(:),Cp(:,:)
+		real*8,allocatable :: g(:),wg(:)
 		integer nlam,nP,nT,ng
 		real*8 lam1,lam2,P1,P2,T1,T2
 		logical available
@@ -455,77 +455,6 @@ C	 create the new empty FITS file
 	   end do
 	endif
 	
-	allocate(Ktable(imol)%Cp(Ktable(imol)%nT,Ktable(imol)%nP))
-	do iT=1,Ktable(imol)%nT
-		Ktable(imol)%Cp(iT,1:Ktable(imol)%nP)=0d0
-		do ilam=1,nlam-1
-			Pl=Planck(Ktable(imol)%T(iT),freq(ilam))
-			do iP=1,Ktable(imol)%nP
-				do ig=1,ng
-					Ktable(imol)%Cp(iT,iP)=Ktable(imol)%Cp(iT,iP)+wgg(ig)*dfreq(ilam)*Pl*Ktable(imol)%ktable(ig,ilam,iT,iP)
-				enddo
-			enddo
-			tot2=tot2+dfreq(ilam)*Pl
-		enddo
-		Ktable(imol)%Cp(iT,1:Ktable(imol)%nP)=Ktable(imol)%Cp(iT,1:Ktable(imol)%nP)/tot2
-	enddo
-
-	return
-
-	end
-
-	subroutine GetCplanck(Cplanck,ir,T0)
-	use GlobalSetup
-	use OpacityFITSdata
-	implicit none
-	integer iT,iP,imol,ir
-	real*8 Cplanck,wP1,wP2,wT1,wT2,T0
-
- 	Cplanck=0d0
-	do imol=1,nmol
-		if(mixrat_r(ir,imol).gt.0d0.and.Ktable(imol)%available) then
-
-		if(P(ir).lt.Ktable(imol)%P1) then
-			iP=1
-			wP1=1d0
-			wP2=0d0
-		else if(P(ir).gt.Ktable(imol)%P2) then
-			iP=Ktable(imol)%nP-1
-			wP1=0d0
-			wP2=1d0
-		else
-			do iP=1,Ktable(imol)%nP
-				if(P(ir).ge.Ktable(imol)%P(iP).and.P(ir).lt.Ktable(imol)%P(iP+1)) exit
-			enddo
-			wP1=1d0-log10(P(ir)/Ktable(imol)%P(iP))/log10(Ktable(imol)%P(iP+1)/Ktable(imol)%P(iP))
-			wP2=1d0-wP1
-		endif
-
-		if(T0.lt.Ktable(imol)%T1) then
-			iT=1
-			wT1=1d0
-			wT2=0d0
-		else if(T0.gt.Ktable(imol)%T2) then
-			iT=Ktable(imol)%nT-1
-			wT1=0d0
-			wT2=1d0
-		else
-			do iT=1,Ktable(imol)%nT
-				if(T0.ge.Ktable(imol)%T(iT).and.T0.lt.Ktable(imol)%T(iT+1)) exit
-			enddo
-			wT1=1d0-log10(T0/Ktable(imol)%T(iT))/log10(Ktable(imol)%T(iT+1)/Ktable(imol)%T(iT))
-			wT2=1d0-wT1
-		endif
-
-		Cplanck=Cplanck+mixrat_r(ir,imol)*(Ktable(imol)%Cp(iT,iP)*wT1*wP1+
-     &						  Ktable(imol)%Cp(iT+1,iP)*wT2*wP1+
-     &						  Ktable(imol)%Cp(iT,iP+1)*wT1*wP2+
-     &						  Ktable(imol)%Cp(iT+1,iP+1)*wT2*wP2)
-
-		endif
-	enddo
-	Cplanck=Cplanck*Ndens(ir)
-
 	return
 	end
 
