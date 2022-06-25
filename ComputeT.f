@@ -314,14 +314,17 @@
 				if(.not.tau.gt.0d0) then
 					tau=0d0
 				endif
-				tau=tau+1d-8
-				tau=1d0/(1d0/tau+1d-8)
-				if(ir.lt.nr) then
-					tauR(jr)=tauR(jr+1)+tau
-				else
-					tauR(jr)=tau
-				endif
+				tau=tau+1d-10
+				tau=1d0/(1d0/tau+1d-10)
 				dtauR_nu(jr,ilam,ig)=tau
+			enddo
+			dtauR_nu(nr,ilam,ig)=dtauR_nu(nr-1,ilam,ig)**2/dtauR_nu(nr-2,ilam,ig)
+			do jr=nr,0,-1
+				if(jr.eq.nr) then
+					tauR(jr)=dtauR_nu(nr,ilam,ig)
+				else
+					tauR(jr)=tauR(jr+1)+dtauR_nu(jr,ilam,ig)
+				endif
 			enddo
 			tauR_nu(0:nr,ilam,ig)=tauR(0:nr)
 		enddo
@@ -373,8 +376,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 			contr=(Fstar_LR(ilam)/(pi*Dplanet**2))
 			tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(max(must,1d-5))
 			Ij_omp(0:nr)=contr*exp(-tauR_omp(0:nr))/(4d0*pi)
-			Ih_omp(0:nr-1)=-must*contr*exp(-(tauR_omp(0:nr-1)+tauR_omp(1:nr))/2d0)
-			Ih_omp(nr)=-must*contr*exp(-tauR_omp(nr))
+			Ih_omp(0:nr)=-must*Ij_omp(0:nr)*4d0*pi
 
 			Hstar_lam(0:nr)=Hstar_lam(0:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
 			directHstar_omp(0:nr)=directHstar_omp(0:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
@@ -855,7 +857,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	real*8 x(nr+2),y(nr+2),tauR(0:nr+1),Ma(nr+2),Mb(nr+2),Mc(nr+2)
 
 	tauR(0:nr)=tauR_in(0:nr)
-	tauR(nr+1)=0d0
+	tauR(nr+1)=tauR_in(nr)*tauR_in(nr)/tauR_in(nr-1)
 
 	Ma=0d0
 	Mb=0d0
@@ -869,8 +871,8 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	enddo
 	Mb(1)=1d0+1d0/(tauR(0)-tauR(1))
 	Mc(1)=-1d0/(tauR(0)-tauR(1))
-	Ma(nr+2)=1d0/(tauR(nr))
-	Mb(nr+2)=-1d0-1d0/(tauR(nr))
+	Ma(nr+2)=1d0/(tauR(nr)-tauR(nr+1))
+	Mb(nr+2)=-1d0-1d0/(tauR(nr)-tauR(nr+1))
 
 	x=0d0
 	x(2:nr+1)=Si(1:nr)
