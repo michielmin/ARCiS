@@ -178,7 +178,7 @@
 	Cs=0d0
 	Ca=0d0
 	do ir=1,nr
-		do ilam=1,nlam-1
+		do ilam=1,nlam
 			g=0d0
 			do ig=1,ng
 				call Crossections(ir,ilam,ig,Ca_HR(ilam,ig),Cs_HR(ilam,ig),docloud0)
@@ -202,6 +202,8 @@
 				Fstar_LR(ilam)=0d0
 				Cs(ir,ilam,1:ng)=0d0
 				do i=i1,i2
+					j=i
+					if(i.eq.ilam) j=ilam-1
 					if(i1.eq.i2) then
 						ww=1d0
 					else if(i.eq.i1) then
@@ -213,11 +215,11 @@
 					endif
 					do ig=1,ng
 						ngF=ngF+1
-						temp_a(ngF)=Ca_HR(i,ig)
+						temp_a(ngF)=Ca_HR(j,ig)
 						wtemp(ngF)=ww*wgg(ig)
 					enddo
-					Fstar_LR(ilam)=Fstar_LR(ilam)+ww*Fstar(i)
-					Cs(ir,ilam,1:ng)=Cs(ir,ilam,1:ng)+ww*Cs_HR(i,1:ng)
+					Fstar_LR(ilam)=Fstar_LR(ilam)+ww*Fstar(j)
+					Cs(ir,ilam,1:ng)=Cs(ir,ilam,1:ng)+ww*Cs_HR(j,1:ng)
 					tot=tot+ww
 				enddo
 				Fstar_LR(ilam)=Fstar_LR(ilam)/tot

@@ -472,8 +472,8 @@ c start the loop
 
 	vsed=0d0
 	do i=1,nnr
-		cs=sqrt(kb*CloudT(i)/(2.3*mp))
-		vth(i)=sqrt(8d0*kb*CloudT(i)/(pi*2.3*mp))
+		cs=sqrt(kb*CloudT(i)/(2.3d0*mp))
+		vth(i)=sqrt(8d0*kb*CloudT(i)/(pi*2.3d0*mp))
 		vsed(i)=-sqrt(pi)*rpart(i)*rho_av(i)*Ggrav*Mplanet/(2d0*Clouddens(i)*vth(i)*CloudR(i)**2)
 		mpart(i)=rho_av(i)*4d0*pi*rpart(i)**3/3d0
 	enddo
@@ -510,7 +510,7 @@ c equations for number of Nuclii
 c coagulation
 		if(coagulation) then
 			npart=xn(i)*Clouddens(i)
-			lmfp=2.3*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
+			lmfp=2.3d0*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
 			vmol=0.5d0*lmfp*vth(i)
 			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
 
@@ -529,8 +529,8 @@ c rewritten for better convergence
 
 			tcinv(iter,i)=tcoaginv
 			
-c			call computemedian(tcinv(1:iter,i),iter,tcoaginv)
-			tcoaginv=sum(tcinv(1:iter,i))/real(iter)
+			call computemedian(tcinv(1:iter,i),iter,tcoaginv)
+c			tcoaginv=sum(tcinv(1:iter,i))/real(iter)
 
 			An(j,i)=An(j,i)-Clouddens(i)*tcoaginv
 		endif
@@ -606,6 +606,9 @@ c equations for mass in Nuclii
 	if(Cloud(ii)%haze) then
 		do i=1,nnr
 			xm(i)=xm(i)*max(0d0,1d0-densv(i,ihaze)/(Clouddens(i)*xv_bot(ihaze)))
+			if(xn(i).gt.xm(i)) then
+				xn(i)=xm(i)
+			endif
 		enddo
 	else
 		xm=0d0
@@ -630,7 +633,7 @@ c equations for mass in Nuclii
 
 	if(dospecies(iCS)) then
 	do i=1,nnr
-		cs=sqrt(kb*CloudT(i)/(2.3*mp))
+		cs=sqrt(kb*CloudT(i)/(2.3d0*mp))
 		vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*mu(iCS)*mp))
 		Sc(i)=min(vthv(i)*rpart(i),kb*CloudT(i)*sqrt(8d0*kb*CloudT(i)/(pi*2.3*mp))/(3d0*CloudP(i)*1d6*8e-15))
      &				*4d0*pi*rpart(i)*Clouddens(i)
@@ -703,12 +706,13 @@ c equations for material
 	call DGESV( NN, NRHS, Aomp, NN, IWORKomp, xomp, NN, info )
 
 	do i=1,NN
-		if(.not.xomp(i).gt.1d-200) xomp(i)=1d-200
+		if(.not.xomp(i).gt.0d0) xomp(i)=0d0
 	enddo
 
 	do i=1,nnr
 		xc(iCS,i)=xomp(ixc(iCS,i))
 		xv(iCS,i)=xomp(ixv(iCS,i))
+		if(.not.xn(i).gt.0d0) xc(iCS,i)=0d0
 	enddo
 	do i=1,nnr
 		if(xc(iCS,i).lt.0d0) xc(iCS,i)=0d0
@@ -716,7 +720,7 @@ c equations for material
 	enddo
 	else
 	do i=1,nnr
-		xc(iCS,i)=1d-200
+		xc(iCS,i)=0d0
 		xv(iCS,i)=xv_bot(iCS)
 	enddo
 	endif
@@ -768,7 +772,7 @@ c equations for material
 		endif
 		err=abs(rr-rpart(i))/(rr+rpart(i))
 		if(err.gt.maxerr) maxerr=err
-		rpart(i)=rr
+		rpart(i)=sqrt(rr*rpart(i))
 	enddo
 	if(maxerr.lt.1d-3) exit
 	enddo
@@ -778,13 +782,16 @@ c end the loop
 	do i=1,nr
 		cloud_dens(i,ii)=0d0
 		Cloud(ii)%rv(i)=0d0
-		Cloud(ii)%frac(i,1:20)=1d-200
+		Cloud(ii)%frac(i,1:20)=0d0
 		CloudMatFrac(i,1:nCS)=0d0
 		tot1=0d0
 		tot2=0d0
 		tot3=0d0
 		nrdo=nr_cloud
-		if(i.eq.1.or.i.eq.nr) nrdo=nr_cloud/2
+		if(i.eq.1.or.i.eq.nr) then
+			nrdo=nr_cloud/2
+			if(nrdo.lt.1) nrdo=1
+		endif
 		do j=1,nrdo
 			tot1=tot1+xm(k)*Clouddens(k)/rho_nuc
 			do iCS=1,nCS
@@ -876,7 +883,11 @@ CCloud(ii)%frac(i,17)=0d0
 
 		enddo
 		tot=sum(Cloud(ii)%frac(i,1:20))
-		Cloud(ii)%frac(i,1:20)=Cloud(ii)%frac(i,1:20)/tot
+		if(tot.gt.0d0) then
+			Cloud(ii)%frac(i,1:20)=Cloud(ii)%frac(i,1:20)/tot
+		else
+			Cloud(ii)%frac(i,1:20)=1d0/20d0
+		endif
 
 		tot=sum(CloudMatFrac(i,1:nCS))
 		CloudMatFrac(i,1:nCS)=CloudMatFrac(i,1:nCS)/tot
