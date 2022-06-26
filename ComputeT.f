@@ -54,8 +54,9 @@
 	real*8,allocatable :: x_SIj(:),y_SIj(:),tauR_SIj(:),Ma_SIj(:),Mb_SIj(:),Mc_SIj(:)
 	character*500 file
 	integer icloud
-	logical Convec(nr)
+	logical Convec(nr),lowresT
 
+	lowresT=.false.
 	maxfact=4d0
 
 	allocate(IP(nr*4+2))
@@ -63,21 +64,30 @@
 	IP(2)=nr*4+2
 	allocate(WS(IP(1)))
 	
-	specres_LR=min(specres/1.5,11d0)
-	tot=lam(1)
-	nlam_LR=1
-	do while(tot.lt.lam(nlam))
-		tot=tot*(1d0+1d0/specres_LR)
-		nlam_LR=nlam_LR+1
-	enddo
+	if(lowresT) then
+		specres_LR=min(specres/1.5,11d0)
+		tot=lam(1)
+		nlam_LR=1
+		do while(tot.lt.lam(nlam))
+			tot=tot*(1d0+1d0/specres_LR)
+			nlam_LR=nlam_LR+1
+		enddo
+	else
+		specres_LR=specres
+		nlam_LR=nlam
+	endif
 	allocate(lam_LR(nlam_LR))
 	allocate(freq_LR(nlam_LR))
 	allocate(dfreq_LR(nlam_LR))
-	lam_LR(1)=lam(1)
-	do i=2,nlam_LR-1
-		lam_LR(i)=lam_LR(i-1)*(1d0+1d0/specres_LR)
-	enddo
-	lam_LR(nlam_LR)=lam(nlam)
+	if(lowresT) then
+		lam_LR(1)=lam(1)
+		do i=2,nlam_LR-1
+			lam_LR(i)=lam_LR(i-1)*(1d0+1d0/specres_LR)
+		enddo
+		lam_LR(nlam_LR)=lam(nlam)
+	else
+		lam_LR(1:nlam_LR)=lam(1:nlam)
+	endif
 	do i=1,nlam_LR
 		freq_LR(i)=1d0/lam_LR(i)
 	enddo
@@ -118,6 +128,7 @@
 	allocate(SurfEmis_LR(nlam_LR))
 
 	call ComputeSurface()
+	if(lowresT) then
 	do ilam=1,nlam_LR-1
 		i1=0
 		i2=0
@@ -131,6 +142,8 @@
 			tot=0d0
 			SurfEmis_LR(ilam)=0d0
 			do i=i1,i2
+				j=i
+				if(i.eq.ilam) j=ilam-1
 				if(i1.eq.i2) then
 					ww=1d0
 				else if(i.eq.i1) then
@@ -140,7 +153,7 @@
 				else
 					ww=abs(lam(i)-lam(i+1))
 				endif
-				SurfEmis_LR(ilam)=SurfEmis_LR(ilam)+ww*surface_emis(i)
+				SurfEmis_LR(ilam)=SurfEmis_LR(ilam)+ww*surface_emis(j)
 				tot=tot+ww
 			enddo
 			SurfEmis_LR(ilam)=SurfEmis_LR(ilam)/tot
@@ -148,7 +161,9 @@
 			SurfEmis_LR(ilam)=1d0
 		endif
 	enddo
-
+	else
+	SurfEmis_LR(1:nlam_LR)=surface_emis(1:nlam)
+	endif
 
 	docloud0=.false.
 	do i=1,nclouds
@@ -187,6 +202,7 @@
 			enddo
 		enddo
 
+		if(lowresT) then
 		do ilam=1,nlam_LR-1
 			i1=0
 			i2=0
@@ -268,6 +284,11 @@
 				Fstar_LR(ilam)=0d0
 			endif
 		enddo
+		else
+			Ca(ir,1:nlam,1:ng)=Ca_HR(1:nlam,1:ng)
+			Cs(ir,1:nlam,1:ng)=Cs_HR(1:nlam,1:ng)
+			Fstar_LR(1:nlam)=Fstar(1:nlam)
+		endif
 	enddo
 	deallocate(temp_a)
 	deallocate(wtemp)
