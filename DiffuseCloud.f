@@ -772,7 +772,7 @@ c equations for material
 		endif
 		err=abs(rr-rpart(i))/(rr+rpart(i))
 		if(err.gt.maxerr) maxerr=err
-		rpart(i)=rr
+		rpart(i)=sqrt(rr*rpart(i))
 	enddo
 	if(maxerr.lt.1d-3) exit
 	enddo
