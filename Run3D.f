@@ -1947,7 +1947,7 @@ c-----------------------------------------------------------------------
 	IMPLICIT NONE
 	integer inu,nnu,ilam,ir,ig,inu0,iter,niter,info,NRHS
 	parameter(nnu=10,niter=500)
-	real*8 tau,d,tauR_nu(nr,nlam,ng),contr,Jstar_nu(nr,nlam,ng)
+	real*8 tau,d,tauR_nu(0:nr,nlam,ng),contr,Jstar_nu(nr,nlam,ng)
 	real*8 Si(nlam,ng,0:nr,nnu0),BBr(nlam,0:nr),Ca(nlam,ng,nr),Cs(nlam,nr),Ce(nlam,ng,nr)
 	real*8 nu(nnu),wnu(nnu),must,tauRs(nr),Ijs(nr),eps,Planck,tot
 	logical err
@@ -1987,6 +1987,11 @@ c-----------------------------------------------------------------------
 					tau=d*Ce(ilam,ig,ir+1)/dens(ir+1)
 					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
 					tau=tau+d*Ce(ilam,ig,ir)/dens(ir)
+				else if(ir.eq.0) then
+					d=abs(sqrt(P(2)*P(1))-P(1))*1d6/grav(1)
+					tau=d*Ce(ilam,ig,1)/dens(1)
+					d=abs(P(1)*sqrt(P(1)/P(2))-P(1))*1d6/grav(1)
+					tau=tau+d*Ce(ilam,ig,1)/dens(1)
 				else
 					d=abs(sqrt(P(ir+2)*P(ir+1))-P(ir+1))*1d6/grav(ir)
 					tau=d*Ce(ilam,ig,ir+1)/dens(ir+1)
