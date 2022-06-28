@@ -466,14 +466,14 @@ c Now call the setup for the readFull3D part
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,itauR,ntauR,SiR,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp,tauR,SiRalb)
-!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,fulloutput3D,Rplanet,
+!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,fulloutput3D,Rplanet,computeT,
 !$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
 	allocate(fluxp_omp(nlam))
 	allocate(ftot(nlam))
-	allocate(tauR(0:nr*2*max(nlong,nlatt),nlam,ng),SiR(nr*2*max(nlong,nlatt),nlam,ng))
-	if(computealbedo) allocate(alb_omp(nlam),SiRalb(nr*2*max(nlong,nlatt),nlam,ng))
+	allocate(tauR(0:nr*2*max(nlong,nlatt),nlam,ng),SiR(0:nr*2*max(nlong,nlatt),nlam,ng))
+	if(computealbedo) allocate(alb_omp(nlam),SiRalb(0:nr*2*max(nlong,nlatt),nlam,ng))
 	fluxp_omp=0d0
 	if(computealbedo) alb_omp=0d0
 !$OMP DO SCHEDULE(DYNAMIC,1)
@@ -618,12 +618,15 @@ c Note we are here using the symmetry between North and South
 			if(ntauR.gt.0) then
 				do ilam=1,nlam-1
 					do ig=1,ng
-						do itauR=1,ntauR-1
+						SiR(0,ilam,ig)=SiR(1,ilam,ig)
+						if(computealbedo) SiRalb(0,ilam,ig)=SiRalb(1,ilam,ig)
+						do itauR=0,ntauR-1
 							if(tauR(itauR,ilam,ig).gt.maxtau) exit
 						enddo
 						if(itauR.gt.ntauR) itauR=ntauR
-						if(ntauR.gt.1) then
-							do itauR=1,ntauR-1
+						if(.false.) then
+						if(ntauR.ge.1) then
+							do itauR=0,ntauR-1
 								call ComputeI12(tauR(itauR+1,ilam,ig),tauR(itauR,ilam,ig),SiR(itauR+1,ilam,ig),
      &													SiR(itauR,ilam,ig),ftot(ilam))
 								fluxp_omp(ilam)=fluxp_omp(ilam)+A*wgg(ig)*ftot(ilam)*exp(-tauR(itauR,ilam,ig))
@@ -633,13 +636,27 @@ c Note we are here using the symmetry between North and South
 									alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*ftot(ilam)*exp(-tauR(itauR,ilam,ig))
 								endif
 							enddo
-						else if(ntauR.eq.1) then
+						else if(ntauR.eq.0) then
 							ftot(ilam)=SiR(1,ilam,ig)*(1d0-exp(-tauR(1,ilam,ig)))
 							fluxp_omp(ilam)=fluxp_omp(ilam)+A*wgg(ig)*ftot(ilam)
 							if(computealbedo) then
 								ftot(ilam)=SiRalb(1,ilam,ig)*(1d0-exp(-tauR(1,ilam,ig)))
 								alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*ftot(ilam)
 							endif
+						endif
+						else
+						if(ntauR.ge.1) then
+							do itauR=0,ntauR-1
+								tau1=tauR(itauR+1,ilam,ig)-tauR(itauR,ilam,ig)
+								ftot(ilam)=SiR(itauR+1,ilam,ig)*(1d0-exp(-tau1))
+								fluxp_omp(ilam)=fluxp_omp(ilam)+A*wgg(ig)*ftot(ilam)*exp(-tauR(itauR,ilam,ig))
+								if(computealbedo) then
+									tau1=tauR(itauR+1,ilam,ig)-tauR(itauR,ilam,ig)
+									ftot(ilam)=SiRalb(itauR+1,ilam,ig)*(1d0-exp(-tau1))
+									alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*ftot(ilam)*exp(-tauR(itauR,ilam,ig))
+								endif
+							enddo
+						endif
 						endif
 					enddo
 				enddo
