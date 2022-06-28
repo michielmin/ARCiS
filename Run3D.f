@@ -19,7 +19,8 @@
 	integer nx_im,ix,iy,ni,ilatt,ilong,imustar
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam)
-	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:)
+	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:),tauR(:,:,:),SiR(:,:,:),SiRalb(:,:,:)
+	integer itauR,ntauR
 	logical iterateshift,actually1D,do_ibeta(n3D)
 	real*8 vxxmin,vxxmax,ComputeKzz,betamin_term,tot1,tot2
 	logical docloud0(max(nclouds,1))
@@ -463,15 +464,16 @@ c Now call the setup for the readFull3D part
 	fluxp=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,
-!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp)
+!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,itauR,ntauR,SiR,
+!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp,tauR,SiRalb)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,fulloutput3D,Rplanet,
-!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,
+!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
 	allocate(fluxp_omp(nlam))
 	allocate(ftot(nlam))
-	if(computealbedo) allocate(alb_omp(nlam))
+	allocate(tauR(0:nr*2*max(nlong,nlatt),nlam,ng),SiR(nr*2*max(nlong,nlatt),nlam,ng))
+	if(computealbedo) allocate(alb_omp(nlam),SiRalb(nr*2*max(nlong,nlatt),nlam,ng))
 	fluxp_omp=0d0
 	if(computealbedo) alb_omp=0d0
 !$OMP DO SCHEDULE(DYNAMIC,1)
@@ -542,6 +544,8 @@ c Note we are here using the symmetry between North and South
 				mixrat_average3D(ipc,1:nr,1:nmol)=mixrat_average3D(ipc,1:nr,1:nmol)+mixrat3D(i,1:nr,1:nmol)*A
 			endif
 			j=0
+			itauR=0
+			tauR=0d0
 1			continue
 			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nr,nlong,nlatt)
 			if(i1.le.nr) then
@@ -554,14 +558,14 @@ c Note we are here using the symmetry between North and South
 					if(inu.lt.1) inu=1
 					if(.not.inu.lt.nnu0-1) inu=nnu0-1
 				endif
+				itauR=itauR+1
 				do ilam=1,nlam
 					if(lamemis(ilam)) then
 					do ig=1,ng
 						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
-						exp_tau1=exp(-tau1)
-						ftot(ilam)=ftot(ilam)+A*wgg(ig)*Si(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
-						if(computealbedo) alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*SiSc(ilam,ig,i1,inu,i)*(1d0-exp_tau1)*fact(ilam,ig)
-						fact(ilam,ig)=fact(ilam,ig)*exp_tau1
+						tauR(itauR,ilam,ig)=tauR(itauR-1,ilam,ig)+1d0/(1d-8+1d0/(1d-8+tau1))
+						SiR(itauR,ilam,ig)=Si(ilam,ig,i1,inu,i)
+						if(computealbedo) SiRalb(itauR,ilam,ig)=SiSc(ilam,ig,i1,inu,i)
 					enddo
 					endif
 				enddo
@@ -580,6 +584,7 @@ c Note we are here using the symmetry between North and South
 					if(lamemis(ilam)) then
 					do ig=1,ng
 						contr=Si(ilam,ig,0,inu,i)
+						fact(ilam,ig)=exp(-tauR(itauR,ilam,ig))
 						ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
 						if(computealbedo) alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*SiSc(ilam,ig,0,inu,i)*fact(ilam,ig)
 					enddo
@@ -606,9 +611,39 @@ c Note we are here using the symmetry between North and South
 			i3=i3next
 			edgeNR=edgenext
 			j=j+1
-			if(j.lt.(nr*nlatt*nlong)) goto 1
+			if(j.lt.nr*2*max(nlatt,nlong)) goto 1
 2			continue
 			fluxp_omp(1:nlam)=fluxp_omp(1:nlam)+ftot(1:nlam)
+			ntauR=itauR
+			if(ntauR.gt.0) then
+				do ilam=1,nlam-1
+					do ig=1,ng
+						do itauR=1,ntauR-1
+							if(tauR(itauR,ilam,ig).gt.maxtau) exit
+						enddo
+						if(itauR.gt.ntauR) itauR=ntauR
+						if(ntauR.gt.1) then
+							do itauR=1,ntauR-1
+								call ComputeI12(tauR(itauR+1,ilam,ig),tauR(itauR,ilam,ig),SiR(itauR+1,ilam,ig),
+     &													SiR(itauR,ilam,ig),ftot(ilam))
+								fluxp_omp(ilam)=fluxp_omp(ilam)+A*wgg(ig)*ftot(ilam)*exp(-tauR(itauR,ilam,ig))
+								if(computealbedo) then
+									call ComputeI12(tauR(itauR+1,ilam,ig),tauR(itauR,ilam,ig),SiRalb(itauR+1,ilam,ig),
+     &													SiRalb(itauR,ilam,ig),ftot(ilam))
+									alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*ftot(ilam)*exp(-tauR(itauR,ilam,ig))
+								endif
+							enddo
+						else if(ntauR.eq.1) then
+							ftot(ilam)=SiR(1,ilam,ig)*(1d0-exp(-tauR(1,ilam,ig)))
+							fluxp_omp(ilam)=fluxp_omp(ilam)+A*wgg(ig)*ftot(ilam)
+							if(computealbedo) then
+								ftot(ilam)=SiRalb(1,ilam,ig)*(1d0-exp(-tauR(1,ilam,ig)))
+								alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*ftot(ilam)
+							endif
+						endif
+					enddo
+				enddo
+			endif
 			if(makeimage) rphi_image(1:nlam,irtrace,iptrace)=ftot(1:nlam)
 		enddo
 	enddo
@@ -617,14 +652,16 @@ c Note we are here using the symmetry between North and South
 	fluxp(1:nlam)=fluxp(1:nlam)+fluxp_omp(1:nlam)
 	if(computealbedo) then
 		planet_albedo(ipc,1:nlam)=planet_albedo(ipc,1:nlam)+alb_omp(1:nlam)
-		deallocate(alb_omp)
+		deallocate(alb_omp,SiRalb)
 	endif
 	deallocate(fluxp_omp)
 !$OMP END CRITICAL
 	deallocate(fact)
 	deallocate(ftot)
+	deallocate(tauR,SiR)
 !$OMP FLUSH
 !$OMP END PARALLEL
+	print*,sum(fluxp(1:nlam-1)*dfreq(1:nlam-1))/(pi*TeffP**4*Rplanet**2)
 	fluxp=fluxp*1d23/distance**2
 	phase(ipc,0,1:nlam)=fluxp(1:nlam)
 	flux(0,1:nlam)=0d0
@@ -953,16 +990,17 @@ c Note we use the symmetry of the North and South here!
 
 	subroutine SolveIj3D(tauR_in,Si,ftot,nr)
 	IMPLICIT NONE
-	integer ir,nr,info
+	integer ir,nr,info,nnr
 	real*8 tauR_in(nr),Si(nr),fact,d,ftot
 	real*8 x(nr+2),y(nr+2),tauR(0:nr+1),Ma(nr+2),Mb(nr+2),Mc(nr+2)
 
+	nnr=1
 	x=0d0
 	do ir=1,nr
 		tauR(nr-ir+1)=tauR_in(ir)
 		x(nr+2-ir)=Si(ir)
 	enddo
-	tauR(0)=tauR(1)*2d0
+	tauR(0)=tauR(1)**2/tauR(2)
 	tauR(nr+1)=0d0
 
 	Ma=0d0
@@ -981,8 +1019,9 @@ c Note we use the symmetry of the North and South here!
 	Mb(nr+2)=-1d0-1d0/(tauR(nr))
 
 	info=0
-	call tridag(Ma,Mb,Mc,x,y,nr+2,info)
-	ftot=y(nr)
+
+	call dgtsv(nr+2,nnr,Ma(2:nr+2),Mb(1:nr+2),Mc(1:nr+1),x,nr+2,info)
+	ftot=x(nr+2)
 
 	return
 	end
@@ -2004,8 +2043,8 @@ c-----------------------------------------------------------------------
 				if(.not.tau.gt.0d0) then
 					tau=0d0
 				endif
-				tau=tau+1d-8
-				tau=1d0/(1d0/tau+1d-8)
+				tau=tau+1d-10
+				tau=1d0/(1d0/tau+1d-10)
 				if(ir.eq.nr) then
 					tauR_nu(ir,ilam,ig)=tau
 				else
@@ -2033,7 +2072,7 @@ c-----------------------------------------------------------------------
 					contr=(Fstar(ilam)/(pi*Dplanet**2))
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
 					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+contr*exp(-tauR(1:nr))*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)/(4d0*pi)
-					contr=must*contr*exp(-tauR(1))
+					contr=must*contr*exp(-tauR(0))
 				else
 					contr=0d0
 				endif
@@ -2165,41 +2204,6 @@ c-----------------------------------------------------------------------
 	return
 	end
 	
-
-	subroutine InvertIjExp(tau,Linv,nr)
-	IMPLICIT NONE
-	integer ir,nr,jr
-	real*8 Linv(nr,nr),tau(nr),Lp(nr,nr),Lm(nr,nr)
-	real*8 exptau(nr),exptau2,fact,Q
-
-	do ir=1,nr
-		exptau(ir)=exp(-tau(ir))
-	enddo
-	
-	Lp=0d0
-	do ir=1,nr-1
-		Lp(ir+1,1:nr)=Lp(ir,1:nr)*exptau(ir)
-		Q=(1d0-(1d0+tau(ir))*exptau(ir))/tau(ir)
-		Lp(ir+1,ir)=Lp(ir+1,ir)+Q
-		Q=(tau(ir)-1d0+exptau(ir))/tau(ir)
-		Lp(ir+1,ir+1)=Lp(ir+1,ir+1)+Q
-	enddo
-
-	Lm=0d0
-	do ir=nr,2,-1
-		Lm(ir-1,1:nr)=Lm(ir,1:nr)*exptau(ir)
-		Q=(1d0-(1d0+tau(ir))*exptau(ir))/tau(ir)
-		Lm(ir-1,ir)=Lm(ir-1,ir)+Q
-		Q=(tau(ir)-1d0+exptau(ir))/tau(ir)
-		Lm(ir-1,ir-1)=Lm(ir-1,ir-1)+Q
-	enddo
-
-	Linv=(Lp+Lm)/2d0
-
-	return
-	end
-
-
 
 
 	subroutine SolveIjStarExp(tau,I0,Ij,nr)

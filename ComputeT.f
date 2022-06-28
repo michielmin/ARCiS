@@ -425,7 +425,6 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			do inu=1,nnu
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 				Ij_omp(0:nr)=exp(-abs(tauR_omp(0:nr)-tauR_omp(0)))
-				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,Ij_omp(0),Ij_omp(nr))
 				Ih_omp(0:nr)=Ij_omp(0:nr)
 				Si_omp(0:nr,nr+1)=Si_omp(0:nr,nr+1)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(0:nr)/(4d0*pi)
 				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
@@ -444,6 +443,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			tot=sum(Si_omp(0:nr,0))
 			do inu=1,nnu
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
+c				call SolveIjExpN(tauR_omp(0:nr),Si_omp(0:nr,0:nr+1),IjN(0:nr,0:nr+1,inu),nr+1,nr+2)
 				call SolveIjN(tauR_omp(0:nr),Si_omp(0:nr,0:nr+1),IjN(0:nr,0:nr+1,inu),nr,nr+2)
 			enddo
 
@@ -811,6 +811,76 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	end
 	
 
+	subroutine ComputeI12(tau1,tau2,S1,S2,I12)
+	IMPLICIT NONE
+	real*8 tau1,tau2,S1,S2,I12,dtau,exptau
+	
+	dtau=abs(tau1-tau2)
+
+
+	if(dtau.lt.1d-3) then
+		I12=S2-S1*exp(-dtau)+(S1-S2)*(1d0-dtau/2d0)
+	else if(dtau.gt.1d4) then
+		I12=S2
+	else
+		I12=(-(S1*dtau-S2+S1)*exp(-dtau)+S2*dtau-S2+S1)/dtau
+	endif
+
+	return
+	end
+
+
+	subroutine SolveIjExpN(tau,Si,Ij,nr,nrhs)
+	IMPLICIT NONE
+	integer ir,nr,jr,nrhs
+	real*8 Ij(nr,nrhs),Si(nr,nrhs),tau(nr),Im(nr,nrhs),Ip(nr,nrhs)
+	real*8 exptau(nr),dtau(nr),s0(nrhs),s1(nrhs),x1,y(nrhs)
+
+	dtau(nr)=tau(nr)
+	do ir=nr-1,1,-1
+		dtau(ir)=abs(tau(ir+1)-tau(ir))
+	enddo
+	do ir=1,nr
+		exptau(ir)=exp(-dtau(ir))
+	enddo
+
+	Im=0d0
+	do ir=nr-1,1,-1
+		s0=Si(ir+1,1:nrhs)
+		s1=Si(ir,1:nrhs)
+		x1=dtau(ir)
+		if(x1.lt.1d-4) then
+			y(1:nrhs)=s1(1:nrhs)-s0(1:nrhs)*exptau(ir)+(s0(1:nrhs)-s1(1:nrhs))*(1d0-x1/2d0)
+		else if(x1.gt.1d4) then
+			y(1:nrhs)=s1(1:nrhs)
+		else
+			y(1:nrhs)=(-(s0(1:nrhs)*x1-s1(1:nrhs)+s0(1:nrhs))*exptau(ir)+s1(1:nrhs)*x1-s1(1:nrhs)+s0(1:nrhs))/x1
+		endif
+		Im(ir,1:nrhs)=Im(ir+1,1:nrhs)*exptau(ir)+y(1:nrhs)
+	enddo
+
+	Ip=0d0
+	do ir=1,nr-1
+		s0=Si(ir,1:nrhs)
+		s1=Si(ir+1,1:nrhs)
+		x1=dtau(ir)
+		if(x1.lt.1d-4) then
+			y(1:nrhs)=s1(1:nrhs)-s0(1:nrhs)*exptau(ir)+(s0(1:nrhs)-s1(1:nrhs))*(1d0-x1/2d0)
+		else if(x1.gt.1d4) then
+			y(1:nrhs)=s1(1:nrhs)
+		else
+			y(1:nrhs)=(-(s0(1:nrhs)*x1-s1(1:nrhs)+s0(1:nrhs))*exptau(ir)+s1(1:nrhs)*x1-s1(1:nrhs)+s0(1:nrhs))/x1
+		endif
+		Ip(ir+1,1:nrhs)=Ip(ir,1:nrhs)*exptau(ir)+y(1:nrhs)
+	enddo
+
+	Ij=(Ip+Im)/2d0
+
+	return
+	end
+	
+
+
 	subroutine SolveIjExp(tau,Si,Ij,Ih,nr)
 	IMPLICIT NONE
 	integer ir,nr,jr
@@ -830,7 +900,13 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		s0=Si(ir+1)
 		s1=Si(ir)
 		x1=dtau(ir)
-		y=(-(s0*x1-s1+s0)*exptau(ir)+s1*x1-s1+s0)/x1
+		if(x1.lt.1d-4) then
+			y=s1-s0*exptau(ir)+(s0-s1)*(1d0-x1/2d0)
+		else if(x1.gt.1d4) then
+			y=s1
+		else
+			y=(-(s0*x1-s1+s0)*exptau(ir)+s1*x1-s1+s0)/x1
+		endif
 		Im(ir)=Im(ir+1)*exptau(ir)+y
 	enddo
 
@@ -839,7 +915,13 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		s0=Si(ir)
 		s1=Si(ir+1)
 		x1=dtau(ir)
-		y=(-(s0*x1-s1+s0)*exptau(ir)+s1*x1-s1+s0)/x1
+		if(x1.lt.1d-4) then
+			y=s1-s0*exptau(ir)+(s0-s1)*(1d0-x1/2d0)
+		else if(x1.gt.1d4) then
+			y=s1
+		else
+			y=(-(s0*x1-s1+s0)*exptau(ir)+s1*x1-s1+s0)/x1
+		endif
 		Ip(ir+1)=Ip(ir)*exptau(ir)+y
 	enddo
 
@@ -851,11 +933,12 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	
 
 
-	subroutine SolveIjExp2(tau,Si,Ij,Ih,nr)
+	subroutine InvertIjExp(tau,Linv,nr)
 	IMPLICIT NONE
 	integer ir,nr,jr
-	real*8 Ij(nr),Si(nr),tau(nr),Ip(nr),Im(nr),Ih(nr)
-	real*8 exptau(nr),fact,exptau2,Q,dtau(nr)
+	real*8 Linv(nr,nr)
+	real*8 Si(nr),tau(nr),Ip(nr),Im(nr)
+	real*8 exptau(nr),dtau(nr),s0,s1,x1,y
 
 	dtau(nr)=tau(nr)
 	do ir=nr-1,1,-1
@@ -865,24 +948,83 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		exptau(ir)=exp(-dtau(ir))
 	enddo
 
-	Ip=0d0
-	do ir=1,nr-1
-		Q=(Si(ir)*(1d0-(1d0+dtau(ir))*exptau(ir))+Si(ir+1)*(dtau(ir)-1d0+exptau(ir)))/dtau(ir)
-		Ip(ir+1)=Ip(ir)*exptau(ir)+Q
-	enddo
+	do jr=1,nr
+		Im=0d0
 
-	Im=0d0
-	do ir=nr,2,-1
-		Q=(Si(ir)*(1d0-(1d0+dtau(ir))*exptau(ir))+Si(ir-1)*(dtau(ir)-1d0+exptau(ir)))/dtau(ir)
-		Im(ir-1)=Im(ir)*exptau(ir)+Q
-	enddo
+		ir=jr
+		s0=0d0
+		s1=1d0
+		x1=dtau(ir)
+		if(x1.lt.1d-4) then
+			y=x1/2d0
+		else if(x1.gt.1d4) then
+			y=1d0
+		else
+			y=(exptau(ir)+x1-1d0)/x1
+		endif
+		Im(ir)=y
 
-	Ij=(Ip+Im)/2d0
-	Ih=(Ip-Im)/2d0
+		if(jr.gt.1) then
+			ir=jr-1
+			s0=1d0
+			s1=0d0
+			x1=dtau(ir)
+			if(x1.lt.1d-4) then
+				y=-exptau(ir)+(1d0-x1/2d0)
+			else if(x1.gt.1d4) then
+				y=0d0
+			else
+				y=(-(x1+1d0)*exptau(ir)+1d0)/x1
+			endif
+			Im(ir)=Im(ir+1)*exptau(ir)+y
+
+			if(jr.gt.2) then
+				do ir=jr-2,1,-1
+					Im(ir)=Im(ir+1)*exptau(ir)
+				enddo
+			endif
+		endif
+		
+		Ip=0d0
+
+		if(jr.gt.1) then
+			ir=jr-1
+			s0=0d0
+			s1=1d0
+			x1=dtau(ir)
+			if(x1.lt.1d-4) then
+				y=x1/2d0
+			else if(x1.gt.1d4) then
+				y=1d0
+			else
+				y=(exptau(ir)+x1-1d0)/x1
+			endif
+			Ip(ir+1)=y
+		endif
+		if(jr.lt.nr) then
+			ir=jr
+			s0=1d0
+			s1=0d0
+			x1=dtau(ir)
+			if(x1.lt.1d-4) then
+				y=-exptau(ir)+(1d0-x1/2d0)
+			else if(x1.gt.1d4) then
+				y=0d0
+			else
+				y=(-(x1+1d0)*exptau(ir)+1d0)/x1
+			endif
+			Ip(ir+1)=Ip(ir)*exptau(ir)+y
+			if(jr.lt.nr-1) then
+				do ir=jr+1,nr-1
+					Ip(ir+1)=Ip(ir)*exptau(ir)+y
+				enddo
+			endif
+		endif
+		Linv(1:nr,jr)=(Ip(1:nr)+Im(1:nr))/2d0
+	enddo
 
 	return
 	end
-	
 
 
 

@@ -136,7 +136,7 @@ c terms of use
 			call SetupOpacities()
 			call DoComputeT(Tconverged,f)
 			if(Tconverged.and.nTiter.gt.4) exit
-			f=0.05d0+0.95d0*exp(-real(nTiter-1)/5d0)
+			f=0.1d0+0.9d0*exp(-real(nTiter-1)/5d0)
 		enddo
 		nlamdust=nldtemp
 		specresdust=srdtemp
