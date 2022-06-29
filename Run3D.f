@@ -19,7 +19,7 @@
 	integer nx_im,ix,iy,ni,ilatt,ilong,imustar
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam)
-	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:),tauR(:,:,:),SiR(:,:,:),SiRalb(:,:,:)
+	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:),tauR(:,:,:),SiR(:,:,:),SiRalb(:,:,:),R3DC(:,:)
 	integer itauR,ntauR
 	logical iterateshift,actually1D,do_ibeta(n3D)
 	real*8 vxxmin,vxxmax,ComputeKzz,betamin_term,tot1,tot2
@@ -30,6 +30,7 @@
 	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce_cont(nlam,nr,n3D))
 	allocate(R3D(n3D,nr+2))
 	allocate(R3D2(n3D,nr+2))
+	allocate(R3DC(n3D,nr+1))
 	allocate(T3D(n3D,0:nr))
 	if(.not.retrieval.and.fulloutput3D) allocate(cloud3D(n3D,0:nr))
 	allocate(mixrat3D(n3D,nr,nmol))
@@ -386,6 +387,7 @@ c Now call the setup for the readFull3D part
 	Rmax=Rmax*1.001
 	R3D(1:n3D,nr+2)=Rmax
 	R3D2(1:n3D,nr+2)=Rmax**2
+	R3DC(1:n3D,1:nr+1)=sqrt(R3D(1:n3D,1:nr+1)*R3D(1:n3D,2:nr+2))
 
 	if(.not.retrieval) then
 		open(unit=20,file=trim(outputdir) // "surfacetemp3D.dat",RECL=6000)
@@ -467,7 +469,7 @@ c Now call the setup for the readFull3D part
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,itauR,ntauR,SiR,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp,tauR,SiRalb)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,fulloutput3D,Rplanet,computeT,
-!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,
+!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,R3DC,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
 	allocate(fluxp_omp(nlam))
@@ -564,8 +566,20 @@ c Note we are here using the symmetry between North and South
 					do ig=1,ng
 						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
 						tauR(itauR,ilam,ig)=tauR(itauR-1,ilam,ig)+1d0/(1d-8+1d0/(1d-8+tau1))
-						SiR(itauR,ilam,ig)=Si(ilam,ig,i1,inu,i)
-						if(computealbedo) SiRalb(itauR,ilam,ig)=SiSc(ilam,ig,i1,inu,i)
+						rr=sqrt((x+v*vx)**2+(y+v*vy)**2+(z+v*vz)**2)
+						if((rr.gt.R3DC(i,i1).and.i1.eq.nr).or.(rr.lt.R3DC(i,i1).and.i1.eq.1)) then
+							SiR(itauR,ilam,ig)=Si(ilam,ig,i1,inu,i)
+						else if(rr.gt.R3DC(i,i1)) then
+							w1=(R3DC(i,i1+1)-rr)/(R3DC(i,i1+1)-R3DC(i,i1))
+							w2=1d0-w1
+							SiR(itauR,ilam,ig)=w1*Si(ilam,ig,i1,inu,i)+w2*Si(ilam,ig,i1+1,inu,i)
+							if(computealbedo) SiRalb(itauR,ilam,ig)=w1*SiSc(ilam,ig,i1,inu,i)+w2*SiSc(ilam,ig,i1+1,inu,i)
+						else
+							w1=(R3DC(i,i1-1)-rr)/(R3DC(i,i1-1)-R3DC(i,i1))
+							w2=1d0-w1
+							SiR(itauR,ilam,ig)=w1*Si(ilam,ig,i1,inu,i)+w2*Si(ilam,ig,i1-1,inu,i)
+							if(computealbedo) SiRalb(itauR,ilam,ig)=w1*SiSc(ilam,ig,i1,inu,i)+w2*SiSc(ilam,ig,i1-1,inu,i)
+						endif
 					enddo
 					endif
 				enddo
@@ -624,7 +638,7 @@ c Note we are here using the symmetry between North and South
 							if(tauR(itauR,ilam,ig).gt.maxtau) exit
 						enddo
 						if(itauR.gt.ntauR) itauR=ntauR
-						if(.false.) then
+						if(.true.) then
 						if(ntauR.ge.1) then
 							do itauR=0,ntauR-1
 								call ComputeI12(tauR(itauR+1,ilam,ig),tauR(itauR,ilam,ig),SiR(itauR+1,ilam,ig),
@@ -996,6 +1010,7 @@ c Note we use the symmetry of the North and South here!
 	deallocate(Ca_mol,Ce_cont)
 	deallocate(R3D)
 	deallocate(R3D2)
+	deallocate(R3DC)
 	deallocate(T3D,mixrat3D)
 	if(.not.retrieval.and.fulloutput3D) deallocate(cloud3D)
 
