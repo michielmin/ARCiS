@@ -514,7 +514,7 @@ c allocate the arrays
 		if(nobs.le.0) useobsgrid=.false.
 	endif
 
-	if(scaleR.and.log_emis) then
+	if(doscaleR.and.log_emis) then
 		call output("ScaleR and log_emis settings both to true does not work toegther")
 		call output("switching to log_emis=.false.")
 		log_emis=.false.
