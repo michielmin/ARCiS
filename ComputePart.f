@@ -1,4 +1,4 @@
-	subroutine ComputePart(C,ii,isize,computelam)
+	subroutine ComputePart(C,ii,isize,computelamcloud)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
@@ -38,7 +38,7 @@
 	parameter(abun_in_name=2)
 	real*8 Kabs(nlamdust),Ksca(nlamdust),Kext(nlamdust)
 	real*8 F11_HR(nlam),F12_HR(nlam),F22_HR(nlam),F33_HR(nlam),F34_HR(nlam),F44_HR(nlam)
-	logical fcomputed,computelam(nlam)
+	logical fcomputed,computelamcloud(nlam)
 	real*8 csmie_fcomp,cemie_fcomp,gasdev
 	real*8,allocatable :: Mief11_fcomp(:),Mief12_fcomp(:)
 	real*8,allocatable :: Mief33_fcomp(:),Mief34_fcomp(:)
@@ -836,13 +836,13 @@ c H2O: 18
 !$OMP&         rad,wvno,m,r1,rcore,qext,qsca,qbs,gqsc,rmie,lmie,e1mie,e2mie,
 !$OMP&         csmie,cemie,MieF11,MieF12,MieF33,MieF34,Mief22,Mief44,tot2,j,fcomputed,
 !$OMP&         MieF11_fcomp,MieF12_fcomp,MieF33_fcomp,MieF34_fcomp,M1,M2,S21,D21)
-!$OMP& SHARED(C,nlamdust,na,nm,ns,frac,minlog,maxlog,f,mu0,e1,e2,wf,isize,computelam,Mass,
+!$OMP& SHARED(C,nlamdust,na,nm,ns,frac,minlog,maxlog,f,mu0,e1,e2,wf,isize,computelamcloud,Mass,
 !$OMP&        pow,lamdust,rho,nf,r0,nr0,Kabs,Ksca,Kext,F11,F12,F22,F33,F34,F44)
 !$OMP DO
 !$OMP& SCHEDULE(STATIC,1)
 	do ilam=1,nlamdust
 	
-	if(.not.computelam(ilam)) then
+	if(.not.computelamcloud(ilam)) then
 		Kabs(ilam)=1d-10
 		Ksca(ilam)=1d-10
 		Kext(ilam)=1d-10

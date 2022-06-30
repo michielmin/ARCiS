@@ -449,6 +449,7 @@ c==============================================================================
 	use Constants
 	use ReadKeywords
 	use Struct3D
+	use TimingModule
 	IMPLICIT NONE
 	type(SettingKey),pointer :: key,first
 	type(SettingKey) keyret
@@ -481,6 +482,17 @@ c allocate the arrays
 		key => key%next
 	enddo
 
+	timechem=0d0
+	timecloud=0d0
+	timetemp=0d0
+	itimechem=0
+	itimecloud=0
+	itimetemp=0
+	ctimechem=0
+	ctimecloud=0
+	ctimetemp=0
+	call system_clock(count_rate=rate)
+
 	if(randomseed) call system_clock(idum0)
 	idum=-idum0
 	
@@ -499,8 +511,13 @@ c allocate the arrays
 #endif
 
 	if(useobsgrid) then
-c		if(computeT) useobsgrid=.false.
 		if(nobs.le.0) useobsgrid=.false.
+	endif
+
+	if(scaleR.and.log_emis) then
+		call output("ScaleR and log_emis settings both to true does not work toegther")
+		call output("switching to log_emis=.false.")
+		log_emis=.false.
 	endif
 
 	if(retrieval) then
@@ -1171,7 +1188,7 @@ c	endif
 	real*8,allocatable :: y2(:)
 	character*10 names(nmol)
 	integer imol(nmol)
-	
+		
 	do i=1,nr
 		mixrat_r(i,1:nmol)=mixrat(1:nmol)
 	enddo
@@ -1885,9 +1902,13 @@ c number of cloud/nocloud combinations
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 lam0,T0,Planck,tot,x,y,dy,dx,specres_LR
+	real*8 lam0,T0,Planck,tot,x,y,dy,dx,lminRT,lmaxRT
 	integer i,j,ilam,nj,jlam
 	
+	lminRT=0.2d0*micron
+	lmaxRT=50d0*micron
+	specres_LR=20d0		!min(specres/1.5,11d0)
+
 	if(useobsgrid) then
 		nlam=1
 		do i=1,nobs
@@ -1914,14 +1935,6 @@ c number of cloud/nocloud combinations
 2					close(unit=30)
 			end select
 		enddo
-		specres_LR=min(specres/1.5,11d0)
-		lam0=lam1
-		nlam=nlam+1
-		do while(lam0.le.lam2)
-			lam0=lam0+lam0/specres_LR
-			nlam=nlam+1
-		enddo
-		nlam=nlam+1
 	else
 		lam0=lam1
 		nlam=1
@@ -1930,10 +1943,20 @@ c number of cloud/nocloud combinations
 			nlam=nlam+1
 		enddo
 	endif
+	if(computeT) then
+		lam0=lminRT
+		nlam=nlam+1
+		do while(lam0.le.lmaxRT)
+			lam0=lam0+lam0/specres_LR
+			nlam=nlam+1
+		enddo
+	endif
 	allocate(lam(nlam))
 	allocate(freq(nlam))
 	allocate(dfreq(nlam))
 	allocate(dlam(nlam))
+	allocate(RTgridpoint(nlam),computelam(nlam))
+	computelam=.true.
 	
 	if(useobsgrid) then
 		ilam=0
@@ -1977,17 +2000,13 @@ c number of cloud/nocloud combinations
 			end select
 		enddo
 		if(computeT) then
-			specres_LR=min(specres/1.5,11d0)
-			lam(nlam)=lam1
-			dlam(nlam)=lam(nlam)/specres_LR
-			do while(lam(nlam).le.lam2)
+			lam(nlam)=lminRT
+			dlam(nlam)=-lam(nlam)/specres_LR
+			do while(lam(nlam).le.lmaxRT)
 				nlam=nlam+1
 				lam(nlam)=lam(nlam-1)+lam(nlam-1)/specres_LR
-				dlam(nlam)=lam(nlam)/specres_LR
+				dlam(nlam)=-lam(nlam)/specres_LR
 			enddo
-			nlam=nlam+1
-			lam(nlam)=lam2
-			dlam(nlam)=lam(nlam)/specres_LR
 			ilam=nlam
 			nlam=nlam+1
 		endif
@@ -1997,6 +2016,15 @@ c number of cloud/nocloud combinations
 		do i=1,nlam
 			freq(i)=1d0/lam(i)
 		enddo
+		if(computeT) then
+			RTgridpoint=.false.
+			do ilam=1,nlam
+				if(dlam(ilam).lt.0d0) then
+					RTgridpoint(ilam)=.true.
+					dlam(ilam)=-dlam(ilam)
+				endif
+			enddo
+		endif
 		lam1=lam(1)
 		lam2=lam(nlam)
 		do i=1,nlam-1
@@ -2012,12 +2040,42 @@ c number of cloud/nocloud combinations
 			lam(i)=lam(i-1)+lam(i-1)/specres
 		enddo
 		lam(nlam)=lam2
+		dlam=lam/specres
+		if(computeT) then
+			i=i+1
+			lam(i)=lminRT
+			dlam(i)=-lam(i)/specres_LR
+			do while(lam(i).le.lmaxRT)
+				i=i+1
+				lam(i)=lam(i-1)+lam(i-1)/specres_LR
+				dlam(i)=-lam(i)/specres_LR
+			enddo
+			nlam=i
+			call sortw(lam,dlam,nlam)
+			do ilam=1,nlam-1
+				if(lam(ilam).eq.lam(ilam+1)) then
+					if(ilam.eq.1) then
+						lam(ilam+1)=(1d0-1d-3)*lam(ilam+1)+1d-3*lam(ilam+2)
+					else
+						lam(ilam)=(1d0-1d-3)*lam(ilam)+1d-3*lam(ilam-1)
+					endif
+				endif
+			enddo						
+			RTgridpoint=.false.
+			do ilam=1,nlam
+				if(dlam(ilam).lt.0d0) then
+					RTgridpoint(ilam)=.true.
+					dlam(ilam)=-dlam(ilam)
+				endif
+			enddo
+		endif
 		do i=1,nlam
 			freq(i)=1d0/lam(i)
 		enddo
 		do i=1,nlam-1
-			dfreq(i)=abs(freq(i+1)-freq(i))
-			dlam(i)=abs(lam(i+1)-lam(i))
+			if(lam(i).lt.lam1) lam1=lam(i)
+			if(lam(i).gt.lam2) lam2=lam(i)
+			dfreq(i)=abs(1d0/(lam(i)-dlam(i)/2d0)-1d0/(lam(i)+dlam(i)/2d0))
 		enddo
 	endif
 
@@ -2238,7 +2296,7 @@ c-----------------------------------------------------------------------
 
 	select case(Cloud(ii)%ptype)
 		case("COMPUTE","DRIFT")
-			computelamcloud=.true.
+			computelamcloud=computelam
 			tautot=0d0
 			restrictcomputecloud=(nlam.eq.nlamdust.and..not.computeT.and..not.scattering)
 			do is=Cloud(ii)%nr,1,-1
@@ -2256,7 +2314,7 @@ c-----------------------------------------------------------------------
 		case("SIMPLE")
 			if(Cloud(ii)%simplecloudpart) then
 c compute cloud particles
-				computelamcloud=.true.
+				computelamcloud=computelam
 				is=1
 				Cloud(ii)%frac(is,1:3)=Cloud(ii)%fRutile/3d0
 				Cloud(ii)%frac(is,4:6)=Cloud(ii)%fForsterite/3d0
@@ -2274,7 +2332,7 @@ c compute cloud particles
 				Cloud(ii)%rv(is)=Cloud(ii)%reff
 				Cloud(ii)%sigma(is)=1d-10
 				call ComputePart(Cloud(ii),ii,is,computelamcloud)
-				computelamcloud=.true.
+				computelamcloud=computelam
 				is=nr
 				Cloud(ii)%hazetype='MIX'
 				Cloud(ii)%frac(is,1:18)=0d0

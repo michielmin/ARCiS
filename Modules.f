@@ -98,7 +98,7 @@ c===============================================================================
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed
 	logical,allocatable :: includemol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
-	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust,twind,epsiter
+	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,specresdust,twind,epsiter,specres_LR
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Psimplecloud,metallicity0,vfrag
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid,blackbodystar
 	logical didcondens_chem,coagulation,resume_multinest,doMCcompute,disequilibrium,const_eff_multinest
@@ -119,6 +119,7 @@ c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
 	real*8 molfracs_atoms_outgas(18)
 	logical secondary_atmosphere,constant_g,forceEbalance
+	logical,allocatable :: RTgridpoint(:),computelam(:)
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,PrefTpoint
 	character*20 surfacetype
@@ -349,7 +350,12 @@ c			   1,2,3,  4,5,6,      7,   8,    9,    10,        11,  12,  13,14,15,  16, 
 
 	end module
 
-
+	module TimingModule
+	IMPLICIT NONE
+	real*8 timechem,timecloud,timetemp
+	integer itimechem,itimecloud,itimetemp
+	integer ctimechem,ctimecloud,ctimetemp,rate
+	end module
 
 	module RetrievalMod
 	implicit none

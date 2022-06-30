@@ -81,13 +81,13 @@ c terms of use
 
 	subroutine ComputeModel1D(recomputeopacities)
 	use GlobalSetup
+	use TimingModule
 	IMPLICIT NONE
 	logical Tconverged
 	real*8 starttime,stoptime,starttime_w,stoptime_w,omp_get_wtime,f
 	logical recomputeopacities
 	logical computeopac,temp
-	real*8 srdtemp,srd,ldtemp(nlamdust),lam0
-	integer nldtemp,nld,i
+	integer i
 	
 	computeopac=recomputeopacities
 
@@ -95,40 +95,10 @@ c terms of use
 	Tconverged=.false.
 	nTiter=0
 	if(computeT.and.computeopac) then
-		nldtemp=nlamdust
-		srdtemp=specresdust
-		ldtemp(1:nlamdust)=lamdust(1:nlamdust)
-		specresdust=10d0
-		if(useobsgrid) then
-			nlamdust=nlam
-			lamdust=lam
-		else
-			lam0=lam1
-			nld=1
-			do while(lam0.le.lam2)
-				lam0=lam0+lam0/specresdust
-				nld=nld+1
-			enddo
-			if(nld.lt.nlamdust) then
-				nlamdust=nld
-				i=1
-				lamdust(i)=lam1
-				do while(lamdust(i).le.lam2)
-					i=i+1
-					lamdust(i)=lamdust(i-1)+lamdust(i-1)/specresdust
-				enddo
-				lamdust(nlamdust)=lam2
-			else
-				nlamdust=nldtemp
-				specresdust=srdtemp
-				lamdust(1:nlamdust)=ldtemp(1:nlamdust)
-			endif
-		endif
-	endif
-	if(computeT.and.computeopac) then
 		temp=par_tprofile
 		par_tprofile=.false.
 		f=1d0
+		computelam=RTgridpoint
 		do nTiter=1,maxiter
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
      &					// trim(int2string(maxiter,'(i3)')) // ")")
@@ -136,16 +106,27 @@ c terms of use
 			call SetupOpacities()
 			call DoComputeT(Tconverged,f)
 			if(Tconverged.and.nTiter.gt.4) exit
-			f=0.1d0+0.9d0*exp(-real(nTiter-1)/5d0)
+			f=0.05d0+0.95d0*exp(-real(nTiter-1)/5d0)
+c			call SetoutputMode(.true.)
+c			call output("Chemistry cpu time: " // trim(dbl2string(timechem,'(f10.4)')) // " s")
+c			call output("Chemistry walltime: " // trim(dbl2string(dble(itimechem)/dble(rate),'(f10.4)')) // " s")
+c			call output("Number of chemistry calls: " // trim(int2string(ctimechem,'(i5)')))
+c			call output("Cloud cpu time:    " // trim(dbl2string(timecloud,'(f10.4)')) // " s")
+c			call output("Cloud walltime:    " // trim(dbl2string(dble(itimecloud)/dble(rate),'(f10.4)')) // " s")
+c			call output("Number of cloud calls:     " // trim(int2string(ctimecloud,'(i5)')))
+c			call output("PTstruct cpu time: " // trim(dbl2string(timetemp,'(f10.4)')) // " s")
+c			call output("PTstruct walltime: " // trim(dbl2string(dble(itimetemp)/dble(rate),'(f10.4)')) // " s")
+c			call output("Number of PTstruct calls:  " // trim(int2string(ctimetemp,'(i5)')))
+c			call SetoutputMode(.false.)
 		enddo
-		nlamdust=nldtemp
-		specresdust=srdtemp
-		lamdust(1:nlamdust)=ldtemp(1:nlamdust)
+		computelam=.not.RTgridpoint
+		if(forceEbalance) computelam=.true.
 		call SetupStructure(.true.)
 		call SetupOpacities()
 		if(forceEbalance) then
 			f=1d0
 			call DoComputeT(Tconverged,f)
+			computelam=.not.RTgridpoint
 		endif
 		par_tprofile=temp
 	else

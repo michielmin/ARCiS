@@ -48,7 +48,9 @@
 	write(30,'("#",a13,a19)') "lambda [mu]","flux_star[Jy]"
 	form='(f14.6,es19.7E3)'
 	do i=1,nlam_out
-		write(30,form) lam_out(i),Fstar(i)*1d23/distance**2
+		if(computelam(i)) then
+			write(30,form) lam_out(i),Fstar(i)*1d23/distance**2
+		endif
 	enddo
 	close(unit=30)
 
@@ -67,7 +69,7 @@
 	endif
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
-		if(lamemis(i)) then
+		if(lamemis(i).and.computelam(i)) then
 		write(30,form) lam_out(i),
 c     &					flux(0:ncc,i)
 c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam(i+1))
@@ -89,7 +91,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 	endif
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
-		if(lamemis(i)) then
+		if(lamemis(i).and.computelam(i)) then
 		write(30,form) lam_out(i),
 c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
      &					((phase(1,j,i)+flux(j,i))/(Fstar(i)*1d23/distance**2),j=0,ncc)
@@ -114,8 +116,10 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	endif
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
-		write(30,form) lam_out(i),
+		if(computelam(i)) then
+			write(30,form) lam_out(i),
      &					obsA(0:ncc,i)/(pi*Rstar**2)
+    	endif
 	enddo
 	close(unit=30)
 
@@ -126,8 +130,10 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	write(30,'("#",a13,3a19)') "lambda [mu]","Morning","Evening","Rp^2/Rstar^2"
 	form='(f14.6,3es19.7E3)'
 	do i=1,nlam_out
-		write(30,form) lam_out(i),obsA_split(i,1:2)/(pi*Rstar**2),
+		if(computelam(i)) then
+			write(30,form) lam_out(i),obsA_split(i,1:2)/(pi*Rstar**2),
      &					obsA(0,i)/(pi*Rstar**2)
+     	endif
 	enddo
 	close(unit=30)
 	endif
@@ -145,7 +151,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		write(30,form) "lambda [mu]",theta(1:nphase)
 		form='(f14.6,' // int2string(nphase+2,'(i3)') // 'es19.7E3)'
 		do i=1,nlam_out
-			if(lamemis(i)) then
+			if(lamemis(i).and.computelam(i)) then
 			write(30,form) lam_out(i),
      &					phase(1:nphase,0,i)+flux(0,i),
      &					Fstar(i)*1d23/distance**2,
@@ -163,7 +169,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			write(30,form) "lambda [mu]",theta(1:nphase)
 			form='(f14.6,' // int2string(nphase+1,'(i3)') // 'es19.7E3)'
 			do i=1,nlam_out
-				if(lamemis(i)) then
+				if(lamemis(i).and.computelam(i)) then
 				write(30,form) lam_out(i),planet_albedo(1:nphase,i),Fstar(i)*1d23/distance**2
 				endif
 			enddo

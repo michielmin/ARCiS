@@ -12,7 +12,7 @@
 		lamemis=.false.
 		lamtrans=.false.
 	endif
-	if(computeT) lamemis=.true.
+	if(computeT) lamemis=RTgridpoint
 	
 	do i=1,nobs
 		select case(ObsSpec(i)%type)

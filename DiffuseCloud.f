@@ -3,6 +3,7 @@
 	use Constants
 	use AtomsModule
 	use CloudModule
+	use TimingModule
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),xtot(:),vth(:),vthv(:)
 	real*8,allocatable :: Sc(:),Sn(:),mpart(:),xMgO(:)
@@ -24,6 +25,14 @@
 	real*8,allocatable :: logCloudP(:)
 	integer INCFD,IERR
 	logical SKIP
+	real*8 time
+	integer itime
+
+	call cpu_time(time)
+	timecloud=timecloud-time
+	call system_clock(itime)
+	itimecloud=itimecloud-itime
+	ctimecloud=ctimecloud+1
 
 	nnr=(nr-1)*nr_cloud+1
 	nCS=10
@@ -267,7 +276,7 @@ c	atoms_cloud(i,3)=1
 			xv_bot_prev(iCS)=xv_bot(iCS)
 		enddo
 	endif
-	if((.not.(retrieval.or.domakeai))) call ComputeTevap
+	if(.not.(retrieval.or.domakeai)) call ComputeTevap
 
 	cloudsform=.false.
 	do i=1,nr
@@ -890,7 +899,11 @@ CCloud(ii)%frac(i,17)=0d0
 		endif
 
 		tot=sum(CloudMatFrac(i,1:nCS))
-		CloudMatFrac(i,1:nCS)=CloudMatFrac(i,1:nCS)/tot
+		if(tot.gt.0d0) then
+			CloudMatFrac(i,1:nCS)=CloudMatFrac(i,1:nCS)/tot
+		else
+			CloudMatFrac(i,1:nCS)=1d0/real(nCS)
+		endif
 		if(tot3.gt.0d0) then
 			rr=((3d0*tot1)/(4d0*pi*tot3))**(1d0/3d0)
 			if(.not.rr.gt.r_nuc) rr=r_nuc
@@ -998,6 +1011,10 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(logCloudP)
 	deallocate(Kd)
 
+	call cpu_time(time)
+	timecloud=timecloud+time
+	call system_clock(itime)
+	itimecloud=itimecloud+itime
 
 	return
 	end

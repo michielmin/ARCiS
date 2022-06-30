@@ -8,9 +8,7 @@
 	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
-	real*8 starttime,stoptime,chemtime,ComputeKzz
-
-	chemtime=0d0
+	real*8 ComputeKzz
 		
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
@@ -32,7 +30,7 @@
 
 	if(compute_mixrat) nabla_ad=2d0/7d0
 	grav=Ggrav*Mplanet/(Rplanet)**2
-	if(par_tprofile.or.(computeT.and.nTiter.le.1.and.i3D.eq.1)) call ComputeParamT(T)
+	if(par_tprofile.or.(computeT.and.nTiter.le.1)) call ComputeParamT(T)
 	if(free_tprofile) then
 		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
 c		call MakePTstruct(P,T,nr,Ppoint,Tpoint,nTpoints)
@@ -150,7 +148,7 @@ c			if(domakeai.or.retrieval) return
 		endif
 	enddo
 
-	if(par_tprofile.or.(computeT.and.nTiter.le.1.and.i3D.eq.1)) call ComputeParamT(T)
+	if(par_tprofile.or.(computeT.and.nTiter.le.1)) call ComputeParamT(T)
 	if(free_tprofile) then
 		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
 c		call MakePTstruct(P,T,nr,Ppoint,Tpoint,nTpoints)
@@ -177,7 +175,6 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
 		do i=1,nr
 			call tellertje(i,nr)
 			Tc=max(min(T(i),20000d0),100d0)
-			call cpu_time(starttime)
 			if(P(i).ge.mixP.or.i.eq.1) then
 				call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
      &			XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
@@ -188,8 +185,6 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
     			MMW(i)=MMW(i-1)
     			didcondens(i)=didcondens(i-1)
     		endif
-			call cpu_time(stoptime)
-			chemtime=chemtime+stoptime-starttime
 			do imol=1,nmol
 				if(includemol(imol)) then
 					if(IsNaN(mixrat_r(i,imol))) then
@@ -290,8 +285,6 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		enddo
 		close(unit=50)
 	endif
-
-	call output("Chemistry runtime:  " // trim(dbl2string((chemtime),'(f10.2)')) // " s")
 
 	return
 	end
@@ -1220,6 +1213,7 @@ c	close(unit=50)
 	subroutine call_chemistry(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,
      &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol)
 	use AtomsModule
+	use TimingModule
 	IMPLICIT NONE
 	integer nmol
 	real*8 Tin,Pin,mol_abun(nmol),nabla_ad
@@ -1229,6 +1223,14 @@ c	close(unit=50)
 	real*8 Xcloud(max(Ncloud,1)),MMW,Tg
 	character*500 cloudspecies(max(Ncloud,1)),namecloud
 	real*8 P1,P2,abun_temp(nmol),M,gas_atoms(N_atoms)
+	real*8 time
+	integer itime
+
+	call cpu_time(time)
+	timechem=timechem-time
+	call system_clock(itime)
+	itimechem=itimechem-itime
+	ctimechem=ctimechem+1
 
 	Tg=min(max(Tin,100d0),30000d0)
 
@@ -1242,6 +1244,11 @@ c	call readBaud(mol_abun,nmol,Pin,MMW)
 	enddo
 
 	nabla_ad=2d0/7d0
+
+	call cpu_time(time)
+	timechem=timechem+time
+	call system_clock(itime)
+	itimechem=itimechem+itime
 
 	return
 

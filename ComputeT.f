@@ -2,6 +2,7 @@
 	use GlobalSetup
 	use Constants
 	use CloudModule
+	use TimingModule
 	IMPLICIT NONE
 	integer iphase,Titer
 	real*8 tau_V,tau_T,Planck,CrV(nr),CrT(nr),CrVe(nr),f
@@ -10,15 +11,26 @@
 	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),must_i
 	integer ir,ilam,ig,i,iT,niter
 	logical docloud0(max(nclouds,1)),converged
+	real*8 time
+	integer itime
+
+	call cpu_time(time)
+	timetemp=timetemp-time
+	call system_clock(itime)
+	itimetemp=itimetemp-itime
+	ctimetemp=ctimetemp+1
 
 	if(doMCcompute.and.nTiter.gt.0) then
 		call MCDoComputeT(converged,f)
 		converged=.false.
 	else
 		call DoComputeTeddington(converged,f)
-		return
-		call DoComputeTfluxes(converged,f)
 	endif
+
+	call cpu_time(time)
+	timetemp=timetemp+time
+	call system_clock(itime)
+	itimetemp=itimetemp+itime
 
 	return
 	end
@@ -43,20 +55,19 @@
 	integer info,IWORK(10*(nr+1)*(nr+1)),NRHS,ii(3),iscat,nscat
 	real*8 tau1,tau2,ee0,ee1,ee2,tauR(0:nr),Ij(0:nr),Ih(0:nr),scale,dtauR(0:nr)
 	integer nlam_LR
-	real*8 specres_LR,IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact
+	real*8 IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact
 	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
 	integer i1,i2,ngF,j
 	real*8 ww,w1,w2,SurfStar,SurfStar_omp,FstarBottom,tauRoss
 	real*8,allocatable :: Si_omp(:,:),Ih_omp(:),Ij_omp(:),tauR_omp(:),Hsurf(:,:),Hstar_omp(:)
-	real*8,allocatable :: temp_a(:),wtemp(:),Ca_HR(:,:),Cs_HR(:,:),Fstar_LR(:),SurfEmis_LR(:)
+	real*8,allocatable :: Fstar_LR(:),SurfEmis_LR(:)
 	integer,allocatable :: IP(:)
 	real*8,allocatable :: WS(:),nu(:),wnu(:),Hstar_lam(:),Hsurf_lam(:),directHstar_omp(:)
 	real*8,allocatable :: IjN(:,:,:)
 	character*500 file
 	integer icloud
-	logical Convec(nr),lowresT
+	logical Convec(nr)
 
-	lowresT=.false.
 	maxfact=4d0
 
 	allocate(IP(nr*4+2))
@@ -64,36 +75,30 @@
 	IP(2)=nr*4+2
 	allocate(WS(IP(1)))
 	
-	if(lowresT) then
-		specres_LR=min(specres/1.5,11d0)
-		tot=lam(1)
-		nlam_LR=1
-		do while(tot.lt.lam(nlam))
-			tot=tot*(1d0+1d0/specres_LR)
+	nlam_LR=0
+	do ilam=1,nlam
+		if(RTgridpoint(ilam)) then
 			nlam_LR=nlam_LR+1
-		enddo
-	else
-		specres_LR=specres
-		nlam_LR=nlam
-	endif
+		endif
+	enddo
+
 	allocate(lam_LR(nlam_LR))
 	allocate(freq_LR(nlam_LR))
 	allocate(dfreq_LR(nlam_LR))
-	if(lowresT) then
-		lam_LR(1)=lam(1)
-		do i=2,nlam_LR-1
-			lam_LR(i)=lam_LR(i-1)*(1d0+1d0/specres_LR)
-		enddo
-		lam_LR(nlam_LR)=lam(nlam)
-	else
-		lam_LR(1:nlam_LR)=lam(1:nlam)
-	endif
+	nlam_LR=0
+	do ilam=1,nlam
+		if(RTgridpoint(ilam)) then
+			nlam_LR=nlam_LR+1
+			lam_LR(nlam_LR)=lam(ilam)
+		endif
+	enddo
 	do i=1,nlam_LR
 		freq_LR(i)=1d0/lam_LR(i)
 	enddo
 	do i=1,nlam_LR-1
 		dfreq_LR(i)=abs(freq_LR(i+1)-freq_LR(i))
 	enddo
+	dfreq_LR(nlam_LR)=dfreq_LR(nlam_LR-1)*freq_LR(nlam_LR)/freq_LR(nlam_LR-1)
 
 	allocate(BB_LR(nlam_LR,nBB))
 
@@ -101,7 +106,7 @@
 	do j=nBB,1,-1
 		TT=real(j)
 		tot=0d0
-		do i=1,nlam_LR-1
+		do i=1,nlam_LR
 			BB_LR(i,j)=Planck(TT,freq_LR(i))
 			tot=tot+dfreq_LR(i)*BB_LR(i,j)
 		enddo
@@ -116,8 +121,6 @@
 
 
 	allocate(taustar(nlam_LR,ng))
-	allocate(Ca_HR(nlam,ng))
-	allocate(Cs_HR(nlam,ng))
 	allocate(Ce(nr,nlam_LR,ng))
 	allocate(Ca(nr,nlam_LR,ng))
 	allocate(Cs(nr,nlam_LR,ng))
@@ -128,42 +131,6 @@
 	allocate(SurfEmis_LR(nlam_LR))
 
 	call ComputeSurface()
-	if(lowresT) then
-	do ilam=1,nlam_LR-1
-		i1=0
-		i2=0
-		do i=1,nlam-1
-			if(lam_LR(ilam).ge.lam(i).and.lam_LR(ilam).lt.lam(i+1)) i1=i
-			if(lam_LR(ilam+1).ge.lam(i).and.lam_LR(ilam+1).lt.lam(i+1)) i2=i+1
-		enddo
-		if(ilam.eq.1) i1=1
-		if(ilam.eq.nlam_LR-1) i2=nlam
-		if(i1.gt.0.and.i2.gt.0) then
-			tot=0d0
-			SurfEmis_LR(ilam)=0d0
-			do i=i1,i2
-				j=i
-				if(i.eq.ilam) j=ilam-1
-				if(i1.eq.i2) then
-					ww=1d0
-				else if(i.eq.i1) then
-					ww=abs(lam_LR(ilam)-lam(i+1))
-				else if(i.eq.i2) then
-					ww=abs(lam_LR(ilam+1)-lam(i))
-				else
-					ww=abs(lam(i)-lam(i+1))
-				endif
-				SurfEmis_LR(ilam)=SurfEmis_LR(ilam)+ww*surface_emis(j)
-				tot=tot+ww
-			enddo
-			SurfEmis_LR(ilam)=SurfEmis_LR(ilam)/tot
-		else
-			SurfEmis_LR(ilam)=1d0
-		endif
-	enddo
-	else
-	SurfEmis_LR(1:nlam_LR)=surface_emis(1:nlam)
-	endif
 
 	docloud0=.false.
 	do i=1,nclouds
@@ -187,115 +154,25 @@
 		T(ir)=Tinp(ir)
 	enddo
 
-	allocate(temp_a(ng*nlam))
-	allocate(wtemp(ng*nlam))
-	Fstar_LR=0d0
-	Cs=0d0
-	Ca=0d0
-	do ir=1,nr
-		do ilam=1,nlam
-			g=0d0
-			do ig=1,ng
-				call Crossections(ir,ilam,ig,Ca_HR(ilam,ig),Cs_HR(ilam,ig),docloud0)
-				Ca_HR(ilam,ig)=Ca_HR(ilam,ig)/dens(ir)
-				Cs_HR(ilam,ig)=Cs_HR(ilam,ig)*(1d0-g)/dens(ir)
-			enddo
-		enddo
-
-		if(lowresT) then
-		do ilam=1,nlam_LR-1
-			i1=0
-			i2=0
-			do i=1,nlam-1
-				if(lam_LR(ilam).ge.lam(i).and.lam_LR(ilam).lt.lam(i+1)) i1=i
-				if(lam_LR(ilam+1).ge.lam(i).and.lam_LR(ilam+1).lt.lam(i+1)) i2=i+1
-			enddo
-			if(ilam.eq.1) i1=1
-			if(ilam.eq.nlam_LR-1) i2=nlam
-			if(i1.gt.0.and.i2.gt.0) then
-				ngF=0
-				tot=0d0
-				Fstar_LR(ilam)=0d0
-				Cs(ir,ilam,1:ng)=0d0
-				do i=i1,i2
-					j=i
-					if(i.eq.ilam) j=ilam-1
-					if(i1.eq.i2) then
-						ww=1d0
-					else if(i.eq.i1) then
-						ww=abs(lam_LR(ilam)-lam(i+1))
-					else if(i.eq.i2) then
-						ww=abs(lam_LR(ilam+1)-lam(i))
-					else
-						ww=abs(lam(i)-lam(i+1))
-					endif
-					do ig=1,ng
-						ngF=ngF+1
-						temp_a(ngF)=Ca_HR(j,ig)
-						wtemp(ngF)=ww*wgg(ig)
-					enddo
-					Fstar_LR(ilam)=Fstar_LR(ilam)+ww*Fstar(j)
-					Cs(ir,ilam,1:ng)=Cs(ir,ilam,1:ng)+ww*Cs_HR(j,1:ng)
-					tot=tot+ww
+	i=0
+	do ilam=1,nlam
+		if(RTgridpoint(ilam)) then
+			i=i+1
+			SurfEmis_LR(i)=surface_emis(ilam)
+			Fstar_LR(i)=Fstar(ilam)
+			do ir=1,nr
+				do ig=1,ng
+					call Crossections(ir,ilam,ig,Ca(ir,i,ig),Cs(ir,i,ig),docloud0)
+					Ca(ir,i,ig)=Ca(ir,i,ig)/dens(ir)
+					Cs(ir,i,ig)=Cs(ir,i,ig)/dens(ir)
 				enddo
-				Fstar_LR(ilam)=Fstar_LR(ilam)/tot
-				Cs(ir,ilam,1:ng)=Cs(ir,ilam,1:ng)/tot
-				tot=0d0
-				do ig=1,ngF
-					tot=tot+temp_a(ig)*wtemp(ig)
-				enddo
-				tot=tot/sum(wtemp(1:ngF))
-
-				call sortw(temp_a,wtemp,ngF)
-				if(ng.eq.1) then
-					tot=0d0
-					do ig=1,ngF
-						tot=tot+temp_a(ig)*wtemp(ig)
-					enddo
-					tot=tot/sum(wtemp(1:ngF))
-					Ca(ir,ilam,1)=tot
-				else
-					do ig=2,ngF
-						wtemp(ig)=wtemp(ig)+wtemp(ig-1)
-					enddo
-					wtemp(1:ngF)=wtemp(1:ngF)/wtemp(ngF)
-					do ig=1,ng
-						call hunt(wtemp,ngF,gg(ig),j)
-						if(j.eq.0) then
-							Ca(ir,ilam,ig)=temp_a(1)
-						else
-							w1=(gg(ig)-wtemp(j+1))/(wtemp(j)-wtemp(j+1))
-							Ca(ir,ilam,ig)=temp_a(j)*w1+temp_a(j+1)*(1d0-w1)
-						endif
-					enddo
-					tot2=0d0
-					do ig=1,ng
-						tot2=tot2+wgg(ig)*Ca(ir,ilam,ig)
-					enddo
-					if(tot2.gt.0d0) then
-						Ca(ir,ilam,1:ng)=Ca(ir,ilam,1:ng)*tot/tot2
-					else
-						Ca(ir,ilam,1:ng)=tot
-					endif
-				endif
-			else
-				Ca(ir,ilam,1:ng)=0d0
-				Cs(ir,ilam,1:ng)=0d0
-				Fstar_LR(ilam)=0d0
-			endif
-		enddo
-		else
-			Ca(ir,1:nlam,1:ng)=Ca_HR(1:nlam,1:ng)
-			Cs(ir,1:nlam,1:ng)=Cs_HR(1:nlam,1:ng)
-			Fstar_LR(1:nlam)=Fstar(1:nlam)
+			enddo
 		endif
 	enddo
-	deallocate(temp_a)
-	deallocate(wtemp)
 
 	Ce=Ca+Cs
 	do ir=1,nr
-		do ilam=1,nlam_LR-1
+		do ilam=1,nlam_LR
 			do ig=1,ng
 				if(Ca(ir,ilam,ig)/Ce(ir,ilam,ig).lt.1d-4) then
 					Ca(ir,ilam,ig)=Cs(ir,ilam,ig)/(1d4-1d0)
@@ -307,7 +184,7 @@
 
 	converged=.true.
 
-	do ilam=1,nlam_LR-1
+	do ilam=1,nlam_LR
 		do ig=1,ng
 			do jr=nr,0,-1
 				if(jr.eq.nr) then
@@ -364,7 +241,7 @@ c	call regridlog(file,1d4*lam_LR,Fstar_LR,nlam_LR)
 c	Fstar_LR=Fstar_LR*distance**2/1e23
 c===============================================================
 	E=0d0
-	do ilam=1,nlam_LR-1
+	do ilam=1,nlam_LR
 c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 		E=E+dfreq_LR(ilam)*Fstar_LR(ilam)
 	enddo
@@ -391,8 +268,8 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	SurfStar_omp=0d0
 	directHstar_omp=0d0
 !$OMP DO
-	do ilam=1,nlam_LR-1
-		call tellertje(ilam,nlam_LR-1)
+	do ilam=1,nlam_LR
+		call tellertje(ilam,nlam_LR)
 		do ig=1,ng
 			Hstar_lam(0:nr)=0d0
 			Hsurf_lam(0:nr)=0d0
@@ -523,7 +400,7 @@ c				call SolveIjExpN(tauR_omp(0:nr),Si_omp(0:nr,0:nr+1),IjN(0:nr,0:nr+1,inu),nr
 			if(iT.lt.1) iT=1
 			scale=(T(jr)/real(iT))**4
 			tot=0d0
-			do ilam=1,nlam_LR-1
+			do ilam=1,nlam_LR
 				tot=tot+scale*BB_LR(ilam,iT)*IntHnu(ilam,ir,jr)
 			enddo
 			IntH(ir,jr)=tot
@@ -551,7 +428,7 @@ c=========== end experimental redistribution ===================================
 	if(iT.lt.1) iT=1
 	scale=(Tsurface/real(iT))**4
 	do ir=1,nr
-		do ilam=1,nlam_LR-1
+		do ilam=1,nlam_LR
 			Fl(ir)=Fl(ir)-abs(IntHnu(ilam,ir,0))*scale*BB_LR(ilam,iT)*SurfEmis_LR(ilam)
 		enddo
 	enddo
@@ -608,7 +485,8 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		IntH=IntH0
 		Convec(j)=.true.
 		goto 1
-	endif
+	endif		
+				
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -620,7 +498,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		if(iT.gt.nBB-1) iT=nBB-1
 		if(iT.lt.1) iT=1
 		E=0d0
-		do ilam=1,nlam_LR-1
+		do ilam=1,nlam_LR
 			do ig=1,ng
 				E=E+dfreq_LR(ilam)*wgg(ig)*BB_LR(ilam,iT)*Ca(ir,ilam,ig)
 			enddo
@@ -631,7 +509,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		iT=(iTmax+iTmin)/2
 		do while(abs(iTmax-iTmin).gt.1)
 			E0=0d0
-			do ilam=1,nlam_LR-1
+			do ilam=1,nlam_LR
 				do ig=1,ng
 					E0=E0+dfreq_LR(ilam)*wgg(ig)*BB_LR(ilam,iT)*Ca(ir,ilam,ig)
 				enddo
@@ -695,7 +573,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 
 	E0=(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
 	E=SurfStar+E0
-	do ilam=1,nlam_LR-1
+	do ilam=1,nlam_LR
 		do ig=1,ng
 			do inu=1,nnu
 				tauR(0:nr)=(tauR_nu(1,ilam,ig)-tauR_nu(0:nr,ilam,ig))/abs(nu(inu))
@@ -718,7 +596,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	iT=(iTmax+iTmin)/2
 	do while(abs(iTmax-iTmin).gt.1)
 		E0=0d0
-		do ilam=1,nlam_LR-1
+		do ilam=1,nlam_LR
 			E0=E0+dfreq_LR(ilam)*BB_LR(ilam,iT)*SurfEmis_LR(ilam)
 		enddo
 		if(E0.gt.E) then
@@ -775,8 +653,6 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	deallocate(dfreq_LR)
 	deallocate(BB_LR)
 	deallocate(taustar)
-	deallocate(Ca_HR)
-	deallocate(Cs_HR)
 	deallocate(Ce)
 	deallocate(Ca)
 	deallocate(Cs)
@@ -816,7 +692,6 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	real*8 tau1,tau2,S1,S2,I12,dtau,exptau
 	
 	dtau=abs(tau1-tau2)
-
 
 	if(dtau.lt.1d-3) then
 		I12=S2-S1*exp(-dtau)+(S1-S2)*(1d0-dtau/2d0)
