@@ -1905,8 +1905,8 @@ c number of cloud/nocloud combinations
 	real*8 lam0,T0,Planck,tot,x,y,dy,dx,lminRT,lmaxRT
 	integer i,j,ilam,nj,jlam
 	
-	lminRT=0.2d0*micron
-	lmaxRT=50d0*micron
+	lminRT=0.22d0*micron
+	lmaxRT=47d0*micron
 	specres_LR=20d0		!min(specres/1.5,11d0)
 
 	if(useobsgrid) then

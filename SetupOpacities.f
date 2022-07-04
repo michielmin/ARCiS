@@ -100,7 +100,7 @@ c===============
 		do imol=1,nmol
 			if(includemol(imol)) then
 				call ReadOpacityFITS(kappa_mol,imol,ir)
-				do i=1,nlam-1
+				do i=1,nlam
 					do ig=1,ng
 						kappa_tot(imol,i)=kappa_tot(imol,i)+wgg(ig)*kappa_mol(ig,i,imol)*mixrat_tmp(imol)
 					enddo
@@ -120,7 +120,7 @@ c===============
 		allocate(w_line(n_nu_line))
 		allocate(fulladd(nmol))
 !$OMP DO SCHEDULE(DYNAMIC,1)
-		do i=1,nlam-1
+		do i=1,nlam
 			if(computelam(i).and.(emisspec.or.computeT).and.(.not.useobsgrid.or.lamemis(i))) then
 			do imol=1,nmol
 				if(opacitymol(imol)) then
@@ -221,22 +221,22 @@ c===============
 			endif
 		enddo
 		if(outputopacity) then
-			call WriteOpacity(ir,"ktab",freq,Cabs(ir,1:nlam-1,1:ng),nlam-1,ng)
-			do i=1,nlam-1
+			call WriteOpacity(ir,"ktab",freq,Cabs(ir,1:nlam,1:ng),nlam,ng)
+			do i=1,nlam
 				kaver(i)=0d0
 				do j=1,ng
 					kaver(i)=kaver(i)+wgg(j)*Cabs(ir,i,j)
 				enddo
 			enddo
-			call WriteOpacity(ir,"aver",freq,kaver(1:nlam-1),nlam-1,1)
-			call WriteOpacity(ir,"scat",freq,Csca(ir,1:nlam-1)*Ndens(ir)/dens(ir),nlam-1,1)
+			call WriteOpacity(ir,"aver",freq,kaver(1:nlam),nlam,1)
+			call WriteOpacity(ir,"scat",freq,Csca(ir,1:nlam)*Ndens(ir)/dens(ir),nlam,1)
 		endif
 	enddo
 
 	if(.not.retrieval) then
 		open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
 		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
-		do i=1,nlam-1
+		do i=1,nlam
 			write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng)*wgg(1:ng))
 		enddo
 		close(unit=30)
@@ -337,7 +337,7 @@ c============================
 	
 	bb2=Planck(T(i),freq(1))
 	dbb2=dPlanck(T(i),freq(1))
-	do ilam=1,nlam-2
+	do ilam=1,nlam-1
 		nu1 = freq(ilam)
 		nu2 = freq(ilam+1)
 		bb1=bb2
@@ -433,7 +433,7 @@ c		enddo
 !$OMP& PRIVATE(ilam,ig)
 !$OMP& SHARED(nlam,ng,kappa_mol,imol,Ktable,wT1,wT2,wP1,wP2,iT,iP)
 !$OMP DO
-	do ilam=1,nlam-1
+	do ilam=1,nlam
 		do ig=1,ng
 			kappa_mol(ig,ilam,imol)=Ktable(imol)%ktable(ig,ilam,iT,iP)*wT1*wP1+
      &						  Ktable(imol)%ktable(ig,ilam,iT+1,iP)*wT2*wP1+
