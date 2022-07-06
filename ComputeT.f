@@ -20,12 +20,7 @@
 	itimetemp=itimetemp-itime
 	ctimetemp=ctimetemp+1
 
-	if(doMCcompute.and.nTiter.gt.0) then
-		call MCDoComputeT(converged,f)
-		converged=.false.
-	else
-		call DoComputeTeddington(converged,f)
-	endif
+	call DoComputeTeddington(converged,f)
 
 	call cpu_time(time)
 	timetemp=timetemp+time
@@ -90,15 +85,10 @@
 		if(RTgridpoint(ilam)) then
 			nlam_LR=nlam_LR+1
 			lam_LR(nlam_LR)=lam(ilam)
+			freq_LR(nlam_LR)=freq(ilam)
+			dfreq_LR(nlam_LR)=dfreq(ilam)
 		endif
 	enddo
-	do i=1,nlam_LR
-		freq_LR(i)=1d0/lam_LR(i)
-	enddo
-	do i=1,nlam_LR-1
-		dfreq_LR(i)=abs(freq_LR(i+1)-freq_LR(i))
-	enddo
-	dfreq_LR(nlam_LR)=dfreq_LR(nlam_LR-1)*freq_LR(nlam_LR)/freq_LR(nlam_LR-1)
 
 	allocate(BB_LR(nlam_LR,nBB))
 
@@ -118,7 +108,6 @@
 			BB_LR(1:nlam_LR,j)=BB_LR(1:nlam_LR,j+1)*scale
 		endif
 	enddo
-
 
 	allocate(taustar(nlam_LR,ng))
 	allocate(Ce(nr,nlam_LR,ng))

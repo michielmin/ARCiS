@@ -128,8 +128,8 @@
 					case("trans","transmission","transC")
 						spectrans(i,1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
 					case("emisr","emisR","emisa","emis","emission")
-						specemisR(i,1:nlam)=(phase(1,0,1:nlam-1)+flux(0,1:nlam-1))/(Fstar(1:nlam-1)*1d23/distance**2)
-						specemis(i,1:nlam)=phase(1,0,1:nlam-1)+flux(0,1:nlam-1)
+						specemisR(i,1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
+						specemis(i,1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 				end select
 			endif
 		enddo
@@ -140,8 +140,8 @@
 			spectrans(i,1:nlam)=spectrans(i,1:nlam)+obsA(0,1:nlam)/(pi*Rstar**2)/2d0
 		endif
 		if(i2d.eq.0.or.i2d.eq.3) then
-			specemisR(i,1:nlam)=(phase(1,0,1:nlam-1)+flux(0,1:nlam-1))/(Fstar(1:nlam-1)*1d23/distance**2)
-			specemis(i,1:nlam)=phase(1,0,1:nlam-1)+flux(0,1:nlam-1)
+			specemisR(i,1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
+			specemis(i,1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 		endif
 	endif
 
@@ -221,7 +221,7 @@
 		open(unit=26,file=trim(outputdir) // "trans_limits",RECL=1000)
 		open(unit=27,file=trim(outputdir) // "emis_limits",RECL=1000)
 		open(unit=28,file=trim(outputdir) // "emisR_limits",RECL=1000)
-		do ilam=1,nlam-1
+		do ilam=1,nlam
 			sorted(1:i)=spectrans(1:i,ilam)
 			call sort(sorted,i)
 			write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
@@ -355,7 +355,7 @@
      &			// "_limits",RECL=1000)
 				open(unit=27,file=trim(outputdir) // "phaseR" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) 
      &			// "_limits",RECL=1000)
-				do ilam=1,nlam-1
+				do ilam=1,nlam
 					sorted(1:i)=phase3D(1:i,iphase,ilam)
 					call sort(sorted,i)
 					write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
@@ -391,7 +391,7 @@
 		open(unit=26,file=trim(outputdir) // "trans_sigma",RECL=1000)
 		open(unit=27,file=trim(outputdir) // "emis_sigma",RECL=1000)
 		open(unit=28,file=trim(outputdir) // "emisR_sigma",RECL=1000)
-		do ilam=1,nlam-1
+		do ilam=1,nlam
 			sorted(1:i)=spectrans(1:i,ilam)
 			call stats(sorted,i,aver,sig)
 			write(26,*) lam(ilam)*1d4,spectrans(0,ilam),sig,aver

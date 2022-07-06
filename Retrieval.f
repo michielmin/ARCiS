@@ -12,7 +12,7 @@
 		lamemis=.false.
 		lamtrans=.false.
 	endif
-	if(computeT) lamemis=RTgridpoint
+	if(computeT.and.useobsgrid) lamemis=RTgridpoint
 	
 	do i=1,nobs
 		select case(ObsSpec(i)%type)
@@ -169,7 +169,7 @@
 				close(unit=20)
 				do j=1,ObsSpec(i)%ndata
 					dmin=1d200
-					do ilam=1,nlam-1
+					do ilam=1,nlam
 						d=abs(lam(ilam)-ObsSpec(i)%lam(j))/dlam(ilam)
 						if(abs(ObsSpec(i)%R(j)-lam(ilam)/dlam(ilam))/ObsSpec(i)%R(j).lt.0.1.and.d.lt.dmin) then
 							ObsSpec(i)%ilam(j)=ilam
@@ -732,7 +732,7 @@ c	linear
 					enddo
 					close(unit=20)
 					open(unit=20,file=trim(outputdir) // "fullobs" // trim(int2string(i,'(i0.3)')),RECL=1000)
-					do j=1,nlam-1
+					do j=1,nlam
 						write(20,*) lam(j)*1d4,specsave(i,j)/ObsSpec(i)%scale
 					enddo
 					close(unit=20)
@@ -962,20 +962,20 @@ c	linear
 			emisRerr=sqrt(emisRerr/real(iemisR-1))
 
 			open(unit=45,file=trim(outputdir) // "emis_limits.dat",RECL=1000)
-			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emis0(i),emiserr(1,i),emiserr(2,i)
+			do i=1,nlam
+				write(45,*) lam(i)*1d4,emis0(i),emiserr(1,i),emiserr(2,i)
 			enddo
 			close(unit=45)
 
 			open(unit=45,file=trim(outputdir) // "emisR_limits.dat",RECL=1000)
-			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emisR0(i),emisRerr(1,i),emisRerr(2,i)
+			do i=1,nlam
+				write(45,*) lam(i)*1d4,emisR0(i),emisRerr(1,i),emisRerr(2,i)
 			enddo
 			close(unit=45)
 
 			open(unit=45,file=trim(outputdir) // "trans_limits.dat",RECL=1000)
-			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,obsA0(i),obsAerr(1,i),obsAerr(2,i)
+			do i=1,nlam
+				write(45,*) lam(i)*1d4,obsA0(i),obsAerr(1,i),obsAerr(2,i)
 			enddo
 			close(unit=45)
 		endif
@@ -1185,20 +1185,20 @@ c			vec(i)=gasdev(idum)
 			emisRerr=sqrt(emisRerr/real(iemisR-1))
 
 			open(unit=45,file=trim(outputdir) // "emis_limits.dat",RECL=1000)
-			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emis0(i),emiserr(1,i),emiserr(2,i)
+			do i=1,nlam
+				write(45,*) lam(i)*1d4,emis0(i),emiserr(1,i),emiserr(2,i)
 			enddo
 			close(unit=45)
 
 			open(unit=45,file=trim(outputdir) // "emisR_limits.dat",RECL=1000)
-			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emisR0(i),emisRerr(1,i),emisRerr(2,i)
+			do i=1,nlam
+				write(45,*) lam(i)*1d4,emisR0(i),emisRerr(1,i),emisRerr(2,i)
 			enddo
 			close(unit=45)
 
 			open(unit=45,file=trim(outputdir) // "trans_limits.dat",RECL=1000)
-			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,obsA0(i),obsAerr(1,i),obsAerr(2,i)
+			do i=1,nlam
+				write(45,*) lam(i)*1d4,obsA0(i),obsAerr(1,i),obsAerr(2,i)
 			enddo
 			close(unit=45)
 		endif
@@ -1506,20 +1506,20 @@ c			vec(i)=gasdev(idum)
 
 		if(speclimits) then
 			open(unit=45,file=trim(outputdir) // "emis_limits.dat")
-			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emismin(i),emismax(i)
+			do i=1,nlam
+				write(45,*) lam(i)*1d4,emismin(i),emismax(i)
 			enddo
 			close(unit=45)
 
 			open(unit=45,file=trim(outputdir) // "emisR_limits.dat")
-			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,emisRmin(i),emisRmax(i)
+			do i=1,nlam
+				write(45,*) lam(i)*1d4,emisRmin(i),emisRmax(i)
 			enddo
 			close(unit=45)
 
 			open(unit=45,file=trim(outputdir) // "trans_limits.dat")
-			do i=1,nlam-1
-				write(45,*) sqrt(lam(i)*lam(i+1))*1d4,obsAmin(i),obsAmax(i)
+			do i=1,nlam
+				write(45,*) lam(i)*1d4,obsAmin(i),obsAmax(i)
 			enddo
 			close(unit=45)
 		endif
@@ -1536,11 +1536,11 @@ c			vec(i)=gasdev(idum)
 	IMPLICIT NONE
 	integer i,j,k,ilam
 	real*8 spec(*),x,specsave(*)
-	real*8 lamobs(nlam-1)
+	real*8 lamobs(nlam)
 	real*8 eta,Tirr,tau,expint
 
-	do j=1,nlam-1
-		lamobs(j)=sqrt(lam(j)*lam(j+1))
+	do j=1,nlam
+		lamobs(j)=lam(j)
 	enddo
 	select case(ObsSpec(i)%type)
 		case("trans","transmission","transC")
@@ -1550,7 +1550,7 @@ c			vec(i)=gasdev(idum)
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
 			else
-				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
+				call regridspecres(lamobs,specsave(1:nlam),nlam,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
     		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
@@ -1561,7 +1561,7 @@ c			vec(i)=gasdev(idum)
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
 			else
-				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
+				call regridspecres(lamobs,specsave(1:nlam),nlam,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
     		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
@@ -1572,7 +1572,7 @@ c			vec(i)=gasdev(idum)
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
 			else
-				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
+				call regridspecres(lamobs,specsave(1:nlam),nlam,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
     		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
@@ -1583,7 +1583,7 @@ c			vec(i)=gasdev(idum)
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
 			else
-				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
+				call regridspecres(lamobs,specsave(1:nlam),nlam,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
     		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
@@ -1594,7 +1594,7 @@ c			vec(i)=gasdev(idum)
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
 			else
-				call regridspecres(lamobs,specsave(1:nlam-1),nlam-1,
+				call regridspecres(lamobs,specsave(1:nlam),nlam,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
      		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)

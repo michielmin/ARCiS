@@ -318,7 +318,7 @@ C	 create the new empty FITS file
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,ww,w1,iT,iP,l1,l2)
-!$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp,dlam,useobsgrid,RTgridpoint)
+!$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp,dlam,useobsgrid,RTgridpoint,blam)
 	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam))
 	allocate(wtemp(Ktable(imol)%ng*Ktable(imol)%nlam))
 !$OMP DO
@@ -328,13 +328,8 @@ C	 create the new empty FITS file
 
 		i1=0
 		i2=0
-		if(useobsgrid.or.RTgridpoint(ilam).or.ilam.eq.nlam) then
-			l1=lam(ilam)-dlam(ilam)/2d0
-			l2=lam(ilam)+dlam(ilam)/2d0
-		else
-			l1=lam(ilam)
-			l2=lam(ilam+1)
-		endif
+		l1=blam(1,ilam)
+		l2=blam(2,ilam)
 
 		do i=1,Ktable(imol)%nlam
 			if(l1.ge.lamF(i).and.l1.lt.lamF(i+1)) i1=i

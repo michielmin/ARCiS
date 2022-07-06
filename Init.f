@@ -547,8 +547,6 @@ c allocate the arrays
 
 c	condensates=(condensates.or.cloudcompute)
 
-	if(specresdust.gt.specres) specresdust=specres
-
 	allocate(gg(ng),wgg(ng))
 	call gauleg(0d0,1d0,gg,wgg,ng)
 	
@@ -811,7 +809,7 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		case("specres")
 			read(key%value,*) specres
 		case("specresdust")
-			read(key%value,*) specresdust
+			call output("Parameter specresdust is not in use anymore!")
 		case("specresfile")
 			specresfile=trim(key%value)
 		case("particledir","dirparticle")
@@ -937,8 +935,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) nspike
 		case("nphot")
 			read(key%value,*) Nphot0
-		case("domccompute","mccompute","mccomputet")
-			read(key%value,*) doMCcompute
 		case("retpar","fitpar")
 			call ReadRetrieval(key)
 		case("obs")
@@ -1399,7 +1395,6 @@ c	if(par_tprofile) call ComputeParamT(T)
 	lam1=1d0
 	lam2=15d0
 	specres=10d0
-	specresdust=10d0
 	
 	trend_compute=.false.
 
@@ -1615,7 +1610,6 @@ c		Cloud(i)%P=0.0624d0
 	enddo
 	
 	computeT=.false.
-	doMCcompute=.false.
 	TeffP=600d0
 	outputopacity=.false.
 	forceEbalance=.true.
@@ -1909,8 +1903,8 @@ c number of cloud/nocloud combinations
 	lmaxRT=47d0*micron
 	specres_LR=20d0		!min(specres/1.5,11d0)
 
+	nlam=0
 	if(useobsgrid) then
-		nlam=1
 		do i=1,nobs
 			select case(ObsSpec(i)%type)
 				case('tprofile','logtp','priors','prior')
@@ -1937,8 +1931,8 @@ c number of cloud/nocloud combinations
 		enddo
 	else
 		lam0=lam1
-		nlam=1
-		do while(lam0.le.lam2)
+		nlam=nlam+1
+		do while((lam0+lam0/specres).le.lam2)
 			lam0=lam0+lam0/specres
 			nlam=nlam+1
 		enddo
@@ -1946,20 +1940,21 @@ c number of cloud/nocloud combinations
 	if(computeT) then
 		lam0=lminRT
 		nlam=nlam+1
-		do while(lam0.le.lmaxRT)
+		do while((lam0+lam0/specres_LR).le.lmaxRT)
 			lam0=lam0+lam0/specres_LR
 			nlam=nlam+1
 		enddo
 	endif
 	allocate(lam(nlam))
+	allocate(blam(2,nlam))
 	allocate(freq(nlam))
 	allocate(dfreq(nlam))
 	allocate(dlam(nlam))
 	allocate(RTgridpoint(nlam),computelam(nlam))
 	computelam=.true.
 	
+	ilam=0
 	if(useobsgrid) then
-		ilam=0
 		do i=1,nobs
 			select case(ObsSpec(i)%type)
 				case('tprofile','logtp','priors','prior')
@@ -1996,121 +1991,58 @@ c number of cloud/nocloud combinations
      				enddo
 					goto 3
 4					close(unit=30)
-					nlam=ilam+1
 			end select
 		enddo
-		if(computeT) then
-			lam(nlam)=lminRT
-			dlam(nlam)=-lam(nlam)/specres_LR
-			do while(lam(nlam).le.lmaxRT)
-				nlam=nlam+1
-				lam(nlam)=lam(nlam-1)+lam(nlam-1)/specres_LR
-				dlam(nlam)=-lam(nlam)/specres_LR
-			enddo
-			ilam=nlam
-			nlam=nlam+1
-		endif
-		call sortw(lam,dlam,ilam)
-		lam(ilam+1)=lam(ilam)+dlam(ilam)/2d0
-		dlam(ilam+1)=dlam(ilam)
-		do i=1,nlam
-			freq(i)=1d0/lam(i)
-		enddo
-		if(computeT) then
-			RTgridpoint=.false.
-			do ilam=1,nlam
-				if(dlam(ilam).lt.0d0) then
-					RTgridpoint(ilam)=.true.
-					dlam(ilam)=-dlam(ilam)
-				endif
-			enddo
-		endif
-		lam1=lam(1)
-		lam2=lam(nlam)
-		do i=1,nlam-1
-			if(lam(i).lt.lam1) lam1=lam(i)
-			if(lam(i).gt.lam2) lam2=lam(i)
-			dfreq(i)=abs(1d0/(lam(i)-dlam(i)/2d0)-1d0/(lam(i)+dlam(i)/2d0))
-		enddo
 	else
-		i=1
-		lam(i)=lam1
-		do while(lam(i).le.lam2)
-			i=i+1
-			lam(i)=lam(i-1)+lam(i-1)/specres
-		enddo
-		lam(nlam)=lam2
-		dlam=lam/specres
-		if(computeT) then
-			i=i+1
-			lam(i)=lminRT
-			dlam(i)=-lam(i)/specres_LR
-			do while(lam(i).le.lmaxRT)
-				i=i+1
-				lam(i)=lam(i-1)+lam(i-1)/specres_LR
-				dlam(i)=-lam(i)/specres_LR
-			enddo
-			nlam=i
-			call sortw(lam,dlam,nlam)
-			do ilam=1,nlam-1
-				if(lam(ilam).eq.lam(ilam+1)) then
-					if(ilam.eq.1) then
-						lam(ilam+1)=(1d0-1d-3)*lam(ilam+1)+1d-3*lam(ilam+2)
-					else
-						lam(ilam)=(1d0-1d-3)*lam(ilam)+1d-3*lam(ilam-1)
-					endif
-				endif
-			enddo						
-			RTgridpoint=.false.
-			do ilam=1,nlam
-				if(dlam(ilam).lt.0d0) then
-					RTgridpoint(ilam)=.true.
-					dlam(ilam)=-dlam(ilam)
-				endif
-			enddo
-		endif
-		do i=1,nlam
-			freq(i)=1d0/lam(i)
-		enddo
-		do i=1,nlam-1
-			if(lam(i).lt.lam1) lam1=lam(i)
-			if(lam(i).gt.lam2) lam2=lam(i)
-			dfreq(i)=abs(1d0/(lam(i)-dlam(i)/2d0)-1d0/(lam(i)+dlam(i)/2d0))
+		ilam=ilam+1
+		lam(ilam)=lam1
+		dlam(ilam)=lam(ilam)/specres
+		do while((lam(ilam)+lam(ilam)/specres).le.lam2)
+			ilam=ilam+1
+			lam(ilam)=lam(ilam-1)+lam(ilam-1)/specres
+			dlam(ilam)=lam(ilam)/specres
 		enddo
 	endif
-
-	allocate(BB(nBB,nlam))
-	do j=1,nBB
-		T0=real(j)
-		tot=0d0
-		do i=1,nlam-1
-			BB(j,i)=Planck(T0,freq(i))
-			tot=tot+dfreq(i)*BB(j,i)
+	if(computeT) then
+		ilam=ilam+1
+		lam(ilam)=lminRT
+		dlam(ilam)=-lam(ilam)/specres_LR
+		do while((lam(ilam)+lam(ilam)/specres_LR).le.lmaxRT)
+			ilam=ilam+1
+			lam(ilam)=lam(ilam-1)+lam(ilam-1)/specres_LR
+			dlam(ilam)=-lam(ilam)/specres_LR
 		enddo
-		BB(j,i)=BB(j,i)*((2d0*(pi*kb*T0)**4)/(15d0*hplanck**3*clight**3))/tot
+	endif
+	nlam=ilam
+	call sortw(lam,dlam,nlam)
+	do ilam=1,nlam-1
+		if(lam(ilam).eq.lam(ilam+1)) then
+			if(ilam.eq.1) then
+				lam(ilam+1)=(1d0-1d-3)*lam(ilam+1)+1d-3*lam(ilam+2)
+			else
+				lam(ilam)=(1d0-1d-3)*lam(ilam)+1d-3*lam(ilam-1)
+			endif
+		endif
 	enddo
-
-	if(useobsgrid) then
-		nlamdust=nlam
-		allocate(lamdust(nlamdust))
-		lamdust=lam
-	else
-		lam0=lam1
-		nlamdust=1
-		do while(lam0.le.lam2)
-			lam0=lam0+lam0/specresdust
-			nlamdust=nlamdust+1
+	RTgridpoint=.false.
+	if(computeT) then
+		do ilam=1,nlam
+			if(dlam(ilam).lt.0d0) then
+				RTgridpoint(ilam)=.true.
+				dlam(ilam)=-dlam(ilam)
+			endif
 		enddo
-		allocate(lamdust(nlamdust))
-		i=1
-		lamdust(i)=lam1
-		do while(lamdust(i).le.lam2)
-			i=i+1
-			lamdust(i)=lamdust(i-1)+lamdust(i-1)/specresdust
-		enddo
-		lamdust(nlamdust)=lam2
 	endif
-	
+	do i=1,nlam
+		blam(1,i)=lam(i)/sqrt(1d0+dlam(i)/lam(i))
+		blam(2,i)=lam(i)*sqrt(1d0+dlam(i)/lam(i))
+		freq(i)=1d0/lam(i)
+		dfreq(i)=abs(1d0/blam(1,i)-1d0/blam(2,i))
+	enddo
+	do i=1,nlam
+		if(lam(i).lt.lam1) lam1=lam(i)
+		if(lam(i).gt.lam2) lam2=lam(i)
+	enddo
 
 	return
 	end
@@ -2298,7 +2230,7 @@ c-----------------------------------------------------------------------
 		case("COMPUTE","DRIFT")
 			computelamcloud=computelam
 			tautot=0d0
-			restrictcomputecloud=(nlam.eq.nlamdust.and..not.computeT.and..not.scattering)
+			restrictcomputecloud=(.not.computeT.and..not.scattering)
 			do is=Cloud(ii)%nr,1,-1
 				call tellertje(Cloud(ii)%nr-is+1,Cloud(ii)%nr)
 				call ComputePart(Cloud(ii),ii,is,computelamcloud)

@@ -22,15 +22,8 @@
 		write(side,'("_",i0.2)') i2d
 	endif
 
-	if(useobsgrid) then
-		lam_out(1:nlam)=lam(1:nlam)/micron
-		nlam_out=nlam-1
-	else
-		nlam_out=nlam-1
-		do i=1,nlam_out
-			lam_out(i)=sqrt(lam(i)*lam(i+1))/micron
-		enddo
-	endif
+	lam_out(1:nlam)=lam(1:nlam)/micron
+	nlam_out=nlam
 
 	allocate(docloud0(max(nclouds,1),ncc))
 	allocate(theta(nphase))

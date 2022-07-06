@@ -140,7 +140,6 @@ OBJS	= Modules.o \
 		ReadFull3D.o \
 		Retrieval.o \
 		PostEqualWeights.o \
-		MCComputeT.o \
 		LightCurve.o \
 		ConvertColors.o \
 		Formation.o

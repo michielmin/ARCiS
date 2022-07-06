@@ -672,7 +672,7 @@ c Note we are here using the symmetry between North and South
 		enddo
 	endif
 c	tot=0d0
-c	do ilam=1,nlam-1
+c	do ilam=1,nlam
 c		tot=tot+phase(ipc,0,ilam)*dfreq(ilam)
 c	enddo
 c	tot=tot*distance**2/1d23
@@ -713,13 +713,12 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 			enddo
 			Rmin_im=Rmax_im
 		enddo
-		ni=nlam-1
-		if(useobsgrid) ni=nlam
+		ni=nlam
 		call writefitsfile(file,xy_image,ni,nx_im)
 
 		file=trim(outputdir) // "imageRGB" //  trim(int2string(int(theta_phase(ipc)),'(i0.3)')) // ".fits"
 		call output("Creating image: " // trim(file))
-		ni=nlam-1
+		ni=nlam
 		i=0
 		allocate(maxdet(nx_im*nx_im,3))
 		do ix=1,nx_im
@@ -2006,7 +2005,7 @@ c-----------------------------------------------------------------------
 	if(.not.scattering) return
 
 	tauR_nu=0d0
-	do ilam=1,nlam-1
+	do ilam=1,nlam
 		do ig=1,ng
 			do ir=nr,1,-1
 				if(ir.eq.nr) then
@@ -2054,7 +2053,7 @@ c-----------------------------------------------------------------------
 !$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar,lamemis,nnu0)
 	allocate(tauR(nr),Ij(nr))
 !$OMP DO
-	do ilam=1,nlam-1
+	do ilam=1,nlam
 		if(lamemis(ilam)) then
 		do ig=1,ng
 			do inu0=1,nnu0

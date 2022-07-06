@@ -15,7 +15,6 @@
 	IMPLICIT NONE
 	integer imol
 	real*8 nu1,nu2,tanscale,ll,tot,tot2
-	real*8 kross,kplanck
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime,cwg(ng),w1
 	real*8,allocatable :: k_line(:),nu_line(:),dnu_line(:),mixrat_tmp(:),w_line(:),kappa(:)
 	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:),ktemp(:),kappa_tot(:,:)
@@ -242,16 +241,6 @@ c===============
 		close(unit=30)
 	endif
 	
-	if(opacitymode) then
-		open(unit=30,file=trim(outputdir) // "meanopacities",RECL=6000)
-		write(30,'("#",a20,3a19)') "T [K]","P [bar]","K_Ross [cm^2/g]","K_Planck [cm^2/g]"
-		do i=1,nr
-			call ComputeMeanOpac(i,kross,kplanck)
-			write(30,'(4es19.7)') T(i),P(i),kross,kplanck
-		enddo
-		close(unit=30)
-	endif
-
 	deallocate(cont_tot)
 	deallocate(kaver)
 	deallocate(opac_tot)
@@ -271,11 +260,7 @@ c===============
 	real*8 ll,Cs
 	integer ir,i,j
 
-	if(useobsgrid) then
-		ll=1d0/lam(i)**2
-	else
-		ll=1d0/(lam(i+1)*lam(i))
-	endif
+	ll=1d0/lam(i)**2
 c Rayleigh cross sections from Dalgarno & Williams (1962)
 c For other than H2 from Sneep & Ubachs (2005)
 	Cs=0d0
@@ -317,64 +302,6 @@ c Pinhas 2019
 c	Cs=Cs+mixratHaze*5.31e-27*(sqrt(ll)*0.35e-4)**4
 c============================
 
-	return
-	end
-
-
-	subroutine ComputeMeanOpac(i,kross,kplanck)
-	use GlobalSetup
-	use Constants
-	IMPLICIT NONE
-	integer i,ilam,ig,imol
-	real*8 kross,kplanck,c1,c2
-	real*8 Planck,dPlanck
-	real*8 nu1,nu2,s1,s2,tross,tplanck,bb1,bb2,dbb1,dbb2
-	
-	kross=0d0
-	kplanck=0d0
-	tross=0d0
-	tplanck=0d0
-	
-	bb2=Planck(T(i),freq(1))
-	dbb2=dPlanck(T(i),freq(1))
-	do ilam=1,nlam-1
-		nu1 = freq(ilam)
-		nu2 = freq(ilam+1)
-		bb1=bb2
-		bb2=Planck(T(i),freq(ilam+1))
-		dbb1=dbb2
-		dbb2=dPlanck(T(i),freq(ilam+1))
-
-		do ig=1,ng
-			c1=Cabs(i,ilam,ig)+Csca(i,ilam)
-			c2=Cabs(i,ilam+1,ig)+Csca(i,ilam+1)
-
-			s1 = c1*bb1
-			s2 = c2*bb2
-			kplanck = kplanck + wgg(ig)*ABS(nu1-nu2)*0.5*(s1+s2)
-			s1 = bb1
-			s2 = bb2
-			tplanck = tplanck + wgg(ig)*ABS(nu1-nu2)*0.5*(s1+s2)
-
-			s1 = dbb1/c1
-			s2 = dbb2/c2
-			kross = kross + wgg(ig)*ABS(nu1-nu2)*0.5*(s1+s2)
-			s1 = dbb1
-			s2 = dbb2
-			tross = tross + wgg(ig)*ABS(nu1-nu2)*0.5*(s1+s2)
-		enddo
-	enddo
-	kross=tross/kross
-	kplanck=kplanck/tplanck
-
-c	mu=0d0
-c	do imol=1,nmol
-c		if(mixrat_r(i,imol).gt.0d0) mu=mu+mixrat_r(i,imol)*Mmol(imol)
-c	enddo
-
-	kross=kross/(mp*MMW(i))
-	kplanck=kplanck/(mp*MMW(i))
-	
 	return
 	end
 

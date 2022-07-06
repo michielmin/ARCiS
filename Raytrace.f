@@ -142,7 +142,7 @@
 !$OMP& SHARED(nlam,nclouds,flux,phase,ncc,docloud,cloudfrac,nphase)
 	allocate(phase0(nphase))
 !$OMP DO
-	do ilam=1,nlam-1
+	do ilam=1,nlam
 		call tellertje(ilam+1,nlam+1)
 		flux(:,ilam)=0d0
 		phase(:,:,ilam)=0d0
@@ -261,17 +261,13 @@
 !$OMP&         Ca,Cs,icloud,isize,BBr,Otot,Ctot,Htot,imol,irc,contr,fact_contr,fluxg_contr,Ag_contr,nk)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
 !$OMP&			cloud_dens,useDRIFT,Psimplecloud,P,flux_contr,obsA_contr,irtrace,dtrace,nirtrace,
-!$OMP&			Ocolumn,Ccolumn,Hcolumn,nmol,mixrat_r,includemol,computecontrib,wgg,useobsgrid)
+!$OMP&			Ocolumn,Ccolumn,Hcolumn,nmol,mixrat_r,includemol,computecontrib,wgg)
 	allocate(fact_contr(nr))
 	allocate(fluxg_contr(nr))
 	allocate(Ag_contr(nr))
 !$OMP DO
-	do ilam=1,nlam-1
-		if(useobsgrid) then
-			freq0=freq(ilam)
-		else
-			freq0=sqrt(freq(ilam)*freq(ilam+1))
-		endif
+	do ilam=1,nlam
+		freq0=freq(ilam)
 		obsA(:,ilam)=0d0
 		obsA_contr(1:nr,ilam)=0d0
 		flux_contr(1:nr,ilam)=flux(0,ilam)
@@ -387,7 +383,7 @@
 !$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,useDRIFT,Cext_cont,
 !$OMP&		cloudfrac,nirtrace,Psimplecloud,maxtau,ndisk,nr,obsA_LC,CaCont)
 !$OMP DO
-	do ilam=1,nlam-1
+	do ilam=1,nlam
 		do icc=1,ncc
 		if(cloudfrac(icc).gt.0d0) then
 			do ir=1,nr
