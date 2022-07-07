@@ -306,13 +306,13 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			call AddScatter(Si_omp(1:nr,0:nr+1),tauR_nu(1:nr,ilam,ig),
      &					Ca(1:nr,ilam,ig),Cs(1:nr,ilam,ig),Ce(1:nr,ilam,ig),nr,nu,wnu,nnu,nr+2)
 
-			tot=sum(Si_omp(0:nr,0))
 			do inu=1,nnu
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 c				call SolveIjExpN(tauR_omp(0:nr),Si_omp(0:nr,0:nr+1),IjN(0:nr,0:nr+1,inu),nr+1,nr+2)
 				call SolveIjN(tauR_omp(0:nr),Si_omp(0:nr,0:nr+1),IjN(0:nr,0:nr+1,inu),nr,nr+2)
 			enddo
 
+			tot=sum(Si_omp(0:nr,0))
 			if(tot.gt.0d0.or.tot.lt.0d0) then
 			do inu=1,nnu
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))

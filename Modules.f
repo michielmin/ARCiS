@@ -130,7 +130,7 @@ c for exchange when computing secondary atmosphere
 	logical fulloutput3D,deepRedist,readFull3D,computealbedo
 	real*8 f_deepredist,f_deep0
 	integer nBB
-	parameter(nBB=10000)
+	parameter(nBB=30000)
 	character*500 formationcommand
 
 	logical do3D

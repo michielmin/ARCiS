@@ -89,7 +89,7 @@
       NewBackIt    = 10
       NewBackFac   = 1.E+10
       NewFastLevel = 1
-      NewPreMethod = 2
+      NewPreMethod = 0
 
 
       write(*,*) 
@@ -339,15 +339,15 @@
 	character*10 :: mol_names_in(n_mol_in),uppername,elnam_UPPER
 
       integer,parameter :: qp = selected_real_kind ( 33, 4931 )
-      real :: p,rhog,rhod,dustV,nges,mges,kT,pges,mu
+      real*8 :: p,rhog,rhod,dustV,nges,mges,kT,pges,mu
       real*8 :: Tg,nHges,dfdmu,dmu,ff,fold,muold,ngas,pgas
       integer :: it
 
-      real(kind=qp) :: eps(NELEM),Sat(NDUST),eldust(NDUST),tot,maxabun
+      real(kind=qp) :: eps(NELEM),Sat(NDUST),eldust(NDUST),tot
 	logical condensates,merk
 
 	model_eqcond=condensates
-	eps=1d-50
+	eps=1q-50
 	do i=1,n_atom_in
 		do j=1,NELEM
 			if(trim(elnam(j)).eq.trim(atom_names_in(i))) then

@@ -8,18 +8,18 @@
 	real*8,allocatable :: x(:),vsed(:),dx(:),vth(:),vthv(:)
 	real*8,allocatable :: Sc(:),Sn(:),mpart(:),xMgO(:)
 	real*8,allocatable :: An(:,:),y(:,:)
-	real*8,allocatable :: Aomp(:,:),xomp(:)
+	real*8,allocatable :: Aomp(:,:),xomp(:),at_ab(:,:)
 	real*8,allocatable :: drhoKd(:),drhovsed(:),tcinv(:,:),rho_av(:),densv(:,:),Kd(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze
-	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,T0(nr),mm,ComputeKzz,err,maxerr
+	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,ComputeKzz,err,maxerr
 	real*8 Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr)
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),IWORKomp(:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
-	logical ini,Tconverged,cloudsform
+	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:)
-	logical,allocatable :: dospecies(:)
+	logical,allocatable :: empty(:)
 	integer iCS,ir,nrdo
 	real*8 logP(nr),logx(nr),dlogx(nr)
 	real*8,allocatable :: logCloudP(:)
@@ -49,8 +49,6 @@
 	endif
 	allocate(Kd(nnr))
 	allocate(logCloudP(nnr))
-
-	T0=T
 	
 	niter=500
 	if(computeT) then
@@ -89,7 +87,6 @@
 		allocate(atoms_cloud(nCS,N_atoms))
 		allocate(maxT(nCS))
 		allocate(xv_bot(nCS))
-		allocate(xv_bot_prev(nCS))
 		allocate(mu(nCS))
 		allocate(CSname(nCS))
 		allocate(CSnmol(nCS))
@@ -240,7 +237,7 @@ c	atoms_cloud(i,3)=1
 	enddo
 	do iCS=1,nCS
 		do k=1,N_atoms
-			if(atoms_cloud(iCS,k).gt.0) then
+			if(atoms_cloud(iCS,k).gt.0d0) then
 				f=molfracs_atoms(k)/atoms_cloud(iCS,k)
 				if(f.lt.xv_bot(iCS)) then
 					xv_bot(iCS)=f
@@ -269,30 +266,10 @@ c	atoms_cloud(i,3)=1
      &		trim(dbl2string(100d0*(1d0-densv(1,iCS)/(dens(1)*xv_bot(iCS))),'(f5.1)')) // " %)")
 				xv_bot(iCS)=densv(1,iCS)/dens(1)
 			endif
-			if(computeT.and.nTiter.gt.1) then
-				xv_bot(iCS)=(xv_bot(iCS)+xv_bot_prev(iCS)*real(nTiter-1))/real(nTiter)
-			endif
-			xv_bot_prev(iCS)=xv_bot(iCS)
 		enddo
 	endif
-	if(.not.(retrieval.or.domakeai)) call ComputeTevap
 
-	cloudsform=.false.
-	do i=1,nr
-		densv(1,1:nCS)=(mu*mp/(kb*T(i)))*exp(BTP(1:nCS)-ATP(1:nCS)/T(i))
-		do iCS=1,nCS
-			if(densv(1,iCS).lt.dens(i)*xv_bot(iCS)) cloudsform=.true.
-		enddo
-	enddo
-	if(Cloud(ii)%haze) cloudsform=.true.
-	if(.not.cloudsform) then!.or.(computeT.and.nTiter.lt.min(2,maxiter/2))) then
-		cloud_dens=0d0
-		do i=1,nr
-			Cloud(ii)%rv(i)=r_nuc
-			Cloud(ii)%frac(i,1:19)=1d0/19d0
-		enddo
-		return
-	endif
+	Cloud(ii)%frac=0d0
 
 	sigmastar=0.1
 	Pstar=60d-6
@@ -365,7 +342,6 @@ c	atoms_cloud(i,3)=1
 
 	allocate(ixv(nCS,nnr))
 	allocate(ixc(nCS,nnr))
-	allocate(dospecies(nCS))
 
 	allocate(xMgO(nnr))
 	xMgO=0d0
@@ -394,22 +370,25 @@ c	atoms_cloud(i,3)=1
 	SKIP=.false.
 	INCFD=1
 	logx(1:nr)=log(T(1:nr))
-	call DPCHIM(nr,logP,logx,dlogx,INCFD)
-	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudT,IERR)
+	call regridarray(logP,logx,nr,logCloudP,CloudT,nnr)
+c	call DPCHIM(nr,logP,logx,dlogx,INCFD)
+c	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudT,IERR)
 	CloudT(1:nnr)=exp(CloudT(1:nnr))
 
 	SKIP=.false.
 	INCFD=1
 	logx(1:nr)=log(dens(1:nr))
-	call DPCHIM(nr,logP,logx,dlogx,INCFD)
-	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,Clouddens,IERR)
+	call regridarray(logP,logx,nr,logCloudP,Clouddens,nnr)
+c	call DPCHIM(nr,logP,logx,dlogx,INCFD)
+c	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,Clouddens,IERR)
 	Clouddens(1:nnr)=exp(Clouddens(1:nnr))
 
 	SKIP=.false.
 	INCFD=1
 	logx(1:nr)=log(R(1:nr))
-	call DPCHIM(nr,logP,logx,dlogx,INCFD)
-	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudR,IERR)
+	call regridarray(logP,logx,nr,logCloudP,CloudR,nnr)
+c	call DPCHIM(nr,logP,logx,dlogx,INCFD)
+c	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudR,IERR)
 	CloudR(1:nnr)=exp(CloudR(1:nnr))
 
 	if((Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0).or.Cloud(ii)%Kzz.le.0d0) then
@@ -422,19 +401,18 @@ c	atoms_cloud(i,3)=1
 
 	f=0.1d0
 
+	allocate(empty(nnr))
 	NN=2*nnr
 	allocate(x(NN))
 	allocate(IWORK(10*NN*NN))
 
 	allocate(An(nnr,nnr))
 
-	if(.not.computeT.or.nTiter.le.1) then
-		rpart=r_nuc
-		xn=0d0
-		xm=0d0
-		xv=0d0
-		xc=0d0
-	endif
+	rpart=r_nuc
+	xn=0d0
+	xm=0d0
+	xv=0d0
+	xc=0d0
 	do j=1,nCS
 		do i=1,nnr
 			xv(j,i)=xv_bot(j)
@@ -442,13 +420,11 @@ c	atoms_cloud(i,3)=1
 	enddo
 	tcinv=0d0
 	
-	dospecies=.false.
 	do i=1,nnr
 		densv(i,1:nCS)=(mu*mp/(kb*CloudT(i)))*exp(BTP(1:nCS)-ATP(1:nCS)/CloudT(i))
 		do iCS=1,nCS
 			if(cloudT(i).gt.maxT(iCS)) densv(i,iCS)=densv(i,iCS)+
      &                    (mu(iCS)*mp/(kb*CloudT(i)*10d0))*exp(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0))
-			if(densv(i,iCS).lt.Clouddens(i)*xv_bot(iCS)) dospecies(iCS)=.true.
 		enddo
 		if(i.eq.1) then
 			drhoKd(i)=(Kd(i+1)*Clouddens(i+1)-Kd(i)*Clouddens(i))/(CloudR(i+1)-CloudR(i))
@@ -482,7 +458,7 @@ c start the loop
 			drhovsed(i)=(vsed(i+1)*Clouddens(i+1)-vsed(i)*Clouddens(i))/(CloudR(i+1)-CloudR(i))
 		endif
 	enddo
-	
+	empty=.false.
 
 c equations for number of Nuclii
 	An=0d0
@@ -528,6 +504,7 @@ c rewritten for better convergence
 			
 c			call computemedian(tcinv(1:iter,i),iter,tcoaginv)
 			tcoaginv=sum(tcinv(1:iter,i))/real(iter)
+c	call printstats(tcinv(1:iter,i),iter)
 
 			An(j,i)=An(j,i)-Clouddens(i)*tcoaginv
 		endif
@@ -546,12 +523,9 @@ c			call computemedian(tcinv(1:iter,i),iter,tcoaginv)
 	NRHS=1
 	call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 	
-	do i=1,nnr
-		if(.not.x(i).gt.0d0) x(i)=0d0
-	enddo
 	xn(1:nnr)=x(1:nnr)
 
-	if(coagulation) then
+	if(coagulation.and.Cloud(ii)%haze) then
 c equations for mass in Nuclii
 		An=0d0
 		x=0d0
@@ -586,19 +560,21 @@ c equations for mass in Nuclii
 		NRHS=1
 		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 	
-		do i=1,nnr
-			if(.not.x(i).gt.0d0) x(i)=0d0
-		enddo
 		xm(1:nnr)=x(1:nnr)
-
-		do i=1,nnr
-			if(xn(i).gt.xm(i)) then
-				xn(i)=xm(i)
-			endif
-		enddo
 	else
 		xm=xn
 	endif
+
+	do i=1,nnr
+		if(.not.xm(i).gt.0d0.or..not.xn(i).gt.0d0) then
+			xn(i)=0d0
+			xm(i)=0d0
+			empty(i)=.true.
+		endif
+		if(xn(i).gt.xm(i)) then
+			xn(i)=xm(i)
+		endif
+	enddo
 
 	if(Cloud(ii)%haze) then
 		do i=1,nnr
@@ -617,8 +593,8 @@ c equations for mass in Nuclii
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(Sc,vthv,cs,Aomp,xomp,IWORKomp,iCS,i,j,dz,NRHS,INFO)
-!$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,
-!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,dospecies,iter,nTiter,i3D)
+!$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,empty,
+!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D)
 	allocate(vthv(nnr))
 	allocate(Sc(nnr))
 	allocate(xomp(NN))
@@ -628,7 +604,6 @@ c equations for mass in Nuclii
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=1,nCS
 
-	if(dospecies(iCS)) then
 	do i=1,nnr
 		cs=sqrt(kb*CloudT(i)/(2.3d0*mp))
 		vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*mu(iCS)*mp))
@@ -642,9 +617,9 @@ c equations for material
 	xomp=0d0
 	j=0
 	do i=2,nnr-1
-
 		j=j+1
 
+		if(.not.empty(i)) then
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-drhovsed(i)
 
 		dz=CloudR(i+1)-CloudR(i)
@@ -659,6 +634,9 @@ c equations for material
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Sc(i)*densv(i,iCS)/mpart(i)
+		else
+		Aomp(j,ixc(iCS,i))=1d0
+		endif
 		xomp(j)=0d0
 
 		j=j+1
@@ -709,18 +687,12 @@ c equations for material
 	do i=1,nnr
 		xc(iCS,i)=xomp(ixc(iCS,i))
 		xv(iCS,i)=xomp(ixv(iCS,i))
-		if(.not.xn(i).gt.0d0) xc(iCS,i)=0d0
+		if(empty(i)) xc(iCS,i)=0d0
 	enddo
 	do i=1,nnr
 		if(xc(iCS,i).lt.0d0) xc(iCS,i)=0d0
 		if(xv(iCS,i).lt.0d0) xv(iCS,i)=0d0
 	enddo
-	else
-	do i=1,nnr
-		xc(iCS,i)=0d0
-		xv(iCS,i)=xv_bot(iCS)
-	enddo
-	endif
 
 	enddo
 !$OMP END DO
@@ -777,48 +749,42 @@ c end the loop
 
 
 	do k=1,nnr
-		if(dospecies(5).and.dospecies(4)) then
 c correction for silicates
-			f=mu(4)*CSnmol(4)+mu(5)*CSnmol(5)
-			mm=(f/(mu(5)*CSnmol(5))-1d0)*xc(5,k)
-			if(xc(4,k).lt.mm) then
-				f=xc(4,k)/mm
-				xc(4,k)=0d0
-				xMgO(k)=xc(5,k)*(1d0-f)
-				xc(5,k)=xc(5,k)*f*(mu(5)*CSnmol(5)+w_atoms(9)+2d0*w_atoms(5))/(mu(5)*CSnmol(5))
-			else
-				xc(4,k)=xc(4,k)-mm
-				xc(5,k)=xc(5,k)+mm
-				xMgO(k)=0d0
-			endif
+		f=mu(4)*CSnmol(4)+mu(5)*CSnmol(5)
+		mm=(f/(mu(5)*CSnmol(5))-1d0)*xc(5,k)
+		if(xc(4,k).lt.mm) then
+			f=xc(4,k)/mm
+			xc(4,k)=0d0
+			xMgO(k)=xc(5,k)*(1d0-f)
+			xc(5,k)=xc(5,k)*f*(mu(5)*CSnmol(5)+w_atoms(9)+2d0*w_atoms(5))/(mu(5)*CSnmol(5))
+		else
+			xc(4,k)=xc(4,k)-mm
+			xc(5,k)=xc(5,k)+mm
+			xMgO(k)=0d0
 		endif
-		if(dospecies(8).and.dospecies(7)) then
 c correction for FeS
-			f=mu(7)*CSnmol(7)+mu(8)*CSnmol(8)
-			mm=(f/(mu(8)*CSnmol(8))-1d0)*xc(8,k)
-			if(xc(7,k).lt.mm) then
-				f=xc(7,k)/mm
-				xc(7,k)=0d0
-				xv(8,k)=xv(8,k)+xc(8,k)*(1d0-f)
-				xc(8,k)=xc(8,k)*f*(mu(7)*CSnmol(7)+mu(8)*CSnmol(8))/(mu(8)*CSnmol(8))
-			else
-				xc(7,k)=xc(7,k)-mm
-				xc(8,k)=xc(8,k)+mm
-			endif
+		f=mu(7)*CSnmol(7)+mu(8)*CSnmol(8)
+		mm=(f/(mu(8)*CSnmol(8))-1d0)*xc(8,k)
+		if(xc(7,k).lt.mm) then
+			f=xc(7,k)/mm
+			xc(7,k)=0d0
+			xv(8,k)=xv(8,k)+xc(8,k)*(1d0-f)
+			xc(8,k)=xc(8,k)*f*(mu(7)*CSnmol(7)+mu(8)*CSnmol(8))/(mu(8)*CSnmol(8))
+		else
+			xc(7,k)=xc(7,k)-mm
+			xc(8,k)=xc(8,k)+mm
 		endif
-		if(dospecies(10).and.dospecies(9)) then
 c correction for SiC
-			f=mu(9)*CSnmol(9)+mu(10)*CSnmol(10)
-			mm=(f/(mu(10)*CSnmol(10))-1d0)*xc(10,k)
-			if(xc(9,k).lt.mm) then
-				f=xc(9,k)/mm
-				xc(9,k)=0d0
-				xv(10,k)=xv(10,k)+xc(10,k)*(1d0-f)
-				xc(10,k)=xc(10,k)*f*(mu(9)*CSnmol(9)+mu(10)*CSnmol(10))/(mu(10)*CSnmol(10))
-			else
-				xc(9,k)=xc(9,k)-mm
-				xc(10,k)=xc(10,k)+mm
-			endif
+		f=mu(9)*CSnmol(9)+mu(10)*CSnmol(10)
+		mm=(f/(mu(10)*CSnmol(10))-1d0)*xc(10,k)
+		if(xc(9,k).lt.mm) then
+			f=xc(9,k)/mm
+			xc(9,k)=0d0
+			xv(10,k)=xv(10,k)+xc(10,k)*(1d0-f)
+			xc(10,k)=xc(10,k)*f*(mu(9)*CSnmol(9)+mu(10)*CSnmol(10))/(mu(10)*CSnmol(10))
+		else
+			xc(9,k)=xc(9,k)-mm
+			xc(10,k)=xc(10,k)+mm
 		endif
 	enddo
 
@@ -832,88 +798,102 @@ c correction for SiC
 	do iCS=1,nCS
 		x(1:nnr)=x(1:nnr)+xc(iCS,1:nnr)*Clouddens(1:nnr)
 	enddo
-	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,cloud_dens(1:nr,ii),IERR)
+	call regridarray(logCloudP,x,nnr,logP,cloud_dens(1:nr,ii),nr)
+c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
+c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,cloud_dens(1:nr,ii),IERR)
 
 	SKIP=.false.
 	INCFD=1
 	x(1:nnr)=rpart(1:nnr)
-	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%rv(1:nr),IERR)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%rv(1:nr),nr)
+c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
+c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%rv(1:nr),IERR)
 
+	Cloud(ii)%frac(1:nr,1:20)=0d0
 c TiO
 	SKIP=.false.
 	INCFD=1
-	x(1:nnr)=xc(1,1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,1),IERR)
-	Cloud(ii)%frac(1:nnr,1)=Cloud(ii)%frac(1:nr,1)/3d0
-	Cloud(ii)%frac(1:nnr,2)=Cloud(ii)%frac(1:nr,1)
-	Cloud(ii)%frac(1:nnr,3)=Cloud(ii)%frac(1:nr,1)
+	x(1:nnr)=xc(1,1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,1),nr)
+c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
+c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,1),IERR)
+	Cloud(ii)%frac(1:nr,1)=Cloud(ii)%frac(1:nr,1)/3d0
+	Cloud(ii)%frac(1:nr,2)=Cloud(ii)%frac(1:nr,1)
+	Cloud(ii)%frac(1:nr,3)=Cloud(ii)%frac(1:nr,1)
 c Al2O3
 	SKIP=.false.
 	INCFD=1
-	x(1:nnr)=xc(3,1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,10),IERR)
+	x(1:nnr)=xc(3,1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,10),nr)
+c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
+c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,10),IERR)
 c Silicates
 	SKIP=.false.
 	INCFD=1
-	x(1:nnr)=xc(5,1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,13),IERR)
+	x(1:nnr)=xc(5,1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,13),nr)
+c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
+c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,13),IERR)
 	Cloud(ii)%frac(1:nr,13)=Cloud(ii)%frac(1:nr,13)/3d0
 	Cloud(ii)%frac(1:nr,14)=Cloud(ii)%frac(1:nr,13)
 	Cloud(ii)%frac(1:nr,15)=Cloud(ii)%frac(1:nr,13)
 c SiO2
 	SKIP=.false.
 	INCFD=1
-	x(1:nnr)=xc(4,1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,8),IERR)
+	x(1:nnr)=xc(4,1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,8),nr)
+c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
+c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,8),IERR)
 c H2O
 	SKIP=.false.
 	INCFD=1
-	x(1:nnr)=xc(6,1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,18),IERR)
+	x(1:nnr)=xc(6,1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,18),nr)
+c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
+c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,18),IERR)
 c Fe+FeS
 	SKIP=.false.
 	INCFD=1
-	x(1:nnr)=(xc(7,1:nnr)+xc(8,1:nnr))*Clouddens(1:nnr)
-	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,9),IERR)
+	x(1:nnr)=(xc(7,1:nnr)+xc(8,1:nnr))
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,9),nr)
+c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
+c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,9),IERR)
 c SiC
 	SKIP=.false.
 	INCFD=1
-	x(1:nnr)=xc(10,1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,17),IERR)
+	x(1:nnr)=xc(10,1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,17),nr)
+c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
+c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,17),IERR)
 c C
 	SKIP=.false.
 	INCFD=1
-	x(1:nnr)=xc(9,1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,16),IERR)
+	x(1:nnr)=xc(9,1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,16),nr)
+c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
+c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,16),IERR)
 c MgO
 	SKIP=.false.
 	INCFD=1
-	x(1:nnr)=xMgO(1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,12),IERR)
+	x(1:nnr)=xMgO(1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,12),nr)
+c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
+c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,12),IERR)
 c Seed particles
 	SKIP=.false.
 	INCFD=1
-	x(1:nnr)=xm(1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,19),IERR)
+	x(1:nnr)=xm(1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,19),nr)
+c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
+c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,19),IERR)
 
 	do i=1,nr
-		tot=sum(Cloud(ii)%frac(i,1:20))
+		tot=sum(Cloud(ii)%frac(i,1:19))
 		if(tot.gt.0d0) then
-			Cloud(ii)%frac(i,1:20)=Cloud(ii)%frac(i,1:20)/tot
+			Cloud(ii)%frac(i,1:19)=Cloud(ii)%frac(i,1:19)/tot
 		else
-			Cloud(ii)%frac(i,1:20)=1d0/20d0
+			Cloud(ii)%frac(i,1:19)=1d0/19d0
+			cloud_dens(i,ii)=0d0
 		endif
 	enddo
 
@@ -928,30 +908,27 @@ c Seed particles
 		close(unit=20)
 	endif
 
-	T=T0
+c Elemental abundances
+	allocate(at_ab(nr,N_atoms))
+	at_ab=0d0
+	do iCS=1,nCS
+		SKIP=.false.
+		INCFD=1
+		x(1:nnr)=xv(iCS,1:nnr)
+		call regridarray(logCloudP,x,nnr,logP,logx,nr)
+c		call DPCHIM(nnr,logCloudP,x,dx,INCFD)
+c		call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,logx,IERR)
+		do j=1,N_atoms
+			at_ab(1:nr,j)=at_ab(1:nr,j)+logx(1:nr)*mutot*atoms_cloud(iCS,j)/(mu(iCS)*CSnmol(iCS))
+		enddo
+	enddo
 
 c	open(unit=20,file=trim(outputdir) // '/atoms.dat',RECL=6000)
 	ini=.true.
-	k=1
 	do i=1,nr
 		call tellertje(i,nr)
-		molfracs_atoms=0d0
-		tot=0d0
-		nrdo=nr_cloud
-		if(i.eq.1.or.i.eq.nr) nrdo=nr_cloud/2+1
-		if(i.eq.2) k=nr_cloud/2+1
-		do ir=1,nrdo
-			tot=tot+Clouddens(k)
-			do iCS=1,nCS
-				do j=1,N_atoms
-					molfracs_atoms(j)=molfracs_atoms(j)+xv(iCS,k)*Clouddens(k)*mutot*atoms_cloud(iCS,j)/(mu(iCS)*CSnmol(iCS))
-				enddo
-			enddo
-			k=k+1
-			if(k.gt.nnr) k=nnr
-		enddo
-		molfracs_atoms=molfracs_atoms/tot+molfracs_atoms0
-
+		molfracs_atoms(1:N_atoms)=at_ab(i,1:N_atoms)
+		molfracs_atoms=molfracs_atoms+molfracs_atoms0
 		molfracs_atoms(3)=molfracs_atoms(3)+COabun
 		molfracs_atoms(5)=molfracs_atoms(5)+COabun
 		do j=1,N_atoms
@@ -974,6 +951,7 @@ c	open(unit=20,file=trim(outputdir) // '/atoms.dat',RECL=6000)
 c		write(20,*) P(i),molfracs_atoms(1:N_atoms)
 	enddo
 c	close(unit=20)
+	deallocate(at_ab)
 
 	if(disequilibrium) then
 c       call disequilibrium code
@@ -1008,9 +986,9 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(ixv)
 	deallocate(ixc)
 	deallocate(x,dx)
+	deallocate(empty)
 	deallocate(IWORK)
 	deallocate(An)
-	deallocate(dospecies)
 	deallocate(logCloudP)
 	deallocate(Kd)
 

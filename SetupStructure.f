@@ -185,19 +185,6 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
     			MMW(i)=MMW(i-1)
     			didcondens(i)=didcondens(i-1)
     		endif
-			do imol=1,nmol
-				if(includemol(imol)) then
-					if(IsNaN(mixrat_r(i,imol))) then
-						if(i.gt.1) then
-							mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
-						else
-							mixrat_r(i,1:nmol)=0d0
-							mixrat_r(i,45)=0.85453462
-							mixrat_r(i,48)=1d0-mixrat_r(i,45)
-						endif
-					endif
-				endif
-			enddo
 		enddo
 		if(disequilibrium) then
 c call disequilibrium code
@@ -218,6 +205,11 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 			do imol=1,nmol
 				if(.not.mixrat_r(i,imol).gt.0d0) mixrat_r(i,imol)=0d0
 			enddo
+			if(.not.sum(mixrat_r(i,1:nmol)).gt.0d0.and.nmol.ge.48) then
+				mixrat_r(i,1:nmol)=0d0
+				mixrat_r(i,45)=0.85453462
+				mixrat_r(i,48)=1d0-mixrat_r(i,45)
+			endif
 		enddo
 		call output("==================================================================")
 	else
@@ -1234,10 +1226,14 @@ c	close(unit=50)
 
 	Tg=min(max(Tin,100d0),30000d0)
 
+	mol_abun=0d0
 	Xcloud=0d0
 	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates,gas_atoms)
 
 c	call readBaud(mol_abun,nmol,Pin,MMW)
+
+c	mol_abun=1d-4
+c	MMW=2.2
 
 	do i=1,nmol
 		if(.not.mol_abun(i).gt.0d0) mol_abun(i)=0d0

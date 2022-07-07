@@ -112,7 +112,7 @@ c===============
 !$OMP& PRIVATE(i,j,k_line,imol,ig,kappa,ktemp,ig_c,tot,tot2,imol0,w1,w_line,fulladd)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,computelam,
 !$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid,
-!$OMP&        kappa_tot)
+!$OMP&        kappa_tot,RTgridpoint)
 		allocate(k_line(n_nu_line))
 		allocate(ktemp(ng))
 		allocate(kappa(ng))
@@ -120,7 +120,7 @@ c===============
 		allocate(fulladd(nmol))
 !$OMP DO SCHEDULE(DYNAMIC,1)
 		do i=1,nlam
-			if(computelam(i).and.(emisspec.or.computeT).and.(.not.useobsgrid.or.lamemis(i))) then
+			if(computelam(i).and.(emisspec.or.computeT).and.(.not.useobsgrid.or.lamemis(i).or.RTgridpoint(i))) then
 			do imol=1,nmol
 				if(opacitymol(imol)) then
 					fulladd(imol)=(kappa_tot(imol,i).gt.0.01*kappa_tot(0,i))

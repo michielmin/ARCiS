@@ -984,5 +984,23 @@ c        print*,'series failed in expint'
 	
 	return
 	end
+
+	subroutine printstats(x,n)
+	IMPLICIT NONE
+	integer i,n
+	real*8 x(n),dx,x0
+
+	if(n.le.1) return	
+	x0=sum(x(1:n))/real(n)
+	dx=0d0
+	do i=1,n
+		dx=dx+(x(n)-x0)**2
+	enddo
+	dx=sqrt(dx/(real(n-1)))
+	print*,dx/x0
+	
+	return
+	end
+	
 	
 	
