@@ -89,7 +89,7 @@
       NewBackIt    = 10
       NewBackFac   = 1.E+10
       NewFastLevel = 1
-      NewPreMethod = 0
+      NewPreMethod = 2
 
 
       write(*,*) 
@@ -315,7 +315,7 @@
 
 ***********************************************************************
 	subroutine call_GGchem(Tin,Pin,atom_names_in,atom_abuns_in,n_atom_in,mol_names_in,mol_abuns_in,n_mol_in,
-     >							MMW,condensates,atom_abuns_out)
+     >							MMW,condensates,atom_abuns_out,imethod)
 ***********************************************************************
       use PARAMETERS,ONLY: elements,abund_pick,model_dim,model_pconst,
      >                     model_struc,model_eqcond,Npoints,useDatabase,
@@ -333,7 +333,7 @@
      >                    dust_Vol,mass,mel
       use ARCiS_GGCHEM
       implicit none
-	integer :: n_atom_in,n_mol_in,verbose,i,j
+	integer :: n_atom_in,n_mol_in,verbose,i,j,imethod
 	real*8 :: Tin,Pin,atom_abuns_in(n_atom_in),mol_abuns_in(n_mol_in),MMW,atom_abuns_out(n_atom_in)
 	character*40 :: atom_names_in(n_atom_in)
 	character*10 :: mol_names_in(n_mol_in),uppername,elnam_UPPER
@@ -345,6 +345,8 @@
 
       real(kind=qp) :: eps(NELEM),Sat(NDUST),eldust(NDUST),tot
 	logical condensates,merk
+
+	NewPreMethod=imethod
 
 	model_eqcond=condensates
 	eps=1q-50
@@ -471,6 +473,8 @@ c		enddo
 		MMW=MMW+nat(i)*mass(i)/tot
 	enddo
 	MMW=MMW/amu
+	
+	imethod=2
 	
       end
 

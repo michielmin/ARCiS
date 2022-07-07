@@ -780,9 +780,12 @@ c use Ackerman & Marley 2001 cloud computation
 	IMPLICIT NONE
 	real*8 mutemp,mol_abun(nmol),abun_total(N_atoms),abun_gas(N_atoms),abun_dust(N_atoms)
 	real*8 Pres,Temp
+	integer methGGchem
+	
+	methGGchem=0
 
 	call call_GGchem(Temp,Pres,names_atoms,abun_total,N_atoms,molname(1:nmol),
-     &			mol_abun,nmol,mutemp,.true.,abun_gas)
+     &			mol_abun,nmol,mutemp,.true.,abun_gas,methGGchem)
 	abun_dust=abun_total-abun_gas	
 
 	return
@@ -1211,12 +1214,19 @@ c	close(unit=50)
 	real*8 Tin,Pin,mol_abun(nmol),nabla_ad
 	character*10 mol_names(nmol)
 	logical includemol(nmol),didcondens,ini,condensates
-	integer Ncloud,i,imol
+	integer Ncloud,i,imol,methGGchem
 	real*8 Xcloud(max(Ncloud,1)),MMW,Tg
 	character*500 cloudspecies(max(Ncloud,1)),namecloud
 	real*8 P1,P2,abun_temp(nmol),M,gas_atoms(N_atoms)
 	real*8 time
 	integer itime
+
+	if(ini) then
+		methGGchem=0
+	else
+		methGGchem=2
+	endif
+	ini=.false.
 
 	call cpu_time(time)
 	timechem=timechem-time
@@ -1228,7 +1238,7 @@ c	close(unit=50)
 
 	mol_abun=0d0
 	Xcloud=0d0
-	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates,gas_atoms)
+	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates,gas_atoms,methGGchem)
 
 c	call readBaud(mol_abun,nmol,Pin,MMW)
 
