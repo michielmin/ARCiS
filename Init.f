@@ -1612,7 +1612,7 @@ c		Cloud(i)%P=0.0624d0
 	computeT=.false.
 	TeffP=600d0
 	outputopacity=.false.
-	forceEbalance=.true.
+	forceEbalance=.false.
 
 	call getenv('HOME',homedir) 
 
