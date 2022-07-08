@@ -104,10 +104,11 @@ c terms of use
      &					// trim(int2string(maxiter,'(i3)')) // ")")
 			call SetupStructure(.true.)
 			call SetupOpacities()
-			f=0.05d0+0.95d0*exp(-real(nTiter-1)/5d0)
+			f=0.5d0
+			if(forceEbalance) f=f+0.5d0*exp(-real(maxiter-nTiter)/5d0)
 			if(f.gt.1d0) f=1d0
 			call DoComputeT(Tconverged,f)
-			if(Tconverged.and.nTiter.gt.4) exit
+			if(Tconverged.and.nTiter.gt.4.and..not.forceEbalance) exit
 c			call SetoutputMode(.true.)
 c			call output("Chemistry cpu time: " // trim(dbl2string(timechem,'(f10.4)')) // " s")
 c			call output("Chemistry walltime: " // trim(dbl2string(dble(itimechem)/dble(rate),'(f10.4)')) // " s")
@@ -126,6 +127,7 @@ c			call SetoutputMode(.false.)
 		call SetupOpacities()
 		if(forceEbalance) then
 			f=1d0
+			nTiter=1
 			call DoComputeT(Tconverged,f)
 			computelam=.not.RTgridpoint
 		endif

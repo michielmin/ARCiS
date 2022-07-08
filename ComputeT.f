@@ -611,9 +611,14 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.maxErr) maxErr=abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir))
 		if(maxErr.gt.epsiter) converged=.false.
 	enddo
+	if(.not.allocated(Tdist)) allocate(Tdist(nr,maxiter))
+	Tdist(1:nr,nTiter)=T(1:nr)
 	call output("Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%")
 	T0(1:nr)=Tinp(1:nr)
 	T1(1:nr)=T(1:nr)
+	do ir=1,nr
+		call computeav50(Tdist(ir,1:nTiter),nTiter,T1(ir))
+	enddo
 	do ir=1,nr
 		T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
 	enddo

@@ -130,7 +130,7 @@ c for exchange when computing secondary atmosphere
 	logical fulloutput3D,deepRedist,readFull3D,computealbedo
 	real*8 f_deepredist,f_deep0
 	integer nBB
-	parameter(nBB=30000)
+	parameter(nBB=10000)
 	character*500 formationcommand
 
 	logical do3D
@@ -345,7 +345,7 @@ c			   1,2,3,  4,5,6,      7,   8,    9,    10,        11,  12,  13,14,15,  16, 
 	character*25,allocatable :: CSname(:)
 	integer nCS,nnr
 	logical,allocatable :: ice(:)
-	real*8,allocatable :: Tevap(:,:),xv_bot_prev(:)
+	real*8,allocatable :: Tevap(:,:),Tdist(:,:)
 
 	end module
 
