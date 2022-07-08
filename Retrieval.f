@@ -171,7 +171,7 @@
 					dmin=1d200
 					do ilam=1,nlam
 						d=abs(lam(ilam)-ObsSpec(i)%lam(j))/dlam(ilam)
-						if(abs(ObsSpec(i)%R(j)-lam(ilam)/dlam(ilam))/ObsSpec(i)%R(j).lt.0.1.and.d.lt.dmin) then
+						if(abs(ObsSpec(i)%R(j)-lam(ilam)/dlam(ilam))/ObsSpec(i)%R(j).lt.0.1.and.d.lt.dmin.and..not.RTgridpoint(ilam)) then
 							ObsSpec(i)%ilam(j)=ilam
 							dmin=d
 						endif

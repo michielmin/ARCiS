@@ -236,7 +236,7 @@ c===============
 		open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
 		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
 		do i=1,nlam
-			write(30,'(f12.6,e19.7)') sqrt(lam(i)*lam(i+1))/micron,sum(opac_tot(i,1:ng)*wgg(1:ng))
+			write(30,'(f12.6,e19.7)') lam(i)/micron,sum(opac_tot(i,1:ng)*wgg(1:ng))
 		enddo
 		close(unit=30)
 	endif

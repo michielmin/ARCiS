@@ -297,15 +297,7 @@ c Now call the setup for the readFull3D part
 				mixrat3D(i,ir,1:nmol)=mixrat_r(ir,1:nmol)
 				if(.not.retrieval.and.fulloutput3D) cloud3D(i,ir)=sum(cloud_dens(ir,1:nclouds))
 				do ilam=1,nlam
-					if(useobsgrid) then
-						freq0=freq(ilam)
-					else
-						if(ilam.lt.nlam) then
-							freq0=sqrt(freq(ilam)*freq(ilam+1))
-						else
-							freq0=freq(ilam)
-						endif
-					endif
+					freq0=freq(ilam)
 					BBr(ilam,ir)=Planck(T(ir),freq0)
 					do ig=1,ng
 						call Crossections(ir,ilam,ig,Ca(ilam,ig,ir,i),Cs(ilam,ir,i),docloud0)
@@ -318,15 +310,7 @@ c Now call the setup for the readFull3D part
 				T3D(i,0)=T3D(i,1)
 			endif
 			do ilam=1,nlam
-				if(useobsgrid) then
-					freq0=freq(ilam)
-				else
-					if(ilam.lt.nlam) then
-						freq0=sqrt(freq(ilam)*freq(ilam+1))
-					else
-						freq0=freq(ilam)
-					endif
-				endif
+				freq0=freq(ilam)
 				BBr(ilam,0)=Planck(T3D(i,0),freq0)
 			enddo
 			do ir=1,nr
@@ -467,7 +451,7 @@ c Now call the setup for the readFull3D part
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,tau0,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp,SiRalb0,SiRalb1)
-!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,useobsgrid,freq,ibeta,fulloutput3D,Rplanet,computeT,
+!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,
 !$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,R3DC,computelam,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
