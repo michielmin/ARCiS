@@ -171,8 +171,6 @@ c ===========================================================
 	atoms_cloud(i,5)=1
 	write(CSname(i),'("Na",f3.1,"Mg",f3.1,"K",f3.1,"Ca",f3.1,"SiO",f3.1)') atoms_cloud(i,6),atoms_cloud(i,7),atoms_cloud(i,13)
      &				,atoms_cloud(i,14),atoms_cloud(i,5)+2
-	write(*,'("Na",f3.1,"Mg",f3.1,"K",f3.1,"Ca",f3.1,"SiO",f3.1)') atoms_cloud(i,6),atoms_cloud(i,7),atoms_cloud(i,13)
-     &				,atoms_cloud(i,14),atoms_cloud(i,5)+2
 c ===========================================================
 	rhodust(i)=2.0d0
 	CSnmol(i)=3d0
