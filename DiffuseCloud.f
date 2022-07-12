@@ -152,25 +152,28 @@ c Silicates: 5
 	ATP(i)=68908.	! MgSiO3 for now
 	BTP(i)=38.1
 
-
-c==================
-	atoms_cloud(i,9)=1
-c	atoms_cloud(i,6)=min(molfracs_atoms(6),molfracs_atoms(8))/molfracs_atoms(9)
-c	atoms_cloud(i,8)=min(molfracs_atoms(6),molfracs_atoms(8))/molfracs_atoms(9)
-	atoms_cloud(i,7)=molfracs_atoms(7)/molfracs_atoms(9)
-c	atoms_cloud(i,13)=molfracs_atoms(13)/molfracs_atoms(9)
-c	atoms_cloud(i,14)=molfracs_atoms(14)/molfracs_atoms(9)
-	atoms_cloud(i,5)=atoms_cloud(i,6)+atoms_cloud(i,7)+atoms_cloud(i,8)+atoms_cloud(i,14)+atoms_cloud(i,13)+2d0
-c	write(CSname(i),'("Al",f3.1,"Na",f3.1,"Mg",f3.1,"SiO",f3.1)') atoms_cloud(i,8),atoms_cloud(i,6),atoms_cloud(i,7)
-c     &				,atoms_cloud(i,5)
-	write(CSname(i),'("Mg",f3.1,"SiO",f3.1)') atoms_cloud(i,7),atoms_cloud(i,5)
-	atoms_cloud(i,9)=0
-	atoms_cloud(i,5)=atoms_cloud(i,5)-2
-c==================
-
+c ===========================================================
+c = Old version, only using Mg to condense ==================
+c ===========================================================
 	atoms_cloud(i,1:N_atoms)=0
 	atoms_cloud(i,7)=1
 	atoms_cloud(i,5)=1
+c ===========================================================
+c = New version, using Na, K, Ca and Mg to condense =========
+c ===========================================================
+	atoms_cloud(i,1:N_atoms)=0
+	atoms_cloud(i,6)=molfracs_atoms(6)
+	atoms_cloud(i,7)=molfracs_atoms(7)
+	atoms_cloud(i,13)=molfracs_atoms(13)
+	atoms_cloud(i,14)=molfracs_atoms(14)
+	tot=sum(atoms_cloud(i,1:N_atoms))
+	atoms_cloud(i,1:N_atoms)=atoms_cloud(i,1:N_atoms)/tot
+	atoms_cloud(i,5)=1
+	write(CSname(i),'("Na",f3.1,"Mg",f3.1,"K",f3.1,"Ca",f3.1,"SiO",f3.1)') atoms_cloud(i,6),atoms_cloud(i,7),atoms_cloud(i,13)
+     &				,atoms_cloud(i,14),atoms_cloud(i,5)+2
+	write(*,'("Na",f3.1,"Mg",f3.1,"K",f3.1,"Ca",f3.1,"SiO",f3.1)') atoms_cloud(i,6),atoms_cloud(i,7),atoms_cloud(i,13)
+     &				,atoms_cloud(i,14),atoms_cloud(i,5)+2
+c ===========================================================
 	rhodust(i)=2.0d0
 	CSnmol(i)=3d0
 	ice(i)=.false.
