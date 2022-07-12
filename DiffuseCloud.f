@@ -169,6 +169,7 @@ c ===========================================================
 	tot=sum(atoms_cloud(i,1:N_atoms))
 	atoms_cloud(i,1:N_atoms)=atoms_cloud(i,1:N_atoms)/tot
 	atoms_cloud(i,5)=1
+
 	write(CSname(i),'("Na",f3.1,"Mg",f3.1,"K",f3.1,"Ca",f3.1,"SiO",f3.1)') atoms_cloud(i,6),atoms_cloud(i,7),atoms_cloud(i,13)
      &				,atoms_cloud(i,14),atoms_cloud(i,5)+2
 c ===========================================================
@@ -933,12 +934,17 @@ c	open(unit=20,file=trim(outputdir) // '/atoms.dat',RECL=6000)
 		molfracs_atoms(3)=molfracs_atoms(3)+COabun
 		molfracs_atoms(5)=molfracs_atoms(5)+COabun
 		do j=1,N_atoms
-			if(.not.molfracs_atoms(j).gt.1d-50) then
-				molfracs_atoms(j)=1d-50
+			if(.not.molfracs_atoms(j).gt.0d0) then
+				molfracs_atoms(j)=0d0
 			endif
 		enddo
 		tot=sum(molfracs_atoms(1:N_atoms))
 		molfracs_atoms=molfracs_atoms/tot
+		do j=1,N_atoms
+			if(.not.molfracs_atoms(j).gt.1d-50) then
+				molfracs_atoms(j)=1d-50
+			endif
+		enddo
 		if(P(i).ge.mixP.or.i.eq.1) then
 			call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
      &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
