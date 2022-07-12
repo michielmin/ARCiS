@@ -54,9 +54,11 @@
 			y0=y1
 		enddo
 102		continue
-		do j=i,1,-1
-			CIA(icia)%Cabs(iT,j)=CIA(icia)%Cabs(iT,i+1)*freq(i+1)/freq(j)
-		enddo
+		if(i.lt.nlam) then
+			do j=i,1,-1
+				CIA(icia)%Cabs(iT,j)=CIA(icia)%Cabs(iT,i+1)*freq(i+1)/freq(j)
+			enddo
+		endif
 	enddo
 	close(unit=20)
 
