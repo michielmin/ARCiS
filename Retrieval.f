@@ -695,7 +695,7 @@ c	linear
 		do j=1,ObsSpec(i)%ndata
 			k=k+1
 			ymod(k)=allspec(i,j)
-			lnew=lnew+((ymod(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
+			lnew=lnew+((ymod(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/(ObsSpec(i)%scale*ObsSpec(i)%dy(j)))**2
 			ObsSpec(i)%model(j)=allspec(i,j)
 		enddo
 	enddo

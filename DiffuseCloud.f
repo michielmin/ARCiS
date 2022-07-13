@@ -925,6 +925,11 @@ c		call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,logx,IERR)
 		enddo
 	enddo
 
+	call cpu_time(time)
+	timecloud=timecloud+time
+	call system_clock(itime)
+	itimecloud=itimecloud+itime
+
 c	open(unit=20,file=trim(outputdir) // '/atoms.dat',RECL=6000)
 	ini=.true.
 	do i=1,nr
@@ -998,11 +1003,6 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(An)
 	deallocate(logCloudP)
 	deallocate(Kd)
-
-	call cpu_time(time)
-	timecloud=timecloud+time
-	call system_clock(itime)
-	itimecloud=itimecloud+itime
 
 	return
 	end

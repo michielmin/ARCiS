@@ -79,8 +79,8 @@
 	do i=1,nobs
 		do j=1,ObsSpec(i)%ndata
 			k=k+1
-			tot=tot-log(sqrt(2d0*pi)*ObsSpec(i)%dy(j))
-			lnew=lnew+((spec(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/ObsSpec(i)%dy(j))**2
+			tot=tot-log(sqrt(2d0*pi)*ObsSpec(i)%scale*ObsSpec(i)%dy(j))
+			lnew=lnew+((spec(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/(ObsSpec(i)%scale*ObsSpec(i)%dy(j)))**2
 		enddo
 	enddo
 	if(planetform.and..not.simAb_converge) lnew=lnew*1d10
