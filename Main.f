@@ -109,17 +109,17 @@ c terms of use
 			if(f.gt.1d0) f=1d0
 			call DoComputeT(Tconverged,f)
 			if(Tconverged.and.nTiter.gt.4.and..not.forceEbalance) exit
-			call SetoutputMode(.true.)
-			call output("Chemistry cpu time: " // trim(dbl2string(timechem,'(f10.4)')) // " s")
-			call output("Chemistry walltime: " // trim(dbl2string(dble(itimechem)/dble(rate),'(f10.4)')) // " s")
-			call output("Number of chemistry calls: " // trim(int2string(ctimechem,'(i5)')))
-			call output("Cloud cpu time:    " // trim(dbl2string(timecloud,'(f10.4)')) // " s")
-			call output("Cloud walltime:    " // trim(dbl2string(dble(itimecloud)/dble(rate),'(f10.4)')) // " s")
-			call output("Number of cloud calls:     " // trim(int2string(ctimecloud,'(i5)')))
-			call output("PTstruct cpu time: " // trim(dbl2string(timetemp,'(f10.4)')) // " s")
-			call output("PTstruct walltime: " // trim(dbl2string(dble(itimetemp)/dble(rate),'(f10.4)')) // " s")
-			call output("Number of PTstruct calls:  " // trim(int2string(ctimetemp,'(i5)')))
-			call SetoutputMode(.false.)
+c			call SetoutputMode(.true.)
+c			call output("Chemistry cpu time: " // trim(dbl2string(timechem,'(f10.4)')) // " s")
+c			call output("Chemistry walltime: " // trim(dbl2string(dble(itimechem)/dble(rate),'(f10.4)')) // " s")
+c			call output("Number of chemistry calls: " // trim(int2string(ctimechem,'(i5)')))
+c			call output("Cloud cpu time:    " // trim(dbl2string(timecloud,'(f10.4)')) // " s")
+c			call output("Cloud walltime:    " // trim(dbl2string(dble(itimecloud)/dble(rate),'(f10.4)')) // " s")
+c			call output("Number of cloud calls:     " // trim(int2string(ctimecloud,'(i5)')))
+c			call output("PTstruct cpu time: " // trim(dbl2string(timetemp,'(f10.4)')) // " s")
+c			call output("PTstruct walltime: " // trim(dbl2string(dble(itimetemp)/dble(rate),'(f10.4)')) // " s")
+c			call output("Number of PTstruct calls:  " // trim(int2string(ctimetemp,'(i5)')))
+c			call SetoutputMode(.false.)
 		enddo
 		computelam=.not.RTgridpoint
 		if(forceEbalance) computelam=.true.
