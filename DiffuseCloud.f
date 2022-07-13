@@ -7,7 +7,7 @@
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),dx(:),vth(:),vthv(:)
 	real*8,allocatable :: Sc(:),Sn(:),mpart(:),xMgO(:)
-	real*8,allocatable :: An(:,:),y(:,:)
+	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:)
 	real*8,allocatable :: Aomp(:,:),xomp(:),at_ab(:,:)
 	real*8,allocatable :: drhoKd(:),drhovsed(:),tcinv(:,:),rho_av(:),densv(:,:),Kd(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
@@ -409,6 +409,9 @@ c	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudR,IERR)
 	allocate(IWORK(10*NN*NN))
 
 	allocate(An(nnr,nnr))
+	allocate(Ma(nnr))
+	allocate(Mb(nnr))
+	allocate(Mc(nnr))
 
 	rpart=r_nuc
 	xn=0d0
@@ -463,24 +466,25 @@ c start the loop
 	empty=.false.
 
 c equations for number of Nuclii
-	An=0d0
+	Ma=0d0
+	Mb=0d0
+	Mc=0d0
 	x=0d0
-	j=0
+	Mb(1)=1d0
+	x(1)=0d0
 	do i=2,nnr-1
-		j=j+1
-
-		An(j,i)=An(j,i)-drhovsed(i)
+		Mb(i)=Mb(i)-drhovsed(i)
 
 		dz=CloudR(i+1)-CloudR(i)
-		An(j,i+1)=An(j,i+1)+(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
-		An(j,i)=An(j,i)-(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
+		Mc(i)=Mc(i)+(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
+		Mb(i)=Mb(i)-(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
 
 		dz=CloudR(i+1)-CloudR(i-1)
-		An(j,i+1)=An(j,i+1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
-		An(j,i-1)=An(j,i-1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
-		An(j,i)=An(j,i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
+		Mc(i)=Mc(i)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
+		Ma(i-1)=Ma(i-1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
+		Mb(i)=Mb(i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 
-		x(j)=-Sn(i)
+		x(i)=-Sn(i)
 
 c coagulation
 		if(coagulation) then
@@ -508,59 +512,53 @@ c			call computemedian(tcinv(1:iter,i),iter,tcoaginv)
 			tcoaginv=sum(tcinv(1:iter,i))/real(iter)
 c	call printstats(tcinv(1:iter,i),iter)
 
-			An(j,i)=An(j,i)-Clouddens(i)*tcoaginv
+			Mb(i)=Mb(i)-Clouddens(i)*tcoaginv
 		endif
 	enddo
-	i=nnr
-	j=j+1
 	dz=CloudR(i)-CloudR(i-1)
-	An(j,i)=Kd(i)/dz-vsed(i)
-	An(j,i-1)=-Kd(i)/dz
-	x(j)=0d0
-	i=1
-	j=j+1
-	An(j,i)=1d0
-	x(j)=0d0
+	Mb(nnr)=Kd(i)/dz-vsed(i)
+	Ma(nnr-1)=-Kd(i)/dz
+	x(nnr)=0d0
 
 	NRHS=1
-	call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
+c	call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
+	call dgtsv(nnr,NRHS,Ma,Mb,Mc,x,nnr,info)
 	
 	xn(1:nnr)=x(1:nnr)
 
 	if(coagulation.and.Cloud(ii)%haze) then
 c equations for mass in Nuclii
-		An=0d0
+		Ma=0d0
+		Mb=0d0
+		Mc=0d0
 		x=0d0
-		j=0
+		Mb(1)=1d0
+		x(1)=0d0
 		do i=2,nnr-1
-			j=j+1
-
-			An(j,i)=An(j,i)-drhovsed(i)
+			Mb(i)=Mb(i)-drhovsed(i)
 
 			dz=CloudR(i+1)-CloudR(i)
-			An(j,i+1)=An(j,i+1)+(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
-			An(j,i)=An(j,i)-(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
+
+			Mc(i)=Mc(i)+(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
+			Mb(i)=Mb(i)-(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
 
 			dz=CloudR(i+1)-CloudR(i-1)
-			An(j,i+1)=An(j,i+1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
-			An(j,i-1)=An(j,i-1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
-			An(j,i)=An(j,i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
+			Mc(i)=Mc(i)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
+			Ma(i-1)=Ma(i-1)+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
+			Mb(i)=Mb(i)-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 
-			x(j)=-Sn(i)
+			x(i)=-Sn(i)
 		enddo
 		i=nnr
 		j=j+1
 		dz=CloudR(i)-CloudR(i-1)
-		An(j,i)=Kd(i)/dz-vsed(i)
-		An(j,i-1)=-Kd(i)/dz
-		x(j)=0d0
-		i=1
-		j=j+1
-		An(j,i)=1d0
-		x(j)=0d0
+		Mb(nnr)=Kd(i)/dz-vsed(i)
+		Ma(nnr-1)=-Kd(i)/dz
+		x(nnr)=0d0
 
 		NRHS=1
-		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
+c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
+		call dgtsv(nnr,NRHS,Ma,Mb,Mc,x,nnr,info)
 	
 		xm(1:nnr)=x(1:nnr)
 	else
