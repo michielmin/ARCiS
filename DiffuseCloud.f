@@ -52,7 +52,7 @@
 	allocate(Kd(nnr))
 	allocate(logCloudP(nnr))
 	
-	niter=200
+	niter=500
 	if(computeT) then
 		if(nTiter.eq.1) then
 			niter=20
