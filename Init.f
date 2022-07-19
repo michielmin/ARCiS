@@ -709,7 +709,7 @@ c In this case the beta map should be the static one. Make sure this is set prop
 		allocate(mixrat_average3D(0:nphase,nr,nmol))
 	endif
 
-	if(planetform) call InitFormation(Mstar,planetform_SolidC,planetform_Macc)
+	if(planetform) call InitFormation(Mstar,Tstar,Rstar,planetform_SolidC,planetform_Macc)
 		
 	return
 	end
@@ -2634,15 +2634,15 @@ c not entirely correct...
 		call output("Maximum radius: " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Rjup")
 				case("Mp","mp","MP")
 					RetPar(i)%x0=Mplanet
-					RetPar(i)%xmin=max(0d0,Mplanet-dsig*dM1)
-					RetPar(i)%xmax=Mplanet+dsig*dM2
+					RetPar(i)%xmin=max(0d0,Mplanet-dsig*dM1/4d0)
+					RetPar(i)%xmax=Mplanet+dsig*dM2/4d0
 					if(RetPar(i)%xmin*Mjup.lt.0.1d0*Mearth) RetPar(i)%xmin=0.1d0*Mearth/Mjup
 		call output("Minimum mass:   " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Mjup")
 		call output("Maximum mass:   " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Mjup")
 				case("loggP","loggp")
 					RetPar(i)%x0=log10(Ggrav*(Mplanet*Mjup)/((Rplanet*Rjup)**2))
-					RetPar(i)%xmin=max(0.1,log10(Ggrav*(max(Mjup*(Mplanet-dsig*dM1),0.1d0*Mearth))/(((Rplanet+dsig*dR2)*Rjup)**2)))
-					RetPar(i)%xmax=log10(Ggrav*((Mplanet+dsig*dM2)*Mjup)/((max((Rplanet-dsig*dR1)*Rjup,0.1d0*Rearth))**2))
+					RetPar(i)%xmin=max(0.1,log10(Ggrav*(max(Mjup*(Mplanet-dsig*dM1/4d0),0.1d0*Mearth))/(((Rplanet+dsig*dR2)*Rjup)**2)))
+					RetPar(i)%xmax=log10(Ggrav*((Mplanet+dsig*dM2/4d0)*Mjup)/((max((Rplanet-dsig*dR1)*Rjup,0.1d0*Rearth))**2))
 		call output("Minimum logg:   " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 		call output("Maximum logg:   " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
 			end select
@@ -2681,12 +2681,14 @@ c	HG=(1d0-g**2)/((1d0-2d0*g*cos(theta)+g**2)**(3.0/2.0))/2d0
 	end
 
 
-	subroutine InitFormation(Ms,frac_SolidC,Macc_in)
+	subroutine InitFormation(Ms,Ts,Rs,frac_SolidC,Macc_in)
 	use FormationModule
+	use Constants
 	IMPLICIT NONE
-	real*8 Ms,frac_SolidC,Macc_in
+	real*8 Ms,frac_SolidC,Macc_in,Ts,Rs
 
 	Mstar=Ms
+	Lstar=Lsun*(Rs/Rsun)**2*(Ts/5777d0)**4
 	call SetupAtoms
 
 	call SetupPPdisk(frac_SolidC,Macc_in)

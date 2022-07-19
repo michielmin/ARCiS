@@ -227,7 +227,7 @@ c			Did not converg!
 			exit
 		endif
 	enddo
-c	print*,flag_converge
+c	print*,flag_converge,Mtot/Mjup,Mplanet/Mjup,Rstart/AU
 	Nsteps=1000
 	if (flag_converge) then
 		Mtot = Mcore
@@ -295,7 +295,7 @@ c===============================================================================
 	surfacedens=(const/T_local)*M_acc*(Ggrav*Mstar/R**3)**(1./2)
 
 	Rhill = (Mtot/(3.*Mstar))**(1./3)*R
-	drdt = (3.*alpha_d*Cs**2.)/(2*R*ang_v)
+	drdt = (3.*alpha_d*Cs**2.)/(2.*R*ang_v)
 	dMdt = scalehight**2*ang_v*surfacedens*min(3.*pi*alpha_disk,(Rhill/scalehight)**(9./2))
 
 	return

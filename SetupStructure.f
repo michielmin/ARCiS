@@ -896,7 +896,7 @@ c Setup names and weights of the elements
 	Mcore=planetform_Mstart*Mearth
 	Rstart=planetform_Rstart*AU
 
-	call InitFormation(Mstar,planetform_SolidC,planetform_Macc)
+	call InitFormation(Mstar,Tstar,Rstar,planetform_SolidC,planetform_Macc)
 	call Formation(Mplanet,Mcore,Rstart,Dplanet,planetform_fdust,planetform_fplan,simAb_converge)
 	if(.not.simAb_converge) then
 		call output("WARNING: SimAb did not converge!")
@@ -1773,7 +1773,7 @@ c-----------------------------------------------------------------------
 	real*8 x
 
 	if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
-		if(Kzz_contrast.gt.0d0) Kzz_max=Kzz_deep*Kzz_contrast	
+		if(Kzz_contrast.gt.0d0) Kzz_max=Kzz_deep*Kzz_contrast
 		ComputeKzz=1d0/(1d0/Kzz_max+1d0/(Kzz_deep+Kzz_1bar/x**Kzz_P))
 	else
 		ComputeKzz=Kzz
