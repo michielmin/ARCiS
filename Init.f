@@ -2506,6 +2506,10 @@ c not entirely correct...
 					RetPar(i)%xmax=log10(Ggrav*((Mplanet+dsig*dM2)*Mjup)/((max((Rplanet-dsig*dR1)*Rjup,0.1d0*Rearth))**2))
 		call output("Minimum logg:   " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 		call output("Maximum logg:   " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
+				case("Rstart","rstart")
+					RetPar(i)%x0=Dplanet
+					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet)
+		call output("Minimum Rstart: " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 			end select
 		enddo
 		return
@@ -2645,6 +2649,10 @@ c not entirely correct...
 					RetPar(i)%xmax=log10(Ggrav*((Mplanet+dsig*dM2/4d0)*Mjup)/((max((Rplanet-dsig*dR1)*Rjup,0.1d0*Rearth))**2))
 		call output("Minimum logg:   " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 		call output("Maximum logg:   " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
+				case("Rstart","rstart")
+					RetPar(i)%x0=Dplanet
+					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet)
+		call output("Minimum Rstart: " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 			end select
 		enddo
 		return

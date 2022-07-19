@@ -5,16 +5,17 @@
 	use CloudModule
 	use TimingModule
 	IMPLICIT NONE
-	real*8,allocatable :: x(:),vsed(:),dx(:),vth(:),vthv(:)
-	real*8,allocatable :: Sc(:),Sn(:),mpart(:),xMgO(:)
+	real*8,allocatable :: x(:),vsed(:),dx(:),vth(:)
+	real*8,allocatable :: Sn(:),mpart(:),xMgO(:)
 	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:)
-	real*8,allocatable :: Aomp(:,:),xomp(:),at_ab(:,:)
+	real*8,allocatable :: at_ab(:,:)
+	real*8,allocatable,save :: Sc(:),vthv(:),Aomp(:,:),xomp(:),IWORKomp(:)
 	real*8,allocatable :: drhoKd(:),drhovsed(:),tcinv(:,:),rho_av(:),densv(:,:),Kd(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,ComputeKzz,err,maxerr
 	real*8 Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM
-	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),IWORKomp(:)
+	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
@@ -27,6 +28,7 @@
 	logical SKIP
 	real*8 time
 	integer itime
+!$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp)
 
 	call cpu_time(time)
 	timecloud=timecloud-time
@@ -50,7 +52,7 @@
 	allocate(Kd(nnr))
 	allocate(logCloudP(nnr))
 	
-	niter=500
+	niter=200
 	if(computeT) then
 		if(nTiter.eq.1) then
 			niter=20
@@ -444,6 +446,17 @@ c	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudR,IERR)
 		Sn(i)=(Clouddens(i)*gz*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
 	enddo
 
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& SHARED(nnr,NN)
+	allocate(vthv(nnr))
+	allocate(Sc(nnr))
+	allocate(xomp(NN))
+	allocate(IWORKomp(10*NN*NN))
+	allocate(Aomp(NN,NN))
+!$OMP END PARALLEL
+
+
 c start the loop
 	do iter=1,niter
 	call tellertje(iter,niter)
@@ -589,14 +602,9 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(Sc,vthv,cs,Aomp,xomp,IWORKomp,iCS,i,j,dz,NRHS,INFO)
+!$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,empty,
 !$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D)
-	allocate(vthv(nnr))
-	allocate(Sc(nnr))
-	allocate(xomp(NN))
-	allocate(IWORKomp(10*NN*NN))
-	allocate(Aomp(NN,NN))
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=1,nCS
@@ -694,11 +702,6 @@ c equations for material
 	enddo
 !$OMP END DO
 !$OMP FLUSH
-	deallocate(vthv)
-	deallocate(Sc)
-	deallocate(xomp)
-	deallocate(IWORKomp)
-	deallocate(Aomp)
 !$OMP END PARALLEL
 
 	else
@@ -744,6 +747,15 @@ c equations for material
 	enddo
 c end the loop
 
+
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+	deallocate(vthv)
+	deallocate(Sc)
+	deallocate(xomp)
+	deallocate(IWORKomp)
+	deallocate(Aomp)
+!$OMP END PARALLEL
 
 	do k=1,nnr
 c correction for silicates
@@ -998,6 +1010,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(An)
 	deallocate(logCloudP)
 	deallocate(Kd)
+	deallocate(Ma,Mb,Mc)
 
 	return
 	end
