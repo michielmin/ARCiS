@@ -507,9 +507,7 @@ c rewritten for better convergence
 			tcinv(iter,i)=tcoaginv
 			
 c			call computemedian(tcinv(1:iter,i),iter,tcoaginv)
-c			tcoaginv=sum(tcinv(1:iter,i))/real(iter)
-			if(iter.gt.1) tcoaginv=(tcoaginv+tcinv(iter-1,i))/2d0
-			tcinv(iter,i)=tcoaginv
+			tcoaginv=sum(tcinv(1:iter,i))/real(iter)
 
 			Mb(i)=Mb(i)-Clouddens(i)*tcoaginv
 		endif
