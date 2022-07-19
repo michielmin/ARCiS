@@ -897,10 +897,10 @@ c Setup names and weights of the elements
 	Rstart=planetform_Rstart*AU
 
 	call InitFormation(Mstar,Tstar,Rstar,planetform_SolidC,planetform_Macc)
-	call Formation(Mplanet,Mcore,Rstart,Dplanet,planetform_fdust,planetform_fplan,simAb_converge)
+	call Formation(Mplanet,Mcore,Rstart,Dplanet,planetform_fdust,planetform_fplan,simAb_converge,MSimAb)
 	if(.not.simAb_converge) then
 		call output("WARNING: SimAb did not converge!")
-		call output("WARNING: using Solar abundances")
+		call output("WARNING: final mass of the planet:" // dbl2string(MSimAb/Mjup,'(se10.3)') // " Mjup")
 	endif
 
 	endif

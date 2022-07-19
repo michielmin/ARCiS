@@ -121,7 +121,7 @@ c for exchange when computing secondary atmosphere
 	logical secondary_atmosphere,constant_g,forceEbalance
 	logical,allocatable :: RTgridpoint(:),computelam(:)
 
-	real*8 Mp_prior,dMp_prior,surfacealbedo,PrefTpoint
+	real*8 Mp_prior,dMp_prior,surfacealbedo,PrefTpoint,MSimAb
 	character*20 surfacetype
 	integer nTZ,nspike,nai,nboot,npew,nTpoints,n_deepRedist
 	integer,allocatable :: niso(:),instr_nobs(:)

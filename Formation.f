@@ -153,7 +153,7 @@ c===============================================================================
 c===================================================================================
 c Main subroutine computing the formation of the atmosphere during accretion
 c===================================================================================
-	subroutine Formation(Mplanet,Mcore,Rstart,Rend,f_dust,f_planet,flag_converge)!,Mtot,R,alpha_d)
+	subroutine Formation(Mplanet,Mcore,Rstart,Rend,f_dust,f_planet,flag_converge,Mtot)!,R,alpha_d)
 	use FormationModule
 	use Constants
 	use AtomsModule
@@ -229,7 +229,7 @@ c			Did not converg!
 	enddo
 c	print*,flag_converge,Mtot/Mjup,Mplanet/Mjup,Rstart/AU
 	Nsteps=1000
-	if (flag_converge) then
+	if (flag_converge.or..true.) then
 		Mtot = Mcore
 		mass_gas=0d0
 		mass_planet=0d0
