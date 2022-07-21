@@ -374,25 +374,22 @@ c	atoms_cloud(i,3)=1
 	SKIP=.false.
 	INCFD=1
 	logx(1:nr)=log(T(1:nr))
-	call regridarray(logP,logx,nr,logCloudP,CloudT,nnr)
-c	call DPCHIM(nr,logP,logx,dlogx,INCFD)
-c	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudT,IERR)
+	call DPCHIM(nr,logP,logx,dlogx,INCFD)
+	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudT,IERR)
 	CloudT(1:nnr)=exp(CloudT(1:nnr))
 
 	SKIP=.false.
 	INCFD=1
 	logx(1:nr)=log(dens(1:nr))
-	call regridarray(logP,logx,nr,logCloudP,Clouddens,nnr)
-c	call DPCHIM(nr,logP,logx,dlogx,INCFD)
-c	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,Clouddens,IERR)
+	call DPCHIM(nr,logP,logx,dlogx,INCFD)
+	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,Clouddens,IERR)
 	Clouddens(1:nnr)=exp(Clouddens(1:nnr))
 
 	SKIP=.false.
 	INCFD=1
 	logx(1:nr)=log(R(1:nr))
-	call regridarray(logP,logx,nr,logCloudP,CloudR,nnr)
-c	call DPCHIM(nr,logP,logx,dlogx,INCFD)
-c	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudR,IERR)
+	call DPCHIM(nr,logP,logx,dlogx,INCFD)
+	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudR,IERR)
 	CloudR(1:nnr)=exp(CloudR(1:nnr))
 
 	if((Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0).or.Cloud(ii)%Kzz.le.0d0) then
@@ -433,18 +430,14 @@ c	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudR,IERR)
 			if(cloudT(i).gt.maxT(iCS)) densv(i,iCS)=densv(i,iCS)+
      &                    (mu(iCS)*mp/(kb*CloudT(i)*10d0))*exp(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0))
 		enddo
-		if(i.eq.1) then
-			drhoKd(i)=(Kd(i+1)*Clouddens(i+1)-Kd(i)*Clouddens(i))/(CloudR(i+1)-CloudR(i))
-		else if(i.eq.nnr) then
-			drhoKd(i)=(Kd(i)*Clouddens(i)-Kd(i-1)*Clouddens(i-1))/(CloudR(i)-CloudR(i-1))
-		else
-			drhoKd(i)=(Kd(i+1)*Clouddens(i+1)-Kd(i-1)*Clouddens(i-1))/(CloudR(i+1)-CloudR(i-1))
-		endif
-
 		gz=Ggrav*Mplanet/CloudR(i)**2
-
 		Sn(i)=(Clouddens(i)*gz*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
 	enddo
+
+	SKIP=.false.
+	INCFD=1
+	x(1:nnr)=Kd(1:nnr)*Clouddens(1:nnr)
+	call DPCHIM(nnr,CloudR,x,drhoKd,INCFD)
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -469,13 +462,11 @@ c start the loop
 		mpart(i)=rho_av(i)*4d0*pi*rpart(i)**3/3d0
 	enddo
 
-	do i=1,nnr
-		if(i.eq.nnr) then
-			drhovsed(i)=(vsed(i)*Clouddens(i)-vsed(i-1)*Clouddens(i-1))/(CloudR(i)-CloudR(i-1))
-		else
-			drhovsed(i)=(vsed(i+1)*Clouddens(i+1)-vsed(i)*Clouddens(i))/(CloudR(i+1)-CloudR(i))
-		endif
-	enddo
+	SKIP=.false.
+	INCFD=1
+	x(1:nnr)=vsed(1:nnr)*Clouddens(1:nnr)
+	call DPCHIM(nnr,CloudR,x,drhovsed,INCFD)
+
 	empty=.false.
 
 c equations for number of Nuclii
@@ -801,100 +792,52 @@ c correction for SiC
 	logP(1:nr)=-log(P(1:nr))
 	logCloudP(1:nnr)=-log(CloudP(1:nnr))
 
-	SKIP=.false.
-	INCFD=1
 	x(1:nnr)=xm(1:nnr)*Clouddens(1:nnr)
 	do iCS=1,nCS
 		x(1:nnr)=x(1:nnr)+xc(iCS,1:nnr)*Clouddens(1:nnr)
 	enddo
 	call regridarray(logCloudP,x,nnr,logP,cloud_dens(1:nr,ii),nr)
-c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,cloud_dens(1:nr,ii),IERR)
 
-	SKIP=.false.
-	INCFD=1
 	x(1:nnr)=rpart(1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%rv(1:nr),nr)
-c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%rv(1:nr),IERR)
 
 	Cloud(ii)%frac(1:nr,1:20)=0d0
 c TiO
-	SKIP=.false.
-	INCFD=1
 	x(1:nnr)=xc(1,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,1),nr)
-c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,1),IERR)
 	Cloud(ii)%frac(1:nr,1)=Cloud(ii)%frac(1:nr,1)/3d0
 	Cloud(ii)%frac(1:nr,2)=Cloud(ii)%frac(1:nr,1)
 	Cloud(ii)%frac(1:nr,3)=Cloud(ii)%frac(1:nr,1)
 c Al2O3
-	SKIP=.false.
-	INCFD=1
 	x(1:nnr)=xc(3,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,10),nr)
-c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,10),IERR)
 c Silicates
-	SKIP=.false.
-	INCFD=1
 	x(1:nnr)=xc(5,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,13),nr)
-c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,13),IERR)
 	Cloud(ii)%frac(1:nr,13)=Cloud(ii)%frac(1:nr,13)/3d0
 	Cloud(ii)%frac(1:nr,14)=Cloud(ii)%frac(1:nr,13)
 	Cloud(ii)%frac(1:nr,15)=Cloud(ii)%frac(1:nr,13)
 c SiO2
-	SKIP=.false.
-	INCFD=1
 	x(1:nnr)=xc(4,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,8),nr)
-c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,8),IERR)
 c H2O
-	SKIP=.false.
-	INCFD=1
 	x(1:nnr)=xc(6,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,18),nr)
-c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,18),IERR)
 c Fe+FeS
-	SKIP=.false.
-	INCFD=1
 	x(1:nnr)=(xc(7,1:nnr)+xc(8,1:nnr))
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,9),nr)
-c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,9),IERR)
 c SiC
-	SKIP=.false.
-	INCFD=1
 	x(1:nnr)=xc(10,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,17),nr)
-c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,17),IERR)
 c C
-	SKIP=.false.
-	INCFD=1
 	x(1:nnr)=xc(9,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,16),nr)
-c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,16),IERR)
 c MgO
-	SKIP=.false.
-	INCFD=1
 	x(1:nnr)=xMgO(1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,12),nr)
-c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,12),IERR)
 c Seed particles
-	SKIP=.false.
-	INCFD=1
 	x(1:nnr)=xm(1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,19),nr)
-c	call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-c	call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,Cloud(ii)%frac(1:nr,19),IERR)
 
 	do i=1,nr
 		tot=sum(Cloud(ii)%frac(i,1:19))
@@ -921,12 +864,8 @@ c Elemental abundances
 	allocate(at_ab(nr,N_atoms))
 	at_ab=0d0
 	do iCS=1,nCS
-		SKIP=.false.
-		INCFD=1
 		x(1:nnr)=xv(iCS,1:nnr)
 		call regridarray(logCloudP,x,nnr,logP,logx,nr)
-c		call DPCHIM(nnr,logCloudP,x,dx,INCFD)
-c		call DPCHFE(nnr,logCloudP,x,dx,INCFD,SKIP,nr,logP,logx,IERR)
 		do j=1,N_atoms
 			at_ab(1:nr,j)=at_ab(1:nr,j)+logx(1:nr)*mutot*atoms_cloud(iCS,j)/(mu(iCS)*CSnmol(iCS))
 		enddo
