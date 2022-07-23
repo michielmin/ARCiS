@@ -443,7 +443,7 @@ c	atoms_cloud(i,3)=1
 	allocate(vthv(nnr))
 	allocate(Sc(nnr))
 	allocate(xomp(NN))
-	allocate(IWORKomp(10*NN*NN))
+	allocate(IWORKomp(NN))
 	allocate(Aomp(NN,NN))
 	allocate(AB(7,NN))
 !$OMP END PARALLEL
@@ -670,21 +670,16 @@ c equations for material
 
 	NRHS=1
 	info=0
-	if(.true.) then
 c Use Band matrix algorithm
-		KL=2
-		KU=2
-		do j=1,NN
-			do i=max(1,j-KU),min(j+KL,NN)
-				AB(KL+KU+1+i-j,j) = Aomp(i,j)
-			enddo
+	KL=2
+	KU=2
+	do j=1,NN
+		do i=max(1,j-KU),min(j+KL,NN)
+			AB(KL+KU+1+i-j,j) = Aomp(i,j)
 		enddo
-		j=7
-		call DGBSV(NN,KL,KU,NRHS,AB,j,IWORKomp,xomp,NN,INFO)	
-	else
-c Use Dense matrix algorithm
-		call DGESV( NN, NRHS, Aomp, NN, IWORKomp, xomp, NN, info )
-	endif
+	enddo
+	j=7
+	call DGBSV(NN,KL,KU,NRHS,AB,j,IWORKomp,xomp,NN,INFO)	
 
 	do i=1,NN
 		if(.not.xomp(i).gt.0d0) xomp(i)=0d0

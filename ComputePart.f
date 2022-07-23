@@ -10,9 +10,6 @@
 
 	real cext0,csca0,maxf
 	real minlog,maxlog,pow,e1blend,e2blend,cabs0,totA
-	real,allocatable :: f11(:,:),f12(:,:)
-	real,allocatable :: f22(:,:),f33(:,:)
-	real,allocatable :: f34(:,:),f44(:,:)
 	real e1av,e2av,rad,r1,r2,tot,lmax,lmin,Mass,tot2,Ntot
 	real lambda,Vol,rho_av
 	real,allocatable :: r0(:),nr0(:,:),f(:),wf(:),rho(:)
@@ -21,13 +18,10 @@
 	integer i,j,k,l,na,nf,ns,nm,ilam,Err,spheres,toolarge
 	complex m,min,mav,alpha
 	real QEXT, QSCA, QBS, GQSC,wvno,scale
-	real,allocatable :: mu0(:),M1(:,:),M2(:,:),S21(:,:),D21(:,:)
 	character*3 meth
 	character*500 input,filename(100),grid,tmp,tmp2,partfile,lnkfile
 
 	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie,KR,theta,dummy,amin,amax,rcore
-	real*8,allocatable :: Mief11(:),Mief12(:),Mief22(:)
-	real*8,allocatable :: Mief33(:),Mief34(:),Mief44(:)
 	logical truefalse,checkparticlefile,lnkloglog
 	external Carbon_BE_Zubko1996,Mg07Fe03SiO3_Dorschner1995,AstroSilicate
 	external Enstatite_X,Enstatite_Y,Enstatite_Z,checkparticlefile
@@ -37,11 +31,8 @@
 	integer abun_in_name,LL,LLmax
 	parameter(abun_in_name=2)
 	real*8 Kabs(nlam),Ksca(nlam),Kext(nlam)
-	real*8 F11_HR(nlam),F12_HR(nlam),F22_HR(nlam),F33_HR(nlam),F34_HR(nlam),F44_HR(nlam)
 	logical fcomputed,computelamcloud(nlam)
 	real*8 csmie_fcomp,cemie_fcomp,gasdev
-	real*8,allocatable :: Mief11_fcomp(:),Mief12_fcomp(:)
-	real*8,allocatable :: Mief33_fcomp(:),Mief34_fcomp(:)
 
 	write(meth,100)
 100	format('DHS')
@@ -54,12 +45,6 @@
 
 	allocate(frac(MAXMAT))
 	allocate(rho(MAXMAT))
-	allocate(f11(nlam,na))
-	allocate(f12(nlam,na))
-	allocate(f22(nlam,na))
-	allocate(f33(nlam,na))
-	allocate(f34(nlam,na))
-	allocate(f44(nlam,na))
 
 	if(useDRIFT.or.cloudcompute) then
 		amin=C%amin
@@ -741,17 +726,6 @@ c H2O: 18
 	endif
 
 
-	do i=1,nlam
-		do j=1,na
-			f11(i,j)=0d0
-			f12(i,j)=0d0
-			f22(i,j)=0d0
-			f33(i,j)=0d0
-			f34(i,j)=0d0
-			f44(i,j)=0d0
-		enddo
-	enddo
-
 	if(nf.gt.1.and.maxf.gt.0.01e0) then
 		call gauleg2(0.01e0,maxf,f(1:nf),wf(1:nf),nf)
 	else if(maxf.eq.0e0) then
@@ -834,10 +808,9 @@ c H2O: 18
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,csca0,cabs0,cext0,theta,i,l,tot,k,Err,spheres,toolarge,
 !$OMP&         rad,wvno,m,r1,rcore,qext,qsca,qbs,gqsc,rmie,lmie,e1mie,e2mie,
-!$OMP&         csmie,cemie,MieF11,MieF12,MieF33,MieF34,Mief22,Mief44,tot2,j,fcomputed,
-!$OMP&         MieF11_fcomp,MieF12_fcomp,MieF33_fcomp,MieF34_fcomp,M1,M2,S21,D21)
-!$OMP& SHARED(C,nlam,na,nm,ns,frac,minlog,maxlog,f,mu0,e1,e2,wf,isize,computelamcloud,Mass,
-!$OMP&        pow,lam,rho,nf,r0,nr0,Kabs,Ksca,Kext,F11,F12,F22,F33,F34,F44)
+!$OMP&         csmie,cemie,tot2,j,fcomputed)
+!$OMP& SHARED(C,nlam,na,nm,ns,frac,minlog,maxlog,f,e1,e2,wf,isize,computelamcloud,Mass,
+!$OMP&        pow,lam,rho,nf,r0,nr0,Kabs,Ksca,Kext)
 !$OMP DO
 !$OMP& SCHEDULE(STATIC,1)
 	do ilam=1,nlam
@@ -846,12 +819,6 @@ c H2O: 18
 		Kabs(ilam)=1d-10
 		Ksca(ilam)=1d-10
 		Kext(ilam)=1d-10
-		F11(ilam,1:180)=1d0
-		F12(ilam,1:180)=0d0
-		F22(ilam,1:180)=1d0
-		F33(ilam,1:180)=1d0
-		F34(ilam,1:180)=0d0
-		F44(ilam,1:180)=1d0
 		goto 11
 	endif
 	csca0=0d0
@@ -924,12 +891,6 @@ c H2O: 18
 	Kabs(ilam)=1d4*cabs0/Mass
 	Ksca(ilam)=1d4*csca0/Mass
 	Kext(ilam)=1d4*cext0/Mass
-	F11(ilam,1:180)=1d0
-	F12(ilam,1:180)=0d0
-	F22(ilam,1:180)=1d0
-	F33(ilam,1:180)=1d0
-	F34(ilam,1:180)=0d0
-	F44(ilam,1:180)=1d0
 
 	Kext(ilam)=Kabs(ilam)+Ksca(ilam)
 	if(Kabs(ilam)/Kext(ilam).lt.1d-4) then
@@ -964,12 +925,6 @@ c H2O: 18
 
 	deallocate(frac)
 	deallocate(rho)
-	deallocate(f11)
-	deallocate(f12)
-	deallocate(f22)
-	deallocate(f33)
-	deallocate(f34)
-	deallocate(f44)
 
 
 	return
