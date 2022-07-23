@@ -47,9 +47,9 @@ ifeq ($(gfort),true)
   FLAG_LINUX    = -ffixed-line-length-132 -cpp
   FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else
-  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(MULTICORE) -assume buffered_io -I/usr/local/modules -fp-model strict -heap-arrays $(LIBS_MN)
+  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(MULTICORE) -assume buffered_io -I/usr/local/modules -fp-model strict -heap-arrays -ip $(LIBS_MN)
   FLAG_LINUX    = -xHOST -fpp
-  FLAG_MAC      = -xHOST -qopt-prefetch -static-intel -fpp -heap-arrays 
+  FLAG_MAC      = -xHOST -qopt-prefetch -static-intel -fpp -heap-arrays
 endif
 
 LIBS_FITS		= -lcfitsio
@@ -116,21 +116,7 @@ OBJS	= Modules.o \
 		mrqmin.o \
 		truncated_normal.o \
 		amoeba.o \
-		ggchem/datamod.o \
-		ggchem/database.o \
-		ggchem/supersat.o \
-		ggchem/stindex.o \
-		ggchem/smchem16.o \
-		ggchem/smchem8.o \
-		ggchem/nucleation.o \
-		ggchem/ggchem.o \
-		ggchem/init_dustchem.o \
-		ggchem/init_chemistry.o \
-		ggchem/gauss_nm.o \
-		ggchem/gauss8.o \
-		ggchem/gauss16.o \
-		ggchem/equil_cond.o \
-		ggchem/upper.o \
+		ggchem/ggchem_all.o \
 		GGchemARCiS.o \
 		nasa_polynomial.o \
 		GGchem_linpack_q.o \
