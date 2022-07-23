@@ -9,10 +9,10 @@
 	real*8,allocatable :: Sn(:),mpart(:),xMgO(:)
 	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:)
 	real*8,allocatable :: at_ab(:,:)
-	real*8,allocatable,save :: Sc(:),vthv(:),Aomp(:,:),xomp(:),IWORKomp(:)
+	real*8,allocatable,save :: Sc(:),vthv(:),Aomp(:,:),xomp(:),IWORKomp(:),AB(:,:)
 	real*8,allocatable :: drhoKd(:),drhovsed(:),tcinv(:,:),rho_av(:),densv(:,:),Kd(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
-	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze
+	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,ComputeKzz,err,maxerr
 	real*8 Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:)
@@ -28,7 +28,7 @@
 	logical SKIP
 	real*8 time
 	integer itime
-!$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp)
+!$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp,AB)
 
 	call cpu_time(time)
 	timecloud=timecloud-time
@@ -355,8 +355,6 @@ c	atoms_cloud(i,3)=1
 		do i=1,nnr
 			j=j+1
 			ixc(iCS,i)=j
-		enddo
-		do i=1,nnr
 			j=j+1
 			ixv(iCS,i)=j
 		enddo
@@ -447,6 +445,7 @@ c	atoms_cloud(i,3)=1
 	allocate(xomp(NN))
 	allocate(IWORKomp(10*NN*NN))
 	allocate(Aomp(NN,NN))
+	allocate(AB(7,NN))
 !$OMP END PARALLEL
 
 
@@ -593,7 +592,7 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO)
+!$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,empty,
 !$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D)
 !$OMP DO
@@ -612,6 +611,14 @@ c equations for material
 	Aomp=0d0
 	xomp=0d0
 	j=0
+	i=1
+	j=j+1
+	Aomp(j,ixc(iCS,i))=1d0
+	xomp(j)=0d0
+
+	j=j+1
+	Aomp(j,ixv(iCS,i))=1d0
+	xomp(j)=xv_bot(iCS)
 	do i=2,nnr-1
 		j=j+1
 
@@ -633,7 +640,6 @@ c equations for material
 		else
 		Aomp(j,ixc(iCS,i))=1d0
 		endif
-		xomp(j)=0d0
 
 		j=j+1
 
@@ -649,17 +655,7 @@ c equations for material
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-Sc(i)*xn(i)*Clouddens(i)
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Sc(i)*densv(i,iCS)/mpart(i)
-		xomp(j)=0d0
 	enddo
-	i=1
-	j=j+1
-	Aomp(j,ixc(iCS,i))=1d0
-	xomp(j)=0d0
-
-	j=j+1
-	Aomp(j,ixv(iCS,i))=1d0
-	xomp(j)=xv_bot(iCS)
-
 	i=nnr
 	dz=CloudR(i)-CloudR(i-1)
 	j=j+1
@@ -674,16 +670,30 @@ c equations for material
 
 	NRHS=1
 	info=0
-	call DGESV( NN, NRHS, Aomp, NN, IWORKomp, xomp, NN, info )
+	if(.true.) then
+c Use Band matrix algorithm
+		KL=2
+		KU=2
+		do j=1,NN
+			do i=max(1,j-KU),min(j+KL,NN)
+				AB(KL+KU+1+i-j,j) = Aomp(i,j)
+			enddo
+		enddo
+		j=7
+		call DGBSV(NN,KL,KU,NRHS,AB,j,IWORKomp,xomp,NN,INFO)	
+	else
+c Use Dense matrix algorithm
+		call DGESV( NN, NRHS, Aomp, NN, IWORKomp, xomp, NN, info )
+	endif
 
 	do i=1,NN
 		if(.not.xomp(i).gt.0d0) xomp(i)=0d0
 	enddo
 
 	do i=1,nnr
+		if(empty(i)) xomp(ixc(iCS,i))=0d0
 		xc(iCS,i)=xomp(ixc(iCS,i))
 		xv(iCS,i)=xomp(ixv(iCS,i))
-		if(empty(i)) xc(iCS,i)=0d0
 	enddo
 	do i=1,nnr
 		if(xc(iCS,i).lt.0d0) xc(iCS,i)=0d0
@@ -738,7 +748,6 @@ c equations for material
 	enddo
 c end the loop
 
-
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 	deallocate(vthv)
@@ -746,6 +755,7 @@ c end the loop
 	deallocate(xomp)
 	deallocate(IWORKomp)
 	deallocate(Aomp)
+	deallocate(AB)
 !$OMP END PARALLEL
 
 	do k=1,nnr
