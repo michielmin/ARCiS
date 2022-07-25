@@ -680,6 +680,7 @@ c equations for material
 c Use Band matrix algorithm
 	KL=2
 	KU=2
+	AB=0d0
 	do j=1,NN
 		do i=max(1,j-KU),min(j+KL,NN)
 			AB(KL+KU+1+i-j,j) = Aomp(i,j)
@@ -763,7 +764,7 @@ c Compute crystallinity
 
 	cryst=impurity
 
-	do iter=1,niter
+	do iter=1,10
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku,tcrystinv)
@@ -832,6 +833,7 @@ c equations for material
 c Use Band matrix algorithm
 	KL=2
 	KU=2
+	AB=0d0
 	do j=1,NN
 		do i=max(1,j-KU),min(j+KL,NN)
 			AB(KL+KU+1+i-j,j) = Aomp(i,j)
@@ -999,6 +1001,10 @@ c Seed particles
 	if(computecryst) then
 c Silicates
 		x(1:nnr)=(xc(5,1:nnr)*cryst(5,1:nnr)+xc(6,1:nnr)*cryst(6,1:nnr))/(xc(5,1:nnr)+xc(6,1:nnr))
+		do i=1,nnr
+			if(.not.x(i).gt.0d0) x(i)=0d0
+			if(.not.x(i).lt.1d0) x(i)=1d0
+		enddo
 		call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%cryst(1:nr,13),nr)
 		Cloud(ii)%cryst(1:nr,14)=Cloud(ii)%cryst(1:nr,13)
 		Cloud(ii)%cryst(1:nr,15)=Cloud(ii)%cryst(1:nr,13)

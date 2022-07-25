@@ -2046,7 +2046,7 @@ c-----------------------------------------------------------------------
 					contr=(Fstar(ilam)/(pi*Dplanet**2))
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
 					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+contr*exp(-tauR(1:nr))*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)/(4d0*pi)
-					contr=must*contr*exp(-tauR(0))
+					contr=must*contr*exp(-tauR(1))
 				else
 					contr=0d0
 				endif

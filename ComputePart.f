@@ -19,7 +19,7 @@
 	complex m,min,mav,alpha
 	real QEXT, QSCA, QBS, GQSC,wvno,scale
 	character*3 meth
-	character*500 input,filename(100),grid,tmp,tmp2,partfile,lnkfile
+	character*500 input,filename(MAXMAT),grid,tmp,tmp2,partfile,lnkfile
 
 	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie,KR,theta,dummy,amin,amax,rcore
 	logical truefalse,checkparticlefile,lnkloglog
@@ -682,13 +682,14 @@ c H2O: 18
 				stop
 		end select
 		if(computecryst) then
+			i=nm
 			nm=nm+3
 
 			frac(4:6)=frac(4:6)*C%cryst(isize,4:6)
 			i=i+1
 			filename(i)='A-Olivine'
 			rho(i)=3.21
-			frac(i)=sum(frac(4:6)*(1d0-C%cryst(isize,4:6)))/rho(i)
+			frac(i)=sum(frac(4:6)*rho(4:6)*(1d0-C%cryst(isize,4:6)))/rho(i)
 			call RegridDataLNK(AstroSilicate,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 			e1(i,1:nlam)=e1d(1:nlam)
 			e2(i,1:nlam)=e2d(1:nlam)
@@ -697,7 +698,7 @@ c H2O: 18
 			i=i+1
 			filename(i)='A-SiO2'
 			rho(i)=2.648
-			frac(i)=(frac(8)*(1d0-C%cryst(isize,8)))/rho(i)
+			frac(i)=(frac(8)*rho(8)*(1d0-C%cryst(isize,8)))/rho(i)
 			call RegridDataLNK(SiO2,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 			e1(i,1:nlam)=e1d(1:nlam)
 			e2(i,1:nlam)=e2d(1:nlam)
@@ -706,7 +707,7 @@ c H2O: 18
 			i=i+1
 			filename(i)='A-Pyroxene'
 			rho(i)=3.01
-			frac(i)=sum(frac(13:15)*(1d0-C%cryst(isize,13:15)))/rho(i)
+			frac(i)=sum(frac(13:15)*rho(13:15)*(1d0-C%cryst(isize,13:15)))/rho(i)
 			call RegridDataLNK(Mg07Fe03SiO3_Dorschner1995,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 			e1(i,1:nlam)=e1d(1:nlam)
 			e2(i,1:nlam)=e2d(1:nlam)
