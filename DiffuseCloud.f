@@ -26,7 +26,7 @@
 	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:)
 	integer INCFD,IERR
 	logical SKIP
-	real*8 time,tcrystinv
+	real*8 time,tcrystinv,impurity,ncryst,nucryst,Tcryst
 	integer itime
 !$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp,AB)
 
@@ -756,21 +756,20 @@ c end the loop
 
 	if(computecryst) then
 c Compute crystallinity
-	do i=1,nnr
-		tcrystinv=exp(93.-112000./CloudT(i))
-		if(1d0/tcrystinv.lt.3600d0) then
-			cryst(1:nCS,i)=1d0
-		else
-			cryst(1:nCS,i)=0d0
-		endif
-	enddo
-	cryst=0.5d0
+	impurity=1d-8
+	ncryst=2.5d0
+	nucryst=93d0
+	Tcryst=112000d0
 
-!$OMP PARALLEL IF(.false.)
+	cryst=impurity
+
+	do iter=1,niter
+!$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku,tcrystinv)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,empty,
-!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot,cryst)
+!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot,cryst,
+!$OMP&		impurity,ncryst,nucryst,Tcryst)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=4,6
@@ -789,7 +788,8 @@ c equations for material
 	Aomp(j,ixv(iCS,i))=1d0
 	xomp(j)=xc(iCS,i)
 	do i=2,nnr-1
-		tcrystinv=exp(93.-112000./CloudT(i))
+		tcrystinv=exp(nucryst-Tcryst/CloudT(i))
+		tcrystinv=tcrystinv*ncryst*(-log(max(impurity,1d0-max(impurity,cryst(iCS,i)))))**((ncryst-1d0)/ncryst)
 
 		j=j+1
 
@@ -858,10 +858,18 @@ c Use Band matrix algorithm
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
-	
-	do i=1,nnr
-		print*,CloudT(i),cryst(4,i),cryst(5,i)
 	enddo
+	
+	if(.not.retrieval) then
+		open(unit=20,file=trim(outputdir) // '/crystallinity.dat',RECL=1000)
+		form='("#",a18,' // trim(int2string(3,'(i4)')) // 'a23,a19)'
+		write(20,form) "P[bar]",(trim(CSname(i)),i=4,6),"T[K]"
+		form='(es19.7E3,' // trim(int2string(3,'(i4)')) // 'es23.7E3,es19.7E3)'
+		do i=1,nnr
+			write(20,form) CloudP(i),cryst(4:6,i),CloudT(i)
+		enddo
+		close(unit=20)
+	endif
 
 	endif
 
@@ -1085,7 +1093,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 		enddo
 	enddo
 	
-	call ComputeTevap()
+	if(.not.retrieval) call ComputeTevap()
 
 	deallocate(densv)
 	deallocate(mpart)

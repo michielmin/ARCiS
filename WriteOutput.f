@@ -217,8 +217,9 @@ c			endif
 	endif
 	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
-		write(30,form) lam_out(i),
-     &					tau1depth(1:ncc,i)
+		if(computelam(i)) then
+		write(30,form) lam_out(i),tau1depth(1:ncc,i)
+		endif
 	enddo
 	close(unit=30)
 
@@ -236,8 +237,9 @@ c			endif
 	endif
 	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
-		write(30,form) lam_out(i),
-     &					cloudtau(1:ncc,i)
+		if(computelam(i)) then
+		write(30,form) lam_out(i),cloudtau(1:ncc,i)
+		endif
 	enddo
 	close(unit=30)
 
