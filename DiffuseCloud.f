@@ -1008,7 +1008,8 @@ c SiO2
 		write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"MgO","r[micron]","T[K]","Jstar"
 		form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+1,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
 		do i=1,nnr
-			write(20,form) CloudP(i),Clouddens(i),xn(i)*m_nuc,xc(1:nCS,i),(xc(4,i)+xc(5,i)+xc(6,i))*fsil(4,i),rpart(i),CloudT(i),Sn(i)/m_nuc
+			write(20,form) CloudP(i),Clouddens(i),xn(i)*m_nuc,xc(1:nCS,i),(xc(4,i)+xc(5,i)+xc(6,i))*fsil(4,i),rpart(i),CloudT(i),
+     &						Sn(i)/m_nuc
 		enddo
 		close(unit=20)
 	endif
