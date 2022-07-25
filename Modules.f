@@ -127,7 +127,7 @@ c for exchange when computing secondary atmosphere
 	integer,allocatable :: niso(:),instr_nobs(:)
 	real*8,allocatable :: MMW(:),Tpoint(:),Ppoint(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
-	logical fulloutput3D,deepRedist,readFull3D,computealbedo
+	logical fulloutput3D,deepRedist,readFull3D,computealbedo,computecryst
 	real*8 f_deepredist,f_deep0
 	integer nBB
 	parameter(nBB=10000)
@@ -278,7 +278,7 @@ c for exchange when computing secondary atmosphere
 		real*8 P,dP,s,column
 		real*8 coverage,frain
 		real*8,allocatable :: rv(:),w(:),M(:)					! dimension nsize
-		real*8,allocatable :: frac(:,:),sigma(:)
+		real*8,allocatable :: frac(:,:),sigma(:),cryst(:,:)
 		real*8 rho,amin,amax,fmax,porosity,reff,veff
 		logical blend,haze,condensates
 		real*8 fcond,mixrat,tau,lam,mixrathaze

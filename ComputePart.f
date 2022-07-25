@@ -5,7 +5,7 @@
 
 	type(CloudType) C,Cdust
 	integer MAXMAT
-	parameter(MAXMAT=20)
+	parameter(MAXMAT=40)
 	integer ii,isize
 
 	real cext0,csca0,maxf
@@ -681,6 +681,36 @@ c H2O: 18
 				call output("hazetype unknown")
 				stop
 		end select
+		if(computecryst) then
+			nm=nm+3
+
+			frac(4:6)=frac(4:6)*C%cryst(isize,4:6)
+			i=i+1
+			filename(i)='A-Olivine'
+			rho(i)=3.21
+			frac(i)=sum(frac(4:6)*(1d0-C%cryst(isize,4:6)))/rho(i)
+			call RegridDataLNK(AstroSilicate,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+			e1(i,1:nlam)=e1d(1:nlam)
+			e2(i,1:nlam)=e2d(1:nlam)
+
+			frac(8)=frac(8)*C%cryst(isize,8)
+			i=i+1
+			filename(i)='A-SiO2'
+			rho(i)=2.648
+			frac(i)=(frac(8)*(1d0-C%cryst(isize,8)))/rho(i)
+			call RegridDataLNK(SiO2,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+			e1(i,1:nlam)=e1d(1:nlam)
+			e2(i,1:nlam)=e2d(1:nlam)
+			
+			frac(13:15)=frac(13:15)*C%cryst(isize,13:15)
+			i=i+1
+			filename(i)='A-Pyroxene'
+			rho(i)=3.01
+			frac(i)=sum(frac(13:15)*(1d0-C%cryst(isize,13:15)))/rho(i)
+			call RegridDataLNK(Mg07Fe03SiO3_Dorschner1995,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+			e1(i,1:nlam)=e1d(1:nlam)
+			e2(i,1:nlam)=e2d(1:nlam)
+		endif
 	endif
 			
 	min=dcmplx(1d0,0d0)

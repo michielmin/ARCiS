@@ -6,7 +6,7 @@
 	use TimingModule
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),dx(:),vth(:)
-	real*8,allocatable :: Sn(:),mpart(:),xMgO(:)
+	real*8,allocatable :: Sn(:),mpart(:)
 	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:)
 	real*8,allocatable :: at_ab(:,:)
 	real*8,allocatable,save :: Sc(:),vthv(:),Aomp(:,:),xomp(:),IWORKomp(:),AB(:,:)
@@ -22,11 +22,11 @@
 	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:)
 	logical,allocatable :: empty(:)
 	integer iCS,ir,nrdo
-	real*8 logP(nr),logx(nr),dlogx(nr)
-	real*8,allocatable :: logCloudP(:)
+	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil
+	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:)
 	integer INCFD,IERR
 	logical SKIP
-	real*8 time
+	real*8 time,tcrystinv
 	integer itime
 !$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp,AB)
 
@@ -37,7 +37,7 @@
 	ctimecloud=ctimecloud+1
 
 	nnr=(nr-1)*nr_cloud+1
-	nCS=10
+	nCS=11
 	if(.not.allocated(CloudP)) then
 		allocate(CloudP(nnr))
 		allocate(CloudT(nnr))
@@ -149,36 +149,46 @@ c SiO2: 4
 	rhodust(i)=2.2d0
 	CSnmol(i)=1d0
 	ice(i)=.false.
-c Silicates: 5
+c Mg/Ca Silicates: 5
 	i=i+1
 	ATP(i)=68908.	! MgSiO3 for now
 	BTP(i)=38.1
-
 c ===========================================================
-c = Old version, only using Mg to condense ==================
-c ===========================================================
-	atoms_cloud(i,1:N_atoms)=0
-	atoms_cloud(i,7)=1
-	atoms_cloud(i,5)=1
-c ===========================================================
-c = New version, using Na, K, Ca and Mg to condense =========
+c = New version, using Ca and Mg to condense =========
 c ===========================================================
 	atoms_cloud(i,1:N_atoms)=0
-	atoms_cloud(i,6)=molfracs_atoms(6)
 	atoms_cloud(i,7)=molfracs_atoms(7)
-	atoms_cloud(i,13)=molfracs_atoms(13)
 	atoms_cloud(i,14)=molfracs_atoms(14)
 	tot=sum(atoms_cloud(i,1:N_atoms))
 	atoms_cloud(i,1:N_atoms)=atoms_cloud(i,1:N_atoms)/tot
 	atoms_cloud(i,5)=1
 
-	write(CSname(i),'("Na",f3.1,"Mg",f3.1,"K",f3.1,"Ca",f3.1,"SiO",f3.1)') atoms_cloud(i,6),atoms_cloud(i,7),atoms_cloud(i,13)
-     &				,atoms_cloud(i,14),atoms_cloud(i,5)+2
+	write(CSname(i),'("Mg",f3.1,"Ca",f3.1,"SiO",f3.1)') atoms_cloud(i,7),atoms_cloud(i,14),atoms_cloud(i,5)+2
 c ===========================================================
 	rhodust(i)=2.0d0
-	CSnmol(i)=3d0
+	CSnmol(i)=2d0
 	ice(i)=.false.
-c H2O: 6
+c Na/K Silicates: 6
+	i=i+1
+	ATP(i)=68908.	! MgSiO3 for now
+	BTP(i)=38.1
+	call scaleABT(ATP(i),BTP(i),1250d0,850d0)	! scale for lower condensation T
+c ===========================================================
+c = New version, using Na and K to condense =========
+c ===========================================================
+	atoms_cloud(i,1:N_atoms)=0
+	atoms_cloud(i,6)=molfracs_atoms(6)
+	atoms_cloud(i,13)=molfracs_atoms(13)
+	tot=sum(atoms_cloud(i,1:N_atoms))
+	atoms_cloud(i,1:N_atoms)=atoms_cloud(i,1:N_atoms)/tot
+	atoms_cloud(i,5)=1
+
+	write(CSname(i),'("Na",f3.1,"K",f3.1,"SiO",f3.1)') atoms_cloud(i,6),atoms_cloud(i,13),atoms_cloud(i,5)+2
+c ===========================================================
+	rhodust(i)=2.0d0
+	CSnmol(i)=2d0
+	ice(i)=.false.
+c H2O: 7
 	i=i+1
 	CSname(i)='H2O'
 	ATP(i)=6511.
@@ -188,7 +198,7 @@ c H2O: 6
 	rhodust(i)=1.0d0
 	CSnmol(i)=1d0
 	ice(i)=.true.
-c Fe: 7
+c Fe: 8
 	i=i+1
 	CSname(i)='Fe'
 	ATP(i)=48354.
@@ -197,7 +207,7 @@ c Fe: 7
 	rhodust(i)=7.8d0
 	CSnmol(i)=1d0
 	ice(i)=.false.
-c FeS: 8
+c FeS: 9
 	i=i+1
 	CSname(i)='FeS'
 	ATP(i)=48354.
@@ -208,7 +218,7 @@ c	atoms_cloud(i,17)=1
 	maxT(i)=680d0
 	CSnmol(i)=1d0
 	ice(i)=.false.
-c C: 9
+c C: 10
 	i=i+1
 	CSname(i)='C'
 	ATP(i)=93646.
@@ -217,7 +227,7 @@ c C: 9
 	rhodust(i)=1.8d0
 	CSnmol(i)=1d0
 	ice(i)=.false.
-c SiC: 10
+c SiC: 11
 	i=i+1
 	CSname(i)='SiC'
 	ATP(i)=78462.
@@ -253,8 +263,8 @@ c	atoms_cloud(i,3)=1
 			if(molfracs_atoms(k).lt.0d0) molfracs_atoms(k)=0d0
 		enddo
 	enddo
-	if(xv_bot(10).gt.xv_bot(9)) xv_bot(10)=xv_bot(9)
-	if(xv_bot(8).gt.xv_bot(7)) xv_bot(8)=xv_bot(7)
+	if(xv_bot(11).gt.xv_bot(10)) xv_bot(11)=xv_bot(10)
+	if(xv_bot(9).gt.xv_bot(8)) xv_bot(9)=xv_bot(8)
 	
 	molfracs_atoms0=molfracs_atoms
 	xv_bot=xv_bot*mu*CSnmol/mutot
@@ -292,22 +302,22 @@ c	atoms_cloud(i,3)=1
 	select case(Cloud(ii)%hazetype)
 		case("SOOT","soot","Soot")
 			rho_nuc=1.00
-			ihaze=9
+			ihaze=10
 		case("THOLIN","tholin","Tholin")
 			rho_nuc=1.00
-			ihaze=9
+			ihaze=10
 		case("SiC")
 			rho_nuc=3.22
-			ihaze=10
+			ihaze=11
 		case("CARBON","Carbon","carbon")
 			rho_nuc=1.80
-			ihaze=9
+			ihaze=10
 		case("CORRUNDUM","Corrundum","corrundum","Al2O3")
 			rho_nuc=3.97
 			ihaze=3
 		case("IRON","Iron","iron","Fe")
 			rho_nuc=7.87
-			ihaze=7
+			ihaze=8
 		case("SiO")
 			rho_nuc=2.18
 			ihaze=4
@@ -347,9 +357,6 @@ c	atoms_cloud(i,3)=1
 	allocate(ixv(nCS,nnr))
 	allocate(ixc(nCS,nnr))
 
-	allocate(xMgO(nnr))
-	xMgO=0d0
-	
 	do iCS=1,nCS
 		j=0
 		do i=1,nnr
@@ -447,7 +454,7 @@ c	atoms_cloud(i,3)=1
 	allocate(Aomp(NN,NN))
 	allocate(AB(7,NN))
 !$OMP END PARALLEL
-
+	allocate(ScTot(2,nCS,NN),cryst(nCS,nnr))
 
 c start the loop
 	do iter=1,niter
@@ -594,7 +601,7 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,empty,
-!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D)
+!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=1,nCS
@@ -686,6 +693,8 @@ c Use Band matrix algorithm
 	enddo
 
 	do i=1,nnr
+		ScTot(1,iCS,i)=Sc(i)*xn(i)*Clouddens(i)
+		ScTot(2,iCS,i)=Sc(i)*densv(i,iCS)/mpart(i)
 		if(empty(i)) xomp(ixc(iCS,i))=0d0
 		xc(iCS,i)=xomp(ixc(iCS,i))
 		xv(iCS,i)=xomp(ixv(iCS,i))
@@ -743,6 +752,119 @@ c Use Band matrix algorithm
 	enddo
 c end the loop
 
+
+
+	if(computecryst) then
+c Compute crystallinity
+	do i=1,nnr
+		tcrystinv=exp(93.-112000./CloudT(i))
+		if(1d0/tcrystinv.lt.3600d0) then
+			cryst(1:nCS,i)=1d0
+		else
+			cryst(1:nCS,i)=0d0
+		endif
+	enddo
+	cryst=0.5d0
+
+!$OMP PARALLEL IF(.false.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku,tcrystinv)
+!$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,empty,
+!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot,cryst)
+!$OMP DO
+!$OMP& SCHEDULE(DYNAMIC, 1)
+	do iCS=4,6
+
+c equations for material
+	Aomp=0d0
+	xomp=0d0
+	j=0
+	i=1
+	j=j+1
+	Aomp(j,ixc(iCS,i))=1d0
+	xomp(j)=0d0
+
+	j=j+1
+	Aomp(j,ixc(iCS,i))=1d0
+	Aomp(j,ixv(iCS,i))=1d0
+	xomp(j)=xc(iCS,i)
+	do i=2,nnr-1
+		tcrystinv=exp(93.-112000./CloudT(i))
+
+		j=j+1
+
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-drhovsed(i)
+
+		dz=CloudR(i+1)-CloudR(i)
+		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))+(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
+
+		dz=CloudR(i+1)-CloudR(i-1)
+		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
+		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))
+     &					+1d0/(dz*(CloudR(i)-CloudR(i-1))))
+
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+tcrystinv
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-ScTot(2,iCS,i)
+		
+		j=j+1
+
+		Aomp(j,ixc(iCS,i))=1d0
+		Aomp(j,ixv(iCS,i))=1d0
+
+		xomp(j)=xc(iCS,i)
+	enddo
+	i=nnr
+	dz=CloudR(i)-CloudR(i-1)
+	j=j+1
+	Aomp(j,ixc(iCS,i))=Kd(i)/dz-vsed(i)
+	Aomp(j,ixc(iCS,i-1))=-Kd(i)/dz
+	xomp(j)=0d0!-Mc_top/Clouddens(i)
+
+	j=j+1
+	Aomp(j,ixc(iCS,i))=1d0
+	Aomp(j,ixv(iCS,i))=1d0
+	xomp(j)=xc(iCS,i)
+
+	NRHS=1
+	info=0
+c Use Band matrix algorithm
+	KL=2
+	KU=2
+	do j=1,NN
+		do i=max(1,j-KU),min(j+KL,NN)
+			AB(KL+KU+1+i-j,j) = Aomp(i,j)
+		enddo
+	enddo
+	j=7
+	call DGBSV(NN,KL,KU,NRHS,AB,j,IWORKomp,xomp,NN,INFO)	
+
+	do i=1,nnr
+		if(.not.xomp(ixc(iCS,i)).gt.0d0) xomp(ixc(iCS,i))=0d0
+		if(.not.xomp(ixc(iCS,i)).lt.xc(iCS,i)) xomp(ixc(iCS,i))=xc(iCS,i)
+		xomp(ixv(iCS,i))=xc(iCS,i)-xomp(ixc(iCS,i))
+	enddo
+
+	do i=1,nnr
+		if(xomp(ixc(iCS,i)).gt.0d0) then
+			cryst(iCS,i)=xomp(ixc(iCS,i))/(xomp(ixv(iCS,i))+xomp(ixc(iCS,i)))
+		else
+			cryst(iCS,i)=0d0
+		endif
+	enddo
+
+	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+	
+	do i=1,nnr
+		print*,CloudT(i),cryst(4,i),cryst(5,i)
+	enddo
+
+	endif
+
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 	deallocate(vthv)
@@ -753,43 +875,48 @@ c end the loop
 	deallocate(AB)
 !$OMP END PARALLEL
 
+	allocate(fsil(4,nnr),fsil2(4,nr))
 	do k=1,nnr
 c correction for silicates
-		f=mu(4)*CSnmol(4)+mu(5)*CSnmol(5)
-		mm=(f/(mu(5)*CSnmol(5))-1d0)*xc(5,k)
-		if(xc(4,k).lt.mm) then
-			f=xc(4,k)/mm
-			xc(4,k)=0d0
-			xMgO(k)=xc(5,k)*(1d0-f)
-			xc(5,k)=xc(5,k)*f*(mu(5)*CSnmol(5)+w_atoms(9)+2d0*w_atoms(5))/(mu(5)*CSnmol(5))
+		SiSil=xc(4,k)*atoms_cloud(4,9)+xc(5,k)*atoms_cloud(5,9)+xc(6,k)*atoms_cloud(6,9)
+		OSil=xc(4,k)*atoms_cloud(4,5)+xc(5,k)*atoms_cloud(5,5)+xc(6,k)*atoms_cloud(6,5)
+		Osil=Osil/SiSil
+		fsil(1:4,k)=0d0
+		if(Osil.le.2d0) then
+			fsil(1,k)=1d0
+		else if(Osil.le.3d0) then
+			fsil(1,k)=3d0-Osil
+			fsil(2,k)=Osil-2d0
+		else if(Osil.le.4d0) then
+			fsil(2,k)=4d0-Osil
+			fsil(3,k)=Osil-3d0
 		else
-			xc(4,k)=xc(4,k)-mm
-			xc(5,k)=xc(5,k)+mm
-			xMgO(k)=0d0
+			fsil(3,k)=1d0
+			fsil(4,k)=Osil-4d0
 		endif
 c correction for FeS
-		f=mu(7)*CSnmol(7)+mu(8)*CSnmol(8)
-		mm=(f/(mu(8)*CSnmol(8))-1d0)*xc(8,k)
-		if(xc(7,k).lt.mm) then
-			f=xc(7,k)/mm
-			xc(7,k)=0d0
-			xv(8,k)=xv(8,k)+xc(8,k)*(1d0-f)
-			xc(8,k)=xc(8,k)*f*(mu(7)*CSnmol(7)+mu(8)*CSnmol(8))/(mu(8)*CSnmol(8))
+		f=mu(8)*CSnmol(8)+mu(9)*CSnmol(9)
+		mm=(f/(mu(9)*CSnmol(9))-1d0)*xc(9,k)
+		if(xc(8,k).lt.mm) then
+			f=xc(8,k)/mm
+			xc(8,k)=0d0
+			xv(9,k)=xv(9,k)+xc(9,k)*(1d0-f)
+			xc(9,k)=xc(9,k)*f*(mu(8)*CSnmol(8)+mu(9)*CSnmol(9))/(mu(9)*CSnmol(9))
 		else
-			xc(7,k)=xc(7,k)-mm
-			xc(8,k)=xc(8,k)+mm
+			xc(8,k)=xc(8,k)-mm
+			xc(9,k)=xc(9,k)+mm
 		endif
 c correction for SiC
-		f=mu(9)*CSnmol(9)+mu(10)*CSnmol(10)
-		mm=(f/(mu(10)*CSnmol(10))-1d0)*xc(10,k)
-		if(xc(9,k).lt.mm) then
-			f=xc(9,k)/mm
-			xc(9,k)=0d0
-			xv(10,k)=xv(10,k)+xc(10,k)*(1d0-f)
-			xc(10,k)=xc(10,k)*f*(mu(9)*CSnmol(9)+mu(10)*CSnmol(10))/(mu(10)*CSnmol(10))
+		f=mu(10)*CSnmol(10)+mu(11)*CSnmol(11)
+		mm=(f/(mu(11)*CSnmol(11))-1d0)*xc(11,k)
+		if(xc(10,k).lt.mm) then
+			f=xc(10,k)/mm
+			xc(10,k)=0d0
+			xv(11,k)=xv(11,k)+xc(11,k)*(1d0-f)
+			xc(11,k)=xc(11,k)*f*(mu(10)*CSnmol(10)+mu(11)*CSnmol(11))/(mu(11)*CSnmol(11))
 		else
-			xc(9,k)=xc(9,k)-mm
-			xc(10,k)=xc(10,k)+mm
+			xc(10,k)=xc(10,k)-mm
+			xc(11,k)=xc(11,k)+mm
 		endif
 	enddo
 
@@ -817,29 +944,36 @@ c Al2O3
 	x(1:nnr)=xc(3,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,10),nr)
 c Silicates
-	x(1:nnr)=xc(5,1:nnr)
-	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,13),nr)
-	Cloud(ii)%frac(1:nr,13)=Cloud(ii)%frac(1:nr,13)/3d0
+	x(1:nnr)=fsil(1,1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,fsil2(1,1:nr),nr)
+	x(1:nnr)=fsil(2,1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,fsil2(2,1:nr),nr)
+	x(1:nnr)=fsil(3,1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,fsil2(3,1:nr),nr)
+	x(1:nnr)=fsil(4,1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,fsil2(4,1:nr),nr)
+	x(1:nnr)=xc(4,1:nnr)+xc(5,1:nnr)+xc(6,1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,15),nr)
+	Cloud(ii)%frac(1:nr,4)=Cloud(ii)%frac(1:nr,15)*fsil2(3,1:nr)/3d0
+	Cloud(ii)%frac(1:nr,5)=Cloud(ii)%frac(1:nr,4)
+	Cloud(ii)%frac(1:nr,6)=Cloud(ii)%frac(1:nr,4)
+	Cloud(ii)%frac(1:nr,8)=Cloud(ii)%frac(1:nr,15)*fsil2(1,1:nr)
+	Cloud(ii)%frac(1:nr,12)=Cloud(ii)%frac(1:nr,15)*fsil2(4,1:nr)
+	Cloud(ii)%frac(1:nr,13)=Cloud(ii)%frac(1:nr,15)*fsil2(2,1:nr)/3d0
 	Cloud(ii)%frac(1:nr,14)=Cloud(ii)%frac(1:nr,13)
 	Cloud(ii)%frac(1:nr,15)=Cloud(ii)%frac(1:nr,13)
-c SiO2
-	x(1:nnr)=xc(4,1:nnr)
-	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,8),nr)
 c H2O
-	x(1:nnr)=xc(6,1:nnr)
+	x(1:nnr)=xc(7,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,18),nr)
 c Fe+FeS
-	x(1:nnr)=(xc(7,1:nnr)+xc(8,1:nnr))
+	x(1:nnr)=(xc(8,1:nnr)+xc(9,1:nnr))
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,9),nr)
 c SiC
-	x(1:nnr)=xc(10,1:nnr)
+	x(1:nnr)=xc(11,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,17),nr)
 c C
-	x(1:nnr)=xc(9,1:nnr)
+	x(1:nnr)=xc(10,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,16),nr)
-c MgO
-	x(1:nnr)=xMgO(1:nnr)
-	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,12),nr)
 c Seed particles
 	x(1:nnr)=xm(1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,19),nr)
@@ -854,13 +988,27 @@ c Seed particles
 		endif
 	enddo
 
+	if(computecryst) then
+c Silicates
+		x(1:nnr)=(xc(5,1:nnr)*cryst(5,1:nnr)+xc(6,1:nnr)*cryst(6,1:nnr))/(xc(5,1:nnr)+xc(6,1:nnr))
+		call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%cryst(1:nr,13),nr)
+		Cloud(ii)%cryst(1:nr,14)=Cloud(ii)%cryst(1:nr,13)
+		Cloud(ii)%cryst(1:nr,15)=Cloud(ii)%cryst(1:nr,13)
+		Cloud(ii)%cryst(1:nr,4)=Cloud(ii)%cryst(1:nr,13)
+		Cloud(ii)%cryst(1:nr,5)=Cloud(ii)%cryst(1:nr,13)
+		Cloud(ii)%cryst(1:nr,6)=Cloud(ii)%cryst(1:nr,13)
+c SiO2
+		x(1:nnr)=cryst(4,1:nnr)
+		call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%cryst(1:nr,8),nr)
+	endif
+
 	if(.not.retrieval) then
 		open(unit=20,file=trim(outputdir) // '/cloudstructure.dat',RECL=1000)
 		form='("#",a18,a19,a19,' // trim(int2string(nCS+1,'(i4)')) // 'a23,a19,a19,a19)'
 		write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"MgO","r[micron]","T[K]","Jstar"
 		form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+1,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
 		do i=1,nnr
-			write(20,form) CloudP(i),Clouddens(i),xn(i)*m_nuc,xc(1:nCS,i),xMgO(i),rpart(i),CloudT(i),Sn(i)/m_nuc
+			write(20,form) CloudP(i),Clouddens(i),xn(i)*m_nuc,xc(1:nCS,i),(xc(4,i)+xc(5,i)+xc(6,i))*fsil(4,i),rpart(i),CloudT(i),Sn(i)/m_nuc
 		enddo
 		close(unit=20)
 	endif
@@ -935,6 +1083,8 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 			if(.not.mixrat_r(i,j).gt.0d0) mixrat_r(i,j)=0d0
 		enddo
 	enddo
+	
+	call ComputeTevap()
 
 	deallocate(densv)
 	deallocate(mpart)
@@ -955,6 +1105,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(logCloudP)
 	deallocate(Kd)
 	deallocate(Ma,Mb,Mc)
+	deallocate(fsil,fsil2)
 
 	return
 	end
@@ -1002,6 +1153,16 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	end
 
 
+
+	subroutine scaleABT(A,B,Tref,Tcon)
+	IMPLICIT NONE
+	real*8 A,B,Tref,Tcon
+
+	B=log(Tcon/Tref)+B
+	A=A*Tcon/Tref
+
+	return
+	end
 
 
 

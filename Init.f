@@ -587,6 +587,8 @@ c	condensates=(condensates.or.cloudcompute)
 				Cloud(i)%nr=nr
 				allocate(Cloud(i)%w(Cloud(i)%nr))
 				allocate(Cloud(i)%frac(nr,20))
+				allocate(Cloud(i)%cryst(nr,20))
+				Cloud(i)%cryst=1d0
 				Cloud(i)%species="MIX"
 				Cloud(i)%standard="MIX"
 			else
@@ -1044,6 +1046,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) coagulation
 		case("vfrag")
 			read(key%value,*) vfrag
+		case("computecryst")
+			read(key%value,*) computecryst
 		case("parameterfile","planetparameterfile")
 			planetparameterfile=trim(key%value)
 		case("planetname")
@@ -1433,6 +1437,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	coagulation=.true.
 	singlecloud=.false.
 	vfrag=100d0	!cm/s
+	computecryst=.false.
 	
 	twind=-1d0
 	
@@ -2228,7 +2233,7 @@ c-----------------------------------------------------------------------
 
 	select case(Cloud(ii)%ptype)
 		case("COMPUTE","DRIFT")
-			computelamcloud=computelam
+			computelamcloud(1:nlam)=computelam(1:nlam)
 			tautot=0d0
 			restrictcomputecloud=(.not.computeT.and..not.scattering)
 			do is=Cloud(ii)%nr,1,-1
