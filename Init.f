@@ -1903,6 +1903,7 @@ c number of cloud/nocloud combinations
 	IMPLICIT NONE
 	real*8 lam0,T0,Planck,tot,x,y,dy,dx,lminRT,lmaxRT
 	integer i,j,ilam,nj,jlam
+	logical truefalse
 	
 	lminRT=0.22d0*micron
 	lmaxRT=47d0*micron
@@ -1915,6 +1916,11 @@ c number of cloud/nocloud combinations
 				case('tprofile','logtp','priors','prior')
 					continue
 				case('lightcurve')
+					inquire(file=ObsSpec(i)%file,exist=truefalse)
+					if(.not.truefalse) then
+						call output("File does not exist" // trim(ObsSpec(i)%file))
+						stop
+					endif
 					open(unit=30,file=ObsSpec(i)%file,RECL=1000)
 11					read(30,*,err=11) nj
 					do j=1,nj
@@ -1927,6 +1933,11 @@ c number of cloud/nocloud combinations
 					goto 12
 13					close(unit=30)					
 				case default
+					inquire(file=ObsSpec(i)%file,exist=truefalse)
+					if(.not.truefalse) then
+						call output("File does not exist" // trim(ObsSpec(i)%file))
+						stop
+					endif
 					open(unit=30,file=ObsSpec(i)%file,RECL=1000)
 1					read(30,*,end=2,err=1) x,y,dy,dx
 					nlam=nlam+1
