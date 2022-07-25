@@ -36,7 +36,7 @@
 		read(cn,*) n
 		i=nlam
 		read(20,*,end=102,err=1) x0,y0
-103		if(x0.ge.freq(i)) then
+103		if(x0.ge.freq(i).and.i.gt.0) then
 			CIA(icia)%Cabs(iT,i)=y0
 			i=i-1
 			goto 103
@@ -54,7 +54,7 @@
 			y0=y1
 		enddo
 102		continue
-		if(i.lt.nlam) then
+		if(i.lt.nlam.and.i.gt.0) then
 			do j=i,1,-1
 				CIA(icia)%Cabs(iT,j)=CIA(icia)%Cabs(iT,i+1)*freq(i+1)/freq(j)
 			enddo
