@@ -196,7 +196,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		   call output("==================================================================")
 		   call output("Computing disequilibrium chemistry")
 			do i=1,nr
-				Kzz_r(i)=ComputeKzz(P(i))
+				Kzz_r(i)=ComputeKzz(P(i),T(i),dens(i),complexKzz)
 			enddo
 		   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))
 		   
@@ -463,7 +463,7 @@ c		endif
 	write(50,form) "Kzz [cm^2/s]","P [bar]"
 	form='(es13.3E3,es13.3E3)'
 	do i=1,nr
-		write(50,form) ComputeKzz(P(i)),P(i)
+		write(50,form) ComputeKzz(P(i),T(i),dens(i),complexKzz),P(i)
 	enddo
 	close(unit=50)
 
@@ -1767,16 +1767,32 @@ c-----------------------------------------------------------------------
 
 
 
-	real*8 function ComputeKzz(x)
+	real*8 function ComputeKzz(x,Tg,rhog,addmicro)
 	use GlobalSetup
+	use Constants
 	IMPLICIT NONE
-	real*8 x
+	real*8 x,Tg,rhog,lmfp,vth,sigmamol,Kmax,Kmin,Kp
+	logical addmicro
+	sigmamol=8d-15
 
 	if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
-		if(Kzz_contrast.gt.0d0) Kzz_max=Kzz_deep*Kzz_contrast
-		ComputeKzz=1d0/(1d0/Kzz_max+1d0/(Kzz_deep+Kzz_1bar/x**Kzz_P))
+		if(Kzz_contrast.gt.1d0) then
+			Kmax=Kzz_deep*Kzz_contrast
+			Kmin=Kzz_deep
+			Kp=abs(Kzz_P)
+		else
+			Kmax=Kzz_deep
+			Kmin=Kzz_deep*Kzz_contrast
+			Kp=-abs(Kzz_P)
+		endif
+		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 	else
 		ComputeKzz=Kzz
+	endif
+	if(addmicro) then
+		lmfp=2.3d0*mp/(sqrt(2d0)*rhog*sigmamol)
+		vth=sqrt(8d0*kb*Tg/(pi*2.3d0*mp))
+		ComputeKzz=ComputeKzz+lmfp*vth/3d0
 	endif
 	
 	return

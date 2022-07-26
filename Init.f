@@ -853,6 +853,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadCloud(key)
 		case("rainout")
 			read(key%value,*) rainout
+		case("complexkzz")
+			read(key%value,*) complexKzz
 		case("mixrathaze","haze")
 			read(key%value,*) mixratHaze
 		case("phaze")
@@ -897,8 +899,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Kzz_1bar
 		case("kzz_p","kzz_pow")
 			read(key%value,*) Kzz_P
-		case("kzz_max")
-			read(key%value,*) Kzz_max
 		case("kzz_contrast")
 			read(key%value,*) Kzz_contrast
 		case("fastchem","fast_chem")
@@ -1428,6 +1428,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	inverseCOratio=.false.
 	element_abun_file=' '
 	rainout=.false.
+	complexKzz=.false.
 	mixP=0d0
 	mixratHaze=0d0
 	PHaze=1d0
@@ -1496,7 +1497,6 @@ c  GGchem was still implemented slightly wrong.
 	Kzz_deep=1d2
 	Kzz_1bar=-1d0
 	Kzz_P=0.5d0
-	Kzz_max=1d50
 	Kzz_contrast=-1d0
 
 	computecontrib=.false.

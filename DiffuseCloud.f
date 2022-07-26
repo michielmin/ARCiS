@@ -7,10 +7,10 @@
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),dx(:),vth(:)
 	real*8,allocatable :: Sn(:),mpart(:)
-	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:)
+	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:),CloudHp(:)
 	real*8,allocatable :: at_ab(:,:)
 	real*8,allocatable,save :: Sc(:),vthv(:),Aomp(:,:),xomp(:),IWORKomp(:),AB(:,:)
-	real*8,allocatable :: drhoKd(:),drhovsed(:),tcinv(:,:),rho_av(:),densv(:,:),Kd(:)
+	real*8,allocatable :: drhoKd(:),drhoKg(:),drhovsed(:),tcinv(:,:),rho_av(:),densv(:,:),Kd(:),Kg(:),Km(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,ComputeKzz,err,maxerr
@@ -22,7 +22,7 @@
 	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:)
 	logical,allocatable :: empty(:)
 	integer iCS,ir,nrdo
-	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil
+	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil,St
 	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:)
 	integer INCFD,IERR
 	logical SKIP
@@ -49,8 +49,9 @@
 		allocate(xm(nnr))
 		allocate(rpart(nnr))
 	endif
-	allocate(Kd(nnr))
+	allocate(Kd(nnr),Kg(nnr),Km(nnr))
 	allocate(logCloudP(nnr))
+	if(complexKzz) allocate(CloudHp(nnr))
 	
 	niter=500
 	if(computeT) then
@@ -349,7 +350,7 @@ c	atoms_cloud(i,3)=1
 	allocate(y(nnr,5))
 	allocate(Sn(nnr))
 	allocate(vth(nnr))
-	allocate(drhoKd(nnr))
+	allocate(drhoKd(nnr),drhoKg(nnr))
 	allocate(drhovsed(nnr))
 	allocate(tcinv(niter,nnr))
 	allocate(vsed(nnr))
@@ -397,12 +398,35 @@ c	atoms_cloud(i,3)=1
 	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudR,IERR)
 	CloudR(1:nnr)=exp(CloudR(1:nnr))
 
+	if(complexKzz) then
+		SKIP=.false.
+		INCFD=1
+		logx(1:nr)=log(Hp(1:nr))
+		call DPCHIM(nr,logP,logx,dlogx,INCFD)
+		call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudHp,IERR)
+		CloudHp(1:nnr)=exp(CloudHp(1:nnr))
+	endif
+
 	if((Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0).or.Cloud(ii)%Kzz.le.0d0) then
 		do i=1,nnr
-			Kd(i)=ComputeKzz(CloudP(i))
+			Km(i)=ComputeKzz(CloudP(i),CloudT(i),Clouddens(i),.false.)
+			Kd(i)=Km(i)
+			if(complexKzz) then
+				Kg(i)=ComputeKzz(CloudP(i),CloudT(i),Clouddens(i),complexKzz)
+			else
+				Kg(i)=Kd(i)
+			endif
 		enddo
 	else
-		Kd=Cloud(ii)%Kzz
+		Km=Cloud(ii)%Kzz
+		Kd=Km
+		do i=1,nnr
+			if(complexKzz) then
+				Kg(i)=ComputeKzz(CloudP(i),CloudT(i),Clouddens(i),complexKzz)
+			else
+				Kg(i)=Kd(i)
+			endif
+		enddo
 	endif
 
 	f=0.1d0
@@ -443,6 +467,8 @@ c	atoms_cloud(i,3)=1
 	INCFD=1
 	x(1:nnr)=Kd(1:nnr)*Clouddens(1:nnr)
 	call DPCHIM(nnr,CloudR,x,drhoKd,INCFD)
+	x(1:nnr)=Kg(1:nnr)*Clouddens(1:nnr)
+	call DPCHIM(nnr,CloudR,x,drhoKg,INCFD)
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -467,6 +493,14 @@ c start the loop
 		vsed(i)=-sqrt(pi)*rpart(i)*rho_av(i)*Ggrav*Mplanet/(2d0*Clouddens(i)*vth(i)*CloudR(i)**2)
 		mpart(i)=rho_av(i)*4d0*pi*rpart(i)**3/3d0
 	enddo
+	if(complexKzz) then
+		do i=1,nnr
+			St=rpart(i)*rho_av(i)*Km(i)/(vth(i)*Clouddens(i)*CloudHp(i)**2)
+			Kd(i)=Km(i)/(1d0+St)
+		enddo
+		x(1:nnr)=Kd(1:nnr)*Clouddens(1:nnr)
+		call DPCHIM(nnr,CloudR,x,drhoKd,INCFD)
+	endif
 
 	SKIP=.false.
 	INCFD=1
@@ -600,8 +634,8 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku)
-!$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,empty,
-!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot)
+!$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,Kg,xn,empty,
+!$OMP&		NN,rpart,ixc,vsed,drhoKd,drhoKg,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=1,nCS
@@ -651,13 +685,13 @@ c equations for material
 		j=j+1
 
 		dz=CloudR(i+1)-CloudR(i)
-		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))+(drhoKd(i))/dz
-		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-(drhoKd(i))/dz
+		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))+(drhoKg(i))/dz
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-(drhoKg(i))/dz
 
 		dz=CloudR(i+1)-CloudR(i-1)
-		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
-		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
-		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))
+		Aomp(j,ixv(iCS,i+1))=Aomp(j,ixv(iCS,i+1))+2d0*Clouddens(i)*Kg(i)/(dz*(CloudR(i+1)-CloudR(i)))
+		Aomp(j,ixv(iCS,i-1))=Aomp(j,ixv(iCS,i-1))+2d0*Clouddens(i)*Kg(i)/(dz*(CloudR(i)-CloudR(i-1)))
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-2d0*Clouddens(i)*Kg(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))
      &					+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-Sc(i)*xn(i)*Clouddens(i)
@@ -671,8 +705,8 @@ c equations for material
 	xomp(j)=0d0!-Mc_top/Clouddens(i)
 
 	j=j+1
-	Aomp(j,ixv(iCS,i))=Kd(i)/dz
-	Aomp(j,ixv(iCS,i-1))=-Kd(i)/dz
+	Aomp(j,ixv(iCS,i))=Kg(i)/dz
+	Aomp(j,ixv(iCS,i-1))=-Kg(i)/dz
 	xomp(j)=0d0!Mc_top/Clouddens(i)
 
 	NRHS=1
@@ -764,13 +798,14 @@ c Compute crystallinity
 
 	cryst=impurity
 
-	do iter=1,10
+	do iter=1,100
+	maxerr=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku,tcrystinv)
+!$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku,tcrystinv,err)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,empty,
 !$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot,cryst,
-!$OMP&		impurity,ncryst,nucryst,Tcryst)
+!$OMP&		impurity,ncryst,nucryst,Tcryst,maxerr)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=4,6
@@ -850,16 +885,20 @@ c Use Band matrix algorithm
 
 	do i=1,nnr
 		if(xomp(ixc(iCS,i)).gt.0d0) then
-			cryst(iCS,i)=xomp(ixc(iCS,i))/(xomp(ixv(iCS,i))+xomp(ixc(iCS,i)))
+			err=xomp(ixc(iCS,i))/(xomp(ixv(iCS,i))+xomp(ixc(iCS,i)))
 		else
-			cryst(iCS,i)=0d0
+			err=0d0
 		endif
+		if(abs(cryst(iCS,i)-err).gt.1d-4) maxerr=1d0
+		cryst(iCS,i)=err
 	enddo
 
 	enddo
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
+
+	if(maxerr.lt.1d-3) exit
 	enddo
 	
 	if(.not.retrieval) then
@@ -1089,7 +1128,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	   call output("==================================================================")
 	   call output("Computing disequilibrium chemistry")
 		do i=1,nr
-			Kzz_r(i)=ComputeKzz(P(i))
+			Kzz_r(i)=ComputeKzz(P(i),T(i),dens(i),complexKzz)
 		enddo
 	   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))
 	endif
@@ -1107,7 +1146,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(y)
 	deallocate(Sn)
 	deallocate(vth)
-	deallocate(drhoKd)
+	deallocate(drhoKd,drhoKg)
 	deallocate(drhovsed)
 	deallocate(tcinv)
 	deallocate(vsed)
@@ -1118,7 +1157,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(IWORK)
 	deallocate(An)
 	deallocate(logCloudP)
-	deallocate(Kd)
+	deallocate(Kd,Kg)
 	deallocate(Ma,Mb,Mc)
 	deallocate(fsil,fsil2)
 
