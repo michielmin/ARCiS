@@ -243,6 +243,10 @@ c for exchange when computing secondary atmosphere
 	logical,allocatable :: do_dB(:)
 	real*8 COret,COerr(2)
 	
+	character*10 fixmol_name(nmol_data)
+	real*8 fixmol_abun(nmol_data)
+	integer nfixmol,ifixmol(nmol_data)
+	
 	logical sinkZ
 	real*8 alphaZ
 

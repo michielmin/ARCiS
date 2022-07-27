@@ -1113,6 +1113,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) surfacetype
 		case("surfacealbedo")
 			read(key%value,*) surfacealbedo
+		case("fixmol")
+			call ReadFixMol(key)
 		case default
 			do i=1,nmol_data
 				if(key%key.eq.molname(i)) then
@@ -1417,6 +1419,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	dochemistry=.false.
 	fast_chem=.false.
 	disequilibrium=.false.
+	nfixmol=0
 	Kzz=1d8
 	metallicity=0d0
 	condensates=.false.
@@ -1814,6 +1817,33 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Par3D(i)%logscale
 		case("relative","multiply")
 			read(key%value,*) Par3D(i)%multiply
+		case default
+			call output("Keyword not recognised: " // trim(key%key2))
+	end select
+	
+	return
+	end
+	
+	subroutine ReadFixMol(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i,j
+	i=key%nr1
+	if(i.gt.nfixmol) nfixmol=i
+	
+	select case(key%key2)
+		case("name")
+			fixmol_name(i)=trim(key%value)
+			do j=1,nmol_data
+				if(fixmol_name(i).eq.molname(j)) then
+					ifixmol(i)=j
+				endif
+			enddo
+		case("abun")
+			read(key%value,*) fixmol_abun(i)
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

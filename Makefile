@@ -18,7 +18,7 @@ ifeq ($(debug),true)
   ifeq ($(gfort),true)
     DEBUGGING = -Wall -Wno-unused-variable -fbounds-check -fbacktrace -fcheck=all
   else	
-    DEBUGGING = -check all -g -traceback -check bounds -check uninit -O0 -ftrapuv -fpe0 -ftz
+    DEBUGGING = -check all -g -traceback -check bounds -check uninit -O0
   endif
 endif
 

@@ -201,6 +201,11 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))
 		   
 		endif
+		if(nfixmol.gt.0) then
+			do i=1,nfixmol
+				mixrat_r(1:nr,ifixmol(i))=fixmol_abun(i)
+			enddo
+		endif
 		do i=1,nr
 			do imol=1,nmol
 				if(.not.mixrat_r(i,imol).gt.0d0) mixrat_r(i,imol)=0d0
@@ -906,6 +911,9 @@ c Setup names and weights of the elements
 	endif
 
 	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))
+	do i=1,N_atoms
+		if(molfracs_atoms(i).lt.1d-50) molfracs_atoms(i)=1d-50
+	enddo
 
 	CO=molfracs_atoms(3)/molfracs_atoms(5)
 	SiO=molfracs_atoms(9)/molfracs_atoms(5)
