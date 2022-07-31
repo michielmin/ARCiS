@@ -343,6 +343,8 @@ C	 create the new empty FITS file
      &			log10(Ktable(imol)%lam2/Ktable(imol)%lam1)*real(ilam-1)/real(Ktable(imol)%nlam))
 	enddo
 
+	ii1=0
+	ii2=0
 	do ilam=1,nlam
 		l1=blam(1,ilam)
 		l2=blam(2,ilam)
