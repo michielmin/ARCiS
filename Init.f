@@ -812,6 +812,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) specres
 		case("specresdust")
 			call output("Parameter specresdust is not in use anymore!")
+		case("usexs")
+			read(key%value,*) useXS
 		case("specresfile")
 			specresfile=trim(key%value)
 		case("particledir","dirparticle")
@@ -1401,6 +1403,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	lam1=1d0
 	lam2=15d0
 	specres=10d0
+	
+	useXS=.false.
 	
 	trend_compute=.false.
 
