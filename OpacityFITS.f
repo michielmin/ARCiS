@@ -217,7 +217,7 @@ C	 create the new empty FITS file
 	logical anynull,truefalse,xs
 	integer naxes(4)
 	character*500 filename
-	integer ig,ilam,iT,iP,imol,i,j,i1,i2,ngF
+	integer ig,ilam,iT,iP,imol,i,j,i1,i2,ngF,ii1(nlam),ii2(nlam)
 	integer*4 hdutype
 
 	if(.not.allocated(Ktable)) allocate(Ktable(nmol))
@@ -343,10 +343,19 @@ C	 create the new empty FITS file
      &			log10(Ktable(imol)%lam2/Ktable(imol)%lam1)*real(ilam-1)/real(Ktable(imol)%nlam))
 	enddo
 
+	do ilam=1,nlam
+		l1=blam(1,ilam)
+		l2=blam(2,ilam)
+		do i=1,Ktable(imol)%nlam
+			if(l1.ge.lamF(i).and.l1.lt.lamF(i+1)) ii1(ilam)=i
+			if(l2.ge.lamF(i).and.l2.lt.lamF(i+1)) ii2(ilam)=i
+		enddo
+	enddo
+
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,ww,w1,iT,iP,l1,l2)
-!$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp,dlam,RTgridpoint,blam)
+!$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp,dlam,RTgridpoint,blam,ii1,ii2)
 	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam))
 	allocate(wtemp(Ktable(imol)%ng*Ktable(imol)%nlam))
 !$OMP DO
@@ -354,15 +363,11 @@ C	 create the new empty FITS file
 		do iP=1,Ktable(imol)%nP
 		do iT=1,Ktable(imol)%nT
 
-		i1=0
-		i2=0
+		i1=ii1(ilam)
+		i2=ii2(ilam)
 		l1=blam(1,ilam)
 		l2=blam(2,ilam)
 
-		do i=1,Ktable(imol)%nlam
-			if(l1.ge.lamF(i).and.l1.lt.lamF(i+1)) i1=i
-			if(l2.ge.lamF(i).and.l2.lt.lamF(i+1)) i2=i
-		enddo
 		if(i1.gt.0.and.i2.gt.0) then
 			ngF=0
 			do i=i1,i2
