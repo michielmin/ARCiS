@@ -240,13 +240,22 @@ C	 create the new empty FITS file
 	filename=trim(filename) // ".fits"
 	inquire(file=trim(filename),exist=truefalse)
 	if(useXS.and..not.truefalse) then
-		xs=.false.
-		call output("Cross sections not available: " // trim(filename))
-		call output("Switching to low res k-tables")
-		filename=trim(opacitydir) // "opacity"
+		readwrite=0
+		status=0
+		blocksize=0
+		filename=trim(opacitydir) // "xs"
 		filename=trim(filename) // "_" // trim(molname(imol))
-		filename=trim(filename) // ".fits"
+		filename=trim(filename) // ".fits.gz"
 		inquire(file=trim(filename),exist=truefalse)
+		if(.not.truefalse) then
+			xs=.false.
+			call output("Cross sections not available: " // trim(filename))
+			call output("Switching to low res k-tables")
+			filename=trim(opacitydir) // "opacity"
+			filename=trim(filename) // "_" // trim(molname(imol))
+			filename=trim(filename) // ".fits"
+			inquire(file=trim(filename),exist=truefalse)
+		endif
 	endif
 	if(truefalse) then
 		call ftgiou (unit,status)
@@ -256,11 +265,7 @@ C	 create the new empty FITS file
 		readwrite=0
 		status=0
 		blocksize=0
-		if(useXS) then
-			filename=trim(opacitydir) // "xs"
-		else
-			filename=trim(opacitydir) // "opacity"
-		endif
+		filename=trim(opacitydir) // "opacity"
 		filename=trim(filename) // "_" // trim(molname(imol))
 		filename=trim(filename) // ".fits.gz"
 		inquire(file=trim(filename),exist=truefalse)
