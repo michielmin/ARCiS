@@ -1732,8 +1732,8 @@ c number of cloud/nocloud combinations
 				n_ret=n_ret+nTpoints*2-1
  				do j=1,nTpoints
 					RetPar(i+j-1)%keyword='Tpoint' // trim(int2string(j,'(i0.3)'))
-					RetPar(i+j-1)%xmin=-2d0/7d0
-					RetPar(i+j-1)%xmax=2d0/7d0
+					RetPar(i+j-1)%xmin=-4d0/7d0
+					RetPar(i+j-1)%xmax=4d0/7d0
 					RetPar(i+j-1)%logscale=.false.
 				enddo
  				do j=1,nTpoints
