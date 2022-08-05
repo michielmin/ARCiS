@@ -108,7 +108,7 @@ c	recomputeopac=.true.
 	enddo
 
 	actually1D=.true.
-	if(((vxx.ne.0d0.or.night2day.ne.1d0).and.betamax.ne.betamin).or.deepRedist) actually1D=.false.
+	if(((vxx.ne.0d0.or.night2day.ne.1d0).and.betamax.ne.betamin).or.n3D.eq.2.or.deepRedist) actually1D=.false.
 
 	call output("hotspot shift: " // dbl2string(hotspotshift,'(f6.2)') // " degrees")
 
@@ -235,7 +235,16 @@ c	recomputeopac=.true.
 			i3D=i
 			beta3D(i)=betamin+(betamax-betamin)*(real(i3D)-0.5)/real(n3D)
 		endif
-		x3D(i)=NormSig(beta3D(i),par3Dsteepness,beta_c,betamin,betamax)
+		if(n3D.eq.2) then
+			if(beta3D(i).lt.0.5d0) then
+				beta3D(i)=0d0
+			else
+				beta3D(i)=1d0
+			endif
+			x3D(i)=beta3D(i)
+		else
+			x3D(i)=NormSig(beta3D(i),par3Dsteepness,beta_c,betamin,betamax)
+		endif
 		do j=1,n_Par3D
 			xmin=Par3D(j)%xmin
 			if(Par3D(j)%multiply) then
