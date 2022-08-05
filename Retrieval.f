@@ -727,7 +727,7 @@ c	linear
 
 		do i=1,nobs
 			select case(ObsSpec(i)%type)
-				case("trans","transmission","emisr","emisR","emisa","emis","emission","transC","phase","phaser","phaseR")
+				case("trans","transmission","emisr","emisR","emisa","emis","emission","transC","phase","phaser","phaseR","transM","transE")
 					open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),RECL=1000)
 					do j=1,ObsSpec(i)%ndata
 						write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j)/ObsSpec(i)%scale,ObsSpec(i)%scale*ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
@@ -1547,6 +1547,36 @@ c			vec(i)=gasdev(idum)
 	select case(ObsSpec(i)%type)
 		case("trans","transmission","transC")
 			specsave(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+			if(useobsgrid) then
+				do ilam=1,ObsSpec(i)%ndata
+					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
+				enddo
+			else
+				call regridspecres(lamobs,specsave(1:nlam),nlam,
+     &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
+    		endif
+     		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
+		case("transM")
+			if(do3D) then
+				specsave(1:nlam)=2d0*obsA_split(1:nlam,1)/(pi*Rstar**2)
+			else
+				specsave(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+			endif
+			if(useobsgrid) then
+				do ilam=1,ObsSpec(i)%ndata
+					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
+				enddo
+			else
+				call regridspecres(lamobs,specsave(1:nlam),nlam,
+     &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
+    		endif
+     		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
+		case("transE")
+			if(do3D) then
+				specsave(1:nlam)=2d0*obsA_split(1:nlam,2)/(pi*Rstar**2)
+			else
+				specsave(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+			endif
 			if(useobsgrid) then
 				do ilam=1,ObsSpec(i)%ndata
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)

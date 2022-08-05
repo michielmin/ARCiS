@@ -127,6 +127,18 @@
 				select case(ObsSpec(iobs)%type)
 					case("trans","transmission","transC")
 						spectrans(i,1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+					case("transM")
+						if(do3D) then
+							spectrans(i,1:nlam)=2d0*obsA(1:nlam,1)/(pi*Rstar**2)
+						else
+							spectrans(i,1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+						endif
+					case("transE")
+						if(do3D) then
+							spectrans(i,1:nlam)=2d0*obsA(1:nlam,2)/(pi*Rstar**2)
+						else
+							spectrans(i,1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+						endif
 					case("emisr","emisR","emisa","emis","emission")
 						specemisR(i,1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
 						specemis(i,1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)

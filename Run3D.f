@@ -66,6 +66,22 @@ c	recomputeopac=.true.
 
 	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,fDay,betamin,betamax)
 
+	if(n3D.eq.2) then
+		do ilong=1,nlong-1
+			do ilatt=1,nlatt-1
+				lo=-pi+2d0*pi*(real(ilong)-0.5d0)/real(nlong-1)
+				la=-pi/2d0+pi*(real(ilatt)-0.5d0)/real(nlatt-1)
+				if(lo.le.0d0) then
+					beta(ilong,ilatt)=0d0
+				else
+					beta(ilong,ilatt)=1d0
+				endif
+			enddo
+		enddo
+		betamin=0d0
+		betamax=1d0
+	endif
+
 	if(vxx.eq.0d0) then
 		hotspotshift=0d0
 	else
@@ -241,6 +257,7 @@ c	recomputeopac=.true.
 		endif
 
 		call MapPar3D()
+		if(n3D.eq.2) beta3D(i)=betaT
 
 		betaT=beta3D(i)
 		if(deepRedist) then
