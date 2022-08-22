@@ -5,7 +5,7 @@
 	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,met_r,dens1bar,minZ,Tc,Rscale
 	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill,MMW_form,P0,R0,Kzz_r(nr)
 	parameter(RgasBar=82.05736*1.01325)
-	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3
+	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3,ir
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
 	real*8 ComputeKzz
@@ -1793,7 +1793,8 @@ c-----------------------------------------------------------------------
 			Kmin=Kzz_deep*Kzz_contrast
 			Kp=-abs(Kzz_P)
 		endif
-		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
+c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
+		ComputeKzz=min(max(Kzz_1bar/x**Kp,Kmin),Kmax)
 	else
 		ComputeKzz=Kzz
 	endif
