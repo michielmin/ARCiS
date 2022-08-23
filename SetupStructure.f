@@ -1342,25 +1342,32 @@ c	MMW=2.2
 	use Constants
 	IMPLICIT NONE
 	real*8 Tc,Ppoint(nVpoints+nIRpoints),Tpoint(nVpoints+nIRpoints),PrefTpoint,Gplan
-	integer nTpoints,i,j
+	real*8 TV(nr),TIR(nr)
+	integer i
 
+	TV=0d0
+	TIR=0d0
+	
 	Gplan=(Ggrav*Mplanet/(Rplanet)**2)
-	j=0
-	do i=1,nVpoints
-		j=j+1
-		Ppoint(j)=betaT*tau_Vpoint(i)*Gplan/(kappaT*gammaT1*1d6)
-		Tpoint(j)=dT_Vpoint(i)
-	enddo
-	do i=1,nIRpoints
-		j=j+1
-		Ppoint(j)=tau_IRpoint(i)*Gplan/(kappaT*1d6)
-		Tpoint(j)=dT_IRpoint(i)
-	enddo
-	nTpoints=j
 	PrefTpoint=Gplan/(kappaT*1d6)
 	
-	Tc=(TeffP**4+Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
-	call MakePTstruct_dT(P,T,nr,Ppoint,Tpoint,nTpoints,Tc,PrefTpoint)
+	if(nVpoints.gt.0) then
+		do i=1,nVpoints
+			Ppoint(i)=betaT*tau_Vpoint(i)*Gplan/(kappaT*gammaT1*1d6)
+			Tpoint(i)=dT_Vpoint(i)
+		enddo
+		Tc=(Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
+		call MakePTstruct_dT(P,TV,nr,Ppoint,Tpoint,nVpoints,Tc,PrefTpoint)
+	endif
+	if(nIRpoints.gt.0) then
+		do i=1,nIRpoints
+			Ppoint(i)=tau_IRpoint(i)*Gplan/(kappaT*1d6)
+			Tpoint(i)=dT_IRpoint(i)
+		enddo
+		Tc=TeffP
+		call MakePTstruct_dT(P,TIR,nr,Ppoint,Tpoint,nIRpoints,Tc,PrefTpoint)
+	endif
+	T=(TV**4+TIR**4)**0.25
 	
 	return
 	end
