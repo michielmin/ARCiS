@@ -121,17 +121,20 @@ c for exchange when computing secondary atmosphere
 	logical secondary_atmosphere,constant_g,forceEbalance
 	logical,allocatable :: RTgridpoint(:),computelam(:)
 
-	real*8 Mp_prior,dMp_prior,surfacealbedo,PrefTpoint,MSimAb
+	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb
 	character*20 surfacetype
-	integer nTZ,nspike,nai,nboot,npew,nTpoints,n_deepRedist
+	integer nTZ,nspike,nai,nboot,npew,n_deepRedist
 	integer,allocatable :: niso(:),instr_nobs(:)
-	real*8,allocatable :: MMW(:),Tpoint(:),Ppoint(:)
+	real*8,allocatable :: MMW(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
 	logical fulloutput3D,deepRedist,readFull3D,computealbedo,computecryst
 	real*8 f_deepredist,f_deep0
 	integer nBB
 	parameter(nBB=10000)
 	character*500 formationcommand
+
+	real*8,allocatable :: tau_Vpoint(:),tau_IRpoint(:),dT_Vpoint(:),dT_IRpoint(:)
+	integer nVpoints,nIRpoints
 
 	logical do3D
 	real*8 par3Dsteepness

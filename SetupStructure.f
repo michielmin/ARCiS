@@ -31,11 +31,7 @@
 	if(compute_mixrat) nabla_ad=2d0/7d0
 	grav=Ggrav*Mplanet/(Rplanet)**2
 	if(par_tprofile.or.(computeT.and.nTiter.le.1)) call ComputeParamT(T)
-	if(free_tprofile) then
-		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
-c		call MakePTstruct(P,T,nr,Ppoint,Tpoint,nTpoints)
-		call MakePTstruct_dT(P,T,nr,Ppoint,Tpoint,nTpoints,Tc,PrefTpoint)
-	endif
+	if(free_tprofile) call MakePTstruct
 
 	call SetAbun
 	nabla_ad=2d0/7d0
@@ -149,11 +145,7 @@ c			if(domakeai.or.retrieval) return
 	enddo
 
 	if(par_tprofile.or.(computeT.and.nTiter.le.1)) call ComputeParamT(T)
-	if(free_tprofile) then
-		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
-c		call MakePTstruct(P,T,nr,Ppoint,Tpoint,nTpoints)
-		call MakePTstruct_dT(P,T,nr,Ppoint,Tpoint,nTpoints,Tc,PrefTpoint)
-	endif
+	if(free_tprofile) call MakePTstruct
 	do i=1,nr
 		if(T(i).gt.maxTprofile) T(i)=maxTprofile
 		if(T(i).lt.3d0) T(i)=3d0
@@ -1345,111 +1337,34 @@ c	MMW=2.2
 	end
 	
 
-
-
-
-	subroutine MakePTstruct(P,T,np,Pp,Tp_in,nT_in)
+	subroutine MakePTstruct()
+	use GlobalSetup
+	use Constants
 	IMPLICIT NONE
-	integer np,i,nT,nT_in,j
-	real*8 P(np),T(np),Pp(nT_in),d2T(nT_in),yp1,ypn
-	real*8 logPp(nT_in),logTp(nT_in),logP(np),logT(np),Tp_in(nT_in)
+	real*8 Tc,Ppoint(nVpoints+nIRpoints),Tpoint(nVpoints+nIRpoints),PrefTpoint,Gplan
+	integer nTpoints,i,j
 
-	logPp=log(Pp)
-	logTp=log(Tp_in)
-
-	nT=nT_in
-	call sortw(logPp,logTp,nT)
-1	continue
-	do i=1,nT-1
-		if(logPp(i).eq.logPp(i+1)) then
-			do j=i,nT-1
-				logPp(j)=logPp(j+1)
-				logTp(j)=logTp(j+1)
-			enddo
-			nT=nT-1
-			goto 1
-		endif
+	Gplan=(Ggrav*Mplanet/(Rplanet)**2)
+	j=0
+	do i=1,nVpoints
+		j=j+1
+		Ppoint(j)=betaT*tau_Vpoint(i)*Gplan/(kappaT*gammaT1*1d6)
+		Tpoint(j)=dT_Vpoint(i)
 	enddo
-
-	yp1=1d100
-	ypn=1d100
-	call spline(logPp,logTp,nT,yp1,ypn,d2T)
-
-	logP=log(P)
-	do i=np,1,-1
-		if(logP(i).lt.logPp(1)) then
-			logT(i)=logTp(1)
-		else if(logP(i).gt.logPp(nT)) then
-			logT(i)=logTp(nT)
-		else
-			call splint(logPp,logTp,d2T,nT,logP(i),logT(i))
-		endif
-		T(i)=exp(logT(i))
+	do i=1,nIRpoints
+		j=j+1
+		Ppoint(j)=tau_IRpoint(i)*Gplan/(kappaT*1d6)
+		Tpoint(j)=dT_IRpoint(i)
 	enddo
-
-	return
-	end
-
-	subroutine MakePTstruct_dT_linear(P,T,np,Pp,dTp_in,nT_in,T0,P0)
-	IMPLICIT NONE
-	integer np,i,nT,nT_in,j,i0
-	real*8 P(np),T(np),Pp(nT_in),dT(np),dTp(nT_in),yp1,ypn,P0,logT1,logP1
-	real*8 logPp(nT_in),logTp(nT_in),logP(np),logT(np),T0,dTp_in(nT_in),dT1,dT0
-
-	logPp=log(Pp)
-	dTp=dTp_in
-
-	nT=nT_in
-	call sort(logPp,nT)
-1	continue
-	do i=1,nT-1
-		if(logPp(i).eq.logPp(i+1)) then
-			logPp(i)=logPp(i)-1d-4
-			goto 1
-		endif
-	enddo
-
-	logP=log(P)
-
-	call regridarray(logPp,dTp,nT,logP,dT,np)
-
-	if(P0.le.P(np)) then
-		i0=np
-		dT0=dT(np)
-	else if(P0.ge.P(1)) then
-		i0=0
-		dT0=dT(1)
-	else
-		do i0=1,np-1
-			if(P0.le.P(i0).and.P0.gt.P(i0+1)) exit
-		enddo
-		dT0=dT(i0)+(dT(i0+1)-dT(i0))*(P(i0)-P0)/(P(i0)-P(i0+1))
-	endif
-
-	logT1=log(T0)
-	logP1=log(P0)
-	dT1=dT0
-	do i=i0,1,-1
-		logT(i)=logT1+(logP(i)-logP1)*dT1
-		logT1=logT(i)
-		logP1=logP(i)
-		dT1=dT(i)
-		T(i)=exp(logT(i))
-	enddo
-
-	logT1=log(T0)
-	logP1=log(P0)
-	dT1=dT0
-	do i=i0+1,np
-		logT(i)=logT1-(logP1-logP(i))*dT1
-		logT1=logT(i)
-		logP1=logP(i)
-		dT1=dT(i)
-		T(i)=exp(logT(i))
-	enddo
+	nTpoints=j
+	PrefTpoint=Gplan/(kappaT*1d6)
+	
+	Tc=(TeffP**4+Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
+	call MakePTstruct_dT(P,T,nr,Ppoint,Tpoint,nTpoints,Tc,PrefTpoint)
 	
 	return
 	end
+	
 
 	subroutine MakePTstruct_dT(P,T,np,Pp_in,dTp_in,nT_in,T0,P0)
 	IMPLICIT NONE
@@ -1547,201 +1462,6 @@ c	MMW=2.2
 	return
 	end
 
-	subroutine MakePTstruct_dT_spline(P,T,np,Pp,dTp_in,nT_in,T0,P0)
-	IMPLICIT NONE
-	integer np,i,nT,nT_in,j,i0
-	real*8 P(np),T(np),Pp(nT_in),d2T(nT_in),dTp(nT_in),yp1,ypn,dT,P0,logT1,logP1
-	real*8 logPp(nT_in),logTp(nT_in),logP(np),logT(np),T0,dTp_in(nT_in)
-
-	logPp=log(Pp)
-	dTp=dTp_in
-
-	nT=nT_in
-	call sort(logPp,nT)
-1	continue
-	do i=1,nT-1
-		if(logPp(i).eq.logPp(i+1)) then
-			logPp(i)=logPp(i)-1d-4
-			goto 1
-		endif
-	enddo
-
-	yp1=1d100
-	ypn=1d100
-	call spline(logPp,dTp,nT,yp1,ypn,d2T)
-
-	logP=log(P)
-
-	if(P0.le.P(np)) then
-		i0=np
-	else if(P0.ge.P(1)) then
-		i0=0
-	else
-		do i0=1,np-1
-			if(P0.le.P(i0).and.P0.gt.P(i0+1)) exit
-		enddo
-	endif
-	
-
-	logT1=log(T0)
-	logP1=log(P0)
-	do i=i0,1,-1
-		if(logP(i).lt.logPp(1)) then
-			dT=dTp(1)
-		else if(logP(i).gt.logPp(nT)) then
-			dT=dTp(nT)
-		else
-			call splint(logPp,dTp,d2T,nT,logP(i),dT)
-		endif
-		if(dT.gt.2d0/7d0) dT=2d0/7d0
-		if(dT.lt.-2d0/7d0) dT=-2d0/7d0
-		logT(i)=logT1+(logP(i)-logP1)*dT
-		logT1=logT(i)
-		logP1=logP(i)
-		T(i)=exp(logT(i))
-	enddo
-
-	logT1=log(T0)
-	logP1=log(P0)
-	do i=i0+1,np
-		if(logP(i).lt.logPp(1)) then
-			dT=dTp(1)
-		else if(logP(i).gt.logPp(nT)) then
-			dT=dTp(nT)
-		else
-			call splint(logPp,dTp,d2T,nT,logP(i),dT)
-		endif
-		if(dT.gt.2d0/7d0) dT=2d0/7d0
-		if(dT.lt.-2d0/7d0) dT=-2d0/7d0
-		logT(i)=logT1-(logP1-logP(i))*dT
-		logT1=logT(i)
-		logP1=logP(i)
-		T(i)=exp(logT(i))
-	enddo
-	
-	return
-	end
-
-
-	subroutine MakePTstruct_weird(P,T,np,Pp,dTp_in,nT,T0)
-	IMPLICIT NONE
-	integer np,i,nT
-	real*8 P(np),T(np),Pp(nT),d2T(nT),dTp(nT)
-	real*8 logPp(nT),logTp(nT),logP(np),logT(np),T0,dTp_in(nT)
-
-	logPp=log(Pp)
-	dTp=dTp_in
-	call sortw(logPp,dTp,nT)
-
-	logTp(1)=log(T0)
-	d2T(1)=0d0
-	do i=1,nT-1
-		logTp(i+1)=(dTp(i)+(logPp(i+1)-logPp(i))*d2T(i)/3d0)*(logPp(i+1)-logPp(i))+logTp(i)
-		d2T(i+1)=(dTp(i+1)-(logTp(i+1)-logTp(i))/(logPp(i+1)-logPp(i)))*3d0/(logPp(i+1)-logPp(i))
-	enddo
-
-	logP=log(P)
-	do i=1,np
-		if(logP(i).lt.logPp(1)) then
-			logT(i)=logTp(1)
-		else if(logP(i).gt.logPp(nT)) then
-			logT(i)=logTp(nT)+(logP(i)-logPp(nT))*dTp(nT)
-		else
-			call splint(logPp,logTp,d2T,nT,logP(i),logT(i))
-		endif
-		T(i)=exp(logT(i))
-	enddo
-	
-	return
-	end
-	
-
-
-
-	subroutine MakePTstruct_d2T(Pin,Tin,npin,Pd2T_in,d2T_in,npd2T,T0)
-	IMPLICIT NONE
-	integer np,i,npd2t,npin
-	real*8 Pin(npin),Tin(npin),d2T_in(npd2t),T0,Pd2T(npd2t)
-	real*8 P(npin+npd2T),T(npin+npd2T)
-	real*8 dlnP,dT(npin+npd2T),Pd2T_in(npd2t),d2TLR(0:npd2t+1),d2T(npin+npd2T)
-	real*8 logP(npin+npd2T),logPd2T(0:npd2t+1)
-
-	Pd2T(1:npd2T)=-Pd2T_in(1:npd2T)	
-	d2TLR(1:npd2T)=d2T_in(1:npd2T)
-	call sortw(Pd2T,d2TLR(1:npd2T),npd2t)
-
-	P(1:npin)=Pin(1:npin)
-	np=npin+npd2T
-	P(npin+1:np)=Pd2T_in(1:npd2T)
-	P=-P
-	call sort(P,np)
-	P=-P
-
-	logP=-log(P)
-	logPd2T(1:npd2T)=-log(-Pd2T(1:npd2T))
-	logPd2T(0)=logP(1)
-	logPd2T(npd2t+1)=logP(np)
-	d2TLR(0)=0d0
-	d2TLR(npd2t+1)=0d0
-	i=npd2t+2
-	call regridarray(logPd2T(0:npd2t+1),d2TLR(0:npd2t+1),i,logP,d2T,np)
-
-	dT(np)=0d0
-	dlnP=log(P(np)/P(np-1))
-	dT(np-1)=d2T(np)*dlnP
-	do i=np-2,1,-1
-		dlnP=log(P(i+2)/P(i))/2d0
-		dT(i)=d2T(i+1)*dlnP+dT(i+1)
-	enddo
-	do i=1,np
-c		if(abs(dT(i)).gt.2d0/7d0) print*,i,dT(i)
-		if(dT(i).gt.2d0/7d0) dT(i)=2d0/7d0
-		if(dT(i).lt.-2d0/7d0) dT(i)=-2d0/7d0
-	enddo
-	T(np)=T0
-	do i=np-1,1,-1
-		dlnP=log(P(i+1)/P(i))
-		T(i)=T(i+1)*exp(-dT(i)*dlnP)
-		if(T(i).lt.10d0) T(i)=10d0
-	enddo
-
-	P=-P
-	Pin=-Pin
-	call regridarray(P,T,np,Pin,Tin,npin)
-	P=-P
-	Pin=-Pin
-	
-	return
-	end
-	
-
-
-	subroutine MakePTstructOld(P,T,d2T,np,T0)
-	IMPLICIT NONE
-	integer np,i
-	real*8 P(np),T(np),d2T(np),T0
-	real*8 dlnP,dT(np)
-	
-	dT(np)=0d0
-	dlnP=log(P(np)/P(np-1))
-	dT(np-1)=d2T(np)*dlnP
-	do i=np-2,1,-1
-		dlnP=log(P(i+2)/P(i))/2d0
-		dT(i)=d2T(i+1)*dlnP+dT(i+1)
-	enddo
-	do i=1,np
-		if(dT(i).gt.2d0/7d0) dT(i)=2d0/7d0
-		if(dT(i).lt.-2d0/7d0) dT(i)=-2d0/7d0
-	enddo
-	T(np)=T0
-	do i=np-1,1,-1
-		dlnP=log(P(i+1)/P(i))
-		T(i)=T(i+1)*exp(-dT(i)*dlnP)
-	enddo
-	
-	return
-	end
-	
 
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------

@@ -52,8 +52,6 @@
 	logical recomputeopac
 	real*8 tot
 	character*500 keyword
-	real*8 Ptemp(nTpoints)
-	integer iPtemp(nTpoints)
 
 	k=0
 	do i=1,nobs

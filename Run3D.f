@@ -5,7 +5,7 @@
 	IMPLICIT NONE
 	integer i,j,icloud,k,irtrace,iptrace,inu,imol
 	real*8 beta(nlong,nlatt),Planck,phi,la,lo,A,rr
-	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta,Tpoint0(max(1,nTpoints)),Ppoint0(max(1,nTpoints))
+	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta
 	real*8,allocatable :: Ca(:,:,:,:),Cs(:,:,:),BBr(:,:),Si(:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce_cont(:,:,:)
 	integer ir,ilam,ig,isize,iRmax,ndisk,nsub,nrtrace,nptrace,ipc,npc,nmol_count
 	logical recomputeopac
@@ -216,11 +216,6 @@ c	recomputeopac=.true.
 		enddo
 	endif
 
-	if(free_tprofile) then
-		Tpoint0(1:nTpoints)=Tpoint(1:nTpoints)
-		Ppoint0(1:nTpoints)=Ppoint(1:nTpoints)
-	endif
-
 
 	call output("Computing multiple 1D structures")
 
@@ -258,12 +253,6 @@ c	recomputeopac=.true.
 				Par3D(j)%x=xmin+(xmax-xmin)*x3D(i)
 			endif
 		enddo
-		if(free_tprofile) then
-			do j=1,nTpoints
-				Ppoint(j)=Ppoint0(j)*beta3D(i)/betamax
-				Tpoint(j)=max(Tpoint0(j),0d0)*(1d0-beta3D(i)/betamax)+Tpoint0(j)*beta3D(i)/betamax
-			enddo
-		endif
 
 		call MapPar3D()
 		if(n3D.eq.2) beta3D(i)=betaT
