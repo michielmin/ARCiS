@@ -1356,7 +1356,7 @@ c	MMW=2.2
 			Ppoint(i)=betaT*tau_Vpoint(i)*Gplan/(kappaT*gammaT1*1d6)
 			Tpoint(i)=dT_Vpoint(i)
 		enddo
-		Tc=(Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
+		Tc=(Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT2))**0.25
 		call MakePTstruct_dT(P,TV,nr,Ppoint,Tpoint,nVpoints,Tc,PrefTpoint)
 	endif
 	if(nIRpoints.gt.0) then
@@ -1380,7 +1380,7 @@ c	MMW=2.2
 	real*8 logPp(nT_in),logP(np),logT(np),logT0,T0,logTp(nT_in),dT0,Tp(nT_in),logP0
 	real*8 a,b,c
 
-	logPp=log(Pp_in)
+	logPp=log(Pp_in+1d-30)
 	dTp=dTp_in
 
 	nT=nT_in
