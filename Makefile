@@ -117,6 +117,7 @@ OBJS	= Modules.o \
 		truncated_normal.o \
 		amoeba.o \
 		ggchem/ggchem_all.o \
+		ggchem/upper.o \
 		GGchemARCiS.o \
 		nasa_polynomial.o \
 		GGchem_linpack_q.o \

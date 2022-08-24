@@ -1809,7 +1809,7 @@
                 i = act_to_all(ii) 
                 xx(i) = xx(i) - fak*dp(ii)
                 anmono(i) = exp(xx(i))*kT1
-                if (IS_NAN(REAL(anmono(i)))) then
+                if (IS_NAN(DBLE(anmono(i)))) then
                   qual=2.Q+99
                   exit
                 endif  
@@ -3245,7 +3245,7 @@ c            verbose=2
                 i = act_to_all(ii) 
                 xx(i) = xx(i) - fak*dp(ii)
                 anmono(i) = exp(xx(i))*kT1
-                if (IS_NAN(anmono(i))) then
+                if (IS_NAN(DBLE(anmono(i)))) then
                   qual=2.d+99
                   exit
                 endif  
@@ -6806,7 +6806,7 @@ c      endif
           !enddo
           !print'(I3,2(1pE18.10),1pE9.2)',ii,Fsav(ii),test, 
      >    !                                  Fsav(ii)/test-1.Q0
-          if (IS_NAN(REAL(dx(ii)))) then
+          if (IS_NAN(DBLE(dx(ii)))) then
             print*,NELEM,Nsolve
             do i=1,Nsolve
               print'(99(1pE13.6))',DFsav(i,1:Nsolve),Fsav(i)
@@ -7228,29 +7228,4 @@ c      endif
      >           //elnam(el2),REAL(emat(el,el2))
         enddo  
       endif
-      end
-      function upper(strIn) result(strOut)
-      implicit none
-      character(len=*),intent(in) :: strIn
-      character(len=len(strIn)) :: strOut
-      integer :: i,j,l
-      logical :: change
-
-      change = .true.
-      l = len(strIn)
-      do i=1,l
-        if (i<l-4) then 
-          if (strIn(i:i+4)=='trans') change=.false. 
-        endif  
-        if (i<l-2) then 
-          if (strIn(i:i+2)=='cis'  ) change=.false. 
-        endif  
-        j = iachar(strIn(i:i))
-        if (j>= iachar("a") .and. j<=iachar("z") .and. change) then
-          strOut(i:i) = achar(iachar(strIn(i:i))-32)
-        else
-          strOut(i:i) = strIn(i:i)
-        end if
-      enddo
-
       end
