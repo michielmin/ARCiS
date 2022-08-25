@@ -226,6 +226,16 @@ c===============================================================================
 		key=>key%next
 	enddo
 
+	nTpoints=0
+	key => firstkey
+	do while(.not.key%last)
+		select case(key%key1)
+			case("ntpoints","nfreet")
+				read(key%value,*) nTpoints
+		end select
+		key=>key%next
+	enddo
+
 	key => firstkey
 	do while(.not.key%last)
 		select case(key%key1)
@@ -276,7 +286,14 @@ c				if(key%nr1.eq.0) key%nr1=1
 			case("fcloud")
 				read(key%value,*) fcloud_default
 			case("retpar","fitpar")
-				if(key%key2.eq.'keyword') n_ret=n_ret+1
+				if(key%key2.eq.'keyword') then
+					if(key%value.eq.'tprofile') then
+						free_tprofile=.true.
+						n_ret=n_ret+nTpoints*2
+					else
+						n_ret=n_ret+1
+					endif
+				endif
 			case("pmin")
 				read(key%value,*) pmin
 			case("pmax")
@@ -329,6 +346,8 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(RetPar(max(n_ret,1)))
 	allocate(tau_Vpoint(max(nVpoints,1)),dT_Vpoint(max(nVpoints,1)))
 	allocate(tau_IRpoint(max(nIRpoints,1)),dT_IRpoint(max(nIRpoints,1)))
+	allocate(dTpoint(max(nTpoints,1)))
+	allocate(Ppoint(max(nTpoints,1)))
 	allocate(ObsSpec(max(nobs,1)))
 	allocate(Tin(nr))
 	allocate(instrument(max(n_instr,1)))
@@ -336,6 +355,11 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(instr_nobs(max(n_instr,1)))
 	allocate(Par3D(max(n_Par3D,1)))
 	allocate(theta_phase(max(nphase,1)))
+
+	do i=1,nTpoints
+		Ppoint(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nTpoints-1))
+	enddo
+	PrefTpoint=Pmin
 
 	ncia0=0
 	existh2h2=.false.
@@ -977,6 +1001,15 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) dT_IRpoint(key%nr1)
 		case("free_tprofile")
 			read(key%value,*) free_tprofile
+		case("tpoint","dtpoint")
+			read(key%value,*) dTpoint(key%nr1)
+		case("ppoint")
+			read(key%value,*) Ppoint(key%nr1)
+		case("ntpoints","nfreet")
+c is already set in CountStuff
+c			read(key%value,*) nTpoints
+		case("preftpoint","pref")
+			read(key%value,*) PrefTpoint
 		case("faircoverage")
 			read(key%value,*) faircoverage
 		case("speclimits")
@@ -1656,6 +1689,7 @@ c		Cloud(i)%P=0.0624d0
 	tau_IRpoint=1d0
 	dT_Vpoint=0d0
 	dT_IRpoint=0d0
+	dTpoint=0d0
 	chimax=1d0
 	
 	maxTprofile=1d6
@@ -1716,6 +1750,27 @@ c number of cloud/nocloud combinations
 			n_ret=n_ret+1
 			i=n_ret
 			read(key%value,*) RetPar(i)%keyword
+			if(RetPar(i)%keyword.eq.'tprofile') then
+ 				free_tprofile=.true.
+				n_ret=n_ret+nTpoints*2-1
+ 				do j=1,nTpoints
+					RetPar(i+j-1)%keyword='dTpoint' // trim(int2string(j,'(i0.3)'))
+					RetPar(i+j-1)%xmin=-4d0/7d0
+					RetPar(i+j-1)%xmax=4d0/7d0
+					RetPar(i+j-1)%logscale=.false.
+				enddo
+ 				do j=1,nTpoints
+					RetPar(i+nTpoints+j-1)%keyword='Ppoint' // trim(int2string(j,'(i0.3)'))
+					RetPar(i+nTpoints+j-1)%xmin=pmin
+					RetPar(i+nTpoints+j-1)%xmax=pmax
+					RetPar(i+nTpoints+j-1)%logscale=.true.
+					if(j.eq.1) then
+						RetPar(i+nTpoints+j-1)%increase=.false.
+					else
+						RetPar(i+nTpoints+j-1)%increase=.true.
+					endif
+				enddo
+			endif
 		case("min","xmin")
 			read(key%value,*) RetPar(i)%xmin
 		case("max","xmax")

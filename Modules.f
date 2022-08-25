@@ -134,7 +134,9 @@ c for exchange when computing secondary atmosphere
 	character*500 formationcommand
 
 	real*8,allocatable :: tau_Vpoint(:),tau_IRpoint(:),dT_Vpoint(:),dT_IRpoint(:)
-	integer nVpoints,nIRpoints
+	real*8,allocatable :: Ppoint(:),dTpoint(:)
+	real*8 PrefTpoint
+	integer nVpoints,nIRpoints,nTpoints
 
 	logical do3D
 	real*8 par3Dsteepness
