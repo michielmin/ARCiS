@@ -6,7 +6,7 @@
 	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime,sig,aver,xmin,xmax
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:),hotspotshift_der(:)
 	real*8,allocatable :: PTstruct(:,:),var(:,:),values(:,:),COratio_der(:),Z_der(:),cloudstruct(:,:)
-	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j,iphase,imol
+	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j,iphase,imol,k
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
 	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:)
@@ -63,30 +63,41 @@
 
 	i1=nmodels/4
 	i2=(3*nmodels)/4
+	k=0
+	do j=1,n_ret
+		values(1:nmodels,j)=var(1:nmodels,j)
+		call sort(values(1:nmodels,j),nmodels)
+	enddo
 15	continue
 	do j=1,n_ret
-		sorted(1:nmodels)=var(1:nmodels,j)
-		call sort(sorted,i)
-		x1(j)=sorted(i1)
-		x2(j)=sorted(i2)
+		x1(j)=values(i1,j)
+		x2(j)=values(i2,j)
 	enddo
 	lbest=0d0
 	ibest=0
+	j=0
 	do i=1,nmodels
 		if(.not.(any(var(i,1:n_ret).lt.x1(1:n_ret)).or.any(var(i,1:n_ret).gt.x2(1:n_ret)))) then
+			j=j+1
 			if(like(i).gt.lbest) then
 				ibest=i
 				lbest=like(i)
 			endif
 		endif
 	enddo
-	if(ibest.eq.0) then
-		i1=i1-1
-		i2=i2+1
-		call output("MPM model hard to find")
-		call output("adjusting boundaries")
-		if(i1.ge.1.and.i2.le.nmodels) goto 15
+	if(j.ne.1) then
+		if(j.gt.1.and.k.eq.0) then
+			i1=i1+1
+			i2=i2-1
+			if(i1.lt.i2) goto 15
+		else if(j.lt.1) then
+			k=k+1
+			i1=i1-1
+			i2=i2+1
+			if(i1.ge.1.and.i2.le.nmodels) goto 15
+		endif
 	endif
+	call output("MPM model output written for all variable P > " // dbl2string(2d0*real(i1)/real(nmodels),'(f4.2)'))
 	call MapRetrievalMN(var(ibest,1:n_ret),error)
 	call system("cp " // trim(outputdir) // "input.dat " // trim(outputdir) // "mpm.dat")
 	open(unit=21,file=trim(outputdir) // "mpm.dat",RECL=1000,access='APPEND')
