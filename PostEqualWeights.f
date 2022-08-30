@@ -9,8 +9,9 @@
 	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j,iphase,imol
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
-	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:)
-	real*8 ComputeKzz
+	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:)
+	real*8 ComputeKzz,lbest,x1(n_ret),x2(n_ret)
+	integer i1,i2,ibest
 	
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
 	
@@ -36,6 +37,7 @@
 	if(do3D) allocate(hotspotshift_der(0:nmodels))
 	allocate(sorted(nmodels))
 	allocate(done(nmodels))
+	allocate(like(nmodels))
 	allocate(var(nmodels,n_ret))
 	if(do3D.and.fulloutput3D) then
 		allocate(PTstruct3D(0:nmodels,0:nphase,nr))
@@ -56,8 +58,45 @@
 	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",RECL=6000)
 
 	do i=1,nmodels
-		read(35,*) var(i,1:n_ret)
+		read(35,*) var(i,1:n_ret),like(i)
 	enddo
+
+	i1=nmodels/4
+	i2=(3*nmodels)/4
+15	continue
+	do j=1,n_ret
+		sorted(1:nmodels)=var(1:nmodels,j)
+		call sort(sorted,i)
+		x1(j)=sorted(i1)
+		x2(j)=sorted(i2)
+	enddo
+	lbest=0d0
+	ibest=0
+	do i=1,nmodels
+		if(.not.(any(var(i,1:n_ret).lt.x1(1:n_ret)).or.any(var(i,1:n_ret).gt.x2(1:n_ret)))) then
+			if(like(i).gt.lbest) then
+				ibest=i
+				lbest=like(i)
+			endif
+		endif
+	enddo
+	if(ibest.eq.0) then
+		i1=i1-1
+		i2=i2+1
+		call output("MPM model hard to find")
+		call output("adjusting boundaries")
+		if(i1.ge.1.and.i2.le.nmodels) goto 15
+	endif
+	call MapRetrievalMN(var(ibest,1:n_ret),error)
+	call system("cp " // trim(outputdir) // "input.dat " // trim(outputdir) // "mpm.dat")
+	open(unit=21,file=trim(outputdir) // "mpm.dat",RECL=1000,access='APPEND')
+	write(21,'("*** Median Probability Model parameters ***")')
+	write(21,'("retrieval=.false.")')
+	write(21,'("pew=.false.")')
+	do i=1,n_ret
+		write(21,'(a," = ",es14.7)') trim(RetPar(i)%keyword),RetPar(i)%value
+	enddo
+	close(unit=21)	
 
 	done=.false.
 	
@@ -428,6 +467,7 @@
 	deallocate(specemisR)
 	deallocate(PTstruct)
 	deallocate(Kzz_struct)
+	deallocate(like)
 	deallocate(sorted)
 	deallocate(values)
 	deallocate(COratio_der)
