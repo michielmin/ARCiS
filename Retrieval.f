@@ -292,8 +292,14 @@ c		if(var0(i).gt.25d0) var0(i)=25d0
 c		if(var0(i).lt.-25d0) var0(i)=-25d0
 c	enddo
 
+	
 	open(unit=31,file=trim(outputdir) // "Wolk.dat",RECL=6000)
 
+	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
+		call doMCMCF90(var0,n_ret)
+		return
+	endif
+	
 	ny=0
 	do i=1,nobs
 		ny=ny+ObsSpec(i)%ndata

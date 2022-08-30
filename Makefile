@@ -41,13 +41,19 @@ else
   LIBS_MN      = -lmultinest -DUSE_MULTINEST
 endif
 
+ifeq ($(mcmc),true)
+  LIBS_MCMC      = -lmcmcrun -framework Accelerate -DUSE_MCMCF90
+else
+  LIBS_MCMC      = -DNO_MCMCF90
+endif
+
 # Platform specific compilation options
 ifeq ($(gfort),true)
-  FLAG_ALL      = -O5 -finit-local-zero $(MULTICORE) -I$(HOME)/include -I/usr/local/modules $(LIBS_MN)
+  FLAG_ALL      = -O5 -finit-local-zero $(MULTICORE) -I$(HOME)/include -I/usr/local/modules $(LIBS_MN) $(LIBS_MCMC)
   FLAG_LINUX    = -ffixed-line-length-132 -cpp
   FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else
-  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(MULTICORE) -assume buffered_io -I/usr/local/modules -fp-model strict -heap-arrays -ip $(LIBS_MN)
+  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(MULTICORE) -assume buffered_io -I/usr/local/modules -fp-model strict -heap-arrays -ip $(LIBS_MN) $(LIBS_MCMC)
   FLAG_LINUX    = -xHOST -fpp
   FLAG_MAC      = -xHOST -qopt-prefetch -static-intel -fpp -heap-arrays
 endif
@@ -113,6 +119,7 @@ OBJS	= Modules.o \
 		writeFITS.o \
 		params_multinest.o \
 		MultiNestARCiS.o \
+		MCMC_ARCiS.o \
 		mrqmin.o \
 		truncated_normal.o \
 		amoeba.o \

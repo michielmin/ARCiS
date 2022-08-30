@@ -115,6 +115,8 @@ c TiO2: 1
 	CSname(i)='TiO2'
 	ATP(i)=77365.	! Al2O3 for now
 	BTP(i)=39.3
+c	ATP(i)=74734.7	! Value from Woitke & Helling 2004 (differences are so small that the old version is kept for backward compatibility)
+c	BTP(i)=35.8027
 	atoms_cloud(i,15)=1
 	atoms_cloud(i,5)=2
 	rhodust(i)=7.0d0	! moet ik nog checken
@@ -125,6 +127,8 @@ c VO: 2
 	CSname(i)='VO'
 	ATP(i)=77365.	! Al2O3 for now
 	BTP(i)=39.3
+c	ATP(i)=74734.7	! Value from Woitke & Helling 2004 for TiO2
+c	BTP(i)=35.8027
 	atoms_cloud(i,16)=1
 	atoms_cloud(i,5)=1
 	rhodust(i)=7.0d0	! moet ik nog checken

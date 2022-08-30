@@ -41,10 +41,56 @@
 	end
 	
 	
+	subroutine doMultiNest
+	use Nested
+	use params_multinest
+	use GlobalSetup
+	use RetrievalMod
+	IMPLICIT NONE
+	external getloglike,dumper
+	integer i,context
+	integer nest_pWrap(n_ret)
+
+	imodel=0
+	bestlike=1d200
+	write(nest_root,'(a,"/")') trim(outputdir)		
+	nest_pWrap=0
+	sdim=n_ret
+	nest_nClsPar=n_ret
+	nest_nlive=npop
+	nest_resume=resume_multinest
+	nest_efr=f_multinest
+	nest_tol=tol_multinest
+	nest_ceff=const_eff_multinest
+
+	if(nest_resume) then
+		open(unit=31,file=trim(outputdir) // '/Wolk.dat',RECL=6000,ACCESS='APPEND')
+	else
+		open(unit=31,file=trim(outputdir) // '/Wolk.dat',RECL=6000)
+	endif
+
+	call nestRun(nest_IS,nest_mmodal,nest_ceff,nest_nlive,nest_tol,nest_efr,sdim,sdim, 
+     & nest_nClsPar,nest_maxModes,nest_updInt,nest_Ztol,nest_root,nest_rseed,nest_pWrap, 
+     & nest_fb,nest_resume,nest_outfile,nest_initMPI,nest_logZero,nest_maxIter,getloglike,dumper,context)
+
+	return
+	end
+
+#else
+	subroutine doMultiNest
+	use GlobalSetup
+	IMPLICIT NONE
+	call output("ARCiS was compiled without MultiNest")
+	stop
+	return
+	end
+#endif
+
+
+	
 	subroutine slikelihood(var,nvars,lnew)
 	use GlobalSetup
 	use Constants
-	use params_multinest
 	IMPLICIT NONE
 	integer nvars,i,j,nlamtot,k,ny
 	real*8 var(nvars),chi2obs(nobs),error(2,nvars),lnew,scale
@@ -95,48 +141,3 @@
 	end
 	
 	
-	
-	subroutine doMultiNest
-	use Nested
-	use params_multinest
-	use GlobalSetup
-	use RetrievalMod
-	IMPLICIT NONE
-	external getloglike,dumper
-	integer i,context
-	integer nest_pWrap(n_ret)
-
-	imodel=0
-	bestlike=1d200
-	write(nest_root,'(a,"/")') trim(outputdir)		
-	nest_pWrap=0
-	sdim=n_ret
-	nest_nClsPar=n_ret
-	nest_nlive=npop
-	nest_resume=resume_multinest
-	nest_efr=f_multinest
-	nest_tol=tol_multinest
-	nest_ceff=const_eff_multinest
-
-	if(nest_resume) then
-		open(unit=31,file=trim(outputdir) // '/Wolk.dat',RECL=6000,ACCESS='APPEND')
-	else
-		open(unit=31,file=trim(outputdir) // '/Wolk.dat',RECL=6000)
-	endif
-
-	call nestRun(nest_IS,nest_mmodal,nest_ceff,nest_nlive,nest_tol,nest_efr,sdim,sdim, 
-     & nest_nClsPar,nest_maxModes,nest_updInt,nest_Ztol,nest_root,nest_rseed,nest_pWrap, 
-     & nest_fb,nest_resume,nest_outfile,nest_initMPI,nest_logZero,nest_maxIter,getloglike,dumper,context)
-
-	return
-	end
-
-#else
-	subroutine doMultiNest
-	use GlobalSetup
-	IMPLICIT NONE
-	call output("ARCiS was compiled without MultiNest")
-	stop
-	return
-	end
-#endif
