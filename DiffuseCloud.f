@@ -9,7 +9,7 @@
 	real*8,allocatable :: Sn(:),mpart(:)
 	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:),CloudHp(:)
 	real*8,allocatable :: at_ab(:,:)
-	real*8,allocatable,save :: Sc(:),vthv(:),Aomp(:,:),xomp(:),IWORKomp(:),AB(:,:)
+	real*8,allocatable,save :: Sc(:),vthv(:),Aomp(:,:),xomp(:),IWORKomp(:),AB(:,:),xrhs(:)
 	real*8,allocatable :: drhoKd(:),drhoKg(:),drhovsed(:),tcinv(:,:),rho_av(:),densv(:,:),Kd(:),Kg(:),Km(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
@@ -20,7 +20,7 @@
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:)
-	logical,allocatable :: empty(:)
+	logical,allocatable :: empty(:),docondense(:)
 	integer iCS,ir,nrdo
 	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil,St
 	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:)
@@ -28,7 +28,7 @@
 	logical SKIP
 	real*8 time,tcrystinv,impurity,ncryst,nucryst,Tcryst
 	integer itime
-!$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp,AB)
+!$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp,AB,xrhs)
 
 	call cpu_time(time)
 	timecloud=timecloud-time
@@ -81,7 +81,7 @@
 	w_atoms(17) = 55.845 		!'Fe'
 	w_atoms(18) = 58.6934 		!'Ni'
 	
-	allocate(densv(nnr,nCS))
+	allocate(densv(nnr,nCS),docondense(nCS))
 
 	if(.not.allocated(ATP)) then
 		allocate(ATP(nCS))
@@ -457,11 +457,15 @@ c	atoms_cloud(i,3)=1
 	enddo
 	tcinv=0d0
 	
+	docondense=.false.
 	do i=1,nnr
 		densv(i,1:nCS)=(mu*mp/(kb*CloudT(i)))*exp(BTP(1:nCS)-ATP(1:nCS)/CloudT(i))
 		do iCS=1,nCS
 			if(cloudT(i).gt.maxT(iCS)) densv(i,iCS)=densv(i,iCS)+
      &                    (mu(iCS)*mp/(kb*CloudT(i)*10d0))*exp(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0))
+		enddo
+		do iCS=1,nCS
+			if(densv(i,iCS).lt.Clouddens(i)*xv_bot(iCS)) docondense(iCS)=.true.
 		enddo
 		gz=Ggrav*Mplanet/CloudR(i)**2
 		Sn(i)=(Clouddens(i)*gz*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
@@ -479,7 +483,7 @@ c	atoms_cloud(i,3)=1
 !$OMP& SHARED(nnr,NN)
 	allocate(vthv(nnr))
 	allocate(Sc(nnr))
-	allocate(xomp(NN))
+	allocate(xomp(NN),xrhs(NN))
 	allocate(IWORKomp(NN))
 	allocate(Aomp(NN,NN))
 	allocate(AB(7,NN))
@@ -638,12 +642,13 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku)
-!$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,Kg,xn,empty,
+!$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,Kg,xn,empty,docondense,
 !$OMP&		NN,rpart,ixc,vsed,drhoKd,drhoKg,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=1,nCS
 
+	if(docondense(iCS)) then
 	do i=1,nnr
 		cs=sqrt(kb*CloudT(i)/(2.3d0*mp))
 		vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*mu(iCS)*mp))
@@ -713,6 +718,9 @@ c equations for material
 	Aomp(j,ixv(iCS,i-1))=-Kg(i)/dz
 	xomp(j)=0d0!Mc_top/Clouddens(i)
 
+	xrhs(1:NN)=xomp(1:NN)
+
+10	continue
 	NRHS=1
 	info=0
 c Use Band matrix algorithm
@@ -725,7 +733,23 @@ c Use Band matrix algorithm
 		enddo
 	enddo
 	j=7
+	xomp(1:NN)=xrhs(1:NN)
 	call DGBSV(NN,KL,KU,NRHS,AB,j,IWORKomp,xomp,NN,INFO)	
+
+c	do i=1,nnr
+c		if(xomp(ixc(iCS,i)).lt.0d0) then
+c			Aomp(ixc(iCS,i),1:NN)=0d0
+c			Aomp(ixc(iCS,i),ixc(iCS,i))=1d0
+c			xrhs(ixc(iCS,i))=0d0
+c			goto 10
+c		endif
+c		if(xomp(ixv(iCS,i)).lt.0d0) then
+c			Aomp(ixv(iCS,i),1:NN)=0d0
+c			Aomp(ixv(iCS,i),ixv(iCS,i))=1d0
+c			xrhs(ixv(iCS,i))=0d0
+c			goto 10
+c		endif
+c	enddo
 
 	do i=1,NN
 		if(.not.xomp(i).gt.0d0) xomp(i)=0d0
@@ -742,6 +766,13 @@ c Use Band matrix algorithm
 		if(xc(iCS,i).lt.0d0) xc(iCS,i)=0d0
 		if(xv(iCS,i).lt.0d0) xv(iCS,i)=0d0
 	enddo
+
+	else
+
+	xv(iCS,1:nnr)=xv_bot(iCS)
+	xc(iCS,1:nnr)=0d0
+	
+	endif
 
 	enddo
 !$OMP END DO
@@ -922,7 +953,7 @@ c Use Band matrix algorithm
 !$OMP& DEFAULT(NONE)
 	deallocate(vthv)
 	deallocate(Sc)
-	deallocate(xomp)
+	deallocate(xomp,xrhs)
 	deallocate(IWORKomp)
 	deallocate(Aomp)
 	deallocate(AB)
@@ -1149,7 +1180,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	
 	if(.not.retrieval) call ComputeTevap()
 
-	deallocate(densv)
+	deallocate(densv,docondense)
 	deallocate(mpart)
 	deallocate(rho_av)
 	deallocate(y)
