@@ -9,7 +9,7 @@
 	real*8,allocatable :: Sn(:),mpart(:)
 	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:),CloudHp(:)
 	real*8,allocatable :: at_ab(:,:)
-	real*8,allocatable,save :: Sc(:),vthv(:),Aomp(:,:),xomp(:),IWORKomp(:),AB(:,:),xrhs(:)
+	real*8,allocatable,save :: Sc(:),vthv(:),Aomp(:,:),xomp(:),IWORKomp(:),AB(:,:)
 	real*8,allocatable :: drhoKd(:),drhoKg(:),drhovsed(:),tcinv(:,:),rho_av(:),densv(:,:),Kd(:),Kg(:),Km(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
@@ -28,7 +28,7 @@
 	logical SKIP
 	real*8 time,tcrystinv,impurity,ncryst,nucryst,Tcryst
 	integer itime
-!$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp,AB,xrhs)
+!$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp,AB)
 
 	call cpu_time(time)
 	timecloud=timecloud-time
@@ -483,7 +483,7 @@ c	atoms_cloud(i,3)=1
 !$OMP& SHARED(nnr,NN)
 	allocate(vthv(nnr))
 	allocate(Sc(nnr))
-	allocate(xomp(NN),xrhs(NN))
+	allocate(xomp(NN))
 	allocate(IWORKomp(NN))
 	allocate(Aomp(NN,NN))
 	allocate(AB(7,NN))
@@ -643,12 +643,11 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,Kg,xn,empty,docondense,
-!$OMP&		NN,rpart,ixc,vsed,drhoKd,drhoKg,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot)
+!$OMP&		NN,rpart,ixc,vsed,drhoKd,drhoKg,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot,xm)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=1,nCS
 
-	if(docondense(iCS)) then
 	do i=1,nnr
 		cs=sqrt(kb*CloudT(i)/(2.3d0*mp))
 		vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*mu(iCS)*mp))
@@ -718,8 +717,6 @@ c equations for material
 	Aomp(j,ixv(iCS,i-1))=-Kg(i)/dz
 	xomp(j)=0d0!Mc_top/Clouddens(i)
 
-	xrhs(1:NN)=xomp(1:NN)
-
 10	continue
 	NRHS=1
 	info=0
@@ -733,23 +730,7 @@ c Use Band matrix algorithm
 		enddo
 	enddo
 	j=7
-	xomp(1:NN)=xrhs(1:NN)
 	call DGBSV(NN,KL,KU,NRHS,AB,j,IWORKomp,xomp,NN,INFO)	
-
-c	do i=1,nnr
-c		if(xomp(ixc(iCS,i)).lt.0d0) then
-c			Aomp(ixc(iCS,i),1:NN)=0d0
-c			Aomp(ixc(iCS,i),ixc(iCS,i))=1d0
-c			xrhs(ixc(iCS,i))=0d0
-c			goto 10
-c		endif
-c		if(xomp(ixv(iCS,i)).lt.0d0) then
-c			Aomp(ixv(iCS,i),1:NN)=0d0
-c			Aomp(ixv(iCS,i),ixv(iCS,i))=1d0
-c			xrhs(ixv(iCS,i))=0d0
-c			goto 10
-c		endif
-c	enddo
 
 	do i=1,NN
 		if(.not.xomp(i).gt.0d0) xomp(i)=0d0
@@ -766,13 +747,6 @@ c	enddo
 		if(xc(iCS,i).lt.0d0) xc(iCS,i)=0d0
 		if(xv(iCS,i).lt.0d0) xv(iCS,i)=0d0
 	enddo
-
-	else
-
-	xv(iCS,1:nnr)=xv_bot(iCS)
-	xc(iCS,1:nnr)=0d0
-	
-	endif
 
 	enddo
 !$OMP END DO
@@ -818,11 +792,11 @@ c	enddo
 		if(err.gt.maxerr) maxerr=err
 		rpart(i)=sqrt(rr*rpart(i))
 	enddo
+	
+	
 	if(maxerr.lt.1d-3) exit
 	enddo
 c end the loop
-
-
 
 	if(computecryst) then
 c Compute crystallinity
@@ -837,10 +811,10 @@ c Compute crystallinity
 	maxerr=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku,tcrystinv,err)
+!$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku,tcrystinv,err,tcoaginv)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,empty,
 !$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot,cryst,
-!$OMP&		impurity,ncryst,nucryst,Tcryst,maxerr)
+!$OMP&		impurity,ncryst,nucryst,Tcryst,maxerr,tcinv)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=4,6
@@ -953,7 +927,7 @@ c Use Band matrix algorithm
 !$OMP& DEFAULT(NONE)
 	deallocate(vthv)
 	deallocate(Sc)
-	deallocate(xomp,xrhs)
+	deallocate(xomp)
 	deallocate(IWORKomp)
 	deallocate(Aomp)
 	deallocate(AB)
