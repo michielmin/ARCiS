@@ -798,7 +798,7 @@ c use Ackerman & Marley 2001 cloud computation
 	integer i
 	character*500 command,homedir
 	character*10 name
-	real*8 abun,Mcore,Rstart
+	real*8 abun,Mcore,Rstart,Rend
 
 	names_atoms(1) = 'H'
 	names_atoms(2) = 'He'
@@ -842,38 +842,6 @@ c use Ackerman & Marley 2001 cloud computation
 
 	if(planetform) then
 
-	if(.false.) then	!run the python version
-
-	Z0=sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))
-	
-	if((planetform_fdust+planetform_fplan).ge.1d0) then	
-		scale=planetform_fdust+planetform_fplan
-		planetform_fdust=planetform_fdust/scale
-		planetform_fplan=planetform_fplan/scale
-	endif
-	
-	call getenv('HOME',homedir) 
-	write(command,'("python3 ",a,"/ARCiS/Data/planetform/elements.py ",a,"/atomic.dat ",6es15.4)') 
-     &	trim(homedir),trim(outputdir),Dplanet/AU,Mplanet/Mearth,planetform_Rstart,planetform_Mstart,planetform_fdust,planetform_fplan
-	if(trim(command).ne.trim(formationcommand)) then
-		call system(command)
-		formationcommand=command
-	endif
-
-	molfracs_atoms=1d-200
-	open(unit=43,file=trim(outputdir) // 'atomic.dat')
-1	read(43,*,err=1,end=2) name,abun
-	do i=1,N_atoms
-		if(trim(name).eq.names_atoms(i)) then
-			molfracs_atoms(i)=abun
-			exit
-		endif
-	enddo
-	goto 1
-2	close(unit=43)
-
-	else	! run the fortran version
-
 c Setup names and weights of the elements
 	Z0=sum(molfracs_atoms(3:N_atoms))/sum(molfracs_atoms(1:2))
 
@@ -891,15 +859,14 @@ c Setup names and weights of the elements
 	call output("[Z]: " // dbl2string(Z,'(f7.3)'))
 
 	Mcore=planetform_Mstart*Mearth
-	Rstart=planetform_Rstart*AU
+	Rstart=(planetform_Rend+planetform_Dmigrate)*AU
+	Rend=planetform_Rend*AU
 
 	call InitFormation(Mstar,Tstar,Rstar,planetform_SolidC,planetform_Macc)
-	call Formation(Mplanet,Mcore,Rstart,Dplanet,planetform_fdust,planetform_fplan,simAb_converge,MSimAb)
+	call Formation(Mplanet,Mcore,Rstart,Rend,planetform_fdust,planetform_fplan,simAb_converge,MSimAb)
 	if(.not.simAb_converge) then
 		call output("WARNING: SimAb did not converge!")
 		call output("WARNING: final mass of the planet:" // dbl2string(MSimAb/Mjup,'(se10.3)') // " Mjup")
-	endif
-
 	endif
 
 	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))

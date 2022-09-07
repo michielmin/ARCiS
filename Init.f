@@ -1124,7 +1124,16 @@ c			read(key%value,*) nTpoints
 		case("fplanet")
 			read(key%value,*) planetform_fplan
 		case("rstart","rcore")
-			read(key%value,*) planetform_Rstart
+			call output("Switching to depreciated mode of SimAb!!!")
+			read(key%value,*) planetform_Dmigrate
+			planetform_Dmigrate=planetform_Dmigrate-Dplanet
+			planetform_Rend=Dplanet
+			call output("Using dMigrate    = " // dbl2string(planetform_Dmigrate,"(f6.3)") // "AU")
+			call output("Using RendMigrate = " // dbl2string(planetform_Rend,"(f6.3)") // "AU")
+		case("dmigrate")
+			read(key%value,*) planetform_Dmigrate
+		case("rendmigrate")
+			read(key%value,*) planetform_Rend
 		case("mstart","mcore")
 			read(key%value,*) planetform_Mstart
 		case("sootline","solidc","fsolidc")
@@ -1704,7 +1713,8 @@ c		Cloud(i)%P=0.0624d0
 	planetform=.false.
 	planetform_fdust=0.1
 	planetform_fplan=0.1
-	planetform_Rstart=15d0
+	planetform_Dmigrate=15d0
+	planetform_Rend=-1d0
 	planetform_Mstart=10d0
 	planetform_SolidC=0d0
 	planetform_Macc=1d-7
@@ -2564,25 +2574,29 @@ c not entirely correct...
 					RetPar(i)%xmin=max(0d0,Rplanet-dsig*dR1)
 					RetPar(i)%xmax=Rplanet+dsig*dR2
 					if(RetPar(i)%xmin*Rjup.lt.0.1d0*Rearth) RetPar(i)%xmin=0.1d0*Rearth/Rjup
-		call output("Minimum radius: " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Rjup")
-		call output("Maximum radius: " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Rjup")
+		call output("Minimum radius:      " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Rjup")
+		call output("Maximum radius:      " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Rjup")
 				case("Mp","mp","MP")
 					RetPar(i)%x0=Mplanet
 					RetPar(i)%xmin=max(0d0,Mplanet-dsig*dM1)
 					RetPar(i)%xmax=Mplanet+dsig*dM2
 					if(RetPar(i)%xmin*Mjup.lt.0.1d0*Mearth) RetPar(i)%xmin=0.1d0*Mearth/Mjup
-		call output("Minimum mass:   " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Mjup")
-		call output("Maximum mass:   " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Mjup")
+		call output("Minimum mass:        " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Mjup")
+		call output("Maximum mass:        " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Mjup")
 				case("loggP","loggp")
 					RetPar(i)%x0=log10(Ggrav*(Mplanet*Mjup)/((Rplanet*Rjup)**2))
 					RetPar(i)%xmin=max(0.1,log10(Ggrav*(max(Mjup*(Mplanet-dsig*dM1),0.1d0*Mearth))/(((Rplanet+dsig*dR2)*Rjup)**2)))
 					RetPar(i)%xmax=log10(Ggrav*((Mplanet+dsig*dM2)*Mjup)/((max((Rplanet-dsig*dR1)*Rjup,0.1d0*Rearth))**2))
-		call output("Minimum logg:   " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
-		call output("Maximum logg:   " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
+		call output("Minimum logg:        " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
+		call output("Maximum logg:        " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
 				case("Rstart","rstart")
 					RetPar(i)%x0=Dplanet
 					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet)
-		call output("Minimum Rstart: " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
+		call output("Minimum Rstart:      " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
+				case("RendMigrate","rendmigrate","Rendmigrate","rendMigrate")
+					RetPar(i)%x0=Dplanet
+					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet)
+		call output("Minimum RendMigrate: " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 			end select
 		enddo
 		return
@@ -2707,25 +2721,29 @@ c not entirely correct...
 					RetPar(i)%xmin=max(0d0,Rplanet-dsig*dR1)
 					RetPar(i)%xmax=Rplanet+dsig*dR2
 					if(RetPar(i)%xmin*Rjup.lt.0.1d0*Rearth) RetPar(i)%xmin=0.1d0*Rearth/Rjup
-		call output("Minimum radius: " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Rjup")
-		call output("Maximum radius: " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Rjup")
+		call output("Minimum radius:      " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Rjup")
+		call output("Maximum radius:      " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Rjup")
 				case("Mp","mp","MP")
 					RetPar(i)%x0=Mplanet
 					RetPar(i)%xmin=max(0d0,Mplanet-dsig*dM1/4d0)
 					RetPar(i)%xmax=Mplanet+dsig*dM2/4d0
 					if(RetPar(i)%xmin*Mjup.lt.0.1d0*Mearth) RetPar(i)%xmin=0.1d0*Mearth/Mjup
-		call output("Minimum mass:   " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Mjup")
-		call output("Maximum mass:   " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Mjup")
+		call output("Minimum mass:        " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Mjup")
+		call output("Maximum mass:        " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Mjup")
 				case("loggP","loggp")
 					RetPar(i)%x0=log10(Ggrav*(Mplanet*Mjup)/((Rplanet*Rjup)**2))
 					RetPar(i)%xmin=max(0.1,log10(Ggrav*(max(Mjup*(Mplanet-dsig*dM1/4d0),0.1d0*Mearth))/(((Rplanet+dsig*dR2)*Rjup)**2)))
 					RetPar(i)%xmax=log10(Ggrav*((Mplanet+dsig*dM2/4d0)*Mjup)/((max((Rplanet-dsig*dR1)*Rjup,0.1d0*Rearth))**2))
-		call output("Minimum logg:   " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
-		call output("Maximum logg:   " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
+		call output("Minimum logg:        " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
+		call output("Maximum logg:        " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
 				case("Rstart","rstart")
 					RetPar(i)%x0=Dplanet
 					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet)
-		call output("Minimum Rstart: " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
+		call output("Minimum Rstart:      " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
+				case("RendMigrate","rendmigrate","Rendmigrate","rendMigrate")
+					RetPar(i)%x0=Dplanet
+					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet)
+		call output("Minimum RendMigrate: " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 			end select
 		enddo
 		return
