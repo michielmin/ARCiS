@@ -18,11 +18,15 @@
 
 	docloud=.false.
 	if(singlecloud) then
-	cloudfrac(1)=0d0
 	do i=1,nclouds
 		cloudfrac(i+1)=Cloud(i)%coverage
 		docloud(i+1,i)=.true.
 	enddo
+	cloudfrac(1)=1d0-sum(cloudfrac(2:nclouds))
+	if(cloudfrac(1).lt.0d0) then
+		cloudfrac(1)=0d0
+		cloudfrac(2:nclouds)=cloudfrac(2:nclouds)/sum(cloudfrac(2:nclouds))
+	endif
 	else
 	do icc=2,ncc
 		docloud(icc,1:nclouds)=docloud(icc-1,1:nclouds)
@@ -42,6 +46,8 @@
 		enddo
 	enddo
 	endif
+	print*,docloud(1:ncc,1)
+	print*,cloudfrac(1:ncc)
 
 	if(ncc.eq.1) cloudfrac=1d0
 

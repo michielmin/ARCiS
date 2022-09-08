@@ -327,58 +327,63 @@ c============================
 	integer ig,ilam,iT,iP,imol,i,j,ir,ngF,i1,i2
 	real*8 kappa_mol(ng,nlam,nmol),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random,w1,ww
 	real*8,allocatable :: temp(:),wtemp(:)
+	real*8,dimension(:,:),pointer :: tab1,tab2,tab3,tab4
+	type(databaseKtable),pointer :: Ktab
 
-	if(.not.Ktable(imol)%available.or..not.includemol(imol)) then
+	Ktab => Ktable(imol)
+	if(.not.Ktab%available.or..not.includemol(imol)) then
 		kappa_mol(1:ng,1:nlam,imol)=0d0
 		return
 	endif
 
-	if(P(ir).lt.Ktable(imol)%P1) then
+	if(P(ir).lt.Ktab%P1) then
 		iP=1
 		wP1=1d0
 		wP2=0d0
-	else if(P(ir).gt.Ktable(imol)%P2) then
-		iP=Ktable(imol)%nP-1
+	else if(P(ir).gt.Ktab%P2) then
+		iP=Ktab%nP-1
 		wP1=0d0
 		wP2=1d0
 	else
-		call hunt(Ktable(imol)%P,Ktable(imol)%nP,P(ir),iP)
-c		do iP=1,Ktable(imol)%nP
-c			if(P(ir).ge.Ktable(imol)%P(iP).and.P(ir).lt.Ktable(imol)%P(iP+1)) exit
+		call hunt(Ktab%P,Ktab%nP,P(ir),iP)
+c		do iP=1,Ktab%nP
+c			if(P(ir).ge.Ktab%P(iP).and.P(ir).lt.Ktab%P(iP+1)) exit
 c		enddo
-		wP1=1d0-log10(P(ir)/Ktable(imol)%P(iP))/log10(Ktable(imol)%P(iP+1)/Ktable(imol)%P(iP))
+		wP1=1d0-log10(P(ir)/Ktab%P(iP))/log10(Ktab%P(iP+1)/Ktab%P(iP))
 		wP2=1d0-wP1
 	endif
 
-	if(T(ir).lt.Ktable(imol)%T1) then
+	if(T(ir).lt.Ktab%T1) then
 		iT=1
 		wT1=1d0
 		wT2=0d0
-	else if(T(ir).gt.Ktable(imol)%T2) then
-		iT=Ktable(imol)%nT-1
+	else if(T(ir).gt.Ktab%T2) then
+		iT=Ktab%nT-1
 		wT1=0d0
 		wT2=1d0
 	else
-		call hunt(Ktable(imol)%T,Ktable(imol)%nT,T(ir),iT)
-c		do iT=1,Ktable(imol)%nT
-c			if(T(ir).ge.Ktable(imol)%T(iT).and.T(ir).lt.Ktable(imol)%T(iT+1)) exit
+		call hunt(Ktab%T,Ktab%nT,T(ir),iT)
+c		do iT=1,Ktab%nT
+c			if(T(ir).ge.Ktab%T(iT).and.T(ir).lt.Ktab%T(iT+1)) exit
 c		enddo
-		wT1=1d0-log10(T(ir)/Ktable(imol)%T(iT))/log10(Ktable(imol)%T(iT+1)/Ktable(imol)%T(iT))
+		wT1=1d0-log10(T(ir)/Ktab%T(iT))/log10(Ktab%T(iT+1)/Ktab%T(iT))
 		wT2=1d0-wT1
 	endif
+ 
+ 	tab1 => Ktab%ktable(1:ng,1:nlam,iT,iP)
+ 	tab2 => Ktab%ktable(1:ng,1:nlam,iT+1,iP)
+ 	tab3 => Ktab%ktable(1:ng,1:nlam,iT,iP+1)
+ 	tab4 => Ktab%ktable(1:ng,1:nlam,iT+1,iP+1)
  
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,ig)
-!$OMP& SHARED(nlam,ng,kappa_mol,imol,Ktable,wT1,wT2,wP1,wP2,iT,iP)
+!$OMP& SHARED(nlam,ng,kappa_mol,imol,tab1,tab2,tab3,tab4,wT1,wT2,wP1,wP2,iT,iP,computelam)
 !$OMP DO
 	do ilam=1,nlam
-		do ig=1,ng
-			kappa_mol(ig,ilam,imol)=Ktable(imol)%ktable(ig,ilam,iT,iP)*wT1*wP1+
-     &						  Ktable(imol)%ktable(ig,ilam,iT+1,iP)*wT2*wP1+
-     &						  Ktable(imol)%ktable(ig,ilam,iT,iP+1)*wT1*wP2+
-     &						  Ktable(imol)%ktable(ig,ilam,iT+1,iP+1)*wT2*wP2
-		enddo
+		if(computelam(ilam)) then
+			kappa_mol(1:ng,ilam,imol)=tab1(1:ng,ilam)*wT1*wP1+tab2(1:ng,ilam)*wT2*wP1+tab3(1:ng,ilam)*wT1*wP2+tab4(1:ng,ilam)*wT2*wP2
+		endif
 	enddo
 !$OMP END DO
 !$OMP FLUSH

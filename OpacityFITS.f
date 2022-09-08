@@ -191,14 +191,14 @@ C	 create the new empty FITS file
 	IMPLICIT NONE
 	
 	type databaseKtable
-		real*8,allocatable :: ktable(:,:,:,:),P(:),T(:)
-		real*8,allocatable :: g(:),wg(:)
+		real*8,allocatable :: ktable(:,:,:,:)
+		real*8,allocatable :: g(:),wg(:),P(:),T(:)
 		integer nlam,nP,nT,ng
 		real*8 lam1,lam2,P1,P2,T1,T2
 		logical available
 	end type databaseKtable
 
-	type(databaseKtable),allocatable :: Ktable(:)
+	type(databaseKtable),allocatable,target :: Ktable(:)
 	
 	end module OpacityFITSdata
 

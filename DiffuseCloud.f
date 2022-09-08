@@ -545,9 +545,10 @@ c coagulation
 			vmol=0.5d0*lmfp*vth(i)
 			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
 
-c			tcoaginv=npart*pi*(2d0*rpart(i))**2*abs(vsed(i))
+c			tcoaginv=2d0*npart*pi*rpart(i)**2*abs(vsed(i))
 c rewritten for better convergence
 			tcoaginv=sqrt(pi)*3d0*(sum(xc(1:nCS,i))+xm(i))*Ggrav*Mplanet/(8d0*vth(i)*CloudR(i)**2)
+
 			tcoaginv=tcoaginv*exp(-(vsed(i)/vfrag)**2)
 
 			vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
@@ -806,15 +807,15 @@ c Compute crystallinity
 	Tcryst=112000d0
 
 	cryst=impurity
-
+	
 	do iter=1,100
 	maxerr=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku,tcrystinv,err,tcoaginv)
+!$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku,tcrystinv,err,tcoaginv,vBM,npart,lmfp,vmol,Dp)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,empty,
 !$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot,cryst,
-!$OMP&		impurity,ncryst,nucryst,Tcryst,maxerr,tcinv)
+!$OMP&		impurity,ncryst,nucryst,Tcryst,maxerr,tcinv,vth,sigmamol,xm,Mplanet)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=4,6
@@ -850,8 +851,22 @@ c equations for material
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))
      &					+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 
-		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+tcrystinv
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Clouddens(i)*tcrystinv
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-ScTot(2,iCS,i)
+
+		if(.false.) then ! collisional amorphization
+			npart=xn(i)*Clouddens(i)
+			tcoaginv=0d0
+			tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*abs(vsed(i))
+			lmfp=2.3d0*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
+			vmol=0.5d0*lmfp*vth(i)
+			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
+			vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
+			if(Dp/rpart(i).lt.vBM) vBM=Dp/rpart(i)
+			tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*vBM
+			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
+			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Clouddens(i)*tcoaginv
+		endif
 		
 		j=j+1
 
