@@ -4846,6 +4846,16 @@ c        filename = 'data/'//trim(filename)
       implicit none
       integer Ndim,N,i,j,k,kmax
       real*8  a(Ndim,Ndim),x(Ndim),b(Ndim),c,amax
+
+	integer NRHS,info,IPIV(N)
+
+	x=b
+	NRHS=1
+	info=0
+	call DGESV( N, NRHS, A, Ndim, IPIV, x, N, info )
+	return
+
+
 *
 c      integer ipiv(N),info      
 c      call DGESV( N, 1, a(1,1), N, ipiv, b, N, info )
@@ -4926,6 +4936,16 @@ c      endif
       integer,parameter :: qp = selected_real_kind ( 33, 4931 )
       integer :: Ndim,N,i,j,k,kmax
       real(kind=qp) :: a(Ndim,Ndim),x(Ndim),b(Ndim),c,amax
+
+	integer NRHS,info,IPIV(N)
+
+	x=b
+	NRHS=1
+	info=0
+	call QGESV( N, NRHS, A, Ndim, IPIV, x, N, info )
+	return
+
+
 *
       do 500 i=1,N-1
 *       ------------------------------------------

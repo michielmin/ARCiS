@@ -42,6 +42,9 @@ c	recomputeopac=.true.
 	docloud0=.false.
 	do i=1,nclouds
 		if(Cloud(i)%coverage.gt.0.5) docloud0(i)=.true.
+		if(Cloud(i)%coverage.ne.1d0) then
+			call outputform("WARNING! Cloud coverage fraction does not work in 3D structures!")
+		endif
 	enddo
 
 	iterateshift=.false.
