@@ -195,7 +195,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		endif
 		if(nfixmol.gt.0) then
 			do i=1,nfixmol
-				mixrat_r(1:nr,ifixmol(i))=fixmol_abun(i)
+				mixrat_r(1:nr,ifixmol(i))=fixmol_abun(i)*exp(-P(1:nr)/fixmol_P(i))
 			enddo
 		endif
 		do i=1,nr

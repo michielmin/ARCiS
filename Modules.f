@@ -249,7 +249,7 @@ c for exchange when computing secondary atmosphere
 	real*8 COret,COerr(2)
 	
 	character*10 fixmol_name(nmol_data)
-	real*8 fixmol_abun(nmol_data)
+	real*8 fixmol_abun(nmol_data),fixmol_P(nmol_data)
 	integer nfixmol,ifixmol(nmol_data)
 	
 	logical sinkZ

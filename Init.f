@@ -1453,6 +1453,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	fast_chem=.false.
 	disequilibrium=.false.
 	nfixmol=0
+	fixmol_P=1d20
 	Kzz=1d8
 	metallicity=0d0
 	condensates=.false.
@@ -1881,6 +1882,8 @@ c number of cloud/nocloud combinations
 			enddo
 		case("abun")
 			read(key%value,*) fixmol_abun(i)
+		case("p")
+			read(key%value,*) fixmol_P(i)
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
