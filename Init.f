@@ -462,6 +462,7 @@ c==============================================================================
 	use ReadKeywords
 	use Struct3D
 	use TimingModule
+	use ARCiS_GGCHEM
 	IMPLICIT NONE
 	type(SettingKey),pointer :: key,first
 	type(SettingKey) keyret
@@ -661,6 +662,10 @@ c	condensates=(condensates.or.cloudcompute)
 	endif
 
 	if(dochemistry.or.secondary_atmosphere) then
+		outputdirGGchem=outputdir
+		smallchem=fast_chem
+		allocate(usemolGGchem(nmol))
+		usemolGGchem(1:nmol)=includemol(1:nmol)
 		if(secondary_atmosphere) then
 			call init_GGchem(molname,nmol,.true.)
 		else
