@@ -123,7 +123,7 @@ c for exchange when computing secondary atmosphere
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb
 	character*20 surfacetype
-	integer nTZ,nspike,nai,nboot,npew,n_deepRedist
+	integer nTZ,nspike,nai,nboot,npew,n_deepRedist,nscaleR
 	integer,allocatable :: niso(:),instr_nobs(:)
 	real*8,allocatable :: MMW(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)

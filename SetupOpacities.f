@@ -17,10 +17,10 @@
 	real*8 nu1,nu2,tanscale,ll,tot,tot2
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime,cwg(ng),w1
 	real*8,allocatable :: nu_line(:),dnu_line(:),mixrat_tmp(:)
-	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:),kappa_tot(:,:)
+	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
 	logical,allocatable,save :: fulladd(:)
-	real*8,allocatable,save :: k_line(:),ktemp(:),kappa(:),w_line(:)
-!$OMP THREADPRIVATE(fulladd,k_line,ktemp,kappa,w_line)
+	real*8,allocatable,save :: k_line(:),ktemp(:),kappa(:),w_line(:),kappa_tot(:)
+!$OMP THREADPRIVATE(fulladd,k_line,ktemp,kappa,w_line,kappa_tot)
 	integer n_nu_line,iT
 	integer i,j,ir,k,nl,ig,ig_c,imol0
 	integer,allocatable :: inu1(:),inu2(:)
@@ -30,7 +30,6 @@
 	allocate(kaver(nlam))
 	allocate(opac_tot(nlam,ng))
 	allocate(kappa_mol(ng,nlam,nmol))
-	allocate(kappa_tot(0:nmol,nlam))
 	allocate(mixrat_tmp(nmol))
 
 	j=0
@@ -75,6 +74,7 @@ c	n_nu_line=ng*min(j,4)
 		allocate(kappa(ng))
 		allocate(w_line(n_nu_line))
 		allocate(fulladd(nmol))
+		allocate(kappa_tot(0:nmol))
 !$OMP END PARALLEL
 
 	do ir=nr,1,-1
@@ -107,17 +107,9 @@ c===============
 			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*mixrat_tmp(CIA(i)%imol1)*mixrat_tmp(CIA(i)%imol2)
 		enddo
 		kappa_mol=0d0
-		kappa_tot(0:nmol,1:nlam)=0d0
-		kappa_tot(0,1:nlam)=cont_tot(1:nlam)
 		do imol=1,nmol
 			if(includemol(imol)) then
 				call ReadOpacityFITS(kappa_mol,imol,ir)
-				do i=1,nlam
-					do ig=1,ng
-						kappa_tot(imol,i)=kappa_tot(imol,i)+wgg(ig)*kappa_mol(ig,i,imol)*mixrat_tmp(imol)
-					enddo
-					kappa_tot(0,i)=kappa_tot(0,i)+kappa_tot(imol,i)
-				enddo
 			endif
 		enddo
 !$OMP PARALLEL IF(.true.)
@@ -125,13 +117,23 @@ c===============
 !$OMP& PRIVATE(i,j,imol,ig,ig_c,tot,tot2,imol0,w1)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,computelam,
 !$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid,
-!$OMP&        kappa_tot,RTgridpoint)
+!$OMP&        RTgridpoint)
 !$OMP DO SCHEDULE(DYNAMIC,1)
 		do i=1,nlam
 			if(computelam(i).and.(emisspec.or.computeT).and.(.not.useobsgrid.or.lamemis(i).or.RTgridpoint(i))) then
+			kappa_tot(0:nmol)=0d0
+			kappa_tot(0)=cont_tot(i)
 			do imol=1,nmol
 				if(opacitymol(imol)) then
-					fulladd(imol)=(kappa_tot(imol,i).gt.0.01*kappa_tot(0,i))
+					do ig=1,ng
+						kappa_tot(imol)=kappa_tot(imol)+wgg(ig)*kappa_mol(ig,i,imol)*mixrat_tmp(imol)
+					enddo
+					kappa_tot(0)=kappa_tot(0)+kappa_tot(imol)
+				endif
+			enddo
+			do imol=1,nmol
+				if(opacitymol(imol)) then
+					fulladd(imol)=(kappa_tot(imol).gt.0.01*kappa_tot(0))
 				endif
 			enddo
 			tot=0d0
@@ -218,7 +220,7 @@ c===============
 			if(includemol(imol)) then
 				do i=1,nlam
 					do j=1,ng
-						Cabs_mol(ir,j,imol,i)=kappa_mol(j,i,imol)*Ndens(ir)*mixrat_r(ir,imol)
+						Cabs_mol(j,i,imol,ir)=kappa_mol(j,i,imol)*Ndens(ir)*mixrat_r(ir,imol)
 					enddo
 				enddo
 			endif
@@ -241,7 +243,7 @@ c===============
 		deallocate(k_line)
 		deallocate(w_line)
 		deallocate(ktemp)
-		deallocate(kappa,fulladd)
+		deallocate(kappa,fulladd,kappa_tot)
 !$OMP END PARALLEL
 
 	if(.not.retrieval) then

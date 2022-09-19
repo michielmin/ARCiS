@@ -1326,6 +1326,7 @@ c	MMW=2.2
 		enddo
 		Tc=(Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT2))**0.25
 		call MakePTstruct_dT(P,TV,nr,Ppoint0,Tpoint0,nVpoints,Tc,PrefTp0)
+c		call MakePTstruct_T(P,TV,nr,Ppoint0,Tpoint0,nVpoints)
 	endif
 	if(nIRpoints.gt.0) then
 		do i=1,nIRpoints
@@ -1334,10 +1335,12 @@ c	MMW=2.2
 		enddo
 		Tc=TeffP
 		call MakePTstruct_dT(P,TIR,nr,Ppoint0,Tpoint0,nIRpoints,Tc,PrefTp0)
+c		call MakePTstruct_T(P,TIR,nr,Ppoint0,Tpoint0,nIRpoints)
 	endif
 	if(nTpoints.gt.0) then
 		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
 		call MakePTstruct_dT(P,Tfree,nr,Ppoint,dTpoint,nTpoints,Tc,PrefTpoint)
+c		call MakePTstruct_T(P,Tfree,nr,Ppoint,dTpoint,nTpoints)
 	endif
 
 	T=(TV**4+TIR**4+Tfree**4)**0.25
@@ -1345,6 +1348,39 @@ c	MMW=2.2
 	return
 	end
 	
+
+	subroutine MakePTstruct_T(P,T,np,Pp_in,Tp_in,nT_in)
+	IMPLICIT NONE
+	integer np,i,nT,nT_in,j,i0
+	real*8 P(np),T(np),Pp_in(nT_in),Tp_in(nT_in),dTp(nT_in)
+	real*8 logPp(nT_in),logP(np),logT(np),logTp(nT_in)
+	logical SKIP
+	integer INCFD,IERR
+	
+	logPp=-log(Pp_in+1d-30)
+	logTp=log(Tp_in)
+	call sortw(logPp,logTp,nT_in)
+	logP=-log(P)
+
+	SKIP=.false.
+	INCFD=1
+	call DPCHIM(nT_in,logPp,logTp,dTp,INCFD)
+	call DPCHFE(nT_in,logPp,logTp,dTp,INCFD,SKIP,np,logP,logT,IERR)
+
+	do i=1,np
+		if(logP(i).lt.logPp(1)) then
+			logT(i)=logTp(1)+dTp(1)*(logP(i)-logPp(1))
+		endif
+		if(logP(i).gt.logPp(nT_in)) then
+			logT(i)=logTp(nT_in)+dTp(nT_in)*(logP(i)-logPp(nT_in))
+		endif
+	enddo
+
+	T(1:np)=exp(logT(1:np))
+
+	return
+	end
+
 
 	subroutine MakePTstruct_dT(P,T,np,Pp_in,dTp_in,nT_in,T0,P0)
 	IMPLICIT NONE

@@ -615,7 +615,8 @@ c	condensates=(condensates.or.cloudcompute)
 
 	metallicity0=metallicity
 
-	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
+c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
+	allocate(Cabs_mol(ng,nlam,nmol,nr))
 	allocate(Cext_cont(nr,nlam))
 	allocate(Cabs(nr,nlam,ng))
 	allocate(Csca(nr,nlam))
@@ -786,6 +787,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) retrieval
 		case("doscaler","scaler")
 			read(key%value,*) doscaleR
+		case("nscaler")
+			read(key%value,*) nscaleR
 		case("contrib","computecontrib")
 			read(key%value,*) computecontrib
 		case("outputopacity","writeopacity")
@@ -1618,6 +1621,7 @@ c		Cloud(i)%P=0.0624d0
 
 	retrieval=.false.
 	doscaleR=.false.
+	nscaleR=-1
 	massprior=.false.
 	useobsgrid=.false.
 	log_emis=.true.

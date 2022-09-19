@@ -344,7 +344,7 @@ c Now call the setup for the readFull3D part
 						k=k+1
 						do ig=1,ng
 							do ilam=1,nlam
-								Ca_mol(ilam,ig,k,ir,i)=Cabs_mol(ir,ig,imol,ilam)
+								Ca_mol(ilam,ig,k,ir,i)=Cabs_mol(ig,ilam,imol,ir)
 								Ce_cont(ilam,ir,i)=Ce_cont(ilam,ir,i)-wgg(ig)*Ca_mol(ilam,ig,k,ir,i)
 							enddo
 						enddo

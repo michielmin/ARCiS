@@ -13,7 +13,7 @@
 	integer icc,imol
 	real*8 Ocolumn(2,nlam,ncc),Ccolumn(2,nlam,ncc),Hcolumn(2,nlam,ncc),Otot,Ctot,Htot,dP
 	character*500 filename
-	real*8,allocatable :: dtrace(:,:),CaCont(:,:)
+	real*8,allocatable :: dtrace(:,:),CaCont(:,:),Ca_cloud(:,:),Cs_cloud(:,:)
 	integer,allocatable :: irtrace(:,:),nirtrace(:)
 
 	docloud=.false.
@@ -173,6 +173,15 @@
 
 	ndisk=15
 	nsub=3
+
+	if(.not.transspec) then
+		ndisk=15
+		nsub=1
+	endif
+	if(.not.emisspec) then
+		ndisk=2
+		nsub=3
+	endif
 	
 	nrtrace=(nr-1)*nsub+ndisk
 	allocate(rtrace(nrtrace))
@@ -261,7 +270,7 @@
 	Hcolumn=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(SHARED)
-!$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,
+!$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,Ca_cloud,Cs_cloud,
 !$OMP&         Ca,Cs,icloud,isize,BBr,Otot,Ctot,Htot,imol,irc,contr,fact_contr,fluxg_contr,Ag_contr,nk)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
 !$OMP&			cloud_dens,useDRIFT,Psimplecloud,P,flux_contr,obsA_contr,irtrace,dtrace,nirtrace,
@@ -269,8 +278,32 @@
 	allocate(fact_contr(nr))
 	allocate(fluxg_contr(nr))
 	allocate(Ag_contr(nr))
+	allocate(Ca_cloud(ncc,nr),Cs_cloud(ncc,nr))
 !$OMP DO
 	do ilam=1,nlam
+		Ca_cloud(1:ncc,1:nr)=0d0
+		Cs_cloud(1:ncc,1:nr)=0d0
+		do icc=1,ncc
+			if(cloudfrac(icc).gt.0d0) then
+				do ir=1,nr
+					do icloud=1,nclouds
+						if(docloud(icc,icloud)) then
+							if(Cloud(icloud)%standard.eq.'MIX') then
+								Ca_cloud(icc,ir)=Ca_cloud(icc,ir)+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+								Cs_cloud(icc,ir)=Cs_cloud(icc,ir)+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+							else
+								do isize=1,Cloud(icloud)%nr
+									Ca_cloud(icc,ir)=Ca_cloud(icc,ir)+
+     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+									Cs_cloud(icc,ir)=Cs_cloud(icc,ir)+
+     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
+								enddo
+							endif
+						endif
+					enddo
+				enddo
+			endif
+		enddo
 		freq0=freq(ilam)
 		obsA(:,ilam)=0d0
 		obsA_contr(1:nr,ilam)=0d0
@@ -297,23 +330,8 @@
 					ir=irtrace(k,i)
 					d=dtrace(k,i)
 
-					Ca=Cabs(ir,ilam,ig)*Ndens(ir)
-					Cs=Csca(ir,ilam)*Ndens(ir)
-					do icloud=1,nclouds
-						if(docloud(icc,icloud)) then
-							if(Cloud(icloud)%standard.eq.'MIX') then
-								Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
-								Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-							else
-								do isize=1,Cloud(icloud)%nr
-									Ca=Ca+
-     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-									Cs=Cs+
-     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-								enddo
-							endif
-						endif
-					enddo
+					Ca=Cabs(ir,ilam,ig)*Ndens(ir)+Ca_cloud(icc,ir)
+					Cs=Csca(ir,ilam)*Ndens(ir)+Cs_cloud(icc,ir)
 					tau_a=d*Ca
 					tau=tau_a+d*Cs
 					if(P(ir).gt.Psimplecloud) tau=1d4
@@ -371,6 +389,7 @@
 	deallocate(fact_contr)
 	deallocate(fluxg_contr)
 	deallocate(Ag_contr)
+	deallocate(Ca_cloud,Cs_cloud)
 !$OMP FLUSH
 !$OMP END PARALLEL
 	endif
@@ -443,7 +462,7 @@
 							do k=1,nk
 								ir=irtrace(k,i)
 								d=dtrace(k,i)
-								tau=d*Cabs_mol(ir,ig,imol,ilam)
+								tau=d*Cabs_mol(ig,ilam,imol,ir)
 								if(P(ir).gt.Psimplecloud) tau=1d4
 								tautot=tautot+tau
 								ir_next=irtrace(k+1,i)
