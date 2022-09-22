@@ -112,7 +112,7 @@ c terms of use
 			endif
 			if(f.gt.1d0) f=1d0
 			call DoComputeT(Tconverged,f)
-			if(Tconverged.and.nTiter.gt.4) exit
+			if(Tconverged.and.nTiter.ge.miniter) exit
 c			call SetoutputMode(.true.)
 c			call output("Chemistry cpu time: " // trim(dbl2string(timechem,'(f10.4)')) // " s")
 c			call output("Chemistry walltime: " // trim(dbl2string(dble(itimechem)/dble(rate),'(f10.4)')) // " s")

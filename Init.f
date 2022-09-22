@@ -905,6 +905,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) TeffP
 		case("maxiter")
 			read(key%value,*) maxiter
+		case("miniter")
+			read(key%value,*) miniter
 		case("epsiter")
 			read(key%value,*) epsiter
 		case("chemistry")
@@ -1714,6 +1716,7 @@ c		Cloud(i)%P=0.0624d0
 	maxTprofile=1d6
 	
 	maxiter=6
+	miniter=5
 	epsiter=1d-4
 
 	maxchemtime=1d200

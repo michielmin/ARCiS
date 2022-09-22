@@ -93,7 +93,7 @@ c===============================================================================
 	integer nT,np,nr,nmol,nlam		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines,ng,ncia,nclouds,nTiter,i3D
 	character*500 outputdir
-	integer idum,maxiter,Nphot0,idum0,iWolk
+	integer idum,maxiter,miniter,Nphot0,idum0,iWolk
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS
