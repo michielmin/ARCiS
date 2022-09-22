@@ -104,8 +104,12 @@ c terms of use
      &					// trim(int2string(maxiter,'(i3)')) // ")")
 			call SetupStructure(.true.)
 			call SetupOpacities()
-			f=0.5d0
-			if(forceEbalance) f=f+0.5d0*exp(-real(maxiter-nTiter)/5d0)
+			if(nTiter.eq.1) then
+				f=1d0
+			else
+				f=0.5d0
+				if(forceEbalance) f=f+0.5d0*exp(-real(maxiter-nTiter)/5d0)
+			endif
 			if(f.gt.1d0) f=1d0
 			call DoComputeT(Tconverged,f)
 			if(Tconverged.and.nTiter.gt.4) exit

@@ -372,7 +372,7 @@ c Now call the setup for the readFull3D part
 			Si(1:nlam,1:ng,0:nr,1:nnu0,i)=Si(1:nlam,1:ng,0:nr,1:nnu0,1)
 			if(computealbedo) SiSc(1:nlam,1:ng,0:nr,1:nnu0,i)=SiSc(1:nlam,1:ng,0:nr,1:nnu0,1)
 		endif
-		if(.not.retrieval.or..true.) then
+		if(.not.retrieval) then
 			call SetOutputMode(.true.)
 			open(unit=20,file=trim(outputdir) // "mixrat" // trim(int2string(i,'(i0.3)')),RECL=6000)
 			write(20,'("#",a9,a13,a13)') "T[K]","P[bar]","Kzz[cm^2/s]"

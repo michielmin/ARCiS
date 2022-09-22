@@ -93,6 +93,11 @@
 	allocate(BB_LR(nlam_LR,nBB))
 
 	BB_LR=0d0
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(TT,j,i,tot,scale)
+!$OMP& SHARED(nlam_LR,BB_LR,freq_LR,dfreq_LR)
+!$OMP DO
 	do j=nBB,1,-1
 		TT=real(j)
 		tot=0d0
@@ -108,6 +113,9 @@
 			BB_LR(1:nlam_LR,j)=BB_LR(1:nlam_LR,j+1)*scale
 		endif
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 
 	allocate(taustar(nlam_LR,ng))
 	allocate(Ce(nr,nlam_LR,ng))
@@ -565,16 +573,15 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	do ilam=1,nlam_LR
 		do ig=1,ng
 			do inu=1,nnu
-				tauR(0:nr)=(tauR_nu(1,ilam,ig)-tauR_nu(0:nr,ilam,ig))/abs(nu(inu))
-				dtauR(0:nr)=dtauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 				do ir=1,nr
+					dtauR(ir)=dtauR_nu(ir,ilam,ig)/abs(nu(inu))
 					iT=T(ir)+1
 					if(iT.gt.nBB-1) iT=nBB-1
 					if(iT.lt.1) iT=1
 					scale=(T(ir)/real(iT))**4
 					contr=nu(inu)*2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*exp(-tauR(ir))
 					E=E+contr*scale*BB_LR(ilam,iT)*(1d0-exp(-dtauR(ir)))*SurfEmis_LR(ilam)*Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
-					if(tauR(ir).gt.10d0) exit
+					if((tauR_nu(1,ilam,ig)-tauR_nu(ir,ilam,ig))/abs(nu(inu)).gt.10d0) exit
 				enddo
 			enddo
 		enddo
@@ -623,24 +630,26 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
 	enddo
 
-	open(unit=26,file=trim(outputdir) // 'convection.dat',RECL=1000)
-	do ir=1,nr
-		if(Convec(ir)) then
-			write(26,*) T(ir),P(ir)
-		else if(ir.ne.1) then
-			if(Convec(ir-1)) then
+	if(.not.retrieval) then
+		open(unit=26,file=trim(outputdir) // 'convection.dat',RECL=1000)
+		do ir=1,nr
+			if(Convec(ir)) then
 				write(26,*) T(ir),P(ir)
+			else if(ir.ne.1) then
+				if(Convec(ir-1)) then
+					write(26,*) T(ir),P(ir)
+				else
+					write(26,*)
+				endif
 			else
 				write(26,*)
 			endif
-		else
-			write(26,*)
-		endif
-	enddo
-	close(unit=26)
+		enddo
+		close(unit=26)
 	
+		call WriteStructure
+	endif
 	call tellertje(niter,niter)
-	call WriteStructure
 
 	deallocate(lam_LR)
 	deallocate(freq_LR)
