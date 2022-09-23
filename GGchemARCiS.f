@@ -125,7 +125,7 @@
 		enddo
 		done=.false.
 		nelread=0
-		write(21,'(i)') ntot
+		write(21,'(i5)') ntot
 		do i=1,4
 			open(unit=20,file=dispol_file(i),RECL=1000)
 			read(20,*) nread
