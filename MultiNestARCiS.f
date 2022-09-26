@@ -113,7 +113,7 @@
 	do i=1,nobs
 		do j=1,ObsSpec(i)%ndata
 			k=k+1
-			dy(k)=ObsSpec(i)%scale*ObsSpec(i)%dy(j)
+			dy(k)=ObsSpec(i)%dy(j)
 			if(doinflate) dy(k)=sqrt(dy(k)**2+10d0**inflate_b)
 		enddo
 	enddo

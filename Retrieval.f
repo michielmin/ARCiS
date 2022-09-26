@@ -587,7 +587,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars),spectemp(nlam),specsave(nobs,nlam)
 	real*8,allocatable :: spec(:),allspec(:,:)
 	logical recomputeopac,truefalse,doscaleR2
-	real*8 xx,xy,scale
+	real*8 xx,xy,scale,dy(ny)
 	character*100 command
 
 	doscaleR2=doscaleR
@@ -645,6 +645,15 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	i2d=i2d+1
 	if(i2d.le.n2d) goto 1
 
+	k=0
+	do i=1,nobs
+		do j=1,ObsSpec(i)%ndata
+			k=k+1
+			dy(k)=ObsSpec(i)%dy(j)
+			if(doinflate) dy(k)=sqrt(dy(k)**2+10d0**inflate_b)
+		enddo
+	enddo
+
 	if(doscaleR2) then
 		xy=0d0
 		xx=0d0
@@ -654,8 +663,8 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 				k=k+1
 				ymod(k)=allspec(i,j)
 				if(.not.ObsSpec(i)%scaling) then
-					xy=xy+ymod(k)*ObsSpec(i)%y(j)/ObsSpec(i)%dy(j)**2
-					xx=xx+ymod(k)*ymod(k)/ObsSpec(i)%dy(j)**2
+					xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
+					xx=xx+ymod(k)*ymod(k)/dy(k)**2
 				endif
 			enddo
 		enddo
@@ -696,8 +705,8 @@ c	linear
 			do j=1,ObsSpec(i)%ndata
 				k=k+1
 				ymod(k)=allspec(i,j)
-				xy=xy+ymod(k)*ObsSpec(i)%y(j)/ObsSpec(i)%dy(j)**2
-				xx=xx+ymod(k)*ymod(k)/ObsSpec(i)%dy(j)**2
+				xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
+				xx=xx+ymod(k)*ymod(k)/dy(k)**2
 			enddo
 			ObsSpec(i)%scale=1d0
 			if(xx.gt.0d0) ObsSpec(i)%scale=xx/xy
@@ -716,7 +725,7 @@ c	linear
 		do j=1,ObsSpec(i)%ndata
 			k=k+1
 			ymod(k)=allspec(i,j)
-			lnew=lnew+((ymod(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/(ObsSpec(i)%scale*ObsSpec(i)%dy(j)))**2
+			lnew=lnew+((ymod(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/(ObsSpec(i)%dy(j)))**2
 			ObsSpec(i)%model(j)=allspec(i,j)
 		enddo
 	enddo
