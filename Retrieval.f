@@ -4,7 +4,7 @@
 	integer i,j,ilam,nj,k,it
 	real*8 x,y,dy,specres_obs,expspecres_obs
 	character*6000 line
-	real*8 scale,scale_av,d,dmin
+	real*8 scale,scale_av,d,dmin,maxsig,minsig
 	integer nscale,i2,j2
 	logical truefalse
 
@@ -13,7 +13,7 @@
 		lamtrans=.false.
 	endif
 	if(computeT.and.useobsgrid) lamemis=RTgridpoint
-	
+
 	do i=1,nobs
 		select case(ObsSpec(i)%type)
 			case('tprofile','logtp')
@@ -215,6 +215,20 @@
 			endif
 		enddo
 	endif
+
+	if(doinflate.and.retrieval) then
+		maxsig=0d0
+		minsig=1d200
+		do i=1,nobs
+			do j=1,ObsSpec(i)%ndata
+				if(ObsSpec(i)%dy(j).gt.maxsig) maxsig=ObsSpec(i)%dy(j)
+				if(ObsSpec(i)%dy(j).lt.minsig) minsig=ObsSpec(i)%dy(j)
+			enddo
+		enddo
+		RetPar(n_ret)%xmin=log10(0.01*(minsig**2))
+		RetPar(n_ret)%xmax=log10(100d0*(maxsig**2))
+	endif
+
 	
 	return
 	end

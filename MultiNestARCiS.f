@@ -94,7 +94,7 @@
 	IMPLICIT NONE
 	integer nvars,i,j,nlamtot,k,ny
 	real*8 var(nvars),chi2obs(nobs),error(2,nvars),lnew,scale
-	real*8,allocatable :: spec(:)
+	real*8,allocatable :: spec(:),dy(:)
 	logical recomputeopac
 	real*8 tot
 	character*500 keyword
@@ -106,9 +106,17 @@
 		enddo
 	enddo
 	ny=k
-	allocate(spec(ny))
-
+	allocate(spec(ny),dy(ny))
 	call mrqcomputeY(var,spec,nvars,ny,lnew,scale)
+
+	k=0
+	do i=1,nobs
+		do j=1,ObsSpec(i)%ndata
+			k=k+1
+			dy(k)=ObsSpec(i)%scale*ObsSpec(i)%dy(j)
+			if(doinflate) dy(k)=sqrt(dy(k)**2+10d0**inflate_b)
+		enddo
+	enddo
 
 	do i=1,nvars
 		var(i)=RetPar(i)%value
@@ -123,8 +131,8 @@
 	do i=1,nobs
 		do j=1,ObsSpec(i)%ndata
 			k=k+1
-			tot=tot-log(sqrt(2d0*pi)*ObsSpec(i)%scale*ObsSpec(i)%dy(j))
-			lnew=lnew+((spec(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/(ObsSpec(i)%scale*ObsSpec(i)%dy(j)))**2
+			tot=tot-log(sqrt(2d0*pi)*dy(k))
+			lnew=lnew+((spec(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/dy(k))**2
 		enddo
 	enddo
 	if(planetform.and..not.simAb_converge) then

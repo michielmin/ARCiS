@@ -294,6 +294,8 @@ c				if(key%nr1.eq.0) key%nr1=1
 						n_ret=n_ret+1
 					endif
 				endif
+			case("doinflate","inflatesig")
+				n_ret=n_ret+1
 			case("pmin")
 				read(key%value,*) pmin
 			case("pmax")
@@ -659,7 +661,13 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
      &	.or.RetPar(i)%keyword.eq.'rstar'.or.RetPar(i)%keyword.eq.'logg'.or.RetPar(i)%keyword.eq.'TStar'
      &	.or.RetPar(i)%keyword.eq.'TSTAR'.or.RetPar(i)%keyword.eq.'RStar'.or.RetPar(i)%keyword.eq.'RSTAR'
      &	.or.RetPar(i)%keyword.eq.'LOGG') retrievestar=.true.
-		enddo			
+		enddo
+	endif
+	if(doinflate) then
+		n_ret=n_ret+1
+		i=n_ret
+		RetPar(i)%keyword="inflate_b"
+		RetPar(i)%logscale=.false.
 	endif
 
 	if(dochemistry.or.secondary_atmosphere) then
@@ -965,6 +973,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadRetrieval(key)
 		case("obs")
 			call ReadObsSpec(key)
+		case("doinflate","inflatesig")
+			read(key%value,*) doinflate
+		case("inflate_b")
+			read(key%value,*) inflate_b
 		case("par3d")
 			call ReadPar3D(key)
 		case("useobsgrid")
@@ -1813,7 +1825,7 @@ c number of cloud/nocloud combinations
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
-	
+
 	return
 	end
 
