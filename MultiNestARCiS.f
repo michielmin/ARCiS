@@ -114,7 +114,12 @@
 		do j=1,ObsSpec(i)%ndata
 			k=k+1
 			dy(k)=ObsSpec(i)%dy(j)
-			if(doinflate) dy(k)=sqrt(dy(k)**2+10d0**inflate_b)
+			select case(ObsSpec(i)%type)
+				case("emisa","emis","emission","phase")
+					dy(k)=sqrt(dy(k)**2+(model_err_abs*spec(k))**2)
+				case("trans","transmission","emisr","emisR","transC","phaser","phaseR","transM","transE")
+					dy(k)=sqrt(dy(k)**2+(model_err_rel*spec(k))**2)
+			end select
 		enddo
 	enddo
 

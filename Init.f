@@ -294,8 +294,6 @@ c				if(key%nr1.eq.0) key%nr1=1
 						n_ret=n_ret+1
 					endif
 				endif
-			case("doinflate","inflatesig")
-				n_ret=n_ret+1
 			case("pmin")
 				read(key%value,*) pmin
 			case("pmax")
@@ -663,12 +661,6 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
      &	.or.RetPar(i)%keyword.eq.'LOGG') retrievestar=.true.
 		enddo
 	endif
-	if(doinflate) then
-		n_ret=n_ret+1
-		i=n_ret
-		RetPar(i)%keyword="inflate_b"
-		RetPar(i)%logscale=.false.
-	endif
 
 	if(dochemistry.or.secondary_atmosphere) then
 		outputdirGGchem=outputdir
@@ -973,10 +965,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadRetrieval(key)
 		case("obs")
 			call ReadObsSpec(key)
-		case("doinflate","inflatesig")
-			read(key%value,*) doinflate
-		case("inflate_b")
-			read(key%value,*) inflate_b
+		case("model_err_abs")
+			read(key%value,*) model_err_abs
+		case("model_err_rel")
+			read(key%value,*) model_err_rel
 		case("par3d")
 			call ReadPar3D(key)
 		case("useobsgrid")
@@ -1639,6 +1631,8 @@ c		Cloud(i)%P=0.0624d0
 	massprior=.false.
 	useobsgrid=.false.
 	log_emis=.true.
+	model_err_abs=0d0
+	model_err_rel=0d0
 	do i=1,n_ret
 		RetPar(i)%x0=-1d200
 		RetPar(i)%dx=-1d0

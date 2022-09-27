@@ -121,8 +121,7 @@ c for exchange when computing secondary atmosphere
 	logical secondary_atmosphere,constant_g,forceEbalance
 	logical,allocatable :: RTgridpoint(:),computelam(:)
 	
-	logical doinflate
-	real*8 inflate_b
+	real*8 model_err_rel,model_err_abs
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb
 	character*20 surfacetype

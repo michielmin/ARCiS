@@ -215,20 +215,6 @@
 			endif
 		enddo
 	endif
-
-	if(doinflate.and.retrieval) then
-		maxsig=0d0
-		minsig=1d200
-		do i=1,nobs
-			do j=1,ObsSpec(i)%ndata
-				if(ObsSpec(i)%dy(j).gt.maxsig) maxsig=ObsSpec(i)%dy(j)
-				if(ObsSpec(i)%dy(j).lt.minsig) minsig=ObsSpec(i)%dy(j)
-			enddo
-		enddo
-		RetPar(n_ret)%xmin=log10(0.01*(minsig**2))
-		RetPar(n_ret)%xmax=log10(100d0*(maxsig**2))
-	endif
-
 	
 	return
 	end
@@ -645,15 +631,6 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	i2d=i2d+1
 	if(i2d.le.n2d) goto 1
 
-	k=0
-	do i=1,nobs
-		do j=1,ObsSpec(i)%ndata
-			k=k+1
-			dy(k)=ObsSpec(i)%dy(j)
-			if(doinflate) dy(k)=sqrt(dy(k)**2+10d0**inflate_b)
-		enddo
-	enddo
-
 	if(doscaleR2) then
 		xy=0d0
 		xx=0d0
@@ -662,6 +639,13 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 			do j=1,ObsSpec(i)%ndata
 				k=k+1
 				ymod(k)=allspec(i,j)
+				dy(k)=ObsSpec(i)%dy(j)
+				select case(ObsSpec(i)%type)
+					case("emisa","emis","emission","phase")
+						dy(k)=sqrt(dy(k)**2+(model_err_abs*ymod(k))**2)
+					case("trans","transmission","emisr","emisR","transC","phaser","phaseR","transM","transE")
+						dy(k)=sqrt(dy(k)**2+(model_err_rel*ymod(k))**2)
+				end select
 				if(.not.ObsSpec(i)%scaling) then
 					xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
 					xx=xx+ymod(k)*ymod(k)/dy(k)**2
@@ -705,6 +689,17 @@ c	linear
 			do j=1,ObsSpec(i)%ndata
 				k=k+1
 				ymod(k)=allspec(i,j)
+				dy(k)=ObsSpec(i)%dy(j)
+				select case(ObsSpec(i)%type)
+					case("emisa","emis","emission","phase")
+						dy(k)=sqrt(dy(k)**2+(model_err_abs*ymod(k))**2)
+					case("trans","transmission","emisr","emisR","transC","phaser","phaseR","transM","transE")
+						dy(k)=sqrt(dy(k)**2+(model_err_rel*ymod(k))**2)
+				end select
+				if(.not.ObsSpec(i)%scaling) then
+					xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
+					xx=xx+ymod(k)*ymod(k)/dy(k)**2
+				endif
 				xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
 				xx=xx+ymod(k)*ymod(k)/dy(k)**2
 			enddo
