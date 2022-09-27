@@ -696,10 +696,6 @@ c	linear
 					case("trans","transmission","emisr","emisR","transC","phaser","phaseR","transM","transE")
 						dy(k)=sqrt(dy(k)**2+(model_err_rel*ymod(k))**2)
 				end select
-				if(.not.ObsSpec(i)%scaling) then
-					xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
-					xx=xx+ymod(k)*ymod(k)/dy(k)**2
-				endif
 				xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
 				xx=xx+ymod(k)*ymod(k)/dy(k)**2
 			enddo
