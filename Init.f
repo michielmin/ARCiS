@@ -978,9 +978,9 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		case("obs")
 			call ReadObsSpec(key)
 		case("model_err_abs")
-			read(key%value,*) model_err_abs
+			read(key%value,*) model_err_abs(key%nr1)
 		case("model_err_rel")
-			read(key%value,*) model_err_rel
+			read(key%value,*) model_err_rel(key%nr1)
 		case("par3d")
 			call ReadPar3D(key)
 		case("useobsgrid")
