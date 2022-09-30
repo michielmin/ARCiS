@@ -215,6 +215,23 @@
 			endif
 		enddo
 	endif
+
+	if(retrieval) then
+		maxsig=0d0
+		minsig=1d200
+		do i=1,nobs
+			do j=1,ObsSpec(i)%ndata
+				if(ObsSpec(i)%dy(j).gt.maxsig) maxsig=ObsSpec(i)%dy(j)
+				if(ObsSpec(i)%dy(j).lt.minsig) minsig=ObsSpec(i)%dy(j)
+			enddo
+		enddo
+		do i=1,n_ret
+			if(RetPar(i)%keyword(1:9).eq.'model_err') then
+				RetPar(i)%xmin=0.1*minsig
+				RetPar(i)%xmax=10d0*maxsig
+			endif
+		enddo
+	endif
 	
 	return
 	end
