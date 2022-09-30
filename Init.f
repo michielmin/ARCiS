@@ -740,7 +740,7 @@ c In this case the beta map should be the static one. Make sure this is set prop
 	if(planetform) call InitFormation(Mstar,Tstar,Rstar,planetform_SolidC,planetform_Macc)
 
 	do i=1,nmodel_err-1
-		model_err_lam(i)=10d0**(log10(lam1)+log10(lam2/lam1)*(real(i)/real(nmodel_err)))
+		model_err_lam(i)=10d0**(log10(lam(1))+log10(lam(nlam)/lam(1))*(real(i)/real(nmodel_err)))
 	enddo
 		
 	return

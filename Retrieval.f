@@ -657,15 +657,9 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 				k=k+1
 				ymod(k)=allspec(i,j)
 				dy(k)=ObsSpec(i)%dy(j)
-				if(ObsSpec(i)%lam(j).lt.model_err_lam(1)) then
-					ii=1
-				else if(ObsSpec(i)%lam(j).gt.model_err_lam(nmodel_err)) then
-					ii=nmodel_err
-				else
-					do ii=2,nmodel_err-1
-						if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
-					enddo
-				endif
+				do ii=1,nmodel_err-1
+					if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
+				enddo
 				select case(ObsSpec(i)%type)
 					case("emisa","emis","emission","phase")
 						dy(k)=sqrt(dy(k)**2+model_err_abs(ii)**2)
@@ -716,15 +710,9 @@ c	linear
 				k=k+1
 				ymod(k)=allspec(i,j)
 				dy(k)=ObsSpec(i)%dy(j)
-				if(ObsSpec(i)%lam(j).lt.model_err_lam(1)) then
-					ii=1
-				else if(ObsSpec(i)%lam(j).gt.model_err_lam(nmodel_err)) then
-					ii=nmodel_err
-				else
-					do ii=2,nmodel_err-1
-						if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
-					enddo
-				endif
+				do ii=1,nmodel_err-1
+					if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
+				enddo
 				select case(ObsSpec(i)%type)
 					case("emisa","emis","emission","phase")
 						dy(k)=sqrt(dy(k)**2+model_err_abs(ii)**2)
