@@ -569,7 +569,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	use Constants
 	use RetrievalMod
 	IMPLICIT NONE
-	integer nvars,i,j,nlamtot,ny,k,maxspec,im,ilam,status,system
+	integer nvars,i,j,nlamtot,ny,k,maxspec,im,ilam,status,system,ii
 	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars),spectemp(nlam),specsave(nobs,nlam)
 	real*8,allocatable :: spec(:),allspec(:,:)
 	logical recomputeopac,truefalse,doscaleR2
@@ -640,11 +640,20 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 				k=k+1
 				ymod(k)=allspec(i,j)
 				dy(k)=ObsSpec(i)%dy(j)
+				if(ObsSpec(i)%lam(j).lt.model_err_lam(1)) then
+					ii=1
+				else if(ObsSpec(i)%lam(j).gt.model_err_lam(nmodel_err)) then
+					ii=nmodel_err
+				else
+					do ii=2,nmodel_err-1
+						if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
+					enddo
+				endif
 				select case(ObsSpec(i)%type)
 					case("emisa","emis","emission","phase")
-						dy(k)=sqrt(dy(k)**2+(model_err_abs*ymod(k))**2)
+						dy(k)=sqrt(dy(k)**2+model_err_abs(ii)**2)
 					case("trans","transmission","emisr","emisR","transC","phaser","phaseR","transM","transE")
-						dy(k)=sqrt(dy(k)**2+(model_err_rel*ymod(k))**2)
+						dy(k)=sqrt(dy(k)**2+model_err_rel(ii)**2)
 				end select
 				if(.not.ObsSpec(i)%scaling) then
 					xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
@@ -690,11 +699,20 @@ c	linear
 				k=k+1
 				ymod(k)=allspec(i,j)
 				dy(k)=ObsSpec(i)%dy(j)
+				if(ObsSpec(i)%lam(j).lt.model_err_lam(1)) then
+					ii=1
+				else if(ObsSpec(i)%lam(j).gt.model_err_lam(nmodel_err)) then
+					ii=nmodel_err
+				else
+					do ii=2,nmodel_err-1
+						if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
+					enddo
+				endif
 				select case(ObsSpec(i)%type)
 					case("emisa","emis","emission","phase")
-						dy(k)=sqrt(dy(k)**2+(model_err_abs*ymod(k))**2)
+						dy(k)=sqrt(dy(k)**2+model_err_abs(ii)**2)
 					case("trans","transmission","emisr","emisR","transC","phaser","phaseR","transM","transE")
-						dy(k)=sqrt(dy(k)**2+(model_err_rel*ymod(k))**2)
+						dy(k)=sqrt(dy(k)**2+model_err_rel(ii)**2)
 				end select
 				xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
 				xx=xx+ymod(k)*ymod(k)/dy(k)**2

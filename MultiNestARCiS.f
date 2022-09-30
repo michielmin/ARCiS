@@ -92,7 +92,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer nvars,i,j,nlamtot,k,ny
+	integer nvars,i,j,nlamtot,k,ny,ii
 	real*8 var(nvars),chi2obs(nobs),error(2,nvars),lnew,scale
 	real*8,allocatable :: spec(:),dy(:)
 	logical recomputeopac
@@ -114,11 +114,20 @@
 		do j=1,ObsSpec(i)%ndata
 			k=k+1
 			dy(k)=ObsSpec(i)%dy(j)
+			if(ObsSpec(i)%lam(j).lt.model_err_lam(1)) then
+				ii=1
+			else if(ObsSpec(i)%lam(j).gt.model_err_lam(nmodel_err)) then
+				ii=nmodel_err
+			else
+				do ii=2,nmodel_err-1
+					if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
+				enddo
+			endif
 			select case(ObsSpec(i)%type)
 				case("emisa","emis","emission","phase")
-					dy(k)=sqrt(dy(k)**2+(model_err_abs*spec(k))**2)
+					dy(k)=sqrt(dy(k)**2+model_err_abs(ii)**2)
 				case("trans","transmission","emisr","emisR","transC","phaser","phaseR","transM","transE")
-					dy(k)=sqrt(dy(k)**2+(model_err_rel*spec(k))**2)
+					dy(k)=sqrt(dy(k)**2+model_err_rel(ii)**2)
 			end select
 		enddo
 	enddo

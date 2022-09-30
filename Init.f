@@ -208,6 +208,7 @@ c===============================================================================
 	nphase=0
 	nVpoints=0
 	nIRpoints=0
+	nmodel_err=1
 	j=0
 	mixratfile=.false.
 	fcloud_default=1d0
@@ -298,6 +299,10 @@ c				if(key%nr1.eq.0) key%nr1=1
 				read(key%value,*) pmin
 			case("pmax")
 				read(key%value,*) pmax
+			case("model_err_abs","model_err_rel")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr2.eq.0) key%nr2=1
+				if(key%nr1.gt.nmodel_err) nmodel_err=key%nr1
 			case default
 				do i=1,nmol_data
 					if(key%key.eq.molname(i)) then
@@ -355,6 +360,9 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(instr_nobs(max(n_instr,1)))
 	allocate(Par3D(max(n_Par3D,1)))
 	allocate(theta_phase(max(nphase,1)))
+	allocate(model_err_abs(max(nmodel_err,1)))
+	allocate(model_err_rel(max(nmodel_err,1)))
+	allocate(model_err_lam(max(nmodel_err,1)))
 
 	do i=1,nTpoints
 		Ppoint(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nTpoints-1))
@@ -730,6 +738,10 @@ c In this case the beta map should be the static one. Make sure this is set prop
 	endif
 
 	if(planetform) call InitFormation(Mstar,Tstar,Rstar,planetform_SolidC,planetform_Macc)
+
+	do i=1,nmodel_err-1
+		model_err_lam(i)=10d0**(log10(lam1)+log10(lam2/lam1)*(real(i)/reeal(nmodel_err)))
+	enddo
 		
 	return
 	end
