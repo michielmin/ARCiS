@@ -82,7 +82,7 @@ function ssfunction(theta,npar,ny) result(ss)
 
 	chi2=amoebafunk(theta,k)
 
-	ss(1)=chi2*max(1,k-npar)
+	ss(1)=global_chi2*max(1,k-npar)
 
 end function ssfunction
 

@@ -292,7 +292,7 @@
 	endif
 	
 	imodel=0
-	bestlike=1d200
+	bestlike=-1d200
 
 	do i=1,n_ret
 		RetPar(i)%value=RetPar(i)%x0
@@ -337,7 +337,7 @@ c	enddo
 	open(unit=90,file='chi2boot')
 	do iboot=1,nboot
 	imodel=0
-	bestlike=1d200
+	bestlike=-1d200
 
 	iy=1
 	do i=1,nobs
@@ -458,14 +458,14 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 
 	enddo
 
-	call output("chi2 best:    " // trim(dbl2string(bestlike,'(f10.3)')))
+	call output("chi2 best:    " // trim(dbl2string(bestchi2,'(f10.3)')))
 	if(nboot.gt.1) then
 		call stati(chi2_boot(1:nboot-1),nboot-1,chi2_boot_av,chi2_boot_sig1,chi2_boot_sig2)
 		call output("chi2 average: " // trim(dbl2string(chi2_boot_av,'(f10.3)')))
 		call output("chi2 sigma-:  " // trim(dbl2string(chi2_boot_sig1,'(f10.3)')))
 		call output("chi2 sigma+:  " // trim(dbl2string(chi2_boot_sig2,'(f10.3)')))
 	endif
-	call WritePTlimits(var,Cov(1:n_ret,1:n_ret),ErrVec,error,bestlike,.true.)
+	call WritePTlimits(var,Cov(1:n_ret,1:n_ret),ErrVec,error,bestchi2,.true.)
 	call WriteRetrieval(imodel,chi2,var,bestvar,error)
 
 	close(unit=31)
@@ -525,6 +525,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	var=var0
 	if(what.eq.1) then
 		call mrqcomputeY(var,ymod,nvars,ny,chi2_0,scale)
+		chi2_0=global_chi2
 		obsA0(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
 		emis0(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 		emisR0(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
@@ -543,6 +544,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 		if(var1(i).lt.0d0) goto 4
 		if(abs(var(i)-var1(i)).lt.1d-5) goto 3
 		call mrqcomputeY(var1,y1,nvars,ny,chi2_1,scale)
+		chi2_1=global_chi2
 		obsA1(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
 		emis1(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 		emisR1(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar*1d23/distance**2)
@@ -576,7 +578,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	real*8 ymod(ny),var(n_ret),chi2,scale
 
 	call mrqcomputeY(var,ymod,n_ret,ny,chi2,scale)
-	amoebafunk=chi2
+	amoebafunk=-chi2
 	
 	return
 	end
@@ -590,7 +592,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars),spectemp(nlam),specsave(nobs,nlam)
 	real*8,allocatable :: spec(:),allspec(:,:)
 	logical recomputeopac,truefalse,doscaleR2
-	real*8 xx,xy,scale,dy(ny)
+	real*8 xx,xy,scale,dy(ny),tot
 	character*100 command
 
 	doscaleR2=doscaleR
@@ -599,7 +601,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	if(imodel.gt.nscaleR.and.nscaleR.gt.0) doscaleR2=.false.
 	imodel=imodel+1
 	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel.or.(do3D.and.night2day.ne.1d0)) call output("model number: " 
-     &				// int2string(imodel,'(i7)') // dbl2string(bestlike,'(f10.2)'))
+     &				// int2string(imodel,'(i7)') // dbl2string(bestchi2,'(f10.2)'))
 
 	var=var_in
 	call fold(var_in,var,n_ret)
@@ -648,6 +650,22 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	i2d=i2d+1
 	if(i2d.le.n2d) goto 1
 
+	k=0
+	do i=1,nobs
+		do j=1,ObsSpec(i)%ndata
+			k=k+1
+			dy(k)=ObsSpec(i)%dy(j)
+			do ii=1,nmodel_err-1
+				if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
+			enddo
+			select case(ObsSpec(i)%type)
+				case("emisa","emis","emission","phase")
+					dy(k)=sqrt(dy(k)**2+model_err_abs(ii)**2)
+				case("trans","transmission","emisr","emisR","transC","phaser","phaseR","transM","transE")
+					dy(k)=sqrt(dy(k)**2+model_err_rel(ii)**2)
+			end select
+		enddo
+	enddo
 	if(doscaleR2) then
 		xy=0d0
 		xx=0d0
@@ -656,16 +674,6 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 			do j=1,ObsSpec(i)%ndata
 				k=k+1
 				ymod(k)=allspec(i,j)
-				dy(k)=ObsSpec(i)%dy(j)
-				do ii=1,nmodel_err-1
-					if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
-				enddo
-				select case(ObsSpec(i)%type)
-					case("emisa","emis","emission","phase")
-						dy(k)=sqrt(dy(k)**2+model_err_abs(ii)**2)
-					case("trans","transmission","emisr","emisR","transC","phaser","phaseR","transM","transE")
-						dy(k)=sqrt(dy(k)**2+model_err_rel(ii)**2)
-				end select
 				if(.not.ObsSpec(i)%scaling) then
 					xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
 					xx=xx+ymod(k)*ymod(k)/dy(k)**2
@@ -709,16 +717,6 @@ c	linear
 			do j=1,ObsSpec(i)%ndata
 				k=k+1
 				ymod(k)=allspec(i,j)
-				dy(k)=ObsSpec(i)%dy(j)
-				do ii=1,nmodel_err-1
-					if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
-				enddo
-				select case(ObsSpec(i)%type)
-					case("emisa","emis","emission","phase")
-						dy(k)=sqrt(dy(k)**2+model_err_abs(ii)**2)
-					case("trans","transmission","emisr","emisR","transC","phaser","phaseR","transM","transE")
-						dy(k)=sqrt(dy(k)**2+model_err_rel(ii)**2)
-				end select
 				xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
 				xx=xx+ymod(k)*ymod(k)/dy(k)**2
 			enddo
@@ -733,35 +731,37 @@ c	linear
 		endif
 	enddo
 
-	lnew=0d0
+	global_chi2=0d0
+	tot=0d0
 	k=0
 	do i=1,nobs
 		do j=1,ObsSpec(i)%ndata
 			k=k+1
 			ymod(k)=allspec(i,j)
-			lnew=lnew+((ymod(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/(ObsSpec(i)%dy(j)))**2
+			global_chi2=global_chi2+((ymod(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/(ObsSpec(i)%scale*dy(k)))**2
+			tot=tot-log(sqrt(2d0*pi)*dy(k))
 			ObsSpec(i)%model(j)=allspec(i,j)
 		enddo
 	enddo
 	if(planetform.and..not.simAb_converge) then
-		lnew=lnew+((Mplanet-MSimAb)/(Mplanet*1d-3))**2
+		global_chi2=global_chi2+((Mplanet-MSimAb)/(Mplanet*1d-3))**2
 	endif
 	if(massprior) then
-		lnew=lnew+((Mplanet/Mjup-Mp_prior)/dMp_prior)**2
+		global_chi2=global_chi2+((Mplanet/Mjup-Mp_prior)/dMp_prior)**2
+		tot=tot-log(sqrt(2d0*pi)*dMp_prior)
 		k=k+1
 	endif
-	if(scale.lt.1d0) scale=1d0/scale
-	scale=1d0	! remove the error from the scaleR scaling on the goodness of fit.
-	lnew=scale*lnew/real(max(1,k-n_ret))
+	lnew=-global_chi2/2d0+tot
+	global_chi2=global_chi2/real(max(1,k-n_ret))
+	global_like=lnew
 
-	write(31,*) imodel,lnew,var(1:nvars),COratio,metallicity
+	write(31,*) imodel,global_chi2,var(1:nvars),COratio,metallicity
 	if(.not.useobsgrid.or.dochemistry.or.do3D) call flush(31)
 
-	if(lnew.lt.bestlike) then
-
+	if(lnew.gt.bestlike) then
 		inquire(file="improve.sh",exist=truefalse)
 		if(truefalse) then
-			write(command,'("./improve.sh ",f10.3)') lnew
+			write(command,'("./improve.sh ",f10.3)') global_chi2
 			status=system(command)
 		endif
 
@@ -807,6 +807,7 @@ c	linear
 
 		bestlike=lnew
 		bestvar=var
+		bestchi2=global_chi2
 	endif
 	
 	deallocate(allspec)

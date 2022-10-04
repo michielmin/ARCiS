@@ -52,7 +52,7 @@
 	integer nest_pWrap(n_ret)
 
 	imodel=0
-	bestlike=1d200
+	bestlike=-1d200
 	write(nest_root,'(a,"/")') trim(outputdir)		
 	nest_pWrap=0
 	sdim=n_ret
@@ -109,50 +109,11 @@
 	allocate(spec(ny),dy(ny))
 	call mrqcomputeY(var,spec,nvars,ny,lnew,scale)
 
-	k=0
-	do i=1,nobs
-		do j=1,ObsSpec(i)%ndata
-			k=k+1
-			dy(k)=ObsSpec(i)%dy(j)
-			do ii=1,nmodel_err-1
-				if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
-			enddo
-			select case(ObsSpec(i)%type)
-				case("emisa","emis","emission","phase")
-					dy(k)=sqrt(dy(k)**2+model_err_abs(ii)**2)
-				case("trans","transmission","emisr","emisR","transC","phaser","phaseR","transM","transE")
-					dy(k)=sqrt(dy(k)**2+model_err_rel(ii)**2)
-			end select
-		enddo
-	enddo
-
 	do i=1,nvars
 		var(i)=RetPar(i)%value
 		if(RetPar(i)%logscale) var(i)=log10(var(i))
 	enddo
 
-	lnew=-0.5d0*lnew
-
-	tot=0d0
-	lnew=0d0
-	k=0
-	do i=1,nobs
-		do j=1,ObsSpec(i)%ndata
-			k=k+1
-			tot=tot-log(sqrt(2d0*pi)*dy(k))
-			lnew=lnew+((spec(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/dy(k))**2
-		enddo
-	enddo
-	if(planetform.and..not.simAb_converge) then
-		lnew=lnew+((Mplanet-MSimAb)/(Mplanet*1d-3))**2
-	endif
-	if(massprior) then
-		lnew=lnew+((Mplanet/Mjup-Mp_prior)/dMp_prior)**2
-		tot=tot-log(sqrt(2d0*pi)*dMp_prior)
-		k=k+1
-	endif
-	lnew=-scale*lnew/2d0+tot
-	
 	return
 	end
 	

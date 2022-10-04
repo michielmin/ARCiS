@@ -143,6 +143,8 @@ c for exchange when computing secondary atmosphere
 
 	logical do3D
 	real*8 par3Dsteepness
+	
+	real*8 global_like,global_chi2
 
 	integer nmol_data
 	parameter(nmol_data=114)
@@ -371,7 +373,7 @@ c			   1,2,3,  4,5,6,      7,   8,    9,    10,        11,  12,  13,14,15,  16, 
 	module RetrievalMod
 	implicit none
 	integer imodel
-	real*8 bestlike,chi2_0
+	real*8 bestlike,chi2_0,bestchi2
 	real*8,allocatable :: dvarq(:),bestvar(:)
 	real*8,allocatable :: obsA0(:),obsA1(:),obsA2(:),dobsA(:,:)
 	real*8,allocatable :: emis0(:),emis1(:),emis2(:),demis(:,:)
