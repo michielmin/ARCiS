@@ -307,6 +307,7 @@
 		open(unit=27,file=trim(outputdir) // "emis_limits",RECL=1000)
 		open(unit=28,file=trim(outputdir) // "emisR_limits",RECL=1000)
 		do ilam=1,nlam
+		if(computelam(ilam)) then
 			sorted(1:i)=spectrans(1:i,ilam)
 			call sort(sorted,i)
 			write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
@@ -316,6 +317,7 @@
 			sorted(1:i)=specemisR(1:i,ilam)
 			call sort(sorted,i)
 			write(28,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+		endif
 		enddo
 		close(unit=26)
 		close(unit=27)
@@ -441,12 +443,14 @@
 				open(unit=27,file=trim(outputdir) // "phaseR" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) 
      &			// "_limits",RECL=1000)
 				do ilam=1,nlam
+				if(computelam(ilam)) then
 					sorted(1:i)=phase3D(1:i,iphase,ilam)
 					call sort(sorted,i)
 					write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 					sorted(1:i)=phase3DR(1:i,iphase,ilam)
 					call sort(sorted,i)
 					write(27,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+				endif
 				enddo
 				close(unit=26)
 				close(unit=27)
@@ -470,13 +474,14 @@
 			call sort(sorted,i)
 			write(26,'(a10,3es12.4)') "hotspot",sorted(ime),sorted(im1),sorted(ip1)
 		endif
-			
+
 		close(unit=26)
 
 		open(unit=26,file=trim(outputdir) // "trans_sigma",RECL=1000)
 		open(unit=27,file=trim(outputdir) // "emis_sigma",RECL=1000)
 		open(unit=28,file=trim(outputdir) // "emisR_sigma",RECL=1000)
 		do ilam=1,nlam
+		if(computelam(ilam)) then
 			sorted(1:i)=spectrans(1:i,ilam)
 			call stats(sorted,i,aver,sig)
 			write(26,*) lam(ilam)*1d4,spectrans(0,ilam),sig,aver
@@ -486,6 +491,7 @@
 			sorted(1:i)=specemisR(1:i,ilam)
 			call stats(sorted,i,aver,sig)
 			write(28,*) lam(ilam)*1d4,specemisR(0,ilam),sig,aver
+		endif
 		enddo
 		close(unit=26)
 		close(unit=27)
