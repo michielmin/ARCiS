@@ -302,6 +302,8 @@ c Sneep & Ubachs (2005)
 				case(45) ! H2
 c Dalgarno & Williams (1962)
 					Cs=Cs+mixrat_r(ir,j)*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4)
+				case(1) !H2O
+					Cs=Cs+4.43*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 			end select
 		endif
 	enddo
