@@ -272,8 +272,8 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 			Hsurf_lam(0:nr)=0d0
 			contr=(Fstar_LR(ilam)/(pi*Dplanet**2))
 			tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(max(must,1d-5))
-			Ij_omp(0:nr)=contr*exp(-tauR_omp(0:nr))/(4d0*pi)
-			Ih_omp(0:nr)=-must*Ij_omp(0:nr)*4d0*pi
+			Ij_omp(0:nr)=contr*exp(-tauR_omp(0:nr))
+			Ih_omp(0:nr)=-must*Ij_omp(0:nr)
 
 			Hstar_lam(0:nr)=Hstar_lam(0:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
 			directHstar_omp(0:nr)=directHstar_omp(0:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
@@ -301,8 +301,8 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				Ij_omp(0:nr)=exp(-abs(tauR_omp(0:nr)-tauR_omp(0)))
 				Ih_omp(0:nr)=Ij_omp(0:nr)
 				Si_omp(0:nr,nr+1)=Si_omp(0:nr,nr+1)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(0:nr)/(4d0*pi)
-				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
-				Hsurf_lam(0:nr)=Hsurf_lam(0:nr)+FstarBottom*2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
+				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
+				Hsurf_lam(0:nr)=Hsurf_lam(0:nr)+FstarBottom*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
      & 								Ih_omp(0:nr)*(1d0-SurfEmis_LR(ilam))
 			enddo
 			Si_omp(0,nr+1)=0d0
@@ -326,8 +326,8 @@ c				call SolveIjExpN(tauR_omp(0:nr),Si_omp(0:nr,0:nr+1),IjN(0:nr,0:nr+1,inu),nr
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 				Ij_omp(0:nr)=IjN(0:nr,0,inu)
 				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
-				Hstar_lam(0:nr)=Hstar_lam(0:nr)+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
-				SurfStar_omp=SurfStar_omp+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1)*SurfEmis_LR(ilam)
+				Hstar_lam(0:nr)=Hstar_lam(0:nr)+4d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(0:nr)
+				SurfStar_omp=SurfStar_omp+4d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1)*SurfEmis_LR(ilam)
 			enddo
 			endif
 
@@ -338,7 +338,7 @@ c				call SolveIjExpN(tauR_omp(0:nr),Si_omp(0:nr,0:nr+1),IjN(0:nr,0:nr+1,inu),nr
 					tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 					Ij_omp(0:nr)=IjN(0:nr,ir,inu)
 					call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
-					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+8d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
+					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+4d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 				enddo
 				endif
 			enddo
@@ -349,8 +349,8 @@ c				call SolveIjExpN(tauR_omp(0:nr),Si_omp(0:nr,0:nr+1),IjN(0:nr,0:nr+1,inu),nr
 				tauR_omp(0:nr)=tauR_nu(0:nr,ilam,ig)/abs(nu(inu))
 				Ij_omp(0:nr)=IjN(0:nr,nr+1,inu)
 				call ComputeDeriv(tauR_omp(0:nr),Ij_omp(0:nr),Ih_omp(0:nr),nr+1,-Ij_omp(0),Ij_omp(nr))
-				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+8d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)
-				Hsurf_lam(0:nr)=Hsurf_lam(0:nr)+FstarBottom*8d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)*(1d0-SurfEmis_LR(ilam))
+				IntHnu(ilam,0:nr,0)=IntHnu(ilam,0:nr,0)+4d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)
+				Hsurf_lam(0:nr)=Hsurf_lam(0:nr)+FstarBottom*4d0*nu(inu)*wnu(inu)*Ih_omp(0:nr)*(1d0-SurfEmis_LR(ilam))
 			enddo
 			endif
 
@@ -379,7 +379,7 @@ c				call SolveIjExpN(tauR_omp(0:nr),Si_omp(0:nr,0:nr+1),IjN(0:nr,0:nr+1,inu),nr
 	Ts(1:nr)=T(1:nr)
 
 	Hedd=0d0
-	E0=4d0*(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
+	E0=2d0*(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
 	do ir=0,nr
 		Hedd(ir)=Hedd(ir)+E0+abs(Hstar(ir))
 	enddo
@@ -568,20 +568,21 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		T(ir)=(Ts(ir)+T(ir))/2d0
 	enddo
 
-	E0=(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
+	E0=2d0*(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
 	E=SurfStar+E0
 	do ilam=1,nlam_LR
 		do ig=1,ng
 			do inu=1,nnu
 				do ir=1,nr
 					dtauR(ir)=dtauR_nu(ir,ilam,ig)/abs(nu(inu))
+					tauR(ir)=(tauR_nu(1,ilam,ig)-tauR_nu(ir,ilam,ig))/abs(nu(inu))
 					iT=T(ir)+1
 					if(iT.gt.nBB-1) iT=nBB-1
 					if(iT.lt.1) iT=1
 					scale=(T(ir)/real(iT))**4
-					contr=nu(inu)*2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*exp(-tauR(ir))
+					contr=nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*exp(-tauR(ir))
 					E=E+contr*scale*BB_LR(ilam,iT)*(1d0-exp(-dtauR(ir)))*SurfEmis_LR(ilam)*Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
-					if((tauR_nu(1,ilam,ig)-tauR_nu(ir,ilam,ig))/abs(nu(inu)).gt.10d0) exit
+					if(tauR(ir).gt.30d0) exit
 				enddo
 			enddo
 		enddo
@@ -697,8 +698,8 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	dtau=abs(tau1-tau2)
 
 	if(dtau.lt.1d-3) then
-		I12=S2-S1*exp(-dtau)+(S1-S2)*(1d0-dtau/2d0)
-	else if(dtau.gt.1d4) then
+		I12=S1*dtau
+	else if(dtau.gt.100d0) then
 		I12=S2
 	else
 		I12=(-(S1*dtau-S2+S1)*exp(-dtau)+S2*dtau-S2+S1)/dtau

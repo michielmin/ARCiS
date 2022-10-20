@@ -67,7 +67,7 @@ c	recomputeopac=.true.
      &		i.lt.999).
      &		or.i.eq.0)
 
-	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,fDay,betamin,betamax)
+	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,pole2eq,fDay,betamin,betamax)
 
 	if(n3D.eq.2) then
 		do ilong=1,nlong-1
@@ -111,7 +111,7 @@ c	recomputeopac=.true.
 	enddo
 
 	actually1D=.true.
-	if(((vxx.ne.0d0.or.night2day.ne.1d0).and.betamax.ne.betamin).or.n3D.eq.2.or.deepRedist) actually1D=.false.
+	if(((vxx.ne.0d0.or.night2day.ne.1d0.or.pole2eq.ne.1d0).and.betamax.ne.betamin).or.n3D.eq.2.or.deepRedist) actually1D=.false.
 
 	call output("hotspot shift: " // dbl2string(hotspotshift,'(f6.2)') // " degrees")
 
@@ -170,7 +170,7 @@ c	recomputeopac=.true.
 				if(ibeta(i,j).gt.n3D) ibeta(i,j)=n3D
 				if(.not.ibeta(i,j).gt.1) ibeta(i,j)=1
 			else
-				if(betamax.eq.betamin.or.(night2day.eq.1d0.and.vxx.eq.0d0)) then
+				if(betamax.eq.betamin.or.(night2day.eq.1d0.and.vxx.eq.0d0.and.pole2eq.eq.1d0)) then
 					ibeta(i,j)=1
 				else
 					ibeta(i,j)=(real(n3D)*((beta(i,j)-betamin)/(betamax-betamin)))+1
@@ -1053,14 +1053,14 @@ c Note we use the symmetry of the North and South here!
 	end
 	
 
-	subroutine Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,f,betamin,betamax)
+	subroutine Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,pole2eq,f,betamin,betamax)
 	IMPLICIT NONE
 	integer i,j,nlong,nlatt
 	real*8 pi
 	parameter(pi=3.1415926536)
 	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
 	real*8 beta(nlong,nlatt),la,lo,albedo,p,f,tot1,tot2,b1,b2
-	real*8 Kxx,vxx,betamin,betamax,beta1(nlong),night2day,Kyy,powvxx
+	real*8 Kxx,vxx,betamin,betamax,beta1(nlong),night2day,Kyy,powvxx,pole2eq
 
 	do i=1,nlong
 		long(i)=-pi+2d0*pi*real(i-1)/real(nlong-1)
@@ -1077,6 +1077,7 @@ c Note we use the symmetry of the North and South here!
 
 	do i=1,nlong-1
 		do j=1,nlatt-1
+			beta(i,j)=beta(i,j)*(pole2eq+(1d0-pole2eq)*cos((latt(j)+latt(j+1))/2d0))
 			if(beta(i,j).gt.betamax) betamax=beta(i,j)
 			if(beta(i,j).lt.betamin) betamin=beta(i,j)
 		enddo
@@ -1735,6 +1736,9 @@ c Note we use the symmetry of the North and South here!
 			hitT=.true.
 		endif
 	endif
+	
+	if(z*(z+v*vz).lt.0d0.and..not.midplane) hitT=.false.
+
 	return
 	end
 
@@ -1749,6 +1753,7 @@ c Note we use the symmetry of the North and South here!
 	at=Thet*a-vz**2
 	v=-bt/at
 	if(.not.v.gt.0d0) hitTsame=.false.
+	if(z*(z+v*vz).lt.0d0) hitTsame=.false.
 
 	return
 	end
@@ -2063,7 +2068,7 @@ c-----------------------------------------------------------------------
 					must=(real(inu0)-0.5)/real(nnu0-1)
 					contr=(Fstar(ilam)/(pi*Dplanet**2))
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
-					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+contr*exp(-tauR(1:nr))*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)/(4d0*pi)
+					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+contr*exp(-tauR(1:nr))*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)
 					contr=must*contr*exp(-tauR(1))
 				else
 					contr=0d0
@@ -2364,6 +2369,11 @@ c=========================================
 	real*8 function NormSig(x,a,c,x0,x1)
 	IMPLICIT NONE
 	real*8 x,a,y1,y2,xx,c,x0,x1,yy
+
+	if(x0.eq.x1) then
+		NormSig=x0
+		return
+	endif
 
 	xx=(0d0-c)*a
 	if(xx.lt.-40d0) then

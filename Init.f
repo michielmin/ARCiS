@@ -713,6 +713,7 @@ c If reading in a full 3D model (from e.g. a GCM model) the number of 3D models 
 		call output("              Number of latitudes:  " // int2string(nlatt,'(i4)'))
 c In this case the beta map should be the static one. Make sure this is set properly.
 		night2day=0d0
+		pole2eq=1d0
 		vxx=0d0
 		fDay=1d0
 		Kxx=1d0
@@ -1054,6 +1055,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) powvxx
 		case("night2day")
 			read(key%value,*) night2day
+		case("pole2eq")
+			read(key%value,*) pole2eq
 		case("hotspotshift")
 			read(key%value,*) hotspotshift0
 		case("n3d")
@@ -1447,6 +1450,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	powvxx=0d0
 	night2day=0.5d0
 	hotspotshift0=-1d5
+	pole2eq=1d0
 	
 	orbit_P=-1d0
 	orbit_e=0d0
