@@ -2011,7 +2011,7 @@ c number of cloud/nocloud combinations
 	
 	lminRT=0.22d0*micron
 	lmaxRT=47d0*micron
-	specres_LR=20d0		!min(specres/1.5,11d0)
+	specres_LR=10d0
 
 	nlam=0
 	if(useobsgrid) then
