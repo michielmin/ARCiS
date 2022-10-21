@@ -698,7 +698,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	dtau=abs(tau1-tau2)
 
 	if(dtau.lt.1d-3) then
-		I12=S1*dtau
+		I12=0.5*(S1+S2)*dtau
 	else if(dtau.gt.100d0) then
 		I12=S2
 	else
