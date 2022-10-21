@@ -606,7 +606,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	enddo
 
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
-	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K"
+c	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K"
 
 	maxErr=0d0
 	do ir=1,nr-1
