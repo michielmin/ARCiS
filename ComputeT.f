@@ -1177,7 +1177,7 @@ c
 	subroutine AddScatter(Si_in,tauR_in,Ca,Cs,Ce,nr,nu,wnu,nnu,NRHS)
 	use Constants
 	IMPLICIT NONE
-	integer inu,nnu,ilam,ir,info,NRHS,nr,i,j
+	integer inu,nnu,ilam,ir,info,NRHS,nr,i,j,jr
 	real*8 tauR(nr),tauR_in(nr),Si_in(nr,NRHS)
 	real*8 Si(nr,NRHS),Ca(nr),Cs(nr),Ce(nr)
 	real*8 nu(nnu),wnu(nnu),albedo(1:nr)
@@ -1199,18 +1199,23 @@ c
 		enddo
 	enddo
 
+	Linv=-Linv
 	do ir=1,nr
-		Linv(ir,ir)=1d0-Linv(ir,ir)
+		Linv(ir,ir)=1d0+Linv(ir,ir)
 	enddo
 	Itot=0d0
 	Itot(1:nr,1:NRHS)=Si_in(1:nr,1:NRHS)
 	info=0
 	call DGESV( nr, NRHS, Linv, nr, IWORKomp, Itot, nr, info)
+	if(info.ne.0) then
+		print*,info
+		read*
+	endif
 
 	Si(1:nr,1:NRHS)=Itot(1:nr,1:NRHS)
 	do i=1,NRHS
 	do ir=1,nr
-		if(.not.Si(ir,i).gt.Si_in(ir,i)) then
+		if(.not.Si(ir,i).ge.Si_in(ir,i)) then
 			Si(ir,i)=Si_in(ir,i)
 		endif
 	enddo
