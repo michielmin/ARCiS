@@ -858,7 +858,7 @@ c	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurf
 		else
 			y=(s0*x1+s1-s0-exptau(ir)*(s1*x1+s1-s0))/x1
 		endif
-		Im(ir)=y
+		Im(jr)=y
 
 		if(jr.gt.1) then
 			do ir=jr-1,1,-1
@@ -1195,7 +1195,7 @@ c
 		tauR(1:nr)=tauR_in(1:nr)/abs(nu(inu))
 		call InvertIjExp(tauR,Lmat,nr)
 		do ir=1,nr
-			Linv(ir,1:nr)=Linv(ir,1:nr)+wnu(inu)*Lmat(ir,1:nr)*albedo(1:nr)
+			Linv(ir,1:nr)=Linv(ir,1:nr)+wnu(inu)*Lmat(ir,1:nr)*albedo(ir)
 		enddo
 	enddo
 
