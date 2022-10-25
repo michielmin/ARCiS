@@ -567,7 +567,11 @@ c Note we are here using the symmetry between North and South
 						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
 						exp_tau1=exp(-tau1)
 						rr=sqrt((x+v*vx)**2+(y+v*vy)**2+(z+v*vz)**2)
-						if((rr.gt.R3DC(i,i1).and.i1.eq.nr).or.(rr.lt.R3DC(i,i1).and.i1.eq.1)) then
+						if(rr.gt.R3DC(i,i1).and.i1.eq.nr) then
+							w1=(R3DC(i,i1+1)-rr)/(R3DC(i,i1+1)-R3DC(i,i1))
+							SiR1=Si(ilam,ig,i1,inu,i)*w1
+							if(computealbedo) SiRalb1=SiSc(ilam,ig,i1,inu,i)
+						else if(rr.lt.R3DC(i,i1).and.i1.eq.1) then
 							SiR1=Si(ilam,ig,i1,inu,i)
 							if(computealbedo) SiRalb1=SiSc(ilam,ig,i1,inu,i)
 						else if(rr.gt.R3DC(i,i1)) then
@@ -627,6 +631,7 @@ c Note we are here using the symmetry between North and South
 				do i1=1,nr+1
 					if(rr.gt.R3D2(i,i1).and.rr.le.R3D2(i,i1+1)) exit
 				enddo
+				if(i1.ge.nr+2) goto 2
 			else
 				i1=i1next
 			endif
