@@ -1186,9 +1186,7 @@ c
 	real*8 Si(nr,NRHS),Ca(nr),Cs(nr),Ce(nr)
 	real*8 nu(nnu),wnu(nnu),albedo(1:nr)
 	real*8 Ij(nr),Itot(nr,NRHS),Linv(nr,nr),Lmat(nr,nr)
-	integer,allocatable :: IWORKomp(:)
-
-	allocate(IWORKomp(10*nr*nr))
+	integer IWORKomp(nr)
 
 	do ir=1,nr
 		albedo(ir)=min(1d0/(1d0+1d-4),Cs(ir)/Ce(ir))
@@ -1225,8 +1223,6 @@ c
 	enddo
 	enddo
 	Si_in=Si
-
-	deallocate(IWORKomp)
 
 	return
 	end
