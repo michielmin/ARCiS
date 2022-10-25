@@ -865,6 +865,7 @@ c	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurf
 		if(jr.gt.1) then
 			do ir=jr-1,1,-1
 				Im(ir)=Im(ir+1)*exptau(ir)
+				if(Im(ir).le.0d0) exit
 			enddo
 		endif
 		
@@ -885,6 +886,7 @@ c	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurf
 			if(jr.lt.nr) then
 				do ir=jr+1,nr
 					Ip(ir)=Ip(ir-1)*exptau(ir-1)
+					if(Ip(ir).le.0d0) exit
 				enddo
 			endif
 		endif
