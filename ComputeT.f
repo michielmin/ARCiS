@@ -758,9 +758,11 @@ c	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurf
 	Ih=(Ip-Im)/2d0
 
 	do ir=1,nr-1
-		s0=(Ip(ir,1:nrhs)+Im(ir,1:nrhs))/2d0
-		s1=(Ip(ir+1,1:nrhs)+Im(ir+1,1:nrhs))/2d0
-		Ih(ir,1:nrhs)=(s0-s1)/dtau(ir)
+		if(tau(ir).gt.1d-6) then
+			s0=(Ip(ir,1:nrhs)+Im(ir,1:nrhs))/2d0
+			s1=(Ip(ir+1,1:nrhs)+Im(ir+1,1:nrhs))/2d0
+			Ih(ir,1:nrhs)=(s0-s1)/dtau(ir)
+		endif
 	enddo
 
 
