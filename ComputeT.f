@@ -693,7 +693,7 @@ c	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurf
 
 	if(dtau.lt.1d-3) then
 		I12=0.5*(S1+S2)*dtau
-	else if(dtau.gt.100d0) then
+	else if(dtau.gt.1d4) then
 		I12=S2+(S1-S2)/dtau
 	else
 		I12=(-(S1*dtau-S2+S1)*exp(-dtau)+S2*dtau-S2+S1)/dtau
@@ -728,7 +728,7 @@ c	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurf
 		x1=dtau(ir)
 		if(x1.lt.1d-4) then
 			y=0.5d0*x1*(s0+s1)
-		else if(x1.gt.1d2) then
+		else if(x1.gt.1d4) then
 			y=s1+(s0-s1)/x1
 		else
 			y=(-(s0*x1-s1+s0)*exptau(ir)+s1*x1-s1+s0)/x1
@@ -747,7 +747,7 @@ c	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurf
 		x1=dtau(ir)
 		if(x1.lt.1d-4) then
 			y=0.5d0*x1*(s0+s1)
-		else if(x1.gt.1d2) then
+		else if(x1.gt.1d4) then
 			y=s1+(s0-s1)/x1
 		else
 			y=(-(s0*x1-s1+s0)*exptau(ir)+s1*x1-s1+s0)/x1
@@ -794,7 +794,7 @@ c	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurf
 		x1=dtau(ir)
 		if(x1.lt.1d-4) then
 			y=0.5d0*x1*(s0+s1)
-		else if(x1.gt.1d2) then
+		else if(x1.gt.1d4) then
 			y=s1+(s0-s1)/x1
 		else
 			y=(-(s0*x1-s1+s0)*exptau(ir)+s1*x1-s1+s0)/x1
@@ -813,7 +813,7 @@ c	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurf
 		x1=dtau(ir)
 		if(x1.lt.1d-4) then
 			y=0.5d0*x1*(s0+s1)
-		else if(x1.gt.1d2) then
+		else if(x1.gt.1d4) then
 			y=s1+(s0-s1)/x1
 		else
 			y=(-(s0*x1-s1+s0)*exptau(ir)+s1*x1-s1+s0)/x1
@@ -853,7 +853,7 @@ c	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurf
 		x1=dtau(ir)
 		if(x1.lt.1d-4) then
 			y=0.5d0*x1*(s0+s1)
-		else if(x1.gt.1d2) then
+		else if(x1.gt.1d4) then
 			y=s0+(s1-s0)/x1
 		else
 			y=(s0*x1+s1-s0-exptau(ir)*(s1*x1+s1-s0))/x1
@@ -874,7 +874,7 @@ c	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurf
 			x1=dtau(ir)
 			if(x1.lt.1d-4) then
 				y=0.5d0*x1*(s0+s1)
-			else if(x1.gt.1d2) then
+			else if(x1.gt.1d4) then
 				y=s0+(s1-s0)/x1
 			else
 				y=(s0*x1+s1-s0-exptau(ir)*(s1*x1+s1-s0))/x1
