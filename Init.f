@@ -2394,7 +2394,7 @@ c compute cloud particles
 				call ComputePart(Cloud(ii),ii,is,computelamcloud)
 
 				cloud_dens(1:nr,ii)=dens(1:nr)
-				do is=2,nr
+				do is=2,nr-1
 					if(P(is).ge.Cloud(ii)%P) then
 						Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat
 						Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat
@@ -2410,6 +2410,8 @@ c compute cloud particles
 				enddo
 				Cloud(ii)%Kabs(1,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze
 				Cloud(ii)%Ksca(1,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze
+				Cloud(ii)%Kabs(nr,1:nlam)=Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze
+				Cloud(ii)%Ksca(nr,1:nlam)=Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze
 			else
 				Cloud(ii)%Kabs(1:nr,1:nlam)=0d0
 				Cloud(ii)%Ksca(1:nr,1:nlam)=0d0
