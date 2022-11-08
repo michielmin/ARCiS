@@ -827,15 +827,7 @@ c Compute crystallinity
 	
 	do iter=1,100
 	maxerr=0d0
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku,tcrystinv,err,tcoaginv,vBM,npart,lmfp,vmol,Dp)
-!$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,xn,empty,
-!$OMP&		NN,rpart,ixc,vsed,drhoKd,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot,cryst,
-!$OMP&		impurity,ncryst,nucryst,Tcryst,maxerr,tcinv,vth,sigmamol,xm,Mplanet)
-!$OMP DO
-!$OMP& SCHEDULE(DYNAMIC, 1)
-	do iCS=4,6
+	iCS=4
 
 c equations for material
 	Aomp=0d0
@@ -849,7 +841,7 @@ c equations for material
 	j=j+1
 	Aomp(j,ixc(iCS,i))=1d0
 	Aomp(j,ixv(iCS,i))=1d0
-	xomp(j)=xc(iCS,i)
+	xomp(j)=xc(4,i)+xc(5,i)+xc(6,i)
 	do i=2,nnr-1
 		tcrystinv=exp(nucryst-Tcryst/CloudT(i))
 		tcrystinv=tcrystinv*ncryst*(-log(max(impurity,1d0-max(impurity,cryst(iCS,i)))))**((ncryst-1d0)/ncryst)
@@ -869,28 +861,14 @@ c equations for material
      &					+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Clouddens(i)*tcrystinv
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-ScTot(2,iCS,i)
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-ScTot(2,4,i)-ScTot(2,5,i)-ScTot(2,6,i)
 
-		if(.false.) then ! collisional amorphization
-			npart=xn(i)*Clouddens(i)
-			tcoaginv=0d0
-			tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*abs(vsed(i))
-			lmfp=2.3d0*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
-			vmol=0.5d0*lmfp*vth(i)
-			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
-			vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
-			if(Dp/rpart(i).lt.vBM) vBM=Dp/rpart(i)
-			tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*vBM
-			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
-			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Clouddens(i)*tcoaginv
-		endif
-		
 		j=j+1
 
 		Aomp(j,ixc(iCS,i))=1d0
 		Aomp(j,ixv(iCS,i))=1d0
 
-		xomp(j)=xc(iCS,i)
+		xomp(j)=xc(4,i)+xc(5,i)+xc(6,i)
 	enddo
 	i=nnr
 	dz=CloudR(i)-CloudR(i-1)
@@ -902,7 +880,7 @@ c equations for material
 	j=j+1
 	Aomp(j,ixc(iCS,i))=1d0
 	Aomp(j,ixv(iCS,i))=1d0
-	xomp(j)=xc(iCS,i)
+	xomp(j)=xc(4,i)+xc(5,i)+xc(6,i)
 
 	NRHS=1
 	info=0
@@ -920,8 +898,8 @@ c Use Band matrix algorithm
 
 	do i=1,nnr
 		if(.not.xomp(ixc(iCS,i)).gt.0d0) xomp(ixc(iCS,i))=0d0
-		if(.not.xomp(ixc(iCS,i)).lt.xc(iCS,i)) xomp(ixc(iCS,i))=xc(iCS,i)
-		xomp(ixv(iCS,i))=xc(iCS,i)-xomp(ixc(iCS,i))
+		if(.not.xomp(ixc(iCS,i)).lt.xc(4,i)+xc(5,i)+xc(6,i)) xomp(ixc(iCS,i))=xc(4,i)+xc(5,i)+xc(6,i)
+		xomp(ixv(iCS,i))=xc(4,i)+xc(5,i)+xc(6,i)-xomp(ixc(iCS,i))
 	enddo
 
 	do i=1,nnr
@@ -931,13 +909,8 @@ c Use Band matrix algorithm
 			err=0d0
 		endif
 		if(abs(cryst(iCS,i)-err).gt.1d-4) maxerr=1d0
-		cryst(iCS,i)=err
+		cryst(4:6,i)=err
 	enddo
-
-	enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
 
 	if(maxerr.lt.1d-3) exit
 	enddo
