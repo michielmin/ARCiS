@@ -14,7 +14,7 @@
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,ComputeKzz,err,maxerr
-	real*8 Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM
+	real*8 Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
 	logical ini,Tconverged
@@ -763,6 +763,23 @@ c Use Band matrix algorithm
 	enddo
 	endif
 
+c	do i=1,nnr
+c correction for silicates to only form up to olivine (i.e. XXSiO4)
+c		SiSil=xc(4,i)*atoms_cloud(4,9)/(CSnmol(4)*mu(4))+
+c     &		xc(5,i)*atoms_cloud(5,9)/(CSnmol(5)*mu(5))+xc(6,i)*atoms_cloud(6,9)/(CSnmol(6)*mu(6))
+c		OSil=xc(4,i)*atoms_cloud(4,5)/(CSnmol(4)*mu(4))+
+c     &		xc(5,i)*atoms_cloud(5,5)/(CSnmol(5)*mu(5))+xc(6,i)*atoms_cloud(6,5)/(CSnmol(6)*mu(6))
+c		Osil=Osil/SiSil
+c		if(Osil.gt.4d0) then
+c			scale=(4d0*SiSil-xc(4,i)*atoms_cloud(4,5)/(CSnmol(4)*mu(4)))/(
+c     &		xc(5,i)*atoms_cloud(5,5)/(CSnmol(5)*mu(5))+xc(6,i)*atoms_cloud(6,5)/(CSnmol(6)*mu(6)))
+c			xv(5,i)=xv(5,i)+xc(5,i)*(1d0-scale)
+c			xc(5,i)=xc(5,i)*scale
+c			xv(6,i)=xv(6,i)+xc(6,i)*(1d0-scale)
+c			xc(6,i)=xc(6,i)*scale
+c		endif
+c	enddo
+
 	maxerr=0d0
 	do i=1,nnr
 		tot=xm(i)/rho_nuc
@@ -951,8 +968,10 @@ c Use Band matrix algorithm
 	allocate(fsil(4,nnr),fsil2(4,nr))
 	do k=1,nnr
 c correction for silicates
-		SiSil=xc(4,k)*atoms_cloud(4,9)+xc(5,k)*atoms_cloud(5,9)+xc(6,k)*atoms_cloud(6,9)
-		OSil=xc(4,k)*atoms_cloud(4,5)+xc(5,k)*atoms_cloud(5,5)+xc(6,k)*atoms_cloud(6,5)
+		SiSil=xc(4,k)*atoms_cloud(4,9)/(CSnmol(4)*mu(4))+
+     &		xc(5,k)*atoms_cloud(5,9)/(CSnmol(5)*mu(5))+xc(6,k)*atoms_cloud(6,9)/(CSnmol(6)*mu(6))
+		OSil=xc(4,k)*atoms_cloud(4,5)/(CSnmol(4)*mu(4))+
+     &		xc(5,k)*atoms_cloud(5,5)/(CSnmol(5)*mu(5))+xc(6,k)*atoms_cloud(6,5)/(CSnmol(6)*mu(6))
 		Osil=Osil/SiSil
 		fsil(1:4,k)=0d0
 		if(Osil.le.2d0) then
@@ -967,6 +986,8 @@ c correction for silicates
 			fsil(3,k)=1d0
 			fsil(4,k)=Osil-4d0
 		endif
+		tot=sum(fsil(1:4,k))
+		fsil(1:4,k)=fsil(1:4,k)/tot
 c correction for FeS
 		f=mu(8)*CSnmol(8)+mu(9)*CSnmol(9)
 		mm=(f/(mu(9)*CSnmol(9))-1d0)*xc(9,k)
@@ -992,7 +1013,6 @@ c correction for SiC
 			xc(11,k)=xc(11,k)+mm
 		endif
 	enddo
-
 	allocate(dx(nnr))
 	logP(1:nr)=-log(P(1:nr))
 	logCloudP(1:nnr)=-log(CloudP(1:nnr))
@@ -1024,6 +1044,10 @@ c Silicates
 	x(1:nnr)=fsil(3,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,fsil2(3,1:nr),nr)
 	x(1:nnr)=fsil(4,1:nnr)
+	do k=1,nr
+		tot=sum(fsil2(1:4,k))
+		fsil2(1:4,k)=fsil2(1:4,k)/tot
+	enddo
 	call regridarray(logCloudP,x,nnr,logP,fsil2(4,1:nr),nr)
 	x(1:nnr)=xc(4,1:nnr)+xc(5,1:nnr)+xc(6,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,15),nr)
