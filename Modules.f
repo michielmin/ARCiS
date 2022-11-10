@@ -123,6 +123,8 @@ c for exchange when computing secondary atmosphere
 	
 	real*8,allocatable :: model_err_rel(:),model_err_abs(:),model_err_lam(:)
 	integer nmodel_err
+	
+	real*8 nC_PAH,mixrat_PAH
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb
 	character*20 surfacetype
@@ -295,7 +297,7 @@ c for exchange when computing secondary atmosphere
 		real*8,allocatable :: frac(:,:),sigma(:),cryst(:,:)
 		real*8 rho,amin,amax,fmax,porosity,reff,veff
 		logical blend,haze,condensates
-		real*8 fcond,mixrat,tau,lam,mixrathaze
+		real*8 fcond,mixrat,tau,lam,mixrathaze,cryst0
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
 		character*500 file,Kzzfile
 		character*20 standard,ptype,type

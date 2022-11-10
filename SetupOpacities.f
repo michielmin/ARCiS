@@ -106,6 +106,10 @@ c===============
 			endif
 			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*mixrat_tmp(CIA(i)%imol1)*mixrat_tmp(CIA(i)%imol2)
 		enddo
+		do i=1,nlam
+			call RayleighScattering(Csca(ir,i),ir,i)
+		enddo
+		call ComputePAH(cont_tot,Csca(ir,1:nlam),computelam)
 		kappa_mol=0d0
 		do imol=1,nmol
 			if(includemol(imol)) then
@@ -206,7 +210,6 @@ c===============
 				kappa=kappa*tot/tot2
 			endif
 			Cabs(ir,i,1:ng)=kappa(1:ng)
-			call RayleighScattering(Csca(ir,i),ir,i)
 			do ig=1,ng
 				if(Cabs(ir,i,ig).lt.1d-6*Csca(ir,i)) Cabs(ir,i,ig)=1d-6*Csca(ir,i)
 			enddo

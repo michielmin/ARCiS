@@ -609,7 +609,7 @@ c	condensates=(condensates.or.cloudcompute)
 				allocate(Cloud(i)%w(Cloud(i)%nr))
 				allocate(Cloud(i)%frac(nr,20))
 				allocate(Cloud(i)%cryst(nr,20))
-				Cloud(i)%cryst=1d0
+				Cloud(i)%cryst=Cloud(i)%cryst0
 				Cloud(i)%species="MIX"
 				Cloud(i)%standard="MIX"
 			else
@@ -1173,6 +1173,10 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) surfacetype
 		case("surfacealbedo")
 			read(key%value,*) surfacealbedo
+		case("ncpah","nc_pah")
+			read(key%value,*) nC_PAH
+		case("pah")
+			read(key%value,*) mixrat_PAH
 		case("fixmol")
 			call ReadFixMol(key)
 		case default
@@ -1565,6 +1569,9 @@ c  GGchem was still implemented slightly wrong.
 	Kzz_contrast=-1d0
 
 	computecontrib=.false.
+
+	nC_PAH=25
+	mixrat_PAH=0d0
 	
 	instrument="ARIEL"
 	instr_ntrans=1d0
@@ -1620,6 +1627,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%fCarbon=0d0
 		Cloud(i)%fSiC=0d0
 		Cloud(i)%fWater=0d0
+		Cloud(i)%cryst0=1d0
 		Cloud(i)%condensates=.true.
 		Cloud(i)%tmix=300d0
 		Cloud(i)%betamix=2.2
@@ -2314,6 +2322,9 @@ c			read(key%value,*) Cloud(j)%fCarbon
 			read(key%value,*) Cloud(j)%fSiC
 		case("fwater")
 			read(key%value,*) Cloud(j)%fWater
+		case("cryst")
+			read(key%value,*) Cloud(j)%cryst0
+			computecryst=.true.
 		case("type")
 			Cloud(j)%type=trim(key%value)
 		case default

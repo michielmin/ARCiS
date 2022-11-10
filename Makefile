@@ -149,7 +149,8 @@ OBJS	= Modules.o \
 		PostEqualWeights.o \
 		LightCurve.o \
 		ConvertColors.o \
-		Formation.o
+		Formation.o \
+		ComputePAH.o
 
 # program name and install location
 PROGRAM       = ARCiS
