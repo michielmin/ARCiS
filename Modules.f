@@ -124,7 +124,7 @@ c for exchange when computing secondary atmosphere
 	real*8,allocatable :: model_err_rel(:),model_err_abs(:),model_err_lam(:)
 	integer nmodel_err
 	
-	real*8 nC_PAH,mixrat_PAH
+	real*8 nC_PAH,mixrat_PAH,rad_optEC,Eg_optEC,mixrat_optEC
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb
 	character*20 surfacetype

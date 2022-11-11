@@ -311,6 +311,9 @@ c	atoms_cloud(i,3)=1
 		case("THOLIN","tholin","Tholin")
 			rho_nuc=1.00
 			ihaze=10
+		case("optEC")
+			rho_nuc=1.50
+			ihaze=10
 		case("SiC")
 			rho_nuc=3.22
 			ihaze=11
@@ -626,14 +629,7 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 		endif
 	enddo
 
-	if(Cloud(ii)%haze) then
-		do i=1,nnr
-			xm(i)=xm(i)*max(0d0,1d0-densv(i,ihaze)/(Clouddens(i)*xv_bot(ihaze)))
-			if(xn(i).gt.xm(i)) then
-				xn(i)=xm(i)
-			endif
-		enddo
-	else
+	if(.not.Cloud(ii)%haze) then
 		xm=0d0
 	endif
 	xn(1:nnr)=xn(1:nnr)/m_nuc

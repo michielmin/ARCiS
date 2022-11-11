@@ -110,6 +110,7 @@ c===============
 			call RayleighScattering(Csca(ir,i),ir,i)
 		enddo
 		call ComputePAH(cont_tot,Csca(ir,1:nlam),computelam)
+		call Compute_optEC(cont_tot,Csca(ir,1:nlam),computelam)
 		kappa_mol=0d0
 		do imol=1,nmol
 			if(includemol(imol)) then

@@ -591,6 +591,14 @@ c H2O: 18
 				frac(i)=frac(i)/rho(i)
 				e1(i,1:nlam)=e1d(1:nlam)
 				e2(i,1:nlam)=e2d(1:nlam)
+			case("optEC")
+				i=i+1
+				filename(i)='optEC'
+				rho(i)=1.50
+				call RefInd_optEC(lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),rad_optEC,Eg_optEC,nlam)
+				frac(i)=frac(i)/rho(i)
+				e1(i,1:nlam)=e1d(1:nlam)
+				e2(i,1:nlam)=e2d(1:nlam)
 			case("SiC")
 				i=i+1
 				rho(i)=3.22

@@ -1,3 +1,164 @@
+	module optECdata
+	IMPLICIT NONE
+	integer nEg_optEC,nr_optEC,nl_optEC
+	parameter(nEg_optEC=14,nr_optEC=7,nl_optEC=1000)
+	real*8 l_optEC(nl_optEC),e1_optEC(nl_optEC,nEg_optEC,nr_optEC),e2_optEC(1000,nEg_optEC,nr_optEC)
+	real*8 Eg_optEC(nEg_optEC),r_optEC(nr_optEC)
+	end module optECdata
+
+	subroutine Compute_optEC(Ca_cont,Cs_cont,computelamcloud)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	logical computelamcloud(nlam),ionized
+	real*8 Ca_cont(nlam),Cs_cont(nlam),Ca(nlam),Cs(nlam),Mc,Nc,Mpart
+	parameter(Mc=2e-23) ! in grams
+
+	if(mixrat_optEC.le.0d0) return
+
+	Mpart=1.5d0*(4d0*pi*(rad_optEC*1d-4)**3)/3d0
+	Nc=Mpart/Mc
+	
+	Ca=0d0
+	Cs=0d0
+	call Make_optEC(lam*1d4,Ca,Cs,rad_optEC,Eg_optEC,nlam,computelamcloud)
+
+	Ca_cont=Ca_cont+Ca*mixrat_optEC/Nc
+	Cs_cont=Cs_cont+Cs*mixrat_optEC/Nc
+
+	return
+	end
+
+
+	subroutine Init_optEC()
+	use optECdata
+	IMPLICIT NONE
+	character*100 filebase,filename,homedir
+	character*4 ext(7)
+	integer i,j,k
+	real*8 dummy
+	external Tholin
+	logical truefalse
+
+	call getenv('HOME',homedir)
+	filebase=trim(homedir) // '/ARCiS/Data/optEC/'
+	r_optEC(1:nr_optEC) = (/ 0.33,0.5,1.0,3.0,10.0,30.0,100.0 /)
+	r_optEC=r_optEC*1d-3
+	ext(1:nr_optEC) = (/ "0_33", "0_5 ", "1   ", "3   ", "10  ", "30  ", "100 " /)
+	Eg_optEC(1:nEg_optEC) = (/ -0.1,0.0,0.1,0.25,0.5,0.75,1.0,1.25,1.5,1.75,2.0,2.25,2.5,2.67 /)
+
+	do i=1,nr_optEC
+		filename=trim(filebase) // "n" // trim(ext(i)) // "nm.dat"
+		inquire(file=filename,exist=truefalse)
+		if(.not.truefalse) then
+			write(*,'("WARNING: optEC data not found")')
+			write(*,'("         optEC opacities set to tholin")')
+			write(*,'("==================================================================")')
+			flush(9)
+			do j=1,nl_optEC
+				l_optEC(j)=10d0**(log10(0.2)+log10(1000.0/0.2)*real(j-1)/real(nl_optEC-1))
+			enddo
+			call RegridDataLNK(Tholin,l_optEC,e1_optEC(1:nl_optEC,1,1),e2_optEC(1:nl_optEC,1,1),nl_optEC,.true.)
+			do j=1,nl_optEC
+				e1_optEC(j,1:nEg_optEC,1:nr_optEC)=e1_optEC(j,1,1)
+				e2_optEC(j,1:nEg_optEC,1:nr_optEC)=e2_optEC(j,1,1)
+			enddo
+			return
+		endif
+		open(unit=25,file=filename,RECL=1000)
+		filename=trim(filebase) // "k" // trim(ext(i)) // "nm.dat"
+		open(unit=26,file=filename,RECL=1000)
+		do j=1,nl_optEC
+			read(25,*) l_optEC(j),dummy,e1_optEC(j,1:nEg_optEC,i)
+			read(26,*) l_optEC(j),dummy,e2_optEC(j,1:nEg_optEC,i)
+		enddo
+		close(unit=25)
+		close(unit=26)
+	enddo
+
+	return
+	end
+
+	subroutine Make_optEC(lam,Cabs,Csca,rad,Eg,nlam,computelam)
+	use optECdata
+	IMPLICIT NONE
+	integer nlam,ir,iEg,ilam
+	real*8 Cabs(nlam),Csca(nlam),rad,Eg,QEX,QSC,QAB,G,lam(nlam),pi
+	parameter(pi=3.1415926536)
+	real*8 wr1,wr2,wEg1,wEg2,e1x(nlam),e2x(nlam),e1(nl_optEC),e2(nl_optEC)
+	logical computelam(nlam)
+
+	call RefInd_optEC(lam,e1x,e2x,rad,Eg,nlam)
+
+	do ilam=1,nlam
+		if(computelam(ilam)) then
+			call Q_MIE(e1x(ilam),e2x(ilam),lam(ilam),rad,QEX,QSC,QAB,G)
+			Cabs(ilam)=1d-8*(qab*pi*rad**2)
+			Csca(ilam)=1d-8*(qsc*pi*rad**2)
+		endif
+	enddo
+	
+	return
+	end
+	
+
+
+	subroutine RefInd_optEC(lam,e1x,e2x,rad,Eg,nlam)
+	use optECdata
+	IMPLICIT NONE
+	integer nlam,ir,iEg,ilam
+	real*8 rad,Eg,QEX,QSC,QAB,G,lam(nlam),pi
+	parameter(pi=3.1415926536)
+	real*8 wr1,wr2,wEg1,wEg2,e1x(nlam),e2x(nlam),e1(nl_optEC),e2(nl_optEC)
+
+	if(rad.le.r_optEC(1)) then
+		ir=1
+		wr1=1d0
+		wr2=0d0
+	else if(rad.ge.r_optEC(nr_optEC)) then
+		ir=nr_optEC-1
+		wr1=0d0
+		wr2=1d0
+	else
+		do ir=1,nr_optEC-1
+			if(rad.ge.r_optEC(ir).and.rad.lt.r_optEC(ir+1)) exit
+		enddo
+		wr1=log(r_optEC(ir+1)/rad)/log(r_optEC(ir+1)/r_optEC(ir))
+		wr2=1d0-wr1
+	endif
+
+	if(Eg.le.Eg_optEC(1)) then
+		iEg=1
+		wEg1=1d0
+		wEg2=0d0
+	else if(Eg.ge.Eg_optEC(nEg_optEC)) then
+		iEg=nEg_optEC-1
+		wEg1=0d0
+		wEg2=1d0
+	else
+		do iEg=1,nEg_optEC-1
+			if(Eg.ge.Eg_optEC(iEg).and.Eg.lt.Eg_optEC(iEg+1)) exit
+		enddo
+		wEg1=(Eg_optEC(iEg+1)-Eg)/(Eg_optEC(iEg+1)-Eg_optEC(iEg))
+		wEg2=1d0-wEg1
+	endif
+
+	e1(1:nl_optEC)=wr1*wEg1*e1_optEC(1:nl_optEC,iEg,ir)+
+     &			wr1*wEg2*e1_optEC(1:nl_optEC,iEg+1,ir)+
+     &			wr2*wEg1*e1_optEC(1:nl_optEC,iEg,ir+1)+
+     &			wr2*wEg2*e1_optEC(1:nl_optEC,iEg+1,ir+1)
+	e2(1:nl_optEC)=wr1*wEg1*e2_optEC(1:nl_optEC,iEg,ir)+
+     &			wr1*wEg2*e2_optEC(1:nl_optEC,iEg+1,ir)+
+     &			wr2*wEg1*e2_optEC(1:nl_optEC,iEg,ir+1)+
+     &			wr2*wEg2*e2_optEC(1:nl_optEC,iEg+1,ir+1)
+	call regridarray(l_optEC,e1,nl_optEC,lam,e1x,nlam)
+	call regridarray(l_optEC,e2,nl_optEC,lam,e2x,nlam)
+
+	return
+	end
+
+
+
 	subroutine ComputePAH(Ca_cont,Cs_cont,computelamcloud)
 	use GlobalSetup
 	use Constants
@@ -5,6 +166,8 @@
 	logical computelamcloud(nlam),ionized
 	real*8 HC,Ca_cont(nlam),Cs_cont(nlam),Ca(nlam),Cs(nlam),Mc
 	parameter(Mc=2e-23) ! in grams
+	
+	if(mixrat_PAH.le.0d0) return
 	
 	if(nC_PAH.lt.25) then
 		HC=0.5d0

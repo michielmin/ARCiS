@@ -739,7 +739,8 @@ c In this case the beta map should be the static one. Make sure this is set prop
 	endif
 
 	if(planetform) call InitFormation(Mstar,Tstar,Rstar,planetform_SolidC,planetform_Macc)
-
+	call Init_optEC
+	
 	do i=1,nmodel_err-1
 		model_err_lam(i)=10d0**(log10(lam(1))+log10(lam(nlam)/lam(1))*(real(i)/real(nmodel_err)))
 	enddo
@@ -1177,6 +1178,12 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) nC_PAH
 		case("pah")
 			read(key%value,*) mixrat_PAH
+		case("optec")
+			read(key%value,*) mixrat_optEC
+		case("rad_optec")
+			read(key%value,*) rad_optEC
+		case("eg_optec")
+			read(key%value,*) Eg_optEC
 		case("fixmol")
 			call ReadFixMol(key)
 		case default
@@ -1572,7 +1579,11 @@ c  GGchem was still implemented slightly wrong.
 
 	nC_PAH=25
 	mixrat_PAH=0d0
-	
+
+	mixrat_optEC=0d0
+	rad_optEC=0.01
+	Eg_optEC=1.0
+
 	instrument="ARIEL"
 	instr_ntrans=1d0
 	do i=1,n_instr
