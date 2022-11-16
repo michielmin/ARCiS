@@ -2165,7 +2165,7 @@ c		emis(i)=1d0+log(2d0*g+1d0)*(g-1)/(2d0*g)
 	real*8 SurfEmis(nlam),e1(nlam),e2(nlam),tot
 	external Enstatite_X,Enstatite_Y,Enstatite_Z
 	external Forsterite_X,Forsterite_Y,Forsterite_Z
-	external Labradorite_X,Labradorite_Y,Labradorite_Z,SiO2
+	external Labradorite_X,Labradorite_Y,Labradorite_Z,SiO2,FeO
 	integer i
 
 c=========================================
@@ -2204,6 +2204,11 @@ c=========================================
 		case("QUARTZ","quartz","SiO2")
 			tot=1d0
 			call RegridDataLNK(SiO2,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
+			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
+			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
+		case("FeO")
+			tot=1d0
+			call RegridDataLNK(FeO,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam)
 			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
 		case("labradorite","LABRADORITE")

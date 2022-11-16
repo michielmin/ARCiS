@@ -1221,6 +1221,8 @@ c
 	call DGESV( nr, NRHS, Linv, nr, IWORKomp, Itot, nr, info)
 	if(info.ne.0) then
 		print*,"problem in scattering",info
+		Si=Si_in
+		return
 	endif
 
 	Si(1:nr,1:NRHS)=Itot(1:nr,1:NRHS)
