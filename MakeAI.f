@@ -100,6 +100,16 @@
 				call output("try different set of parameters")
 				if(.not.usefile) goto 1
 			endif
+			do iobs=1,nobs
+				select case(ObsSpec(iobs)%type)
+					case("trans","transmission","emisr","emisR","emisa","emis","emission","transC","phase","phaser","phaseR","transM","transE")
+						open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(iobs,'(i0.3)')),RECL=1000)
+						do j=1,ObsSpec(iobs)%ndata
+							write(20,*) ObsSpec(iobs)%lam(j)*1d4,ObsSpec(iobs)%model(j),ObsSpec(iobs)%y(j),ObsSpec(iobs)%dy(j)
+						enddo
+						close(unit=20)
+			end select
+		enddo
 		endif
 	enddo
 2	continue
