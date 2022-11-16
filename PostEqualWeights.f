@@ -10,7 +10,7 @@
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
 	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:)
-	real*8 ComputeKzz,lbest,x1(n_ret),x2(n_ret)
+	real*8 ComputeKzz,lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,lm2,lm3,cmin
 	integer i1,i2,ibest
 	
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
@@ -64,6 +64,7 @@
 	PTstruct=0d0
 	dPTstruct=0d0
 	cloudstruct=0d0
+	cmax=0d0
 
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
 		open(unit=35,file=trim(outputdir) // "/posterior.dat",RECL=6000)
@@ -99,6 +100,15 @@
 	lbest=0d0
 	ibest=0
 	j=0
+	sorted(1:nmodels)=like(1:nmodels)
+	call sort(sorted,nmodels)
+	im1=real(nmodels)-real(nmodels)*0.682689492137086+0.5d0
+	im2=real(nmodels)-real(nmodels)*0.954499736103642+0.5d0
+	im3=real(nmodels)-real(nmodels)*0.997300203936740+0.5d0
+	lm1=sorted(im1)
+	lm2=sorted(im2)
+	lm2=sorted(im3)
+
 	do i=1,nmodels
 		if(.not.(any(var(i,1:n_ret).lt.x1(1:n_ret)).or.any(var(i,1:n_ret).gt.x2(1:n_ret)))) then
 			j=j+1
@@ -229,6 +239,34 @@
 			specemis(i,1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 		endif
 	endif
+
+	if(like(imodel).gt.lm1.or.i.eq.1) then
+		ctrans=maxval(spectrans(i,1:nlam))-minval(spectrans(i,1:nlam))
+		if(ctrans.gt.cmax.or.i.eq.1) then
+			cmax=ctrans
+			call system("cp " // trim(outputdir) // "input.dat " // trim(outputdir) // "maxcontrast.dat")
+			open(unit=21,file=trim(outputdir) // "maxcontrast.dat",RECL=1000,access='APPEND')
+			write(21,'("*** Maximum contrast Model parameters ***")')
+			write(21,'("retrieval=.false.")')
+			write(21,'("pew=.false.")')
+			do j=1,n_ret
+				write(21,'(a," = ",es14.7)') trim(RetPar(j)%keyword),RetPar(j)%value
+			enddo
+			close(unit=21)	
+		endif
+		if(ctrans.lt.cmin.or.i.eq.1) then
+			cmin=ctrans
+			call system("cp " // trim(outputdir) // "input.dat " // trim(outputdir) // "mincontrast.dat")
+			open(unit=21,file=trim(outputdir) // "mincontrast.dat",RECL=1000,access='APPEND')
+			write(21,'("*** Minimum contrast Model parameters ***")')
+			write(21,'("retrieval=.false.")')
+			write(21,'("pew=.false.")')
+			do j=1,n_ret
+				write(21,'(a," = ",es14.7)') trim(RetPar(j)%keyword),RetPar(j)%value
+			enddo
+			close(unit=21)	
+		endif
+	endif	
 
 	i2d=i2d+1
 	if(i2d.le.n2d) goto 3
