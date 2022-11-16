@@ -40,6 +40,7 @@
 	real*8 tau_V,tau_T,Planck,f
 	real*8 g,dlnT,dlnP,d,tau,tautot,fact,contr,tau_a,exp_tau
 	real*8,allocatable :: Ce(:,:,:),Ca(:,:,:),Cs(:,:,:),taustar(:,:),tauR_nu(:,:,:)
+	real*8,allocatable :: wscat(:,:,:),wabs(:,:,:)
 	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),T1(nr),must_i,E,E0,Tinp(nr)
 	real*8 z,Hstar(0:nr),Jtot,Htot,Ktot
 	real*8 fedd(nr),Hedd(0:nr),lH1,lH2,P1,P2,directHstar(0:nr)
@@ -168,11 +169,20 @@
 	enddo
 
 	Ce=Ca+Cs
+	allocate(wscat(nr,nlam_LR,ng),wabs(nr,nlam_LR,ng))
 	do ir=1,nr
 		do ilam=1,nlam_LR
 			do ig=1,ng
-				if(Ca(ir,ilam,ig)/Ce(ir,ilam,ig).lt.1d-4) then
-					Ca(ir,ilam,ig)=Cs(ir,ilam,ig)/(1d4-1d0)
+				wabs(ir,ilam,ig)=Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
+				if(.not.wabs(ir,ilam,ig).gt.1d-4) then
+					wabs(ir,ilam,ig)=1d-4
+					Ca(ir,ilam,ig)=Cs(ir,ilam,ig)/(1d0/wabs(ir,ilam,ig)-1d0)
+					Ce(ir,ilam,ig)=Ca(ir,ilam,ig)+Cs(ir,ilam,ig)
+				endif
+				wscat(ir,ilam,ig)=Cs(ir,ilam,ig)/Ce(ir,ilam,ig)
+				if(.not.wscat(ir,ilam,ig).gt.0d0) then
+					wscat(ir,ilam,ig)=0d0
+					Cs(ir,ilam,ig)=0d0
 					Ce(ir,ilam,ig)=Ca(ir,ilam,ig)+Cs(ir,ilam,ig)
 				endif
 			enddo
@@ -257,7 +267,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 !$OMP& PRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,
 !$OMP&			Hstar_omp,SurfStar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,directHstar_omp,tot,IhN)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,
-!$OMP&			Hstar,SurfStar,Dplanet,Fstar_LR,must,directHstar)
+!$OMP&			Hstar,SurfStar,Dplanet,Fstar_LR,must,directHstar,wabs,wscat)
 	allocate(Si_omp(0:nr,0:nr+1),tauR_omp(0:nr),Ih_omp(0:nr),Ij_omp(0:nr))
 	allocate(IhN(0:nr,0:nr+1,nnu))
 	allocate(Hstar_omp(0:nr),Hstar_lam(0:nr),Hsurf_lam(0:nr),directHstar_omp(0:nr))
@@ -281,7 +291,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 			FstarBottom=abs(Ih_omp(0))
 
 c Si_omp(0:nr,0) is the direct stellar contribution
-			Si_omp(1:nr,0)=(Ij_omp(1:nr)*Cs(1:nr,ilam,ig)/Ce(1:nr,ilam,ig))
+			Si_omp(1:nr,0)=Ij_omp(1:nr)*wscat(1:nr,ilam,ig)
 			do ir=1,nr
 				if(.not.Si_omp(ir,0).gt.0d0) Si_omp(ir,0)=0d0
 			enddo
@@ -290,7 +300,7 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 c Si_omp(0:nr,1:nr) is the direct contribution from the atmosphere
 			do ir=1,nr
 				Si_omp(0:nr,ir)=0d0
-				Si_omp(ir,ir)=Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
+				Si_omp(ir,ir)=wabs(ir,ilam,ig)
 				if(.not.Si_omp(ir,ir).gt.0d0) Si_omp(ir,ir)=0d0
 			enddo
 
@@ -306,7 +316,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
      & 								Ih_omp(0:nr)*(1d0-SurfEmis_LR(ilam))
 			enddo
 			Si_omp(0,nr+1)=0d0
-			Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)*Cs(1:nr,ilam,ig)/Ce(1:nr,ilam,ig)
+			Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)*wscat(1:nr,ilam,ig)
 			do ir=1,nr
 				if(.not.Si_omp(ir,nr+1).gt.0d0) Si_omp(ir,nr+1)=0d0
 			enddo
@@ -574,7 +584,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 					if(iT.lt.1) iT=1
 					scale=(T(ir)/real(iT))**4
 					contr=nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*exp(-tauR(ir))
-					E=E+contr*scale*BB_LR(ilam,iT)*(1d0-exp(-dtauR(ir)))*SurfEmis_LR(ilam)*Ca(ir,ilam,ig)/Ce(ir,ilam,ig)
+					E=E+contr*scale*BB_LR(ilam,iT)*(1d0-exp(-dtauR(ir)))*SurfEmis_LR(ilam)*wabs(ir,ilam,ig)
 					if(tauR(ir).gt.30d0) exit
 				enddo
 			enddo
@@ -606,7 +616,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	enddo
 
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
-c	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K"
+	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K"
 
 	maxErr=0d0
 	do ir=1,nr-1
