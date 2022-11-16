@@ -95,7 +95,7 @@ c===============================================================================
 	character*500 outputdir
 	integer idum,maxiter,miniter,Nphot0,idum0,iWolk
 !$OMP THREADPRIVATE(idum)
-	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib
+	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib,do_rayleigh
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS
 	logical,allocatable :: includemol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,twind,epsiter,specres_LR

@@ -852,6 +852,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			specresfile=trim(key%value)
 		case("particledir","dirparticle")
 			particledir=trim(key%value)
+		case("rayleigh")
+			read(key%value,*) do_rayleigh
 		case("tpfile")
 			TPfile=key%value
 		case("mixratfile")
@@ -1481,6 +1483,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	mixrat=0d0
 	includemol=.false.
 	par_tprofile=.false.
+	do_rayleigh=.true.
 	
 	Nphot0=2500
 	
@@ -2028,7 +2031,7 @@ c number of cloud/nocloud combinations
 	integer i,j,ilam,nj,jlam
 	logical truefalse
 	
-	lminRT=0.22d0*micron
+	lminRT=0.11d0*micron
 	lmaxRT=47d0*micron
 	specres_LR=10d0
 
