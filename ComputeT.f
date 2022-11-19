@@ -264,7 +264,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	IntEab(1:nlam_LR,0:nr,0:nr)=0d0
 	EabDirect=0d0
 
-!$OMP PARALLEL IF(.false.)
+!$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,EabDirect_omp,
 !$OMP&			Hstar_omp,SurfStar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,tot,IhN,IjN)
@@ -1199,7 +1199,8 @@ c
 	integer IWORKomp(nr)
 
 	do ir=1,nr
-		albedo(ir)=min(1d0/(1d0+1d-4),Cs(ir)/Ce(ir))
+		albedo(ir)=Cs(ir)/Ce(ir)
+		if(.not.albedo(ir).lt.1d0/(1d0+1d-4)) albedo(ir)=1d0/(1d0+1d-4)
 	enddo
 
 	Linv=0d0

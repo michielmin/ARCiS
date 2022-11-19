@@ -1990,7 +1990,7 @@ c-----------------------------------------------------------------------
 	parameter(nnu=10,niter=500)
 	real*8 tau,d,tauR_nu(0:nr,nlam,ng),contr,Jstar_nu(nr,nlam,ng)
 	real*8 Si(nlam,ng,0:nr,nnu0),BBr(nlam,0:nr),Ca(nlam,ng,nr),Cs(nlam,nr),Ce(nlam,ng,nr)
-	real*8 nu(nnu),wnu(nnu),must,tauRs(nr),Ijs(nr),eps,Planck,tot
+	real*8 nu(nnu),wnu(nnu),must,tauRs(nr),Ijs(nr),eps,Planck,tot,wabs(nlam,ng,nr),wscat(nlam,ng,nr)
 	logical err
 	parameter(eps=1d-20)
 	real*8,allocatable :: tauR(:),Ij(:),Itot(:),Linv(:,:),Lmat(:,:),Iprev(:)
@@ -2000,8 +2000,16 @@ c-----------------------------------------------------------------------
 		do ig=1,ng
 			do ilam=1,nlam
 				Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
-				if(Ca(ilam,ig,ir)/Ce(ilam,ig,ir).lt.1d-4) then
-					Ca(ilam,ig,ir)=Cs(ilam,ir)/(1d4-1d0)
+				wabs(ilam,ig,ir)=Ca(ilam,ig,ir)/Ce(ilam,ig,ir)
+				if(.not.wabs(ilam,ig,ir).gt.1d-4) then
+					wabs(ilam,ig,ir)=1d-4
+					Ca(ilam,ig,ir)=Cs(ilam,ir)/(1d0/wabs(ilam,ig,ir)-1d0)
+					Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
+				endif
+				wscat(ilam,ig,ir)=Cs(ilam,ir)/Ce(ilam,ig,ir)
+				if(.not.wscat(ilam,ig,ir).gt.0d0) then
+					wscat(ilam,ig,ir)=0d0
+					Cs(ilam,ir)=0d0
 					Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
 				endif
 			enddo
@@ -2010,7 +2018,7 @@ c-----------------------------------------------------------------------
 
 	do inu0=1,nnu0
 		do ig=1,ng
-			Si(1:nlam,ig,1:nr,inu0)=BBr(1:nlam,1:nr)*Ca(1:nlam,ig,1:nr)/(Ca(1:nlam,ig,1:nr)+Cs(1:nlam,1:nr))
+			Si(1:nlam,ig,1:nr,inu0)=BBr(1:nlam,1:nr)*wabs(1:nlam,ig,1:nr)
 			Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
 		enddo
 	enddo
@@ -2062,7 +2070,7 @@ c-----------------------------------------------------------------------
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(tauR,Ij,ilam,ig,inu0,inu,contr,must)
-!$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar,lamemis,nnu0)
+!$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar,lamemis,nnu0,wscat)
 	allocate(tauR(nr),Ij(nr))
 !$OMP DO
 	do ilam=1,nlam
@@ -2073,7 +2081,7 @@ c-----------------------------------------------------------------------
 					must=(real(inu0)-0.5)/real(nnu0-1)
 					contr=(Fstar(ilam)/(pi*Dplanet**2))
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
-					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+contr*exp(-tauR(1:nr))*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)
+					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+contr*exp(-tauR(1:nr))*wscat(ilam,ig,1:nr)
 					contr=must*contr*exp(-tauR(1))
 				else
 					contr=0d0
@@ -2083,7 +2091,7 @@ c-----------------------------------------------------------------------
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
 					tauR(1:nr)=abs(tauR(1:nr)-tauR(1))
 					Ij(1:nr)=(BBr(ilam,0)*surface_emis(ilam)+contr*(1d0-surface_emis(ilam)))*exp(-tauR(1:nr))
-					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+wnu(inu)*Ij(1:nr)*Cs(ilam,1:nr)/Ce(ilam,ig,1:nr)
+					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+wnu(inu)*Ij(1:nr)*wscat(ilam,ig,1:nr)
 				enddo
 			enddo
 			call AddScatter(Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ilam,ig),
