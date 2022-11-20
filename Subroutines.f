@@ -1002,5 +1002,83 @@ c        print*,'series failed in expint'
 	return
 	end
 	
+	subroutine regridKtable(k0,w0,n0,g1,k1,w1,n1)
+	IMPLICIT NONE
+	integer n0,n1,ig,j,j1,j2
+	real*8 g0(n0),k0(n0),w0(n0)	
+	real*8 g1(n1),k1(n1),w1(n1),bg0,bg1,b0(n0+1),gg1(n1)
+	real*8 tot0,tot1,ww
 	
+	tot0=0d0
+	do ig=1,n0
+		tot0=tot0+k0(ig)*w0(ig)
+	enddo
+	tot0=tot0/sum(w0(1:n0))
+	call sortw(k0,w0,n0)
+	if(n1.eq.1) then
+		k1(1)=tot0
+	else
+		g0=w0
+		do ig=2,n0
+			g0(ig)=g0(ig)+g0(ig-1)
+		enddo
+		g0(1:n0)=g0(1:n0)/g0(n0)
+		w0=w0/sum(w0(1:n0))
+		if(.false.) then
+			do ig=1,n1
+				call hunt(g0,n0,g1(ig),j)
+				if(j.eq.0) then
+					k1(ig)=k0(1)
+				else
+					ww=(g1(ig)-g0(j+1))/(g0(j)-g0(j+1))
+					k1(ig)=k0(j)*ww+k0(j+1)*(1d0-ww)
+				endif
+			enddo
+			tot1=0d0
+			do ig=1,n1
+				tot1=tot1+w1(ig)*k1(ig)	
+			enddo
+			if(tot1.gt.0d0) then
+				k1(1:n1)=k1(1:n1)*tot0/tot1
+			else
+				k1(1:n1)=tot0
+			endif
+		else
+			gg1=w1
+			do ig=2,n1
+				gg1(ig)=gg1(ig)+gg1(ig-1)
+			enddo
+			gg1(1:n1)=gg1(1:n1)/gg1(n1)
+			b0(1)=0d0
+			do ig=1,n0
+				b0(ig+1)=g0(ig)
+			enddo
+			bg0=0d0
+			do ig=1,n1
+				bg1=gg1(ig)
+				k1(ig)=0d0
+				do j1=1,n0
+					if(b0(j1+1).ge.bg0) exit
+				enddo
+				do j2=j1,n0
+					if(b0(j2+1).gt.bg1) exit
+				enddo
+				if(j1.eq.j2) then
+					k1(ig)=k0(j1)
+				else if((j2-j1).eq.1) then
+					k1(ig)=(k0(j1)*(b0(j1+1)-bg0)+k0(j2)*(bg1-b0(j2)))/(bg1-bg0)
+				else
+					k1(ig)=(k0(j1)*(b0(j1+1)-bg0)+k0(j2)*(bg1-b0(j2)))
+					do j=j1+1,j2-1
+						k1(ig)=k1(ig)+k0(j)*(b0(j+1)-b0(j))
+					enddo
+					k1(ig)=k1(ig)/(bg1-bg0)
+				endif
+				bg0=bg1
+			enddo
+		endif
+	endif
+	
+	return
+	end
 	

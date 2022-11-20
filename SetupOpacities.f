@@ -141,7 +141,7 @@ c===============
 			enddo
 			do imol=1,nmol
 				if(opacitymol(imol)) then
-					fulladd(imol)=(kappa_tot(imol).gt.0.01*kappa_tot(0))
+					fulladd(imol)=(kappa_tot(imol).ge.0.01*kappa_tot(0))
 				endif
 			enddo
 			tot=0d0
@@ -154,7 +154,7 @@ c===============
 				endif
 			enddo
 			imol0=imol
-			if(imol0.lt.nmol) then
+			if(imol0.le.nmol) then
 			do imol=1,nmol
 				if(opacitymol(imol).and.fulladd(imol).and.imol.ne.imol0) then
 					ktemp(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
@@ -171,20 +171,7 @@ c===============
 					do ig=1,n_nu_line
 						if(.not.k_line(ig).ge.1d-80) k_line(ig)=1d-80
 					enddo
-					call sortw(k_line,w_line,n_nu_line)
-					do ig=2,n_nu_line
-						w_line(ig)=w_line(ig)+w_line(ig-1)
-					enddo
-					w_line(1:n_nu_line)=w_line(1:n_nu_line)/w_line(n_nu_line)
-					do ig=1,ng
-						call hunt(w_line,n_nu_line,gg(ig),ig_c)
-						if(ig_c.le.1) then
-							kappa(ig)=k_line(1)
-						else
-							w1=(gg(ig)-w_line(ig_c+1))/(w_line(ig_c)-w_line(ig_c+1))
-							kappa(ig)=k_line(ig_c)*w1+k_line(ig_c+1)*(1d0-w1)
-						endif
-					enddo
+					call regridKtable(k_line,w_line,n_nu_line,gg,kappa,wgg,ng)
 				endif
 			enddo
 			endif

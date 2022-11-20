@@ -389,42 +389,7 @@ C	 create the new empty FITS file
 					wtemp(ngF)=ww*Ktable(imol)%wg(ig)
 				enddo
 			enddo
-			tot=0d0
-			do ig=1,ngF
-				tot=tot+temp(ig)*wtemp(ig)
-			enddo
-			tot=tot/sum(wtemp(1:ngF))
-			call sortw(temp,wtemp,ngF)
-			if(ng.eq.1) then
-				Ktable(imol)%ktable(1,ilam,iT,iP)=tot
-			else
-				do ig=2,ngF
-					wtemp(ig)=wtemp(ig)+wtemp(ig-1)
-				enddo
-				wtemp(1:ngF)=wtemp(1:ngF)/wtemp(ngF)
-				do ig=1,ng
-					call hunt(wtemp,ngF,gg(ig),j)
-					if(j.eq.0) then
-						Ktable(imol)%ktable(ig,ilam,iT,iP)=temp(1)
-					else
-						w1=(gg(ig)-wtemp(j+1))/(wtemp(j)-wtemp(j+1))
-						Ktable(imol)%ktable(ig,ilam,iT,iP)=temp(j)*w1+temp(j+1)*(1d0-w1)
-					endif
-				enddo
-				tot2=0d0
-				do ig=1,ng
-					tot2=tot2+wgg(ig)*Ktable(imol)%ktable(ig,ilam,iT,iP)
-				enddo
-				if(tot2.ne.0d0) then
-					if(tot/tot2.gt.1d0) then
-						Ktable(imol)%ktable(ng,ilam,iT,iP)=Ktable(imol)%ktable(ng,ilam,iT,iP)+(tot-tot2)/wgg(ng)
-					else
-						Ktable(imol)%ktable(1:ng,ilam,iT,iP)=Ktable(imol)%ktable(1:ng,ilam,iT,iP)*tot/tot2
-					endif
-				else
-					Ktable(imol)%ktable(1:ng,ilam,iT,iP)=tot
-				endif
-			endif
+			call regridKtable(temp,wtemp,ngF,gg,Ktable(imol)%ktable(1:ng,ilam,iT,iP),wgg,ng)			
 		endif
 		enddo
 		enddo
