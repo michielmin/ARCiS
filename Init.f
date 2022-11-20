@@ -844,6 +844,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) maxtau
 		case("specres")
 			read(key%value,*) specres
+		case("specreslr","specres_lr","specresrt","specres_rt")
+			read(key%value,*) specres_LR
 		case("specresdust")
 			call output("Parameter specresdust is not in use anymore!")
 		case("usexs")
@@ -1475,6 +1477,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	lam1=1d0
 	lam2=15d0
 	specres=10d0
+	specres_LR=10d0
 	
 	useXS=.false.
 	
@@ -2033,7 +2036,6 @@ c number of cloud/nocloud combinations
 	
 	lminRT=0.11d0*micron
 	lmaxRT=47d0*micron
-	specres_LR=10d0
 
 	nlam=0
 	if(useobsgrid) then
