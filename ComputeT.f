@@ -293,7 +293,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 			FstarBottom=abs(Ih_omp(0))
 
 c Si_omp(0:nr,0) is the direct stellar contribution
-			Si_omp(1:nr,0)=Ij_omp(1:nr)*wscat(1:nr,ilam,ig)/4d0
+			Si_omp(1:nr,0)=Ij_omp(1:nr)*wscat(1:nr,ilam,ig)
 			do ir=1,nr
 				if(.not.Si_omp(ir,0).gt.0d0) Si_omp(ir,0)=0d0
 			enddo
