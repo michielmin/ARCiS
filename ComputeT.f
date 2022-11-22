@@ -525,7 +525,7 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 				E=E+IntEab(ilam,ir,0)*scale*BB_LR(ilam,iT)*SurfEmis_LR(ilam)
 			enddo
 			do jr=1,nr
-				iT=T(jr)+1
+				iT=T(jr)*Fl(jr)**0.25+1
 				if(iT.gt.nBB-1) iT=nBB-1
 				if(iT.lt.1) iT=1
 				scale=Fl(jr)*(T(jr)/real(iT))**4
