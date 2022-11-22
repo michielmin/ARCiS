@@ -2036,7 +2036,7 @@ c-----------------------------------------------------------------------
 					tau=d*Ce(ilam,ig,ir+1)/dens(ir+1)
 					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
 					tau=tau+d*Ce(ilam,ig,ir)/dens(ir)
-				else if(ir.eq.0) then
+				else if(ir.eq.1) then
 					d=abs(sqrt(P(2)*P(1))-P(1))*1d6/grav(1)
 					tau=d*Ce(ilam,ig,1)/dens(1)
 					d=abs(P(1)*sqrt(P(1)/P(2))-P(1))*1d6/grav(1)
