@@ -435,8 +435,6 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 
 	enddo
 
-	if((.not.chi2.lt.chimax).and.jj.lt.3) goto 1
-
 	lambda=-1d0
 	call mrqmin(yobs,dyobs,ny,var,ia,n_ret,Cov,alphaW,nca,chi2,mrqcomputemodel,lambda,beta)
 	lambda=0d0
