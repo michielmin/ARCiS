@@ -2070,7 +2070,8 @@ c-----------------------------------------------------------------------
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(tauR,Ij,ilam,ig,inu0,inu,contr,must)
-!$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar,lamemis,nnu0,wscat)
+!$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar,lamemis,
+!$OMP&        nnu0,wscat)
 	allocate(tauR(nr),Ij(nr))
 !$OMP DO
 	do ilam=1,nlam
@@ -2095,7 +2096,7 @@ c-----------------------------------------------------------------------
 				enddo
 			enddo
 			call AddScatter(Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ilam,ig),
-     &					Ca(ilam,ig,1:nr),Cs(ilam,1:nr),Ce(ilam,ig,1:nr),nr,nu,wnu,nnu,nnu0)
+     &	Ca(ilam,ig,1:nr),Cs(ilam,1:nr),Ce(ilam,ig,1:nr),(1d0-surface_emis(ilam)),nr,nu,wnu,nnu,nnu0)
 		enddo
 		endif
 	enddo

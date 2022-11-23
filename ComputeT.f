@@ -322,7 +322,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)*wscat(1:nr,ilam,ig)
 
 			call AddScatter(Si_omp(1:nr,0:nr+1),tauR_nu(1:nr,ilam,ig),
-     &					Ca(1:nr,ilam,ig),Cs(1:nr,ilam,ig),Ce(1:nr,ilam,ig),nr,nu,wnu,nnu,nr+2)
+     &					Ca(1:nr,ilam,ig),Cs(1:nr,ilam,ig),Ce(1:nr,ilam,ig),(1d0-SurfEmis_LR(ilam)),nr,nu,wnu,nnu,nr+2)
 
 			do inu=1,nnu
 				tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
@@ -390,7 +390,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(tot,iT,scale,jr,ir)
-!$OMP& SHARED(nlam_LR,BB_LR,IntH,IntHnu,nr,T)
+!$OMP& SHARED(nlam_LR,BB_LR,IntH,IntHnu,nr,T,IntHnuSurf,SurfEmis_LR,dfreq_LR)
 !$OMP DO
 	do jr=1,nr
 		iT=T(jr)+1
@@ -401,6 +401,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			tot=0d0
 			do ilam=1,nlam_LR
 				tot=tot+scale*BB_LR(ilam,iT)*IntHnu(ilam,ir,jr)
+				tot=tot+scale*BB_LR(ilam,iT)*abs(IntHnu(ilam,1,jr))*IntHnuSurf(ilam,ir)*(1d0-SurfEmis_LR(ilam))/dfreq_LR(ilam)
 			enddo
 			IntH(ir,jr)=tot
 		enddo
@@ -1141,14 +1142,14 @@ c
 
 
 
-	subroutine AddScatter(Si_in,tauR_in,Ca,Cs,Ce,nr,nu,wnu,nnu,NRHS)
+	subroutine AddScatter(Si_in,tauR_in,Ca,Cs,Ce,SurfAlb,nr,nu,wnu,nnu,NRHS)
 	use Constants
 	IMPLICIT NONE
 	integer inu,nnu,ilam,ir,info,NRHS,nr,i,j,jr
 	real*8 tauR(nr),tauR_in(nr),Si_in(nr,NRHS)
 	real*8 Si(nr,NRHS),Ca(nr),Cs(nr),Ce(nr)
-	real*8 nu(nnu),wnu(nnu),albedo(1:nr)
-	real*8 Ij(nr),Itot(nr,NRHS),Linv(nr,nr),Lmat(nr,nr)
+	real*8 nu(nnu),wnu(nnu),albedo(1:nr),SurfAlb
+	real*8 Ij(nr),Itot(nr,NRHS),Linv(nr,nr),Lmat(nr,nr),Hsurf(nr)
 	integer IWORKomp(nr)
 
 	do ir=1,nr
@@ -1157,12 +1158,17 @@ c
 	enddo
 
 	Linv=0d0
+	Hsurf=0d0
 	do inu=1,nnu
 		tauR(1:nr)=tauR_in(1:nr)/abs(nu(inu))
 		call InvertIjExp(tauR,Lmat,nr)
 		do ir=1,nr
 			Linv(ir,1:nr)=Linv(ir,1:nr)+wnu(inu)*Lmat(ir,1:nr)*albedo(ir)
 		enddo
+		Hsurf(1:nr)=Hsurf(1:nr)+2d0*nu(inu)*wnu(inu)*Lmat(1,1:nr)
+	enddo
+	do ir=1,nr
+		Linv(ir,1:nr)=Linv(ir,1:nr)+SurfAlb*Hsurf(1:nr)*albedo(ir)
 	enddo
 
 	Linv=-Linv
