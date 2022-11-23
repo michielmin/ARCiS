@@ -59,7 +59,7 @@
 	real*8,allocatable :: Fstar_LR(:),SurfEmis_LR(:),IntEab(:,:,:),IntHnuSurf(:,:),IntEabSurf(:,:)
 	integer,allocatable :: IP(:)
 	real*8,allocatable :: WS(:),nu(:),wnu(:),Hstar_lam(:),Hsurf_lam(:)
-	real*8,allocatable :: IhN(:,:,:),IjN(:,:,:)
+	real*8,allocatable :: IhN(:,:,:),IjN(:,:,:),HBottom(:)
 	character*500 file
 	integer icloud
 	logical Convec(0:nr)
@@ -270,13 +270,13 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,EabDirect_omp,
+!$OMP& PRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,EabDirect_omp,HBottom,
 !$OMP&			Hstar_omp,SurfStar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,tot,IhN,IjN)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,
 !$OMP&			Hstar,SurfStar,Dplanet,Fstar_LR,must,wabs,wscat,EabDirect,IntEab,IntHnuSurf,IntEabSurf)
 	allocate(Si_omp(nr,0:nr+1),tauR_omp(nr),Ih_omp(nr),Ij_omp(nr))
 	allocate(IhN(nr,0:nr+1,nnu),IjN(nr,0:nr+1,nnu))
-	allocate(Hstar_omp(nr),Hstar_lam(nr),Hsurf_lam(nr),EabDirect_omp(nr))
+	allocate(Hstar_omp(nr),Hstar_lam(nr),Hsurf_lam(nr),EabDirect_omp(nr),HBottom(nr))
 	Hstar_omp=0d0
 	SurfStar_omp=0d0
 	EabDirect_omp=0d0
@@ -343,6 +343,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 					Ij_omp(1:nr)=IjN(1:nr,ir,inu)
 					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+4d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 					IntEab(ilam,1:nr,ir)=IntEab(ilam,1:nr,ir)+4d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
+					HBottom(ir)=HBottom(ir)+4d0*nu(inu)*wnu(inu)*Ij_omp(1)
 				enddo
 			enddo
 
@@ -352,7 +353,14 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				Hsurf_lam(1:nr)=Hsurf_lam(1:nr)+FstarBottom*2d0*nu(inu)*wnu(inu)*Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
 				IntHnuSurf(ilam,1:nr)=IntHnuSurf(ilam,1:nr)+2d0*nu(inu)*wnu(inu)*Ih_omp(1:nr)
 				IntEabSurf(ilam,1:nr)=IntEabSurf(ilam,1:nr)+2d0*wnu(inu)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
-				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+FstarBottom*2d0*wnu(inu)*Ij_omp(1:nr)*(1d0-SurfEmis_LR(ilam))*Ca(1:nr,ilam,ig)
+				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+FstarBottom*2d0*wnu(inu)*
+     &						Ij_omp(1:nr)*(1d0-SurfEmis_LR(ilam))*Ca(1:nr,ilam,ig)
+				do ir=1,nr
+					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+HBottom(ir)*2d0*nu(inu)*wnu(inu)*
+     &						Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
+					IntEab(ilam,1:nr,ir)=IntEab(ilam,1:nr,ir)+HBottom(ir)*2d0*nu(inu)*wnu(inu)*
+     &						Ij_omp(1:nr)*Ca(1:nr,ilam,ig)*(1d0-SurfEmis_LR(ilam))
+				enddo
 			enddo
 
 			do ir=1,nr
@@ -367,7 +375,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 	EabDirect=EabDirect+EabDirect_omp
 !$OMP END CRITICAL
 	deallocate(Si_omp,tauR_omp,Ih_omp,Ij_omp,IhN,IjN)
-	deallocate(Hstar_omp,Hstar_lam,Hsurf_lam,EabDirect_omp)
+	deallocate(Hstar_omp,Hstar_lam,Hsurf_lam,EabDirect_omp,HBottom)
 !$OMP FLUSH
 !$OMP END PARALLEL
 
@@ -401,7 +409,6 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			tot=0d0
 			do ilam=1,nlam_LR
 				tot=tot+scale*BB_LR(ilam,iT)*IntHnu(ilam,ir,jr)
-				tot=tot+scale*BB_LR(ilam,iT)*abs(IntHnu(ilam,1,jr))*IntHnuSurf(ilam,ir)*(1d0-SurfEmis_LR(ilam))/dfreq_LR(ilam)
 			enddo
 			IntH(ir,jr)=tot
 		enddo
