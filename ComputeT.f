@@ -54,7 +54,7 @@
 	real*8 IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact,err
 	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
 	integer i1,i2,ngF,j
-	real*8 ww,w1,w2,SurfStar,SurfStar_omp,FstarBottom,tauRoss
+	real*8 ww,w1,w2,FstarBottom,tauRoss
 	real*8,allocatable :: Si_omp(:,:),Ih_omp(:),Ij_omp(:),tauR_omp(:),Hsurf(:,:),Hstar_omp(:),EabDirect_omp(:)
 	real*8,allocatable :: Fstar_LR(:),SurfEmis_LR(:),IntEab(:,:,:),IntHnuSurf(:,:),IntEabSurf(:,:)
 	integer,allocatable :: IP(:)
@@ -261,7 +261,6 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	ff=1d0
 	
 	Hstar(1:nr)=0d0
-	SurfStar=0d0
 	IntHnu(1:nlam_LR,1:nr,1:nr)=0d0
 	IntEab(1:nlam_LR,1:nr,1:nr)=0d0
 	IntHnuSurf(1:nlam_LR,1:nr)=0d0
@@ -271,14 +270,13 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,EabDirect_omp,HBottom,
-!$OMP&			Hstar_omp,SurfStar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,tot,IhN,IjN)
+!$OMP&			Hstar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,tot,IhN,IjN)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,
-!$OMP&			Hstar,SurfStar,Dplanet,Fstar_LR,must,wabs,wscat,EabDirect,IntEab,IntHnuSurf,IntEabSurf)
+!$OMP&			Hstar,Dplanet,Fstar_LR,must,wabs,wscat,EabDirect,IntEab,IntHnuSurf,IntEabSurf)
 	allocate(Si_omp(nr,0:nr+1),tauR_omp(nr),Ih_omp(nr),Ij_omp(nr))
 	allocate(IhN(nr,0:nr+1,nnu),IjN(nr,0:nr+1,nnu))
 	allocate(Hstar_omp(nr),Hstar_lam(nr),Hsurf_lam(nr),EabDirect_omp(nr),HBottom(nr))
 	Hstar_omp=0d0
-	SurfStar_omp=0d0
 	EabDirect_omp=0d0
 !$OMP DO
 	do ilam=1,nlam_LR
@@ -293,7 +291,6 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 
 			Hstar_lam(1:nr)=Hstar_lam(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 			EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
-			SurfStar_omp=SurfStar_omp+dfreq_LR(ilam)*wgg(ig)*abs(Ih_omp(1))*SurfEmis_LR(ilam)
 			FstarBottom=abs(Ih_omp(1))
 
 c Si_omp(0:nr,0) is the direct stellar contribution
@@ -334,7 +331,6 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				Ij_omp(1:nr)=IjN(1:nr,0,inu)
 				Hstar_lam(1:nr)=Hstar_lam(1:nr)+4d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+4d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
-				SurfStar_omp=SurfStar_omp+4d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*abs(Ih_omp(1))*SurfEmis_LR(ilam)
 			enddo
 
 			do ir=1,nr
@@ -371,7 +367,6 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 !$OMP END DO
 !$OMP CRITICAL
 	Hstar=Hstar+Hstar_omp
-	SurfStar=SurfStar+SurfStar_omp
 	EabDirect=EabDirect+EabDirect_omp
 !$OMP END CRITICAL
 	deallocate(Si_omp,tauR_omp,Ih_omp,Ij_omp,IhN,IjN)
