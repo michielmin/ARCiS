@@ -659,6 +659,11 @@ c Note we are here using the symmetry between North and South
 	deallocate(SiR0)
 !$OMP FLUSH
 !$OMP END PARALLEL
+	tot=0d0
+	do ilam=1,nlam
+		if(.not.RTgridpoint(ilam)) tot=tot+dfreq(ilam)*fluxp(ilam)
+	enddo
+	print*,tot/(Tstar**4*(Rstar/Dplanet)**2)
 	fluxp=fluxp*1d23/distance**2
 	phase(ipc,0,1:nlam)=fluxp(1:nlam)
 	flux(0,1:nlam)=0d0
@@ -2082,7 +2087,7 @@ c-----------------------------------------------------------------------
 					must=(real(inu0)-0.5)/real(nnu0-1)
 					contr=(Fstar(ilam)/(pi*Dplanet**2))
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
-					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+contr*exp(-tauR(1:nr))*wscat(ilam,ig,1:nr)
+					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+0.5d0*contr*exp(-tauR(1:nr))*wscat(ilam,ig,1:nr)
 					contr=must*contr*exp(-tauR(1))
 				else
 					contr=0d0

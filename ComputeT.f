@@ -327,19 +327,19 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			enddo
 
 			do inu=1,nnu
-				Ih_omp(1:nr)=IhN(1:nr,0,inu)*2d0
-				Ij_omp(1:nr)=IjN(1:nr,0,inu)*2d0
+				Ih_omp(1:nr)=IhN(1:nr,0,inu)
+				Ij_omp(1:nr)=IjN(1:nr,0,inu)
 				Hstar_lam(1:nr)=Hstar_lam(1:nr)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
 			enddo
 			HBottom=0d0
 			do ir=1,nr
 				do inu=1,nnu
-					Ih_omp(1:nr)=IhN(1:nr,ir,inu)*2d0
-					Ij_omp(1:nr)=IjN(1:nr,ir,inu)*2d0
-					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
-					IntEab(ilam,1:nr,ir)=IntEab(ilam,1:nr,ir)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
-					HBottom(ir)=HBottom(ir)+2d0*nu(inu)*wnu(inu)*Ij_omp(1)
+					Ih_omp(1:nr)=IhN(1:nr,ir,inu)
+					Ij_omp(1:nr)=IjN(1:nr,ir,inu)
+					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+4d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
+					IntEab(ilam,1:nr,ir)=IntEab(ilam,1:nr,ir)+4d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
+					HBottom(ir)=HBottom(ir)+4d0*nu(inu)*wnu(inu)*Ij_omp(1)
 				enddo
 			enddo
 
@@ -348,26 +348,20 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				Ij_omp(1:nr)=exp(-abs(tauR_omp(1:nr)-tauR_omp(1)))
 				Ih_omp(1:nr)=Ij_omp(1:nr)
 				do ir=1,nr
-					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+HBottom(ir)*2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
+					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+2d0*HBottom(ir)*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
      &						Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
-					IntEab(ilam,1:nr,ir)=IntEab(ilam,1:nr,ir)+HBottom(ir)*2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
+					IntEab(ilam,1:nr,ir)=IntEab(ilam,1:nr,ir)+2d0*HBottom(ir)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
      &						Ij_omp(1:nr)*Ca(1:nr,ilam,ig)*(1d0-SurfEmis_LR(ilam))
 				enddo
 			enddo
 			do inu=1,nnu
-				Ih_omp(1:nr)=IhN(1:nr,nr+1,inu)*2d0
-				Ij_omp(1:nr)=IjN(1:nr,nr+1,inu)*2d0
-				Hsurf_lam(1:nr)=Hsurf_lam(1:nr)+FstarBottom*2d0*nu(inu)*wnu(inu)*Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
-				IntHnuSurf(ilam,1:nr)=IntHnuSurf(ilam,1:nr)+2d0*nu(inu)*wnu(inu)*Ih_omp(1:nr)
-				IntEabSurf(ilam,1:nr)=IntEabSurf(ilam,1:nr)+2d0*wnu(inu)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
-				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+FstarBottom*2d0*wnu(inu)*
+				Ih_omp(1:nr)=IhN(1:nr,nr+1,inu)
+				Ij_omp(1:nr)=IjN(1:nr,nr+1,inu)
+				Hsurf_lam(1:nr)=Hsurf_lam(1:nr)+FstarBottom*4d0*nu(inu)*wnu(inu)*Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
+				IntHnuSurf(ilam,1:nr)=IntHnuSurf(ilam,1:nr)+4d0*nu(inu)*wnu(inu)*Ih_omp(1:nr)
+				IntEabSurf(ilam,1:nr)=IntEabSurf(ilam,1:nr)+4d0*wnu(inu)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
+				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+FstarBottom*4d0*wnu(inu)*
      &						Ij_omp(1:nr)*(1d0-SurfEmis_LR(ilam))*Ca(1:nr,ilam,ig)
-				do ir=1,nr
-					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+HBottom(ir)*2d0*nu(inu)*wnu(inu)*
-     &						Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
-					IntEab(ilam,1:nr,ir)=IntEab(ilam,1:nr,ir)+HBottom(ir)*2d0*wnu(inu)*
-     &						Ij_omp(1:nr)*Ca(1:nr,ilam,ig)*(1d0-SurfEmis_LR(ilam))
-				enddo
 			enddo
 
 			do ir=1,nr
@@ -840,10 +834,24 @@ c	Ts=T*Fl**0.25
 		Im(jr)=y
 
 		if(jr.gt.1) then
-			do ir=jr-1,1,-1
-				Im(ir)=Im(ir+1)*exptau(ir)
-				if(Im(ir).le.0d0) exit
-			enddo
+			ir=jr-1
+			s0=0d0
+			s1=1d0
+			x1=dtau(ir)
+			if(x1.lt.1d-4) then
+				y=0.5d0*x1*(s0+s1)
+			else if(x1.gt.1d4) then
+				y=s0+(s1-s0)/x1
+			else
+				y=(s0*x1+s1-s0-exptau(ir)*(s1*x1+s1-s0))/x1
+			endif
+			Im(ir)=Im(jr)*exptau(ir)+y
+			if(jr.gt.2) then
+				do ir=jr-2,1,-1
+					Im(ir)=Im(ir+1)*exptau(ir)
+					if(Im(ir).le.0d0) exit
+				enddo
+			endif
 		endif
 		
 		Ip=0d0
@@ -861,10 +869,24 @@ c	Ts=T*Fl**0.25
 			endif
 			Ip(jr)=y
 			if(jr.lt.nr) then
-				do ir=jr+1,nr
-					Ip(ir)=Ip(ir-1)*exptau(ir-1)
-					if(Ip(ir).le.0d0) exit
-				enddo
+				ir=jr
+				s0=0d0
+				s1=1d0
+				x1=dtau(ir)
+				if(x1.lt.1d-4) then
+					y=0.5d0*x1*(s0+s1)
+				else if(x1.gt.1d4) then
+					y=s0+(s1-s0)/x1
+				else
+					y=(s0*x1+s1-s0-exptau(ir)*(s1*x1+s1-s0))/x1
+				endif
+				Ip(jr+1)=Ip(jr)*exptau(ir)+y
+				if(jr.lt.nr-1) then
+					do ir=jr+2,nr
+						Ip(ir)=Ip(ir-1)*exptau(ir-1)
+						if(Ip(ir).le.0d0) exit
+					enddo
+				endif
 			endif
 		endif
 		Linv(1:nr,jr)=(Ip(1:nr)+Im(1:nr))/2d0
@@ -1181,9 +1203,9 @@ c
 		Hsurf(1:nr)=Hsurf(1:nr)+2d0*nu(inu)*wnu(inu)*Lmat(1,1:nr)
 	enddo
 	do inu=1,nnu
-		tauR(1:nr)=tauR_in(1:nr)/abs(nu(inu))
+		tauR(1:nr)=abs((tauR_in(1:nr)-tauR_in(1))/nu(inu))
 		do ir=1,nr
-			Linv(ir,1:nr)=Linv(ir,1:nr)+SurfAlb*Hsurf(1:nr)*albedo(ir)*exp(-tauR(ir))
+			Linv(ir,1:nr)=Linv(ir,1:nr)+wnu(inu)*SurfAlb*Hsurf(1:nr)*albedo(ir)*exp(-tauR(ir))
 		enddo
 	enddo
 
