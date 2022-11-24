@@ -51,7 +51,7 @@
 	integer info,IWORK(10*(nr+1)*(nr+1)),NRHS,ii(3),iscat,nscat
 	real*8 tau1,tau2,ee0,ee1,ee2,tauR(nr),Ij(nr),Ih(nr),scale,dtauR(nr),EabDirect(nr)
 	integer nlam_LR
-	real*8 IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact,err
+	real*8 IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact,err,tot1
 	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
 	integer i1,i2,ngF,j
 	real*8 ww,w1,w2,FstarBottom,tauRoss
@@ -308,7 +308,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
 				Ij_omp(1:nr)=exp(-abs(tauR_omp(1:nr)-tauR_omp(1)))
 				Ih_omp(1:nr)=Ij_omp(1:nr)
-				Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
+				Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)/2d0
 				Hsurf_lam(1:nr)=Hsurf_lam(1:nr)+2d0*FstarBottom*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
      & 								Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
 				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+2d0*FstarBottom*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
@@ -327,19 +327,19 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			enddo
 
 			do inu=1,nnu
-				Ih_omp(1:nr)=IhN(1:nr,0,inu)
-				Ij_omp(1:nr)=IjN(1:nr,0,inu)
-				Hstar_lam(1:nr)=Hstar_lam(1:nr)+4d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
-				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+4d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
+				Ih_omp(1:nr)=IhN(1:nr,0,inu)*2d0
+				Ij_omp(1:nr)=IjN(1:nr,0,inu)*2d0
+				Hstar_lam(1:nr)=Hstar_lam(1:nr)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
+				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
 			enddo
 			HBottom=0d0
 			do ir=1,nr
 				do inu=1,nnu
-					Ih_omp(1:nr)=IhN(1:nr,ir,inu)
-					Ij_omp(1:nr)=IjN(1:nr,ir,inu)
-					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+4d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
-					IntEab(ilam,1:nr,ir)=IntEab(ilam,1:nr,ir)+4d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
-					HBottom(ir)=HBottom(ir)+4d0*nu(inu)*wnu(inu)*Ij_omp(1)
+					Ih_omp(1:nr)=IhN(1:nr,ir,inu)*2d0
+					Ij_omp(1:nr)=IjN(1:nr,ir,inu)*2d0
+					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
+					IntEab(ilam,1:nr,ir)=IntEab(ilam,1:nr,ir)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
+					HBottom(ir)=HBottom(ir)+2d0*nu(inu)*wnu(inu)*Ij_omp(1)
 				enddo
 			enddo
 
@@ -355,8 +355,8 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				enddo
 			enddo
 			do inu=1,nnu
-				Ih_omp(1:nr)=IhN(1:nr,nr+1,inu)
-				Ij_omp(1:nr)=IjN(1:nr,nr+1,inu)
+				Ih_omp(1:nr)=IhN(1:nr,nr+1,inu)*2d0
+				Ij_omp(1:nr)=IjN(1:nr,nr+1,inu)*2d0
 				Hsurf_lam(1:nr)=Hsurf_lam(1:nr)+FstarBottom*2d0*nu(inu)*wnu(inu)*Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
 				IntHnuSurf(ilam,1:nr)=IntHnuSurf(ilam,1:nr)+2d0*nu(inu)*wnu(inu)*Ih_omp(1:nr)
 				IntEabSurf(ilam,1:nr)=IntEabSurf(ilam,1:nr)+2d0*wnu(inu)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
@@ -1180,8 +1180,11 @@ c
 		enddo
 		Hsurf(1:nr)=Hsurf(1:nr)+2d0*nu(inu)*wnu(inu)*Lmat(1,1:nr)
 	enddo
-	do ir=1,nr
-		Linv(ir,1:nr)=Linv(ir,1:nr)+SurfAlb*Hsurf(1:nr)*albedo(ir)
+	do inu=1,nnu
+		tauR(1:nr)=tauR_in(1:nr)/abs(nu(inu))
+		do ir=1,nr
+			Linv(ir,1:nr)=Linv(ir,1:nr)+SurfAlb*Hsurf(1:nr)*albedo(ir)*exp(-tauR(ir))
+		enddo
 	enddo
 
 	Linv=-Linv
