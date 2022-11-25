@@ -431,7 +431,7 @@ c=========== begin experimental redistribution =================================
 
 	E0=(Rstar/Dplanet)**2*((2d0*(pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*(f_deepredist-must)
 	do ir=1,nr
-		Hedd(ir)=Hedd(ir)+max(-abs(Hstar(ir)),E0*exp(-P(ir)*10d0))
+		Hedd(ir)=Hedd(ir)+max(-abs(Hstar(ir)),E0*exp(-P(ir)/Pdeepredist))
 	enddo
 
 	endif

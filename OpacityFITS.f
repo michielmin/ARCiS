@@ -213,7 +213,7 @@ C	 create the new empty FITS file
 	integer firstpix,nbuffer,npixels
 	integer istat,stat4,tmp_int,stat5,stat6
 	real*8  nullval,tot2,w1,ww,Pl,Planck,tot,l1,l2
-	real*8,allocatable :: lamF(:),Ktemp(:,:,:,:),temp(:),wtemp(:)
+	real*8,allocatable :: lamF(:),Ktemp(:,:,:,:),temp(:),wtemp(:),work1(:),work2(:),work3(:)
 	logical anynull,truefalse,xs
 	integer naxes(4)
 	character*500 filename
@@ -356,10 +356,13 @@ C	 create the new empty FITS file
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,ww,w1,iT,iP,l1,l2)
+!$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,ww,w1,iT,iP,l1,l2,work1,work2,work3)
 !$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp,dlam,RTgridpoint,blam,ii1,ii2)
 	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam))
 	allocate(wtemp(Ktable(imol)%ng*Ktable(imol)%nlam))
+	allocate(work1(Ktable(imol)%ng*Ktable(imol)%nlam))
+	allocate(work2(Ktable(imol)%ng*Ktable(imol)%nlam))
+	allocate(work3(Ktable(imol)%ng*Ktable(imol)%nlam))
 !$OMP DO
 	do ilam=1,nlam
 		do iP=1,Ktable(imol)%nP
@@ -389,7 +392,7 @@ C	 create the new empty FITS file
 					wtemp(ngF)=ww*Ktable(imol)%wg(ig)
 				enddo
 			enddo
-			call regridKtable(temp,wtemp,ngF,gg,Ktable(imol)%ktable(1:ng,ilam,iT,iP),wgg,ng)			
+			call regridKtable(temp,wtemp,ngF,gg,Ktable(imol)%ktable(1:ng,ilam,iT,iP),wgg,ng,work1,work2,work3)
 		endif
 		enddo
 		enddo
@@ -397,6 +400,7 @@ C	 create the new empty FITS file
 !$OMP END DO
 	deallocate(temp)
 	deallocate(wtemp)
+	deallocate(work1,work2,work3)
 !$OMP FLUSH
 !$OMP END PARALLEL
 	deallocate(Ktemp,lamF)

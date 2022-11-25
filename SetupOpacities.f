@@ -19,8 +19,8 @@
 	real*8,allocatable :: nu_line(:),dnu_line(:),mixrat_tmp(:)
 	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
 	logical,allocatable,save :: fulladd(:)
-	real*8,allocatable,save :: k_line(:),ktemp(:),kappa(:),w_line(:),kappa_tot(:)
-!$OMP THREADPRIVATE(fulladd,k_line,ktemp,kappa,w_line,kappa_tot)
+	real*8,allocatable,save :: k_line(:),ktemp(:),kappa(:),w_line(:),kappa_tot(:),work1(:),work2(:),work3(:)
+!$OMP THREADPRIVATE(fulladd,k_line,ktemp,kappa,w_line,kappa_tot,work1,work2,work3)
 	integer n_nu_line,iT
 	integer i,j,ir,k,nl,ig,ig_c,imol0
 	integer,allocatable :: inu1(:),inu2(:)
@@ -75,6 +75,9 @@ c	n_nu_line=ng*min(j,4)
 		allocate(w_line(n_nu_line))
 		allocate(fulladd(nmol))
 		allocate(kappa_tot(0:nmol))
+		allocate(work1(n_nu_line))
+		allocate(work2(n_nu_line))
+		allocate(work3(n_nu_line))
 !$OMP END PARALLEL
 
 	do ir=nr,1,-1
@@ -115,11 +118,20 @@ c===============
 		call ComputePAH(cont_tot,Csca(ir,1:nlam),computelam)
 		call Compute_optEC(cont_tot,Csca(ir,1:nlam),computelam)
 		kappa_mol=0d0
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(imol)
+!$OMP& SHARED(includemol,nmol,kappa_mol,ir)
+!$OMP DO SCHEDULE(DYNAMIC,1)
 		do imol=1,nmol
 			if(includemol(imol)) then
 				call ReadOpacityFITS(kappa_mol,imol,ir)
 			endif
 		enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,j,imol,ig,ig_c,tot,tot2,imol0,w1)
@@ -171,7 +183,7 @@ c===============
 					do ig=1,n_nu_line
 						if(.not.k_line(ig).ge.1d-80) k_line(ig)=1d-80
 					enddo
-					call regridKtable(k_line,w_line,n_nu_line,gg,kappa,wgg,ng)
+					call regridKtable(k_line,w_line,n_nu_line,gg,kappa,wgg,ng,work1,work2,work3)
 				endif
 			enddo
 			endif
@@ -238,6 +250,7 @@ c===============
 		deallocate(w_line)
 		deallocate(ktemp)
 		deallocate(kappa,fulladd,kappa_tot)
+		deallocate(work1,work2,work3)
 !$OMP END PARALLEL
 
 	if(.not.retrieval) then
@@ -373,19 +386,11 @@ c		enddo
  	tab3 => Ktab%ktable(1:ng,1:nlam,iT,iP+1)
  	tab4 => Ktab%ktable(1:ng,1:nlam,iT+1,iP+1)
  
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,ig)
-!$OMP& SHARED(nlam,ng,kappa_mol,imol,tab1,tab2,tab3,tab4,wT1,wT2,wP1,wP2,iT,iP,computelam)
-!$OMP DO
 	do ilam=1,nlam
 		if(computelam(ilam)) then
 			kappa_mol(1:ng,ilam,imol)=tab1(1:ng,ilam)*wT1*wP1+tab2(1:ng,ilam)*wT2*wP1+tab3(1:ng,ilam)*wT1*wP2+tab4(1:ng,ilam)*wT2*wP2
 		endif
 	enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
 
 	return
 	end

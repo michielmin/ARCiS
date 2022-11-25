@@ -1124,6 +1124,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) deepredist
 		case("n_deepredist","ndeepredist")
 			read(key%value,*) n_deepRedist
+		case("pdeepredist")
+			read(key%value,*) Pdeepredist
 		case("readfull3d")
 			read(key%value,*) readFull3D
 		case("computealbedo","planetalbedo")
@@ -1572,6 +1574,7 @@ c  GGchem was still implemented slightly wrong.
 	deepRedist=.false.
 	f_deep0=0.5d0
 	n_deepRedist=1
+	Pdeepredist=0.1d0
 
 	readFull3D=.false.
 	computealbedo=.false.

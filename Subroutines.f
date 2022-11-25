@@ -1002,19 +1002,19 @@ c        print*,'series failed in expint'
 	return
 	end
 	
-	subroutine regridKtable(k0,w0,n0,g1,k1,w1,n1)
+	subroutine regridKtable(k0,w0,n0,g1,k1,w1,n1, g0,b0,gg1)
 	IMPLICIT NONE
 	integer n0,n1,ig,j,j1,j2
-	real*8 g0(n0),k0(n0),w0(n0)	
-	real*8 g1(n1),k1(n1),w1(n1),bg0,bg1,b0(n0+1),gg1(n1)
-	real*8 tot0,tot1,ww
+	real*8 k0(n0),w0(n0),g1(n1),k1(n1),w1(n1)
+	real*8 g0(n0),b0(n0+1),gg1(n1)
+	real*8 tot0,tot1,ww,bg0,bg1
 	
 	tot0=0d0
 	do ig=1,n0
 		tot0=tot0+k0(ig)*w0(ig)
 	enddo
 	tot0=tot0/sum(w0(1:n0))
-	call sortw(k0,w0,n0)
+	call sortw_2(k0,w0,n0)
 	if(n1.eq.1) then
 		k1(1)=tot0
 	else
