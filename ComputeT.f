@@ -571,9 +571,6 @@ c	Ts=T*Fl**0.25
 	if(maxErr.lt.(epsiter/5d0).and.iter.gt.5) exit
 	enddo
 
-	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
-	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K"
-
 	maxErr=0d0
 	do ir=1,nr-1
 		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.maxErr) maxErr=abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir))
@@ -582,6 +579,7 @@ c	Ts=T*Fl**0.25
 	if(.not.allocated(Tdist)) allocate(Tdist(nr,maxiter))
 	Tdist(1:nr,nTiter)=T(1:nr)
 	call output("Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%")
+	if(do3D.and..not.retrieval) print*,"Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%"
 	T0(1:nr)=Tinp(1:nr)
 	T1(1:nr)=T(1:nr)
 	do ir=1,nr
@@ -590,6 +588,10 @@ c	Ts=T*Fl**0.25
 	do ir=1,nr
 		T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
 	enddo
+
+	Tsurface=T(1)
+	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
+	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K"
 
 	if(.not.retrieval) then
 		open(unit=26,file=trim(outputdir) // 'convection.dat',RECL=1000)
