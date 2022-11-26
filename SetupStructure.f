@@ -6,7 +6,7 @@
 	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill,MMW_form,P0,R0,Kzz_r(nr)
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3,ir
-	logical ini,compute_mixrat
+	logical ini,compute_mixrat,dosimplerainout
 	character*500 cloudspecies(max(nclouds,1))
 	real*8 ComputeKzz
 		
@@ -164,12 +164,13 @@ c			if(domakeai.or.retrieval) return
 		call output("==================================================================")
 c		call output("Computing chemistry using easy_chem by Paul Molliere")
 		call output("Computing chemistry using GGchem by Peter Woitke")
+		dosimplerainout=(rainout.and..not.cloudcompute)
 		do i=1,nr
 			call tellertje(i,nr)
 			Tc=max(min(T(i),20000d0),100d0)
 			if(P(i).ge.mixP.or.i.eq.1) then
 				call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &			XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
+     &			XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,dosimplerainout)
     		else
     			mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
     			XeqCloud(i,1:nclouds)=XeqCloud(i-1,1:nclouds)
@@ -720,7 +721,7 @@ c use Ackerman & Marley 2001 cloud computation
 	subroutine OnlyChemCompute()
 	use GlobalSetup
 	IMPLICIT NONE
-	logical ini
+	logical ini,dosimplerainout
 	integer i
 	character*500 cloudspecies(max(nclouds,1))
 	
@@ -729,9 +730,10 @@ c use Ackerman & Marley 2001 cloud computation
 	enddo
 	call set_molfracs_atoms(COratio,SiOratio,NOratio,SOratio,metallicity)
 	ini=.true.
+	dosimplerainout=(rainout.and..not.cloudcompute)
 	do i=1,nr
 		call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol)
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,dosimplerainout)
 	enddo
 
 	return
@@ -743,7 +745,7 @@ c use Ackerman & Marley 2001 cloud computation
 	use Constants
 	use AtomsModule
 	IMPLICIT NONE
-	real*8 Zout,abun_dust(N_atoms)
+	real*8 Zout,abun_dust(N_atoms),tot
 	integer i
 
 	if(secondary_atmosphere) then
@@ -764,6 +766,8 @@ c use Ackerman & Marley 2001 cloud computation
 		Toutgas=Tsurface
 		Poutgas=P(1)
 		call SplitGasDust(Toutgas,Poutgas,molfracs_atoms,molfracs_atoms_outgas,abun_dust)
+		tot=sum(molfracs_atoms_outgas(1:N_atoms))
+		molfracs_atoms=molfracs_atoms_outgas/tot
 	endif
 	
 	return
@@ -1173,14 +1177,14 @@ c	close(unit=50)
 
 
 	subroutine call_chemistry(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,
-     &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol)
+     &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol,rainout)
 	use AtomsModule
 	use TimingModule
 	IMPLICIT NONE
 	integer nmol
 	real*8 Tin,Pin,mol_abun(nmol),nabla_ad
 	character*10 mol_names(nmol)
-	logical includemol(nmol),didcondens,ini,condensates
+	logical includemol(nmol),didcondens,ini,condensates,rainout
 	integer Ncloud,i,imol,methGGchem
 	real*8 Xcloud(max(Ncloud,1)),MMW,Tg
 	character*500 cloudspecies(max(Ncloud,1)),namecloud
@@ -1206,6 +1210,10 @@ c	close(unit=50)
 	mol_abun=0d0
 	Xcloud=0d0
 	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates,gas_atoms,methGGchem)
+
+	if(condensates.and.rainout) then
+		molfracs_atoms=gas_atoms/sum(gas_atoms(1:N_atoms))
+	endif
 
 c	call readBaud(mol_abun,nmol,Pin,MMW)
 
