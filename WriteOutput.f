@@ -170,33 +170,39 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		endif
 	endif
 
-	if(nlam.lt.350) then
+	nj=0
+	do i=1,nlam_out
+		if(lamemis(i).and.computelam(i))nj=nj+1
+	enddo
+	if(nj.lt.350) then
 		allocate(specR(nlam))
 		filename=trim(outputdir) // "phasecurve" // trim(side)
 		call output("Writing phasecurve to: " // trim(filename))
 		open(unit=30,file=filename,RECL=6000)
-		form='("#",a13,' // '"       fint [Jy]",'// trim(int2string(nlam_out,'(i4)')) // 
+		form='("#",a13,' // trim(int2string(nj,'(i4)')) // 
      &				 '("      F(",es8.1E3,")"))'
-		write(30,form) "phase [degrees]",lam(1:nlam_out)
-		form='(f14.6,' // int2string(nlam,'(i3)') // 'es17.9E3)'
+		specR(1:nlam_out)=lam_out(1:nlam_out)
+		nj=0
+		do i=1,nlam_out
+			if(lamemis(i).and.computelam(i)) then
+				nj=nj+1
+				specR(nj)=specR(i)
+			endif
+		enddo
+		write(30,form) "phase [degrees]",specR(1:nj)
+		form='(f14.6,' // int2string(nj,'(i3)') // 'es17.9E3)'
 		do i=1,nphase
 			specR(1:nlam_out)=Fstar(1:nlam_out)*1d23/distance**2
-c			if(sin(pi-pi*theta(i)/180d0).lt.(Rstar/Dplanet)) then
-c				if(theta(i).lt.90d0) then
-c					specR(1:nlam_out)=((pi*Rstar**2-obsA(0,1:nlam_out))/(pi*Rstar**2))*Fstar(1:nlam_out)*1d23/distance**2
-c				endif
-c			endif
-c			if(sin(pi*theta(i)/180d0).gt.(Rstar/Dplanet).or.theta(i).lt.90d0) then
-				specR(1:nlam_out)=specR(1:nlam_out)+phase(i,0,1:nlam_out)+flux(0,1:nlam_out)
-c			endif
-			x=0d0
-			tot=0d0
+			specR(1:nlam_out)=specR(1:nlam_out)+phase(i,0,1:nlam_out)+flux(0,1:nlam_out)
+			specR(1:nlam_out)=specR(1:nlam_out)/(Fstar(1:nlam_out)*1d23/distance**2)
+			nj=0
 			do j=1,nlam_out
-				x=x+dfreq(j)*specR(j)
-				tot=tot+dfreq(j)
+				if(lamemis(j).and.computelam(j)) then
+					nj=nj+1
+					specR(nj)=specR(j)
+				endif
 			enddo
-			x=x/tot
-			write(30,form) theta(i),x,specR(1:nlam_out)/(Fstar(1:nlam_out)*1d23/distance**2)
+			write(30,form) theta(i),specR(1:nj)
 		enddo
 		close(unit=30)
 		deallocate(specR)
