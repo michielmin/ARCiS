@@ -1061,9 +1061,11 @@ c        print*,'series failed in expint'
 					if(b0(j1+1).ge.bg0) exit
 				enddo
 				do j2=j1,n0
-					if(b0(j2+1).gt.bg1) exit
+					if(b0(j2+1).ge.bg1) exit
 				enddo
-				if(j1.eq.j2) then
+				if(j1.gt.n0) j1=n0
+				if(j2.gt.n0) j2=n0
+				if(j1.ge.j2) then
 					k1(ig)=k0(j1)
 				else if((j2-j1).eq.1) then
 					k1(ig)=(k0(j1)*(b0(j1+1)-bg0)+k0(j2)*(bg1-b0(j2)))/(bg1-bg0)
