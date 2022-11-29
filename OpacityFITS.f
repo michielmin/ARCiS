@@ -200,6 +200,15 @@ C	 create the new empty FITS file
 
 	type(databaseKtable),allocatable,target :: Ktable(:)
 	
+	interface
+		subroutine regridKtable(k0,w0,n0,g1,k1,w1,n1,g0,b0,gg1)
+			integer,intent(in) :: n0,n1
+			real*8,intent(in) :: k0(n0),g1(n1),w1(n1)
+			real*8,intent(out) :: k1(n1),g0(n0),b0(n0+1),gg1(n1)
+			real*8,intent(inout) :: w0(n0)
+		end subroutine regridKtable
+	end interface
+
 	end module OpacityFITSdata
 
 

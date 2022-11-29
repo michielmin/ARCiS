@@ -12,6 +12,7 @@
 	subroutine ReadOpacities()
 	use GlobalSetup
 	use Constants
+	use OpacityFITSdata
 	IMPLICIT NONE
 	integer imol
 	real*8 nu1,nu2,tanscale,ll,tot,tot2
@@ -115,8 +116,8 @@ c===============
 				call RayleighScattering(Csca(ir,i),ir,i)
 			enddo
 		endif
-		call ComputePAH(cont_tot,Csca(ir,1:nlam),computelam)
-		call Compute_optEC(cont_tot,Csca(ir,1:nlam),computelam)
+		if(mixrat_PAH.gt.0d0) call ComputePAH(cont_tot,Csca(ir,1:nlam),computelam)
+		if(mixrat_optEC.gt.0d0) call Compute_optEC(cont_tot,Csca(ir,1:nlam),computelam)
 		kappa_mol=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
