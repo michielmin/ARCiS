@@ -70,15 +70,15 @@ c	n_nu_line=ng*min(j,4)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(n_nu_line,ng,nmol)
-		allocate(k_line(n_nu_line))
-		allocate(ktemp(ng))
-		allocate(kappa(ng))
-		allocate(w_line(n_nu_line))
-		allocate(fulladd(nmol))
-		allocate(kappa_tot(0:nmol))
-		allocate(work1(n_nu_line))
-		allocate(work2(n_nu_line))
-		allocate(work3(n_nu_line))
+	if(.not.allocated(k_line)) allocate(k_line(n_nu_line))
+	if(.not.allocated(ktemp)) allocate(ktemp(ng))
+	if(.not.allocated(kappa)) allocate(kappa(ng))
+	if(.not.allocated(w_line)) allocate(w_line(n_nu_line))
+	if(.not.allocated(fulladd)) allocate(fulladd(nmol))
+	if(.not.allocated(kappa_tot)) allocate(kappa_tot(0:nmol))
+	if(.not.allocated(work1)) allocate(work1(n_nu_line))
+	if(.not.allocated(work2)) allocate(work2(n_nu_line))
+	if(.not.allocated(work3)) allocate(work3(n_nu_line))
 !$OMP END PARALLEL
 
 	do ir=nr,1,-1
@@ -244,15 +244,6 @@ c===============
 			call WriteOpacity(ir,"scat",freq,Csca(ir,1:nlam)*Ndens(ir)/dens(ir),nlam,1)
 		endif
 	enddo
-
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-		deallocate(k_line)
-		deallocate(w_line)
-		deallocate(ktemp)
-		deallocate(kappa,fulladd,kappa_tot)
-		deallocate(work1,work2,work3)
-!$OMP END PARALLEL
 
 	if(.not.retrieval) then
 		open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
