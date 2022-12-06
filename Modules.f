@@ -95,14 +95,14 @@ c===============================================================================
 	character*500 outputdir
 	integer idum,maxiter,miniter,Nphot0,idum0,iWolk
 !$OMP THREADPRIVATE(idum)
-	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib,do_rayleigh
+	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib,do_rayleigh,isoFstar
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS
 	logical,allocatable :: includemol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,twind,epsiter,specres_LR
-	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Psimplecloud,metallicity0,vfrag
+	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Psimplecloud,metallicity0,vfrag,betaF
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid,blackbodystar
 	logical didcondens_chem,coagulation,resume_multinest,disequilibrium,const_eff_multinest
-	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file,pargridfile
+	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file,pargridfile,deepredisttype
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
 	real*8 mixratHaze,PHaze,dPHaze,kappaHaze,Kzz,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,powvxx,night2day,pole2eq
 	real*8 Kzz_deep,Kzz_1bar,Kzz_P,Kzz_contrast,SOratio,Tsurface,hotspotshift0
@@ -126,14 +126,13 @@ c for exchange when computing secondary atmosphere
 	
 	real*8 nC_PAH,mixrat_PAH,rad_optEC,Eg_optEC,mixrat_optEC
 
-	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb,Pdeepredist
+	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb
 	character*20 surfacetype
-	integer nTZ,nspike,nai,nboot,npew,n_deepRedist,nscaleR
+	integer nTZ,nspike,nai,nboot,npew,nscaleR
 	integer,allocatable :: niso(:),instr_nobs(:)
 	real*8,allocatable :: MMW(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
-	logical fulloutput3D,deepRedist,readFull3D,computealbedo,computecryst
-	real*8 f_deepredist,f_deep0
+	logical fulloutput3D,deepredist,readFull3D,computealbedo,computecryst
 	integer nBB
 	parameter(nBB=10000)
 	character*500 formationcommand

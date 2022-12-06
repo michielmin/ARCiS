@@ -722,11 +722,15 @@ c In this case the beta map should be the static one. Make sure this is set prop
 		hotspotshift0=-1d5
 	endif
 	
-	if(deepRedist) then
-		n3D=n3D*n_deepRedist
-		f_deepredist=f_deep0
+	if(deepredist.and..not.do3D) deepredist=.false.
+	if(deepredist) then
+		do i=1,len_trim(deepredisttype)
+			if(iachar(deepredisttype(i:i)).ge.65.and.iachar(deepredisttype(i:i)).le.90) then
+				deepredisttype(i:i)=achar(iachar(deepredisttype(i:i))+32)
+			endif
+		enddo
 	endif
-	
+		
 	allocate(long(nlong),latt(nlatt))
 	allocate(tanx(nlong),tany(nlong))
 	allocate(cost2(nlatt),beta3D_eq(nlong),x3D_eq(nlong))
@@ -917,6 +921,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			opacitydir=trim(key%value)
 		case("computet")
 			read(key%value,*) computeT
+		case("isofstar")
+			read(key%value,*) isoFstar
 		case("forceebalance")
 			read(key%value,*) forceEbalance
 		case("teffp","tplanet")
@@ -1122,10 +1128,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) fulloutput3D
 		case("deepredist")
 			read(key%value,*) deepredist
-		case("n_deepredist","ndeepredist")
-			read(key%value,*) n_deepRedist
-		case("pdeepredist")
-			read(key%value,*) Pdeepredist
+		case("deepredisttype")
+			read(key%value,*) deepredisttype
 		case("readfull3d")
 			read(key%value,*) readFull3D
 		case("computealbedo","planetalbedo")
@@ -1571,10 +1575,8 @@ c  GGchem was still implemented slightly wrong.
 	nlatt=19
 	i3D=1
 	
-	deepRedist=.false.
-	f_deep0=0.5d0
-	n_deepRedist=1
-	Pdeepredist=0.1d0
+	deepredist=.false.
+	deepredisttype='fixbeta'
 
 	readFull3D=.false.
 	computealbedo=.false.
@@ -1711,6 +1713,7 @@ c		Cloud(i)%P=0.0624d0
 	enddo
 	
 	computeT=.false.
+	isoFstar=.false.
 	TeffP=600d0
 	outputopacity=.false.
 	forceEbalance=.false.

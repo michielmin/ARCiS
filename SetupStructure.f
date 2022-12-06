@@ -292,8 +292,8 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		return
 	endif
 
-	beta_used=betaT
-	if(deepredist) beta_used=f_deepredist
+	beta_used=abs(betaT)
+	if(deepredist) beta_used=betaF
 
 	tau=0d0
 	Tirr=sqrt(Rstar/(Dplanet))*Tstar
@@ -311,10 +311,6 @@ c	endif
 		endif
 		if(tau.lt.0d0) tau=0d0
 		x(i)=(3d0*TeffP**4/4d0)*(2d0/3d0+tau)
-c		if(deepRedist) then
-c			print*,'warning! deep redistribution does not work properly with parameterised T-structure'
-c			x(i)=x(i)+(3d0*Tirr**4*exp(-tau)/4d0/sqrt(2d0))*(2d0/3d0+tau)*(f_deepredist-beta_used)
-c		endif
 		x(i)=x(i)+(3d0*Tirr**4/4d0)*beta_used*
      &	(2d0/3d0+1d0/(sqrt(3d0)*gammaT1)+(gammaT1/sqrt(3d0)-1d0/(sqrt(3d0)*gammaT1))*exp(-gammaT1*tau*sqrt(3d0)))
 
@@ -351,7 +347,7 @@ c		endif
 	integer i
 
 	beta_used=betaT
-	if(deepredist) beta_used=f_deepredist
+	if(deepredist) beta_used=betaF
 
 	tau=0d0
 	Tirr=(beta_used*4d0)**0.25*sqrt(Rstar/(2d0*Dplanet))*Tstar

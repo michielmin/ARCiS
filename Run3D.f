@@ -111,7 +111,7 @@ c	recomputeopac=.true.
 	enddo
 
 	actually1D=.true.
-	if(((vxx.ne.0d0.or.night2day.ne.1d0.or.pole2eq.ne.1d0).and.betamax.ne.betamin).or.n3D.eq.2.or.deepRedist) actually1D=.false.
+	if(((vxx.ne.0d0.or.night2day.ne.1d0.or.pole2eq.ne.1d0).and.betamax.ne.betamin).or.n3D.eq.2) actually1D=.false.
 
 	call output("hotspot shift: " // dbl2string(hotspotshift,'(f6.2)') // " degrees")
 
@@ -153,22 +153,6 @@ c	recomputeopac=.true.
 		do j=1,nlatt-1
 			if(readFull3D) then
 				ibeta(i,j)=(i-1)*(nlatt-1)+j
-			else if(deepRedist) then
-				lo=-pi+2d0*pi*(real(i)-0.5d0)/real(nlong-1)
-				la=-pi/2d0+pi*(real(j)-0.5d0)/real(nlatt-1)
-				betaT=0d0
-				if(abs(lo).le.pi/2d0) then
-					betaT=cos(lo)*cos(la)
-					imustar=betaT*real(n_deepRedist)+1
-					imustar=min(max(2,imustar),n_deepRedist)
-				else
-					imustar=1
-				endif
-				i3D=(real(n3D/n_deepRedist)*((beta(i,j)-betamin)/(betamax-betamin)))+1
-				if(i3D.gt.n3D/n_deepRedist) i3D=n3D/n_deepRedist
-				ibeta(i,j)=i3D+(imustar-1)*n3D/n_deepRedist
-				if(ibeta(i,j).gt.n3D) ibeta(i,j)=n3D
-				if(.not.ibeta(i,j).gt.1) ibeta(i,j)=1
 			else
 				if(betamax.eq.betamin.or.(night2day.eq.1d0.and.vxx.eq.0d0.and.pole2eq.eq.1d0)) then
 					ibeta(i,j)=1
@@ -223,16 +207,10 @@ c	recomputeopac=.true.
 	call output("Computing multiple 1D structures")
 
 	call tellertje_perc(0,n3D)
-	do i=1,n3D
+	do i=n3D,1,-1
 		call SetOutputMode(.false.)
-		if(deepRedist) then
-			imustar=(i-1)*n_deepRedist/n3D+1
-			i3D=i-(imustar-1)*n3D/n_deepRedist
-			beta3D(i)=betamin+(betamax-betamin)*(real(i3D)-0.5)/real(n3D/n_deepRedist)
-		else
-			i3D=i
-			beta3D(i)=betamin+(betamax-betamin)*(real(i3D)-0.5)/real(n3D)
-		endif
+		i3D=i
+		beta3D(i)=betamin+(betamax-betamin)*(real(i3D)-0.5)/real(n3D)
 		if(n3D.eq.2) then
 			if(beta3D(i).lt.0.5d0) then
 				beta3D(i)=0d0
@@ -260,36 +238,8 @@ c	recomputeopac=.true.
 		call MapPar3D()
 		if(n3D.eq.2) beta3D(i)=betaT
 
-		betaT=beta3D(i)
-		if(deepRedist) then
-			if(n_deepRedist.eq.1) then
-				betaT=0d0
-				j=0
-				tot=0d0
-				do ilong=1,nlong-1
-					do ilatt=1,nlatt-1
-						if(ibeta(ilong,ilatt).eq.i3D) then
-							lo=-pi+2d0*pi*(real(ilong)-0.5d0)/real(nlong-1)
-							la=-pi/2d0+pi*(real(ilatt)-0.5d0)/real(nlatt-1)
-							if(abs(lo).le.pi/2d0) betaT=betaT+cos(lo)*cos(la)*cos(la)
-							tot=tot+cos(la)
-							j=j+1
-						endif
-					enddo
-				enddo
-				if(j.gt.0) betaT=betaT/tot
-			else
-				betaT=real(imustar-1)/real(n_deepRedist-1)
-			endif
-			if(beta3D(i).lt.betamin_term) then
-				f_deep0=1d0
-			else
-				f_deep0=1d0-(beta3D(i)-betamin_term)/(betamax-betamin_term)
-			endif
-			f_deepredist=beta3D(i)
-			betaT=(1d0-f_deep0)*f_deepredist+f_deep0*betaT
-			if(betaT.gt.f_deepredist) betaT=f_deepredist
-		endif
+		betaF=beta3D(i)
+		if(.not.deepredist) betaT=beta3D(i)
 
 c Now call the setup for the readFull3D part
 		if(readFull3D) then
@@ -298,9 +248,14 @@ c Now call the setup for the readFull3D part
 			call DoReadFull3D(i,ilong,ilatt)
 		endif
 
-		if((.not.actually1D.and.do_ibeta(i)).or.i.eq.1) then
+		if((.not.actually1D.and.do_ibeta(i)).or.i.eq.n3D) then
 			call InitDens()
 			call ComputeModel1D(recomputeopac)
+			if(i3D.eq.n3D.and.deepredist.and.deepredisttype.eq.'fixflux') then
+				i3D=1
+				call ComputeModel1D(recomputeopac)
+				i3D=i
+			endif
 
 			if(R(nr+1).gt.Rmax) then
 				Rmax=R(nr+1)
@@ -361,16 +316,16 @@ c Now call the setup for the readFull3D part
 				Fstar(1:nlam)=Fstar_temp(1:nlam)
 			endif
 		else
-			R3D(i,1:nr+1)=R3D(1,1:nr+1)
-			R3D2(i,1:nr+1)=R3D2(1,1:nr+1)
-			T3D(i,0:nr)=T3D(1,0:nr)
-			mixrat3D(i,1:nr,1:nmol)=mixrat3D(1,1:nr,1:nmol)
-			Ca(1:nlam,1:ng,1:nr,i)=Ca(1:nlam,1:ng,1:nr,1)
-			Cs(1:nlam,1:nr,i)=Cs(1:nlam,1:nr,1)
-			Ce_cont(1:nlam,1:nr,i)=Ce_cont(1:nlam,1:nr,1)
-			Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,i)=Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,1)
-			Si(1:nlam,1:ng,0:nr,1:nnu0,i)=Si(1:nlam,1:ng,0:nr,1:nnu0,1)
-			if(computealbedo) SiSc(1:nlam,1:ng,0:nr,1:nnu0,i)=SiSc(1:nlam,1:ng,0:nr,1:nnu0,1)
+			R3D(i,1:nr+1)=R3D(n3D,1:nr+1)
+			R3D2(i,1:nr+1)=R3D2(n3D,1:nr+1)
+			T3D(i,0:nr)=T3D(n3D,0:nr)
+			mixrat3D(i,1:nr,1:nmol)=mixrat3D(n3D,1:nr,1:nmol)
+			Ca(1:nlam,1:ng,1:nr,i)=Ca(1:nlam,1:ng,1:nr,n3D)
+			Cs(1:nlam,1:nr,i)=Cs(1:nlam,1:nr,n3D)
+			Ce_cont(1:nlam,1:nr,i)=Ce_cont(1:nlam,1:nr,n3D)
+			Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,i)=Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,n3D)
+			Si(1:nlam,1:ng,0:nr,1:nnu0,i)=Si(1:nlam,1:ng,0:nr,1:nnu0,n3D)
+			if(computealbedo) SiSc(1:nlam,1:ng,0:nr,1:nnu0,i)=SiSc(1:nlam,1:ng,0:nr,1:nnu0,n3D)
 		endif
 		if(.not.retrieval) then
 			call SetOutputMode(.true.)
@@ -381,7 +336,7 @@ c Now call the setup for the readFull3D part
 			enddo
 			close(unit=20)
 		endif
-		call tellertje_perc(i,n3D)
+		call tellertje_perc(n3D-i+1,n3D)
 	enddo
 
 

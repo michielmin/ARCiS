@@ -588,7 +588,7 @@
         if (errmax>1.Q-8) then
           print*,"*** element conservation violation in database.f"
           print*,elnam(elworst),errmax
-          stop
+          return
         endif  
         !--- for remove_condensates models: force new entry --- 
         if (maxval(ddust)==0.Q0) qbest=MIN(qbest,0.01)

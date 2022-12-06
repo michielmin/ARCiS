@@ -35,6 +35,7 @@
 	use GlobalSetup
 	use Constants
 	use CloudModule
+	use Struct3D
 	IMPLICIT NONE
 	integer iphase,iter,iter2
 	real*8 tau_V,tau_T,Planck,f
@@ -63,6 +64,12 @@
 	character*500 file
 	integer icloud
 	logical Convec(0:nr)
+	real*8,allocatable,save :: Hstar0(:),EabDirect0(:)
+
+	if(deepredist.and.deepredisttype.eq.'fixflux') then
+		if(.not.allocated(Hstar0)) allocate(Hstar0(nr))
+		if(.not.allocated(EabDirect0)) allocate(EabDirect0(nr))
+	endif
 
 	maxfact=4d0
 
@@ -150,7 +157,7 @@
 		else if(ir.lt.nr) then
 			Tinp(ir)=T(ir+1)
 		else
-			Tinp(ir)=must*sqrt(Rstar/(2d0*Dplanet))*Tstar
+			Tinp(ir)=abs(must)*sqrt(Rstar/(2d0*Dplanet))*Tstar
 		endif
 		T(ir)=Tinp(ir)
 	enddo
@@ -272,7 +279,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 !$OMP& PRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,EabDirect_omp,HBottom,
 !$OMP&			Hstar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,tot,IhN,IjN)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,
-!$OMP&			Hstar,Dplanet,Fstar_LR,must,wabs,wscat,EabDirect,IntEab,IntHnuSurf,IntEabSurf)
+!$OMP&			Hstar,Dplanet,Fstar_LR,must,wabs,wscat,EabDirect,IntEab,IntHnuSurf,IntEabSurf,betaF,isoFstar)
 	allocate(Si_omp(nr,0:nr+1),tauR_omp(nr),Ih_omp(nr),Ij_omp(nr))
 	allocate(IhN(nr,0:nr+1,nnu),IjN(nr,0:nr+1,nnu))
 	allocate(Hstar_omp(nr),Hstar_lam(nr),Hsurf_lam(nr),EabDirect_omp(nr),HBottom(nr))
@@ -285,13 +292,24 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 			Hstar_lam(1:nr)=0d0
 			Hsurf_lam(1:nr)=0d0
 			contr=(Fstar_LR(ilam)/(pi*Dplanet**2))
-			tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(max(must,1d-5))
-			Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
-			Ih_omp(1:nr)=-must*Ij_omp(1:nr)
-
-			Hstar_lam(1:nr)=Hstar_lam(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
-			EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
-			FstarBottom=abs(Ih_omp(1))
+			if(isoFstar) then
+				FstarBottom=0d0
+				do inu=1,nnu
+					tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
+					Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
+					Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)*nu(inu)
+					Hstar_lam(1:nr)=Hstar_lam(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
+					EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
+					FstarBottom=FstarBottom+2d0*wnu(inu)*abs(Ih_omp(1))
+				enddo
+			else
+				tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(max(must,1d-5))
+				Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
+				Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)
+				Hstar_lam(1:nr)=Hstar_lam(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
+				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
+				FstarBottom=abs(Ih_omp(1))
+			endif
 
 c Si_omp(0:nr,0) is the direct stellar contribution
 			Si_omp(1:nr,0)=Ij_omp(1:nr)*wscat(1:nr,ilam,ig)/2d0
@@ -379,6 +397,15 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 !$OMP FLUSH
 !$OMP END PARALLEL
 
+	if(deepredist.and.deepredisttype.eq.'fixflux') then
+		if(i3D.eq.n3D) then
+			Hstar0(1:nr)=Hstar(1:nr)/betaF
+			EabDirect0(1:nr)=EabDirect(1:nr)
+		else
+			Hstar(1:nr)=Hstar0(1:nr)*betaF
+			EabDirect(1:nr)=EabDirect0(1:nr)
+		endif
+	endif
 
 	iter=1
 	iter2=1
@@ -425,17 +452,6 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			IntH(ir,1)=IntH(ir,1)+scale*BB_LR(ilam,iT)*IntHnuSurf(ilam,ir)*SurfEmis_LR(ilam)
 		enddo
 	enddo
-
-c=========== begin experimental redistribution ===========================================
-	if(deepredist) then
-
-	E0=(Rstar/Dplanet)**2*((2d0*(pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*(f_deepredist-must)
-	do ir=1,nr
-		Hedd(ir)=Hedd(ir)+max(-abs(Hstar(ir)),E0*exp(-P(ir)/Pdeepredist))
-	enddo
-
-	endif
-c=========== end experimental redistribution =============================================
 
 	Fl=Hedd
 	
