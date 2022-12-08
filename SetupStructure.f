@@ -92,6 +92,9 @@
 			do imol=1,nmol
 				if(includemol(imol)) MMW(i3)=MMW(i3)+mixrat_r(i3,imol)*Mmol(imol)
 			enddo
+			if(mixratfile) then
+				MMW(i3)=MMW(i3)+(1d0-sum(mixrat_r(i3,1:nmol)))
+			endif
 		endif
 
 		if(Pb(i3).ge.1d0.and.Pb(i3+1).lt.1d0) then
@@ -861,6 +864,7 @@ c Setup names and weights of the elements
 	Mcore=planetform_Mstart*Mearth
 	Rstart=(planetform_Rend+planetform_Dmigrate)*AU
 	Rend=planetform_Rend*AU
+	if(Rend.le.0d0) Rend=Dplanet
 
 	call InitFormation(Mstar,Tstar,Rstar,planetform_SolidC,planetform_Macc)
 	call Formation(Mplanet,Mcore,Rstart,Rend,planetform_fdust,planetform_fplan,simAb_converge,MSimAb)
