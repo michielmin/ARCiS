@@ -598,9 +598,11 @@ c	Ts=T*Fl**0.25
 	if(do3D.and..not.retrieval) print*,"Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%"
 	T0(1:nr)=Tinp(1:nr)
 	T1(1:nr)=T(1:nr)
-	do ir=1,nr
-		call computeav50(Tdist(ir,1:nTiter),nTiter,T1(ir))
-	enddo
+	if(dochemistry.or.cloudcompute) then
+		do ir=1,nr
+			call computeav50(Tdist(ir,1:nTiter),nTiter,T1(ir))
+		enddo
+	endif
 	do ir=1,nr
 		T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
 	enddo
@@ -1227,6 +1229,19 @@ c
 		enddo
 	enddo
 
+c	Itot=Si_in
+c	do i=1,2
+c		Si=0d0
+c		do ir=1,nr
+c			do jr=1,nr
+c				Si(ir,1:NRHS)=Si(ir,1:NRHS)+Itot(jr,1:NRHS)*Linv(ir,jr)
+c			enddo
+c		enddo
+c		Si_in=Si_in+Si
+c		Itot=Si
+c	enddo
+c	return
+	
 	Linv=-Linv
 	do ir=1,nr
 		Linv(ir,ir)=1d0+Linv(ir,ir)

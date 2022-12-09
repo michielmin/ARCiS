@@ -28,13 +28,12 @@
 	enddo
 	Pb(nr+1)=P(nr)
 
-	if(compute_mixrat) nabla_ad=2d0/7d0
+	nabla_ad=(1d0-1d0/exp_ad)	!2d0/7d0
 	grav=Ggrav*Mplanet/(Rplanet)**2
 	if(par_tprofile.or.(computeT.and.nTiter.le.1)) call ComputeParamT(T)
 	if(free_tprofile) call MakePTstruct
 
 	call SetAbun
-	nabla_ad=2d0/7d0
 
 	Rscale=1d0
 
@@ -1223,8 +1222,6 @@ c	MMW=2.2
 	do i=1,nmol
 		if(.not.mol_abun(i).gt.0d0) mol_abun(i)=0d0
 	enddo
-
-	nabla_ad=2d0/7d0
 
 	call cpu_time(time)
 	timechem=timechem+time

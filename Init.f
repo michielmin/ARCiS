@@ -921,6 +921,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			opacitydir=trim(key%value)
 		case("computet")
 			read(key%value,*) computeT
+		case("exp_ad")
+			read(key%value,*) exp_ad
 		case("isofstar")
 			read(key%value,*) isoFstar
 		case("forceebalance")
@@ -1717,6 +1719,7 @@ c		Cloud(i)%P=0.0624d0
 	TeffP=600d0
 	outputopacity=.false.
 	forceEbalance=.false.
+	exp_ad=7d0/5d0		! adiabatic exponent
 
 	call getenv('HOME',homedir) 
 
