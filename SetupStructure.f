@@ -924,6 +924,7 @@ c	close(unit=50)
 
 	readin=.false.
 	molfracs_atoms_solar=molfracs_atoms
+	molfracs_atoms=1d-50
 
 	open(unit=43,file=filename)
 1	read(43,*,err=1,end=2) name,abun
@@ -939,8 +940,6 @@ c	close(unit=50)
 	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))
 
 	molfracs_atoms_solar=molfracs_atoms_solar/sum(molfracs_atoms_solar(1:N_atoms))
-
-	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))
 
 	COratio=molfracs_atoms(3)/molfracs_atoms(5)
 	call output("C/O: " // dbl2string(molfracs_atoms(3)/molfracs_atoms(5),'(f6.2)'))
