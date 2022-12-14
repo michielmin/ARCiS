@@ -923,7 +923,7 @@ c	close(unit=50)
 	call SetupAtoms
 
 	readin=.false.
-	molfracs_atoms=molfracs_atoms_solar
+	molfracs_atoms_solar=molfracs_atoms
 
 	open(unit=43,file=filename)
 1	read(43,*,err=1,end=2) name,abun
