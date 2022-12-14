@@ -802,45 +802,7 @@ c use Ackerman & Marley 2001 cloud computation
 	character*10 name
 	real*8 abun,Mcore,Rstart,Rend
 
-	names_atoms(1) = 'H'
-	names_atoms(2) = 'He'
-	names_atoms(3) = 'C'
-	names_atoms(4) = 'N'
-	names_atoms(5) = 'O'
-	names_atoms(6) = 'Na'
-	names_atoms(7) = 'Mg'
-	names_atoms(8) = 'Al'
-	names_atoms(9) = 'Si'
-	names_atoms(10) = 'P'
-	names_atoms(11) = 'S'
-	names_atoms(12) = 'Cl'
-	names_atoms(13) = 'K'
-	names_atoms(14) = 'Ca'
-	names_atoms(15) = 'Ti'
-	names_atoms(16) = 'V'
-	names_atoms(17) = 'Fe'
-	names_atoms(18) = 'Ni'
-
-	molfracs_atoms = (/ 0.9207539305, 	!H
-     &	0.0783688694,					!He
-     &	0.0002478241,					!C
-     &	6.22506056949881e-05,			!N
-     &	0.0004509658,					!O
-     &	1.60008694353205e-06,			!Na
-     &	3.66558742055362e-05,			!Mg
-     &	2.595e-06,						!Al
-     &	2.9795e-05,						!Si
-     &	2.36670201997668e-07,			!P
-     &	1.2137900734604e-05,			!S
-     &	2.91167958499589e-07,			!Cl
-     &	9.86605611925677e-08,			!K
-     &	2.01439011429255e-06,			!Ca
-     &	8.20622804366359e-08,			!Ti
-     &	7.83688694089992e-09,			!V
-     &	2.91167958499589e-05,			!Fe
-     &	1.52807116806281e-06			!Ni
-     &  /)
-
+	call SetupAtoms
 
 	if(planetform) then
 
@@ -899,7 +861,7 @@ c Setup names and weights of the elements
 	write(50,'(a6,f7.3)') "S/O:",SO
 	write(50,'(a6,f7.3)') "[Z]:",Z
 	write(50,'("=============")')
-	do i=1,18
+	do i=1,N_atoms
 		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
 	enddo
 	close(unit=50)
@@ -924,7 +886,7 @@ c	adjust N/O ratio
 
 c	adjust Si/O ratio
 	scale=molfracs_atoms(5)*SiO/molfracs_atoms(9)
-	molfracs_atoms(6:18)=molfracs_atoms(6:18)*scale
+	molfracs_atoms(6:N_atoms)=molfracs_atoms(6:N_atoms)*scale
 
 c	adjust S/O ratio
 	molfracs_atoms(11)=molfracs_atoms(5)*SO
@@ -937,7 +899,7 @@ c	adjust metallicity
 	molfracs_atoms=molfracs_atoms/tot
 
 c	open(unit=50,file='atomic.dat')
-c	do i=1,18
+c	do i=1,N_atoms
 c		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
 c	enddo
 c	close(unit=50)
@@ -958,44 +920,7 @@ c	close(unit=50)
 	logical readin(N_atoms)
 	integer i
 
-	names_atoms(1) = 'H'
-	names_atoms(2) = 'He'
-	names_atoms(3) = 'C'
-	names_atoms(4) = 'N'
-	names_atoms(5) = 'O'
-	names_atoms(6) = 'Na'
-	names_atoms(7) = 'Mg'
-	names_atoms(8) = 'Al'
-	names_atoms(9) = 'Si'
-	names_atoms(10) = 'P'
-	names_atoms(11) = 'S'
-	names_atoms(12) = 'Cl'
-	names_atoms(13) = 'K'
-	names_atoms(14) = 'Ca'
-	names_atoms(15) = 'Ti'
-	names_atoms(16) = 'V'
-	names_atoms(17) = 'Fe'
-	names_atoms(18) = 'Ni'
-
-	molfracs_atoms_solar = (/ 0.9207539305,
-     &  0.0783688694,
-     &  0.0002478241, 
-     &  6.22506056949881e-05, 
-     &  0.0004509658, 
-     &  1.60008694353205e-06, 
-     &  3.66558742055362e-05, 
-     &  2.595e-06, 
-     &  2.9795e-05, 
-     &  2.36670201997668e-07, 
-     &  1.2137900734604e-05, 
-     &  2.91167958499589e-07, 
-     &  9.86605611925677e-08, 
-     &  2.01439011429255e-06, 
-     &  8.20622804366359e-08,
-     &  7.83688694089992e-09,
-     &  2.91167958499589e-05,
-     &  1.52807116806281e-06
-     &  /)
+	call SetupAtoms
 
 	readin=.false.
 	molfracs_atoms=molfracs_atoms_solar
@@ -1026,153 +951,13 @@ c	close(unit=50)
 	call output("[Z]: " // dbl2string(metallicity,'(f6.2)'))
 
 	open(unit=50,file='atomic.dat')
-	do i=1,18
+	do i=1,N_atoms
 		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
 	enddo
 	close(unit=50)
 
 	return
 	end
-
-
-	subroutine set_molfracs_atoms_old(CO,Z,TiScale,enhancecarbon)
-	use AtomsModule
-	implicit none
-	real*8 CO,Z,tot,TiScale
-	integer i
-	logical enhancecarbon
-
-	names_atoms(1) = 'H'
-	names_atoms(2) = 'He'
-	names_atoms(3) = 'C'
-	names_atoms(4) = 'N'
-	names_atoms(5) = 'O'
-	names_atoms(6) = 'Na'
-	names_atoms(7) = 'Mg'
-	names_atoms(8) = 'Al'
-	names_atoms(9) = 'Si'
-	names_atoms(10) = 'P'
-	names_atoms(11) = 'S'
-	names_atoms(12) = 'Cl'
-	names_atoms(13) = 'K'
-	names_atoms(14) = 'Ca'
-	names_atoms(15) = 'Ti'
-	names_atoms(16) = 'V'
-	names_atoms(17) = 'Fe'
-	names_atoms(18) = 'Ni'
-
-	molfracs_atoms = (/ 0.9207539305,
-     &	0.0783688694,
-     &	0.0002478241,
-     &	6.22506056949881e-05,
-     &	0.0004509658,
-     &	1.60008694353205e-06,
-     &	3.66558742055362e-05,
-     &	2.595e-06,
-     &	2.9795e-05,
-     &	2.36670201997668e-07,
-     &	1.2137900734604e-05,
-     &	2.91167958499589e-07,
-     &	9.86605611925677e-08,
-     &	2.01439011429255e-06,
-     &	8.20622804366359e-08,
-     &	7.83688694089992e-09,
-     &	2.91167958499589e-05,
-     &	1.52807116806281e-06
-     &  /)
-
-	molfracs_atoms(1)=molfracs_atoms(1)/(10d0**Z)
-	molfracs_atoms(2)=molfracs_atoms(2)/(10d0**Z)
-	if(enhancecarbon) then
-		molfracs_atoms(3)=molfracs_atoms(5)*CO
-	else
-		molfracs_atoms(5)=molfracs_atoms(3)/CO
-	endif
-	
-	molfracs_atoms(15)=molfracs_atoms(15)*TiScale
-	molfracs_atoms(16)=molfracs_atoms(16)*TiScale
-
-	tot=sum(molfracs_atoms(1:N_atoms))
-	molfracs_atoms=molfracs_atoms/tot
-
-	open(unit=50,file='atomic.dat')
-	do i=1,18
-		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
-	enddo
-	close(unit=50)
-
-
-	return
-	end
-
-
-
-	subroutine set_molfracs_atoms_elabun(CO,Z,elabun)
-	use AtomsModule
-	implicit none
-	real*8 CO,Z,tot,elabun(7)
-	integer i
-
-	names_atoms(1) = 'H'
-	names_atoms(2) = 'He'
-	names_atoms(3) = 'C'
-	names_atoms(4) = 'N'
-	names_atoms(5) = 'O'
-	names_atoms(6) = 'Na'
-	names_atoms(7) = 'Mg'
-	names_atoms(8) = 'Al'
-	names_atoms(9) = 'Si'
-	names_atoms(10) = 'P'
-	names_atoms(11) = 'S'
-	names_atoms(12) = 'Cl'
-	names_atoms(13) = 'K'
-	names_atoms(14) = 'Ca'
-	names_atoms(15) = 'Ti'
-	names_atoms(16) = 'V'
-	names_atoms(17) = 'Fe'
-	names_atoms(18) = 'Ni'
-
-	molfracs_atoms = (/ 0.9207539305,
-     &	0.0783688694,
-     &	0.0002478241,
-     &	6.22506056949881e-05,
-     &	0.0004509658,
-     &	1.60008694353205e-06,
-     &	3.66558742055362e-05,
-     &	2.595e-06,
-     &	2.9795e-05,
-     &	2.36670201997668e-07,
-     &	1.2137900734604e-05,
-     &	2.91167958499589e-07,
-     &	9.86605611925677e-08,
-     &	2.01439011429255e-06,
-     &	8.20622804366359e-08,
-     &	7.83688694089992e-09,
-     &	2.91167958499589e-05,
-     &	1.52807116806281e-06
-     &  /)
-
-	molfracs_atoms(1)=molfracs_atoms(1)/(10d0**Z)
-	molfracs_atoms(2)=molfracs_atoms(2)/(10d0**Z)
-	molfracs_atoms(5)=molfracs_atoms(3)/CO
-
-	tot=sum(molfracs_atoms(1:N_atoms))
-	molfracs_atoms=molfracs_atoms/tot
-
-	molfracs_atoms( 7)=molfracs_atoms(1)*elabun(1)
-	molfracs_atoms( 9)=molfracs_atoms(1)*elabun(2)
-	molfracs_atoms(15)=molfracs_atoms(1)*elabun(3)
-	molfracs_atoms( 5)=molfracs_atoms(1)*elabun(4)
-	molfracs_atoms(17)=molfracs_atoms(1)*elabun(5)
-	molfracs_atoms( 8)=molfracs_atoms(1)*elabun(6)
-	molfracs_atoms( 3)=molfracs_atoms(1)*elabun(7)
-
-	tot=sum(molfracs_atoms(1:N_atoms))
-	molfracs_atoms=molfracs_atoms/tot
-
-	return
-	end
-
 
 
 	subroutine call_chemistry(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,

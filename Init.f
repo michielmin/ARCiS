@@ -672,7 +672,6 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 
 	if(dochemistry.or.secondary_atmosphere) then
 		outputdirGGchem=outputdir
-		smallchem=fast_chem
 		allocate(usemolGGchem(nmol))
 		usemolGGchem(1:nmol)=includemol(1:nmol)
 		if(secondary_atmosphere) then
@@ -951,8 +950,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Kzz_P
 		case("kzz_contrast")
 			read(key%value,*) Kzz_contrast
-		case("fastchem","fast_chem")
-			read(key%value,*) fast_chem
 		case("metallicity")
 			read(key%value,*) metallicity
 		case("coratio")
@@ -971,6 +968,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			element_abun_file=key%value
 		case("condensates")
 			read(key%value,*) condensates
+		case("elementlist")
+			elements_ARCiS=key%value
 		case("secondary_atmosphere")
 			read(key%value,*) secondary_atmosphere
 		case("cloudcompute")
@@ -1505,7 +1504,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	surfacealbedo=0.5d0
 
 	dochemistry=.false.
-	fast_chem=.false.
+	elements_ARCiS= 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V el'
 	disequilibrium=.false.
 	nfixmol=0
 	fixmol_P=1d20

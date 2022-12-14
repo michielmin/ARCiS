@@ -3,9 +3,10 @@
 **********************************************************************
       implicit none
       integer,allocatable :: linkmol(:),linkele(:)
-      logical GGCHEM_P_iter,smallchem
+      logical GGCHEM_P_iter
       logical,allocatable :: usemolGGchem(:)
       character*100 outputdirGGchem
+      character(len=200) :: elements_ARCiS
       end MODULE ARCiS_GGCHEM
 
 
@@ -61,130 +62,8 @@
       dispol_file(2) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_StockKitzmann_withoutTsuji.dat'
       dispol_file(3) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_WoitkeRefit.dat'
       dispol_file(4) = trim(homedir) // '/ARCiS/src/dispol_Burcat.dat'
-	if(smallchem) then
-		extra_list(1:20) = (/ "CH4       ","CO        ","CO2       ","H2        ","H2O       ",
-     &						  "NH3       ","N2        ","C         ","CH2OH     ","CH3       ",
-     &						  "CH3OH     ","C2H2      ","H         ","O         ","OH        ",
-     &						  "N         ","NH        ","NH2       ","NO        ","N2H3      " /)
-		nextra=20
-		do i=1,n_mol_in
-			j=index(trim(mol_names_in(i)),"-")
-			if(j.ne.0) then
-				nextra=nextra+1
-				extra_list(nextra)=mol_names_in(i)
-				extra_list(nextra)(j:j)="+"
-			endif
-		enddo
-		ntot=0
-		done=.false.
-		do i=1,4
-			open(unit=20,file=dispol_file(i),RECL=1000)
-			read(20,*) nread
-			do iread=1,nread
-				read(20,*) cread
-				do j=1,n_mol_in
-					if(usemolGGchem(j)) then
-					if(trim(cread).eq.trim(mol_names_in(j)).and..not.done(j)) then
-						ntot=ntot+1
-						done(j)=.true.
-						goto 10
-					endif
-					endif
-				enddo
-				do j=1,nextra
-					if(trim(cread).eq.trim(extra_list(j)).and..not.done(n_mol_in+j)) then
-						ntot=ntot+1
-						done(n_mol_in+j)=.true.
-						goto 10
-					endif
-				enddo
-10				read(20,*)
-				do j=1,n_mol_in
-					if(usemolGGchem(j)) then
-					if(trim(cread).eq.trim(mol_names_in(j)).and..not.done(j)) then
-						done(j)=.true.
-					endif
-					endif
-				enddo
-				do j=1,nextra
-					if(trim(cread).eq.trim(extra_list(j)).and..not.done(n_mol_in+j)) then
-						done(n_mol_in+j)=.true.
-					endif
-				enddo
-			enddo
-			close(unit=20)
-		enddo
-		open(unit=21,file=trim(outputdirGGchem) // '/dispol_select.dat',RECL=1000)
-		elements =''
-		do i=1,n_mol_in
-			do j=1,19
-				if(trim(mol_names_in(i)).eq.elementlist(j)) then
-					elements = trim(elements) // " " // trim(elementlist(j)) // " "
-				endif
-			enddo
-		enddo
-		done=.false.
-		nelread=0
-		write(21,'(i5)') ntot
-		do i=1,4
-			open(unit=20,file=dispol_file(i),RECL=1000)
-			read(20,*) nread
-			do iread=1,nread
-				read(20,'(a1000)') readline(1:1000)
-				read(readline,*) cread
-				do j=1,n_mol_in
-					if(usemolGGchem(j)) then
-					if(trim(cread).eq.trim(mol_names_in(j)).and..not.done(j)) then
-						done(j)=.true.
-						goto 20
-					endif
-					endif
-				enddo
-				do j=1,nextra
-					if(trim(cread).eq.trim(extra_list(j)).and..not.done(n_mol_in+j)) then
-						done(n_mol_in+j)=.true.
-						goto 20
-					endif
-				enddo
-				read(20,*)
-				goto 30
-20				write(21,'(a)') trim(readline(1:1000))
-				do j=1,19
-					if(index(readline, trim(elementlist(j)) // " ").ne.0) then
-						if(index(elements, trim(elementlist(j)) // " ").eq.0) then
-							elements = trim(elements) // " " // trim(elementlist(j)) // " "
-							nelread=nelread+1
-							elread(nelread)=elementlist(j)
-						endif
-					endif
-				enddo
-				read(20,'(a1000)') readline(1:1000)
-				write(21,'(a)') trim(readline(1:1000))
-30				continue
-				do j=1,n_mol_in
-					if(usemolGGchem(j)) then
-					if(trim(cread).eq.trim(mol_names_in(j)).and..not.done(j)) then
-						done(j)=.true.
-					endif
-					endif
-				enddo
-				do j=1,nextra
-					if(trim(cread).eq.trim(extra_list(j)).and..not.done(n_mol_in+j)) then
-						done(n_mol_in+j)=.true.
-					endif
-				enddo
-			enddo
-			close(unit=20)
-		enddo
-		close(unit=21)
-
-      dispol_file(1) = trim(outputdirGGchem) // '/dispol_select.dat'
-      dispol_file(2) = ''
-      dispol_file(3) = ''
-      dispol_file(4) = ''
-	else
       elements     = 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V el'
-	endif
+      elements = elements_ARCiS
       DustChem_file  = trim(homedir) // '/ARCiS/Data/GGchem/DustChem.dat'
 
       auto_atmos         = .false.

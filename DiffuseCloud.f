@@ -14,7 +14,7 @@
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,ComputeKzz,err,maxerr
-	real*8 Pv,w_atoms(N_atoms),molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
+	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
 	logical ini,Tconverged
@@ -61,25 +61,6 @@
 			niter=100
 		endif
 	endif
-
-	w_atoms(1) = 1.00794		!'H'
-	w_atoms(2) = 4.002602		!'He'
-	w_atoms(3) = 12.011			!'C'
-	w_atoms(4) = 14.00674		!'N'
-	w_atoms(5) = 15.9994		!'O'
-	w_atoms(6) = 22.989768		!'Na'
-	w_atoms(7) = 24.3050		!'Mg'
-	w_atoms(8) = 26.981539		!'Al'
-	w_atoms(9) = 28.0855		!'Si'
-	w_atoms(10) = 30.973762 	!'P'
-	w_atoms(11) = 32.066 		!'S'
-	w_atoms(12) = 35.4527 		!'Cl'
-	w_atoms(13) = 39.0983 		!'K'
-	w_atoms(14) = 40.078 		!'Ca'
-	w_atoms(15) = 47.867 		!'Ti'
-	w_atoms(16) = 50.9415 		!'V'
-	w_atoms(17) = 55.845 		!'Fe'
-	w_atoms(18) = 58.6934 		!'Ni'
 	
 	allocate(densv(nnr,nCS),docondense(nCS))
 
@@ -246,13 +227,13 @@ c	atoms_cloud(i,3)=1
 	nCS=i
 
 	do i=1,nCS
-		mu(i)=sum(w_atoms(1:N_atoms)*atoms_cloud(i,1:N_atoms))/CSnmol(i)
+		mu(i)=sum(mass_atoms(1:N_atoms)*atoms_cloud(i,1:N_atoms))/CSnmol(i)
 	enddo
 
 	mutot=0d0
 	xv_bot=1d200
 	do i=1,N_atoms
-		mutot=mutot+w_atoms(i)*molfracs_atoms(i)
+		mutot=mutot+mass_atoms(i)*molfracs_atoms(i)
 	enddo
 	do iCS=1,nCS
 		do k=1,N_atoms
