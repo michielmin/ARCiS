@@ -84,7 +84,6 @@ c	n_nu_line=ng*min(j,4)
 	do ir=nr,1,-1
 		call tellertje(nr-ir+1,nr)
 		cont_tot=0d0
-
 c===============
 c UV cross sections of CO2 from Venot et al.
 		call CO2_UV_cross(lam,cont_tot,nlam,min(T(ir),800d0))
@@ -112,13 +111,23 @@ c===============
 		enddo
 		Csca(ir,1:nlam)=0d0
 		if(do_rayleigh) then
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i)
+!$OMP& SHARED(Csca,ir,nlam,computelam)
+!$OMP DO SCHEDULE(DYNAMIC,1)
 			do i=1,nlam
-				call RayleighScattering(Csca(ir,i),ir,i)
+				if(computelam(i)) call RayleighScattering(Csca(ir,i),ir,i)
 			enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 		endif
+
 		if(mixrat_PAH.gt.0d0) call ComputePAH(cont_tot,Csca(ir,1:nlam),computelam)
 		if(mixrat_optEC.gt.0d0) call Compute_optEC(cont_tot,Csca(ir,1:nlam),computelam)
 		kappa_mol=0d0
+
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(imol)
@@ -248,6 +257,7 @@ c===============
 	deallocate(nu_line)
 	deallocate(mixrat_tmp)
 
+
 	return
 	end
 
@@ -257,10 +267,11 @@ c===============
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 ll,Cs
+	real*8 ll,Cs,ll2
 	integer ir,i,j
 
 	ll=1d0/lam(i)**2
+	ll2=ll*ll
 c Rayleigh cross sections from Dalgarno & Williams (1962)
 c For other than H2 from Sneep & Ubachs (2005)
 	Cs=0d0
@@ -269,40 +280,49 @@ c For other than H2 from Sneep & Ubachs (2005)
 			select case(j)
 				case(2) !CO2
 c Sneep & Ubachs (2005)
-					Cs=Cs+12.4*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+c					Cs=Cs+12.4*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+					Cs=Cs+9.950903042454394e-44*mixrat_r(ir,j)*ll2
 				case(4) !N2O
 c Sneep & Ubachs (2005)
-					Cs=Cs+15.9*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+c					Cs=Cs+15.9*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+					Cs=Cs+1.2759625675405231e-43*mixrat_r(ir,j)*ll2
 				case(5) !CO
 c Sneep & Ubachs (2005)
-					Cs=Cs+6.19*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+c					Cs=Cs+6.19*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+					Cs=Cs+4.967426599418766e-44*mixrat_r(ir,j)*ll2
 				case(6) !CH4
 c Sneep & Ubachs (2005)
-					Cs=Cs+12.47*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+c					Cs=Cs+12.47*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+					Cs=Cs+1.000707749511341e-43*mixrat_r(ir,j)*ll2
 				case(22) !N2
 c Sneep & Ubachs (2005)
-					Cs=Cs+5.1*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+c					Cs=Cs+5.1*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+					Cs=Cs+4.0927101222997906e-44*mixrat_r(ir,j)*ll2
 				case(30) !SF6
 c Sneep & Ubachs (2005)
-					Cs=Cs+32.3*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+c					Cs=Cs+32.3*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+					Cs=Cs+2.5920497441232007e-43*mixrat_r(ir,j)*ll2
 				case(45) ! H2
 c Dalgarno & Williams (1962)
-					Cs=Cs+mixrat_r(ir,j)*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4)
+					Cs=Cs+mixrat_r(ir,j)*(8.14d-45*ll2+1.28d-54*ll2*ll+1.61d-64*ll2*ll2)
 				case(1) !H2O
-					Cs=Cs+4.43*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+c					Cs=Cs+4.43*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+					Cs=Cs+3.555040361134916e-44*mixrat_r(ir,j)*ll2
 				case(48) ! He
 c https://www.climate-policy-watcher.org/surface-temperature/scattering-by-molecules-rayleigh-scattering.html
-					Cs=Cs+0.0641*mixrat_r(ir,j)*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4)
+					Cs=Cs+0.0641*mixrat_r(ir,j)*(8.14d-45*ll2+1.28d-54*ll2*ll+1.61d-64*ll2*ll2)
 				case(11) ! NH3
 c https://www.climate-policy-watcher.org/surface-temperature/scattering-by-molecules-rayleigh-scattering.html
-					Cs=Cs+7.3427*mixrat_r(ir,j)*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4)
+					Cs=Cs+7.3427*mixrat_r(ir,j)*(8.14d-45*ll2+1.28d-54*ll2*ll+1.61d-64*ll2*ll2)
 			end select
 		endif
 	enddo
 c============================
 c old parameterization
-	Cs=Cs+mixratHaze*(8.14d-45*ll**2+1.28d-54*ll**3+1.61d-64*ll**4+kappaHaze*2d0*mp)*exp(-(abs(log10(P(ir)/PHaze))
+	if(mixratHaze.gt.0d0) then
+		Cs=Cs+mixratHaze*(8.14d-45*ll2+1.28d-54*ll2*ll+1.61d-64*ll2*ll2+kappaHaze*2d0*mp)*exp(-(abs(log10(P(ir)/PHaze))
      &					/log10(dPHaze))**2/2d0)
+	endif
 c============================
 
 c============================
