@@ -135,7 +135,7 @@ c===============
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,j,imol,ig,ig_c,tot,tot2,imol0,w1)
+!$OMP& PRIVATE(i,j,imol,ig,ig_c,imol0,w1)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,computelam,
 !$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid,
 !$OMP&        RTgridpoint)
@@ -157,12 +157,10 @@ c===============
 					fulladd(imol)=(kappa_tot(imol).ge.0.01*kappa_tot(0))
 				endif
 			enddo
-			tot=0d0
 			kappa(1:ng)=0d0
 			do imol=1,nmol
 				if(opacitymol(imol).and.fulladd(imol)) then
 					kappa(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
-					tot=tot+sum(kappa(1:ng)*wgg(1:ng))
 					exit
 				endif
 			enddo
@@ -172,7 +170,6 @@ c===============
 				if(opacitymol(imol).and.fulladd(imol).and.imol.ne.imol0) then
 					ktemp(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 					ig_c=0
-					tot=tot+sum(ktemp(1:ng)*wgg(1:ng))
 					do ig=1,ng
 						do j=1,ng
 							ig_c=ig_c+1
@@ -190,29 +187,19 @@ c===============
 			endif
 			do imol=1,nmol
 				if(opacitymol(imol).and..not.fulladd(imol)) then
-					ktemp(1:ng)=kappa_mol(1:ng,i,imol)
-					tot=tot+sum(ktemp(1:ng)*wgg(1:ng))*mixrat_tmp(imol)
-					kappa(1:ng)=kappa(1:ng)+ktemp(1:ng)*mixrat_tmp(imol)
+					kappa(1:ng)=kappa(1:ng)+kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 				endif
 			enddo
 			else
 			kappa(1:ng)=0d0
-			tot=0d0
 			do imol=1,nmol
 				if(opacitymol(imol)) then
-					ktemp(1:ng)=kappa_mol(1:ng,i,imol)
-					tot=tot+sum(ktemp(1:ng)*wgg(1:ng))*mixrat_tmp(imol)
-					kappa(1:ng)=kappa(1:ng)+ktemp(1:ng)*mixrat_tmp(imol)
+					kappa(1:ng)=kappa(1:ng)+kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 				endif
 			enddo
 			endif
 
-			tot2=sum(kappa(1:ng)*wgg(1:ng))+cont_tot(i)
-			tot=tot+cont_tot(i)
 			kappa=kappa+cont_tot(i)
-			if(tot2.gt.0d0) then
-				kappa=kappa*tot/tot2
-			endif
 			Cabs(ir,i,1:ng)=kappa(1:ng)
 			do ig=1,ng
 				if(Cabs(ir,i,ig).lt.1d-6*Csca(ir,i)) Cabs(ir,i,ig)=1d-6*Csca(ir,i)
