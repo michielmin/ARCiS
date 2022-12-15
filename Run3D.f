@@ -111,7 +111,7 @@ c	recomputeopac=.true.
 	enddo
 
 	actually1D=.true.
-	if(((vxx.ne.0d0.or.night2day.ne.1d0.or.pole2eq.ne.1d0).and.betamax.ne.betamin).or.n3D.eq.2) actually1D=.false.
+	if(((vxx.ne.0d0.or.night2day.ne.1d0.or.pole2eq.ne.1d0).and.betamax.ne.betamin).or.(n3D.eq.2.and.n_Par3D.ne.0)) actually1D=.false.
 
 	call output("hotspot shift: " // dbl2string(hotspotshift,'(f6.2)') // " degrees")
 
