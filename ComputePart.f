@@ -851,7 +851,7 @@ c H2O: 18
 !$OMP& SHARED(C,nlam,na,nm,ns,frac,minlog,maxlog,f,e1,e2,wf,isize,computelamcloud,Mass,
 !$OMP&        pow,lam,rho,nf,r0,nr0,Kabs,Ksca,Kext)
 !$OMP DO
-!$OMP& SCHEDULE(STATIC,1)
+!$OMP& SCHEDULE(STATIC)
 	do ilam=1,nlam
 	
 	if(.not.computelamcloud(ilam)) then

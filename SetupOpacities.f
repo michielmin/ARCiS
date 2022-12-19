@@ -115,7 +115,7 @@ c===============
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i)
 !$OMP& SHARED(Csca,ir,nlam,computelam)
-!$OMP DO SCHEDULE(DYNAMIC,1)
+!$OMP DO SCHEDULE(STATIC)
 			do i=1,nlam
 				if(computelam(i)) call RayleighScattering(Csca(ir,i),ir,i)
 			enddo
@@ -132,7 +132,7 @@ c===============
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(imol)
 !$OMP& SHARED(includemol,nmol,kappa_mol,ir)
-!$OMP DO SCHEDULE(DYNAMIC,1)
+!$OMP DO SCHEDULE(STATIC)
 		do imol=1,nmol
 			if(includemol(imol)) then
 				call ReadOpacityFITS(kappa_mol,imol,ir)
@@ -148,7 +148,7 @@ c===============
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,computelam,
 !$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid,
 !$OMP&        RTgridpoint)
-!$OMP DO SCHEDULE(DYNAMIC,1)
+!$OMP DO SCHEDULE(STATIC)
 		do i=1,nlam
 			if(computelam(i).and.(emisspec.or.computeT).and.(.not.useobsgrid.or.lamemis(i).or.RTgridpoint(i))) then
 			kappa_tot(0:nmol)=0d0
