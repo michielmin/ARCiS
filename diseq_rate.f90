@@ -10,13 +10,13 @@ subroutine rate(nr, T, nt, k)
   k_0(1:nr) = 1.93d3 * T(1:nr)**(-9.88d0) * exp(-7544d0/T(1:nr)) &
        + 5.11d-11 * T(1:nr)**(-6.25d0) * exp(-1433d0/T(1:nr))
   k_inf(1:nr) = 1.03d-10 * T(1:nr)**(-0.018d0) * exp(16.74d0/T(1:nr))
-  k(1, 1:nr) = (k_0(1:nr) * nt(1:nr)) / (1.0d0 + k_0(1:nr) * nt(1:nr) / k_inf(1:nr))
+  k(1, 1:nr) = (k_0(1:nr) * nt(1:nr) * k_inf(1:nr)) / (k_inf(1:nr) + k_0(1:nr) * nt(1:nr))
   
   k(2, 1:nr) = 1.60d-10
 
   k_0(1:nr) = 1.66d-10 * exp(-12630d0/T(1:nr))
   k_inf(1:nr) = 3d9 * exp(-14600d0/T(1:nr))
-  k(3, 1:nr) = (k_0(1:nr) * nt(1:nr)) / (1.0d0 + k_0(1:nr) * nt(1:nr) / k_inf(1:nr))
+  k(3, 1:nr) = (k_0(1:nr) * nt(1:nr) * k_inf(1:nr)) / (k_inf(1:nr) + k_0(1:nr) * nt(1:nr))
   
 
   k(4, 1:nr) = 1.4d-10
@@ -30,7 +30,7 @@ subroutine rate(nr, T, nt, k)
  
   k_0(1:nr) = 3.49d38 * T(1:nr)**(-13.13d0) * exp(-36825d0/T(1:nr))
   k_inf(1:nr) = 7.95d13 * exp(-27463d0/T(1:nr))
-  k(12, 1:nr) = (k_0(1:nr) * nt(1:nr)) / (1.0d0 + k_0(1:nr) * nt(1:nr) / k_inf(1:nr))
+  k(12, 1:nr) = (k_0(1:nr) * nt(1:nr) * k_inf(1:nr)) / (k_inf(1:nr) + k_0(1:nr) * nt(1:nr))
   
   k(13, 1:nr) = 6.98d-10 * T(1:nr)**(-0.27d0) * exp(39d0/T(1:nr))  
   k(14, 1:nr) = 7.9d-9 * T(1:nr)**(-1.1d0) * exp(-98d0/T(1:nr))  
@@ -39,7 +39,7 @@ subroutine rate(nr, T, nt, k)
 
   k_0(1:nr) = 2.7d-31 * T(1:nr)**(-0.6d0)
   k_inf(1:nr) = 3.31d-6 * T(1:nr)**(-1.0d0)
-  k(17, 1:nr) = (k_0(1:nr) * nt(1:nr)) / (1.0d0 + k_0(1:nr) * nt(1:nr) / k_inf(1:nr))
+  k(17, 1:nr) = (k_0(1:nr) * nt(1:nr) * k_inf(1:nr)) / (k_inf(1:nr) + k_0(1:nr) * nt(1:nr))
   
   k(18, 1:nr) = 1.05d-17 * T(1:nr)**(1.5d0) * exp(259d0/T(1:nr))  
   

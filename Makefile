@@ -16,7 +16,7 @@ endif
 # array boundary check
 ifeq ($(debug),true)
   ifeq ($(gfort),true)
-    DEBUGGING = -Wall -Wno-unused-variable -fbounds-check -fbacktrace -fcheck=all
+    DEBUGGING = -Wall -Wno-unused-variable -fbounds-check -fbacktrace -fcheck=all -ffpe-trap=zero,overflow -g3
   else	
     DEBUGGING = -check all -g -traceback -check bounds -check uninit -O0
   endif
@@ -49,7 +49,7 @@ endif
 
 # Platform specific compilation options
 ifeq ($(gfort),true)
-  FLAG_ALL      = -O5 -finit-local-zero $(MULTICORE) -I$(HOME)/include -I/usr/local/modules $(LIBS_MN) $(LIBS_MCMC)
+  FLAG_ALL      = -O5 -finit-local-zero $(MULTICORE) -I$(HOME)/include -I/usr/local/modules $(LIBS_MN) $(LIBS_MCMC) -frecursive -finit-derived -Wuninitialized
   FLAG_LINUX    = -ffixed-line-length-132 -cpp
   FLAG_MAC      = -m64 -ffixed-line-length-132 -cpp
 else
