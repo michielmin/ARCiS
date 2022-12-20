@@ -94,7 +94,7 @@
 	IMPLICIT NONE
 	integer nvars,i,j,nlamtot,k,ny,ii
 	real*8 var(nvars),chi2obs(nobs),error(2,nvars),lnew,scale
-	real*8,allocatable :: spec(:),dy(:)
+	real*8,allocatable :: spec(:)
 	logical recomputeopac
 	real*8 tot
 	character*500 keyword
@@ -106,13 +106,14 @@
 		enddo
 	enddo
 	ny=k
-	allocate(spec(ny),dy(ny))
+	allocate(spec(ny))
 	call mrqcomputeY(var,spec,nvars,ny,lnew,scale)
 
 	do i=1,nvars
 		var(i)=RetPar(i)%value
 		if(RetPar(i)%logscale) var(i)=log10(var(i))
 	enddo
+	deallocate(spec)
 
 	return
 	end
