@@ -3,7 +3,6 @@
 	use Constants
 	IMPLICIT NONE
 	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot,Ag
-	real*8 Ca,Cs,BBr(0:nr),tot,contr
 	real*8 Ca,Cs,tot,contr
 	integer icloud,isize
 	real*8,allocatable :: rtrace(:),phase0(:),ptrace(:)
