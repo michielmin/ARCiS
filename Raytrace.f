@@ -5,7 +5,7 @@
 	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot,Ag
 	real*8 Ca,Cs,tot,contr
 	integer icloud,isize
-	real*8,allocatable :: rtrace(:),phase0(:),ptrace(:)
+	real*8,allocatable :: rtrace(:),phase0(:)
 	real*8,allocatable :: fluxg_contr(:),fact_contr(:),Ag_contr(:)
 	integer irc
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig,nsub,j,k,nk
@@ -176,7 +176,7 @@
 	nsub=3
 
 	if(.not.transspec) then
-		ndisk=20
+		ndisk=15
 		nsub=0
 	endif
 	if(.not.emisspec) then
@@ -186,19 +186,23 @@
 	
 	nrtrace=(nr-1)*nsub+ndisk
 	allocate(rtrace(nrtrace))
-	allocate(ptrace(nrtrace))
 
 	k=0
-	do i=1,ndisk
-		k=k+1
-		rtrace(k)=R(1)*real(i-1)/real(ndisk)
-		ptrace(k)=P(1)*(1d0+real(ndisk-i)/real(ndisk))
-	enddo
+	if(nsub.eq.0) then
+		do i=1,ndisk
+			k=k+1
+			rtrace(k)=R(nr)*real(i-1)/real(ndisk)
+		enddo
+	else
+		do i=1,ndisk
+			k=k+1
+			rtrace(k)=R(1)*real(i-1)/real(ndisk)
+		enddo
+	endif
 	do i=1,nr-1
 		do j=1,nsub
 			k=k+1
 			rtrace(k)=R(i)+(R(i+1)-R(i))*real(j-1)/real(nsub)
-			ptrace(k)=P(i)+(P(i+1)-P(i))*real(j-1)/real(nsub)
 		enddo
 	enddo
 
@@ -529,7 +533,6 @@ c		call LightCurveRetrieval(rtrace,nrtrace)
 	phase=phase*1d23/distance**2
 
 	deallocate(rtrace)
-	deallocate(ptrace)
 
 	return
 	end
