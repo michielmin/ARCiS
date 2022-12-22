@@ -49,6 +49,7 @@
 
 	if(ncc.eq.1) cloudfrac=1d0
 
+	if(.not.retrieval) then
 	do icc=1,ncc
 		do ilam=1,nlam
 		tau=0d0
@@ -129,7 +130,7 @@
 		cloudtau(icc,ilam)=tau
 		enddo
 	enddo
-		
+	endif
 
 	flux=0d0
 
@@ -145,7 +146,7 @@
 !$OMP& PRIVATE(ilam,fluxg,icc,phase0)
 !$OMP& SHARED(nlam,nclouds,flux,phase,ncc,docloud,cloudfrac,nphase)
 	allocate(phase0(nphase))
-!$OMP DO
+!$OMP DO SCHEDULE(DYNAMIC)
 	do ilam=1,nlam
 		call tellertje(ilam+1,nlam+1)
 		flux(:,ilam)=0d0
@@ -208,7 +209,7 @@
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,rr,ir,k,si,xx1,in,xx2,d,ir_next)
 !$OMP& SHARED(nrtrace,rtrace,R,dtrace,irtrace,nirtrace,nr)
-!$OMP DO
+!$OMP DO SCHEDULE(DYNAMIC)
 	do i=1,nrtrace-1
 		rr=sqrt(rtrace(i)*rtrace(i+1))
 		ir=nr
@@ -265,21 +266,18 @@
 		allocate(flux_contr(nr,nlam))
 		allocate(obsA_contr(nr,nlam))
 	endif
-	Ocolumn=0d0
-	Ccolumn=0d0
-	Hcolumn=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(SHARED)
 !$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,Ca_cloud,Cs_cloud,
 !$OMP&         Ca,Cs,icloud,isize,BBr,Otot,Ctot,Htot,imol,irc,contr,fact_contr,fluxg_contr,Ag_contr,nk)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
 !$OMP&			cloud_dens,useDRIFT,Psimplecloud,P,flux_contr,obsA_contr,irtrace,dtrace,nirtrace,
-!$OMP&			Ocolumn,Ccolumn,Hcolumn,nmol,mixrat_r,includemol,computecontrib,wgg)
+!$OMP&			nmol,mixrat_r,includemol,computecontrib,wgg)
 	allocate(fact_contr(nr))
 	allocate(fluxg_contr(nr))
 	allocate(Ag_contr(nr))
 	allocate(Ca_cloud(ncc,nr),Cs_cloud(ncc,nr),BBr(0:nr))
-!$OMP DO
+!$OMP DO SCHEDULE(DYNAMIC)
 	do ilam=1,nlam
 		Ca_cloud(1:ncc,1:nr)=0d0
 		Cs_cloud(1:ncc,1:nr)=0d0
@@ -407,7 +405,7 @@
 !$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,opacitymol,irtrace,dtrace,Cabs_mol,mixrat_r,
 !$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,useDRIFT,Cext_cont,
 !$OMP&		cloudfrac,nirtrace,Psimplecloud,maxtau,ndisk,nr,obsA_LC,CaCont)
-!$OMP DO
+!$OMP DO SCHEDULE(DYNAMIC)
 	do ilam=1,nlam
 		do icc=1,ncc
 		if(cloudfrac(icc).gt.0d0) then

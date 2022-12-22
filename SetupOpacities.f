@@ -19,11 +19,11 @@
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime,cwg(ng),w1
 	real*8,allocatable :: nu_line(:),dnu_line(:),mixrat_tmp(:)
 	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
-	logical,allocatable,save :: fulladd(:)
+	integer,allocatable,save :: ifull(:),ifast(:)
 	real*8,allocatable,save :: k_line(:),ktemp(:),kappa(:),w_line(:),kappa_tot(:),work1(:),work2(:),work3(:)
-!$OMP THREADPRIVATE(fulladd,k_line,ktemp,kappa,w_line,kappa_tot,work1,work2,work3)
-	integer n_nu_line,iT
-	integer i,j,ir,k,nl,ig,ig_c,imol0
+!$OMP THREADPRIVATE(ifull,ifast,k_line,ktemp,kappa,w_line,kappa_tot,work1,work2,work3)
+	integer n_nu_line,iT,nfull,nfast
+	integer i,j,ir,k,nl,ig,ig_c,imol0,jg
 	integer,allocatable :: inu1(:),inu2(:)
 	character*500 filename
 
@@ -74,7 +74,8 @@ c	n_nu_line=ng*min(j,4)
 	if(.not.allocated(ktemp)) allocate(ktemp(ng))
 	if(.not.allocated(kappa)) allocate(kappa(ng))
 	if(.not.allocated(w_line)) allocate(w_line(n_nu_line))
-	if(.not.allocated(fulladd)) allocate(fulladd(nmol))
+	if(.not.allocated(ifull)) allocate(ifull(nmol))
+	if(.not.allocated(ifast)) allocate(ifast(nmol))
 	if(.not.allocated(kappa_tot)) allocate(kappa_tot(0:nmol))
 	if(.not.allocated(work1)) allocate(work1(n_nu_line))
 	if(.not.allocated(work2)) allocate(work2(n_nu_line))
@@ -122,7 +123,7 @@ c===============
 		Csca(ir,1:nlam)=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,j,imol,ig,ig_c,imol0,w1)
+!$OMP& PRIVATE(i,j,imol,ig,jg,ig_c,imol0,w1,nfull,nfast)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,computelam,
 !$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid,
 !$OMP&        RTgridpoint,includemol,do_rayleigh,mixrat_PAH,mixrat_optEC)
@@ -146,7 +147,7 @@ c===============
 !$OMP END DO
 !$OMP FLUSH
 
-!$OMP DO SCHEDULE(STATIC)
+!$OMP DO SCHEDULE(DYNAMIC)
 		do imol=1,nmol
 			if(includemol(imol)) then
 				call ReadOpacityFITS(kappa_mol,imol,ir)
@@ -155,42 +156,48 @@ c===============
 !$OMP END DO
 !$OMP FLUSH
 
-!$OMP DO SCHEDULE(STATIC)
+!$OMP DO SCHEDULE(DYNAMIC)
 		do i=1,nlam
 			if(computelam(i).and.(emisspec.or.computeT).and.(.not.useobsgrid.or.lamemis(i).or.RTgridpoint(i))) then
-			kappa_tot(0:nmol)=0d0
 			kappa_tot(0)=cont_tot(i)
 			do imol=1,nmol
 				if(opacitymol(imol)) then
+					kappa_tot(imol)=0d0
 					do ig=1,ng
-						kappa_tot(imol)=kappa_tot(imol)+wgg(ig)*kappa_mol(ig,i,imol)*mixrat_tmp(imol)
+						kappa_tot(imol)=kappa_tot(imol)+wgg(ig)*kappa_mol(ig,i,imol)
 					enddo
+					kappa_tot(imol)=kappa_tot(imol)*mixrat_tmp(imol)
 					kappa_tot(0)=kappa_tot(0)+kappa_tot(imol)
 				endif
 			enddo
+			nfull=0
+			nfast=0d0
 			do imol=1,nmol
 				if(opacitymol(imol)) then
-					fulladd(imol)=(kappa_tot(imol).ge.0.01*kappa_tot(0))
+					if(kappa_tot(imol).ge.0.01*kappa_tot(0)) then
+						nfull=nfull+1
+						ifull(nfull)=imol
+						kappa_tot(nfull)=-kappa_tot(imol)
+					else
+						nfast=nfast+1
+						ifast(nfast)=imol
+					endif
 				endif
 			enddo
+			call dpquicksort_indx(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 			kappa(1:ng)=0d0
-			do imol=1,nmol
-				if(opacitymol(imol).and.fulladd(imol)) then
-					kappa(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
-					exit
-				endif
-			enddo
-			imol0=imol
-			if(imol0.le.nmol) then
-			do imol=1,nmol
-				if(opacitymol(imol).and.fulladd(imol).and.imol.ne.imol0) then
+			if(nfull.gt.0) then
+				imol=ifull(1)
+				kappa(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
+				do j=2,nfull
+					imol=ifull(j)
 					ktemp(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 					ig_c=0
 					do ig=1,ng
-						do j=1,ng
+						do jg=1,ng
 							ig_c=ig_c+1
-							k_line(ig_c)=kappa(ig)+ktemp(j)
-							w_line(ig_c)=wgg(ig)*wgg(j)
+							k_line(ig_c)=kappa(ig)+ktemp(jg)
+							w_line(ig_c)=wgg(ig)*wgg(jg)
 						enddo
 					enddo
 					n_nu_line=ig_c
@@ -198,13 +205,11 @@ c===============
 						if(.not.k_line(ig).ge.1d-80) k_line(ig)=1d-80
 					enddo
 					call regridKtable(k_line,w_line,n_nu_line,gg,kappa,wgg,ng,work1,work2,work3)
-				endif
-			enddo
+				enddo
 			endif
-			do imol=1,nmol
-				if(opacitymol(imol).and..not.fulladd(imol)) then
-					kappa(1:ng)=kappa(1:ng)+kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
-				endif
+			do j=1,nfast
+				imol=ifast(j)
+				kappa(1:ng)=kappa(1:ng)+kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 			enddo
 			else
 			kappa(1:ng)=0d0
@@ -442,9 +447,9 @@ c Venot et al. 2018
 	subroutine regridKtable(k0,w0,n0,g1,k1,w1,n1, g0,b0,gg1)
 	IMPLICIT NONE
 	integer,intent(in) :: n0,n1
-	real*8,intent(in) :: k0(n0),g1(n1),w1(n1)
+	real*8,intent(in) :: g1(n1),w1(n1)
 	real*8,intent(out) :: k1(n1),g0(n0),b0(n0+1),gg1(n1)
-	real*8,intent(inout) :: w0(n0)
+	real*8,intent(inout) :: k0(n0),w0(n0)
 	integer ig,j,j1,j2
 	real*8 tot0,tot1,ww,bg0,bg1
 	
@@ -612,6 +617,111 @@ c-----------------------------------------------------------------------
 	IMPLICIT NONE
 	integer, intent(in) :: last
 	real*8, intent(inout) :: array(last),warray(last)
+	real*8 :: temp,p1,p2,wtemp,wp1,wp2
+	integer :: i,j,l,k,g
+	
+	if (last.lt.40) then ! use insertion sort on small arrays
+		do i=2,last
+			temp=array(i)
+			wtemp=warray(i)
+			do j=i-1,1,-1
+				if (array(j).le.temp) exit
+				array(j+1)=array(j)
+				warray(j+1)=warray(j)
+			enddo
+			array(j+1)=temp
+			warray(j+1)=wtemp
+		enddo
+		return
+	endif
+	p1=array(last/3)
+	p2=array(2*last/3)
+	wp1=warray(last/3)
+	wp2=warray(2*last/3)
+	if (p2.lt.p1) then
+		temp=p1
+		p1=p2
+		p2=temp
+		wtemp=wp1
+		wp1=wp2
+		wp2=wtemp
+	endif
+	array(last/3)=array(1)
+	array(1)=p1
+	array(2*last/3)=array(last)
+	array(last)=p2
+	
+	warray(last/3)=warray(1)
+	warray(1)=wp1
+	warray(2*last/3)=warray(last)
+	warray(last)=wp2
+	
+	g=last
+	l=2
+	do while (array(l).lt.p1)
+		l=l+1
+	enddo
+	k=l
+	
+	do while(k.lt.g)
+		temp=array(k)
+		wtemp=warray(k)
+		if (temp.lt.p1) then
+			array(k)=array(l)
+			array(l)=temp
+			warray(k)=warray(l)
+			warray(l)=wtemp
+			l=l+1
+		else if (temp.gt.p2) then
+			do while(array(g-1).gt.p2)
+				g=g-1
+			enddo
+			if (k.ge.g) exit
+			g=g-1
+			if (array(g).lt.p1) then
+				array(k)=array(l)
+				array(l)=array(g)
+				array(g)=temp
+				warray(k)=warray(l)
+				warray(l)=warray(g)
+				warray(g)=wtemp
+				l=l+1
+			else
+				array(k)=array(g)
+				array(g)=temp
+				warray(k)=warray(g)
+				warray(g)=wtemp
+			endif
+		endif
+		k=k+1
+	enddo
+	if (l.gt.2) then
+		array(1)=array(l-1)
+		array(l-1)=p1
+		warray(1)=warray(l-1)
+		warray(l-1)=wp1
+		call dpquicksort_w(array(1:l-2),warray(1:l-2),l-2)
+	endif
+	call dpquicksort_w(array(l:g-1),warray(l:g-1),g-l)
+	if (g.lt.last) then
+		array(last)=array(g)
+		array(g)=p2
+		warray(last)=warray(g)
+		warray(g)=wp2
+		call dpquicksort_w(array(g+1:last),warray(g+1:last),last-g)
+	endif
+	
+	return
+	end
+
+
+
+  ! dual pivot quicksort
+	recursive subroutine dpquicksort_indx(array,warray,last)
+	IMPLICIT NONE
+	integer, intent(in) :: last
+	real*8, intent(inout) :: array(last)
+	integer, intent(inout) :: warray(last)
 	real*8 :: temp,p1,p2,wtemp,wp1,wp2
 	integer :: i,j,l,k,g
 	
