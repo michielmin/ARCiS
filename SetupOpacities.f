@@ -83,7 +83,17 @@ c	n_nu_line=ng*min(j,4)
 
 	do ir=nr,1,-1
 		call tellertje(nr-ir+1,nr)
-		cont_tot=0d0
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& SHARED(cont_tot,nlam)
+!$OMP DO SCHEDULE(STATIC)
+		do i=1,nlam
+			cont_tot(i)=0d0
+		enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+
 c===============
 c UV cross sections of CO2 from Venot et al.
 		call CO2_UV_cross(lam,cont_tot,nlam,min(T(ir),800d0))
@@ -110,28 +120,32 @@ c===============
 			cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(iT,1:nlam)*Ndens(ir)*mixrat_tmp(CIA(i)%imol1)*mixrat_tmp(CIA(i)%imol2)
 		enddo
 		Csca(ir,1:nlam)=0d0
-		if(do_rayleigh) then
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i)
-!$OMP& SHARED(Csca,ir,nlam,computelam)
+!$OMP& PRIVATE(i,j,imol,ig,ig_c,imol0,w1)
+!$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,computelam,
+!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid,
+!$OMP&        RTgridpoint,includemol,do_rayleigh,mixrat_PAH,mixrat_optEC)
+
+		if(do_rayleigh) then
 !$OMP DO SCHEDULE(STATIC)
 			do i=1,nlam
 				if(computelam(i)) call RayleighScattering(Csca(ir,i),ir,i)
 			enddo
 !$OMP END DO
 !$OMP FLUSH
-!$OMP END PARALLEL
 		endif
 
 		if(mixrat_PAH.gt.0d0) call ComputePAH(cont_tot,Csca(ir,1:nlam),computelam)
 		if(mixrat_optEC.gt.0d0) call Compute_optEC(cont_tot,Csca(ir,1:nlam),computelam)
-		kappa_mol=0d0
 
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(imol)
-!$OMP& SHARED(includemol,nmol,kappa_mol,ir)
+!$OMP DO SCHEDULE(STATIC)
+		do i=1,nlam
+			kappa_mol(1:ng,i,1:nmol)=0d0
+		enddo
+!$OMP END DO
+!$OMP FLUSH
+
 !$OMP DO SCHEDULE(STATIC)
 		do imol=1,nmol
 			if(includemol(imol)) then
@@ -140,14 +154,7 @@ c===============
 		enddo
 !$OMP END DO
 !$OMP FLUSH
-!$OMP END PARALLEL
 
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,j,imol,ig,ig_c,imol0,w1)
-!$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,computelam,
-!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid,
-!$OMP&        RTgridpoint)
 !$OMP DO SCHEDULE(STATIC)
 		do i=1,nlam
 			if(computelam(i).and.(emisspec.or.computeT).and.(.not.useobsgrid.or.lamemis(i).or.RTgridpoint(i))) then
@@ -213,7 +220,7 @@ c===============
 			do ig=1,ng
 				if(Cabs(ir,i,ig).lt.1d-6*Csca(ir,i)) Cabs(ir,i,ig)=1d-6*Csca(ir,i)
 			enddo
-			opac_tot(i,1:ng)=opac_tot(i,1:ng)+(Cabs(ir,i,1:ng)+Csca(ir,i))*Ndens(ir)*(R(ir+1)-R(ir))
+			if(.not.retrieval) opac_tot(i,1:ng)=opac_tot(i,1:ng)+(Cabs(ir,i,1:ng)+Csca(ir,i))*Ndens(ir)*(R(ir+1)-R(ir))
 		enddo
 !$OMP END DO
 !$OMP FLUSH
@@ -431,3 +438,274 @@ c Venot et al. 2018
 	return
 	end
 		
+		
+	subroutine regridKtable(k0,w0,n0,g1,k1,w1,n1, g0,b0,gg1)
+	IMPLICIT NONE
+	integer,intent(in) :: n0,n1
+	real*8,intent(in) :: k0(n0),g1(n1),w1(n1)
+	real*8,intent(out) :: k1(n1),g0(n0),b0(n0+1),gg1(n1)
+	real*8,intent(inout) :: w0(n0)
+	integer ig,j,j1,j2
+	real*8 tot0,tot1,ww,bg0,bg1
+	
+	tot0=0d0
+	do ig=1,n0
+		tot0=tot0+k0(ig)*w0(ig)
+	enddo
+	tot0=tot0/sum(w0(1:n0))
+c	call sortw_2(k0,w0,n0)
+	call dpquicksort_w(k0,w0,n0)
+	if(n1.eq.1) then
+		k1(1)=tot0
+	else
+		g0=w0
+		do ig=2,n0
+			g0(ig)=g0(ig)+g0(ig-1)
+		enddo
+		g0(1:n0)=g0(1:n0)/g0(n0)
+		w0=w0/sum(w0(1:n0))
+		gg1=w1
+		do ig=2,n1
+			gg1(ig)=gg1(ig)+gg1(ig-1)
+		enddo
+		gg1(1:n1)=gg1(1:n1)/gg1(n1)
+		b0(1)=0d0
+		do ig=1,n0
+			b0(ig+1)=g0(ig)
+		enddo
+		bg0=0d0
+		do ig=1,n1
+			bg1=gg1(ig)
+			k1(ig)=0d0
+			do j1=1,n0
+				if(b0(j1+1).ge.bg0) exit
+			enddo
+c			call hunt(b0,n0,bg0,j1)
+			do j2=j1,n0
+				if(b0(j2+1).ge.bg1) exit
+			enddo
+c			call hunt(b0(j1:n0),n0-j1+1,bg1,j2)
+			if(j1.gt.n0) j1=n0
+			if(j2.gt.n0) j2=n0
+			if(j1.ge.j2) then
+				k1(ig)=k0(j1)
+			else if((j2-j1).eq.1) then
+				k1(ig)=(k0(j1)*(b0(j1+1)-bg0)+k0(j2)*(bg1-b0(j2)))/(bg1-bg0)
+			else
+			k1(ig)=(k0(j1)*(b0(j1+1)-bg0)+k0(j2)*(bg1-b0(j2)))
+				do j=j1+1,j2-1
+					k1(ig)=k1(ig)+k0(j)*(b0(j+1)-b0(j))
+				enddo
+				k1(ig)=k1(ig)/(bg1-bg0)
+			endif
+			bg0=bg1
+		enddo
+	endif
+	
+	return
+	end
+	
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+	
+      SUBROUTINE sortw_2(arr,brr,n)
+      INTEGER n,M,NSTACK
+      REAL*8 arr(n),brr(n)
+      PARAMETER (M=7,NSTACK=50)
+      INTEGER i,ir,j,jstack,k,l,istack(NSTACK)
+      REAL*8 a,b,temp
+	if(n.le.1) return
+      jstack=0
+      l=1
+      ir=n
+1     if(ir-l.lt.M)then
+        do 12 j=l+1,ir
+          a=arr(j)
+          b=brr(j)
+          do 11 i=j-1,l,-1
+            if(arr(i).le.a)goto 2
+            arr(i+1)=arr(i)
+            brr(i+1)=brr(i)
+11        continue
+          i=l-1
+2         arr(i+1)=a
+          brr(i+1)=b
+12      continue
+        if(jstack.eq.0)return
+        ir=istack(jstack)
+        l=istack(jstack-1)
+        jstack=jstack-2
+      else
+        k=(l+ir)/2
+        temp=arr(k)
+        arr(k)=arr(l+1)
+        arr(l+1)=temp
+        temp=brr(k)
+        brr(k)=brr(l+1)
+        brr(l+1)=temp
+        if(arr(l).gt.arr(ir))then
+          temp=arr(l)
+          arr(l)=arr(ir)
+          arr(ir)=temp
+          temp=brr(l)
+          brr(l)=brr(ir)
+          brr(ir)=temp
+        endif
+        if(arr(l+1).gt.arr(ir))then
+          temp=arr(l+1)
+          arr(l+1)=arr(ir)
+          arr(ir)=temp
+          temp=brr(l+1)
+          brr(l+1)=brr(ir)
+          brr(ir)=temp
+        endif
+        if(arr(l).gt.arr(l+1))then
+          temp=arr(l)
+          arr(l)=arr(l+1)
+          arr(l+1)=temp
+          temp=brr(l)
+          brr(l)=brr(l+1)
+          brr(l+1)=temp
+        endif
+        i=l+1
+        j=ir
+        a=arr(l+1)
+        b=brr(l+1)
+3       continue
+          i=i+1
+        if(arr(i).lt.a)goto 3
+4       continue
+          j=j-1
+        if(arr(j).gt.a)goto 4
+        if(j.lt.i)goto 5
+        temp=arr(i)
+        arr(i)=arr(j)
+        arr(j)=temp
+        temp=brr(i)
+        brr(i)=brr(j)
+        brr(j)=temp
+        goto 3
+5       arr(l+1)=arr(j)
+        arr(j)=a
+        brr(l+1)=brr(j)
+        brr(j)=b
+        jstack=jstack+2
+        if(jstack.gt.NSTACK)pause 'NSTACK too small in sort2'
+        if(ir-i+1.ge.j-l)then
+          istack(jstack)=ir
+          istack(jstack-1)=i
+          ir=j-1
+        else
+          istack(jstack)=j-1
+          istack(jstack-1)=l
+          l=i
+        endif
+      endif
+      goto 1
+      END
+
+
+
+  ! dual pivot quicksort
+	recursive subroutine dpquicksort_w(array,warray,last)
+	IMPLICIT NONE
+	integer, intent(in) :: last
+	real*8, intent(inout) :: array(last),warray(last)
+	real*8 :: temp,p1,p2,wtemp,wp1,wp2
+	integer :: i,j,l,k,g
+	
+	if (last.lt.40) then ! use insertion sort on small arrays
+		do i=2,last
+			temp=array(i)
+			wtemp=warray(i)
+			do j=i-1,1,-1
+				if (array(j).le.temp) exit
+				array(j+1)=array(j)
+				warray(j+1)=warray(j)
+			enddo
+			array(j+1)=temp
+			warray(j+1)=wtemp
+		enddo
+		return
+	endif
+	p1=array(last/3)
+	p2=array(2*last/3)
+	wp1=warray(last/3)
+	wp2=warray(2*last/3)
+	if (p2.lt.p1) then
+		temp=p1
+		p1=p2
+		p2=temp
+		wtemp=wp1
+		wp1=wp2
+		wp2=wtemp
+	endif
+	array(last/3)=array(1)
+	array(1)=p1
+	array(2*last/3)=array(last)
+	array(last)=p2
+	
+	warray(last/3)=warray(1)
+	warray(1)=wp1
+	warray(2*last/3)=warray(last)
+	warray(last)=wp2
+	
+	g=last
+	l=2
+	do while (array(l).lt.p1)
+		l=l+1
+	enddo
+	k=l
+	
+	do while(k.lt.g)
+		temp=array(k)
+		wtemp=warray(k)
+		if (temp.lt.p1) then
+			array(k)=array(l)
+			array(l)=temp
+			warray(k)=warray(l)
+			warray(l)=wtemp
+			l=l+1
+		else if (temp.gt.p2) then
+			do while(array(g-1).gt.p2)
+				g=g-1
+			enddo
+			if (k.ge.g) exit
+			g=g-1
+			if (array(g).lt.p1) then
+				array(k)=array(l)
+				array(l)=array(g)
+				array(g)=temp
+				warray(k)=warray(l)
+				warray(l)=warray(g)
+				warray(g)=wtemp
+				l=l+1
+			else
+				array(k)=array(g)
+				array(g)=temp
+				warray(k)=warray(g)
+				warray(g)=wtemp
+			endif
+		endif
+		k=k+1
+	enddo
+	if (l.gt.2) then
+		array(1)=array(l-1)
+		array(l-1)=p1
+		warray(1)=warray(l-1)
+		warray(l-1)=wp1
+		call dpquicksort_w(array(1:l-2),warray(1:l-2),l-2)
+	endif
+	call dpquicksort_w(array(l:g-1),warray(l:g-1),g-l)
+	if (g.lt.last) then
+		array(last)=array(g)
+		array(g)=p2
+		warray(last)=warray(g)
+		warray(g)=wp2
+		call dpquicksort_w(array(g+1:last),warray(g+1:last),last-g)
+	endif
+	
+	return
+	end
+

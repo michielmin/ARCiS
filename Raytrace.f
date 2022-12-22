@@ -4,6 +4,7 @@
 	IMPLICIT NONE
 	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot,Ag
 	real*8 Ca,Cs,BBr(0:nr),tot,contr
+	real*8 Ca,Cs,tot,contr
 	integer icloud,isize
 	real*8,allocatable :: rtrace(:),phase0(:),ptrace(:)
 	real*8,allocatable :: fluxg_contr(:),fact_contr(:),Ag_contr(:)
@@ -13,7 +14,7 @@
 	integer icc,imol
 	real*8 Ocolumn(2,nlam,ncc),Ccolumn(2,nlam,ncc),Hcolumn(2,nlam,ncc),Otot,Ctot,Htot,dP
 	character*500 filename
-	real*8,allocatable :: dtrace(:,:),CaCont(:,:),Ca_cloud(:,:),Cs_cloud(:,:)
+	real*8,allocatable :: dtrace(:,:),CaCont(:,:),Ca_cloud(:,:),Cs_cloud(:,:),BBr(:)
 	integer,allocatable :: irtrace(:,:),nirtrace(:)
 
 	docloud=.false.
@@ -175,8 +176,8 @@
 	nsub=3
 
 	if(.not.transspec) then
-		ndisk=15
-		nsub=1
+		ndisk=20
+		nsub=0
 	endif
 	if(.not.emisspec) then
 		ndisk=2
@@ -278,11 +279,12 @@
 	allocate(fact_contr(nr))
 	allocate(fluxg_contr(nr))
 	allocate(Ag_contr(nr))
-	allocate(Ca_cloud(ncc,nr),Cs_cloud(ncc,nr))
+	allocate(Ca_cloud(ncc,nr),Cs_cloud(ncc,nr),BBr(0:nr))
 !$OMP DO
 	do ilam=1,nlam
 		Ca_cloud(1:ncc,1:nr)=0d0
 		Cs_cloud(1:ncc,1:nr)=0d0
+		if(nclouds.gt.0) then
 		do icc=1,ncc
 			if(cloudfrac(icc).gt.0d0) then
 				do ir=1,nr
@@ -304,6 +306,7 @@
 				enddo
 			endif
 		enddo
+		endif
 		freq0=freq(ilam)
 		obsA(:,ilam)=0d0
 		obsA_contr(1:nr,ilam)=0d0
@@ -389,7 +392,7 @@
 	deallocate(fact_contr)
 	deallocate(fluxg_contr)
 	deallocate(Ag_contr)
-	deallocate(Ca_cloud,Cs_cloud)
+	deallocate(Ca_cloud,Cs_cloud,BBr)
 !$OMP FLUSH
 !$OMP END PARALLEL
 	endif
