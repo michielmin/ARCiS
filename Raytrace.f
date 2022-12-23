@@ -3,7 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot,Ag
-	real*8 Ca,Cs,tot,contr
+	real*8 Ca,Cs,tot,contr,dP
 	integer icloud,isize
 	real*8,allocatable :: rtrace(:),phase0(:)
 	real*8,allocatable :: fluxg_contr(:),fact_contr(:),Ag_contr(:)
@@ -11,7 +11,6 @@
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig,nsub,j,k,nk
 	logical in
 	integer icc,imol
-	real*8 Ocolumn(2,nlam,ncc),Ccolumn(2,nlam,ncc),Hcolumn(2,nlam,ncc),Otot,Ctot,Htot,dP
 	character*500 filename
 	real*8,allocatable :: dtrace(:,:),CaCont(:,:),Ca_cloud(:,:),Cs_cloud(:,:),BBr(:)
 	integer,allocatable :: irtrace(:,:),nirtrace(:)
@@ -51,60 +50,6 @@
 
 	if(.not.retrieval) then
 	do icc=1,ncc
-		do ilam=1,nlam
-		tau=0d0
-		Otot=0d0
-		Ctot=0d0
-		Htot=0d0
-		do ir=nr,2,-1
-			Ca=sum(wgg(1:ng)*Cabs(ir,ilam,1:ng))*Ndens(ir)
-			Cs=Csca(ir,ilam)*Ndens(ir)
-			do icloud=1,nclouds
-				if(docloud(icc,icloud)) then
-					if(Cloud(icloud)%standard.eq.'MIX') then
-						Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
-						Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-					else
-						do isize=1,Cloud(icloud)%nr
-							Ca=Ca+
-     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-							Cs=Cs+
-     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-						enddo
-					endif
-				endif
-			enddo
-			tau_a=(R(ir)-R(ir-1))*(Ca+Cs)
-			if((tau+tau_a).gt.1d0) then
-				d=(1d0-tau)/tau_a
-				tau1depth(icc,ilam)=10d0**(log10(P(ir))+log10(P(ir-1)/P(ir))*d)
-				d=d*(R(ir)-R(ir-1))
-				do imol=1,nmol
-					if(includemol(imol)) then
-						Otot=Otot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Oatoms(imol))
-						Ctot=Ctot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Catoms(imol))
-						Htot=Htot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Hatoms(imol))
-					endif
-				enddo
-				goto 3
-			endif
-			tau=tau+tau_a
-			d=(R(ir)-R(ir-1))
-			do imol=1,nmol
-				if(includemol(imol)) then
-					Otot=Otot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Oatoms(imol))
-					Ctot=Ctot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Catoms(imol))
-					Htot=Htot+d*Ndens(ir)*mixrat_r(ir,imol)*real(Hatoms(imol))
-				endif
-			enddo
-		enddo
-		tau1depth(icc,ilam)=P(1)
-3		continue
-		Ocolumn(2,ilam,icc)=Otot
-		Ccolumn(2,ilam,icc)=Ctot
-		Hcolumn(2,ilam,icc)=Htot
-		enddo
-
 		do ilam=1,nlam
 		tau=0d0
 		do ir=nr,1,-1
@@ -266,14 +211,14 @@
 
 	if(emisspec.or.computecontrib) then
 
-	if(.not.allocated(flux_contr)) then
+	if(.not.allocated(flux_contr).and.computecontrib) then
 		allocate(flux_contr(nr,nlam))
 		allocate(obsA_contr(nr,nlam))
 	endif
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(SHARED)
 !$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,Ca_cloud,Cs_cloud,
-!$OMP&         Ca,Cs,icloud,isize,BBr,Otot,Ctot,Htot,imol,irc,contr,fact_contr,fluxg_contr,Ag_contr,nk)
+!$OMP&         Ca,Cs,icloud,isize,BBr,imol,irc,contr,fact_contr,fluxg_contr,Ag_contr,nk)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
 !$OMP&			cloud_dens,useDRIFT,Psimplecloud,P,flux_contr,obsA_contr,irtrace,dtrace,nirtrace,
 !$OMP&			nmol,mixrat_r,includemol,computecontrib,wgg)
@@ -310,8 +255,10 @@
 		endif
 		freq0=freq(ilam)
 		obsA(:,ilam)=0d0
-		obsA_contr(1:nr,ilam)=0d0
-		flux_contr(1:nr,ilam)=flux(0,ilam)
+		if(computecontrib) then
+			obsA_contr(1:nr,ilam)=0d0
+			flux_contr(1:nr,ilam)=flux(0,ilam)
+		endif
 		BBr(0)=Planck(Tsurface,freq0)
 		do ir=1,nr
 			BBr(ir)=Planck(T(ir),freq0)

@@ -114,7 +114,7 @@ c===============================================================================
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	real*8 planetform_fdust,planetform_fplan,planetform_Mstart,planetform_SolidC
 	real*8 planetform_Macc,planetform_Dmigrate,planetform_Rend
-	logical planetform,massprior,retrievestar,simAb_converge,log_emis
+	logical planetform,massprior,retrievestar,simAb_converge,log_emis,randomstart
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
 	real*8 molfracs_atoms_outgas(41)

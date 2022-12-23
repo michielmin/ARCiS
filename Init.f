@@ -819,6 +819,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) doscaleR
 		case("nscaler")
 			read(key%value,*) nscaleR
+		case("randomstart")
+			read(key%value,*) randomstart
 		case("contrib","computecontrib")
 			read(key%value,*) computecontrib
 		case("outputopacity","writeopacity")
@@ -1711,6 +1713,7 @@ c		Cloud(i)%P=0.0624d0
 	npop=30
 	ngen=0
 	gene_cross=.false.
+	randomstart=.false.
 	resume_multinest=.false.
 	f_multinest=0.3d0
 	tol_multinest=0.5d0

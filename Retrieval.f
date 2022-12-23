@@ -294,10 +294,16 @@
 	imodel=0
 	bestlike=-1d200
 
-	do i=1,n_ret
-		RetPar(i)%value=RetPar(i)%x0
-	enddo
-	call MapRetrievalInverse(var0)
+	if(randomstart) then
+		do i=1,n_ret
+			var0(i)=random(idum)
+		enddo
+	else
+		do i=1,n_ret
+			RetPar(i)%value=RetPar(i)%x0
+		enddo
+		call MapRetrievalInverse(var0)
+	endif
 	call fold(var0,var0,n_ret)
 	do i=1,n_ret
 		if(var0(i).gt.1d0) var0(i)=1d0
