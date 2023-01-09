@@ -805,15 +805,15 @@ c-----------------------------------------------------------------------
 		array(l-1)=p1
 		warray(1)=warray(l-1)
 		warray(l-1)=wp1
-		call dpquicksort_w(array(1:l-2),warray(1:l-2),l-2)
+		call dpquicksort_indx(array(1:l-2),warray(1:l-2),l-2)
 	endif
-	call dpquicksort_w(array(l:g-1),warray(l:g-1),g-l)
+	call dpquicksort_indx(array(l:g-1),warray(l:g-1),g-l)
 	if (g.lt.last) then
 		array(last)=array(g)
 		array(g)=p2
 		warray(last)=warray(g)
 		warray(g)=wp2
-		call dpquicksort_w(array(g+1:last),warray(g+1:last),last-g)
+		call dpquicksort_indx(array(g+1:last),warray(g+1:last),last-g)
 	endif
 	
 	return
