@@ -694,6 +694,15 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 		endif
 	endif
 
+	if(pos_dT_lowest) then
+		do i=1,n_ret
+			if(RetPar(i)%keyword(1:7).eq."dTpoint") then
+				read(RetPar(i)%keyword(8:len(RetPar(i)%keyword)),*) j
+				if(j.eq.nTpoints) RetPar(i)%xmin=0d0
+			endif
+		enddo
+	endif
+
 	if(iWolk.gt.0) then
 		open(unit=50,file=trim(outputdir) // "/Wolk.dat",RECL=6000)
 		allocate(var(n_ret),dvar(n_ret))
@@ -1064,6 +1073,8 @@ c is already set in CountStuff
 c			read(key%value,*) nTpoints
 		case("preftpoint","pref")
 			read(key%value,*) PrefTpoint
+		case("pos_dt_lowest")
+			read(key%value,*) pos_dT_lowest
 		case("faircoverage")
 			read(key%value,*) faircoverage
 		case("speclimits")
@@ -1783,7 +1794,8 @@ c		Cloud(i)%P=0.0624d0
 	dT_IRpoint=0d0
 	dTpoint=0d0
 	chimax=1d0
-	
+	pos_dT_lowest=.false.	
+
 	maxTprofile=1d6
 	
 	maxiter=6
