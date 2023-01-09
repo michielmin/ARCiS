@@ -618,6 +618,7 @@ c Note we are here using the symmetry between North and South
 	fluxp=fluxp*1d23/distance**2
 	phase(ipc,0,1:nlam)=fluxp(1:nlam)
 	flux(0,1:nlam)=0d0
+
 	call tellertje_perc(ipc,npc)
 	if(fulloutput3D) then
 		PTaverage3D(ipc,1:nr)=PTaverage3D(ipc,1:nr)/(pi*Rmax**2)
@@ -744,6 +745,16 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 
 	enddo
 	
+	if(.not.retrieval) then
+		Lplanet=0d0
+		do ilam=1,nlam
+			if(computelam(ilam).and.lamemis(ilam)) Lplanet=Lplanet+dfreq(ilam)*phase(1,0,ilam)
+		enddo
+		call output("Teff: " // 
+     &	dbl2string((Lplanet*distance**2*1e-23/(pi*Rplanet**2*((2d0*(pi*kb)**4)/(15d0*hplanck**3*clight**3))))**0.25d0,'(f10.2)')
+     &		// "K" )
+	endif
+
 	if(makeimage) then
 		deallocate(rphi_image)
 		deallocate(xy_image)
@@ -2196,7 +2207,7 @@ c=========================================
 	end select
 
 	if(.not.retrieval) then
-		open(unit=93,file='surfemis.dat')
+		open(unit=93,file=trim(outputdir) // 'surfemis.dat')
 		do i=1,nlam
 			write(93,*) lam(i),surface_emis(i)
 		enddo

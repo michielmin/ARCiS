@@ -949,11 +949,11 @@ c	close(unit=50)
      &			(sum(molfracs_atoms_solar(3:n_atoms))/sum(molfracs_atoms_solar(1:n_atoms))))
 	call output("[Z]: " // dbl2string(metallicity,'(f6.2)'))
 
-	open(unit=50,file='atomic.dat')
-	do i=1,N_atoms
-		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
-	enddo
-	close(unit=50)
+c	open(unit=50,file='atomic.dat')
+c	do i=1,N_atoms
+c		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
+c	enddo
+c	close(unit=50)
 
 	return
 	end

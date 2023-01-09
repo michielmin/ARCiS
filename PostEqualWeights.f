@@ -9,7 +9,7 @@
 	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j,iphase,imol,k
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
-	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:)
+	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:),Tplanet(:)
 	real*8 ComputeKzz,lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,lm2,lm3,cmin
 	integer i1,i2,ibest
 	
@@ -44,6 +44,7 @@
 	allocate(values(0:nmodels,n_ret))
 	allocate(COratio_der(0:nmodels))
 	allocate(Z_der(0:nmodels))
+	allocate(Tplanet(0:nmodels))
 	if(do3D) allocate(hotspotshift_der(0:nmodels))
 	allocate(sorted(nmodels))
 	allocate(done(nmodels))
@@ -293,6 +294,7 @@
 	enddo
 	endif
 	cloudstruct(i,1:nr)=cloudstruct(i,1:nr)/dens(1:nr)
+	Tplanet(i)=(Lplanet*distance**2*1e-23/(pi*Rplanet**2*((2d0*(pi*kb)**4)/(15d0*hplanck**3*clight**3))))**0.25d0
 	
 	if(do3D.and.fulloutput3D) then
 		PTstruct3D(i,0:nphase,1:nr)=PTaverage3D(0:nphase,1:nr)
@@ -511,6 +513,11 @@
 			sorted(1:i)=hotspotshift_der(1:i)
 			call sort(sorted,i)
 			write(26,'(a10,3es12.4)') "hotspot",sorted(ime),sorted(im1),sorted(ip1)
+		endif
+		if(emisspec.and..not.useobsgrid) then
+			sorted(1:i)=Tplanet(1:i)
+			call sort(sorted,i)
+			write(26,'(a10,3es12.4)') "Tplanet",sorted(ime),sorted(im1),sorted(ip1)
 		endif
 
 		close(unit=26)

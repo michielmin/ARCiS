@@ -75,7 +75,7 @@ c===============================================================================
 	use OutputModule
 	IMPLICIT NONE
 	real*8 Mplanet,Rplanet,Pplanet,loggPlanet				! mass and radius of the planet at pressure Pplanet
-	real*8 Tstar,Rstar,Mstar,logg,Dplanet
+	real*8 Tstar,Rstar,Mstar,logg,Dplanet,Lplanet
 	real*8 orbit_P,orbit_e,orbit_omega,orbit_inc
 	real*8,allocatable :: dens(:),T(:),P(:),Ndens(:),Tin(:)	! radius
 	real*8,allocatable :: dust_dens(:,:)					! radius, component

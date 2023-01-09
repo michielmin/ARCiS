@@ -82,6 +82,7 @@ c terms of use
 	subroutine ComputeModel1D(recomputeopacities)
 	use GlobalSetup
 	use TimingModule
+	use Constants
 	IMPLICIT NONE
 	logical Tconverged
 	real*8 starttime,stoptime,starttime_w,stoptime_w,omp_get_wtime,f
@@ -143,7 +144,19 @@ c			call SetoutputMode(.false.)
 	endif
 	call cpu_time(stoptime)
 	call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
-	if(.not.do3D) call Raytrace()
+	if(.not.do3D) then
+		call Raytrace()
+		if(emisspec.and..not.useobsgrid.and..not.retrieval) then
+			Lplanet=0d0
+			do i=1,nlam
+				if(computelam(i).and.lamemis(i)) Lplanet=Lplanet+dfreq(i)*flux(0,i)
+			enddo
+			call output("Teff: " // 
+     &	dbl2string((Lplanet*distance**2*1e-23/(pi*Rplanet**2*((2d0*(pi*kb)**4)/(15d0*hplanck**3*clight**3))))**0.25d0,'(f10.2)')
+     &		// "K" )
+		endif
+	endif
+
 	call cpu_time(stoptime)
 	call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 
