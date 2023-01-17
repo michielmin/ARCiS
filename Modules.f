@@ -307,7 +307,7 @@ c for exchange when computing secondary atmosphere
 		integer nr,nsubgrains
 		real*8 tmix,betamix,Kzz,Kscale,Sigmadot
 c simple cloud from Jo
-		real*8 ff,g1,g2,kappa,albedo,kappa_haze,albedo_haze
+		real*8 ff,g1,g2,kappa,albedo,kappa_haze,albedo_haze,shscale_haze
 		logical simplecloud,simplecloudpart
 		real*8 fRutile,fForsterite,fSiO,fSiO2,fIron,fCorrundum,fFeO,fMgO,fEnstatite,fCarbon,fSiC,fWater
 c			   1,2,3,  4,5,6,      7,   8,    9,    10,        11,  12,  13,14,15,  16,     17,  18

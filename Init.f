@@ -1693,6 +1693,7 @@ c  GGchem was still implemented slightly wrong.
 c		Cloud(i)%P=0.0624d0
 		Cloud(i)%kappa_haze=0d0
 		Cloud(i)%albedo_haze=0d0
+		Cloud(i)%shscale_haze=1d0
 	enddo
 	cloudcompute=.false.
 	useDRIFT=.false.
@@ -2310,6 +2311,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%mixrat
 		case("mixrathaze")
 			read(key%value,*) Cloud(j)%mixrathaze
+		case("shscalehaze","shscale_haze")
+			read(key%value,*) Cloud(j)%shscale_haze
 		case("fcond")
 			read(key%value,*) Cloud(j)%fcond
 		case("tmix")
@@ -2411,6 +2414,7 @@ c-----------------------------------------------------------------------
 	integer ii,is,ilam,j
 	real*8 phi,thet,tot,tot2,fact,tautot(nlam),HG,kabs,ksca
 	logical computelamcloud(nlam),restrictcomputecloud
+	real*8 dens1bar,haze_scale
 
 	if(.not.allocated(Cloud(ii)%rv)) allocate(Cloud(ii)%rv(Cloud(ii)%nr))
 	if(.not.allocated(Cloud(ii)%M)) allocate(Cloud(ii)%M(Cloud(ii)%nr))
@@ -2438,6 +2442,12 @@ c-----------------------------------------------------------------------
 				endif
 			enddo
 		case("SIMPLE")
+			do is=1,nr-1
+				if(P(is).gt.1d0.and.P(is+1).le.1d0) then
+					dens1bar=exp(log(dens(is))+log(dens(is+1)/dens(is))*log(P(is))/log(P(is)/P(is+1)))
+					exit
+				endif
+			enddo
 			if(Cloud(ii)%simplecloudpart) then
 c compute cloud particles
 				computelamcloud=computelam
@@ -2478,14 +2488,17 @@ c compute cloud particles
 						Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat
      &								*exp(-(log(P(is)/Cloud(ii)%P)/log(Cloud(ii)%dP))**2)
 					endif
-					Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%Kabs(is,1:nlam)+Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze
-					Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(is,1:nlam)+Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze
+					haze_scale=(dens(is)/dens1bar)**(1d0/Cloud(ii)%shscale_haze-1d0)
+					Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%Kabs(is,1:nlam)+Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
+					Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(is,1:nlam)+Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
 					Cloud(ii)%Kext(is,1:nlam)=Cloud(ii)%Kabs(is,1:nlam)+Cloud(ii)%Ksca(is,1:nlam)
 				enddo
-				Cloud(ii)%Kabs(1,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze
-				Cloud(ii)%Ksca(1,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze
-				Cloud(ii)%Kabs(nr,1:nlam)=Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze
-				Cloud(ii)%Ksca(nr,1:nlam)=Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze
+				haze_scale=(dens(1)/dens1bar)**(1d0/Cloud(ii)%shscale_haze-1d0)
+				Cloud(ii)%Kabs(1,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
+				Cloud(ii)%Ksca(1,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
+				haze_scale=(dens(nr)/dens1bar)**(1d0/Cloud(ii)%shscale_haze-1d0)
+				Cloud(ii)%Kabs(nr,1:nlam)=Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
+				Cloud(ii)%Ksca(nr,1:nlam)=Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
 			else
 				Cloud(ii)%Kabs(1:nr,1:nlam)=0d0
 				Cloud(ii)%Ksca(1:nr,1:nlam)=0d0
@@ -2497,9 +2510,10 @@ c compute cloud particles
 						Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%kappa*Cloud(ii)%albedo
 						Cloud(ii)%Kext(is,1:nlam)=Cloud(ii)%kappa
 					endif
+					haze_scale=(dens(is)/dens1bar)**(1d0/Cloud(ii)%shscale_haze-1d0)
 					do ilam=1,nlam
-						kabs=Cloud(ii)%kappa_haze*(1d0-Cloud(ii)%albedo_haze)/(lam(ilam)*1d4)
-						ksca=Cloud(ii)%kappa_haze*Cloud(ii)%albedo_haze/(lam(ilam)*1d4)**4
+						kabs=Cloud(ii)%kappa_haze*haze_scale*(1d0-Cloud(ii)%albedo_haze)/(lam(ilam)*1d4)
+						ksca=Cloud(ii)%kappa_haze*haze_scale*Cloud(ii)%albedo_haze/(lam(ilam)*1d4)**4
 						Cloud(ii)%Kabs(is,ilam)=Cloud(ii)%Kabs(is,ilam)+kabs
 						Cloud(ii)%Ksca(is,ilam)=Cloud(ii)%Ksca(is,ilam)+ksca
 						Cloud(ii)%Kext(is,ilam)=Cloud(ii)%Kext(is,ilam)+ksca+kabs
@@ -2791,8 +2805,15 @@ c not entirely correct...
 		name(i:i)=' '
 	endif
 	orbit_P=orbit_P*86400d0
-	if(Mp_prior.le.0d0) then
+	if(Mp_prior.lt.0d0) then
 		massprior=.false.
+	else if(Mp_prior.eq.0d0) then
+		if(dM2.eq.0d0) then
+			Mplanet=dM1
+			dM2=dM1
+		else
+			massprior=.false.
+		endif
 	else
 		Mplanet=Mp_prior
 	endif
