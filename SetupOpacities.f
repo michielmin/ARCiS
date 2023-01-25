@@ -3,6 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 
+	call ComputeSurface()
 	call ReadOpacities()
 
 	return

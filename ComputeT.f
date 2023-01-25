@@ -138,8 +138,6 @@
 	allocate(IntEabSurf(nlam_LR,nr))
 	allocate(SurfEmis_LR(nlam_LR))
 
-	call ComputeSurface()
-
 	docloud0=.false.
 	do i=1,nclouds
 		if(Cloud(i)%coverage.gt.0.5) docloud0(i)=.true.
@@ -397,7 +395,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 !$OMP FLUSH
 !$OMP END PARALLEL
 
-	if(deepredist.and.deepredisttype.eq.'fixflux') then
+	if(do3D.and.deepredist.and.deepredisttype.eq.'fixflux') then
 		if(i3D.eq.n3D) then
 			Hstar0(1:nr)=Hstar(1:nr)/betaF
 			EabDirect0(1:nr)=EabDirect(1:nr)
