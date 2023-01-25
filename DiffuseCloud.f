@@ -775,10 +775,6 @@ c	enddo
 				rr=r_nuc
 				xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
 			endif
-			if(.not.rr.le.1d0) then
-				rr=1d0
-				xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
-			endif
 		else
 			rr=r_nuc
 			xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
