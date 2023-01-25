@@ -13,6 +13,8 @@
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
 	enddo
+	
+	if(.not.do3D) betaF=betaT
 
 	ini = .TRUE.
 
