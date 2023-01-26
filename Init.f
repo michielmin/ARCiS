@@ -6,6 +6,7 @@ c==============================================================================
 
 	type SettingKey
 		character*500 key1,key2,value,key
+		character*500 orkey1,orkey2
 		integer nr1,nr2,key2d
 		logical last
 		type(SettingKey),pointer :: next
@@ -83,7 +84,7 @@ c				all arguments are read
 	allocate(key%next)
 	key => key%next
 	key%last=.false.
-	call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2,key%key2d)
+	call get_key_value(readline,key%key,key%key1,key%key2,key%orkey1,key%orkey2,key%value,key%nr1,key%nr2,key%key2d)
 
 c read another command, so go back
 	goto 10
@@ -102,11 +103,11 @@ c===============================================================================
 c This subroutine just seperates the key and value component of a string given
 c key=value syntax. Key is transformed to lowercase.
 c=========================================================================================
-	subroutine get_key_value(line_in,key,key1,key2,value,nr1,nr2,key2d)
+	subroutine get_key_value(line_in,key,key1,key2,orkey1,orkey2,value,nr1,nr2,key2d)
 	use GlobalSetup
 	IMPLICIT NONE
 	character*1000 line_in,line
-	character*500 key,key1,key2,value
+	character*500 key,key1,key2,value,orkey1,orkey2
 	integer i,nr1,nr2,ikey1,ikey2,key2d
 	
 	line=line_in
@@ -127,12 +128,16 @@ c===============================================================================
 		key1=line(1:ikey2-1)
 		key=key1
 		key2=line(ikey2+1:ikey1-1)
+		orkey1=key1
+		orkey2=key2
 		call checknr(key1,nr1)
 		call checknr(key2,nr2)
 	else
 		key1=line(1:ikey1-1)
 		key=key1
 		key2=' '
+		orkey1=key1
+		orkey2=key2
 		call checknr(key1,nr1)
 	endif
 
@@ -342,6 +347,7 @@ c select at least the species relevant for disequilibrium chemistry
 	if(do_cia) nmol=max(nmol,48)
 
 	allocate(mixrat(nmol))
+	allocate(Pswitch_mol(nmol))
 	allocate(includemol(nmol))
 	allocate(opacitymol(nmol))
 	allocate(Cloud(max(nclouds,1)))
@@ -549,7 +555,7 @@ c allocate the arrays
 
 		do i=1,n_ret
 			line=trim(RetPar(i)%keyword) // "=0d0"
-			call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%value,keyret%nr1,keyret%nr2,keyret%key2d)
+			call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%orkey1,keyret%orkey2,keyret%value,keyret%nr1,keyret%nr2,keyret%key2d)
 			if(trim(keyret%key1).eq.trim(key%key1).and.trim(keyret%key2).eq.trim(key%key2).and.
      &		   keyret%nr1.eq.key%nr1.and.keyret%nr2.eq.key%nr2.and.keyret%key2d.eq.key%key2d) then
 				read(key%value,*) RetPar(i)%x0
@@ -891,6 +897,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) gridTPfile
 		case("maxt","maxtprofile")
 			read(key%value,*) maxTprofile
+		case("pswitch")
+			call ReadPswitch(key)
 		case("tp")
 			read(key%value,*) TP0
 		case("dtp")
@@ -1520,6 +1528,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	includemol=.false.
 	par_tprofile=.false.
 	do_rayleigh=.true.
+	Pswitch_mol=0d0
 	
 	Nphot0=2500
 	
@@ -1954,6 +1963,28 @@ c number of cloud/nocloud combinations
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
+	
+	return
+	end
+	
+	subroutine ReadPswitch(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i
+	
+	do i=1,nmol_data
+		if(key%orkey2.eq.molname(i)) then
+			if(i.le.nmol) then
+				read(key%value,*) Pswitch_mol(i)
+			endif
+			return
+		endif
+	enddo
+	call output("Molecule not recognised in Pswitch")
+	stop
 	
 	return
 	end

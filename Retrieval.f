@@ -1776,7 +1776,7 @@ c	linear
 	metallicity=metallicity0
 	do i=1,n_ret
 		readline=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
-		call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2,key%key2d)
+		call get_key_value(readline,key%key,key%key1,key%key2,key%orkey1,key%orkey2,key%value,key%nr1,key%nr2,key%key2d)
 		call ReadAndSetKey(key)
 	enddo
 	call ConvertUnits()
@@ -1826,7 +1826,7 @@ c	linear, square
 
 	do i=1,n_ret
 		readline=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
-		call get_key_value(readline,key%key,key%key1,key%key2,key%value,key%nr1,key%nr2,key%key2d)
+		call get_key_value(readline,key%key,key%key1,key%key2,key%orkey1,key%orkey2,key%value,key%nr1,key%nr2,key%key2d)
 		call ReadAndSetKey(key)
 	enddo
 	call ConvertUnits()
