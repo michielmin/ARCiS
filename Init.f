@@ -219,6 +219,8 @@ c===============================================================================
 	fcloud_default=1d0
 	Pmin=1d-6
 	Pmax=1d+3
+	freePT_fitT=.false.
+	freePT_fitP=.true.
 
 	i2d=0
 
@@ -295,11 +297,19 @@ c				if(key%nr1.eq.0) key%nr1=1
 				if(key%key2.eq.'keyword') then
 					if(key%value.eq.'tprofile') then
 						free_tprofile=.true.
-						n_ret=n_ret+nTpoints*2
+						n_ret=n_ret+nTpoints
+						if(freePT_fitP) n_ret=n_ret+nTpoints
 					else
 						n_ret=n_ret+1
 					endif
 				endif
+			case("free_fitt","freetp_fitt","freept_fitt")
+				read(key%value,*) freePT_fitT
+			case("free_fitp","freetp_fitp","freept_fitp")
+				read(key%value,*) freePT_fitP
+			case("free_fitdt","freetp_fitdt","freept_fitdt")
+				read(key%value,*) freePT_fitT
+				freePT_fitT=.not.freePT_fitT
 			case("pmin")
 				read(key%value,*) pmin
 			case("pmax")
@@ -1072,6 +1082,15 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) dT_IRpoint(key%nr1)
 		case("free_tprofile")
 			read(key%value,*) free_tprofile
+		case("free_fitt","freetp_fitt","freept_fitt")
+*			read(key%value,*) freePT_fitT
+		case("free_fitp","freetp_fitp","freept_fitp")
+*			read(key%value,*) freePT_fitP
+		case("free_fitdt","freetp_fitdt","freept_fitdt")
+*			read(key%value,*) freePT_fitT
+*			freePT_fitT=.not.freePT_fitT
+		case("wiggle_err")
+			read(key%value,*) wiggle_err
 		case("tpoint","dtpoint")
 			read(key%value,*) dTpoint(key%nr1)
 		case("ppoint")
@@ -1805,6 +1824,7 @@ c		Cloud(i)%P=0.0624d0
 	dTpoint=0d0
 	chimax=1d0
 	pos_dT_lowest=.false.	
+	wiggle_err=-1d0
 
 	maxTprofile=1d6
 	
@@ -1868,13 +1888,24 @@ c number of cloud/nocloud combinations
 			read(key%value,*) RetPar(i)%keyword
 			if(RetPar(i)%keyword.eq.'tprofile') then
  				free_tprofile=.true.
-				n_ret=n_ret+nTpoints*2-1
+				n_ret=n_ret+nTpoints-1
+				if(freePT_fitT) then
+ 				do j=1,nTpoints
+					RetPar(i+j-1)%keyword='Tpoint' // trim(int2string(j,'(i0.3)'))
+					RetPar(i+j-1)%xmin=10d0
+					RetPar(i+j-1)%xmax=10000d0
+					RetPar(i+j-1)%logscale=.true.
+				enddo
+				else
  				do j=1,nTpoints
 					RetPar(i+j-1)%keyword='dTpoint' // trim(int2string(j,'(i0.3)'))
 					RetPar(i+j-1)%xmin=-4d0/7d0
 					RetPar(i+j-1)%xmax=4d0/7d0
 					RetPar(i+j-1)%logscale=.false.
 				enddo
+				endif
+				if(freePT_fitP) then
+				n_ret=n_ret+nTpoints
  				do j=1,nTpoints
 					RetPar(i+nTpoints+j-1)%keyword='Ppoint' // trim(int2string(j,'(i0.3)'))
 					RetPar(i+nTpoints+j-1)%xmin=pmin
@@ -1886,6 +1917,7 @@ c number of cloud/nocloud combinations
 						RetPar(i+nTpoints+j-1)%increase=.true.
 					endif
 				enddo
+				endif
 			endif
 		case("min","xmin")
 			read(key%value,*) RetPar(i)%xmin

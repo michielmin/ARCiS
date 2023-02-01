@@ -1130,9 +1130,12 @@ c		call MakePTstruct_T(P,TV,nr,Ppoint0,Tpoint0,nVpoints)
 c		call MakePTstruct_T(P,TIR,nr,Ppoint0,Tpoint0,nIRpoints)
 	endif
 	if(nTpoints.gt.0) then
-		Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
-		call MakePTstruct_dT(P,Tfree,nr,Ppoint,dTpoint,nTpoints,Tc,PrefTpoint)
-c		call MakePTstruct_T(P,Tfree,nr,Ppoint,dTpoint,nTpoints)
+		if(freePT_fitT) then
+			call MakePTstruct_T(P,Tfree,nr,Ppoint,dTpoint,nTpoints)
+		else
+			Tc=(0.5d0*TeffP**4+0.5d0*Tstar**4*(Rstar/Dplanet)**2*(betaT*gammaT1))**0.25
+			call MakePTstruct_dT(P,Tfree,nr,Ppoint,dTpoint,nTpoints,Tc,PrefTpoint)
+		endif
 	endif
 
 	T=(TV**4+TIR**4+Tfree**4)**0.25
@@ -1159,14 +1162,14 @@ c		call MakePTstruct_T(P,Tfree,nr,Ppoint,dTpoint,nTpoints)
 	call DPCHIM(nT_in,logPp,logTp,dTp,INCFD)
 	call DPCHFE(nT_in,logPp,logTp,dTp,INCFD,SKIP,np,logP,logT,IERR)
 
-	do i=1,np
-		if(logP(i).lt.logPp(1)) then
-			logT(i)=logTp(1)+dTp(1)*(logP(i)-logPp(1))
-		endif
-		if(logP(i).gt.logPp(nT_in)) then
-			logT(i)=logTp(nT_in)+dTp(nT_in)*(logP(i)-logPp(nT_in))
-		endif
-	enddo
+c	do i=1,np
+c		if(logP(i).lt.logPp(1)) then
+c			logT(i)=logTp(1)+dTp(1)*(logP(i)-logPp(1))
+c		endif
+c		if(logP(i).gt.logPp(nT_in)) then
+c			logT(i)=logTp(nT_in)+dTp(nT_in)*(logP(i)-logPp(nT_in))
+c		endif
+c	enddo
 
 	T(1:np)=exp(logT(1:np))
 

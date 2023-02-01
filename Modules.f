@@ -140,8 +140,8 @@ c for exchange when computing secondary atmosphere
 
 	real*8,allocatable :: tau_Vpoint(:),tau_IRpoint(:),dT_Vpoint(:),dT_IRpoint(:)
 	real*8,allocatable :: Ppoint(:),dTpoint(:)
-	logical pos_dT_lowest
-	real*8 PrefTpoint
+	logical pos_dT_lowest,freePT_fitT,freePT_fitP
+	real*8 PrefTpoint,wiggle_err
 	integer nVpoints,nIRpoints,nTpoints
 
 	logical do3D

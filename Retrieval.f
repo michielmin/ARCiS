@@ -757,6 +757,13 @@ c	linear
 	endif
 	lnew=-global_chi2/2d0+tot
 	global_chi2=global_chi2/real(max(1,k-n_ret))
+	if(free_tprofile.and.freePT_fitT.and.wiggle_err.gt.0d0) then
+		tot=-(real(nr-2)/2d0)*log(2d0*pi*wiggle_err)
+		do i=2,nr-1
+			tot=tot-log(T(i+1)*T(i-1)/T(i)**2)**2/(0.5d0*wiggle_err*log(P(i+1)/P(i-1))**2)
+		enddo
+		lnew=lnew+tot
+	endif
 	global_like=lnew
 
 	write(31,*) imodel,global_chi2,var(1:nvars),COratio,metallicity
