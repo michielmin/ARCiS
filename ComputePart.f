@@ -406,7 +406,7 @@ c changed this to mass fractions (11-05-2010)
 		allocate(e1d(nlam))
 		allocate(e2d(nlam))
 		filename(1)='H2SO4'
-		call RegridDataLNK(AstroSilicate,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
+		call RegridDataLNK(H2SO4,lam(1:nlam)*1d4,e1d(1:nlam),e2d(1:nlam),nlam,.true.)
 		e1(1,1:nlam)=e1d(1:nlam)
 		e2(1,1:nlam)=e2d(1:nlam)
 	else if(C%standard.eq.'MIX') then

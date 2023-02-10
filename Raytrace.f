@@ -16,17 +16,6 @@
 	integer,allocatable :: irtrace(:,:),nirtrace(:)
 
 	docloud=.false.
-	if(singlecloud) then
-	do i=1,nclouds
-		cloudfrac(i+1)=Cloud(i)%coverage
-		docloud(i+1,i)=.true.
-	enddo
-	cloudfrac(1)=1d0-sum(cloudfrac(2:nclouds+1))
-	if(cloudfrac(1).lt.0d0) then
-		cloudfrac(1)=0d0
-		cloudfrac(2:nclouds+1)=cloudfrac(2:nclouds+1)/sum(cloudfrac(2:nclouds+1))
-	endif
-	else
 	do icc=2,ncc
 		docloud(icc,1:nclouds)=docloud(icc-1,1:nclouds)
 		i=0
@@ -44,7 +33,6 @@
 			endif
 		enddo
 	enddo
-	endif
 
 	if(ncc.eq.1) cloudfrac=1d0
 

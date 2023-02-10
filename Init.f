@@ -216,7 +216,6 @@ c===============================================================================
 	nmodel_err=1
 	j=0
 	mixratfile=.false.
-	fcloud_default=1d0
 	Pmin=1d-6
 	Pmax=1d+3
 	freePT_fitT=.false.
@@ -291,8 +290,6 @@ c===============================================================================
 c				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nclouds) nclouds=key%nr1
-			case("fcloud")
-				read(key%value,*) fcloud_default
 			case("retpar","fitpar")
 				if(key%key2.eq.'keyword') then
 					if(key%value.eq.'tprofile') then
@@ -1154,10 +1151,6 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) idum0
 		case("randomseed")
 			read(key%value,*) randomseed
-		case("fcloud")
-			read(key%value,*) fcloud_default
-		case("singlecloud","exactcoverage")
-			read(key%value,*) singlecloud
 		case("coagulation")
 			read(key%value,*) coagulation
 		case("vfrag")
@@ -1581,7 +1574,6 @@ c	if(par_tprofile) call ComputeParamT(T)
 	kappaHaze=0d0
 	Psimplecloud=1d9
 	coagulation=.true.
-	singlecloud=.false.
 	vfrag=100d0	!cm/s
 	computecryst=.false.
 	
@@ -1678,7 +1670,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%blend=.true.
 		Cloud(i)%reff=1d0
 		Cloud(i)%veff=0.1
-		Cloud(i)%coverage=fcloud_default
+		Cloud(i)%coverage=1d0
 		Cloud(i)%ptype='COMPUTE'
 		Cloud(i)%frain=1d0
 		Cloud(i)%species=''
@@ -1856,7 +1848,6 @@ c		Cloud(i)%P=0.0624d0
 
 c number of cloud/nocloud combinations
 	ncc=2**nclouds
-	if(singlecloud) ncc=1+nclouds
 	allocate(docloud(ncc,nclouds))
 	allocate(cloudfrac(ncc))
 	allocate(flux(0:ncc,nlam))

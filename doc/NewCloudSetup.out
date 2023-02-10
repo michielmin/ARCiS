@@ -1,0 +1,13 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.2}{Self consistent cloud formation}{}% 2
+\BOOKMARK [1][-]{section.3}{Parameterised clouds}{}% 3
+\BOOKMARK [2][-]{subsection.3.1}{Cloud layer}{section.3}% 4
+\BOOKMARK [2][-]{subsection.3.2}{Homogeneous cloud}{section.3}% 5
+\BOOKMARK [2][-]{subsection.3.3}{Cloud slab}{section.3}% 6
+\BOOKMARK [2][-]{subsection.3.4}{Cloud deck}{section.3}% 7
+\BOOKMARK [2][-]{subsection.3.5}{Opacities}{section.3}% 8
+\BOOKMARK [3][-]{subsubsection.3.5.1}{Parameterised opacity}{subsection.3.5}% 9
+\BOOKMARK [3][-]{subsubsection.3.5.2}{Computed from refractive index}{subsection.3.5}% 10
+\BOOKMARK [1][-]{section.4}{Examples}{}% 11
+\BOOKMARK [2][-]{subsection.4.1}{Cloud formation}{section.4}% 12
+\BOOKMARK [2][-]{subsection.4.2}{A fully parameterised cloud layer}{section.4}% 13
