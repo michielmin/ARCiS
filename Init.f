@@ -562,7 +562,8 @@ c allocate the arrays
 
 		do i=1,n_ret
 			line=trim(RetPar(i)%keyword) // "=0d0"
-			call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%orkey1,keyret%orkey2,keyret%value,keyret%nr1,keyret%nr2,keyret%key2d)
+			call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%orkey1,keyret%orkey2,
+     &						keyret%value,keyret%nr1,keyret%nr2,keyret%key2d)
 			if(trim(keyret%key1).eq.trim(key%key1).and.trim(keyret%key2).eq.trim(key%key2).and.
      &		   keyret%nr1.eq.key%nr1.and.keyret%nr2.eq.key%nr2.and.keyret%key2d.eq.key%key2d) then
 				read(key%value,*) RetPar(i)%x0
@@ -2548,8 +2549,10 @@ c compute cloud particles
 					Cloud(ii)%Kext(is,1:nlam)=Cloud(ii)%Kabs(is,1:nlam)+Cloud(ii)%Ksca(is,1:nlam)
 				enddo
 				haze_scale=(dens(1)/dens1bar)**(1d0/Cloud(ii)%shscale_haze-1d0)
-				Cloud(ii)%Kabs(1,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
-				Cloud(ii)%Ksca(1,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat+Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
+				Cloud(ii)%Kabs(1,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat+
+     &						Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
+				Cloud(ii)%Ksca(1,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat+
+     &						Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
 				haze_scale=(dens(nr)/dens1bar)**(1d0/Cloud(ii)%shscale_haze-1d0)
 				Cloud(ii)%Kabs(nr,1:nlam)=Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
 				Cloud(ii)%Ksca(nr,1:nlam)=Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
