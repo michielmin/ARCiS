@@ -48,7 +48,7 @@
 		tot=0d0
 		mixrat_r(i,1:nmol)=mixrat(1:nmol)
 		do imol=1,nmol
-			if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=0d0
+			if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=abun_switch_mol(imol)
 			if(mixrat_r(i,imol).gt.0d0) tot=tot+mixrat_r(i,imol)
 		enddo
 		if(tot.gt.0d0) mixrat_r(i,1:nmol)=mixrat_r(i,1:nmol)/tot
@@ -196,14 +196,18 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 			do i=1,nr
 				Kzz_r(i)=ComputeKzz(P(i),T(i),dens(i),complexKzz)
 			enddo
-		   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))
-		   
+		   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))		   
 		endif
 		if(nfixmol.gt.0) then
 			do i=1,nfixmol
 				mixrat_r(1:nr,ifixmol(i))=fixmol_abun(i)*exp(-P(1:nr)/fixmol_P(i))
 			enddo
 		endif
+		do i=1,nr
+			do imol=1,nmol
+				if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=abun_switch_mol(imol)
+			enddo
+		enddo
 		do i=1,nr
 			do imol=1,nmol
 				if(.not.mixrat_r(i,imol).gt.0d0) mixrat_r(i,imol)=0d0

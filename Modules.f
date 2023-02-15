@@ -87,7 +87,7 @@ c===============================================================================
 	real*8,allocatable :: Fstar(:)							! wavelength
 	real*8,allocatable :: tau1depth(:,:),cloudtau(:,:)		! ncc,wavelength
 	real*8,allocatable :: Cabs_mol(:,:,:,:),Cext_cont(:,:)
-	real*8,allocatable :: Pswitch_mol(:)
+	real*8,allocatable :: Pswitch_mol(:),abun_switch_mol(:)
 	integer nangle_Jscat
 	parameter(nangle_Jscat=60)
 	real*8,allocatable :: Jscat(:,:)						! radius, angle
