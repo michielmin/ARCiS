@@ -48,10 +48,12 @@
 		tot=0d0
 		mixrat_r(i,1:nmol)=mixrat(1:nmol)
 		do imol=1,nmol
-			if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=abun_switch_mol(imol)
 			if(mixrat_r(i,imol).gt.0d0) tot=tot+mixrat_r(i,imol)
 		enddo
 		if(tot.gt.0d0) mixrat_r(i,1:nmol)=mixrat_r(i,1:nmol)/tot
+		do imol=1,nmol
+			if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=abun_switch_mol(imol)
+		enddo
 	enddo
 	endif
 
