@@ -1,36 +1,6 @@
 \documentclass[12pt]{article}
-\usepackage{natbib}
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{graphicx}
-\usepackage{txfonts}
-\usepackage[english]{babel}
-\usepackage{hyperref}
-\usepackage{units}
-\usepackage{listings}
-\usepackage{xcolor}
 
-\lstdefinelanguage{args}{
-sensitive=false,
-alsoletter={.},
-moredelim=[s][\color{red}]{<}{>},
-moredelim=[s][\color{blue}]{[}{]},
-moredelim=[is][\color{orange}]{:}{:},
-keywords=[10]{...},
-keywordstyle=[10]{\color{magenta}},
-}
-
-\lstnewenvironment{arguments}
-{\lstset{language=args}}
-{}
-
-\lstnewenvironment{bash}
-{\lstset{numbers=left,language=bash,keywordstyle={\color{blue}}}}
-{}
-
-\newcommand{\shellcmd}[1]{\\ \\ \indent\indent\texttt{\# #1}\\ \\ }
-
-\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+\include{general}
 
 \begin{document}
 
@@ -281,28 +251,8 @@ File containing the input file for the best fitting model when retrieval was don
 
 There are a few examples in the Example directory downloaded with the git repository for retrieval and forward modelling.
 
-\begin{thebibliography}{91}
-
-\bibitem[\protect\citeauthoryear{Min et al.}{2020}]{2020A&A...642A..28M} Min M., Ormel C.~W., Chubb K., Helling C., Kawashima Y., 2020, A\&A, 642, A28. doi:10.1051/0004-6361/201937377
-
-\bibitem[\protect\citeauthoryear{Woitke et al.}{2018}]{2018A&A...614A...1W} Woitke P., Helling C., Hunter G.~H., Millard J.~D., Turner G.~E., Worters M., Blecic J., et al., 2018, A\&A, 614, A1. doi:10.1051/0004-6361/201732193
-
-\bibitem[\protect\citeauthoryear{Ormel \& Min}{2019}]{2019A&A...622A.121O} Ormel C.~W., Min M., 2019, A\&A, 622, A121. doi:10.1051/0004-6361/201833678
-
-\bibitem[\protect\citeauthoryear{Min, Hovenier, \& de Koter}{2005}]{2005A&A...432..909M} Min M., Hovenier J.~W., de Koter A., 2005, A\&A, 432, 909. doi:10.1051/0004-6361:20041920
-
-\bibitem[\protect\citeauthoryear{Toon \& Ackerman}{1981}]{1981ApOpt..20.3657T} Toon O.~B., Ackerman T.~P., 1981, ApOpt, 20, 3657. doi:10.1364/AO.20.003657
-
-\bibitem[\protect\citeauthoryear{Chubb et al.}{2021}]{2021A&A...646A..21C} Chubb K.~L., Rocchetto M., Yurchenko S.~N., Min M., Waldmann I., Barstow J.~K., Molli{\`e}re P., et al., 2021, A\&A, 646, A21. doi:10.1051/0004-6361/202038350
-
-%multinest
-\bibitem[\protect\citeauthoryear{Feroz \& Hobson}{2008}]{2008MNRAS.384..449F} Feroz F., Hobson M.~P., 2008, MNRAS, 384, 449. doi:10.1111/j.1365-2966.2007.12353.x
-
-\bibitem[\protect\citeauthoryear{Feroz, Hobson, \& Bridges}{2009}]{2009MNRAS.398.1601F} Feroz F., Hobson M.~P., Bridges M., 2009, MNRAS, 398, 1601. doi:10.1111/j.1365-2966.2009.14548.x
-
-\bibitem[\protect\citeauthoryear{Feroz et al.}{2019}]{2019OJAp....2E..10F} Feroz F., Hobson M.~P., Cameron E., Pettitt A.~N., 2019, OJAp, 2, 10. doi:10.21105/astro.1306.2144
-
-\end{thebibliography}
+\bibliographystyle{plain} % We choose the "plain" reference style
+\bibliography{refs} % Entries are in the refs.bib file
 
 \end{document}
 

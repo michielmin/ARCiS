@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) (preloaded format=pdflatex 2020.9.17)  16 MAR 2021 09:58
+This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) (preloaded format=pdflatex 2020.9.17)  14 FEB 2023 14:39
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -24,14 +24,16 @@ File: size12.clo 2019/12/20 v1.4l Standard LaTeX file (size option)
 \belowcaptionskip=\skip48
 \bibindent=\dimen134
 )
-(/usr/local/texlive/2020/texmf-dist/tex/latex/natbib/natbib.sty
+\@input{general.aux}
+\openout2 = `general.aux'.
+
+(./general.tex (/usr/local/texlive/2020/texmf-dist/tex/latex/natbib/natbib.sty
 Package: natbib 2010/09/13 8.31b (PWD, AO)
 \bibhang=\skip49
 \bibsep=\skip50
 LaTeX Info: Redefining \cite on input line 694.
 \c@NAT@ctr=\count175
-)
-(/usr/local/texlive/2020/texmf-dist/tex/latex/amsmath/amsmath.sty
+) (/usr/local/texlive/2020/texmf-dist/tex/latex/amsmath/amsmath.sty
 Package: amsmath 2020/01/20 v2.17e AMS math features
 \@mathmargin=\skip51
 
@@ -411,8 +413,8 @@ Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1369.
 Package xcolor Info: Model `Gray' substituted by `gray' on input line 1370.
 Package xcolor Info: Model `wave' substituted by `hsb' on input line 1371.
 )
-Package hyperref Info: Option `colorlinks' set `true' on input line 33.
-
+Package hyperref Info: Option `colorlinks' set `true' on input line 34.
+)
 (/usr/local/texlive/2020/texmf-dist/tex/latex/l3backend/l3backend-pdfmode.def
 File: l3backend-pdfmode.def 2020-03-12 L3 backend support: PDF mode
 \l__kernel_color_stack_int=\count274
@@ -421,48 +423,48 @@ File: l3backend-pdfmode.def 2020-03-12 L3 backend support: PDF mode
 (./UserGuide.aux)
 \openout1 = `UserGuide.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/txmi/m/it on input line 35.
+LaTeX Font Info:    Checking defaults for OML/txmi/m/it on input line 5.
 LaTeX Font Info:    Trying to load font information for OML+txmi on input line 
-35.
+5.
 
 (/usr/local/texlive/2020/texmf-dist/tex/latex/txfonts/omltxmi.fd
 File: omltxmi.fd 2000/12/15 v3.1
 )
-LaTeX Font Info:    ... okay on input line 35.
-LaTeX Font Info:    Checking defaults for OMS/txsy/m/n on input line 35.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for OMS/txsy/m/n on input line 5.
 LaTeX Font Info:    Trying to load font information for OMS+txsy on input line 
-35.
+5.
 
 (/usr/local/texlive/2020/texmf-dist/tex/latex/txfonts/omstxsy.fd
 File: omstxsy.fd 2000/12/15 v3.1
 )
-LaTeX Font Info:    ... okay on input line 35.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 35.
-LaTeX Font Info:    ... okay on input line 35.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 35.
-LaTeX Font Info:    ... okay on input line 35.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 35.
-LaTeX Font Info:    ... okay on input line 35.
-LaTeX Font Info:    Checking defaults for OMX/txex/m/n on input line 35.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for OMX/txex/m/n on input line 5.
 LaTeX Font Info:    Trying to load font information for OMX+txex on input line 
-35.
+5.
 
 (/usr/local/texlive/2020/texmf-dist/tex/latex/txfonts/omxtxex.fd
 File: omxtxex.fd 2000/12/15 v3.1
 )
-LaTeX Font Info:    ... okay on input line 35.
-LaTeX Font Info:    Checking defaults for U/txexa/m/n on input line 35.
-LaTeX Font Info:    Trying to load font information for U+txexa on input line 3
-5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for U/txexa/m/n on input line 5.
+LaTeX Font Info:    Trying to load font information for U+txexa on input line 5
+.
 
 (/usr/local/texlive/2020/texmf-dist/tex/latex/txfonts/utxexa.fd
 File: utxexa.fd 2000/12/15 v3.1
 )
-LaTeX Font Info:    ... okay on input line 35.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 35.
-LaTeX Font Info:    ... okay on input line 35.
-LaTeX Font Info:    Trying to load font information for OT1+txr on input line 3
-5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Trying to load font information for OT1+txr on input line 5
+.
 
 (/usr/local/texlive/2020/texmf-dist/tex/latex/txfonts/ot1txr.fd
 File: ot1txr.fd 2000/12/15 v3.1
@@ -490,7 +492,7 @@ File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
 \AtBeginShipoutBox=\box51
-Package hyperref Info: Link coloring ON on input line 35.
+Package hyperref Info: Link coloring ON on input line 5.
 
 (/usr/local/texlive/2020/texmf-dist/tex/latex/hyperref/nameref.sty
 Package: nameref 2019/09/16 v2.46 Cross-referencing by name of section
@@ -504,9 +506,9 @@ Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 )
 \c@section@level=\count281
 )
-LaTeX Info: Redefining \ref on input line 35.
-LaTeX Info: Redefining \pageref on input line 35.
-LaTeX Info: Redefining \nameref on input line 35.
+LaTeX Info: Redefining \ref on input line 5.
+LaTeX Info: Redefining \pageref on input line 5.
+LaTeX Info: Redefining \nameref on input line 5.
  (./UserGuide.out) (./UserGuide.out)
 \@outlinefile=\write3
 \openout3 = `UserGuide.out'.
@@ -515,288 +517,264 @@ LaTeX Info: Redefining \nameref on input line 35.
 <ARCiS.png, id=68, 1445.4pt x 1445.4pt>
 File: ARCiS.png Graphic file (type png)
 <use ARCiS.png>
-Package pdftex.def Info: ARCiS.png  used on input line 41.
+Package pdftex.def Info: ARCiS.png  used on input line 11.
 (pdftex.def)             Requested size: 350.99762pt x 350.98326pt.
-LaTeX Font Info:    Trying to load font information for U+txsya on input line 4
+LaTeX Font Info:    Trying to load font information for U+txsya on input line 1
 1.
 
 (/usr/local/texlive/2020/texmf-dist/tex/latex/txfonts/utxsya.fd
 File: utxsya.fd 2000/12/15 v3.1
 )
-LaTeX Font Info:    Trying to load font information for U+txsyb on input line 4
+LaTeX Font Info:    Trying to load font information for U+txsyb on input line 1
 1.
 
 (/usr/local/texlive/2020/texmf-dist/tex/latex/txfonts/utxsyb.fd
 File: utxsyb.fd 2000/12/15 v3.1
 )
-LaTeX Font Info:    Trying to load font information for U+txmia on input line 4
+LaTeX Font Info:    Trying to load font information for U+txmia on input line 1
 1.
 
 (/usr/local/texlive/2020/texmf-dist/tex/latex/txfonts/utxmia.fd
 File: utxmia.fd 2000/12/15 v3.1
 )
-LaTeX Font Info:    Trying to load font information for U+txsyc on input line 4
+LaTeX Font Info:    Trying to load font information for U+txsyc on input line 1
 1.
 
 (/usr/local/texlive/2020/texmf-dist/tex/latex/txfonts/utxsyc.fd
 File: utxsyc.fd 2000/12/15 v3.1
 )
 LaTeX Font Info:    Font shape `OT1/txr/b/n' in size <17.28> not available
-(Font)              Font shape `OT1/txr/bx/n' tried instead on input line 42.
+(Font)              Font shape `OT1/txr/bx/n' tried instead on input line 12.
 LaTeX Font Info:    Font shape `OT1/txr/b/n' in size <14.4> not available
-(Font)              Font shape `OT1/txr/bx/n' tried instead on input line 45.
+(Font)              Font shape `OT1/txr/bx/n' tried instead on input line 15.
  [1
+
+
 
 {/usr/local/texlive/2020/texmf-var/fonts/map/pdftex/updmap/pdftex.map} <./ARCiS
 .png>]
-LaTeX Font Info:    Trying to load font information for TS1+txr on input line 4
+LaTeX Font Info:    Trying to load font information for TS1+txr on input line 1
 9.
 
 (/usr/local/texlive/2020/texmf-dist/tex/latex/txfonts/ts1txr.fd
 File: ts1txr.fd 2000/12/15 v3.1
 )
-Overfull \hbox (6.26271pt too wide) in paragraph at lines 60--61
-[]\OT1/txr/m/n/12 Multinest Re-trieval tools: [][]Feroz & Hob-son[][] ([][]2008
-[][]); [][]Feroz, Hob-son, & Bridges[][]
- []
-
 LaTeX Font Info:    Font shape `OT1/txr/b/n' in size <12> not available
-(Font)              Font shape `OT1/txr/bx/n' tried instead on input line 71.
+(Font)              Font shape `OT1/txr/bx/n' tried instead on input line 41.
 LaTeX Font Info:    Trying to load font information for OT1+txtt on input line 
-71.
+41.
+
 (/usr/local/texlive/2020/texmf-dist/tex/latex/txfonts/ot1txtt.fd
 File: ot1txtt.fd 2000/12/15 v3.1
 ) [2]
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Overfull \hbox (23.2489pt too wide) in paragraph at lines 76--91
+Overfull \hbox (23.2489pt too wide) in paragraph at lines 46--61
 [][]\OT1/txtt/m/n/12 # git clone https://github.com/JohannesBuchner/MultiNest.g
 it 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--91
+Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 93--104
+Underfull \hbox (badness 10000) in paragraph at lines 63--74
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 93--104
+Underfull \hbox (badness 10000) in paragraph at lines 63--74
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 93--104
+Underfull \hbox (badness 10000) in paragraph at lines 63--74
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 93--104
+Underfull \hbox (badness 10000) in paragraph at lines 63--74
 
  []
 
 
-Overfull \hbox (4.34894pt too wide) in paragraph at lines 93--104
+Overfull \hbox (4.34894pt too wide) in paragraph at lines 63--74
 [][]\OT1/txtt/m/n/12 # git clone https://github.com/michielmin/ARCiS.git ./src 
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 93--104
+Underfull \hbox (badness 10000) in paragraph at lines 63--74
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 93--104
+Underfull \hbox (badness 10000) in paragraph at lines 63--74
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 93--104
+Underfull \hbox (badness 10000) in paragraph at lines 63--74
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 93--104
+Underfull \hbox (badness 10000) in paragraph at lines 63--74
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 93--104
+Underfull \hbox (badness 10000) in paragraph at lines 63--74
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 93--104
+Underfull \hbox (badness 10000) in paragraph at lines 63--74
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 93--104
+Underfull \hbox (badness 10000) in paragraph at lines 63--74
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 110--115
+Underfull \hbox (badness 10000) in paragraph at lines 80--85
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 110--115
+Underfull \hbox (badness 10000) in paragraph at lines 80--85
 
  []
 
 [3]
-Underfull \hbox (badness 10000) in paragraph at lines 116--121
+Underfull \hbox (badness 10000) in paragraph at lines 86--91
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 116--121
+Underfull \hbox (badness 10000) in paragraph at lines 86--91
 
  []
 
 [4] [5] [6]
-Overfull \hbox (12.3428pt too wide) in paragraph at lines 252--253
+Overfull \hbox (12.3428pt too wide) in paragraph at lines 222--223
 []\OT1/txr/m/n/12 Can be "MIRI", "NIR-SPEC", "WFC3", "JWST" or "ARIEL".
  []
 
-[7]
-Underfull \hbox (badness 6428) in paragraph at lines 290--291
-[]\OT1/txr/m/n/12 Ormel C. W., Min M., 2019, A&A, 622, A121. doi:10.1051/0004-
- []
-
-
-Underfull \hbox (badness 2150) in paragraph at lines 296--297
-[]\OT1/txr/m/n/12 Chubb K. L., Roc-chetto M., Yurchenko S. N., Min M., Wald-man
-n I.,
- []
-
-[8]
-Underfull \hbox (badness 2359) in paragraph at lines 299--300
-[]\OT1/txr/m/n/12 Feroz F., Hob-son M. P., 2008, MN-RAS, 384, 449. doi:10.1111/
-j.1365-
- []
-
-
-Underfull \hbox (badness 7116) in paragraph at lines 301--302
-[]\OT1/txr/m/n/12 Feroz F., Hob-son M. P., Bridges M., 2009, MN-RAS, 398, 1601.
-
- []
-
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 307.
-[9]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 307.
+[7] (./UserGuide.bbl [8])
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 257.
+ [9]
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 257.
  (./UserGuide.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 307.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 307.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 257.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 257.
 Package rerunfilecheck Info: File `UserGuide.out' has not changed.
 (rerunfilecheck)             Checksum: DD92CDBEADC71919AB146DF39F0F5040;987.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 307.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 257.
  ) 
 Here is how much of TeX's memory you used:
- 9962 strings out of 480608
- 142142 string characters out of 5903630
- 412746 words of memory out of 5000000
- 25616 multiletter control sequences out of 15000+600000
+ 10023 strings out of 480608
+ 142476 string characters out of 5903630
+ 413226 words of memory out of 5000000
+ 25671 multiletter control sequences out of 15000+600000
  568940 words of font info for 113 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 34i,6n,37p,411b,450s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 39i,6n,41p,411b,461s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2020/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/local/t
 exlive/2020/texmf-dist/fonts/type1/public/txfonts/rtcxr.pfb></usr/local/texlive
-/2020/texmf-dist/fonts/type1/public/txfonts/rtxmi.pfb></usr/local/texlive/2020/
-texmf-dist/fonts/type1/public/txfonts/rtxr.pfb></usr/local/texlive/2020/texmf-d
-ist/fonts/type1/public/txfonts/txbtt.pfb></usr/local/texlive/2020/texmf-dist/fo
-nts/type1/public/txfonts/txtt.pfb></usr/local/texlive/2020/texmf-dist/fonts/typ
-e1/urw/times/utmb8a.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/urw/tim
-es/utmr8a.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/urw/times/utmri8a
-.pfb>
-Output written on UserGuide.pdf (9 pages, 212246 bytes).
+/2020/texmf-dist/fonts/type1/public/txfonts/rtxi.pfb></usr/local/texlive/2020/t
+exmf-dist/fonts/type1/public/txfonts/rtxmi.pfb></usr/local/texlive/2020/texmf-d
+ist/fonts/type1/public/txfonts/rtxr.pfb></usr/local/texlive/2020/texmf-dist/fon
+ts/type1/public/txfonts/txbtt.pfb></usr/local/texlive/2020/texmf-dist/fonts/typ
+e1/public/txfonts/txtt.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/urw/
+times/utmb8a.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/urw/times/utmr
+8a.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on UserGuide.pdf (9 pages, 214938 bytes).
 PDF statistics:
- 191 PDF objects out of 1000 (max. 8388607)
- 168 compressed objects within 2 object streams
+ 184 PDF objects out of 1000 (max. 8388607)
+ 160 compressed objects within 2 object streams
  37 named destinations out of 1000 (max. 500000)
  134 words of extra memory for PDF output out of 10000 (max. 10000000)
 

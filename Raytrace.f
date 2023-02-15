@@ -208,7 +208,7 @@
 !$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,Ca_cloud,Cs_cloud,
 !$OMP&         Ca,Cs,icloud,isize,BBr,imol,irc,contr,fact_contr,fluxg_contr,Ag_contr,nk)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
-!$OMP&			cloud_dens,useDRIFT,Psimplecloud,P,flux_contr,obsA_contr,irtrace,dtrace,nirtrace,
+!$OMP&			cloud_dens,P,flux_contr,obsA_contr,irtrace,dtrace,nirtrace,
 !$OMP&			nmol,mixrat_r,includemol,computecontrib,wgg)
 	allocate(fact_contr(nr))
 	allocate(fluxg_contr(nr))
@@ -273,7 +273,6 @@
 					Cs=Csca(ir,ilam)*Ndens(ir)+Cs_cloud(icc,ir)
 					tau_a=d*Ca
 					tau=tau_a+d*Cs
-					if(P(ir).gt.Psimplecloud) tau=1d4
 					exp_tau=exp(-tau)
 					tautot=tautot+tau
 					contr=A*BBr(ir)*(1d0-exp_tau)*fact*tau_a/tau
@@ -342,8 +341,8 @@
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
 !$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,opacitymol,irtrace,dtrace,Cabs_mol,mixrat_r,
-!$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,useDRIFT,Cext_cont,
-!$OMP&		cloudfrac,nirtrace,Psimplecloud,maxtau,ndisk,nr,obsA_LC,CaCont)
+!$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,Cext_cont,
+!$OMP&		cloudfrac,nirtrace,maxtau,ndisk,nr,obsA_LC,CaCont)
 !$OMP DO SCHEDULE(DYNAMIC)
 	do ilam=1,nlam
 		do icc=1,ncc
@@ -378,7 +377,6 @@
 						ir=irtrace(k,i)
 						d=dtrace(k,i)
 						tau=d*CaCont(ir,ilam)
-						if(P(ir).gt.Psimplecloud) tau=1d4
 						tautot=tautot+tau
 						ir_next=irtrace(k+1,i)
 						if(tautot.gt.maxtau) then
@@ -402,7 +400,6 @@
 								ir=irtrace(k,i)
 								d=dtrace(k,i)
 								tau=d*Cabs_mol(ig,ilam,imol,ir)
-								if(P(ir).gt.Psimplecloud) tau=1d4
 								tautot=tautot+tau
 								ir_next=irtrace(k+1,i)
 								if(tautot.gt.maxtau) goto 8

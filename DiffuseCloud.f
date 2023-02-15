@@ -255,7 +255,7 @@ c	atoms_cloud(i,3)=1
 	molfracs_atoms0=molfracs_atoms
 	xv_bot=xv_bot*mu*CSnmol/mutot
 
-	if(rainout) then
+	if(Cloud(ii)%rainout) then
 		densv(1,1:nCS)=(mu*mp/(kb*T(1)))*exp(BTP(1:nCS)-ATP(1:nCS)/T(1))
 		do iCS=1,nCS
 			if(T(1).gt.maxT(iCS)) densv(1,iCS)=densv(1,iCS)+(mu(iCS)*mp/(kb*T(1)*10d0))*exp(BTP(iCS)-ATP(iCS)/(T(1)*10d0))
@@ -316,22 +316,12 @@ c	atoms_cloud(i,3)=1
 		case("Enstatite","enstatite","ENSTATITE")
 			rho_nuc=3.20
 			ihaze=5
-		case("MIX")
-			tot=Cloud(ii)%fHazeSiO+Cloud(ii)%fHazeAl2O3+Cloud(ii)%fHazeTiO2+Cloud(ii)%fHazeTholin+Cloud(ii)%fHazeFe
-			Cloud(ii)%fHazeSiO=Cloud(ii)%fHazeSiO/tot
-			Cloud(ii)%fHazeAl2O3=Cloud(ii)%fHazeAl2O3/tot
-			Cloud(ii)%fHazeTiO2=Cloud(ii)%fHazeTiO2/tot
-			Cloud(ii)%fHazeTholin=Cloud(ii)%fHazeTholin/tot
-			Cloud(ii)%fHazeFe=Cloud(ii)%fHazeFe/tot
-			rho_nuc=1d0/(Cloud(ii)%fHazeSiO/2.18+Cloud(ii)%fHazeAl2O3/3.97+Cloud(ii)%fHazeTiO2/4.23+
-     &					Cloud(ii)%fHazeTholin/1.00+Cloud(ii)%fHazeFe/7.87)
-			ihaze=1
 		case default
 			call output("hazetype unknown")
 			stop
 	end select
 
-	m_nuc=4d0*pi*r_nuc**3*rho_nuc/3d0
+	m_nuc=4d0*pi*Cloud(ii)%rnuc**3*rho_nuc/3d0
 
 	allocate(mpart(nnr))
 	allocate(rho_av(nnr))
@@ -429,7 +419,7 @@ c	atoms_cloud(i,3)=1
 	allocate(Mb(nnr))
 	allocate(Mc(nnr))
 
-	rpart=r_nuc
+	rpart=Cloud(ii)%rnuc
 	xn=0d0
 	xm=0d0
 	xv=0d0
@@ -771,12 +761,12 @@ c	enddo
 		tot=sum(xc(1:nCS,i))+xm(i)
 		if(xn(i).gt.0d0) then
 			rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
-			if(.not.rr.ge.r_nuc) then
-				rr=r_nuc
+			if(.not.rr.ge.Cloud(ii)%rnuc) then
+				rr=Cloud(ii)%rnuc
 				xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
 			endif
 		else
-			rr=r_nuc
+			rr=Cloud(ii)%rnuc
 			xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
 		endif
 		err=abs(rr-rpart(i))/(rr+rpart(i))

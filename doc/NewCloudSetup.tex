@@ -1,38 +1,6 @@
 \documentclass[12pt]{article}
-\usepackage{natbib}
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{graphicx}
-\usepackage{txfonts}
-\usepackage[english]{babel}
-\usepackage{hyperref}
-\usepackage{units}
-\usepackage{listings}
-\usepackage{xcolor}
 
-\lstdefinelanguage{args}{
-sensitive=false,
-alsoletter={.},
-moredelim=[s][\color{red}]{<}{>},
-moredelim=[s][\color{blue}]{[}{]},
-moredelim=[is][\color{orange}]{:}{:},
-keywords=[10]{...},
-keywordstyle=[10]{\color{magenta}},
-}
-
-\lstnewenvironment{arguments}
-{\lstset{language=args}}
-{}
-
-\lstnewenvironment{bash}
-{\lstset{numbers=left,language=bash,keywordstyle={\color{blue}}}}
-{}
-
-\newcommand{\shellcmd}[1]{\\ \\ \indent\indent\texttt{\# #1}\\ \\ }
-
-\newcommand{\inputfile}[1]{\\ \indent\indent\texttt{#1}}
-
-\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+\include{general}
 
 \begin{document}
 
@@ -45,7 +13,7 @@ keywordstyle=[10]{\color{magenta}},
 
 In this document the new cloud setup options are described. These option are a complete replacement of the older setup used in ARCiS. The old setup was getting very convoluted with too many option that had to be set in too many different places. Management of the code and the input files was therefor too sensitive to errors.
 
-We have now two different basic types of clouds. Different cloud layers can be set by using the keyword
+We have now a few different basic types of clouds. Different cloud layers can be set by using the keyword
 \begin{description}
 \item[\texttt{cloud}]
 followed by a number (the number of the layer) and a ":".
@@ -92,6 +60,20 @@ As an example if you want to setup a cloud layer that is computed and follows th
 \\
 \\
 Note that for these self-consistent cloud layers the opacities are always computed using DHS and effective medium theory.
+
+\section{Reading from a file}
+
+This is the most straightforward one. You have a file with a setup of the cloud from another code. All parameters should be given in the file.
+
+\begin{description}
+\item[\texttt{type}]
+Has to be set to "FILEDRIFT" or "FILE" to form this type of cloud
+\item[\texttt{file}]
+Gives the filename to read.
+\item[\texttt{fmax}]
+Sets the maximum value used in the DHS computation (default is 0.8)
+\end{description}
+The structure of the possible file formats will be described in a separate document.
 
 \section{Parameterised clouds}
 
@@ -281,37 +263,56 @@ Imaginary part of the refractive index
 
 \subsubsection*{Real materials measured in the lab}
 
-For this a library of measured optical properties is needed.
+For this a library of measured optical properties is needed. Some materials come compiled into ARCiS. You can setup a mixture of materials. Each material gets a number and you can mix materials from files and precompiled materials.
 
 \begin{description}
 \item[\texttt{opacitytype}]
 Has to be set to "MATERIAL" to use this opacity type
 \item[\texttt{lnkfile}]
 Optionally followed by a number. This keyword points to an lnk-file with three columns: wavelength [micron], real part, imaginary part of the refractive index.
+\item[\texttt{lnkfilex,lnkfiley,lnkfilez}]
+Optionally followed by a number. This keyword points to an lnk-file with three columns: wavelength [micron], real part, imaginary part of the refractive index for different crystallographic axes. If one of them is set, they have to be set all. If none of them is set, the particle is supposed to have an isotropic refractive index set by the keyword \texttt{lnkfile}.
+\item[\texttt{material}]
+Optionally followed by a number. This keyword points to a material compiled into ARCiS. For a list of materials see the table below.
 \item[\texttt{abun}]
 Followed by a number. Sets the abundance of material with the matching lnk-file.
 \end{description}
 
-An example of pure forsterite cloud, using the file "forsterite.lnk" for the refractive index.
+An example of pure forsterite cloud, using the files "forsterite\_x.lnk","forsterite\_y.lnk", "forsterite\_z.lnk" for the refractive index.
 \\
 \inputfile{cloud1:opacitytype="MATERIAL"}
-\inputfile{cloud1:lnkfile="forsterite.lnk"}
+\inputfile{cloud1:lnkfilex="forsterite\_x.lnk"}
+\inputfile{cloud1:lnkfiley="forsterite\_y.lnk"}
+\inputfile{cloud1:lnkfilez="forsterite\_z.lnk"}
 \\
 \\
-An example of mixed forsterite/enstatite cloud, using the files "forsterite.lnk" and "enstatite.lnk" for the refractive index.
+An example of mixed astrosil/forsterite cloud, using the files "astrosil.lnk" and "forsterite\_x.lnk","forsterite\_y.lnk", "forsterite\_z.lnk" for the refractive index.
 \\
 \inputfile{cloud1:opacitytype="MATERIAL"}
-\inputfile{cloud1:lnkfile01="forsterite.lnk"}
-\inputfile{cloud1:lnkfile02="enstatite.lnk"}
+\inputfile{cloud1:lnkfile01="astrosil.lnk"}
+\inputfile{cloud1:lnkfilex02="forsterite\_x.lnk"}
+\inputfile{cloud1:lnkfiley02="forsterite\_y.lnk"}
+\inputfile{cloud1:lnkfilez02="forsterite\_z.lnk"}
 \inputfile{cloud1:abun01=0.7}
 \inputfile{cloud1:abun02=0.3}
+\\
+\\
+An example of mixed astrosil/forsterite cloud, using the compiled material "ENSTATITE" and the files "forsterite\_x.lnk","forsterite\_y.lnk", "forsterite\_z.lnk" for the refractive index.
+\\
+\inputfile{cloud1:opacitytype="MATERIAL"}
+\inputfile{cloud1:material01="ENSTATITE"}
+\inputfile{cloud1:lnkfilex02="forsterite\_x.lnk"}
+\inputfile{cloud1:lnkfiley02="forsterite\_y.lnk"}
+\inputfile{cloud1:lnkfilez02="forsterite\_z.lnk"}
+\inputfile{cloud1:abun01=0.4}
+\inputfile{cloud1:abun02=0.6}
 \\
 \\
 
 \section{Examples}
 
 \subsection{Cloud formation}
-A full setup for cloud formation similar to what was done in Min et al. 2020 but compute the crystallinity
+A full setup for cloud formation similar to what was done in \cite{2020A&A...642A..28M} but compute the crystallinity
 \\
 \inputfile{cloud1:type="DIFFUSE"}
 \inputfile{cloud1:globalKzz=.false.}
@@ -334,11 +335,7 @@ A cloud layer with parameterised structure and opacity extending to very high op
 \\
 
 
-
-\begin{thebibliography}{91}
-
-\bibitem[\protect\citeauthoryear{Ormel \& Min}{2019}]{2019A&A...622A.121O} Ormel C.~W., Min M., 2019, A\&A, 622, A121. doi:10.1051/0004-6361/201833678
-
-\end{thebibliography}
+\bibliographystyle{plain} % We choose the "plain" reference style
+\bibliography{refs} % Entries are in the refs.bib file
 
 \end{document}
