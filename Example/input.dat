@@ -40,19 +40,14 @@ compute=.false.
 scattering=.false.
 scattstar=.false.
 
-cloud1:nsubgrains=1
+cloud1:type='LAYER'
+cloud1:Ptau=0.01d0
+cloud1:lam_ref=1d0
+cloud1:xi=2d0
 cloud1:fmax=0d0
-cloud1:standard='DRIFT'
-cloud1:species='DRIFT'
-cloud1:coverage=1d0
-cloud1:Sigmadot=1d-17			! between 1d-19 and 1d-11
-cloud1:dP=10d0
-cloud1:coverage=1d0
-cloud1:Kzz=2d+06				! between 1d6 and 1d10 cm^2/s
-cloud1:P=1d-03					! between 1d-5 and 1d-1 bar
-
-useDRIFT=.true.
-cloudcompute=.true.
+cloud1:reff=0.1d0
+cloud1:opacitytype="MATERIAL"
+cloud1:material01="FORSTERITE"
 
 par_tprofile=.true.
 

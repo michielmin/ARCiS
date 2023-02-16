@@ -45,17 +45,8 @@
 			Cs=0d0
 			do icloud=1,nclouds
 				if(docloud(icc,icloud)) then
-					if(Cloud(icloud)%standard.eq.'MIX') then
-						Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
-						Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-					else
-						do isize=1,Cloud(icloud)%nr
-							Ca=Ca+
-     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-							Cs=Cs+
-     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-						enddo
-					endif
+					Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+					Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 				endif
 			enddo
 			tau=tau+(R(ir+1)-R(ir))*(Ca+Cs)
@@ -224,17 +215,8 @@
 				do ir=1,nr
 					do icloud=1,nclouds
 						if(docloud(icc,icloud)) then
-							if(Cloud(icloud)%standard.eq.'MIX') then
-								Ca_cloud(icc,ir)=Ca_cloud(icc,ir)+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
-								Cs_cloud(icc,ir)=Cs_cloud(icc,ir)+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-							else
-								do isize=1,Cloud(icloud)%nr
-									Ca_cloud(icc,ir)=Ca_cloud(icc,ir)+
-     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-									Cs_cloud(icc,ir)=Cs_cloud(icc,ir)+
-     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-								enddo
-							endif
+							Ca_cloud(icc,ir)=Ca_cloud(icc,ir)+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+							Cs_cloud(icc,ir)=Cs_cloud(icc,ir)+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 						endif
 					enddo
 				enddo
@@ -351,17 +333,8 @@
 				Ca=Cext_cont(ir,ilam)
 				do icloud=1,nclouds
 					if(docloud(icc,icloud)) then
-						if(Cloud(icloud)%standard.eq.'MIX') then
-							Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
-							Ca=Ca+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-						else
-							do isize=1,Cloud(icloud)%nr
-								Ca=Ca+
-     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-								Ca=Ca+
-     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-							enddo
-						endif
+						Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+						Ca=Ca+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 					endif
 				enddo
 				CaCont(ir,ilam)=Ca

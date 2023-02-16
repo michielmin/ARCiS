@@ -37,20 +37,13 @@ compute=.false.
 scattering=.false.
 scattstar=.false.
 
-cloud1:nsubgrains=1
+cloud1:type='DIFFUSE'
 cloud1:fmax=0d0
-cloud1:standard='DRIFT'
-cloud1:species='DRIFT'
-cloud1:coverage=1d0
-cloud1:Sigmadot=1d-17
 cloud1:dP=10d0
 cloud1:coverage=1d0
 cloud1:Kzz =  2E+06
 cloud1:Sigmadot =  2.3637590E-17
 cloud1:P =  5.2049144E-04
-
-useDRIFT=.true.
-cloudcompute=.true.
 
 par_tprofile=.true.
 

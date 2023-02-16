@@ -513,7 +513,7 @@ c equations for number of Nuclii
 		x(i)=-Sn(i)
 
 c coagulation
-		if(coagulation) then
+		if(Cloud(ii)%coagulation) then
 			npart=xn(i)*Clouddens(i)
 			lmfp=2.3d0*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
 			vmol=0.5d0*lmfp*vth(i)
@@ -550,7 +550,7 @@ c	call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 	
 	xn(1:nnr)=x(1:nnr)
 
-	if(coagulation.and.Cloud(ii)%haze) then
+	if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
 c equations for mass in Nuclii
 		Ma=0d0
 		Mb=0d0
@@ -779,7 +779,7 @@ c	enddo
 	enddo
 c end the loop
 
-	if(computecryst) then
+	if(Cloud(ii)%computecryst) then
 c Compute crystallinity
 	impurity=1d-8
 	ncryst=2.5d0
@@ -963,15 +963,14 @@ c correction for SiC
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%rv(1:nr),nr)
 
 	Cloud(ii)%frac(1:nr,1:20)=0d0
+
 c TiO
 	x(1:nnr)=xc(1,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,1),nr)
-	Cloud(ii)%frac(1:nr,1)=Cloud(ii)%frac(1:nr,1)/3d0
-	Cloud(ii)%frac(1:nr,2)=Cloud(ii)%frac(1:nr,1)
-	Cloud(ii)%frac(1:nr,3)=Cloud(ii)%frac(1:nr,1)
+	Cloud(ii)%frac(1:nr,1)=Cloud(ii)%frac(1:nr,1)
 c Al2O3
 	x(1:nnr)=xc(3,1:nnr)
-	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,10),nr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,6),nr)
 c Silicates
 	x(1:nnr)=fsil(1,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,fsil2(1,1:nr),nr)
@@ -986,42 +985,38 @@ c Silicates
 	enddo
 	call regridarray(logCloudP,x,nnr,logP,fsil2(4,1:nr),nr)
 	x(1:nnr)=xc(4,1:nnr)+xc(5,1:nnr)+xc(6,1:nnr)
-	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,15),nr)
-	Cloud(ii)%frac(1:nr,4)=Cloud(ii)%frac(1:nr,15)*fsil2(3,1:nr)/3d0
-	Cloud(ii)%frac(1:nr,5)=Cloud(ii)%frac(1:nr,4)
-	Cloud(ii)%frac(1:nr,6)=Cloud(ii)%frac(1:nr,4)
-	Cloud(ii)%frac(1:nr,8)=Cloud(ii)%frac(1:nr,15)*fsil2(1,1:nr)
-	Cloud(ii)%frac(1:nr,12)=Cloud(ii)%frac(1:nr,15)*fsil2(4,1:nr)
-	Cloud(ii)%frac(1:nr,13)=Cloud(ii)%frac(1:nr,15)*fsil2(2,1:nr)/3d0
-	Cloud(ii)%frac(1:nr,14)=Cloud(ii)%frac(1:nr,13)
-	Cloud(ii)%frac(1:nr,15)=Cloud(ii)%frac(1:nr,13)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,9),nr)
+	Cloud(ii)%frac(1:nr,2)=Cloud(ii)%frac(1:nr,9)*fsil2(3,1:nr)
+	Cloud(ii)%frac(1:nr,4)=Cloud(ii)%frac(1:nr,9)*fsil2(1,1:nr)
+	Cloud(ii)%frac(1:nr,8)=Cloud(ii)%frac(1:nr,9)*fsil2(4,1:nr)
+	Cloud(ii)%frac(1:nr,9)=Cloud(ii)%frac(1:nr,9)*fsil2(2,1:nr)
 c H2O
 	x(1:nnr)=xc(7,1:nnr)
-	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,18),nr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,12),nr)
 c Fe+FeS
 	x(1:nnr)=(xc(8,1:nnr)+xc(9,1:nnr))
-	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,9),nr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,5),nr)
 c SiC
 	x(1:nnr)=xc(11,1:nnr)
-	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,17),nr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,11),nr)
 c C
 	x(1:nnr)=xc(10,1:nnr)
-	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,16),nr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,10),nr)
 c Seed particles
 	x(1:nnr)=xm(1:nnr)
-	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,19),nr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,13),nr)
 
 	do i=1,nr
-		tot=sum(Cloud(ii)%frac(i,1:19))
+		tot=sum(Cloud(ii)%frac(i,1:13))
 		if(tot.gt.0d0) then
-			Cloud(ii)%frac(i,1:19)=Cloud(ii)%frac(i,1:19)/tot
+			Cloud(ii)%frac(i,1:13)=Cloud(ii)%frac(i,1:13)/tot
 		else
-			Cloud(ii)%frac(i,1:19)=1d0/19d0
+			Cloud(ii)%frac(i,1:13)=1d0/13d0
 			cloud_dens(i,ii)=0d0
 		endif
 	enddo
 
-	if(computecryst) then
+	if(Cloud(ii)%computecryst) then
 c Silicates
 		x(1:nnr)=(xc(5,1:nnr)*cryst(5,1:nnr)+xc(6,1:nnr)*cryst(6,1:nnr))/(xc(5,1:nnr)+xc(6,1:nnr))
 		do i=1,nnr

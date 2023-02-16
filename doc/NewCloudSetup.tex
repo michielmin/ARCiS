@@ -43,8 +43,7 @@ Compute the cloud nuclii. In the original paper the mass and opacity of the clou
 \item[\texttt{condensates}]
 Compute the cloud condensation species. Can be switched off to have a pure haze cloud (default is .true.)
 \item[\texttt{hazetype}]
-Determiones the composition of the hze particles (only when haze=.true.). Can be: "soot", "tholin", "optEC", "SiC", "carbon", "corrundum", "iron", "SiO", "TiO2", "enstatite", "MIX"
-\item[\texttt{fHaze}] followed by any of: SiO, SiO2, tholin, TiO2 corrundum, iron, enstatite or forsterite. Sets the abundance ratios of these species in case the haze type is set to "MIX"
+Determiones the composition of the hze particles (only when haze=.true.). Can be any of the buildin material types.
 \item[\texttt{computecryst}] 
 When switched on tries to compute the crystallinity of the cloud silicates. (default is .false.)
 \item[\texttt{cryst}]
@@ -208,9 +207,9 @@ The parameters to set are:
 Has to be set to "PARAMETERISED" to use this opacity type
 \item[\texttt{kappa}]
 The value of $\kappa_0$ in cm$^2$/g.
-\item[\texttt{lam\_ref}]
+\item[\texttt{lam\_kappa}]
 Reference wavelength (in micron, default $\lambda_0=1\,\mu$m)
-\item[\texttt{opacity\_pow}]
+\item[\texttt{pow\_kappa}]
 The value of the powerlaw $p$ (default is $p=4$)
 \item[\texttt{albedo}]
 The single scattering albedo $\omega$
@@ -238,9 +237,9 @@ So this parameterisation has 3 parameters in total: $v_\mathrm{eff}, r_\mathrm{e
 Value of $r_\mathrm{eff,0}$ in $\mu$m.
 \item[\texttt{veff}]
 Value of $v_\mathrm{eff}$ (default is $v_\mathrm{eff}=0$, which uses a single size in each pressure layer)
-\item[\texttt{gamma}]
+\item[\texttt{pow\_rad}]
 Value of the power of the powerlaw $\gamma$ (default is $\gamma=0$)
-\item[\texttt{P0}]
+\item[\texttt{Pref}]
 Value of the reference pressure $P_0$ (default is $P_0=1$)
 \item[\texttt{fmax}]
 Irregularity parameter for the DHS computations. When set to 0 homogeneous spheres are used (default $f_\mathrm{max}=0.8$)

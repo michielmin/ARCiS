@@ -102,7 +102,7 @@ c===============================================================================
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,twind,epsiter,specres_LR
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,metallicity0,vfrag,betaF
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid,blackbodystar
-	logical didcondens_chem,coagulation,resume_multinest,disequilibrium,const_eff_multinest
+	logical didcondens_chem,resume_multinest,disequilibrium,const_eff_multinest
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file,pargridfile,deepredisttype
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
 	real*8 Kzz,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,powvxx,night2day,pole2eq
@@ -133,7 +133,7 @@ c for exchange when computing secondary atmosphere
 	integer,allocatable :: niso(:),instr_nobs(:)
 	real*8,allocatable :: MMW(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
-	logical fulloutput3D,deepredist,readFull3D,computealbedo,computecryst
+	logical fulloutput3D,deepredist,readFull3D,computealbedo
 	integer nBB
 	parameter(nBB=10000)
 	character*500 formationcommand
@@ -292,24 +292,21 @@ c for exchange when computing secondary atmosphere
 	real*8 cia_mixrat(nmol_data)
 
 	type CloudType
-		character*20 standard,opacitytype,type
-		real*8 P,dP,s,column,xi,Pmax,Pmin,Ptau,Phi
-		real*8 coverage,frain
-		real*8,allocatable :: rv(:),w(:),M(:)					! dimension nsize
-		real*8,allocatable :: frac(:,:),sigma(:),cryst(:,:)
-		real*8 rho,amin,amax,fmax,porosity,reff,veff,rpow,Pref,rnuc
-		logical blend,haze,condensates,rainout
-		real*8 fcond,mixrat,tau,lref,mixrathaze,cryst0,e1_par,e2_par,Kref
+		character*20 opacitytype,type
+		real*8 P,dP,xi,Pmax,Pmin,Ptau,Phi,coverage
+		real*8,allocatable :: rv(:),M(:)					! dimension nsize
+		real*8,allocatable :: frac(:,:),sigma(:),cryst(:,:),abun(:)
+		real*8 rho,fmax,porosity,reff,veff,rpow,Pref,rnuc
+		logical blend,haze,condensates,rainout,globalKzz,computecryst,coagulation
+		real*8 mixrat,tau,lref,cryst0,e1_par,e2_par,Kref
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
-		character*500 file,Kzzfile
-		character*500 species,hazetype
-		integer nr,nsubgrains,nmat
+		character*500 species,hazetype,file
+		integer nmat,nlam
 		character*500,allocatable :: lnkfile(:,:),material(:)
 		real*8 Kzz,Sigmadot
 		real*8 kappa,albedo,kpow,klam
-		real*8,allocatable :: lam(:),e1(:,:),e2(:,:)
-		integer,allocatable :: lmap(:)
-		integer nlam
+		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:)
+		integer,allocatable :: nax(:)
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 

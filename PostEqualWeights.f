@@ -283,16 +283,6 @@
 	enddo
 	dPTstruct(i,nr)=log(T(nr)/T(nr-1))/log(P(nr)/P(nr-1))
 	cloudstruct(i,1:nr)=cloud_dens(1:nr,1)
-	if(Cloud(1)%simplecloudpart) then
-	do j=1,nr
-		if(P(j).ge.Cloud(1)%P) then
-			cloudstruct(i,j)=cloudstruct(i,j)*Cloud(1)%mixrat
-		else
-			cloudstruct(i,j)=cloudstruct(i,j)*Cloud(1)%mixrat*exp(-(log(P(j)/Cloud(1)%P)/log(Cloud(1)%dP))**2)
-		endif
-		cloudstruct(i,j)=cloudstruct(i,j)+Cloud(1)%mixrathaze*cloud_dens(j,1)
-	enddo
-	endif
 	cloudstruct(i,1:nr)=cloudstruct(i,1:nr)/dens(1:nr)
 	Tplanet(i)=(Lplanet*distance**2*1e-23/(pi*Rplanet**2*((2d0*(pi*kb)**4)/(15d0*hplanck**3*clight**3))))**0.25d0
 	

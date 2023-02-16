@@ -14,11 +14,13 @@
 	
 	select case(Cloud(ii)%type)
 		case("DIFFUSE")
+			Cloud(ii)%nlam=nlam
 			call DiffuseCloud(ii)
 			Cloud(ii)%rv=Cloud(ii)%rv*1d4
 			Cloud(ii)%sigma=1d-10
 			call SetupPartCloud(ii)
 		case("FILE")
+			Cloud(ii)%nlam=nlam
 			call regridN(Cloud(ii)%file,P,cloud_dens(1:nr,ii),nr,2,6,1,1,.false.,.false.)
 			call regridN(Cloud(ii)%file,P,Cloud(ii)%rv(1:nr),nr,2,5,1,1,.false.,.true.)
 c 10% iron
@@ -32,6 +34,7 @@ c 90% MgSiO3
 			Cloud(ii)%sigma=1d-10
 			call SetupPartCloud(ii)
 		case("FILEDRIFT")
+			Cloud(ii)%nlam=nlam
 			call regridN(Cloud(ii)%file,P*1d6,frac,nr,2,9,10,4,.true.,.true.)
 			Cloud(ii)%frac(1:nr,1)=frac(1:nr,1)/3d0
 			Cloud(ii)%frac(1:nr,2)=frac(1:nr,1)/3d0
@@ -65,41 +68,48 @@ c 90% MgSiO3
 			Cloud(ii)%sigma=1d-10
 			call SetupPartCloud(ii)
 		case("LAYER")
+			Cloud(ii)%nlam=nlam+1
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
 			call SetupPartCloud(ii)
 			do i=1,nr
+				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
 				if(P(i).gt.Cloud(ii)%Pmin.and.P(i).lt.Cloud(ii)%Pmax) then
 					cloud_dens(i,ii)=(grav(i)*Cloud(ii)%xi*Cloud(ii)%tau*P(i)**(Cloud(ii)%xi-1d0))/
-     &					(Cloud(ii)%Kref*(Cloud(ii)%Ptau**Cloud(ii)%xi-Cloud(ii)%Pmin**Cloud(ii)%xi))
+     &					(Cloud(ii)%Kref*1d6*(Cloud(ii)%Ptau**Cloud(ii)%xi-Cloud(ii)%Pmin**Cloud(ii)%xi))
 				else
 					cloud_dens(i,ii)=0d0
 				endif
 			enddo
 			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
 		case("SLAB")
+			Cloud(ii)%nlam=nlam+1
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
 			call SetupPartCloud(ii)
 			do i=1,nr
+				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
 				if(P(i).gt.Cloud(ii)%Pmin.and.P(i).lt.Cloud(ii)%Pmax) then
 					cloud_dens(i,ii)=(grav(i)*2d0*Cloud(ii)%tau*P(i))/
-     &					(Cloud(ii)%Kref*(Cloud(ii)%Pmax*Cloud(ii)%Pmax-Cloud(ii)%Pmin*Cloud(ii)%Pmin))
+     &					(Cloud(ii)%Kref*1d6*(Cloud(ii)%Pmax*Cloud(ii)%Pmax-Cloud(ii)%Pmin*Cloud(ii)%Pmin))
 				else
 					cloud_dens(i,ii)=0d0
 				endif
 			enddo
 			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
 		case("DECK")
+			Cloud(ii)%nlam=nlam+1
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
 			call SetupPartCloud(ii)
 			do i=1,nr
+				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
 				cloud_dens(i,ii)=(grav(i)*exp((P(i)-Cloud(ii)%Ptau)/Cloud(ii)%Phi))/
-     &				(Cloud(ii)%Kref*Cloud(ii)%Phi*(1d0-exp(-Cloud(ii)%Ptau/Cloud(ii)%Phi)))
+     &				(Cloud(ii)%Kref*1d6*Cloud(ii)%Phi*(1d0-exp(-Cloud(ii)%Ptau/Cloud(ii)%Phi)))
 			enddo
 			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
 		case("HOMOGENEOUS")
+			Cloud(ii)%nlam=nlam
 			cloud_dens(1:nr,ii)=dens(1:nr)*Cloud(ii)%mixrat
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
@@ -130,42 +140,20 @@ c-----------------------------------------------------------------------
 	logical computelamcloud(nlam),restrictcomputecloud
 	real*8 dens1bar,haze_scale
 
-	if(.not.allocated(Cloud(ii)%rv)) allocate(Cloud(ii)%rv(Cloud(ii)%nr))
-	if(.not.allocated(Cloud(ii)%M)) allocate(Cloud(ii)%M(Cloud(ii)%nr))
+	if(.not.allocated(Cloud(ii)%rv)) allocate(Cloud(ii)%rv(nr))
+	if(.not.allocated(Cloud(ii)%M)) allocate(Cloud(ii)%M(nr))
 	if(.not.allocated(Cloud(ii)%Kabs)) then
-		allocate(Cloud(ii)%Kabs(Cloud(ii)%nr,nlam))
-		allocate(Cloud(ii)%Ksca(Cloud(ii)%nr,nlam))
-		allocate(Cloud(ii)%Kext(Cloud(ii)%nr,nlam))
+		allocate(Cloud(ii)%Kabs(nr,nlam+1))
+		allocate(Cloud(ii)%Ksca(nr,nlam+1))
+		allocate(Cloud(ii)%Kext(nr,nlam+1))
 	endif
 
 	call output("Computing inhomogeneous cloud particles")
 
-	j=0
-	veff=Cloud(ii)%veff
-1	tot=0d0
-	do i=1,Cloud(ii)%nr
-		Cloud(ii)%w(i)=(1d4*Cloud(ii)%rv(i))**(1d0+(1d0-3d0*veff)/veff)*
-     &					exp(-1d0*Cloud(ii)%rv(i)/(Cloud(ii)%reff*veff))
-		Cloud(ii)%w(i)=Cloud(ii)%w(i)*Cloud(ii)%rv(i)**3
-		tot=tot+Cloud(ii)%w(i)
-	enddo
-	if(.not.tot.gt.0d0) then
-		if(j.lt.10) then
-			veff=veff*2d0
-			call output("increasing veff")
-			j=j+1
-			goto 1
-		else
-			tot=1d0
-			Cloud(ii)%w(1:Cloud(ii)%nr)=1d0
-		endif
-	endif
-	Cloud(ii)%w=Cloud(ii)%w/tot
-
 	select case(Cloud(ii)%opacitytype)
 		case("PARAMETERISED")
 			do ilam=1,nlam
-				Cloud(ii)%Kext(1:nr,ilam)=Cloud(ii)%kappa/(1d0+(lam(ilam)/Cloud(ii)%klam)**Cloud(ii)%kpow)
+				Cloud(ii)%Kext(1:nr,ilam)=Cloud(ii)%kappa/(1d0+(lam(ilam)*1d4/Cloud(ii)%klam)**Cloud(ii)%kpow)
 			enddo
 			Cloud(ii)%Kref=Cloud(ii)%kappa/(1d0+(Cloud(ii)%lref/Cloud(ii)%klam)**Cloud(ii)%kpow)
 			Cloud(ii)%Ksca(1:nr,1:nlam)=Cloud(ii)%Kext(1:nr,1:nlam)*Cloud(ii)%albedo
@@ -174,10 +162,10 @@ c-----------------------------------------------------------------------
 			computelamcloud(1:nlam)=computelam(1:nlam)
 			tautot=0d0
 			restrictcomputecloud=(.not.computeT.and..not.scattering)
-			do is=Cloud(ii)%nr,1,-1
-				call tellertje(Cloud(ii)%nr-is+1,Cloud(ii)%nr)
+			do is=nr,1,-1
+				call tellertje(nr-is+1,nr)
 				call ComputePart(Cloud(ii),ii,is,computelamcloud)
-				if(restrictcomputecloud.and.(useDRIFT.or.cloudcompute)) then
+				if(restrictcomputecloud) then
 					do ilam=1,nlam
 						if(computelamcloud(ilam)) then
 							tautot(ilam)=tautot(ilam)+Cloud(ii)%Kext(is,ilam)*cloud_dens(is,ii)*(R(is+1)-R(is))
@@ -196,5 +184,210 @@ c-----------------------------------------------------------------------
 	
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
+
+
+
+	subroutine SetupRefIndCloud()
+	use GlobalSetup
+	IMPLICIT NONE
+	integer ii,i,j,iref,ngrid
+	real*8 lgrid(nlam+1),e1d(nlam+1),e2d(nlam+1)
+	logical lnkloglog
+	external Carbon_BE_Zubko1996,Mg07Fe03SiO3_Dorschner1995,AstroSilicate
+	external Enstatite_X,Enstatite_Y,Enstatite_Z,checkparticlefile
+	external Forsterite_X,Forsterite_Y,Forsterite_Z
+	external Rutile_xy,Rutile_z,Water,OrganicsHenning,Soot,Tholin
+	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O,MgO,SiC,H2SO4
+
+	lnkloglog=.true.
+	ngrid=nlam+1
+
+	do ii=1,nclouds
+		lgrid(1:nlam)=lam(1:nlam)*1d4
+		lgrid(nlam+1)=Cloud(ii)%lref
+		iref=nlam+1
+		do i=1,nlam
+			if(lam(i).gt.Cloud(ii)%lref) then
+				lgrid(i+1:nlam+1)=lam(i:nlam)*1d4
+				lgrid(i)=Cloud(ii)%lref
+				iref=i
+				exit
+			endif
+		enddo
+		allocate(Cloud(ii)%e1(Cloud(ii)%nmat,3,nlam+1),Cloud(ii)%e2(Cloud(ii)%nmat,3,nlam+1))
+		allocate(Cloud(ii)%nax(Cloud(ii)%nmat))
+		if(Cloud(ii)%opacitytype.eq.'REFIND') then
+			Cloud(ii)%e1(1,1,1:ngrid)=Cloud(ii)%e1_par
+			Cloud(ii)%e2(1,1,1:ngrid)=Cloud(ii)%e2_par
+			Cloud(ii)%nmat=1
+			Cloud(ii)%nax(1)=1
+		else
+			do i=1,Cloud(ii)%nmat
+				select case(Cloud(ii)%material(i))
+					case("FILE")
+						if(Cloud(ii)%lnkfile(i,2).eq.' ') then
+							Cloud(ii)%nax(i)=1
+						else
+							Cloud(ii)%nax(i)=3
+						endif
+						do j=1,Cloud(ii)%nax(i)
+							call readrefindCP(Cloud(ii)%lnkfile(i,j),lgrid,e1d,e2d,ngrid,lnkloglog)
+							Cloud(ii)%e1(i,j,1:ngrid)=e1d(1:ngrid)
+							Cloud(ii)%e2(i,j,1:ngrid)=e2d(1:ngrid)
+						enddo
+					case('ENSTATITE')
+						Cloud(ii)%nax(i)=3
+						call RegridDataLNK(Enstatite_X,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						call RegridDataLNK(Enstatite_Y,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,2,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,2,1:ngrid)=e2d(1:ngrid)
+						call RegridDataLNK(Enstatite_Z,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,3,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,3,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=2.8
+					case('FORSTERITE')
+						Cloud(ii)%nax(i)=3
+						call RegridDataLNK(Forsterite_X,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						call RegridDataLNK(Forsterite_Y,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,2,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,2,1:ngrid)=e2d(1:ngrid)
+						call RegridDataLNK(Forsterite_Z,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,3,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,3,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=3.33
+					case('BROOKITE','RUTILE','TiO2') 
+						Cloud(ii)%nax(i)=3
+						call RegridDataLNK(Rutile_xy,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						call RegridDataLNK(Rutile_xy,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,2,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,2,1:ngrid)=e2d(1:ngrid)
+						call RegridDataLNK(Rutile_z,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,3,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,3,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=2.80
+					case('WATER')
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(Water,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=1.00
+					case('CARBON')
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(Carbon_BE_Zubko1996,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=1.80
+					case('QUARTZ','SiO2')
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(SiO2,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=2.648
+					case('SiO')
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(SiO,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=2.18
+					case('SiC')
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(SiC,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=3.22
+					case('IRON')
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(Iron,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=7.87
+					case('CORRUNDUM')
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(Corrundum,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=3.97
+					case('ORGANICS')
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(OrganicsHenning,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=1.80
+					case('THOLIN')
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(Tholin,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=1.00
+					case('ASTROSIL',"OLIVINE")
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(AstroSilicate,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=3.00
+					case("PYROXENE")
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(Mg07Fe03SiO3_Dorschner1995,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=3.01
+					case('H2SO4')
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(H2SO4,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=1.00
+					case('FeO')
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(FeO,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=5.70
+					case('MgO')
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(MgO,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=3.58
+					case("SOOT")
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(Soot,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=1.00
+					case("optEC")
+						Cloud(ii)%nax(i)=1
+						call RefInd_optEC(lgrid,e1d,e2d,rad_optEC,Eg_optEC,ngrid)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=1.50
+					case default
+						call output("Material unknown: " // trim(Cloud(ii)%material(i)))
+					stop
+				end select
+			enddo
+		endif
+		do j=1,Cloud(ii)%nax(i)
+			e1d(1:iref-1)=Cloud(ii)%e1(i,j,1:iref-1)
+			e1d(iref:nlam)=Cloud(ii)%e1(i,j,iref+1:nlam+1)
+			e1d(iref)=Cloud(ii)%e1(i,j,iref)
+			Cloud(ii)%e1(i,j,1:nlam+1)=e1d(1:nlam+1)
+			e2d(1:iref-1)=Cloud(ii)%e2(i,j,1:iref-1)
+			e2d(iref:nlam)=Cloud(ii)%e2(i,j,iref+1:nlam+1)
+			e2d(iref)=Cloud(ii)%e2(i,j,iref)
+			Cloud(ii)%e2(i,j,1:nlam+1)=e2d(1:nlam+1)
+		enddo
+	enddo
+
+
+	return
+	end
+	
 
 
