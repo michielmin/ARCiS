@@ -354,7 +354,7 @@ c select at least the species relevant for disequilibrium chemistry
 	if(do_cia) nmol=max(nmol,48)
 
 	allocate(mixrat(nmol))
-	allocate(Pswitch_mol(nmol))
+	allocate(Pswitch_mol(nmol),abun_switch_mol(nmol))
 	allocate(includemol(nmol))
 	allocate(opacitymol(nmol))
 	allocate(Cloud(max(nclouds,1)))
@@ -921,6 +921,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) maxTprofile
 		case("pswitch")
 			call ReadPswitch(key)
+		case("abunswitch","abun_switch")
+			call ReadAbunSwitch(key)
 		case("tp")
 			read(key%value,*) TP0
 		case("dtp")
@@ -1518,6 +1520,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	par_tprofile=.false.
 	do_rayleigh=.true.
 	Pswitch_mol=0d0
+	abun_switch_mol=0d0
 	
 	Nphot0=2500
 	
@@ -1955,6 +1958,28 @@ c number of cloud/nocloud combinations
 	return
 	end
 	
+	subroutine ReadAbunSwitch(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i
+	
+	do i=1,nmol_data
+		if(key%orkey2.eq.molname(i)) then
+			if(i.le.nmol) then
+				read(key%value,*) abun_switch_mol(i)
+			endif
+			return
+		endif
+	enddo
+	call output("Molecule not recognised in abun_switch")
+	stop
+	
+	return
+	end
+	
 	subroutine ReadFixMol(key)
 	use GlobalSetup
 	use Constants
@@ -2372,9 +2397,6 @@ c number of cloud/nocloud combinations
 	return
 	end
 	
-
-
-
 
 
 	subroutine NameCloudSpecies(standard,species)
