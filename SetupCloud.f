@@ -71,6 +71,7 @@ c 90% MgSiO3
 			Cloud(ii)%nlam=nlam+1
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
+			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			call SetupPartCloud(ii)
 			do i=1,nr
 				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
@@ -86,6 +87,7 @@ c 90% MgSiO3
 			Cloud(ii)%nlam=nlam+1
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
+			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			call SetupPartCloud(ii)
 			do i=1,nr
 				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
@@ -101,6 +103,7 @@ c 90% MgSiO3
 			Cloud(ii)%nlam=nlam+1
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
+			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			call SetupPartCloud(ii)
 			do i=1,nr
 				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
@@ -113,6 +116,7 @@ c 90% MgSiO3
 			cloud_dens(1:nr,ii)=dens(1:nr)*Cloud(ii)%mixrat
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
+			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			call SetupPartCloud(ii)
 		case default
 			call output("Cloud type unknown: " // trim(Cloud(ii)%type))
@@ -155,25 +159,35 @@ c-----------------------------------------------------------------------
 			do ilam=1,nlam
 				Cloud(ii)%Kext(1:nr,ilam)=Cloud(ii)%kappa/(1d0+(lam(ilam)*1d4/Cloud(ii)%klam)**Cloud(ii)%kpow)
 			enddo
-			Cloud(ii)%Kref=Cloud(ii)%kappa/(1d0+(Cloud(ii)%lref/Cloud(ii)%klam)**Cloud(ii)%kpow)
+			Cloud(ii)%Kext(1:nr,nlam+1)=Cloud(ii)%kappa/(1d0+(Cloud(ii)%lref/Cloud(ii)%klam)**Cloud(ii)%kpow)
 			Cloud(ii)%Ksca(1:nr,1:nlam)=Cloud(ii)%Kext(1:nr,1:nlam)*Cloud(ii)%albedo
 			Cloud(ii)%Kabs(1:nr,1:nlam)=Cloud(ii)%Kext(1:nr,1:nlam)*(1d0-Cloud(ii)%albedo)
 		case("MATERIAL","REFIND")
 			computelamcloud(1:nlam)=computelam(1:nlam)
 			tautot=0d0
 			restrictcomputecloud=(.not.computeT.and..not.scattering)
-			do is=nr,1,-1
-				call tellertje(nr-is+1,nr)
+			if(Cloud(ii)%onepart) then
+				is=1
 				call ComputePart(Cloud(ii),ii,is,computelamcloud)
-				if(restrictcomputecloud) then
-					do ilam=1,nlam
-						if(computelamcloud(ilam)) then
-							tautot(ilam)=tautot(ilam)+Cloud(ii)%Kext(is,ilam)*cloud_dens(is,ii)*(R(is+1)-R(is))
-							if(tautot(ilam).gt.maxtau) computelamcloud(ilam)=.false.
-						endif
-					enddo
-				endif
-			enddo
+				do is=2,nr
+					Cloud(ii)%Kext(is,1:nlam+1)=Cloud(ii)%Kext(1,1:nlam+1)
+					Cloud(ii)%Kabs(is,1:nlam+1)=Cloud(ii)%Kabs(1,1:nlam+1)
+					Cloud(ii)%Ksca(is,1:nlam+1)=Cloud(ii)%Ksca(1,1:nlam+1)
+				enddo
+			else
+				do is=nr,1,-1
+					call tellertje(nr-is+1,nr)
+					call ComputePart(Cloud(ii),ii,is,computelamcloud)
+					if(restrictcomputecloud) then
+						do ilam=1,nlam
+							if(computelamcloud(ilam)) then
+								tautot(ilam)=tautot(ilam)+Cloud(ii)%Kext(is,ilam)*cloud_dens(is,ii)*(R(is+1)-R(is))
+								if(tautot(ilam).gt.maxtau) computelamcloud(ilam)=.false.
+							endif
+						enddo
+					endif
+				enddo
+			endif
 		case default
 			call output("Opacity type unknown: " // trim(Cloud(ii)%opacitytype))
 			stop
@@ -207,7 +221,7 @@ c-----------------------------------------------------------------------
 		lgrid(nlam+1)=Cloud(ii)%lref
 		iref=nlam+1
 		do i=1,nlam
-			if(lam(i).gt.Cloud(ii)%lref) then
+			if(lam(i)*1d4.gt.Cloud(ii)%lref) then
 				lgrid(i+1:nlam+1)=lam(i:nlam)*1d4
 				lgrid(i)=Cloud(ii)%lref
 				iref=i
@@ -371,18 +385,18 @@ c-----------------------------------------------------------------------
 						call output("Material unknown: " // trim(Cloud(ii)%material(i)))
 					stop
 				end select
+				do j=1,Cloud(ii)%nax(i)
+					e1d(1:iref-1)=Cloud(ii)%e1(i,j,1:iref-1)
+					e1d(iref:nlam)=Cloud(ii)%e1(i,j,iref+1:nlam+1)
+					e1d(nlam+1)=Cloud(ii)%e1(i,j,iref)
+					Cloud(ii)%e1(i,j,1:nlam+1)=e1d(1:nlam+1)
+					e2d(1:iref-1)=Cloud(ii)%e2(i,j,1:iref-1)
+					e2d(iref:nlam)=Cloud(ii)%e2(i,j,iref+1:nlam+1)
+					e2d(nlam+1)=Cloud(ii)%e2(i,j,iref)
+					Cloud(ii)%e2(i,j,1:nlam+1)=e2d(1:nlam+1)
+				enddo
 			enddo
 		endif
-		do j=1,Cloud(ii)%nax(i)
-			e1d(1:iref-1)=Cloud(ii)%e1(i,j,1:iref-1)
-			e1d(iref:nlam)=Cloud(ii)%e1(i,j,iref+1:nlam+1)
-			e1d(iref)=Cloud(ii)%e1(i,j,iref)
-			Cloud(ii)%e1(i,j,1:nlam+1)=e1d(1:nlam+1)
-			e2d(1:iref-1)=Cloud(ii)%e2(i,j,1:iref-1)
-			e2d(iref:nlam)=Cloud(ii)%e2(i,j,iref+1:nlam+1)
-			e2d(iref)=Cloud(ii)%e2(i,j,iref)
-			Cloud(ii)%e2(i,j,1:nlam+1)=e2d(1:nlam+1)
-		enddo
 	enddo
 
 
