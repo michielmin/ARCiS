@@ -1777,7 +1777,9 @@ c	linear
 	lam1=lam1/micron
 	lam2=lam2/micron
 	distance=distance/parsec
-	r_nuc=r_nuc/micron
+	do i=1,nclouds
+		Cloud(i)%rnuc=Cloud(i)%rnuc/micron
+	enddo
 	orbit_inc=orbit_inc*180d0/pi
 
 	metallicity=metallicity0
@@ -1828,7 +1830,9 @@ c	linear, square
 	lam1=lam1/micron
 	lam2=lam2/micron
 	distance=distance/parsec
-	r_nuc=r_nuc/micron
+	do i=1,nclouds
+		Cloud(i)%rnuc=Cloud(i)%rnuc/micron
+	enddo
 	orbit_inc=orbit_inc*180d0/pi
 
 	do i=1,n_ret

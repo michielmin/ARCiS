@@ -105,9 +105,6 @@ c UV cross sections of CO2 from Venot et al.
 		enddo
 c===============
 
-		if(P(ir).gt.psimplecloud) then
-			cont_tot(1:nlam)=1d0/Ndens(ir)
-		endif
 		mixrat_tmp(1:nmol)=mixrat_r(ir,1:nmol)
 		do i=1,ncia
 			if(T(ir).lt.CIA(i)%T(1)) then
@@ -330,18 +327,6 @@ c https://www.climate-policy-watcher.org/surface-temperature/scattering-by-molec
 			end select
 		endif
 	enddo
-c============================
-c old parameterization
-	if(mixratHaze.gt.0d0) then
-		Cs=Cs+mixratHaze*(8.14d-45*ll2+1.28d-54*ll2*ll+1.61d-64*ll2*ll2+kappaHaze*2d0*mp)*exp(-(abs(log10(P(ir)/PHaze))
-     &					/log10(dPHaze))**2/2d0)
-	endif
-c============================
-
-c============================
-c Pinhas 2019
-c	Cs=Cs+mixratHaze*5.31e-27*(sqrt(ll)*0.35e-4)**4
-c============================
 
 	return
 	end

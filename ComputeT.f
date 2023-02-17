@@ -223,9 +223,6 @@
 					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
 					tau=tau+d*Ce(ir,ilam,ig)
 				endif
-				if(P(ir).gt.Psimplecloud) then
-					tau=tau+1d4
-				endif
 				if(.not.tau.gt.0d0) then
 					tau=0d0
 				endif
@@ -596,11 +593,9 @@ c	Ts=T*Fl**0.25
 	if(do3D.and..not.retrieval) print*,"Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%"
 	T0(1:nr)=Tinp(1:nr)
 	T1(1:nr)=T(1:nr)
-	if(dochemistry.or.cloudcompute) then
-		do ir=1,nr
-			call computeav50(Tdist(ir,1:nTiter),nTiter,T1(ir))
-		enddo
-	endif
+	do ir=1,nr
+		call computeav50(Tdist(ir,1:nTiter),nTiter,T1(ir))
+	enddo
 	do ir=1,nr
 		T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
 	enddo

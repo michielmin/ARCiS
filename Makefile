@@ -91,6 +91,7 @@ OBJS	= Modules.o \
 		Subroutines.o \
 		CIA.o \
 		ComputePart.o \
+		SetupCloud.o \
 		ReadParticleFits.o \
 		RefIndData.o \
 		EnstatiteData.o \

@@ -216,7 +216,6 @@ c===============================================================================
 	nmodel_err=1
 	j=0
 	mixratfile=.false.
-	fcloud_default=1d0
 	Pmin=1d-6
 	Pmax=1d+3
 	freePT_fitT=.false.
@@ -291,8 +290,6 @@ c===============================================================================
 c				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nclouds) nclouds=key%nr1
-			case("fcloud")
-				read(key%value,*) fcloud_default
 			case("retpar","fitpar")
 				if(key%key2.eq.'keyword') then
 					if(key%value.eq.'tprofile') then
@@ -361,6 +358,12 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(includemol(nmol))
 	allocate(opacitymol(nmol))
 	allocate(Cloud(max(nclouds,1)))
+	do i=1,nclouds
+		allocate(Cloud(i)%abun(40))
+		allocate(Cloud(i)%rho_mat(40))
+		allocate(Cloud(i)%lnkfile(40,3))
+		allocate(Cloud(i)%material(40))
+	enddo
 	allocate(XeqCloud(nr,max(nclouds,1)))
 	allocate(XeqCloud_old(nr,max(nclouds,1)))
 	allocate(XCloud(nr,max(nclouds,1)))
@@ -566,7 +569,7 @@ c allocate the arrays
 		do i=1,n_ret
 			line=trim(RetPar(i)%keyword) // "=0d0"
 			call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%orkey1,keyret%orkey2,
-     &			keyret%value,keyret%nr1,keyret%nr2,keyret%key2d)
+     &						keyret%value,keyret%nr1,keyret%nr2,keyret%key2d)
 			if(trim(keyret%key1).eq.trim(key%key1).and.trim(keyret%key2).eq.trim(key%key2).and.
      &		   keyret%nr1.eq.key%nr1.and.keyret%nr2.eq.key%nr2.and.keyret%key2d.eq.key%key2d) then
 				read(key%value,*) RetPar(i)%x0
@@ -621,21 +624,31 @@ c	condensates=(condensates.or.cloudcompute)
 		do i=1,nclouds
 			call output("==================================================================")
 			call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
-			if(useDRIFT.or.cloudcompute.or.Cloud(i)%simplecloud) then
-				Cloud(i)%nr=nr
-				allocate(Cloud(i)%w(Cloud(i)%nr))
-				allocate(Cloud(i)%frac(nr,20))
-				allocate(Cloud(i)%cryst(nr,20))
-				Cloud(i)%cryst=Cloud(i)%cryst0
-				Cloud(i)%species="MIX"
-				Cloud(i)%standard="MIX"
-			else
-				call SetupPartCloud(i)
-				allocate(Cloud(i)%w(Cloud(i)%nr))
-				if(Cloud(i)%species.eq.' ') call NameCloudSpecies(Cloud(i)%standard,Cloud(i)%species)
+			allocate(Cloud(i)%frac(nr,40))
+			allocate(Cloud(i)%cryst(nr,40))
+			Cloud(i)%cryst=Cloud(i)%cryst0
+			if(Cloud(i)%type.eq.'DIFFUSE') then
+				Cloud(i)%opacitytype="MATERIAL"
+				Cloud(i)%nmat=12
+				Cloud(i)%material(1)='RUTILE'
+				Cloud(i)%material(2)='FORSTERITE'
+				Cloud(i)%material(3)='SiO'
+				Cloud(i)%material(4)='SiO2'
+				Cloud(i)%material(5)='IRON'
+				Cloud(i)%material(6)='CORRUNDUM'
+				Cloud(i)%material(7)='FeO'
+				Cloud(i)%material(8)='MgO'
+				Cloud(i)%material(9)='ENSTATITE'
+				Cloud(i)%material(10)='CARBON'
+				Cloud(i)%material(11)='SiC'
+				Cloud(i)%material(12)='WATER'
+				if(Cloud(i)%haze) then
+					Cloud(i)%nmat=Cloud(i)%nmat+1
+					Cloud(i)%material(13)=Cloud(i)%hazetype
+				endif
 			endif
-			if(Cloud(i)%tau.gt.0d0) Cloud(i)%column=1d0
 		enddo
+		call SetupRefIndCloud
 	endif
 
 	metallicity0=metallicity
@@ -872,8 +885,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) pmin
 		case("pmax")
 			read(key%value,*) pmax
-		case("pcloud","psimplecloud")
-			read(key%value,*) psimplecloud
 		case("tmin")
 			read(key%value,*) Tmin
 		case("tmax")
@@ -939,18 +950,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) distance
 		case("cloud")
 			call ReadCloud(key)
-		case("rainout")
-			read(key%value,*) rainout
 		case("complexkzz")
 			read(key%value,*) complexKzz
-		case("mixrathaze","haze")
-			read(key%value,*) mixratHaze
-		case("phaze")
-			read(key%value,*) PHaze
-		case("dphaze")
-			read(key%value,*) dPHaze
-		case("kappahaze")
-			read(key%value,*) kappaHaze
 		case("scattering")
 			read(key%value,*) scattering
 		case("scattstar","starscatt")
@@ -1017,10 +1018,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			elements_ARCiS=key%value
 		case("secondary_atmosphere")
 			read(key%value,*) secondary_atmosphere
-		case("cloudcompute")
-			read(key%value,*) cloudcompute
-		case("usedrift")
-			read(key%value,*) useDRIFT
 		case("mixp")
 			read(key%value,*) mixP
 		case("sinkz")
@@ -1139,8 +1136,6 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) nlatt
 		case("betapow")
 			read(key%value,*) betapow
-		case("rnuc","r_nuc")
-			read(key%value,*) r_nuc
 		case("makeai")
 			read(key%value,*) domakeai
 		case("parametergridfile")
@@ -1157,16 +1152,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) idum0
 		case("randomseed")
 			read(key%value,*) randomseed
-		case("fcloud")
-			read(key%value,*) fcloud_default
-		case("singlecloud","exactcoverage")
-			read(key%value,*) singlecloud
-		case("coagulation")
-			read(key%value,*) coagulation
 		case("vfrag")
 			read(key%value,*) vfrag
-		case("computecryst")
-			read(key%value,*) computecryst
 		case("parameterfile","planetparameterfile")
 			planetparameterfile=trim(key%value)
 		case("planetname")
@@ -1300,7 +1287,9 @@ c			read(key%value,*) nTpoints
 	lam1=lam1*micron
 	lam2=lam2*micron
 	
-	r_nuc=r_nuc*micron
+	do i=1,nclouds
+		Cloud(i)%rnuc=Cloud(i)%rnuc*micron
+	enddo
 
 	distance=distance*parsec
 	
@@ -1402,19 +1391,6 @@ c	endif
 		T(i)=T0(nr+1-i)
 		P(i)=P0(nr+1-i)
 	enddo
-	do j=1,nclouds
-		if(Cloud(j)%simplecloud.and.Cloud(j)%P.lt.pmax.and.Cloud(j)%P.gt.pmin) then
-			dp=abs(P(i)-Cloud(j)%P)
-			k=1
-			do i=2,nr
-				if(abs(P(i)-Cloud(j)%P).lt.dp) then
-					dp=abs(P(i)-Cloud(j)%P)
-					k=i
-				endif
-			enddo
-			P(k)=Cloud(j)%P
-		endif
-	enddo
 
 c	if(par_tprofile) call ComputeParamT(T)
 	do i=1,nr
@@ -1459,13 +1435,6 @@ c	if(par_tprofile) call ComputeParamT(T)
 	allocate(mixrat_r(nr,nmol))
 	allocate(mixrat_old_r(nr,nmol))
 	allocate(cloud_dens(nr,max(nclouds,1)))
-	do i=1,nclouds
-		call output("==================================================================")
-		call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
-		call SetupPartCloud(i)
-		allocate(Cloud(i)%w(Cloud(i)%nr))
-		if(Cloud(i)%species.eq.' ') call NameCloudSpecies(Cloud(i)%standard,Cloud(i)%species)
-	enddo
 
 	do i=1,nr
 		mixrat_r(i,1:nmol)=mixrat(1:nmol)
@@ -1576,18 +1545,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 	TiScale=1d0
 	inverseCOratio=.false.
 	element_abun_file=' '
-	rainout=.false.
 	complexKzz=.false.
 	mixP=0d0
-	mixratHaze=0d0
-	PHaze=1d0
-	dPHaze=1d6
-	kappaHaze=0d0
-	Psimplecloud=1d9
-	coagulation=.true.
-	singlecloud=.false.
 	vfrag=100d0	!cm/s
-	computecryst=.false.
 	
 	twind=-1d0
 	
@@ -1607,8 +1567,6 @@ c	if(par_tprofile) call ComputeParamT(T)
 	alphaZ=1d0
 	
 	faircoverage=.false.
-
-	r_nuc=1d-3
 	
 	secondary_atmosphere=.false.
 	Poutgas=0d0
@@ -1663,72 +1621,48 @@ c  GGchem was still implemented slightly wrong.
 	nr_cloud=10
 
 	do i=1,nclouds
+		Cloud(i)%opacitytype=' '
+		Cloud(i)%type=' '
 		Cloud(i)%P=1d-4
 		Cloud(i)%dP=10d0
-		Cloud(i)%s=2d0
-		Cloud(i)%column=0d0
-		Cloud(i)%tau=-1d0
-		Cloud(i)%lam=0.55d0
-		Cloud(i)%file=' '
-		Cloud(i)%Kzzfile=' '
-		Cloud(i)%standard='ASTROSIL'
-		Cloud(i)%nr=50
-		Cloud(i)%nsubgrains=1
-		Cloud(i)%amin=0.1
-		Cloud(i)%amax=100d0
+		Cloud(i)%xi=2d0
+		Cloud(i)%Pmax=1d10
+		Cloud(i)%Pmin=0d0
+		Cloud(i)%Ptau=1d0
+		Cloud(i)%Phi=2d0
+		Cloud(i)%coverage=1d0
+		Cloud(i)%abun=1d0
 		Cloud(i)%fmax=0d0
 		Cloud(i)%porosity=0d0
-		Cloud(i)%fcarbon=0d0
-		Cloud(i)%blend=.true.
 		Cloud(i)%reff=1d0
 		Cloud(i)%veff=0.1
-		Cloud(i)%coverage=fcloud_default
-		Cloud(i)%ptype='COMPUTE'
-		Cloud(i)%frain=1d0
-		Cloud(i)%species=''
+		Cloud(i)%rpow=0d0
+		Cloud(i)%Pref=1d0
+		Cloud(i)%rnuc=0.001
+		Cloud(i)%blend=.true.
 		Cloud(i)%haze=.false.
-		Cloud(i)%hazetype='SOOT'
-		Cloud(i)%fHazeSiO=1d-10
-		Cloud(i)%fHazeTiO2=0d0
-		Cloud(i)%fHazeAl2O3=0d0
-		Cloud(i)%fHazeFe=0d0
-		Cloud(i)%fHazeTholin=0d0
-		Cloud(i)%fHazeEnstatite=0d0
-		Cloud(i)%fHazeForsterite=0d0
-		Cloud(i)%fHazeSiO2=0d0
-		Cloud(i)%fRutile=0d0
-		Cloud(i)%fForsterite=0d0
-		Cloud(i)%fSiO=0d0
-		Cloud(i)%fSiO2=0d0
-		Cloud(i)%fIron=0d0
-		Cloud(i)%fCorrundum=0d0
-		Cloud(i)%fFeO=0d0
-		Cloud(i)%fMgO=0d0
-		Cloud(i)%fEnstatite=1d-10
-		Cloud(i)%fCarbon=0d0
-		Cloud(i)%fSiC=0d0
-		Cloud(i)%fWater=0d0
-		Cloud(i)%cryst0=1d0
 		Cloud(i)%condensates=.true.
-		Cloud(i)%tmix=300d0
-		Cloud(i)%betamix=2.2
-		Cloud(i)%Kscale=1d0
+		Cloud(i)%rainout=.false.
+		Cloud(i)%coagulation=.true.
+		Cloud(i)%computecryst=.false.
+		Cloud(i)%mixrat=0d0
+		Cloud(i)%tau=1d0
+		Cloud(i)%lref=1d0
+		Cloud(i)%cryst0=1d0
+		Cloud(i)%e1_par=1.5
+		Cloud(i)%e2_par=0.01
+		Cloud(i)%hazetype='SOOT'
+		Cloud(i)%nmat=1
+		Cloud(i)%material=' '
 		Cloud(i)%Kzz=-1d0
 		Cloud(i)%Sigmadot=1d-17
-		Cloud(i)%simplecloud=.false.
-		Cloud(i)%simplecloudpart=.false.
-		Cloud(i)%ff=0.9d0
-		Cloud(i)%g1=0.99d0
-		Cloud(i)%g2=-0.9d0
 		Cloud(i)%kappa=1d-2
 		Cloud(i)%albedo=0.99d0
-c		Cloud(i)%P=0.0624d0
-		Cloud(i)%kappa_haze=0d0
-		Cloud(i)%albedo_haze=0d0
-		Cloud(i)%shscale_haze=1d0
+		Cloud(i)%kpow=4d0
+		Cloud(i)%klam=1d0
+		Cloud(i)%rho_mat=3.0
+		Cloud(i)%nax=1
 	enddo
-	cloudcompute=.false.
-	useDRIFT=.false.
 	nspike=0
 
 	retrieval=.false.
@@ -1860,7 +1794,6 @@ c		Cloud(i)%P=0.0624d0
 
 c number of cloud/nocloud combinations
 	ncc=2**nclouds
-	if(singlecloud) ncc=1+nclouds
 	allocate(docloud(ncc,nclouds))
 	allocate(cloudfrac(ncc))
 	allocate(flux(0:ncc,nlam))
@@ -2334,7 +2267,7 @@ c number of cloud/nocloud combinations
 	use ReadKeywords
 	IMPLICIT NONE
 	type(SettingKey) key
-	integer j,j1,j2
+	integer j,j1,j2,i
 
 
 	if(key%nr1.eq.0) then
@@ -2343,145 +2276,118 @@ c number of cloud/nocloud combinations
 	else
 		j1=key%nr1
 		j2=key%nr1
-		Cloud(key%nr1)%ptype="COMPUTE"
 	endif
 
 	do j=j1,j2
 	select case(key%key2)
+		case("type")
+			Cloud(j)%type=trim(key%value)
+		case("opacitytype")
+			Cloud(j)%opacitytype=trim(key%value)
 		case("file")
 			Cloud(j)%file=trim(key%value)
-		case("ngrains","nsize","nr")
-			read(key%value,*) Cloud(j)%nr
-		case("nsubgrains")
-			read(key%value,*) Cloud(j)%nsubgrains
-		case("amin")
-			read(key%value,*) Cloud(j)%amin
-		case("amax")
-			read(key%value,*) Cloud(j)%amax
 		case("fmax")
 			read(key%value,*) Cloud(j)%fmax
 		case("blend")
 			read(key%value,*) Cloud(j)%blend
 		case("porosity")
 			read(key%value,*) Cloud(j)%porosity
-		case("standard")
-			Cloud(j)%standard=trim(key%value)
-		case("species")
-			Cloud(j)%species=trim(key%value)
 		case("hazetype")
 			Cloud(j)%hazetype=trim(key%value)
-		case("fcarbon")
-			read(key%value,*) Cloud(j)%fcarbon
 		case("pressure","p")
 			read(key%value,*) Cloud(j)%P
 		case("dp")
 			read(key%value,*) Cloud(j)%dP
-		case("s","sharpness")
-			read(key%value,*) Cloud(j)%s
-		case("column")
-			read(key%value,*) Cloud(j)%column
+		case("ptop")
+			read(key%value,*) Cloud(j)%Pmin
+		case("pbottom")
+			read(key%value,*) Cloud(j)%Pmax
+		case("ptau")
+			read(key%value,*) Cloud(j)%Ptau
+		case("xi")
+			read(key%value,*) Cloud(j)%xi
+		case("dlogp")
+			read(key%value,*) Cloud(j)%Phi
 		case("tau")
 			read(key%value,*) Cloud(j)%tau
-		case("lam")
-			read(key%value,*) Cloud(j)%lam
-		case("reff")
-			read(key%value,*) Cloud(j)%reff
-		case("veff")
-			read(key%value,*) Cloud(j)%veff
+		case("lam_ref")
+			read(key%value,*) Cloud(j)%lref
+		case("lam_kappa")
+			read(key%value,*) Cloud(j)%klam
+		case("pow_kappa")
+			read(key%value,*) Cloud(j)%kpow
+		case("albedo")
+			read(key%value,*) Cloud(j)%albedo
+		case("rnuc")
+			read(key%value,*) Cloud(j)%rnuc
+		case("pref")
+			read(key%value,*) Cloud(j)%Pref
+		case("pow_rad")
+			read(key%value,*) Cloud(j)%rpow
+		case("n")
+			read(key%value,*) Cloud(j)%e1_par
+		case("k")
+			read(key%value,*) Cloud(j)%e2_par
 		case("coverage")
 			read(key%value,*) Cloud(j)%coverage
-		case("frain")
-			read(key%value,*) Cloud(j)%frain
 		case("haze")
 			read(key%value,*) Cloud(j)%haze
 		case("condensates")
 			read(key%value,*) Cloud(j)%condensates
 		case("mixrat")
 			read(key%value,*) Cloud(j)%mixrat
-		case("mixrathaze")
-			read(key%value,*) Cloud(j)%mixrathaze
-		case("shscalehaze","shscale_haze")
-			read(key%value,*) Cloud(j)%shscale_haze
-		case("fcond")
-			read(key%value,*) Cloud(j)%fcond
-		case("tmix")
-			read(key%value,*) Cloud(j)%tmix
-		case("betamix")
-			read(key%value,*) Cloud(j)%betamix
-		case("kzzfile")
-			Cloud(j)%Kzzfile=trim(key%value)
-		case("kzz","k")
+		case("kzz")
 			read(key%value,*) Cloud(j)%Kzz
-		case("kscale")
-			read(key%value,*) Cloud(j)%Kscale
+		case("globalkzz")
+			read(key%value,*) Cloud(j)%GlobalKzz
 		case("sigmadot","nucleation")
 			read(key%value,*) Cloud(j)%Sigmadot
-		case("simple")
-			read(key%value,*) Cloud(j)%simplecloud
-		case("simplepart")
-			read(key%value,*) Cloud(j)%simplecloudpart
-		case("f")
-			read(key%value,*) Cloud(j)%ff
-		case("g")
-			if(key%nr2.eq.1) read(key%value,*) Cloud(j)%g1
-			if(key%nr2.eq.2) read(key%value,*) Cloud(j)%g2
+		case("reff")
+			read(key%value,*) Cloud(j)%reff
+		case("veff")
+			read(key%value,*) Cloud(j)%veff
 		case("kappa")
 			read(key%value,*) Cloud(j)%kappa
-		case("albedo")
-			read(key%value,*) Cloud(j)%albedo
-		case("kappa_haze")
-			read(key%value,*) Cloud(j)%kappa_haze
-		case("albedo_haze")
-			read(key%value,*) Cloud(j)%albedo_haze
-		case("fhazesio")
-			if(key%nr2.eq.2) then
-				read(key%value,*) Cloud(j)%fHazeSiO2
-			else
-				read(key%value,*) Cloud(j)%fHazeSiO
-			endif
-		case("fhazetholin")
-			read(key%value,*) Cloud(j)%fHazeTholin
-		case("fhazetio","fhazerutile")
-			read(key%value,*) Cloud(j)%fHazeTiO2
-		case("fhazealo","fhazeal2o")
-			read(key%value,*) Cloud(j)%fHazeAl2O3
-		case("fhazefe","fhazeiron")
-			read(key%value,*) Cloud(j)%fHazeFe
-		case("fhazeenstatite")
-			read(key%value,*) Cloud(j)%fHazeEnstatite
-		case("fhazeforsterite")
-			read(key%value,*) Cloud(j)%fHazeForsterite
-		case("frutile")
-			read(key%value,*) Cloud(j)%fRutile
-		case("fforsterite")
-			read(key%value,*) Cloud(j)%fForsterite
-		case("fsio")
-			if(key%nr2.eq.2) then
-				read(key%value,*) Cloud(j)%fSiO2
-			else
-				read(key%value,*) Cloud(j)%fSiO
-			endif
-		case("firon")
-			read(key%value,*) Cloud(j)%fIron
-		case("fcorrundum")
-			read(key%value,*) Cloud(j)%fCorrundum
-		case("ffeo")
-			read(key%value,*) Cloud(j)%fFeO
-		case("fmgo")
-			read(key%value,*) Cloud(j)%fMgO
-		case("fenstatite")
-			read(key%value,*) Cloud(j)%fEnstatite
-c		case("fcarbon")
-c			read(key%value,*) Cloud(j)%fCarbon
-		case("fsic")
-			read(key%value,*) Cloud(j)%fSiC
-		case("fwater")
-			read(key%value,*) Cloud(j)%fWater
+		case("rainout")
+			read(key%value,*) Cloud(j)%rainout
+		case("computecryst")
+			read(key%value,*) Cloud(j)%computecryst
+		case("coagulation")
+			read(key%value,*) Cloud(j)%coagulation
 		case("cryst")
 			read(key%value,*) Cloud(j)%cryst0
-			computecryst=.true.
-		case("type")
-			Cloud(j)%type=trim(key%value)
+		case("abun")
+			i=key%nr2
+			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
+			read(key%value,*) Cloud(j)%abun(i)
+		case("rho_mat")
+			i=key%nr2
+			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
+			read(key%value,*) Cloud(j)%rho_mat(i)
+		case("material")
+			i=key%nr2
+			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
+			Cloud(j)%material(i)=trim(key%value)
+		case("lnkfile")
+			i=key%nr2
+			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
+			Cloud(j)%lnkfile(i,1)=trim(key%value)
+			Cloud(j)%nax(i)=1
+		case("lnkfilex")
+			i=key%nr2
+			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
+			Cloud(j)%lnkfile(i,1)=trim(key%value)
+			Cloud(j)%nax(i)=3
+		case("lnkfiley")
+			i=key%nr2
+			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
+			Cloud(j)%lnkfile(i,2)=trim(key%value)
+			Cloud(j)%nax(i)=3
+		case("lnkfilez")
+			i=key%nr2
+			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
+			Cloud(j)%lnkfile(i,3)=trim(key%value)
+			Cloud(j)%nax(i)=3
 		case default
 			call output("Unknown cloud keyword: " // trim(key%key2))
 			stop
@@ -2491,140 +2397,6 @@ c			read(key%value,*) Cloud(j)%fCarbon
 	return
 	end
 	
-
-
-c-----------------------------------------------------------------------
-c-----------------------------------------------------------------------
-
-	subroutine SetupPartCloud(ii)
-	use GlobalSetup
-	use Constants
-	IMPLICIT NONE
-	integer ii,is,ilam,j
-	real*8 phi,thet,tot,tot2,fact,tautot(nlam),HG,kabs,ksca
-	logical computelamcloud(nlam),restrictcomputecloud
-	real*8 dens1bar,haze_scale
-
-	if(.not.allocated(Cloud(ii)%rv)) allocate(Cloud(ii)%rv(Cloud(ii)%nr))
-	if(.not.allocated(Cloud(ii)%M)) allocate(Cloud(ii)%M(Cloud(ii)%nr))
-	if(.not.allocated(Cloud(ii)%Kabs)) then
-		allocate(Cloud(ii)%Kabs(Cloud(ii)%nr,nlam))
-		allocate(Cloud(ii)%Ksca(Cloud(ii)%nr,nlam))
-		allocate(Cloud(ii)%Kext(Cloud(ii)%nr,nlam))
-	endif
-
-	select case(Cloud(ii)%ptype)
-		case("COMPUTE","DRIFT")
-			computelamcloud(1:nlam)=computelam(1:nlam)
-			tautot=0d0
-			restrictcomputecloud=(.not.computeT.and..not.scattering)
-			do is=Cloud(ii)%nr,1,-1
-				call tellertje(Cloud(ii)%nr-is+1,Cloud(ii)%nr)
-				call ComputePart(Cloud(ii),ii,is,computelamcloud)
-				if(restrictcomputecloud.and.(useDRIFT.or.cloudcompute)) then
-					do ilam=1,nlam
-						if(computelamcloud(ilam)) then
-							tautot(ilam)=tautot(ilam)+Cloud(ii)%Kext(is,ilam)*cloud_dens(is,ii)*(R(is+1)-R(is))
-							if(tautot(ilam).gt.maxtau) computelamcloud(ilam)=.false.
-						endif
-					enddo
-				endif
-			enddo
-		case("SIMPLE")
-			do is=1,nr-1
-				if(P(is).gt.1d0.and.P(is+1).le.1d0) then
-					dens1bar=exp(log(dens(is))+log(dens(is+1)/dens(is))*log(P(is))/log(P(is)/P(is+1)))
-					exit
-				endif
-			enddo
-			if(Cloud(ii)%simplecloudpart) then
-c compute cloud particles
-				computelamcloud=computelam
-				is=1
-				Cloud(ii)%frac(is,1:3)=Cloud(ii)%fRutile/3d0
-				Cloud(ii)%frac(is,4:6)=Cloud(ii)%fForsterite/3d0
-				Cloud(ii)%frac(is,7)=Cloud(ii)%fSiO
-				Cloud(ii)%frac(is,8)=Cloud(ii)%fSiO2
-				Cloud(ii)%frac(is,9)=Cloud(ii)%fIron
-				Cloud(ii)%frac(is,10)=Cloud(ii)%fCorrundum
-				Cloud(ii)%frac(is,11)=Cloud(ii)%fFeO
-				Cloud(ii)%frac(is,12)=Cloud(ii)%fMgO
-				Cloud(ii)%frac(is,13:15)=Cloud(ii)%fEnstatite/3d0
-				Cloud(ii)%frac(is,16)=Cloud(ii)%fCarbon
-				Cloud(ii)%frac(is,17)=Cloud(ii)%fSiC
-				Cloud(ii)%frac(is,18)=Cloud(ii)%fWater
-				Cloud(ii)%frac(is,19)=0d0
-				Cloud(ii)%rv(is)=Cloud(ii)%reff
-				Cloud(ii)%sigma(is)=1d-10
-				call ComputePart(Cloud(ii),ii,is,computelamcloud)
-				computelamcloud=computelam
-				is=nr
-				Cloud(ii)%hazetype='MIX'
-				Cloud(ii)%frac(is,1:18)=0d0
-				Cloud(ii)%frac(is,19)=1d0
-				Cloud(ii)%rv(is)=r_nuc*1d4
-				Cloud(ii)%sigma(is)=1d-10
-				call ComputePart(Cloud(ii),ii,is,computelamcloud)
-
-				cloud_dens(1:nr,ii)=dens(1:nr)
-				do is=2,nr-1
-					if(P(is).ge.Cloud(ii)%P) then
-						Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat
-						Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat
-					else
-						Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat
-     &								*exp(-(log(P(is)/Cloud(ii)%P)/log(Cloud(ii)%dP))**2)
-						Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat
-     &								*exp(-(log(P(is)/Cloud(ii)%P)/log(Cloud(ii)%dP))**2)
-					endif
-					haze_scale=(dens(is)/dens1bar)**(1d0/Cloud(ii)%shscale_haze-1d0)
-					Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%Kabs(is,1:nlam)+
-     &						Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
-					Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%Ksca(is,1:nlam)+
-     &						Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
-					Cloud(ii)%Kext(is,1:nlam)=Cloud(ii)%Kabs(is,1:nlam)+Cloud(ii)%Ksca(is,1:nlam)
-				enddo
-				haze_scale=(dens(1)/dens1bar)**(1d0/Cloud(ii)%shscale_haze-1d0)
-				Cloud(ii)%Kabs(1,1:nlam)=Cloud(ii)%Kabs(1,1:nlam)*Cloud(ii)%mixrat+
-     &					Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
-				Cloud(ii)%Ksca(1,1:nlam)=Cloud(ii)%Ksca(1,1:nlam)*Cloud(ii)%mixrat+
-     &					Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
-				haze_scale=(dens(nr)/dens1bar)**(1d0/Cloud(ii)%shscale_haze-1d0)
-				Cloud(ii)%Kabs(nr,1:nlam)=Cloud(ii)%Kabs(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
-				Cloud(ii)%Ksca(nr,1:nlam)=Cloud(ii)%Ksca(nr,1:nlam)*Cloud(ii)%mixrathaze*haze_scale
-			else
-				Cloud(ii)%Kabs(1:nr,1:nlam)=0d0
-				Cloud(ii)%Ksca(1:nr,1:nlam)=0d0
-				Cloud(ii)%Kext(1:nr,1:nlam)=0d0
-				do is=1,nr
-					cloud_dens(is,ii)=dens(is)
-					if(P(is).ge.Cloud(ii)%P) then
-						Cloud(ii)%Kabs(is,1:nlam)=Cloud(ii)%kappa*(1d0-Cloud(ii)%albedo)
-						Cloud(ii)%Ksca(is,1:nlam)=Cloud(ii)%kappa*Cloud(ii)%albedo
-						Cloud(ii)%Kext(is,1:nlam)=Cloud(ii)%kappa
-					endif
-					haze_scale=(dens(is)/dens1bar)**(1d0/Cloud(ii)%shscale_haze-1d0)
-					do ilam=1,nlam
-						kabs=Cloud(ii)%kappa_haze*haze_scale*(1d0-Cloud(ii)%albedo_haze)/(lam(ilam)*1d4)
-						ksca=Cloud(ii)%kappa_haze*haze_scale*Cloud(ii)%albedo_haze/(lam(ilam)*1d4)**4
-						Cloud(ii)%Kabs(is,ilam)=Cloud(ii)%Kabs(is,ilam)+kabs
-						Cloud(ii)%Ksca(is,ilam)=Cloud(ii)%Ksca(is,ilam)+ksca
-						Cloud(ii)%Kext(is,ilam)=Cloud(ii)%Kext(is,ilam)+ksca+kabs
-					enddo
-				enddo
-			endif
-c		case("PARTFILE")
-c			call ReadParticle(Cloud(ii),ii)
-		case default
-			call output("I did not understand what I was trying to do. Sorry!")
-	end select
-		
-	return
-	end
-	
-c-----------------------------------------------------------------------
-c-----------------------------------------------------------------------
-
 
 
 	subroutine NameCloudSpecies(standard,species)

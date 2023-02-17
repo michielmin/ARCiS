@@ -100,15 +100,15 @@ c===============================================================================
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS
 	logical,allocatable :: includemol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,twind,epsiter,specres_LR
-	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,Psimplecloud,metallicity0,vfrag,betaF
+	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,metallicity0,vfrag,betaF
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid,blackbodystar
-	logical didcondens_chem,coagulation,resume_multinest,disequilibrium,const_eff_multinest
+	logical didcondens_chem,resume_multinest,disequilibrium,const_eff_multinest
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file,pargridfile,deepredisttype
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
-	real*8 mixratHaze,PHaze,dPHaze,kappaHaze,Kzz,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,powvxx,night2day,pole2eq
+	real*8 Kzz,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,powvxx,night2day,pole2eq
 	real*8 Kzz_deep,Kzz_1bar,Kzz_P,Kzz_contrast,SOratio,Tsurface,hotspotshift0,exp_ad
 	logical gamma_equal,dopostequalweights,inverseCOratio
-	logical transspec,emisspec,rainout,computeLC,doscaleR,complexKzz
+	logical transspec,emisspec,dosimplerainout,computeLC,doscaleR,complexKzz
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),dlam(:),blam(:,:),surface_emis(:)
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:),planet_albedo(:,:)
@@ -133,7 +133,7 @@ c for exchange when computing secondary atmosphere
 	integer,allocatable :: niso(:),instr_nobs(:)
 	real*8,allocatable :: MMW(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
-	logical fulloutput3D,deepredist,readFull3D,computealbedo,computecryst
+	logical fulloutput3D,deepredist,readFull3D,computealbedo
 	integer nBB
 	parameter(nBB=10000)
 	character*500 formationcommand
@@ -251,7 +251,7 @@ c for exchange when computing secondary atmosphere
 	character*500 opacitydir,specresfile,starfile
 	character*500,allocatable :: instrument(:)
 	real*8,allocatable :: instr_ntrans(:)
-	real*8 Tmin,Tmax,minTprofile,maxTprofile,fcloud_default,chimax,r_nuc
+	real*8 Tmin,Tmax,minTprofile,maxTprofile,chimax
 	real*8 sintheta(360),costheta(360)
 	logical,allocatable :: do_dB(:)
 	real*8 COret,COerr(2)
@@ -266,7 +266,7 @@ c for exchange when computing secondary atmosphere
 	real*8,allocatable :: flux(:,:),obsA(:,:),phase(:,:,:),obsLightCurve(:,:)
 	real*8,allocatable :: timeLightCurve(:),theta_phase(:),obsA_split(:,:)
 	integer ncc,nphase,n2d,i2d,nLightCurve
-	logical cloudcompute,useDRIFT,singlecloud,makeimage,makemovie
+	logical makeimage,makemovie
 	logical,allocatable :: docloud(:,:)
 	real*8,allocatable :: cloudfrac(:),XCloud(:,:),XeqCloud(:,:),XeqCloud_old(:,:)
 	real*8,allocatable :: nabla_ad(:),grav(:)
@@ -292,26 +292,22 @@ c for exchange when computing secondary atmosphere
 	real*8 cia_mixrat(nmol_data)
 
 	type CloudType
-		real*8 P,dP,s,column
-		real*8 coverage,frain
-		real*8,allocatable :: rv(:),w(:),M(:)					! dimension nsize
-		real*8,allocatable :: frac(:,:),sigma(:),cryst(:,:)
-		real*8 rho,amin,amax,fmax,porosity,reff,veff
-		logical blend,haze,condensates
-		real*8 fcond,mixrat,tau,lam,mixrathaze,cryst0
+		character*20 opacitytype,type
+		real*8 P,dP,xi,Pmax,Pmin,Ptau,Phi,coverage
+		real*8,allocatable :: rv(:),M(:)					! dimension nsize
+		real*8,allocatable :: frac(:,:),sigma(:),cryst(:,:),abun(:)
+		real*8 rho,fmax,porosity,reff,veff,rpow,Pref,rnuc
+		logical blend,haze,condensates,rainout,globalKzz,computecryst,coagulation
+		logical onepart
+		real*8 mixrat,tau,lref,cryst0,e1_par,e2_par,Kref
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
-		character*500 file,Kzzfile
-		character*20 standard,ptype,type
-		character*500 species,hazetype
-		real*8 fHazeSiO,fHazeTiO2,fHazeTholin,fHazeAl2O3,fHazeFe
-		real*8 fHazeEnstatite,fHazeForsterite,fHazeSiO2
-		integer nr,nsubgrains
-		real*8 tmix,betamix,Kzz,Kscale,Sigmadot
-c simple cloud from Jo
-		real*8 ff,g1,g2,kappa,albedo,kappa_haze,albedo_haze,shscale_haze
-		logical simplecloud,simplecloudpart
-		real*8 fRutile,fForsterite,fSiO,fSiO2,fIron,fCorrundum,fFeO,fMgO,fEnstatite,fCarbon,fSiC,fWater
-c			   1,2,3,  4,5,6,      7,   8,    9,    10,        11,  12,  13,14,15,  16,     17,  18
+		character*500 species,hazetype,file
+		integer nmat,nlam
+		character*500,allocatable :: lnkfile(:,:),material(:)
+		real*8 Kzz,Sigmadot
+		real*8 kappa,albedo,kpow,klam
+		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:)
+		integer,allocatable :: nax(:)
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 

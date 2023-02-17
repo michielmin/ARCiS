@@ -324,18 +324,6 @@ c		enddo
 			goingup=.true.
 			nscat=nscat+1
 		endif
-		if(P(jr).gt.Psimplecloud) then
-			call reflectsurface(x,y,z,dx,dy,dz)
-			goingup=.true.
-			nscat=nscat+1
-			do while(P(jr).gt.Psimplecloud.and.jr.lt.nr)
-				jr=jr+1
-			enddo
-			rr=sqrt(x**2+y**2+z**2)
-			x=x*R(jr)/rr
-			y=y*R(jr)/rr
-			z=z*R(jr)/rr
-		endif
 		onedge=.true.
 		goto 2
 	endif
@@ -376,17 +364,8 @@ c		enddo
 
 	do icloud=1,nclouds
 		if(docloud0(icloud)) then
-			if(Cloud(icloud)%standard.eq.'MIX') then
-				Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
-				Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-			else
-				do isize=1,Cloud(icloud)%nr
-					Ca=Ca+
-     &		Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-					Cs=Cs+
-     &		Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-				enddo
-			endif
+			Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+			Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 		endif
 	enddo
 	if(.not.Ca.gt.0d0) Ca=0d0

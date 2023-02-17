@@ -6,7 +6,7 @@
 	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill,MMW_form,P0,R0,Kzz_r(nr)
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3,ir
-	logical ini,compute_mixrat,dosimplerainout
+	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
 	real*8 ComputeKzz
 		
@@ -171,7 +171,6 @@ c			if(domakeai.or.retrieval) return
 		call output("==================================================================")
 c		call output("Computing chemistry using easy_chem by Paul Molliere")
 		call output("Computing chemistry using GGchem by Peter Woitke")
-		dosimplerainout=(rainout.and..not.cloudcompute)
 		do i=1,nr
 			call tellertje(i,nr)
 			Tc=max(min(T(i),20000d0),100d0)
@@ -487,223 +486,6 @@ c	endif
 	end
 	
 
-	subroutine SetupCloud(ii)
-	use GlobalSetup
-	use Constants
-	IMPLICIT NONE
-	real*8 pp,tot,column,tt,z,densdust,CloudMass
-	integer ii,i,j,nsubr,isize,ilam
-	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau,P_SI1,P_SI2,veff,frac(nr,10)
-	logical cl
-
-	if(.not.allocated(Cloud(ii)%rv)) then
-		allocate(Cloud(ii)%rv(nr))
-		allocate(Cloud(ii)%sigma(nr))
-	endif
-	if(Cloud(ii)%simplecloud) then
-		Cloud(ii)%ptype='SIMPLE'
-		call SetupPartCloud(ii)
-		Cloud(ii)%w=1d0
-		return
-	else if(cloudcompute) then
-		call DiffuseCloud(ii)
-		Cloud(ii)%rv=Cloud(ii)%rv*1d4
-		Cloud(ii)%sigma=1d-10
-		call output("Computing inhomogeneous cloud particles")
-		call SetupPartCloud(ii)
-		if(.not.retrieval) then
-			open(unit=25,file=trim(outputdir) // "DRIFTcloud" // trim(int2string(ii,'(i0.4)')),recl=6000)
-			do i=1,nr
-				write(25,*) P(i),T(i),Cloud(ii)%rv(i),Cloud(ii)%sigma(i),cloud_dens(i,ii),dens(i),
-     &			Cloud(ii)%frac(i,1)*3d0,Cloud(ii)%frac(i,4)*3d0,Cloud(ii)%frac(i,7:12),
-     &			Cloud(ii)%frac(i,13)*3d0,Cloud(ii)%frac(i,16)
-			enddo
-			close(unit=25)
-		endif
-	else if(Cloud(ii)%file.ne.' ') then
-		if(useDRIFT) then
-		
-		call regridN(Cloud(ii)%file,P*1d6,frac,nr,2,9,10,4,.true.,.true.)
-		Cloud(ii)%frac(1:nr,1)=frac(1:nr,1)/3d0
-		Cloud(ii)%frac(1:nr,2)=frac(1:nr,1)/3d0
-		Cloud(ii)%frac(1:nr,3)=frac(1:nr,1)/3d0
-
-		Cloud(ii)%frac(1:nr,4)=frac(1:nr,2)/3d0
-		Cloud(ii)%frac(1:nr,5)=frac(1:nr,2)/3d0
-		Cloud(ii)%frac(1:nr,6)=frac(1:nr,2)/3d0
-
-		Cloud(ii)%frac(1:nr,7)=frac(1:nr,3)
-		Cloud(ii)%frac(1:nr,8)=frac(1:nr,4)
-		Cloud(ii)%frac(1:nr,9)=frac(1:nr,5)
-		Cloud(ii)%frac(1:nr,10)=frac(1:nr,6)
-		Cloud(ii)%frac(1:nr,11)=frac(1:nr,7)
-		Cloud(ii)%frac(1:nr,12)=frac(1:nr,8)
-
-		Cloud(ii)%frac(1:nr,13)=frac(1:nr,9)/3d0
-		Cloud(ii)%frac(1:nr,14)=frac(1:nr,9)/3d0
-		Cloud(ii)%frac(1:nr,15)=frac(1:nr,9)/3d0
-
-		Cloud(ii)%frac(1:nr,16)=frac(1:nr,10)
-
-		Cloud(ii)%frac(1:nr,17)=0d0
-		Cloud(ii)%frac(1:nr,18)=0d0
-
-		call regridN(Cloud(ii)%file,P*1d6,cloud_dens(1:nr,ii),nr,2,43,1,4,.true.,.false.)
-		cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
-
-		call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,7,1,4,.true.,.false.)
-		
-		else
-
-		call regridN(Cloud(ii)%file,P,cloud_dens(1:nr,ii),nr,2,6,1,1,.false.,.false.)
-		call regridN(Cloud(ii)%file,P,Cloud(ii)%rv(1:nr),nr,2,5,1,1,.false.,.true.)
-
-
-		Cloud(ii)%frac(1:nr,1:19)=1d-10
-		select case(Cloud(ii)%hazetype)
-			case("SOOT","soot","THOLIN","tholin")
-				Cloud(ii)%frac(1:nr,19)=1d0
-				densdust=1.00
-				Cloud(ii)%haze=.true.
-			case("CHRIS")
-c 10% iron
-				Cloud(ii)%frac(1:nr,9)=0.1d0
-c 90% MgSiO3
-				Cloud(ii)%frac(1:nr,13:15)=0.9d0/3d0
-				densdust=3.7
-				Cloud(ii)%hazetype='THOLIN'
-			case default
-				call output("Cloud species unknown for file readin")
-				stop
-		end select
-		
-		cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*(4d0*pi*densdust*Cloud(ii)%rv(1:nr)**3)/3d0
-		endif
-		
-		Cloud(ii)%rv=Cloud(ii)%rv*1d4
-		Cloud(ii)%sigma=1d-10
-		call output("Computing inhomogeneous cloud particles")
-
-		call SetupPartCloud(ii)
-
-		open(unit=25,file=trim(outputdir) // "DRIFTcloud" // trim(int2string(ii,'(i0.4)')),recl=6000)
-		do i=1,nr
-			write(25,*) P(i),T(i),Cloud(ii)%rv(i),Cloud(ii)%sigma(i),cloud_dens(i,ii),dens(i),
-     &			Cloud(ii)%frac(i,1)*3d0,Cloud(ii)%frac(i,4)*3d0,Cloud(ii)%frac(i,7:12),
-     &			Cloud(ii)%frac(i,13)*3d0,Cloud(ii)%frac(i,16)
-		enddo
-		close(unit=25)
-	else if(.true.) then
-		if(Cloud(ii)%haze) then
-			column=0d0
-			do i=1,nr
-				cloud_dens(i,ii)=Cloud(ii)%mixrat*dens(i)
-				column=column+cloud_dens(i,ii)*(R(i+1)-R(i))
-			enddo
-			Cloud(ii)%column=column
-		else
-			column=0d0
-			nsubr=100
-			cloud_dens(1:nr,ii)=0d0
-			do i=1,nr
-				do j=1,nsubr
-					if(i.ne.nr) then
-						pp=(log10(P(i))+log10(P(i+1)/P(i))*real(j)/real(nsubr+1))
-					else
-						pp=log10(P(i))
-					endif
-					cloud_dens(i,ii)=cloud_dens(i,ii)+exp(-(abs(pp-log10(Cloud(ii)%P))/log10(Cloud(ii)%dP))**Cloud(ii)%s/2d0)
-				enddo
-				column=column+cloud_dens(i,ii)*(R(i+1)-R(i))
-			enddo
-			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%column/column
-		endif
-	else
-c use Ackerman & Marley 2001 cloud computation
-		column=0d0
-		nsubr=1
-		if(Cloud(ii)%haze) then
-			Xc=Cloud(ii)%fcond*XeqCloud(1,ii)
-		else
-			Xc=0d0
-		endif
-		Xc1=Xc
-		cloud_dens(1,ii)=Xc*dens(1)
-		cl=.false.
-		do i=2,nr
-			lambdaC=max(0.1d0,(log(T(i)/T(i-1))/log(P(i)/P(i-1)))/nabla_ad(i))
-			do j=1,nsubr
-				if(Cloud(ii)%haze) then
-					Xc=Cloud(ii)%fcond*XeqCloud(i,ii)
-				else
-					Xc=(Xc1+(XeqCloud(i,ii)-XeqCloud(i-1,ii))/real(nsubr))/(1d0-Cloud(ii)%frain*((P(i)-P(i-1))
-     &						/real(nsubr))/(lambdaC*P(i)))
-				endif
-				if(Xc.le.0d0.and.cl) then
-					cloud_dens(i,ii)=0d0
-					goto 2
-				endif
-				Xc=max(Xc,0d0)
-				if(Xc.gt.0d0) cl=.true.
-				Xc1=Xc
-			enddo
-			cloud_dens(i,ii)=Xc*dens(i)
-		enddo
-2 		continue
-	endif
-
-	j=0
-	veff=Cloud(ii)%veff
-1	tot=0d0
-	do i=1,Cloud(ii)%nr
-		Cloud(ii)%w(i)=(1d4*Cloud(ii)%rv(i))**(1d0+(1d0-3d0*veff)/veff)*
-     &					exp(-1d0*Cloud(ii)%rv(i)/(Cloud(ii)%reff*veff))
-		Cloud(ii)%w(i)=Cloud(ii)%w(i)*Cloud(ii)%rv(i)**3
-		tot=tot+Cloud(ii)%w(i)
-	enddo
-	if(.not.tot.gt.0d0) then
-		if(j.lt.10) then
-			veff=veff*2d0
-			call output("increasing veff")
-			j=j+1
-			goto 1
-		else
-			tot=1d0
-			Cloud(ii)%w(1:Cloud(ii)%nr)=1d0
-		endif
-	endif
-	Cloud(ii)%w=Cloud(ii)%w/tot
-	
-	if(Cloud(ii)%tau.gt.0d0.and..not.cloudcompute) then
-		tau=0d0
-		do ilam=nlam-1,1,-1
-			if((lam(ilam)*1d4).lt.Cloud(ii)%lam.and.(lam(ilam+1)*1d4).ge.Cloud(ii)%lam) exit
-		enddo
-		if(ilam.lt.1) ilam=1
-		do i=nr,2,-1
-			Ca=0d0
-			Cs=0d0
-			do isize=1,Cloud(ii)%nr
-				Ca=Ca+
-     &		Cloud(ii)%Kabs(isize,ilam)*Cloud(ii)%w(isize)*cloud_dens(i,ii)
-				Cs=Cs+
-     &		Cloud(ii)%Ksca(isize,ilam)*Cloud(ii)%w(isize)*cloud_dens(i,ii)
-			enddo
-			tau=tau+(R(i)-R(i-1))*(Ca+Cs)
-		enddo
-		cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%tau/tau
-	endif
-
-	CloudMass=0d0
-	do i=1,nr
-		CloudMass=CloudMass+cloud_dens(i,ii)*4d0*pi*abs(R(i+1)**3-R(i)**3)/3d0
-	enddo
-	call output("Cloud mass: " // dbl2string(CloudMass/Mearth,'(es13.4E3)') // " Mearth")
-
-	return
-	end	
-
-
 	real*8 function findpressure(P0)
 	use GlobalSetup
 	IMPLICIT NONE
@@ -728,7 +510,7 @@ c use Ackerman & Marley 2001 cloud computation
 	subroutine OnlyChemCompute()
 	use GlobalSetup
 	IMPLICIT NONE
-	logical ini,dosimplerainout
+	logical ini
 	integer i
 	character*500 cloudspecies(max(nclouds,1))
 	
@@ -737,7 +519,6 @@ c use Ackerman & Marley 2001 cloud computation
 	enddo
 	call set_molfracs_atoms(COratio,SiOratio,NOratio,SOratio,metallicity)
 	ini=.true.
-	dosimplerainout=(rainout.and..not.cloudcompute)
 	do i=1,nr
 		call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
      &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,dosimplerainout)

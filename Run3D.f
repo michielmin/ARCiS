@@ -374,17 +374,8 @@ c Now call the setup for the readFull3D part
 		cloudtau(1,ilam)=0d0
 		do ir=nr,1,-1
 			do icloud=1,nclouds
-				if(Cloud(icloud)%standard.eq.'MIX') then
-					cloudtau(1,ilam)=cloudtau(1,ilam)+(R(ir+1)-R(ir))*Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
-					cloudtau(1,ilam)=cloudtau(1,ilam)+(R(ir+1)-R(ir))*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
-				else
-					do isize=1,Cloud(icloud)%nr
-						cloudtau(1,ilam)=cloudtau(1,ilam)+
-     &		(R(ir+1)-R(ir))*Cloud(icloud)%Kabs(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-						cloudtau(1,ilam)=cloudtau(1,ilam)+
-     &		(R(ir+1)-R(ir))*Cloud(icloud)%Ksca(isize,ilam)*Cloud(icloud)%w(isize)*cloud_dens(ir,icloud)
-					enddo
-				endif
+				cloudtau(1,ilam)=cloudtau(1,ilam)+(R(ir+1)-R(ir))*Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+				cloudtau(1,ilam)=cloudtau(1,ilam)+(R(ir+1)-R(ir))*Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 			enddo
 		enddo
 	enddo
@@ -1009,7 +1000,9 @@ c Note we use the symmetry of the North and South here!
 	lam1=lam1/micron
 	lam2=lam2/micron
 	distance=distance/parsec
-	r_nuc=r_nuc/micron
+	do i=1,nclouds
+		Cloud(i)%rnuc=Cloud(i)%rnuc/micron
+	enddo
 	orbit_inc=orbit_inc*180d0/pi
 
 	if(dochemistry) metallicity=metallicity0
@@ -2013,9 +2006,6 @@ c-----------------------------------------------------------------------
 					tau=d*Ce(ilam,ig,ir+1)/dens(ir+1)
 					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
 					tau=tau+d*Ce(ilam,ig,ir)/dens(ir)
-				endif
-				if(P(ir).gt.Psimplecloud) then
-					tau=tau+1d4
 				endif
 				if(.not.tau.gt.0d0) then
 					tau=0d0

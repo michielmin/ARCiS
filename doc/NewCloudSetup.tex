@@ -1,0 +1,340 @@
+\documentclass[12pt]{article}
+
+\include{general}
+
+\begin{document}
+
+\title{\includegraphics[width=0.9\hsize]{ARCiS}\\Cloud setup in ARCiS}
+\author{Michiel Min}
+\date{\today}
+\maketitle
+
+\section{Introduction}
+
+In this document the new cloud setup options are described. These option are a complete replacement of the older setup used in ARCiS. The old setup was getting very convoluted with too many option that had to be set in too many different places. Management of the code and the input files was therefor too sensitive to errors.
+
+We have now a few different basic types of clouds. Different cloud layers can be set by using the keyword
+\begin{description}
+\item[\texttt{cloud}]
+followed by a number (the number of the layer) and a ":".
+\end{description}
+After that the keywords described above follow. Example is \texttt{cloud1:Kzz=1d9} sets the $K_{zz}$ value of cloud layer 1 to $10^9$.
+In the remainder of this document I will always use as an example for the keywords cloud number 1.
+
+\section{Self consistent cloud formation}
+
+This setup follows the method from \cite{2019A&A...622A.121O}. The clouds are formed using diffusion and sedimentation.
+
+\begin{description}
+\item[\texttt{type}]
+Has to be set to "DIFFUSE" to form this type of cloud
+\item[\texttt{SigmaDot}]
+The nucleation rate in g/cm$^2$
+\item[\texttt{globalKzz}]
+Set to .false. to use a value for $K_{zz}$ different from the profile set globally in the atmosphere (default is .true.)
+\item[\texttt{Kzz}]
+Value for $K_{zz}$ to use. Only used when globalKzz=.false.
+\item[\texttt{coagulation}] 
+When switched on computes the coagulation of cloud particles (default is .true.)
+\item[\texttt{rainout}] 
+When wsitched on materials that are (partly) thermally stable at the lower boundary of the atmospheric setup are (partly) removed from the mixture (default is .false.)
+\item[\texttt{haze}]
+Compute the cloud nuclii. In the original paper the mass and opacity of the cloud nuclii is ignored. (default is .false.)
+\item[\texttt{condensates}]
+Compute the cloud condensation species. Can be switched off to have a pure haze cloud (default is .true.)
+\item[\texttt{hazetype}]
+Determiones the composition of the hze particles (only when haze=.true.). Can be any of the buildin material types.
+\item[\texttt{computecryst}] 
+When switched on tries to compute the crystallinity of the cloud silicates. (default is .false.)
+\item[\texttt{cryst}]
+Sets the crystallinity of the cloud silicates in case computecryst=.false. (default is 1)
+\item[\texttt{fmax}]
+Sets the maximum value used in the DHS computation (default is 0.8)
+\end{description}
+
+As an example if you want to setup a cloud layer that is computed and follows the global $K_{zz}$ profile all you have to do is:
+\\
+\inputfile{cloud1:type="DIFFUSE"}
+\inputfile{cloud1:SigmaDot=1d-12}
+\\
+\\
+Note that for these self-consistent cloud layers the opacities are always computed using DHS and effective medium theory.
+
+\section{Reading from a file}
+
+This is the most straightforward one. You have a file with a setup of the cloud from another code. All parameters should be given in the file.
+
+\begin{description}
+\item[\texttt{type}]
+Has to be set to "FILEDRIFT" or "FILE" to form this type of cloud
+\item[\texttt{file}]
+Gives the filename to read.
+\item[\texttt{fmax}]
+Sets the maximum value used in the DHS computation (default is 0.8)
+\end{description}
+The structure of the possible file formats will be described in a separate document.
+
+\section{Parameterised clouds}
+
+For the parameterised cloud distribution setup we have four options: "LAYER", "SLAB", "DECK", "HOMOGENEOUS".
+There are a few general parameters, mostly for the particle setup, and some specific for the two types. We start with the specific ones and afterwards discuss the general ones for giving the particle size distribution and optical properties.
+
+For details on the underlying equations, please read the document on cloud parameterisation.
+
+\subsection{Cloud layer}
+
+This is a slab with constant mass fraction of the cloud material between two pressure points. To get this you have to specify:
+\\
+\inputfile{cloud1:type="LAYER"}
+\\
+\\
+You have only a few parameters specifying the cloud
+
+\begin{description}
+\item[\texttt{type}]
+Has to be set to "LAYER" to form this type of cloud
+\item[\texttt{Ptop}]
+The top pressure of the cloud (default $P_\mathrm{top}=0$)
+\item[\texttt{Pbottom}]
+The bottom pressure of the cloud (default $P_\mathrm{bottom}=10^9$)
+\item[\texttt{Ptau}]
+The pressure where the optical depth of $\tau_\mathrm{cloud}$ is reached at the reference wavelength
+\item[\texttt{tau}]
+Optical depth of the cloud at reference wavelength (default $\tau_\mathrm{cloud}=1$)
+\item[\texttt{xi}]
+The powerlaw of the opacity change with pressure (default $\xi=1$)
+\item[\texttt{lam\_ref}]
+Reference wavelength (in micron, default 1\,$\mu$m)
+\end{description}
+
+\subsection{Homogeneous cloud}
+
+This is actually not really a cloud. It is actually a homogeneous component in the atmosphere. There is no top pressure or bottom pressure, the entire atmosphere is filled with the same mass fraction of cloud particles.
+\\
+\inputfile{cloud1:type="HOMOGENEOUS"}
+\\
+\\
+You have only a few parameters specifying the cloud distribution
+
+\begin{description}
+\item[\texttt{type}]
+Has to be set to "HOMOGENEOUS" to form this type of cloud
+\item[\texttt{mixrat}]
+Mass mixing ratio of the cloud particles
+\end{description}
+
+
+\subsection{Cloud slab}
+
+This is a slab with a mass fraction of the cloud material between two pressure points varying linearly with pressure. To get this you have to specify:
+\\
+\inputfile{cloud1:type="SLAB"}
+\\
+\\
+You have only a few parameters specifying the cloud
+
+\begin{description}
+\item[\texttt{type}]
+Has to be set to "SLAB" to form this type of cloud
+\item[\texttt{Ptop}]
+The top pressure of the cloud (default $P_\mathrm{top}=0$)
+\item[\texttt{Pbottom}]
+The bottom pressure of the cloud (default $P_\mathrm{bottom}=10^9$)
+\item[\texttt{tau}]
+Optical depth of the cloud at reference wavelength
+\item[\texttt{lam\_ref}]
+Reference wavelength (in micron, default 1\,$\mu$m)
+\end{description}
+
+\subsection{Cloud deck}
+
+This is a deck with an infinite extend. The pressure at which an optical depth of 1 is reached is given as well as how the cloud mass fraction increases with pressure. To get this you have to specify:
+\\
+\inputfile{cloud1:type="DECK"}
+\\
+\\
+The cloud is parameterised using the prescription from the gradient in the optical depth,
+\begin{equation}
+\frac{\partial \tau}{\partial P}=C\,\exp{((P-P_\mathrm{\tau})/\Phi)}.
+\end{equation}
+For an atmosphere in hydrostatic equilibrium we have that
+\begin{equation}
+\frac{\partial \tau}{\partial P}=\frac{\kappa}{g},
+\end{equation}
+where $\kappa$ is the mass absorption coefficient of the atmosphere and $g$ is the gravitational acceleration. Here we consider only the optical depth caused by the cloud which means that we have $\kappa=f_\mathrm{cloud}\kappa_\mathrm{cloud}$. Working this all out we find that (assuming gradients in $f_\mathrm{cloud}$ and $\kappa_\mathrm{cloud}$ can be ignored)
+\begin{equation}
+f_\mathrm{cloud}=\frac{g}{\kappa_\mathrm{cloud}}\,C\,\exp{((P-P_\mathrm{top})/\Phi)}.
+\end{equation}
+Where the scaling constant is determined by where the optical depth reaches a value of one at the reference wavelength. Not that for very low pressures $f_\mathrm{cloud}$ reaches a constant value so the cloud reaches up with constant value to the top of the atmosphere.
+
+You have only a few parameters specifying the cloud
+
+\begin{description}
+\item[\texttt{type}]
+Has to be set to "DECK" to form this type of cloud
+\item[\texttt{Ptop}]
+The pressure at which an optical depth op 1 is reached at the reference wavelength
+\item[\texttt{dlogP}]
+The pressure range over which the cloud optical depth falls off (i.e. $\Phi$)
+\item[\texttt{lam\_ref}]
+Reference wavelength (in micron, default 1\,$\mu$m)
+\end{description}
+
+\subsection{Opacities}
+
+There are two different options for the opacities in the cloud: parameterised or computed from real material optical properties. For the parameterised one can parameterise the opacity itself or parameterise the refractive index.
+
+The opacity type of the cloud can be set by using the keyword
+\begin{description}
+\item[\texttt{opacitytype}]
+which can be "PARAMETERISED", "REFIND", "MATERIAL"
+\end{description}
+
+\subsubsection{Parameterised opacity}
+
+The simplest opacity is the parameterised opacity one. This should only be used in the case that there is no observational data on the composition of the particle available (e.g. no mid-infrared spectral resonances). In this case we simply parameterise the opacity as
+\begin{equation}
+\label{eq:paropac}
+\kappa_\mathrm{ext}=\frac{\kappa_0}{1+\left(\frac{\lambda}{\lambda_0}\right)^{p}}
+\end{equation}
+where $\lambda_0$ is the wavelength where the opacity turns from grey into a Rayleigh slope. In principle this is an indication for the particle size as this usually happens around $\lambda\sim2\pi r$. For Rayleigh scattering $p$ is expected to be $4$ while for Rayleigh absorption it is expected to be around $2$.
+
+When computing emission spectra it is important to know the albedo of the particles, which gives us another parameter $\omega$, the single scattering albedo. We take this to be wavelength independent.
+
+The parameters to set are:
+\begin{description}
+\item[\texttt{opacitytype}]
+Has to be set to "PARAMETERISED" to use this opacity type
+\item[\texttt{kappa}]
+The value of $\kappa_0$ in cm$^2$/g.
+\item[\texttt{lam\_kappa}]
+Reference wavelength (in micron, default $\lambda_0=1\,\mu$m)
+\item[\texttt{pow\_kappa}]
+The value of the powerlaw $p$ (default is $p=4$)
+\item[\texttt{albedo}]
+The single scattering albedo $\omega$
+\end{description}
+
+\subsubsection{Computed from refractive index}
+
+When computing the particle opacity from the refractive index we have to define the size and the shape of the particle. For the shape we take either Mie theory (homogeneous spheres), DHS (simulating irregularly shaped particles, see Min et al. 2005), or aggregates.
+
+We parameterise the size distribution of the particles using a Hansen size distribution.
+\begin{equation}
+n(r)dr\propto r^\frac{1-3v_\mathrm{eff}}{v_\mathrm{eff}} \exp\left(-\frac{r}{r_\mathrm{eff}v_\mathrm{eff}}\right)
+\end{equation}
+for radii $r > r_\mathrm{nuc}$. The smallest possible radius (the radius of a nucleus) can be set to a low value of around $r_\mathrm{nuc}=0.01\,\mu$m. In this distribution $r_\mathrm{eff}$ is the effictive radius of the size distribution and $v_\mathrm{eff}$ is the dimensionless width.
+
+We take a varying radius with height in the cloud parameterised as,
+\begin{equation}
+r_\mathrm{eff}=r_\mathrm{nuc}+r_\mathrm{eff,0}\left(\frac{P}{P_0}\right)^\gamma
+\end{equation}
+For convenience we pick $P_0=1\,$bar. Typically the larger particles will be at the bottom of the cloud (so at high pressures) so $\gamma>0$.
+
+So this parameterisation has 3 parameters in total: $v_\mathrm{eff}, r_\mathrm{eff,0}$ and $\gamma$. They can be set by:
+\begin{description}
+\item[\texttt{reff}]
+Value of $r_\mathrm{eff,0}$ in $\mu$m.
+\item[\texttt{veff}]
+Value of $v_\mathrm{eff}$ (default is $v_\mathrm{eff}=0$, which uses a single size in each pressure layer)
+\item[\texttt{pow\_rad}]
+Value of the power of the powerlaw $\gamma$ (default is $\gamma=0$)
+\item[\texttt{Pref}]
+Value of the reference pressure $P_0$ (default is $P_0=1$)
+\item[\texttt{fmax}]
+Irregularity parameter for the DHS computations. When set to 0 homogeneous spheres are used (default $f_\mathrm{max}=0.8$)
+\item[\texttt{rnuc}]
+Value of $r_\mathrm{nuc}$ in $\mu$m (default is $r_\mathrm{nuc}=0.01\,\mu$m).
+\end{description}
+
+\subsubsection*{Parameterised refractive index}
+
+A simple thing we could do is fit the refractive index of the material. This works best if the wavelength coverage is rather narrow so the refractive index is not expected to vary too much. In that case we simply have two parameters: the real and imaginary parts of the refractive index, $n$ and $k$ respectively such that $m=n+ik$.
+
+\begin{description}
+\item[\texttt{opacitytype}]
+Has to be set to "REFIND" to use this opacity type
+\item[\texttt{n}]
+Real part of the refractive index
+\item[\texttt{k}]
+Imaginary part of the refractive index
+\end{description}
+
+\subsubsection*{Real materials measured in the lab}
+
+For this a library of measured optical properties is needed. Some materials come compiled into ARCiS. You can setup a mixture of materials. Each material gets a number and you can mix materials from files and precompiled materials.
+
+\begin{description}
+\item[\texttt{opacitytype}]
+Has to be set to "MATERIAL" to use this opacity type
+\item[\texttt{lnkfile}]
+Optionally followed by a number. This keyword points to an lnk-file with three columns: wavelength [micron], real part, imaginary part of the refractive index.
+\item[\texttt{lnkfilex,lnkfiley,lnkfilez}]
+Optionally followed by a number. This keyword points to an lnk-file with three columns: wavelength [micron], real part, imaginary part of the refractive index for different crystallographic axes. If one of them is set, they have to be set all. If none of them is set, the particle is supposed to have an isotropic refractive index set by the keyword \texttt{lnkfile}.
+\item[\texttt{material}]
+Optionally followed by a number. This keyword points to a material compiled into ARCiS. For a list of materials see the table below.
+\item[\texttt{abun}]
+Followed by a number. Sets the abundance of material with the matching lnk-file.
+\end{description}
+
+An example of pure forsterite cloud, using the files "forsterite\_x.lnk","forsterite\_y.lnk", "forsterite\_z.lnk" for the refractive index.
+\\
+\inputfile{cloud1:opacitytype="MATERIAL"}
+\inputfile{cloud1:lnkfilex="forsterite\_x.lnk"}
+\inputfile{cloud1:lnkfiley="forsterite\_y.lnk"}
+\inputfile{cloud1:lnkfilez="forsterite\_z.lnk"}
+\\
+\\
+An example of mixed astrosil/forsterite cloud, using the files "astrosil.lnk" and "forsterite\_x.lnk","forsterite\_y.lnk", "forsterite\_z.lnk" for the refractive index.
+\\
+\inputfile{cloud1:opacitytype="MATERIAL"}
+\inputfile{cloud1:lnkfile01="astrosil.lnk"}
+\inputfile{cloud1:lnkfilex02="forsterite\_x.lnk"}
+\inputfile{cloud1:lnkfiley02="forsterite\_y.lnk"}
+\inputfile{cloud1:lnkfilez02="forsterite\_z.lnk"}
+\inputfile{cloud1:abun01=0.7}
+\inputfile{cloud1:abun02=0.3}
+\\
+\\
+An example of mixed astrosil/forsterite cloud, using the compiled material "ENSTATITE" and the files "forsterite\_x.lnk","forsterite\_y.lnk", "forsterite\_z.lnk" for the refractive index.
+\\
+\inputfile{cloud1:opacitytype="MATERIAL"}
+\inputfile{cloud1:material01="ENSTATITE"}
+\inputfile{cloud1:lnkfilex02="forsterite\_x.lnk"}
+\inputfile{cloud1:lnkfiley02="forsterite\_y.lnk"}
+\inputfile{cloud1:lnkfilez02="forsterite\_z.lnk"}
+\inputfile{cloud1:abun01=0.4}
+\inputfile{cloud1:abun02=0.6}
+\\
+\\
+
+\section{Examples}
+
+\subsection{Cloud formation}
+A full setup for cloud formation similar to what was done in \cite{2020A&A...642A..28M} but compute the crystallinity
+\\
+\inputfile{cloud1:type="DIFFUSE"}
+\inputfile{cloud1:globalKzz=.false.}
+\inputfile{cloud1:SigmaDot=1d-12}
+\inputfile{cloud1:Kzz=1d8}
+\inputfile{cloud1:computecryst=.true.}
+
+\subsection{A fully parameterised cloud layer}
+A cloud layer with parameterised structure and opacity extending to very high optical depths and reaching optical depth one at 1\,bar.
+\\
+\inputfile{cloud1:type="LAYER"}
+\inputfile{cloud1:Ptop=1d-3}
+\inputfile{cloud1:Ptau=1d0}
+\inputfile{cloud1:xi=4}
+\inputfile{cloud1:opacitytype="PARAMETERISED"}
+\inputfile{cloud1:kappa=100}
+\inputfile{cloud1:opacity\_pow=2}
+\inputfile{cloud1:albedo=0.1}
+\\
+\\
+
+
+\bibliographystyle{plain} % We choose the "plain" reference style
+\bibliography{refs} % Entries are in the refs.bib file
+
+\end{document}
