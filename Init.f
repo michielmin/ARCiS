@@ -625,6 +625,9 @@ c	condensates=(condensates.or.cloudcompute)
 			call output("==================================================================")
 			call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
 			allocate(Cloud(i)%frac(nr,40))
+			do j=1,nr
+				Cloud(i)%frac(j,1:40)=Cloud(i)%abun(1:40)
+			enddo
 			allocate(Cloud(i)%cryst(nr,40))
 			Cloud(i)%cryst=Cloud(i)%cryst0
 			if(Cloud(i)%type.eq.'DIFFUSE') then
