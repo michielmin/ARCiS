@@ -229,7 +229,6 @@ c-----------------------------------------------------------------------
 			endif
 		enddo
 		allocate(Cloud(ii)%e1(Cloud(ii)%nmat,3,nlam+1),Cloud(ii)%e2(Cloud(ii)%nmat,3,nlam+1))
-		allocate(Cloud(ii)%nax(Cloud(ii)%nmat))
 		if(Cloud(ii)%opacitytype.eq.'REFIND') then
 			Cloud(ii)%e1(1,1,1:ngrid)=Cloud(ii)%e1_par
 			Cloud(ii)%e2(1,1,1:ngrid)=Cloud(ii)%e2_par

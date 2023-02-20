@@ -360,6 +360,7 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(Cloud(max(nclouds,1)))
 	do i=1,nclouds
 		allocate(Cloud(i)%abun(40))
+		allocate(Cloud(i)%nax(40))
 		allocate(Cloud(i)%rho_mat(40))
 		allocate(Cloud(i)%lnkfile(40,3))
 		allocate(Cloud(i)%material(40))
