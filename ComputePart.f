@@ -26,7 +26,7 @@
 	integer abun_in_name,LL,LLmax
 	parameter(abun_in_name=2)
 	real*8 Kabs(C%nlam),Ksca(C%nlam),Kext(C%nlam),lgrid(C%nlam)
-	logical fcomputed,computelamcloud(C%nlam)
+	logical fcomputed,computelamcloud(nlam)
 	real*8 csmie_fcomp,cemie_fcomp,gasdev
 
 	write(meth,100)
