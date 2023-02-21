@@ -250,6 +250,7 @@ c-----------------------------------------------------------------------
 				exit
 			endif
 		enddo
+		if(Cloud(ii)%opacitytype.eq."MATERIAL".or.Cloud(ii)%opacitytype.eq."REFIND") then
 		allocate(Cloud(ii)%e1(Cloud(ii)%nmat,3,nlam+1),Cloud(ii)%e2(Cloud(ii)%nmat,3,nlam+1))
 		if(Cloud(ii)%opacitytype.eq.'REFIND') then
 			Cloud(ii)%e1(1,1,1:ngrid)=Cloud(ii)%e1_par
@@ -417,6 +418,7 @@ c-----------------------------------------------------------------------
 					Cloud(ii)%e2(i,j,1:nlam+1)=e2d(1:nlam+1)
 				enddo
 			enddo
+		endif
 		endif
 	enddo
 
