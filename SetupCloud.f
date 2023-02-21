@@ -2,7 +2,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 pp,tot,column,tt,z,densdust,CloudMass
+	real*8 pp,tot,column,tt,z,densdust,CloudMass,x
 	integer ii,i,j,nsubr,isize,ilam
 	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau,P_SI1,P_SI2,veff,frac(nr,10)
 	logical cl
@@ -76,6 +76,11 @@ c 90% MgSiO3
 				Cloud(ii)%frac(i,1:40)=Cloud(ii)%abun(1:40)
 			enddo
 			call SetupPartCloud(ii)
+			if(Cloud(ii)%Ptau.lt.Cloud(ii)%Pmin) then
+				x=Cloud(ii)%Ptau/Cloud(ii)%Pmin
+				Cloud(ii)%Pmin=Cloud(ii)%Ptau*x
+			endif
+			if(Cloud(ii)%Ptau.eq.Cloud(ii)%Pmin) Cloud(ii)%Pmin=Cloud(ii)%Ptau*1.0001
 			do i=1,nr
 				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
 				if(P(i).gt.Cloud(ii)%Pmin.and.P(i).lt.Cloud(ii)%Pmax) then
@@ -95,6 +100,11 @@ c 90% MgSiO3
 				Cloud(ii)%frac(i,1:40)=Cloud(ii)%abun(1:40)
 			enddo
 			call SetupPartCloud(ii)
+			if(Cloud(ii)%Ptau.lt.Cloud(ii)%Pmin) then
+				x=Cloud(ii)%Ptau/Cloud(ii)%Pmin
+				Cloud(ii)%Pmin=Cloud(ii)%Ptau*x
+			endif
+			if(Cloud(ii)%Ptau.eq.Cloud(ii)%Pmin) Cloud(ii)%Pmin=Cloud(ii)%Ptau*1.0001
 			do i=1,nr
 				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
 				if(P(i).gt.Cloud(ii)%Pmin.and.P(i).lt.Cloud(ii)%Pmax) then
