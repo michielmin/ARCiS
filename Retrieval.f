@@ -1592,9 +1592,9 @@ c			vec(i)=gasdev(idum)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j,k,ilam
+	integer i,j,k,ilam,nuse
 	real*8 spec(*),x,specsave(*)
-	real*8 lamobs(nlam)
+	real*8 lamobs(nlam),lamuse(nlam),specuse(nlam)
 	real*8 eta,Tirr,tau,expint
 
 	do j=1,nlam
@@ -1608,7 +1608,15 @@ c			vec(i)=gasdev(idum)
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
 			else
-				call regridspecres(lamobs,specsave(1:nlam),nlam,
+				nuse=0
+				do j=1,nlam
+					if(computelam(j)) then
+						nuse=nuse+1
+						lamuse(nuse)=lamobs(j)
+						specuse(nuse)=specsave(j)
+					endif
+				enddo
+				call regridspecres(lamuse,specuse,nuse,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
     		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
@@ -1623,7 +1631,14 @@ c			vec(i)=gasdev(idum)
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
 			else
-				call regridspecres(lamobs,specsave(1:nlam),nlam,
+				do j=1,nlam
+					if(computelam(j)) then
+						nuse=nuse+1
+						lamuse(nuse)=lamobs(j)
+						specuse(nuse)=specsave(j)
+					endif
+				enddo
+				call regridspecres(lamuse,specuse,nuse,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
     		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
@@ -1638,7 +1653,14 @@ c			vec(i)=gasdev(idum)
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
 			else
-				call regridspecres(lamobs,specsave(1:nlam),nlam,
+				do j=1,nlam
+					if(computelam(j)) then
+						nuse=nuse+1
+						lamuse(nuse)=lamobs(j)
+						specuse(nuse)=specsave(j)
+					endif
+				enddo
+				call regridspecres(lamuse,specuse,nuse,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
     		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
@@ -1649,7 +1671,14 @@ c			vec(i)=gasdev(idum)
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
 			else
-				call regridspecres(lamobs,specsave(1:nlam),nlam,
+				do j=1,nlam
+					if(computelam(j)) then
+						nuse=nuse+1
+						lamuse(nuse)=lamobs(j)
+						specuse(nuse)=specsave(j)
+					endif
+				enddo
+				call regridspecres(lamuse,specuse,nuse,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
     		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
@@ -1660,7 +1689,14 @@ c			vec(i)=gasdev(idum)
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
 			else
-				call regridspecres(lamobs,specsave(1:nlam),nlam,
+				do j=1,nlam
+					if(computelam(j)) then
+						nuse=nuse+1
+						lamuse(nuse)=lamobs(j)
+						specuse(nuse)=specsave(j)
+					endif
+				enddo
+				call regridspecres(lamuse,specuse,nuse,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
     		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
@@ -1671,7 +1707,14 @@ c			vec(i)=gasdev(idum)
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
 			else
-				call regridspecres(lamobs,specsave(1:nlam),nlam,
+				do j=1,nlam
+					if(computelam(j)) then
+						nuse=nuse+1
+						lamuse(nuse)=lamobs(j)
+						specuse(nuse)=specsave(j)
+					endif
+				enddo
+				call regridspecres(lamuse,specuse,nuse,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
     		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
@@ -1682,7 +1725,14 @@ c			vec(i)=gasdev(idum)
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
 			else
-				call regridspecres(lamobs,specsave(1:nlam),nlam,
+				do j=1,nlam
+					if(computelam(j)) then
+						nuse=nuse+1
+						lamuse(nuse)=lamobs(j)
+						specuse(nuse)=specsave(j)
+					endif
+				enddo
+				call regridspecres(lamuse,specuse,nuse,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
      		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)

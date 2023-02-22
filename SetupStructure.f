@@ -74,15 +74,16 @@
 		if(Pb(i).eq.Pplanet) Pb(i)=Pb(i)**0.99*P(i)**0.01
 	enddo
 	if(Pb(nr+1).eq.Pplanet) Pb(nr+1)=Pb(nr+1)/1.001
+	P0=min(Pplanet,Pb(1))
 	do i=1,nr
-		if(Pb(i).ge.Pplanet.and.Pb(i+1).lt.Pplanet) then
+		if(Pb(i).ge.P0.and.Pb(i+1).lt.P0) then
 			i1=i
 		endif
 	enddo
 	i2=nr
 	di=1
 	do ii=1,2
-	P0=Pplanet
+	P0=min(Pplanet,Pb(1))
 	R0=Rplanet
 	do i=i1,i2,di
 		if(di.gt.0) then
@@ -123,7 +124,7 @@
 	i2=2
 	di=-1
 	R0=Rplanet
-	P0=Pplanet
+	P0=min(Pplanet,Pb(1))
 	enddo
 	Mtot=Mplanet
 	do i=1,nr
