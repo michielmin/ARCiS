@@ -1619,6 +1619,9 @@ c			vec(i)=gasdev(idum)
 				call regridspecres(lamuse,specuse,nuse,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
     		endif
+    		do j=1,ObsSpec(i)%ndata
+    			spec(j)=spec(j)+(ObsSpec(i)%lam(j)-ObsSpec(i)%lam(1))*1d4*ObsSpec(i)%slope
+    		enddo
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
 		case("transM")
 			if(do3D) then
