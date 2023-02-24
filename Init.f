@@ -927,6 +927,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadPswitch(key)
 		case("abunswitch","abun_switch")
 			call ReadAbunSwitch(key)
+		case("setsurfp","setsurfpressure")
+			read(key%value,*) setsurfpressure
 		case("tp")
 			read(key%value,*) TP0
 		case("dtp")
@@ -1311,6 +1313,13 @@ c		call output("Summed mixing ratio above 1. Renormalizing.")
 c		mixrat=mixrat/tot
 c	endif
 
+	if(setsurfpressure) then
+		Pmax=0d0
+		do i=1,nmol
+			Pmax=Pmax+mixrat(i)
+		enddo
+	endif
+
 	return
 	end
 
@@ -1528,6 +1537,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	do_rayleigh=.true.
 	Pswitch_mol=0d0
 	abun_switch_mol=0d0
+	setsurfpressure=.false.
 	
 	Nphot0=2500
 	
