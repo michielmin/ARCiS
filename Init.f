@@ -1022,6 +1022,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			elements_ARCiS=key%value
 		case("secondary_atmosphere")
 			read(key%value,*) secondary_atmosphere
+		case("simplerainout")
+			read(key%value,*) dosimplerainout
 		case("mixp")
 			read(key%value,*) mixP
 		case("sinkz")
@@ -1275,6 +1277,7 @@ c			read(key%value,*) nTpoints
 	if(Mp_from_logg) then
 		Mplanet=(Rplanet**2)*(10d0**(loggPlanet))/Ggrav
 		call output("Planet mass: " // dbl2string(Mplanet/Mjup,'(f8.3)') // " Mjup")
+		call output("Planet mass: " // dbl2string(Mplanet/Mearth,'(f8.3)') // " Mearth")
 	else
 		loggPlanet=log10(Ggrav*Mplanet/(Rplanet**2))
 		call output("Planet logg: " // dbl2string(loggPlanet,'(f8.3)'))
@@ -1542,6 +1545,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Kzz=1d8
 	metallicity=0d0
 	condensates=.false.
+	dosimplerainout=.false.
 	COratio=0.5495407855762011
 	SiOratio=0.06606931168616334
 	NOratio=0.13803841820153123
