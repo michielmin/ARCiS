@@ -67,7 +67,7 @@ ifeq ($(shell uname),Linux)
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING)  
   LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) 
-  LIBS    =  -L/usr/local/lib $(LIBS_FITS) $(LIBS_MN) Version.f
+  LIBS    =  -L/usr/local/lib $(LIBS_FITS) $(LIBS_MN) -llapack Version.f
 endif
 
 

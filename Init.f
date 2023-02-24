@@ -1795,9 +1795,13 @@ c  GGchem was still implemented slightly wrong.
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
+	integer i
 
 c number of cloud/nocloud combinations
-	ncc=2**nclouds
+	ncc=1
+	do i=1,nclouds
+		if(Cloud(i)%coverage.ne.1d0) ncc=2**nclouds
+	enddo
 	allocate(docloud(ncc,nclouds))
 	allocate(cloudfrac(ncc))
 	allocate(flux(0:ncc,nlam))

@@ -359,6 +359,7 @@
 
       real(kind=qp) :: eps(NELEM),Sat(NDUST),eldust(NDUST),tot
 	logical condensates,merk
+	real*8,save :: muguess=1d0
 
 	NewPreMethod=imethod
 
@@ -385,6 +386,8 @@ c      write(*,'("rho = n<H> *",1pE12.4," amu")') muH/amu
 c      write(*,'("C/O =",0pF6.3)') eps(C)/eps(O)
         eldust = 0.Q0
 	mu=muH
+
+	mu=muguess*muH
 
 	Tg=Tin
 	p=Pin*bar
@@ -434,6 +437,7 @@ c          print '("p-it=",i3,"  mu=",2(1pE20.12))',it,mu/amu,dmu/mu
 		if (.not.ABS(dmu/mu).gt.1.E-10) exit
         enddo  
 
+	muguess=mu/muH
 
 	if(condensates) then
 		atom_abuns_out=1d-50

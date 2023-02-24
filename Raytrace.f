@@ -34,7 +34,10 @@
 		enddo
 	enddo
 
-	if(ncc.eq.1) cloudfrac=1d0
+	if(ncc.eq.1) then
+		docloud=.true.
+		cloudfrac=1d0
+	endif
 
 	if(.not.retrieval) then
 	do icc=1,ncc

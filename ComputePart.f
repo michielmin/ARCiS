@@ -14,7 +14,7 @@
 	real lambda,Vol,rho_av
 	real,allocatable :: r0(:),nr0(:,:),f(:),wf(:),rho(:)
 	real,allocatable :: e1(:,:),e2(:,:),frac(:)
-	real*8,allocatable :: e1d(:),e2d(:)
+	real,allocatable :: e1d(:,:),e2d(:,:)
 	integer i,j,k,l,na,nf,ns,nm,ilam,Err,spheres,toolarge
 	complex m,min,mav,alpha
 	real QEXT, QSCA, QBS, GQSC,wvno,scale
@@ -36,8 +36,6 @@
 
 	allocate(e1(MAXMAT,C%nlam))
 	allocate(e2(MAXMAT,C%nlam))
-	allocate(e1d(C%nlam))
-	allocate(e2d(C%nlam))
 
 	allocate(frac(MAXMAT))
 	allocate(rho(MAXMAT))
@@ -64,56 +62,75 @@
 	lgrid(nlam+1)=C%lref
 
 	nm=0
-	do j=1,C%nmat
-		do i=1,C%nax(j)
-			nm=nm+1
-			e1(nm,1:C%nlam)=C%e1(j,i,1:C%nlam)
-			e2(nm,1:C%nlam)=C%e2(j,i,1:C%nlam)
-			rho(nm)=C%rho_mat(j)
-			frac(nm)=C%frac(isize,j)/(real(C%nax(j))*rho(nm))
-		enddo
-	enddo
-	min=dcmplx(1d0,0d0)
-
-	tot=0d0
-	do i=1,nm
-		tot=tot+frac(i)
-	enddo
-	if(tot.gt.0d0) then
-		frac=frac/tot
-	else
-		frac=1d0/real(nm)
-	endif
-
 	if(C%blend) then
-		nm=nm+1
-		e1(nm,1:C%nlam)=1d0
-		e2(nm,1:C%nlam)=0d0
-		rho(nm)=0d0
-		frac(nm)=C%porosity
-		frac(1:nm-1)=frac(1:nm-1)*(1d0-C%porosity)
+		nm=maxval(C%nax(1:C%nmat))
+		allocate(e1d(C%nmat+1,C%nlam))
+		allocate(e2d(C%nmat+1,C%nlam))
+		frac(1:C%nmat)=C%frac(isize,1:C%nmat)
+		tot=0d0
+		do i=1,C%nmat
+			tot=tot+frac(i)
+		enddo
+		if(tot.gt.0d0) then
+			frac=frac/tot
+		else
+			frac=1d0/real(C%nmat)
+		endif
+		frac(C%nmat+1)=C%porosity
+		frac(1:C%nmat)=frac(1:C%nmat)*(1d0-C%porosity)
+		e1d(C%nmat+1,1:C%nlam)=1d0
+		e2d(C%nmat+1,1:C%nlam)=0d0
+		rho(1:C%nmat)=C%rho_mat(1:C%nmat)
+		rho(C%nmat+1)=0d0
+		do i=1,nm
+			do j=1,C%nmat
+				e1d(j,1:C%nlam)=C%e1(j,minval((/i,C%nax(j)/)),1:C%nlam)
+				e2d(j,1:C%nlam)=C%e2(j,minval((/i,C%nax(j)/)),1:C%nlam)
+			enddo
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,e1blend,e2blend)
-!$OMP& SHARED(C,e1,e2,frac,nm)
+!$OMP& PRIVATE(j,e1blend,e2blend)
+!$OMP& SHARED(C,i,e1,e2,frac,e1d,e2d)
 !$OMP DO
 !$OMP& SCHEDULE(STATIC)
-		do i=1,C%nlam
-			call Blender(e1(1:nm,i),e2(1:nm,i),frac,nm,e1blend,e2blend)
-			e1(1,i)=e1blend
-			e2(1,i)=e2blend
-		enddo
+			do j=1,C%nlam
+				call Blender(e1d(1:C%nmat+1,j),e2d(1:C%nmat+1,j),frac(1:C%nmat+1),C%nmat+1,e1blend,e2blend)
+				e1(i,j)=e1blend
+				e2(i,j)=e2blend
+			enddo
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
-		rho_av=0d0
-		do i=1,nm
-			rho_av=rho_av+frac(i)*rho(i)
+			rho_av=0d0
+			do j=1,C%nmat+1
+				rho_av=rho_av+frac(j)*rho(j)
+			enddo
+			rho(i)=rho_av
 		enddo
-		rho(1)=rho_av
-		nm=1
-		frac(1)=1d0
+		frac(1:nm)=1d0/real(nm)
+		deallocate(e1d)
+		deallocate(e2d)
+	else
+		do j=1,C%nmat
+			do i=1,C%nax(j)
+				nm=nm+1
+				e1(nm,1:C%nlam)=C%e1(j,i,1:C%nlam)
+				e2(nm,1:C%nlam)=C%e2(j,i,1:C%nlam)
+				rho(nm)=C%rho_mat(j)
+				frac(nm)=C%frac(isize,j)/(real(C%nax(j))*rho(nm))
+			enddo
+		enddo
+		tot=0d0
+		do i=1,nm
+			tot=tot+frac(i)
+		enddo
+		if(tot.gt.0d0) then
+			frac=frac/tot
+		else
+			frac=1d0/real(nm)
+		endif
 	endif
+	min=dcmplx(1d0,0d0)
 
 	if(maxf.eq.0d0) then
 		nf=1
@@ -313,8 +330,6 @@ c		endif
 	deallocate(nr0)
 	deallocate(f)
 	deallocate(wf)
-	deallocate(e1d)
-	deallocate(e2d)
 
 301	continue
 
