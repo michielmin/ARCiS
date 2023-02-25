@@ -1128,6 +1128,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) powvxx
 		case("night2day")
 			read(key%value,*) night2day
+		case("fixnight2day","fixn2d")
+			read(key%value,*) fixnight2day
 		case("pole2eq")
 			read(key%value,*) pole2eq
 		case("hotspotshift")
@@ -1270,7 +1272,7 @@ c			read(key%value,*) nTpoints
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 tot
+	real*8 tot,k,kap,Teq,f
 	integer i
 	
 	Rplanet=Rplanet*Rjup
@@ -1318,6 +1320,16 @@ c	endif
 		do i=1,nmol
 			Pmax=Pmax+mixrat(i)
 		enddo
+	endif
+
+	if(fixnight2day) then
+c Use formalism from Koll (2022)
+		k=1.9	! value for TRAPPIST-1b
+		kap=1d0
+		Teq=sqrt(Rstar/(2d0*Dplanet))*Tstar
+		f=(kap**(1./3.)*Pmax*(Teq/600d0)**(-4./3.))
+		night2day=f/(2d0*k+f)
+		print*,night2day
 	endif
 
 	return
@@ -1514,6 +1526,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	night2day=0.5d0
 	hotspotshift0=-1d5
 	pole2eq=1d0
+	fixnight2day=.false.
 	
 	orbit_P=-1d0
 	orbit_e=0d0
