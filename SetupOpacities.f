@@ -184,7 +184,8 @@ c===============
 					endif
 				endif
 			enddo
-			call dpquicksort_indx(kappa_tot(1:nfull),ifull(1:nfull),nfull)
+c			call dpquicksort_indx(kappa_tot(1:nfull),ifull(1:nfull),nfull)
+			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 			kappa(1:ng)=0d0
 			if(nfull.gt.0) then
 				imol=ifull(1)
@@ -446,8 +447,8 @@ c Venot et al. 2018
 		tot0=tot0+k0(ig)*w0(ig)
 	enddo
 	tot0=tot0/sum(w0(1:n0))
-c	call sortw_2(k0,w0,n0)
-	call dpquicksort_w(k0,w0,n0)
+c	call dpquicksort_w(k0,w0,n0)
+	call sortw_2(k0,w0,n0)
 	if(n1.eq.1) then
 		k1(1)=tot0
 	else
@@ -578,6 +579,107 @@ c-----------------------------------------------------------------------
         temp=brr(i)
         brr(i)=brr(j)
         brr(j)=temp
+        goto 3
+5       arr(l+1)=arr(j)
+        arr(j)=a
+        brr(l+1)=brr(j)
+        brr(j)=b
+        jstack=jstack+2
+        if(jstack.gt.NSTACK)pause 'NSTACK too small in sort2'
+        if(ir-i+1.ge.j-l)then
+          istack(jstack)=ir
+          istack(jstack-1)=i
+          ir=j-1
+        else
+          istack(jstack)=j-1
+          istack(jstack-1)=l
+          l=i
+        endif
+      endif
+      goto 1
+      END
+
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+	
+      SUBROUTINE sortidx_2(arr,brr,n)
+      INTEGER n,M,NSTACK
+      REAL*8 arr(n)
+      integer brr(n),b,itemp
+      PARAMETER (M=7,NSTACK=50)
+      INTEGER i,ir,j,jstack,k,l,istack(NSTACK)
+      REAL*8 a,temp
+	if(n.le.1) return
+      jstack=0
+      l=1
+      ir=n
+1     if(ir-l.lt.M)then
+        do 12 j=l+1,ir
+          a=arr(j)
+          b=brr(j)
+          do 11 i=j-1,l,-1
+            if(arr(i).le.a)goto 2
+            arr(i+1)=arr(i)
+            brr(i+1)=brr(i)
+11        continue
+          i=l-1
+2         arr(i+1)=a
+          brr(i+1)=b
+12      continue
+        if(jstack.eq.0)return
+        ir=istack(jstack)
+        l=istack(jstack-1)
+        jstack=jstack-2
+      else
+        k=(l+ir)/2
+        temp=arr(k)
+        arr(k)=arr(l+1)
+        arr(l+1)=temp
+        itemp=brr(k)
+        brr(k)=brr(l+1)
+        brr(l+1)=itemp
+        if(arr(l).gt.arr(ir))then
+          temp=arr(l)
+          arr(l)=arr(ir)
+          arr(ir)=temp
+          itemp=brr(l)
+          brr(l)=brr(ir)
+          brr(ir)=itemp
+        endif
+        if(arr(l+1).gt.arr(ir))then
+          temp=arr(l+1)
+          arr(l+1)=arr(ir)
+          arr(ir)=temp
+          itemp=brr(l+1)
+          brr(l+1)=brr(ir)
+          brr(ir)=itemp
+        endif
+        if(arr(l).gt.arr(l+1))then
+          temp=arr(l)
+          arr(l)=arr(l+1)
+          arr(l+1)=temp
+          itemp=brr(l)
+          brr(l)=brr(l+1)
+          brr(l+1)=itemp
+        endif
+        i=l+1
+        j=ir
+        a=arr(l+1)
+        b=brr(l+1)
+3       continue
+          i=i+1
+        if(arr(i).lt.a)goto 3
+4       continue
+          j=j-1
+        if(arr(j).gt.a)goto 4
+        if(j.lt.i)goto 5
+        temp=arr(i)
+        arr(i)=arr(j)
+        arr(j)=temp
+        itemp=brr(i)
+        brr(i)=brr(j)
+        brr(j)=itemp
         goto 3
 5       arr(l+1)=arr(j)
         arr(j)=a
