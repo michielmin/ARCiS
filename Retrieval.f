@@ -316,7 +316,7 @@ c		if(var0(i).lt.-25d0) var0(i)=-25d0
 c	enddo
 
 	
-	open(unit=31,file=trim(outputdir) // "Wolk.dat",RECL=6000)
+	if(writeWolk) open(unit=31,file=trim(outputdir) // "Wolk.dat",RECL=6000)
 
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
 		call doMCMCF90(var0,n_ret)
@@ -472,7 +472,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	call WritePTlimits(var,Cov(1:n_ret,1:n_ret),ErrVec,error,bestchi2,.true.)
 	call WriteRetrieval(imodel,chi2,var,bestvar,error)
 
-	close(unit=31)
+	if(writeWolk) close(unit=31)
 	
 	return
 	end
@@ -766,8 +766,8 @@ c	linear
 	endif
 	global_like=lnew
 
-	write(31,*) imodel,global_chi2,var(1:nvars),COratio,metallicity
-	if(.not.useobsgrid.or.dochemistry.or.do3D) call flush(31)
+	if(writeWolk) write(31,*) imodel,global_chi2,var(1:nvars),COratio,metallicity
+	if((.not.useobsgrid.or.dochemistry.or.do3D).and.writeWolk) call flush(31)
 
 	if(lnew.gt.bestlike) then
 		inquire(file="improve.sh",exist=truefalse)

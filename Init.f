@@ -1080,6 +1080,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) tol_multinest
 		case("retrievaltype")
 			read(key%value,*) retrievaltype
+		case("writewolk")
+			read(key%value,*) writeWolk
 		case("tauvpoint")
 			read(key%value,*) tau_Vpoint(key%nr1)
 		case("tauirpoint")
@@ -1728,6 +1730,7 @@ c  GGchem was still implemented slightly wrong.
 	tol_multinest=0.5d0
 	const_eff_multinest=.false.
 	retrievaltype='MN'
+	writeWolk=.true.
 
 	do i=1,nobs
 		ObsSpec(i)%beta=1d0

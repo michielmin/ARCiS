@@ -63,10 +63,12 @@
 	nest_tol=tol_multinest
 	nest_ceff=const_eff_multinest
 
-	if(nest_resume) then
-		open(unit=31,file=trim(outputdir) // '/Wolk.dat',RECL=6000,ACCESS='APPEND')
-	else
-		open(unit=31,file=trim(outputdir) // '/Wolk.dat',RECL=6000)
+	if(writeWolk) then
+		if(nest_resume) then
+			open(unit=31,file=trim(outputdir) // '/Wolk.dat',RECL=6000,ACCESS='APPEND')
+		else
+			open(unit=31,file=trim(outputdir) // '/Wolk.dat',RECL=6000)
+		endif
 	endif
 
 	call nestRun(nest_IS,nest_mmodal,nest_ceff,nest_nlive,nest_tol,nest_efr,sdim,sdim, 
