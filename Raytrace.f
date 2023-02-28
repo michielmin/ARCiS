@@ -243,6 +243,7 @@
 				Ag=0d0
 				fluxg_contr=0d0
 				Ag_contr=0d0
+				ir_next=0
 				do i=1,nrtrace-1
 					fact=1d0
 					fact_contr=1d0

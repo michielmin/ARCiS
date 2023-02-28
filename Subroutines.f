@@ -671,6 +671,7 @@ c-----------------------------------------------------------------------
 11      continue
 c        stop 'continued fraction failed in expint'
 c        print*,'continued fraction failed in expint'
+		expint=0d0
       else
         if(nm1.ne.0)then
           expint=1./nm1
@@ -694,6 +695,7 @@ c        print*,'continued fraction failed in expint'
 13      continue
 c        stop 'series failed in expint'
 c        print*,'series failed in expint'
+		expint=0d0
       endif
       return
       END

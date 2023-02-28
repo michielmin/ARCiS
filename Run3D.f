@@ -1841,6 +1841,10 @@ c	hitP1=.false.
 c	hitP2=.false.
 
 	v=1d200
+	edgenext=1
+	i1next=0
+	i2next=0
+	i3next=0
 	if(hitR1.and.vR1.lt.v.and.vR1.gt.0d0) then
 		v=vR1
 		i1next=i1-1
