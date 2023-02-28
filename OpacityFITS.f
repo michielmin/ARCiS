@@ -344,6 +344,17 @@ C	 create the new empty FITS file
 	allocate(Ktemp(naxes(1),naxes(2),naxes(3),naxes(4)))
 
 	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktemp,anynull,status)
+	do ilam=1,naxes(1)
+		do ig=1,naxes(2)
+			do iT=1,naxes(3)
+				do iP=1,naxes(4)
+					if(.not.Ktemp(ilam,ig,iT,iP).ge.0d0) then
+						Ktemp(ilam,ig,iT,iP)=0d0
+					endif
+				enddo
+			enddo
+		enddo
+	enddo
 
 	allocate(lamF(Ktable(imol)%nlam+1))
 
