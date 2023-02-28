@@ -812,8 +812,8 @@ c-----------------------------------------------------------------------
 	integer, intent(in) :: last
 	real*8, intent(inout) :: array(last)
 	integer, intent(inout) :: warray(last)
-	real*8 :: temp,p1,p2,wtemp,wp1,wp2
-	integer :: i,j,l,k,g
+	real*8 :: temp,p1,p2
+	integer :: i,j,l,k,g,wtemp,wp1,wp2
 	
 	if (last.lt.40) then ! use insertion sort on small arrays
 		do i=2,last
