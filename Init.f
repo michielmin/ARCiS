@@ -1329,6 +1329,7 @@ c Use formalism from Koll (2022)
 		Teq=sqrt(Rstar/(2d0*Dplanet))*Tstar
 		f=(kap**(1./3.)*Pmax*(Teq/600d0)**(-4./3.))
 		night2day=f/(2d0*k+f)
+		if(.not.retrieval) call output("night2day contrast: " // dbl2string(night2day,'(f7.4)'))
 	endif
 
 	return

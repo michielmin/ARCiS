@@ -20,6 +20,7 @@
 	CIA(icia)%nT=iT
 	allocate(CIA(icia)%T(CIA(icia)%nT))
 	allocate(CIA(icia)%Cabs(CIA(icia)%nT,nlam))
+	CIA(icia)%Cabs(1:CIA(icia)%nT,1:nlam)=0d0
 
 	open(unit=20,file=CIA(icia)%filename,RECL=100)
 	do iT=1,CIA(icia)%nT
