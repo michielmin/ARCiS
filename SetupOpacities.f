@@ -184,8 +184,8 @@ c===============
 					endif
 				endif
 			enddo
-c			call dpquicksort_indx(kappa_tot(1:nfull),ifull(1:nfull),nfull)
-			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
+			call dpquicksort_indx(kappa_tot(1:nfull),ifull(1:nfull),nfull)
+c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 			kappa(1:ng)=0d0
 			if(nfull.gt.0) then
 				imol=ifull(1)
@@ -447,8 +447,8 @@ c Venot et al. 2018
 		tot0=tot0+k0(ig)*w0(ig)
 	enddo
 	tot0=tot0/sum(w0(1:n0))
-c	call dpquicksort_w(k0,w0,n0)
-	call sortw_2(k0,w0,n0)
+	call dpquicksort_w(k0,w0,n0)
+c	call sortw_2(k0,w0,n0)
 	if(n1.eq.1) then
 		k1(1)=tot0
 	else
