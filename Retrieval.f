@@ -1595,7 +1595,7 @@ c			vec(i)=gasdev(idum)
 	integer i,j,k,ilam,nuse
 	real*8 spec(*),x,specsave(*)
 	real*8 lamobs(nlam),lamuse(nlam),specuse(nlam)
-	real*8 eta,Tirr,tau,expint
+	real*8 eta,Tirr,tau,expint,starspec(nlam),starspecregrid(nlam)
 
 	do j=1,nlam
 		lamobs(j)=lam(j)
@@ -1678,11 +1678,15 @@ c			vec(i)=gasdev(idum)
 					if(computelam(j)) then
 						nuse=nuse+1
 						lamuse(nuse)=lamobs(j)
-						specuse(nuse)=specsave(j)
+						specuse(nuse)=(phase(1,0,j)+flux(0,j))
+						starspec(nuse)=(Fstar(j)*1d23/distance**2)
 					endif
 				enddo
 				call regridspecres(lamuse,specuse,nuse,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
+				call regridspecres(lamuse,starspec,nuse,
+     &					ObsSpec(i)%lam,starspecregrid,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
+				spec(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)/starspecregrid(1:ObsSpec(i)%ndata)
     		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
 		case("phaser","phaseR")
@@ -1696,11 +1700,15 @@ c			vec(i)=gasdev(idum)
 					if(computelam(j)) then
 						nuse=nuse+1
 						lamuse(nuse)=lamobs(j)
-						specuse(nuse)=specsave(j)
+						specuse(nuse)=(phase(ObsSpec(i)%iphase,0,j)+flux(0,j))
+						starspec(nuse)=(Fstar(j)*1d23/distance**2)
 					endif
 				enddo
 				call regridspecres(lamuse,specuse,nuse,
      &					ObsSpec(i)%lam,spec,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
+				call regridspecres(lamuse,starspec,nuse,
+     &					ObsSpec(i)%lam,starspecregrid,ObsSpec(i)%R,ObsSpec(i)%Rexp,ObsSpec(i)%ndata)
+				spec(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)/starspecregrid(1:ObsSpec(i)%ndata)
     		endif
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
 		case("phase")

@@ -415,6 +415,146 @@ c-----------------------------------------------------------------------
 
 
 c-----------------------------------------------------------------------
+c The new readstar subroutine uses a boxcar filtering to read in 
+c high resolution spectra.
+c-----------------------------------------------------------------------
+
+	subroutine regridstar(input,grid,y,n)
+	IMPLICIT NONE
+	integer i,j,n,nls
+	real*8 grid(n),y(n),x0,y0,xedge(n+1)
+	real*8 grid2(n),y2(n),tot(n)
+	real*8,allocatable :: ls(:),Fs(:),dls(:)
+	character*500 input
+	logical truefalse,done(n)
+
+	do i=1,n-1
+		xedge(i+1)=sqrt(grid(i)*grid(i+1))
+	enddo
+	xedge(1)=grid(1)**2/xedge(2)
+	xedge(n)=grid(n)**2/xedge(n-1)
+
+	inquire(file=input,exist=truefalse)
+	if(.not.truefalse) then
+		write(*,200) input(1:len_trim(input))
+200		format('File "',a,'" does not exist')
+		stop
+	endif
+	open(unit=20,file=input,RECL=100)
+	j=1
+1	read(20,*,end=2,err=1) x0,y0
+	j=j+1
+	goto 1
+2	continue
+	nls=j-1
+	close(unit=20)
+	allocate(ls(nls))
+	allocate(dls(nls))
+	allocate(Fs(nls))
+
+	open(unit=20,file=input,RECL=100)
+	do i=1,nls
+3		read(20,*,end=4,err=3) ls(i),Fs(i)
+	enddo
+4	close(unit=20)
+	do i=2,nls-1
+		dls(i)=(1d0/ls(i-1)-1d0/ls(i+1))/2d0
+	enddo
+	dls(1)=dls(2)
+	dls(nls)=dls(nls-1)
+	
+	j=1
+	tot=0d0
+	y=0d0
+	done=.false.
+	do i=1,nls
+5		continue
+		if(ls(i).lt.xedge(j)) goto 6
+		if(ls(i).gt.xedge(j+1)) then
+			j=j+1
+			if(j.gt.n) goto 7
+			goto 5
+		endif
+		y(j)=y(j)+Fs(i)*dls(i)
+		tot(j)=tot(j)+dls(i)
+		done(j)=.true.
+6		continue
+	enddo
+7	continue
+	j=0
+	do i=1,n
+		if(done(i)) then
+			y(i)=y(i)/tot(i)
+		else
+			j=j+1
+			grid2(j)=grid(i)
+		endif
+	enddo
+	if(j.ne.0) then
+		call readstar_interpol(input,grid2,y2,j)
+		j=0
+		do i=1,n
+			if(.not.done(i)) then
+				j=j+1
+				y(i)=y2(j)
+			endif
+		enddo
+	endif
+	
+	return
+	end
+	
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+
+	subroutine readstar_interpol(input,grid,y,n)
+	IMPLICIT NONE
+	integer i,j,n
+	real*8 grid(n),y(n),x0,y0,x1,y1
+	character*500 input
+	logical truefalse
+	inquire(file=input,exist=truefalse)
+	if(.not.truefalse) then
+		write(*,200) input(1:len_trim(input))
+200		format('File "',a,'" does not exist')
+		stop
+	endif
+	open(unit=20,file=input,RECL=100)
+	i=1
+1	read(20,*,end=102,err=1) x0,y0
+103	if(x0.ge.grid(i)) then
+		y(i)=y0
+		i=i+1
+		goto 103
+	endif
+100	read(20,*,end=102) x1,y1
+101	if(grid(i).le.x1.and.grid(i).gt.x0) then
+		if(y1.gt.1d-60.and.y0.gt.1d-60) then
+			y(i)=10d0**(log10(y1)+(log10(grid(i))-log10(x1))*(log10(y0)-log10(y1))/(log10(x0)-log10(x1)))
+		else
+			y(i)=y1+(grid(i)-x1)*(y0-y1)/(x0-x1)
+		endif
+		i=i+1
+		if(i.gt.n) goto 102
+		goto 101
+	endif
+	x0=x1
+	y0=y1
+	goto 100
+102	continue
+	do j=i,n
+		y(j)=y1*x1**2/grid(j)**2
+	enddo
+	close(unit=20)
+	return
+	end
+
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+
+c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 	
       SUBROUTINE sort(arr,n)

@@ -13270,7 +13270,7 @@
 		enddo
 		return
 	else if(file.ne.' ') then
-		call regridlog(file,lam,flux,nlam)
+		call regridstar(file,lam,flux,nlam)
 		return
 	endif
 	
