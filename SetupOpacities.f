@@ -327,6 +327,25 @@ c https://www.climate-policy-watcher.org/surface-temperature/scattering-by-molec
 				case(11) ! NH3
 c https://www.climate-policy-watcher.org/surface-temperature/scattering-by-molecules-rayleigh-scattering.html
 					Cs=Cs+7.3427*mixrat_r(ir,j)*(8.14d-45*ll2+1.28d-54*ll2*ll+1.61d-64*ll2*ll2)
+				case(13) ! OH
+c Tarafdar and Vardya 1973
+					Cs=Cs+(12.41**2)*mixrat_r(ir,j)*13056.839884384113d-50*ll2
+				case(54) ! SiO
+c Tarafdar and Vardya 1973
+					Cs=Cs+(26.41**2)*mixrat_r(ir,j)*13056.839884384113d-50*ll2
+				case(23) ! HCN
+c Tarafdar and Vardya 1973
+					Cs=Cs+(25.54**2)*mixrat_r(ir,j)*13056.839884384113d-50*ll2
+				case(31) ! H2S
+c Tarafdar and Vardya 1973
+					Cs=Cs+(32.14**2)*mixrat_r(ir,j)*13056.839884384113d-50*ll2
+				case(38) ! C2H4
+c Tarafdar and Vardya 1973
+					Cs=Cs+(42.61**2)*mixrat_r(ir,j)*13056.839884384113d-50*ll2
+				case(9) ! SO2 (but taken the value from CO2 as a poor-man's solution)
+c Sneep & Ubachs (2005)
+c					Cs=Cs+12.4*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
+					Cs=Cs+9.950903042454394e-44*mixrat_r(ir,j)*ll2
 			end select
 		endif
 	enddo
