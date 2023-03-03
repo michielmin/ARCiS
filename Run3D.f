@@ -2176,26 +2176,16 @@ c=========================================
 			call RegridDataLNK(SiO2,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam,computelam(1:nlam))
 			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
-
-			do i=1,nlam
-				if(surface_emis(i).lt.(1d0-surfacealbedo)) surface_emis(i)=1d0-surfacealbedo
-			enddo
 		case("QUARTZ","quartz","SiO2")
 			tot=1d0
 			call RegridDataLNK(SiO2,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam,computelam(1:nlam))
 			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
-			do i=1,nlam
-				if(surface_emis(i).lt.(1d0-surfacealbedo)) surface_emis(i)=1d0-surfacealbedo
-			enddo
 		case("FeO")
 			tot=1d0
 			call RegridDataLNK(FeO,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam,computelam(1:nlam))
 			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
-			do i=1,nlam
-				if(surface_emis(i).lt.(1d0-surfacealbedo)) surface_emis(i)=1d0-surfacealbedo
-			enddo
 		case("labradorite","LABRADORITE")
 			tot=1.0d0
 			call RegridDataLNK(Labradorite_X,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
@@ -2207,9 +2197,6 @@ c=========================================
 			call RegridDataLNK(Labradorite_Z,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam,computelam(1:nlam))
 			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
-			do i=1,nlam
-				if(surface_emis(i).lt.(1d0-surfacealbedo)) surface_emis(i)=1d0-surfacealbedo
-			enddo
 		case("BLACK","black")
 			surface_emis(1:nlam)=1.0
 		case("GREY","grey")
