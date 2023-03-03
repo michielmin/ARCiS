@@ -927,6 +927,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadPswitch(key)
 		case("abunswitch","abun_switch")
 			call ReadAbunSwitch(key)
+		case("isotope","f_isotope")
+			call ReadIsotope(key)
 		case("setsurfp","setsurfpressure")
 			read(key%value,*) setsurfpressure
 		case("tp")
@@ -1698,6 +1700,9 @@ c  GGchem was still implemented slightly wrong.
 	enddo
 	nspike=0
 
+	isotope=0
+	f_isotope=0d0
+
 	retrieval=.false.
 	doscaleR=.false.
 	nscaleR=-1
@@ -2023,6 +2028,42 @@ c number of cloud/nocloud combinations
 	enddo
 	call output("Molecule not recognised in abun_switch")
 	stop
+	
+	return
+	end
+	
+	subroutine ReadIsotope(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer imol,i
+	
+	do i=1,nmol_data
+		if(key%orkey2.eq.molname(i)) exit
+	enddo
+	if(i.gt.nmol_data) then
+		call output("Molecule not recognised in isotope")
+		stop
+	endif
+	imol=i
+
+	select case(key%key1)
+		case("isotope")
+			do i=1,nmol_data
+				if(key%value.eq.molname(i)) exit
+			enddo
+			if(i.gt.nmol_data) then
+				call output("Molecule not recognised in isotope")
+				stop
+			endif
+			isotope(imol)=i
+		case("f_isotope")
+			read(key%value,*) f_isotope(imol)
+		case default
+			call output("Keyword not recognised: " // trim(key%key2))
+	end select
 	
 	return
 	end

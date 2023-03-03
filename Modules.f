@@ -259,7 +259,10 @@ c for exchange when computing secondary atmosphere
 	character*10 fixmol_name(nmol_data)
 	real*8 fixmol_abun(nmol_data),fixmol_P(nmol_data)
 	integer nfixmol,ifixmol(nmol_data)
-	
+
+	integer isotope(nmol_data)
+	real*8 f_isotope(nmol_data)
+
 	logical sinkZ
 	real*8 alphaZ
 

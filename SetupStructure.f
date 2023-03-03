@@ -210,6 +210,14 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 				if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=abun_switch_mol(imol)
 			enddo
 		enddo
+		do imol=1,nmol
+			if(isotope(imol).gt.0) then
+				do i=1,nr
+					mixrat_r(i,isotope(imol))=mixrat_r(i,imol)/f_isotope(imol)
+					mixrat_r(i,imol)=mixrat_r(i,imol)*(1d0-1d0/f_isotope(imol))
+				enddo
+			endif
+		enddo
 		do i=1,nr
 			do imol=1,nmol
 				if(.not.mixrat_r(i,imol).gt.0d0) mixrat_r(i,imol)=0d0

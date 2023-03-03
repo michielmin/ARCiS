@@ -1121,6 +1121,14 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 			mixrat_r(1:nr,ifixmol(i))=fixmol_abun(i)*exp(-P(1:nr)/fixmol_P(i))
 		enddo
 	endif
+	do j=1,nmol
+		if(isotope(j).gt.0) then
+			do i=1,nr
+				mixrat_r(i,isotope(j))=mixrat_r(i,j)/f_isotope(j)
+				mixrat_r(i,j)=mixrat_r(i,j)*(1d0-1d0/f_isotope(j))
+			enddo
+		endif
+	enddo
 	
 	if(.not.retrieval) call ComputeTevap()
 
