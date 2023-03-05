@@ -50,6 +50,7 @@
 	external getloglike,dumper
 	integer i,context
 	integer nest_pWrap(n_ret)
+	real*8 var(n_ret)
 
 	imodel=0
 	bestlike=-1d200
@@ -64,11 +65,18 @@
 	nest_ceff=const_eff_multinest
 
 	if(writeWolk) then
-c		if(nest_resume) then
-c			open(unit=31,file=trim(outputdir) // '/Wolk.dat',FORM="FORMATTED",ACCESS="APPEND")
-c		else
+		if(nest_resume) then
+			call system("mv " //trim(outputdir) // '/Wolk.dat ' //trim(outputdir) // '/Wolk_tmp.dat ')
+			open(unit=32,file=trim(outputdir) // '/Wolk_tmp.dat',FORM="FORMATTED",ACCESS="STREAM")
 			open(unit=31,file=trim(outputdir) // '/Wolk.dat',FORM="FORMATTED",ACCESS="STREAM")
-c		endif
+1			read(32,*,end=2) imodel,global_chi2,var(1:n_ret),COratio,metallicity
+			write(31,*) imodel,global_chi2,var(1:n_ret),COratio,metallicity
+			goto 1
+2			close(unit=32)
+			call system("rm " //trim(outputdir) // '/Wolk_tmp.dat ')
+		else
+			open(unit=31,file=trim(outputdir) // '/Wolk.dat',FORM="FORMATTED",ACCESS="STREAM")
+		endif
 	endif
 
 	call nestRun(nest_IS,nest_mmodal,nest_ceff,nest_nlive,nest_tol,nest_efr,sdim,sdim, 
