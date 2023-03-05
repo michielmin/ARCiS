@@ -42,7 +42,7 @@
 	form='(f14.6,es19.7E3)'
 	do i=1,nlam_out
 		if(computelam(i)) then
-			write(30,trim(form)) lam_out(i),Fstar(i)*1d23/distance**2
+			write(30,form) lam_out(i),Fstar(i)*1d23/distance**2
 		endif
 	enddo
 	close(unit=30)
@@ -56,14 +56,14 @@
 		form='("#",a13,a19,' // trim(int2string(ncc,'(i3)')) // 
      &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
      &				trim(int2string(nclouds,'(i3)')) // 'l1))'
-		write(30,trim(form)) "lambda [mu]","flux [Jy]",docloud0(1:nclouds,1:ncc)
+		write(30,form) "lambda [mu]","flux [Jy]",docloud0(1:nclouds,1:ncc)
 	else
 		write(30,'("#",a13,a19)') "lambda [mu]","flux [Jy]"
 	endif
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
 		if(lamemis(i).and.computelam(i)) then
-		write(30,trim(form)) lam_out(i),
+		write(30,form) lam_out(i),
 c     &					flux(0:ncc,i)
 c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam(i+1))
      &					(phase(1,j,i)+flux(j,i),j=0,ncc)
@@ -78,14 +78,14 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 		form='("#",a13,a19,' // trim(int2string(ncc,'(i3)')) // 
      &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
      &				trim(int2string(nclouds,'(i3)')) // 'l1))'
-		write(30,trim(form)) "lambda [mu]","flux/flux_star",docloud0(1:nclouds,1:ncc)
+		write(30,form) "lambda [mu]","flux/flux_star",docloud0(1:nclouds,1:ncc)
 	else
 		write(30,'("#",a13,a19)') "lambda [mu]","flux/flux_star"
 	endif
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
 		if(lamemis(i).and.computelam(i)) then
-		write(30,trim(form)) lam_out(i),
+		write(30,form) lam_out(i),
 c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
      &					((phase(1,j,i)+flux(j,i))/(Fstar(i)*1d23/distance**2),j=0,ncc)
 		endif
@@ -103,14 +103,14 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		form='("#",a13,a19,' // trim(int2string(ncc,'(i3)')) // 
      &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
      &				trim(int2string(nclouds,'(i3)')) // 'l1))'
-		write(30,trim(form)) "lambda [mu]","Rp^2/Rstar^2",docloud0(1:nclouds,1:ncc)
+		write(30,form) "lambda [mu]","Rp^2/Rstar^2",docloud0(1:nclouds,1:ncc)
 	else
 		write(30,'("#",a13,a19)') "lambda [mu]","Rp^2/Rstar^2"
 	endif
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
 		if(computelam(i)) then
-			write(30,trim(form)) lam_out(i),
+			write(30,form) lam_out(i),
      &					obsA(0:ncc,i)/(pi*Rstar**2)
     	endif
 	enddo
@@ -124,7 +124,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	form='(f14.6,3es19.7E3)'
 	do i=1,nlam_out
 		if(computelam(i)) then
-			write(30,trim(form)) lam_out(i),obsA_split(i,1:2)/(pi*Rstar**2),
+			write(30,form) lam_out(i),obsA_split(i,1:2)/(pi*Rstar**2),
      &					obsA(0,i)/(pi*Rstar**2)
      	endif
 	enddo
@@ -141,11 +141,11 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		open(unit=30,file=filename,RECL=6000)
 		form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         fstar [Jy]")'
-		write(30,trim(form)) "lambda [mu]",theta(1:nphase)
+		write(30,form) "lambda [mu]",theta(1:nphase)
 		form='(f14.6,' // int2string(nphase+2,'(i3)') // 'es19.7E3)'
 		do i=1,nlam_out
 			if(lamemis(i).and.computelam(i)) then
-			write(30,trim(form)) lam_out(i),
+			write(30,form) lam_out(i),
      &					phase(1:nphase,0,i)+flux(0,i),
      &					Fstar(i)*1d23/distance**2,
      &					(pi*Rplanet**2)*Fstar(i)*1d23/distance**2/(4d0*Dplanet**2)
@@ -159,11 +159,11 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			open(unit=30,file=filename,RECL=6000)
 			form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("      albedo(",f5.1,")"),"         fstar [Jy]")'
-			write(30,trim(form)) "lambda [mu]",theta(1:nphase)
+			write(30,form) "lambda [mu]",theta(1:nphase)
 			form='(f14.6,' // int2string(nphase+1,'(i3)') // 'es19.7E3)'
 			do i=1,nlam_out
 				if(lamemis(i).and.computelam(i)) then
-				write(30,trim(form)) lam_out(i),planet_albedo(1:nphase,i),Fstar(i)*1d23/distance**2
+				write(30,form) lam_out(i),planet_albedo(1:nphase,i),Fstar(i)*1d23/distance**2
 				endif
 			enddo
 			close(unit=30)
@@ -189,7 +189,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 				specR(nj)=specR(i)
 			endif
 		enddo
-		write(30,trim(form)) "phase [degrees]",specR(1:nj)
+		write(30,form) "phase [degrees]",specR(1:nj)
 		form='(f14.6,' // int2string(nj,'(i3)') // 'es17.9E3)'
 		do i=1,nphase
 			specR(1:nlam_out)=Fstar(1:nlam_out)*1d23/distance**2
@@ -202,7 +202,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 					specR(nj)=specR(j)
 				endif
 			enddo
-			write(30,trim(form)) theta(i),specR(1:nj)
+			write(30,form) theta(i),specR(1:nj)
 		enddo
 		close(unit=30)
 		deallocate(specR)
@@ -217,14 +217,14 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		form='("#",a13,' // trim(int2string(ncc,'(i3)')) // 
      &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
      &				trim(int2string(nclouds,'(i3)')) // 'l1))'
-		write(30,trim(form)) "lambda [mu]",docloud0(1:nclouds,1:ncc)
+		write(30,form) "lambda [mu]",docloud0(1:nclouds,1:ncc)
 	else
 		write(30,'("#",a13,a19)') "lambda [mu]","P [bar]"
 	endif
 	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
 		if(computelam(i)) then
-		write(30,trim(form)) lam_out(i),tau1depth(1:ncc,i)
+		write(30,form) lam_out(i),tau1depth(1:ncc,i)
 		endif
 	enddo
 	close(unit=30)
@@ -237,14 +237,14 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		form='("#",a13,' // trim(int2string(ncc,'(i3)')) // 
      &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
      &				trim(int2string(nclouds,'(i3)')) // 'l1))'
-		write(30,trim(form)) "lambda [mu]",docloud0(1:nclouds,1:ncc)
+		write(30,form) "lambda [mu]",docloud0(1:nclouds,1:ncc)
 	else
 		write(30,'("#",a13,a19)') "lambda [mu]","optical depth"
 	endif
 	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
 		if(computelam(i)) then
-		write(30,trim(form)) lam_out(i),cloudtau(1:ncc,i)
+		write(30,form) lam_out(i),cloudtau(1:ncc,i)
 		endif
 	enddo
 	close(unit=30)
@@ -467,7 +467,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	write(30,'("#",a13,4a19)') "lambda [mu]","Rp^2/Rstar^2","error","R"
 	form='(f14.6,4es19.7E3)'
 	do i=1,nlamR
-		write(30,trim(form)) lamR(i)/micron,spec(1,i),specErr(i)/sqrt(real(k)),specR(i)
+		write(30,form) lamR(i)/micron,spec(1,i),specErr(i)/sqrt(real(k)),specR(i)
 	enddo
 	close(unit=30)
 	do i=1,nlamR
@@ -485,7 +485,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	write(30,'("#",a13,4a19)') "lambda [mu]","Rp^2/Rstar^2","error","R"
 	form='(f14.6,4es19.7E3)'
 	do i=1,nlamR
-		write(30,trim(form)) lamR(i)/micron,spec(1,i),specErr(i)/sqrt(real(k)),specR(i)
+		write(30,form) lamR(i)/micron,spec(1,i),specErr(i)/sqrt(real(k)),specR(i)
 	enddo
 	close(unit=30)
 
@@ -505,11 +505,11 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
      &		2d0*(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
 	endif
 	form='("#",a13,"        flux [Jy]","         error","             R")'
-	write(30,trim(form)) "lambda [mu]"
+	write(30,form) "lambda [mu]"
 	form='(f14.6,3es19.7E3)'
 	do i=1,nlamR
-c		write(30,trim(form)) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(i)**2,specErr(i)/sqrt(real(k)),specR(i)
-		write(30,trim(form)) lamR(i)/micron,spec(1,i),specErr(i)/sqrt(real(k)),specR(i)
+c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(i)**2,specErr(i)/sqrt(real(k)),specR(i)
+		write(30,form) lamR(i)/micron,spec(1,i),specErr(i)/sqrt(real(k)),specR(i)
 	enddo
 	close(unit=30)
 	do j=1,nphase
@@ -526,10 +526,10 @@ c		write(30,trim(form)) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2
 	endif
 	form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         error","             R")'
-	write(30,trim(form)) "lambda [mu]",theta(1:nphase)
+	write(30,form) "lambda [mu]",theta(1:nphase)
 	form='(f14.6,' // trim(int2string(nphase+2,'(i4)')) // 'es19.7E3)'
 	do i=1,nlamR
-		write(30,trim(form)) lamR(i)/micron,spec(1:nphase,i),specErr(i)/sqrt(real(k)),specR(i)
+		write(30,form) lamR(i)/micron,spec(1:nphase,i),specErr(i)/sqrt(real(k)),specR(i)
 	enddo
 	close(unit=30)
 	do j=1,nphase
@@ -548,10 +548,10 @@ c		write(30,trim(form)) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2
 	endif
 	form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         error","             R")'
-	write(30,trim(form)) "lambda [mu]",theta(1:nphase)
+	write(30,form) "lambda [mu]",theta(1:nphase)
 	form='(f14.6,' // trim(int2string(nphase+2,'(i4)')) // 'es19.7E3)'
 	do i=1,nlamR
-		write(30,trim(form)) lamR(i)/micron,spec(1:nphase,i),specErr(i)/sqrt(real(k)),specR(i)
+		write(30,form) lamR(i)/micron,spec(1:nphase,i),specErr(i)/sqrt(real(k)),specR(i)
 	enddo
 	close(unit=30)
 

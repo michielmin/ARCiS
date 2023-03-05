@@ -48,7 +48,7 @@ c	parameter(Rjup=7.1492d9)
 		character,intent(in),optional :: form*(*)
 
 		if(present(form)) then
-			write(res,trim(form)) x
+			write(res,form) x
 		else
 			write(res,*) x
 		endif
@@ -60,7 +60,7 @@ c	parameter(Rjup=7.1492d9)
 		character,intent(in),optional :: form*(*)
 
 		if(present(form)) then
-			write(res,trim(form)) x
+			write(res,form) x
 		else
 			write(res,*) x
 		endif
@@ -72,7 +72,7 @@ c	parameter(Rjup=7.1492d9)
 		character,intent(in),optional :: form*(*)
 
 		if(present(form)) then
-			write(res,trim(form)) x
+			write(res,form) x
 		else
 			write(res,*) x
 		endif
@@ -125,7 +125,7 @@ c	parameter(Rjup=7.1492d9)
 		character,intent(in),optional :: form*(*)
 
 		if(present(form)) then
-			write(res,trim(form)) x
+			write(res,form) x
 		else
 			write(res,*) x
 		endif
