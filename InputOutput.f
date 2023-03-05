@@ -3,7 +3,7 @@
 	character string*(*)
 	character,intent(in),optional :: form*(*)
 
-	if(form.ne.' ') then
+	if(present(form)) then
 		write(*,form) trim(string)
 		write(9,form) trim(string)
 	else
@@ -92,9 +92,9 @@ c-----------------------------------------------------------------------
 	character*20 function int2string(i,form)
 	IMPLICIT NONE
 	integer i
-	character,intent(in),optional :: form*(*)
+	character,intent(in),optional :: form*(*)=' '
 	
-	if(form.ne.' ') then
+	if(present(form)) then
 		write(int2string,form) i
 	else
 		write(int2string,*) i
@@ -110,9 +110,9 @@ c-----------------------------------------------------------------------
 	character*20 function dbl2string(x,form)
 	IMPLICIT NONE
 	real*8 x
-	character,intent(in),optional :: form*(*)
+	character,intent(in),optional :: form*(*)=' '
 	
-	if(form.ne.' ') then
+	if(present(form)) then
 		write(dbl2string,form) x
 	else
 		write(dbl2string,*) x
