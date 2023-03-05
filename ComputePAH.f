@@ -65,9 +65,9 @@
 			enddo
 			return
 		endif
-		open(unit=25,file=filename,RECL=1000)
+		open(unit=25,file=filename,FORM="FORMATTED")
 		filename=trim(filebase) // "k" // trim(ext(i)) // "nm.dat"
-		open(unit=26,file=filename,RECL=1000)
+		open(unit=26,file=filename,FORM="FORMATTED")
 		do j=1,nl_optEC
 			read(25,*) l_optEC(j),dummy,e1_optEC(j,1:nEg_optEC,i)
 			read(26,*) l_optEC(j),dummy,e2_optEC(j,1:nEg_optEC,i)

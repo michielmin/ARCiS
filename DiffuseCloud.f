@@ -879,7 +879,7 @@ c Use Band matrix algorithm
 	enddo
 	
 	if(.not.retrieval) then
-		open(unit=20,file=trim(outputdir) // '/crystallinity.dat',RECL=1000)
+		open(unit=20,file=trim(outputdir) // '/crystallinity.dat',FORM="FORMATTED")
 		form='("#",a18,' // trim(int2string(3,'(i4)')) // 'a23,a19)'
 		write(20,form) "P[bar]",(trim(CSname(i)),i=4,6),"T[K]"
 		form='(es19.7E3,' // trim(int2string(3,'(i4)')) // 'es23.7E3,es19.7E3)'
@@ -1035,7 +1035,7 @@ c SiO2
 	endif
 
 	if(.not.retrieval) then
-		open(unit=20,file=trim(outputdir) // '/cloudstructure.dat',RECL=1000)
+		open(unit=20,file=trim(outputdir) // '/cloudstructure.dat',FORM="FORMATTED")
 		form='("#",a18,a19,a19,' // trim(int2string(nCS+1,'(i4)')) // 'a23,a19,a19,a19)'
 		write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"MgO","r[micron]","T[K]","Jstar"
 		form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+1,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
@@ -1062,7 +1062,7 @@ c Elemental abundances
 	call system_clock(itime)
 	itimecloud=itimecloud+itime
 
-c	open(unit=20,file=trim(outputdir) // '/atoms.dat',RECL=6000)
+c	open(unit=20,file=trim(outputdir) // '/atoms.dat',FORM="FORMATTED")
 	ini=.true.
 	do i=1,nr
 		call tellertje(i,nr)
@@ -1169,7 +1169,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	integer ir,iCS,iter
 	character*500 form
 	
-	open(unit=36,file=trim(outputdir) // "/Tevap.dat",RECL=1000)
+	open(unit=36,file=trim(outputdir) // "/Tevap.dat",FORM="FORMATTED")
 	form='("#",a18,' // trim(int2string(nCS,'(i4)')) // 'a23,a19)'
 	write(36,form) "P[bar]",CSname(1:nCS),"T[K]"
 	form='(es19.7E3,' // trim(int2string(nCS,'(i4)')) // 'es23.7E3,es19.7E3)'

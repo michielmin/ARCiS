@@ -605,7 +605,7 @@ c	Ts=T*Fl**0.25
 	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K"
 
 	if(.not.retrieval) then
-		open(unit=26,file=trim(outputdir) // 'convection.dat',RECL=1000)
+		open(unit=26,file=trim(outputdir) // 'convection.dat',FORM="FORMATTED")
 		do ir=1,nr
 			if(Convec(ir)) then
 				write(26,*) T(ir),P(ir)
