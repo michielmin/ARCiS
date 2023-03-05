@@ -454,10 +454,14 @@ c Venot et al. 2018
 		
 	subroutine regridKtable(k0,w0,n0,g1,k1,w1,n1, g0,b0,gg1)
 	IMPLICIT NONE
-	integer,intent(in) :: n0,n1
-	real*8,intent(in) :: g1(n1),w1(n1)
-	real*8,intent(out) :: k1(n1),g0(n0),b0(n0+1),gg1(n1)
-	real*8,intent(inout) :: k0(n0),w0(n0)
+c	integer,intent(in) :: n0,n1
+c	real*8,intent(in) :: g1(n1),w1(n1)
+c	real*8,intent(out) :: k1(n1),g0(n0),b0(n0+1),gg1(n1)
+c	real*8,intent(inout) :: k0(n0),w0(n0)
+	integer n0,n1
+	real*8 g1(n1),w1(n1)
+	real*8 k1(n1),g0(n0),b0(n0+1),gg1(n1)
+	real*8 k0(n0),w0(n0)
 	integer ig,j,j1,j2
 	real*8 tot0,tot1,ww,bg0,bg1
 	
