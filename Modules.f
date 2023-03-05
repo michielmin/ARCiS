@@ -82,7 +82,7 @@ c	parameter(Rjup=7.1492d9)
 		integer x
 		character(len=20) res
 		character,intent(in),optional :: form*(*)
-
+		res=' '
 		return
 	end function dbl2string_int
 
@@ -102,6 +102,7 @@ c	parameter(Rjup=7.1492d9)
 		real x
 		character(len=20) res
 		character,intent(in),optional :: form*(*)
+		res=' '
 		return
 	end function int2string_real
 
@@ -109,6 +110,7 @@ c	parameter(Rjup=7.1492d9)
 		real*8 x
 		character(len=20) res
 		character,intent(in),optional :: form*(*)
+		res=' '
 		return
 	end function int2string_dbl
 
@@ -116,6 +118,7 @@ c	parameter(Rjup=7.1492d9)
 		real*16 x
 		character(len=20) res
 		character,intent(in),optional :: form*(*)
+		res=' '
 		return
 	end function int2string_qdr
 
