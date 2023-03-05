@@ -7,7 +7,7 @@
 	
 	call output("Reading file:" // trim(CIA(icia)%filename))
 	iT=0
-	open(unit=20,file=CIA(icia)%filename,RECL=100)
+	open(unit=20,file=CIA(icia)%filename,FORM="FORMATTED")
 1	read(20,'(a20,a10,a10,a7,a7)',err=1,end=2) name,cmin,cmax,cn,cT
 	read(cn,*) n
 	do i=1,n
@@ -22,7 +22,7 @@
 	allocate(CIA(icia)%Cabs(CIA(icia)%nT,nlam))
 	CIA(icia)%Cabs(1:CIA(icia)%nT,1:nlam)=0d0
 
-	open(unit=20,file=CIA(icia)%filename,RECL=100)
+	open(unit=20,file=CIA(icia)%filename,FORM="FORMATTED")
 	do iT=1,CIA(icia)%nT
 3		read(20,'(a20,a10,a10,a7,a7)',err=3) name,cmin,cmax,cn,cT
 		if(iT.eq.1) then

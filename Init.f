@@ -33,12 +33,12 @@ c==============================================================================
 		stop
 	endif
 
-	open(unit=20,file=inputfile,RECL=1000)
+	open(unit=20,file=inputfile,FORM="FORMATTED")
 
 	call output("input file: " // trim(inputfile))
 
 	call system("cp " // trim(inputfile) // " " // trim(outputdir) // "input.dat")
-	open(unit=21,file=trim(outputdir) // "input.dat",RECL=1000,access='APPEND')
+	open(unit=21,file=trim(outputdir) // "input.dat",FORM="FORMATTED",access='APPEND')
 	write(21,'("*** command line keywords ***")')
 	
 	ncla=0
@@ -68,7 +68,7 @@ c==============================================================================
 		else
 			if(readline.ne.' ') then
 c				try to read another command line argument
-				open(unit=20,file=readline,RECL=1000)
+				open(unit=20,file=readline,FORM="FORMATTED")
 				readfile=.true.
 				ncla=ncla+1
 				goto 10
@@ -327,7 +327,7 @@ c				if(key%nr1.eq.0) key%nr1=1
 	enddo
 
 	if(mixratfile) then
-		open(unit=30,file=TPfile,RECL=6000)
+		open(unit=30,file=TPfile,FORM="FORMATTED")
 		read(30,*) n
 		read(30,*) names(1:n)
 		close(unit=30)
@@ -738,7 +738,7 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 	endif
 
 	if(iWolk.gt.0) then
-		open(unit=50,file=trim(outputdir) // "/Wolk.dat",RECL=6000)
+		open(unit=50,file=trim(outputdir) // "/Wolk.dat",FORM="FORMATTED")
 		allocate(var(n_ret),dvar(n_ret))
 		do i=1,iWolk
 			read(50,*) j,tot,var(1:n_ret)
@@ -1355,7 +1355,7 @@ c Use formalism from Koll (2022)
 	enddo
 	
 	if(mixratfile) then
-		open(unit=20,file=TPfile,RECL=1000)
+		open(unit=20,file=TPfile,FORM="FORMATTED")
 		read(20,*) n
 		read(20,*) names(1:n)
 		do j=1,n
@@ -1385,7 +1385,7 @@ c Use formalism from Koll (2022)
 2		close(unit=20)
 		nr=i-1
 	else if(gridTPfile) then
-		open(unit=20,file=TPfile)
+		open(unit=20,file=TPfile,FORM="FORMATTED")
 		i=1
 3		read(20,*,err=3,end=4) pp,tt
 		if(i.gt.nr) then
@@ -2196,7 +2196,7 @@ c number of cloud/nocloud combinations
 						call output("File does not exist" // trim(ObsSpec(i)%file))
 						stop
 					endif
-					open(unit=30,file=ObsSpec(i)%file,RECL=1000)
+					open(unit=30,file=ObsSpec(i)%file,FORM="FORMATTED")
 11					read(30,*,err=11) nj
 					do j=1,nj
 						read(30,*)
@@ -2213,7 +2213,7 @@ c number of cloud/nocloud combinations
 						call output("File does not exist" // trim(ObsSpec(i)%file))
 						stop
 					endif
-					open(unit=30,file=ObsSpec(i)%file,RECL=1000)
+					open(unit=30,file=ObsSpec(i)%file,FORM="FORMATTED")
 1					read(30,*,end=2,err=1) x,y,dy,dx
 					nlam=nlam+1
 					goto 1
@@ -2262,7 +2262,7 @@ c number of cloud/nocloud combinations
 				case('tprofile','logtp','priors','prior')
 					continue
 				case('lightcurve')
-					open(unit=30,file=ObsSpec(i)%file,RECL=1000)
+					open(unit=30,file=ObsSpec(i)%file,FORM="FORMATTED")
 14					read(30,*,err=14) nj
 					do j=1,nj
 						read(30,*)
@@ -2278,7 +2278,7 @@ c number of cloud/nocloud combinations
 					goto 15
 16					close(unit=30)					
 				case default
-					open(unit=30,file=ObsSpec(i)%file,RECL=1000)
+					open(unit=30,file=ObsSpec(i)%file,FORM="FORMATTED")
 3					read(30,*,end=4,err=3) x,y,dy,dx
 					ilam=ilam+1
 					lam(ilam)=x*micron
@@ -2546,7 +2546,7 @@ c not entirely correct...
 	character*1000 key(1000),value(1000)
 	character*6000 line
 
-	open(unit=72,file=planetparameterfile,RECL=6000)
+	open(unit=72,file=planetparameterfile,FORM="FORMATTED")
 	read(72,'(a6000)') line
 	call getkeys(line,key,n)
 
@@ -2622,7 +2622,7 @@ c not entirely correct...
 		call output("Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K")
 		call output("Orbital period:   " // dbl2string(orbit_P/86400d0,'(f9.4)') // "days")
 			
-		open(unit=73,file=trim(outputdir) // "ListParameters",RECL=1000)
+		open(unit=73,file=trim(outputdir) // "ListParameters",FORM="FORMATTED")
 		write(73,'(a)') "Stellar mass:     " // dbl2string(Mstar,'(f9.4)') // "Msun"
 		write(73,'(a)') "Stellar T:        " // dbl2string(Tstar,'(f9.4)') // "K"
 		write(73,'(a)') "Stellar radius:   " // dbl2string(Rstar,'(f9.4)') // "Rsun"
@@ -2744,7 +2744,7 @@ c not entirely correct...
 		planetname(i:i)=' '
 	endif
 	
-	open(unit=72,file=planetparameterfile,RECL=6000)
+	open(unit=72,file=planetparameterfile,FORM="FORMATTED")
 	read(72,*)
 1	read(72,*,end=2) name,Tstar,x,x,Zc,x,x,Mstar,x,x,Rstar,x,x,logg,x,x,x,x,x,orbit_P,orbit_e,x,x,Dplanet,x,x,
      &					Mp_prior,dM1,dM2,Rplanet,dR1,dR2
@@ -2786,7 +2786,7 @@ c not entirely correct...
 		call output("Blackbody T:    " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K")
 		call output("Orbital period: " // dbl2string(orbit_P/86400d0,'(f9.4)') // "days")
 
-		open(unit=73,file=trim(outputdir) // "ListParameters",RECL=1000)
+		open(unit=73,file=trim(outputdir) // "ListParameters",FORM="FORMATTED")
 		write(73,'(a)') "Stellar mass:     " // dbl2string(Mstar,'(f9.4)') // "Msun"
 		write(73,'(a)') "Stellar T:        " // dbl2string(Tstar,'(f9.4)') // "K"
 		write(73,'(a)') "Stellar radius:   " // dbl2string(Rstar,'(f9.4)') // "Rsun"

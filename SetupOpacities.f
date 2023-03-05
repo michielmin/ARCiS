@@ -259,7 +259,7 @@ c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 	enddo
 
 	if(.not.retrieval) then
-		open(unit=30,file=trim(outputdir) // "opticaldepth.dat",RECL=6000)
+		open(unit=30,file=trim(outputdir) // "opticaldepth.dat",FORM="FORMATTED")
 		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
 		do i=1,nlam
 			write(30,'(f12.6,e19.7)') lam(i)/micron,sum(opac_tot(i,1:ng)*wgg(1:ng))
