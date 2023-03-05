@@ -10,7 +10,7 @@
 	call cpu_time(starttime)
 
 	call GetOutputDir
-	open(unit=9,file=trim(outputdir) // "log.dat",FORM="FORMATTED")
+	open(unit=9,file=trim(outputdir) // "log.dat",FORM="FORMATTED",ACCESS="STREAM")
 	call output("Output dir: " // trim(outputdir))
 
 	call output("==================================================================")

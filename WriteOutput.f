@@ -37,7 +37,7 @@
 
 	filename=trim(outputdir) // "star" // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
-	open(unit=30,file=filename,FORM="FORMATTED")
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	write(30,'("#",a13,a19)') "lambda [mu]","flux_star[Jy]"
 	form='(f14.6,es19.7E3)'
 	do i=1,nlam_out
@@ -51,7 +51,7 @@
 	
 	filename=trim(outputdir) // "emis" // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
-	open(unit=30,file=filename,FORM="FORMATTED")
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	if(nclouds.gt.0) then
 		form='("#",a13,a19,' // trim(int2string(ncc,'(i3)')) // 
      &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
@@ -73,7 +73,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 
 	filename=trim(outputdir) // "emisR" // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
-	open(unit=30,file=filename,FORM="FORMATTED")
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	if(nclouds.gt.0) then
 		form='("#",a13,a19,' // trim(int2string(ncc,'(i3)')) // 
      &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
@@ -98,7 +98,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 
 	filename=trim(outputdir) // "trans" // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
-	open(unit=30,file=filename,FORM="FORMATTED")
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	if(nclouds.gt.0) then
 		form='("#",a13,a19,' // trim(int2string(ncc,'(i3)')) // 
      &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
@@ -119,7 +119,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	if(do3D) then
 	filename=trim(outputdir) // "trans_split" // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
-	open(unit=30,file=filename,FORM="FORMATTED")
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	write(30,'("#",a13,3a19)') "lambda [mu]","Morning","Evening","Rp^2/Rstar^2"
 	form='(f14.6,3es19.7E3)'
 	do i=1,nlam_out
@@ -138,7 +138,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	if(nphase.le.310) then
 		filename=trim(outputdir) // "phase" // trim(side)
 		call output("Writing spectrum to: " // trim(filename))
-		open(unit=30,file=filename,FORM="FORMATTED")
+		open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 		form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         fstar [Jy]")'
 		write(30,form) "lambda [mu]",theta(1:nphase)
@@ -156,7 +156,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		if(computealbedo) then
 			filename=trim(outputdir) // "albedo" // trim(side)
 			call output("Writing albedo to: " // trim(filename))
-			open(unit=30,file=filename,FORM="FORMATTED")
+			open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 			form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("      albedo(",f5.1,")"),"         fstar [Jy]")'
 			write(30,form) "lambda [mu]",theta(1:nphase)
@@ -178,7 +178,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 		allocate(specR(nlam))
 		filename=trim(outputdir) // "phasecurve" // trim(side)
 		call output("Writing phasecurve to: " // trim(filename))
-		open(unit=30,file=filename,FORM="FORMATTED")
+		open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 		form='("#",a13,' // trim(int2string(nj,'(i4)')) // 
      &				 '("      F(",es8.1E3,")"))'
 		specR(1:nlam_out)=lam_out(1:nlam_out)
@@ -212,7 +212,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	
 	filename=trim(outputdir) // "tau1depth" // trim(side)
 	call output("Writing tau1depth to: " // trim(filename))
-	open(unit=30,file=filename,FORM="FORMATTED")
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	if(nclouds.gt.0) then
 		form='("#",a13,' // trim(int2string(ncc,'(i3)')) // 
      &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
@@ -232,7 +232,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 
 	filename=trim(outputdir) // "cloudtau" // trim(side)
 	call output("Writing cloud optical depth to: " // trim(filename))
-	open(unit=30,file=filename,FORM="FORMATTED")
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	if(nclouds.gt.0) then
 		form='("#",a13,' // trim(int2string(ncc,'(i3)')) // 
      &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
@@ -377,7 +377,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			endif
 		enddo
 		filename=trim(outputdir) // "contr_trans_" // trim(instr_add) // trim(side)
-		open(unit=30,file=filename,FORM="FORMATTED")
+		open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 		write(30,'("#",a13,f10.3)') "T average ",Tweight
 		write(30,'("#",a13,es10.3)') "P average ",Pweight
 		do i=1,nmol
@@ -424,7 +424,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			endif
 		enddo
 		filename=trim(outputdir) // "contr_emisR_" // trim(instr_add) // trim(side)
-		open(unit=30,file=filename,FORM="FORMATTED")
+		open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 		write(30,'("#",a13,f10.3)') "T average ",Tweight
 		write(30,'("#",a13,es10.3)') "P average ",Pweight
 		do i=1,nmol
@@ -457,7 +457,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	endif
 	filename=trim(outputdir) // "obs_trans_" // trim(instr_add) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
-	open(unit=30,file=filename,FORM="FORMATTED")
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	if(instr_add.ne."simulated") then
 		write(30,'("# transit time       : ",f10.3," sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
 		write(30,'("# number of transits : ",f10.3)') instr_ntrans(i_instr)
@@ -475,7 +475,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	enddo
 	filename=trim(outputdir) // "obs_trans_noise_" // trim(instr_add) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
-	open(unit=30,file=filename,FORM="FORMATTED")
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	if(instr_add.ne."simulated") then
 		write(30,'("# transit time       : ",f10.3," sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
 		write(30,'("# number of transits : ",f10.3)') instr_ntrans(i_instr)
@@ -497,7 +497,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
      &						lamR,Fstar_obs(1:nlamR),specR,specRexp,nlamR)
 	filename=trim(outputdir) // "obs_emis_" // trim(instr_add) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
-	open(unit=30,file=filename,FORM="FORMATTED")
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	if(instr_add.ne."simulated") then
 		write(30,'("# transit time       : ",es19.7E3, "sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
 		write(30,'("# number of transits : ",es19.7E3)') instr_ntrans(i_instr)
@@ -517,7 +517,7 @@ c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(
 	enddo
 	filename=trim(outputdir) // "obs_emisR_" // trim(instr_add) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
-	open(unit=30,file=filename,FORM="FORMATTED")
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	if(instr_add.ne."simulated") then
 		write(30,'("# transit time       : ",es19.7E3, "sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
 		write(30,'("# number of transits : ",es19.7E3)') instr_ntrans(i_instr)
@@ -539,7 +539,7 @@ c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(
 	enddo
 	filename=trim(outputdir) // "obs_emisR_noise_" // trim(instr_add) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
-	open(unit=30,file=filename,FORM="FORMATTED")
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	if(instr_add.ne."simulated") then
 		write(30,'("# transit time       : ",es19.7E3, "sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
 		write(30,'("# number of transits : ",es19.7E3)') instr_ntrans(i_instr)
@@ -587,7 +587,7 @@ c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(
 	real*8 nu0(nnu0),kappa0(nnu0,ng0)
 	
 	file=trim(outputdir) // "opacity_" // trim(flag) // "_" // trim(int2string(ir,'(i0.4)')) // ".dat"
-	open(unit=30,file=file,FORM="FORMATTED")
+	open(unit=30,file=file,FORM="FORMATTED",ACCESS="STREAM")
 	write(30,'("# Pressure:    ",es10.3E3," bar")') P(ir)
 	write(30,'("# Temperature: ",f10.3," K")') T(ir)
 	write(30,'("#",a13,a19)') "lambda [mu]","kappa [cm^2/mol]"
@@ -1293,7 +1293,7 @@ c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(
 	character*6000 line
 	character*1000 key(100),value(100)
 	
-	open(unit=20,file=filename,FORM="FORMATTED")
+	open(unit=20,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 
 1	read(20,'(a6000)',end=3) line
 	call getkeys(line,key,n)
@@ -1324,7 +1324,7 @@ c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(
 	
 	specRexp=20d0
 
-	open(unit=20,file=filename,FORM="FORMATTED")
+	open(unit=20,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 
 4	read(20,'(a6000)',end=6) line
 	call getkeys(line,key,n)

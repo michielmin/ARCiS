@@ -38,7 +38,7 @@ c==============================================================================
 	call output("input file: " // trim(inputfile))
 
 	call system("cp " // trim(inputfile) // " " // trim(outputdir) // "input.dat")
-	open(unit=21,file=trim(outputdir) // "input.dat",FORM="FORMATTED",access='APPEND')
+	open(unit=21,file=trim(outputdir) // "input.dat",FORM="FORMATTED",ACCESS="APPEND")
 	write(21,'("*** command line keywords ***")')
 	
 	ncla=0
@@ -738,7 +738,7 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 	endif
 
 	if(iWolk.gt.0) then
-		open(unit=50,file=trim(outputdir) // "/Wolk.dat",FORM="FORMATTED")
+		open(unit=50,file=trim(outputdir) // "/Wolk.dat",FORM="FORMATTED",ACCESS="STREAM")
 		allocate(var(n_ret),dvar(n_ret))
 		do i=1,iWolk
 			read(50,*) j,tot,var(1:n_ret)

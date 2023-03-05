@@ -119,7 +119,7 @@ c	recomputeopac=.true.
 	if(iterateshift.and.abs(hotspotshift-hotspotshift0).gt.5d-3) call output("Desired hotspot shift could not be obtained!!")
 
 	if(.not.retrieval) then
-		open(unit=20,file=trim(outputdir) // "structure3D.dat",FORM="FORMATTED")
+		open(unit=20,file=trim(outputdir) // "structure3D.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do j=1,nlatt-1
 			write(20,*) beta(1:nlong-1,j)
 		enddo
@@ -185,7 +185,7 @@ c	recomputeopac=.true.
 	beta_c=beta_c/real(2*(nlatt-1))	
 
 	if(.not.retrieval.and..not.domakeai) then
-		open(unit=20,file=trim(outputdir) // "parameter3D.dat",FORM="FORMATTED")
+		open(unit=20,file=trim(outputdir) // "parameter3D.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do j=1,nlatt-1
 			do i=1,nlong-1
 				beta3D_eq(i)=beta(i,j)
@@ -330,7 +330,7 @@ c Now call the setup for the readFull3D part
 		endif
 		if(.not.retrieval) then
 			call SetOutputMode(.true.)
-			open(unit=20,file=trim(outputdir) // "mixrat" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED")
+			open(unit=20,file=trim(outputdir) // "mixrat" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
 			write(20,'("#",a9,a13,a13)') "T[K]","P[bar]","Kzz[cm^2/s]"
 			do j=1,nr
 				write(20,'(f10.3,2es13.3E3)') T(j),P(j),ComputeKzz(P(j),T(j),dens(j),complexKzz)
@@ -347,19 +347,19 @@ c Now call the setup for the readFull3D part
 	R3DC(1:n3D,1:nr+1)=sqrt(R3D(1:n3D,1:nr+1)*R3D(1:n3D,2:nr+2))
 
 	if(.not.retrieval) then
-		open(unit=20,file=trim(outputdir) // "surfacetemp3D.dat",FORM="FORMATTED")
+		open(unit=20,file=trim(outputdir) // "surfacetemp3D.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do j=1,nlatt-1
 			write(20,*) T3D(ibeta(1:nlong-1,j),0)
 		enddo
 		close(unit=20)
 		if(fulloutput3D) then
 			do ir=1,nr
-				open(unit=20,file=trim(outputdir) // "temp3D_P" // trim(dbl2string(P(ir),'(es8.2)')) // ".dat",FORM="FORMATTED")
+				open(unit=20,file=trim(outputdir) // "temp3D_P" // trim(dbl2string(P(ir),'(es8.2)')) // ".dat",FORM="FORMATTED",ACCESS="STREAM")
 				do j=1,nlatt-1
 					write(20,*) T3D(ibeta(1:nlong-1,j),ir)
 				enddo
 				close(unit=20)
-				open(unit=20,file=trim(outputdir) // "cloud3D_P" // trim(dbl2string(P(ir),'(es8.2)')) // ".dat",FORM="FORMATTED")
+				open(unit=20,file=trim(outputdir) // "cloud3D_P" // trim(dbl2string(P(ir),'(es8.2)')) // ".dat",FORM="FORMATTED",ACCESS="STREAM")
 				do j=1,nlatt-1
 					write(20,*) cloud3D(ibeta(1:nlong-1,j),ir)
 				enddo
@@ -615,7 +615,7 @@ c Note we are here using the symmetry between North and South
 	if(fulloutput3D) then
 		PTaverage3D(ipc,1:nr)=PTaverage3D(ipc,1:nr)/(pi*Rmax**2)
 		mixrat_average3D(ipc,1:nr,1:nmol)=mixrat_average3D(ipc,1:nr,1:nmol)/(pi*Rmax**2)
-		open(unit=25,file=trim(outputdir) // "mixrat_phase" // trim(int2string(int(theta_phase(ipc)),'(i0.3)')),FORM="FORMATTED")
+		open(unit=25,file=trim(outputdir) // "mixrat_phase" // trim(int2string(int(theta_phase(ipc)),'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
 		do ir=1,nr
 			j=0
 			do i=1,nmol
@@ -765,7 +765,7 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 			PTaverage3D(0,1:nr)=PTaverage3D(0,1:nr)+T3D(ibeta(i,j),1:nr)/real(nlatt*2)
 			mixrat_average3D(0,1:nr,1:nmol)=mixrat_average3D(0,1:nr,1:nmol)+mixrat3D(ibeta(i,j),1:nr,1:nmol)/real(nlatt*2)
 		enddo
-		open(unit=25,file=trim(outputdir) // "mixrat_transit",FORM="FORMATTED")
+		open(unit=25,file=trim(outputdir) // "mixrat_transit",FORM="FORMATTED",ACCESS="STREAM")
 		do ir=1,nr
 			j=0
 			do i=1,nmol
@@ -2207,7 +2207,7 @@ c=========================================
 	end select
 
 	if(.not.retrieval) then
-		open(unit=93,file=trim(outputdir) // 'surfemis.dat',FORM="FORMATTED")
+		open(unit=93,file=trim(outputdir) // 'surfemis.dat',FORM="FORMATTED",ACCESS="STREAM")
 		do i=1,nlam
 			write(93,*) lam(i),surface_emis(i)
 		enddo

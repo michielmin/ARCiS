@@ -275,7 +275,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 	endif
 
 	if(.not.retrieval) then
-		open(unit=50,file=trim(outputdir) // 'COprofile.dat',FORM="FORMATTED")
+		open(unit=50,file=trim(outputdir) // 'COprofile.dat',FORM="FORMATTED",ACCESS="STREAM")
 		write(50,'("#",a14,3a10)') "P [bar]","C/O","[O]","[C]"
 		do i=1,nr
 			Otot=0d0
@@ -437,7 +437,7 @@ c	endif
 		write(side,'("_",i0.2)') i2d
 	endif
 	
-	open(unit=50,file=trim(outputdir) // 'densityprofile' // trim(side) // '.dat',FORM="FORMATTED")
+	open(unit=50,file=trim(outputdir) // 'densityprofile' // trim(side) // '.dat',FORM="FORMATTED",ACCESS="STREAM")
 	write(50,'("#",a14,a15,a15,a13,a10,a11,a10)') "radius [cm]","height [cm]","dens [g/cm^3]","N [1/cm^3]","T [K]",
      & 	"P [bar]","g [cm/s^2]"
 	do i=1,nr
@@ -446,7 +446,7 @@ c	endif
 	enddo
 	close(unit=50)
 
-	open(unit=50,file=trim(outputdir) // 'density' // trim(side) // '.dat',FORM="FORMATTED")
+	open(unit=50,file=trim(outputdir) // 'density' // trim(side) // '.dat',FORM="FORMATTED",ACCESS="STREAM")
 	do i=1,nr
 		write(50,*) sqrt(R(i)*R(i+1)),sqrt(R(i)*R(i+1))-Rplanet
      &			,dens(i),cloud_dens(i,1:nclouds)
@@ -462,7 +462,7 @@ c	endif
 		endif
 	enddo
 
-	open(unit=50,file=trim(outputdir) // 'mixingratios' // trim(side) // '.dat',FORM="FORMATTED")
+	open(unit=50,file=trim(outputdir) // 'mixingratios' // trim(side) // '.dat',FORM="FORMATTED",ACCESS="STREAM")
 	form='("#",a9,a13,' // trim(int2string(nmix,'(i2)')) // 'a15)'
 	write(50,trim(form)) "T [K]","P [bar]",namemix(1:nmix)
 	form='(f10.3,es13.3E3,' // trim(int2string(nmix,'(i2)')) // 'es15.4E3)'
@@ -471,7 +471,7 @@ c	endif
 	enddo
 	close(unit=50)
 
-	open(unit=50,file=trim(outputdir) // 'Kzz' // trim(side) // '.dat',FORM="FORMATTED")
+	open(unit=50,file=trim(outputdir) // 'Kzz' // trim(side) // '.dat',FORM="FORMATTED",ACCESS="STREAM")
 	form='("#",a12,a13)'
 	write(50,trim(form)) "Kzz [cm^2/s]","P [bar]"
 	form='(es13.3E3,es13.3E3)'
@@ -481,7 +481,7 @@ c	endif
 	close(unit=50)
 
 	do ii=1,nclouds
-		open(unit=50,file=trim(outputdir) // 'clouddens' // trim(int2string(ii,'(i0.2)')) // trim(side) // '.dat',FORM="FORMATTED")
+		open(unit=50,file=trim(outputdir) // 'clouddens' // trim(int2string(ii,'(i0.2)')) // trim(side) // '.dat',FORM="FORMATTED",ACCESS="STREAM")
 		form='("#",a12,a15,a15,a15)'
 		write(50,trim(form)) "P [bar]","dens [g/cm^3]","Eq. dens","gas dens"
 		form='(es13.3,es15.3E3,es15.3E3,es15.3E3)'
@@ -652,7 +652,7 @@ c Setup names and weights of the elements
 	call output("[Z]: " // dbl2string(Z,'(f7.3)'))
 
 	if(.not.retrieval) then
-	open(unit=50,file=trim(outputdir) // 'atomic.dat',FORM="FORMATTED")
+	open(unit=50,file=trim(outputdir) // 'atomic.dat',FORM="FORMATTED",ACCESS="STREAM")
 	write(50,'("SimAB abundances:")')
 	write(50,'(a6,f7.3)') "C/O:",CO
 	write(50,'(a6,f7.3)') "Si/O:",SiO
@@ -697,7 +697,7 @@ c	adjust metallicity
 	tot=sum(molfracs_atoms(1:N_atoms))
 	molfracs_atoms=molfracs_atoms/tot
 
-c	open(unit=50,file='atomic.dat',FORM="FORMATTED")
+c	open(unit=50,file='atomic.dat',FORM="FORMATTED",ACCESS="STREAM")
 c	do i=1,N_atoms
 c		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
 c	enddo
@@ -725,7 +725,7 @@ c	close(unit=50)
 	molfracs_atoms_solar=molfracs_atoms
 	molfracs_atoms=1d-50
 
-	open(unit=43,file=filename,FORM="FORMATTED")
+	open(unit=43,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 1	read(43,*,err=1,end=2) name,abun
 	do i=1,N_atoms
 		if(trim(name).eq.names_atoms(i)) then
@@ -748,7 +748,7 @@ c	close(unit=50)
      &			(sum(molfracs_atoms_solar(3:n_atoms))/sum(molfracs_atoms_solar(1:n_atoms))))
 	call output("[Z]: " // dbl2string(metallicity,'(f6.2)'))
 
-c	open(unit=50,file='atomic.dat',FORM="FORMATTED")
+c	open(unit=50,file='atomic.dat',FORM="FORMATTED",ACCESS="STREAM")
 c	do i=1,N_atoms
 c		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
 c	enddo
@@ -826,7 +826,7 @@ c	MMW=2.2
 	integer nm,i
 	real*8 mf(nm),Pin,P0,mm
 	
-	open(unit=20,file='dbf26/a_p_G4___.tsv',FORM="FORMATTED")
+	open(unit=20,file='dbf26/a_p_G4___.tsv',FORM="FORMATTED",ACCESS="STREAM")
 1	read(20,*,end=2) P0,mf(1),mf(6),mf(11),mf(5),mf(2),mf(28),mf(56),mf(57)
 	if(P0.ge.Pin) then
 		mm=0d0

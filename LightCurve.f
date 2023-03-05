@@ -186,7 +186,7 @@ c		Ftot0(0:4)=Ftot0(0:4)+F(0:4,i)*Atot(i)
 		ilam0=ilam0+ObsSpec(iobs)%nlam
 	enddo
 
-c	open(unit=30,file='LDcoeff.dat',FORM="FORMATTED")
+c	open(unit=30,file='LDcoeff.dat',FORM="FORMATTED",ACCESS="STREAM")
 c	do ilam=1,nlam-1
 c		write(30,*) lam(ilam),(cLD((ilam-1)*nc+i),i=1,nc)
 c	enddo
@@ -195,7 +195,7 @@ c
 c	do iobs=1,nobs
 c		im=0
 c		do ilam=1,ObsSpec(iobs)%nlam
-c			open(unit=20,file=trim(outputdir) // "lightcurve" // trim(int2string(iobs,'(i0.4)')) // "_"  // trim(int2string(ilam,'(i0.4)')) // ".dat",FORM="FORMATTED")
+c			open(unit=20,file=trim(outputdir) // "lightcurve" // trim(int2string(iobs,'(i0.4)')) // "_"  // trim(int2string(ilam,'(i0.4)')) // ".dat",FORM="FORMATTED",ACCESS="STREAM")
 c			do j=1,ObsSpec(iobs)%nt
 c				im=(j-1)*ObsSpec(iobs)%nlam+ilam
 c				write(20,*) ObsSpec(iobs)%t(j),ObsSpec(iobs)%model(im),ObsSpec(iobs)%y(im),(LC(i,j,ilam),i=0,nc-1)
@@ -420,7 +420,7 @@ c	enddo
 		ilam0=ilam0+ObsSpec(iobs)%nlam
 	enddo
 
-c	open(unit=30,file='LDcoeff.dat',FORM="FORMATTED")
+c	open(unit=30,file='LDcoeff.dat',FORM="FORMATTED",ACCESS="STREAM")
 c	do ilam=1,nlam-1
 c		write(30,*) lam(ilam),(cLD((ilam-1)*5+i),i=1,5)
 c	enddo
@@ -429,7 +429,7 @@ c
 c	do iobs=1,nobs
 c		im=0
 c		do ilam=1,ObsSpec(iobs)%nlam
-c			open(unit=20,file=trim(outputdir) // "lightcurve" // trim(int2string(iobs,'(i0.4)')) // "_"  // trim(int2string(ilam,'(i0.4)')) // ".dat",FORM="FORMATTED")
+c			open(unit=20,file=trim(outputdir) // "lightcurve" // trim(int2string(iobs,'(i0.4)')) // "_"  // trim(int2string(ilam,'(i0.4)')) // ".dat",FORM="FORMATTED",ACCESS="STREAM")
 c			do j=1,ObsSpec(iobs)%nt
 c				im=(j-1)*ObsSpec(iobs)%nlam+ilam
 c				write(20,*) ObsSpec(iobs)%t(j),ObsSpec(iobs)%model(im),ObsSpec(iobs)%y(im),LC(0,j,ilam),LC(1,j,ilam),LC(2,j,ilam),LC(3,j,ilam),LC(4,j,ilam)
@@ -528,7 +528,7 @@ c	enddo
 		cLD(4,ilam)=-1d-2*lam(1)/lam(ilam)
 	enddo
 	
-	open(unit=20,file=trim(outputdir) // "lightcurve.dat",FORM="FORMATTED")
+	open(unit=20,file=trim(outputdir) // "lightcurve.dat",FORM="FORMATTED",ACCESS="STREAM")
 	do j=1,nLightCurve
 		write(20,*) timeLightCurve(j),(sum(cLD(0:4,ilam)*LC(0:4,j,ilam))/sum(cLD(0:4,ilam)*Ftot0(0:4)),ilam=1,nlam-1)
 	enddo

@@ -48,7 +48,7 @@
 					call output("File does not exist" // trim(ObsSpec(i)%file))
 					stop
 				endif
-				open(unit=20,file=ObsSpec(i)%file,FORM="FORMATTED")
+				open(unit=20,file=ObsSpec(i)%file,FORM="FORMATTED",ACCESS="STREAM")
 10				read(20,*,err=10) ObsSpec(i)%nt
 				allocate(ObsSpec(i)%t(ObsSpec(i)%nt))
 				allocate(ObsSpec(i)%dt(ObsSpec(i)%nt))
@@ -121,7 +121,7 @@
 					call output("File does not exist" // trim(ObsSpec(i)%file))
 					stop
 				endif
-				open(unit=20,file=ObsSpec(i)%file,FORM="FORMATTED")
+				open(unit=20,file=ObsSpec(i)%file,FORM="FORMATTED",ACCESS="STREAM")
 				j=1
 				ilam=1
 1				read(20,*,end=2,err=1) x,y,dy
@@ -316,7 +316,7 @@ c		if(var0(i).lt.-25d0) var0(i)=-25d0
 c	enddo
 
 	
-	if(writeWolk) open(unit=31,file=trim(outputdir) // "Wolk.dat",FORM="FORMATTED")
+	if(writeWolk) open(unit=31,file=trim(outputdir) // "Wolk.dat",FORM="FORMATTED",ACCESS="STREAM")
 
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
 		call doMCMCF90(var0,n_ret)
@@ -340,7 +340,7 @@ c	enddo
 	allocate(dvarq(n_ret))
 
 	allocate(chi2_boot(nboot))
-	open(unit=90,file='chi2boot',FORM="FORMATTED")
+	open(unit=90,file='chi2boot',FORM="FORMATTED",ACCESS="STREAM")
 	do iboot=1,nboot
 	imodel=0
 	bestlike=-1d200
@@ -783,12 +783,12 @@ c	linear
 		do i=1,nobs
 			select case(ObsSpec(i)%type)
 				case("trans","transmission","emisr","emisR","emisa","emis","emission","transC","phase","phaser","phaseR","transM","transE")
-					open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED")
+					open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
 					do j=1,ObsSpec(i)%ndata
 						write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j)/ObsSpec(i)%scale,ObsSpec(i)%scale*ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
 					enddo
 					close(unit=20)
-					open(unit=20,file=trim(outputdir) // "fullobs" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED")
+					open(unit=20,file=trim(outputdir) // "fullobs" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
 					do j=1,nlam
 						write(20,*) lam(j)*1d4,specsave(i,j)/ObsSpec(i)%scale
 					enddo
@@ -797,7 +797,7 @@ c	linear
 					im=0
 					do ilam=1,ObsSpec(i)%nlam
 						open(unit=20,file=trim(outputdir) // "lightcurve" // trim(int2string(i,'(i0.4)')) // "_"  
-     &								// trim(int2string(ilam,'(i0.4)')) // ".dat",FORM="FORMATTED")
+     &								// trim(int2string(ilam,'(i0.4)')) // ".dat",FORM="FORMATTED",ACCESS="STREAM")
 						do j=1,ObsSpec(i)%nt
 							im=(j-1)*ObsSpec(i)%nlam+ilam
 							write(20,*) ObsSpec(i)%t(j),ObsSpec(i)%model(im),ObsSpec(i)%y(im)
@@ -887,7 +887,7 @@ c	linear
 
 	nk=n_ret*2500
 	if(ioflag) then
-		open(unit=35,file=trim(outputdir) // "error_cloud.dat",FORM="FORMATTED")
+		open(unit=35,file=trim(outputdir) // "error_cloud.dat",FORM="FORMATTED",ACCESS="STREAM")
 		form='("#"' // trim(int2string(n_ret+2,'(i4)')) // 'a19)'
 		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
      &	,(trim(int2string(n_ret+1,'(i4)')) // " COratio"),(trim(int2string(n_ret+2,'(i4)')) // " metallicity")
@@ -1008,7 +1008,7 @@ c	linear
 	if(ioflag) then
 		close(unit=35)
 
-		open(unit=45,file=trim(outputdir) // "limits.dat",FORM="FORMATTED")
+		open(unit=45,file=trim(outputdir) // "limits.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do i=1,nr
 			write(45,*) P(i),Tbest(i),minT(i),maxT(i)
 		enddo
@@ -1019,19 +1019,19 @@ c	linear
 			emiserr=sqrt(emiserr/real(iemis-1))
 			emisRerr=sqrt(emisRerr/real(iemisR-1))
 
-			open(unit=45,file=trim(outputdir) // "emis_limits.dat",FORM="FORMATTED")
+			open(unit=45,file=trim(outputdir) // "emis_limits.dat",FORM="FORMATTED",ACCESS="STREAM")
 			do i=1,nlam
 				write(45,*) lam(i)*1d4,emis0(i),emiserr(1,i),emiserr(2,i)
 			enddo
 			close(unit=45)
 
-			open(unit=45,file=trim(outputdir) // "emisR_limits.dat",FORM="FORMATTED")
+			open(unit=45,file=trim(outputdir) // "emisR_limits.dat",FORM="FORMATTED",ACCESS="STREAM")
 			do i=1,nlam
 				write(45,*) lam(i)*1d4,emisR0(i),emisRerr(1,i),emisRerr(2,i)
 			enddo
 			close(unit=45)
 
-			open(unit=45,file=trim(outputdir) // "trans_limits.dat",FORM="FORMATTED")
+			open(unit=45,file=trim(outputdir) // "trans_limits.dat",FORM="FORMATTED",ACCESS="STREAM")
 			do i=1,nlam
 				write(45,*) lam(i)*1d4,obsA0(i),obsAerr(1,i),obsAerr(2,i)
 			enddo
@@ -1103,7 +1103,7 @@ c	linear
 
 	nk=n_ret*2500
 	if(ioflag) then
-		open(unit=35,file=trim(outputdir) // "error_cloud.dat",FORM="FORMATTED")
+		open(unit=35,file=trim(outputdir) // "error_cloud.dat",FORM="FORMATTED",ACCESS="STREAM")
 		form='("#"' // trim(int2string(n_ret+2,'(i4)')) // 'a19)'
 		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
      &	,(trim(int2string(n_ret+1,'(i4)')) // " COratio"),(trim(int2string(n_ret+2,'(i4)')) // " metallicity")
@@ -1231,7 +1231,7 @@ c			vec(i)=gasdev(idum)
 	if(ioflag) then
 		close(unit=35)
 
-		open(unit=45,file=trim(outputdir) // "limits.dat",FORM="FORMATTED")
+		open(unit=45,file=trim(outputdir) // "limits.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do i=1,nr
 			write(45,*) P(i),Tbest(i),minT(i),maxT(i)
 		enddo
@@ -1242,19 +1242,19 @@ c			vec(i)=gasdev(idum)
 			emiserr=sqrt(emiserr/real(iemis-1))
 			emisRerr=sqrt(emisRerr/real(iemisR-1))
 
-			open(unit=45,file=trim(outputdir) // "emis_limits.dat",FORM="FORMATTED")
+			open(unit=45,file=trim(outputdir) // "emis_limits.dat",FORM="FORMATTED",ACCESS="STREAM")
 			do i=1,nlam
 				write(45,*) lam(i)*1d4,emis0(i),emiserr(1,i),emiserr(2,i)
 			enddo
 			close(unit=45)
 
-			open(unit=45,file=trim(outputdir) // "emisR_limits.dat",FORM="FORMATTED")
+			open(unit=45,file=trim(outputdir) // "emisR_limits.dat",FORM="FORMATTED",ACCESS="STREAM")
 			do i=1,nlam
 				write(45,*) lam(i)*1d4,emisR0(i),emisRerr(1,i),emisRerr(2,i)
 			enddo
 			close(unit=45)
 
-			open(unit=45,file=trim(outputdir) // "trans_limits.dat",FORM="FORMATTED")
+			open(unit=45,file=trim(outputdir) // "trans_limits.dat",FORM="FORMATTED",ACCESS="STREAM")
 			do i=1,nlam
 				write(45,*) lam(i)*1d4,obsA0(i),obsAerr(1,i),obsAerr(2,i)
 			enddo
@@ -1293,7 +1293,7 @@ c			vec(i)=gasdev(idum)
 	
 	ioflag=.true.
 	
-	open(unit=40,file=trim(outputdir)//".txt",FORM="FORMATTED")
+	open(unit=40,file=trim(outputdir)//".txt",FORM="FORMATTED",ACCESS="STREAM")
 	wmax=-1d200
 3	read(40,*,end=4) w,dummy,var(1:n_ret)
 	if(w.gt.wmax) then
@@ -1321,14 +1321,14 @@ c			vec(i)=gasdev(idum)
 	iCO=0
 
 	if(ioflag) then
-		open(unit=35,file=trim(outputdir) // "error_cloud.dat",FORM="FORMATTED")
+		open(unit=35,file=trim(outputdir) // "error_cloud.dat",FORM="FORMATTED",ACCESS="STREAM")
 		form='("#"' // trim(int2string(n_ret+2,'(i4)')) // 'a19)'
 		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
      &	,(trim(int2string(n_ret+1,'(i4)')) // " COratio"),(trim(int2string(n_ret+2,'(i4)')) // " metallicity")
 		form='(' // int2string(n_ret+3,'(i4)') // 'es19.7)'
 	endif
 
-	open(unit=40,file=trim(outputdir)//".txt",FORM="FORMATTED")
+	open(unit=40,file=trim(outputdir)//".txt",FORM="FORMATTED",ACCESS="STREAM")
 1	continue
 		read(40,*,end=2) w,dummy,var(1:n_ret)
 		call MapRetrievalMN(var,errdummy)
@@ -1387,7 +1387,7 @@ c			vec(i)=gasdev(idum)
 	if(ioflag) then
 		close(unit=35)
 
-		open(unit=45,file=trim(outputdir) // "limits" // trim(side) //".dat",FORM="FORMATTED")
+		open(unit=45,file=trim(outputdir) // "limits" // trim(side) //".dat",FORM="FORMATTED",ACCESS="STREAM")
 		do i=1,nr
 			write(45,*) P(i),Tbest(i),minT(i),maxT(i)
 		enddo
@@ -1437,7 +1437,7 @@ c			vec(i)=gasdev(idum)
 
 	nk=n_ret*1000
 	if(ioflag) then
-		open(unit=35,file=trim(outputdir) // "error_cloud.dat",FORM="FORMATTED")
+		open(unit=35,file=trim(outputdir) // "error_cloud.dat",FORM="FORMATTED",ACCESS="STREAM")
 		form='("#"' // trim(int2string(n_ret,'(i4)')) // 'a19)'
 		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
 		form='(' // int2string(n_ret,'(i4)') // 'es19.7)'
@@ -1556,26 +1556,26 @@ c			vec(i)=gasdev(idum)
 	if(ioflag) then
 		close(unit=35)
 
-		open(unit=45,file=trim(outputdir) // "limits.dat",FORM="FORMATTED")
+		open(unit=45,file=trim(outputdir) // "limits.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do i=1,nr
 			write(45,*) P(i),Tbest(i),minT(i),maxT(i)
 		enddo
 		close(unit=45)
 
 		if(speclimits) then
-			open(unit=45,file=trim(outputdir) // "emis_limits.dat",FORM="FORMATTED")
+			open(unit=45,file=trim(outputdir) // "emis_limits.dat",FORM="FORMATTED",ACCESS="STREAM")
 			do i=1,nlam
 				write(45,*) lam(i)*1d4,emismin(i),emismax(i)
 			enddo
 			close(unit=45)
 
-			open(unit=45,file=trim(outputdir) // "emisR_limits.dat",FORM="FORMATTED")
+			open(unit=45,file=trim(outputdir) // "emisR_limits.dat",FORM="FORMATTED",ACCESS="STREAM")
 			do i=1,nlam
 				write(45,*) lam(i)*1d4,emisRmin(i),emisRmax(i)
 			enddo
 			close(unit=45)
 
-			open(unit=45,file=trim(outputdir) // "trans_limits.dat",FORM="FORMATTED")
+			open(unit=45,file=trim(outputdir) // "trans_limits.dat",FORM="FORMATTED",ACCESS="STREAM")
 			do i=1,nlam
 				write(45,*) lam(i)*1d4,obsAmin(i),obsAmax(i)
 			enddo
@@ -2076,7 +2076,7 @@ c	linear
 
 	call MapRetrieval(var,error)
 
-98	open(unit=20,file=trim(outputdir) // "retrieval",FORM="FORMATTED",ERR=99)
+98	open(unit=20,file=trim(outputdir) // "retrieval",FORM="FORMATTED",ACCESS="STREAM",ERR=99)
 	goto 100
 99	write(command,'("mkdir -p ",a)') trim(outputdir)
 	call system(command)
@@ -2121,7 +2121,7 @@ c	linear/squared
 c	do i=1,nobs
 c		select case(ObsSpec(i)%type)
 c			case("trans","transmission","emisr","emisR","emisa","emis","emission","transC")
-c				open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED")
+c				open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
 c				do j=1,ObsSpec(i)%ndata
 c					write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j),ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
 c				enddo

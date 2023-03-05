@@ -14,7 +14,7 @@
 	integer i1,i2,ibest
 	
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
-	open(unit=35,file=trim(outputdir) // "/posterior.dat",FORM="FORMATTED")
+	open(unit=35,file=trim(outputdir) // "/posterior.dat",FORM="FORMATTED",ACCESS="STREAM")
 	i=1
 11	read(35,*,end=12) error(1:n_ret),j
 	i=i+j
@@ -22,7 +22,7 @@
 12	close(unit=35)
 	nmodels=i-1
 	else
-	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",FORM="FORMATTED")
+	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",FORM="FORMATTED",ACCESS="STREAM")
 	i=1
 1	read(35,*,end=2) error(1:n_ret)
 	i=i+1
@@ -68,7 +68,7 @@
 	cmax=0d0
 
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
-		open(unit=35,file=trim(outputdir) // "/posterior.dat",FORM="FORMATTED")
+		open(unit=35,file=trim(outputdir) // "/posterior.dat",FORM="FORMATTED",ACCESS="STREAM")
 		i=1
 		do while(i.lt.nmodels)
 			read(35,*) var(i,1:n_ret),k
@@ -81,7 +81,7 @@
 			like(i:i+k-1)=1d0
 		enddo
 	else
-		open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",FORM="FORMATTED")
+		open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do i=1,nmodels
 			read(35,*) var(i,1:n_ret),like(i)
 		enddo
@@ -333,9 +333,9 @@
 		if(ip2.gt.i) ip2=i
 		if(ip3.gt.i) ip3=i
 		if(ime.gt.i) ime=i
-		open(unit=26,file=trim(outputdir) // "trans_limits",FORM="FORMATTED")
-		open(unit=27,file=trim(outputdir) // "emis_limits",FORM="FORMATTED")
-		open(unit=28,file=trim(outputdir) // "emisR_limits",FORM="FORMATTED")
+		open(unit=26,file=trim(outputdir) // "trans_limits",FORM="FORMATTED",ACCESS="STREAM")
+		open(unit=27,file=trim(outputdir) // "emis_limits",FORM="FORMATTED",ACCESS="STREAM")
+		open(unit=28,file=trim(outputdir) // "emisR_limits",FORM="FORMATTED",ACCESS="STREAM")
 		do ilam=1,nlam
 		if(computelam(ilam)) then
 			sorted(1:i)=spectrans(1:i,ilam)
@@ -353,21 +353,21 @@
 		close(unit=27)
 		close(unit=28)		
 
-		open(unit=26,file=trim(outputdir) // "PT_limits",FORM="FORMATTED")
+		open(unit=26,file=trim(outputdir) // "PT_limits",FORM="FORMATTED",ACCESS="STREAM")
 		do ir=1,nr
 			sorted(1:i)=PTstruct(1:i,ir)
 			call sort(sorted,i)
 			write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 		enddo
 		close(unit=26)
-		open(unit=26,file=trim(outputdir) // "dPT_limits",FORM="FORMATTED")
+		open(unit=26,file=trim(outputdir) // "dPT_limits",FORM="FORMATTED",ACCESS="STREAM")
 		do ir=1,nr
 			sorted(1:i)=dPTstruct(1:i,ir)
 			call sort(sorted,i)
 			write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 		enddo
 		close(unit=26)
-		open(unit=26,file=trim(outputdir) // "Kzz_limits",FORM="FORMATTED")
+		open(unit=26,file=trim(outputdir) // "Kzz_limits",FORM="FORMATTED",ACCESS="STREAM")
 		do ir=1,nr
 			sorted(1:i)=Kzz_struct(1:i,ir)
 			call sort(sorted,i)
@@ -378,7 +378,7 @@
 		if(dochemistry) then
 		do imol=1,nmol
 			if(includemol(imol)) then
-				open(unit=26,file=trim(outputdir) // trim(molname(imol)) // "_limits",FORM="FORMATTED")
+				open(unit=26,file=trim(outputdir) // trim(molname(imol)) // "_limits",FORM="FORMATTED",ACCESS="STREAM")
 				do ir=1,nr
 					sorted(1:i)=mol_struct(1:i,ir,imol)
 					call sort(sorted,i)
@@ -389,7 +389,7 @@
 		enddo
 		endif
 
-		open(unit=26,file=trim(outputdir) // "cloud_limits",FORM="FORMATTED")
+		open(unit=26,file=trim(outputdir) // "cloud_limits",FORM="FORMATTED",ACCESS="STREAM")
 		do ir=1,nr
 			sorted(1:i)=cloudstruct(1:i,ir)
 			call sort(sorted,i)
@@ -398,7 +398,7 @@
 		close(unit=26)
 
 		if(do3D.and.fulloutput3D) then
-			open(unit=26,file=trim(outputdir) // "beta3D_eq_limits",FORM="FORMATTED")
+			open(unit=26,file=trim(outputdir) // "beta3D_eq_limits",FORM="FORMATTED",ACCESS="STREAM")
 			do ir=1,nlong-1
 				sorted(1:i)=var3D(1:i,ir,0)
 				call sort(sorted,i)
@@ -407,7 +407,7 @@
 			enddo
 			close(unit=26)
 			do j=1,n_Par3D
-				open(unit=26,file=trim(outputdir) // trim(Par3D(j)%keyword) // "_eq_limits",FORM="FORMATTED")
+				open(unit=26,file=trim(outputdir) // trim(Par3D(j)%keyword) // "_eq_limits",FORM="FORMATTED",ACCESS="STREAM")
 				do ir=1,nlong-1
 					sorted(1:i)=var3D(1:i,ir,j)
 					call sort(sorted,i)
@@ -416,14 +416,14 @@
 				enddo
 				close(unit=26)
 			enddo
-			open(unit=26,file=trim(outputdir) // "PT_trans_limits",FORM="FORMATTED")
+			open(unit=26,file=trim(outputdir) // "PT_trans_limits",FORM="FORMATTED",ACCESS="STREAM")
 			do ir=1,nr
 				sorted(1:i)=PTstruct3D(1:i,0,ir)
 				call sort(sorted,i)
 				write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 			enddo
 			close(unit=26)
-			open(unit=26,file=trim(outputdir) // "dPT_trans_limits",FORM="FORMATTED")
+			open(unit=26,file=trim(outputdir) // "dPT_trans_limits",FORM="FORMATTED",ACCESS="STREAM")
 			do ir=1,nr
 				sorted(1:i)=dPTstruct3D(1:i,0,ir)
 				call sort(sorted,i)
@@ -432,7 +432,7 @@
 			close(unit=26)
 			do imol=1,nmol
 				if(includemol(imol)) then
-					open(unit=26,file=trim(outputdir) // trim(molname(imol)) // "_trans_limits",FORM="FORMATTED")
+					open(unit=26,file=trim(outputdir) // trim(molname(imol)) // "_trans_limits",FORM="FORMATTED",ACCESS="STREAM")
 					do ir=1,nr
 						sorted(1:i)=mixrat3D(1:i,0,ir,imol)
 						call sort(sorted,i)
@@ -442,14 +442,14 @@
 				endif
 			enddo
 			do iphase=1,nphase
-				open(unit=26,file=trim(outputdir) // "PT" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",FORM="FORMATTED")
+				open(unit=26,file=trim(outputdir) // "PT" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",FORM="FORMATTED",ACCESS="STREAM")
 				do ir=1,nr
 					sorted(1:i)=PTstruct3D(1:i,iphase,ir)
 					call sort(sorted,i)
 					write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 				enddo
 				close(unit=26)
-				open(unit=26,file=trim(outputdir) // "dPT" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",FORM="FORMATTED")
+				open(unit=26,file=trim(outputdir) // "dPT" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",FORM="FORMATTED",ACCESS="STREAM")
 				do ir=1,nr
 					sorted(1:i)=dPTstruct3D(1:i,iphase,ir)
 					call sort(sorted,i)
@@ -459,7 +459,7 @@
 				do imol=1,nmol
 					if(includemol(imol)) then
 						open(unit=26,file=trim(outputdir) // trim(molname(imol)) // "_" // 
-     &						trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",FORM="FORMATTED")
+     &						trim(int2string(int(theta_phase(iphase)),'(i0.3)')) // "_limits",FORM="FORMATTED",ACCESS="STREAM")
 						do ir=1,nr
 							sorted(1:i)=mixrat3D(1:i,iphase,ir,imol)
 							call sort(sorted,i)
@@ -469,9 +469,9 @@
 					endif
 				enddo
 				open(unit=26,file=trim(outputdir) // "phase" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) 
-     &			// "_limits",FORM="FORMATTED")
+     &			// "_limits",FORM="FORMATTED",ACCESS="STREAM")
 				open(unit=27,file=trim(outputdir) // "phaseR" // trim(int2string(int(theta_phase(iphase)),'(i0.3)')) 
-     &			// "_limits",FORM="FORMATTED")
+     &			// "_limits",FORM="FORMATTED",ACCESS="STREAM")
 				do ilam=1,nlam
 				if(computelam(ilam)) then
 					sorted(1:i)=phase3D(1:i,iphase,ilam)
@@ -487,7 +487,7 @@
 			enddo
 		endif
 
-		open(unit=26,file=trim(outputdir) // "retrieval",FORM="FORMATTED")
+		open(unit=26,file=trim(outputdir) // "retrieval",FORM="FORMATTED",ACCESS="STREAM")
 		do j=1,n_ret
 			sorted(1:i)=values(1:i,j)
 			call sort(sorted,i)
@@ -512,9 +512,9 @@
 
 		close(unit=26)
 
-		open(unit=26,file=trim(outputdir) // "trans_sigma",FORM="FORMATTED")
-		open(unit=27,file=trim(outputdir) // "emis_sigma",FORM="FORMATTED")
-		open(unit=28,file=trim(outputdir) // "emisR_sigma",FORM="FORMATTED")
+		open(unit=26,file=trim(outputdir) // "trans_sigma",FORM="FORMATTED",ACCESS="STREAM")
+		open(unit=27,file=trim(outputdir) // "emis_sigma",FORM="FORMATTED",ACCESS="STREAM")
+		open(unit=28,file=trim(outputdir) // "emisR_sigma",FORM="FORMATTED",ACCESS="STREAM")
 		do ilam=1,nlam
 		if(computelam(ilam)) then
 			sorted(1:i)=spectrans(1:i,ilam)

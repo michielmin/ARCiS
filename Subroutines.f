@@ -251,7 +251,7 @@ c-----------------------------------------------------------------------
 200		format('File "',a,'" does not exist')
 		stop
 	endif
-	open(unit=20,file=input,FORM="FORMATTED")
+	open(unit=20,file=input,FORM="FORMATTED",ACCESS="STREAM")
 	i=1
 1	read(20,*,end=102,err=1) x0,y0
 103	if(x0.ge.grid(i)) then
@@ -308,7 +308,7 @@ c-----------------------------------------------------------------------
 	y0=1d-60
 	y1=1d-60
 	y=1d-60
-	open(unit=20,file=input,FORM="FORMATTED")
+	open(unit=20,file=input,FORM="FORMATTED",ACCESS="STREAM")
 	do j=1,nskip
 		read(20,*)
 	enddo
@@ -383,7 +383,7 @@ c-----------------------------------------------------------------------
 200		format('File "',a,'" does not exist')
 		stop
 	endif
-	open(unit=20,file=input,FORM="FORMATTED")
+	open(unit=20,file=input,FORM="FORMATTED",ACCESS="STREAM")
 	i=1
 1	read(20,*,end=102,err=1) x0,y0
 103	if(x0.ge.grid(i)) then
@@ -440,7 +440,7 @@ c-----------------------------------------------------------------------
 200		format('File "',a,'" does not exist')
 		stop
 	endif
-	open(unit=20,file=input,FORM="FORMATTED")
+	open(unit=20,file=input,FORM="FORMATTED",ACCESS="STREAM")
 	j=1
 1	read(20,*,end=2,err=1) x0,y0
 	j=j+1
@@ -452,7 +452,7 @@ c-----------------------------------------------------------------------
 	allocate(dls(nls))
 	allocate(Fs(nls))
 
-	open(unit=20,file=input,FORM="FORMATTED")
+	open(unit=20,file=input,FORM="FORMATTED",ACCESS="STREAM")
 	do i=1,nls
 3		read(20,*,end=4,err=3) ls(i),Fs(i)
 	enddo
@@ -520,7 +520,7 @@ c-----------------------------------------------------------------------
 200		format('File "',a,'" does not exist')
 		stop
 	endif
-	open(unit=20,file=input,FORM="FORMATTED")
+	open(unit=20,file=input,FORM="FORMATTED",ACCESS="STREAM")
 	i=1
 1	read(20,*,end=102,err=1) x0,y0
 103	if(x0.ge.grid(i)) then
@@ -950,7 +950,7 @@ c        print*,'series failed in expint'
 
 	cdepth=256
 
-	open(unit=35,file=filename,FORM="FORMATTED")
+	open(unit=35,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	write(35,'("P3")')
 	write(35,'("# ",a)') trim(filename)
 	write(35,'(i5,i5)') n,n
