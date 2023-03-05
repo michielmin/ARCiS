@@ -27,6 +27,7 @@
 	integer i,j,ir,k,nl,ig,ig_c,imol0,jg
 	integer,allocatable :: inu1(:),inu2(:)
 	character*500 filename
+	logical,save :: first_entry=.true.
 
 	allocate(cont_tot(nlam))
 	allocate(kaver(nlam))
@@ -68,20 +69,23 @@ c	n_nu_line=ng*min(j,4)
 		nu_line(i)=1d0-real(i-1)/real(n_nu_line-1)
 	enddo
 
+	if(first_entry) then
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(n_nu_line,ng,nmol)
-	if(.not.allocated(k_line)) allocate(k_line(n_nu_line))
-	if(.not.allocated(ktemp)) allocate(ktemp(ng))
-	if(.not.allocated(kappa)) allocate(kappa(ng))
-	if(.not.allocated(w_line)) allocate(w_line(n_nu_line))
-	if(.not.allocated(ifull)) allocate(ifull(nmol))
-	if(.not.allocated(ifast)) allocate(ifast(nmol))
-	if(.not.allocated(kappa_tot)) allocate(kappa_tot(0:nmol))
-	if(.not.allocated(work1)) allocate(work1(n_nu_line))
-	if(.not.allocated(work2)) allocate(work2(n_nu_line))
-	if(.not.allocated(work3)) allocate(work3(n_nu_line))
+		allocate(k_line(n_nu_line))
+		allocate(ktemp(ng))
+		allocate(kappa(ng))
+		allocate(w_line(n_nu_line))
+		allocate(ifull(nmol))
+		allocate(ifast(nmol))
+		allocate(kappa_tot(0:nmol))
+		allocate(work1(n_nu_line))
+		allocate(work2(n_nu_line))
+		allocate(work3(n_nu_line))
 !$OMP END PARALLEL
+		first_entry=.false.
+	endif
 
 	do ir=nr,1,-1
 		call tellertje(nr-ir+1,nr)
@@ -454,14 +458,10 @@ c Venot et al. 2018
 		
 	subroutine regridKtable(k0,w0,n0,g1,k1,w1,n1, g0,b0,gg1)
 	IMPLICIT NONE
-c	integer,intent(in) :: n0,n1
-c	real*8,intent(in) :: g1(n1),w1(n1)
-c	real*8,intent(out) :: k1(n1),g0(n0),b0(n0+1),gg1(n1)
-c	real*8,intent(inout) :: k0(n0),w0(n0)
-	integer n0,n1
-	real*8 g1(n1),w1(n1)
-	real*8 k1(n1),g0(n0),b0(n0+1),gg1(n1)
-	real*8 k0(n0),w0(n0)
+	integer,intent(in) :: n0,n1
+	real*8,intent(in) :: g1(n1),w1(n1)
+	real*8,intent(out) :: k1(n1),g0(n0),b0(n0+1),gg1(n1)
+	real*8,intent(inout) :: k0(n0),w0(n0)
 	integer ig,j,j1,j2
 	real*8 tot0,tot1,ww,bg0,bg1
 	
