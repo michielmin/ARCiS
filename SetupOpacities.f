@@ -367,7 +367,6 @@ c					Cs=Cs+12.4*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 	integer ig,ilam,iT,iP,imol,i,j,ir,ngF,i1,i2
 	real*8 kappa_mol(ng,nlam,nmol),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random,w1,ww
 	real*8,allocatable :: temp(:),wtemp(:)
-	real*8,dimension(:,:),pointer :: tab1,tab2,tab3,tab4
 	type(databaseKtable),pointer :: Ktab
 
 	Ktab => Ktable(imol)
@@ -410,14 +409,12 @@ c		enddo
 		wT2=1d0-wT1
 	endif
  
- 	tab1 => Ktab%ktable(1:ng,1:nlam,iT,iP)
- 	tab2 => Ktab%ktable(1:ng,1:nlam,iT+1,iP)
- 	tab3 => Ktab%ktable(1:ng,1:nlam,iT,iP+1)
- 	tab4 => Ktab%ktable(1:ng,1:nlam,iT+1,iP+1)
- 
 	do ilam=1,nlam
 		if(computelam(ilam)) then
-			kappa_mol(1:ng,ilam,imol)=tab1(1:ng,ilam)*wT1*wP1+tab2(1:ng,ilam)*wT2*wP1+tab3(1:ng,ilam)*wT1*wP2+tab4(1:ng,ilam)*wT2*wP2
+			kappa_mol(1:ng,ilam,imol)=Ktab%ktable(1:ng,ilam,iT,iP)*wT1*wP1+
+     &			Ktab%ktable(1:ng,ilam,iT+1,iP)*wT2*wP1+
+     &			Ktab%ktable(1:ng,ilam,iT,iP+1)*wT1*wP2+
+     &			Ktab%ktable(1:ng,ilam,iT+1,iP+1)*wT2*wP2
 		endif
 	enddo
 
