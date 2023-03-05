@@ -785,14 +785,14 @@ c-----------------------------------------------------------------------
       INTEGER i,ii,nm1
       REAL*8 a,b,c,d,del,fact,h,psi
       nm1=n-1
-      if(n.lt.0.or.x.lt.0..or.(x.eq.0..and.(n.eq.0.or.n.eq.1)))then
+      if(n.lt.0.or.x.lt.0..or.(x.eq.0d0.and.(n.eq.0.or.n.eq.1)))then
         print*,'bad arguments in expint'
-        expint=1./nm1
+        expint=1./real(nm1)
       else if(n.eq.0)then
         expint=exp(-x)/x
-      else if(x.eq.0.)then
-        expint=1./nm1
-      else if(x.gt.1.)then
+      else if(x.eq.0d0)then
+        expint=1./real(nm1)
+      else if(x.gt.1d0)then
         b=x+n
         c=1./FPMIN
         d=1./b

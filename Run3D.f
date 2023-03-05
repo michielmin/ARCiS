@@ -43,7 +43,7 @@ c	recomputeopac=.true.
 	do i=1,nclouds
 		if(Cloud(i)%coverage.gt.0.5) docloud0(i)=.true.
 		if(Cloud(i)%coverage.ne.1d0) then
-			call outputform("WARNING! Cloud coverage fraction does not work in 3D structures!")
+			call output("WARNING! Cloud coverage fraction does not work in 3D structures!")
 		endif
 	enddo
 
@@ -495,6 +495,7 @@ c Note we are here using the symmetry between North and South
 			j=0
 			tau0=0d0
 			SiR0=0d0
+			if(computealbedo) SiRalb0=0d0
 1			continue
 			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nr,nlong,nlatt)
 			if(i1.le.nr) then

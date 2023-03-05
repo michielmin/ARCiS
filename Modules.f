@@ -33,11 +33,113 @@ c	parameter(Rjup=7.1492d9)
 	end module Constants
 
 
+	module dbl2str_mod
+	implicit none
+	private
+	public :: dbl2string
+
+	interface dbl2string
+		procedure dbl2string_real, dbl2string_dbl, dbl2string_qdr, dbl2string_int
+	end interface dbl2string
+	contains
+	function dbl2string_real(x,form) result(res)
+		real x
+		character(len=20) res
+		character,intent(in),optional :: form*(*)
+
+		if(present(form)) then
+			write(res,trim(form)) x
+		else
+			write(res,*) x
+		endif
+	end function dbl2string_real
+
+	function dbl2string_dbl(x,form) result(res)
+		real*8 x
+		character(len=20) res
+		character,intent(in),optional :: form*(*)
+
+		if(present(form)) then
+			write(res,trim(form)) x
+		else
+			write(res,*) x
+		endif
+	end function dbl2string_dbl
+
+	function dbl2string_qdr(x,form) result(res)
+		real*16 x
+		character(len=20) res
+		character,intent(in),optional :: form*(*)
+
+		if(present(form)) then
+			write(res,trim(form)) x
+		else
+			write(res,*) x
+		endif
+	end function dbl2string_qdr
+
+	function dbl2string_int(x,form) result(res)
+		integer x
+		character(len=20) res
+		character,intent(in),optional :: form*(*)
+
+		return
+	end function dbl2string_int
+
+	end module dbl2str_mod
+
+
+	module int2str_mod
+	implicit none
+	private
+	public :: int2string
+
+	interface int2string
+		procedure int2string_real, int2string_dbl, int2string_qdr, int2string_int
+	end interface int2string
+	contains
+	function int2string_real(x,form) result(res)
+		real x
+		character(len=20) res
+		character,intent(in),optional :: form*(*)
+		return
+	end function int2string_real
+
+	function int2string_dbl(x,form) result(res)
+		real*8 x
+		character(len=20) res
+		character,intent(in),optional :: form*(*)
+		return
+	end function int2string_dbl
+
+	function int2string_qdr(x,form) result(res)
+		real*16 x
+		character(len=20) res
+		character,intent(in),optional :: form*(*)
+		return
+	end function int2string_qdr
+
+	function int2string_int(x,form) result(res)
+		integer x
+		character(len=20) res
+		character,intent(in),optional :: form*(*)
+
+		if(present(form)) then
+			write(res,trim(form)) x
+		else
+			write(res,*) x
+		endif
+	end function int2string_int
+
+	end module int2str_mod
+
 
 c========================================================
 c Interfaces for input/output subroutines
 c========================================================
 	module OutputModule
+	use dbl2str_mod
+	use int2str_mod
 	IMPLICIT NONE
 
 	interface
@@ -45,22 +147,6 @@ c========================================================
 			character :: string*(*)
 			character,intent(in),optional :: form*(*)
 		end subroutine outputform
-	end interface
-
-	interface
-		function int2string(i,form)
-			character*20 :: int2string
-			integer :: i
-			character,intent(in),optional :: form*(*)
-		end function int2string
-	end interface
-
-	interface
-		function dbl2string(x,form)
-			character*20 :: dbl2string
-			real*8 :: x
-			character,intent(in),optional :: form*(*)
-		end function dbl2string
 	end interface
 
 

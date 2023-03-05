@@ -464,29 +464,29 @@ c	endif
 
 	open(unit=50,file=trim(outputdir) // 'mixingratios' // trim(side) // '.dat',RECL=6000)
 	form='("#",a9,a13,' // trim(int2string(nmix,'(i2)')) // 'a15)'
-	write(50,form) "T [K]","P [bar]",namemix(1:nmix)
+	write(50,trim(form)) "T [K]","P [bar]",namemix(1:nmix)
 	form='(f10.3,es13.3E3,' // trim(int2string(nmix,'(i2)')) // 'es15.4E3)'
 	do i=1,nr
-		write(50,form) T(i),P(i),mix(i,1:nmix)
+		write(50,trim(form)) T(i),P(i),mix(i,1:nmix)
 	enddo
 	close(unit=50)
 
 	open(unit=50,file=trim(outputdir) // 'Kzz' // trim(side) // '.dat',RECL=6000)
 	form='("#",a12,a13)'
-	write(50,form) "Kzz [cm^2/s]","P [bar]"
+	write(50,trim(form)) "Kzz [cm^2/s]","P [bar]"
 	form='(es13.3E3,es13.3E3)'
 	do i=1,nr
-		write(50,form) ComputeKzz(P(i),T(i),dens(i),complexKzz),P(i)
+		write(50,trim(form)) ComputeKzz(P(i),T(i),dens(i),complexKzz),P(i)
 	enddo
 	close(unit=50)
 
 	do ii=1,nclouds
 		open(unit=50,file=trim(outputdir) // 'clouddens' // trim(int2string(ii,'(i0.2)')) // trim(side) // '.dat',RECL=6000)
 		form='("#",a12,a15,a15,a15)'
-		write(50,form) "P [bar]","dens [g/cm^3]","Eq. dens","gas dens"
+		write(50,trim(form)) "P [bar]","dens [g/cm^3]","Eq. dens","gas dens"
 		form='(es13.3,es15.3E3,es15.3E3,es15.3E3)'
 		do i=1,nr
-			write(50,form) P(i),cloud_dens(i,ii),dens(i)*XeqCloud(i,ii),dens(i)
+			write(50,trim(form)) P(i),cloud_dens(i,ii),dens(i)*XeqCloud(i,ii),dens(i)
 		enddo
 		close(unit=50)
 	enddo

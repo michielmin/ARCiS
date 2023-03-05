@@ -152,7 +152,7 @@ c			call SetoutputMode(.false.)
 				if(computelam(i).and.lamemis(i)) Lplanet=Lplanet+dfreq(i)*flux(0,i)
 			enddo
 			call output("Teff: " // 
-     &	dbl2string((Lplanet*distance**2*1e-23/(pi*Rplanet**2*((2d0*(pi*kb)**4)/(15d0*hplanck**3*clight**3))))**0.25d0,'(f10.2)')
+     &	dbl2string((Lplanet*distance**2*1d-23/(pi*Rplanet**2*((2d0*(pi*kb)**4)/(15d0*hplanck**3*clight**3))))**0.25d0,'(f10.2)')
      &		// "K" )
 		endif
 	endif

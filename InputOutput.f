@@ -4,11 +4,11 @@
 	character,intent(in),optional :: form*(*)
 
 	if(present(form)) then
-		write(*,form) trim(string)
-		write(9,form) trim(string)
+		write(*,form) string
+		write(9,form) string
 	else
-		write(*,'(a)') trim(string)
-		write(9,'(a)') trim(string)
+		write(*,'(a)') string
+		write(9,'(a)') string
 	endif
 	
 	return
@@ -45,12 +45,12 @@ c-----------------------------------------------------------------------
 	subroutine output(string)
 	use OutputModeModule
 	IMPLICIT NONE
-	character string*(*)
+	character(len=*),intent(in) :: string
 
 	if(.not.do_output) return
 
-	write(*,'(a)') trim(string)
-	write(9,'(a)') trim(string)
+	write(*,'(a)') string
+	write(9,'(a)') string
 	
 	return
 	end
@@ -64,7 +64,7 @@ c-----------------------------------------------------------------------
 	character string*(*)
 	if(.not.do_output) return
 
-	write(*,'(1a1,a,$)') char(13),trim(string)
+	write(*,'(1a1,a,$)') char(13),string
 	
 	return
 	end
@@ -82,42 +82,6 @@ c-----------------------------------------------------------------------
 	backspace(unit=un)
 2	continue
 3	format(a1)
-	return
-	end
-
-c-----------------------------------------------------------------------
-c-----------------------------------------------------------------------
-
-
-	character*20 function int2string(i,form)
-	IMPLICIT NONE
-	integer i
-	character,intent(in),optional :: form*(*)
-	
-	if(present(form)) then
-		write(int2string,form) i
-	else
-		write(int2string,*) i
-	endif
-	
-	return
-	end
-	
-c-----------------------------------------------------------------------
-c-----------------------------------------------------------------------
-
-
-	character*20 function dbl2string(x,form)
-	IMPLICIT NONE
-	real*8 x
-	character,intent(in),optional :: form*(*)
-	
-	if(present(form)) then
-		write(dbl2string,form) x
-	else
-		write(dbl2string,*) x
-	endif
-	
 	return
 	end
 
@@ -170,17 +134,10 @@ c-----------------------------------------------------------------------
 
 
 	subroutine tellertje_perc(i,n)
+	use dbl2str_mod
 	IMPLICIT NONE
 	integer i,n,f
 	real*8 xx
-	
-c GFORTRAN requires interface for this function
-	INTERFACE 
-		character*20 function dbl2string(x,form)
-			real*8 x
-			character,intent(in),optional :: form*(*)
-		end function dbl2string
-	end INTERFACE
 	
 	f=int(100d0*dble(i)/dble(n))
 	
