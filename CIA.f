@@ -57,7 +57,7 @@
 102		continue
 		if(i.lt.nlam.and.i.gt.0) then
 			do j=i,1,-1
-				CIA(icia)%Cabs(iT,j)=abs(CIA(icia)%Cabs(iT,i+1)*freq(i+1)/freq(j))
+				CIA(icia)%Cabs(iT,j)=abs(y1)*x1/freq(j)
 			enddo
 		endif
 	enddo
