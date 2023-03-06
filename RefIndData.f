@@ -53,31 +53,28 @@ c-----------------------------------------------------------------------
 102	continue
 
 	if(loglog) then
-		m0=dcmplx(e1(i-1),e2(i-1))
+		m0=dcmplx(y1(n0),y2(n0))
 		if(abs(m0).gt.2d0.and..false.) then
 c don't use the conducting extrapolation since it is not very accurate
 			do j=i,n
-				m=m0*sqrt(grid(j)/grid(i-1))
+				m=m0*sqrt(grid(j)/x(n0))
 				e1(j)=real(m)
 				e2(j)=dimag(m)
 			enddo
 		else
 c use loglog extrapolation
-			m0=dcmplx(e1(i-2),e2(i-2))
-			m1=dcmplx(e1(i-1),e2(i-1))
+			m0=dcmplx(y1(n0-1),y2(n0-1))
+			m1=dcmplx(y1(n0),y2(n0))
 			do j=i,n
-c				m=10d0**(log10(m0)+log10(m1/m0)*log10(grid(i-2)/grid(j))/log10(grid(i-2)/grid(i-1)))
-c				e1(j)=real(m)
-c				e2(j)=dimag(m)
-				e1(j)=10d0**(log10(e1(i-2))+log10(e1(i-1)/e1(i-2))*log10(grid(i-2)/grid(j))/log10(grid(i-2)/grid(i-1)))
-				e2(j)=10d0**(log10(e2(i-2))+log10(e2(i-1)/e2(i-2))*log10(grid(i-2)/grid(j))/log10(grid(i-2)/grid(i-1)))
+				e1(j)=10d0**(log10(y1(n0-1))+log10(y1(n0)/y1(n0-1))*log10(x(n0-1)/grid(j))/log10(x(n0-1)/x(n0)))
+				e2(j)=10d0**(log10(y2(n0-1))+log10(y2(n0)/y2(n0-1))*log10(x(n0-1)/grid(j))/log10(x(n0-1)/x(n0)))
 			enddo
 		endif
 	else
 c use the dielectric extrapolation, this is the default
 		do j=i,n
-			e1(j)=e1(i-1)
-			e2(j)=e2(i-1)*grid(i-1)/grid(j)
+			e1(j)=y1(n0)
+			e2(j)=y2(n0)*x(n0)/grid(j)
 		enddo
 	endif
 	
