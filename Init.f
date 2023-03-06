@@ -224,14 +224,18 @@ c===============================================================================
 	i2d=0
 
 	nr=20
+	nrsurf=0
 	key => firstkey
 	do while(.not.key%last)
 		select case(key%key1)
 			case("nr")
 				read(key%value,*) nr
+			case("nrsurf")
+				read(key%value,*) nrsurf
 		end select
 		key=>key%next
 	enddo
+	nr=nr+nrsurf
 
 	nTpoints=0
 	key => firstkey
@@ -826,6 +830,11 @@ c In this case the beta map should be the static one. Make sure this is set prop
 		case("nr")
 c is already set in CountStuff
 c			read(key%value,*) nr
+		case("nrsurf")
+c is already set in CountStuff
+c			read(key%value,*) nrsurf
+		case("psurf")
+			read(key%value,*) Psurf
 		case("nrcloud","nrhr")
 			read(key%value,*) nr_cloud
 			nr_cloud=max(1,nr_cloud/nr)
@@ -1399,9 +1408,20 @@ c Use formalism from Koll (2022)
 4		close(unit=20)
 		nr=i-1
 	else
-		do i=1,nr
-			P0(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nr-1))
-		enddo
+		if(Pmin.gt.Pmax/Psurf.or.nrsurf.le.1) then
+			do i=1,nr
+				P0(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nr-1))
+			enddo
+		else
+			do i=1,nr-nrsurf
+				P0(i)=exp(log(Pmin)+log((Pmax/Psurf)/Pmin)*real(i-1)/real(nr-nrsurf))
+			enddo
+			do i=nr-nrsurf+1,nr
+				P0(i)=exp(log(Pmax/Psurf)+log(Psurf)*real(i-nr+nrsurf-1)/real(nrsurf-1))
+				P0(i)=Pmax/Psurf+(Pmax-Pmax/Psurf)*real(i-nr+nrsurf-1)/real(nrsurf-1)
+			enddo
+			call sort(P0,nr)
+		endif
 		if(TPfile.ne.' ') then
 			call regridlog(TPfile,P0,T0,nr)
 		else
@@ -1512,6 +1532,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	loggPlanet=2.5d0
 	Mp_from_logg=.false.
 	constant_g=.false.
+	Psurf=10d0
 	
 	Tstar=5777d0
 	Rstar=1d0
