@@ -82,7 +82,7 @@ c	n_nu_line=ng*min(j,4)
 		allocate(ifast(nmol),stat=istat)
 		allocate(kappa_tot(0:nmol),stat=istat)
 		allocate(work1(n_nu_line),stat=istat)
-		allocate(work2(n_nu_line),stat=istat)
+		allocate(work2(n_nu_line+1),stat=istat)
 		allocate(work3(n_nu_line),stat=istat)
 !$OMP END PARALLEL
 		first_entry=.false.

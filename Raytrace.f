@@ -93,8 +93,8 @@
 		enddo
 	enddo
 !$OMP END DO
-	deallocate(phase0)
 !$OMP FLUSH
+	deallocate(phase0)
 !$OMP END PARALLEL
 	call tellertje(nlam,nlam)
 	endif
@@ -312,11 +312,11 @@
 		enddo
 	enddo
 !$OMP END DO
+!$OMP FLUSH
 	deallocate(fact_contr)
 	deallocate(fluxg_contr)
 	deallocate(Ag_contr)
 	deallocate(Ca_cloud,Cs_cloud,BBr)
-!$OMP FLUSH
 !$OMP END PARALLEL
 	endif
 
