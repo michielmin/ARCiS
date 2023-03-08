@@ -24,7 +24,7 @@
 	real*8,allocatable,save :: k_line(:),ktemp(:),kappa(:),w_line(:),kappa_tot(:),work1(:),work2(:),work3(:)
 !$OMP THREADPRIVATE(ifull,ifast,k_line,ktemp,kappa,w_line,kappa_tot,work1,work2,work3)
 	integer n_nu_line,iT,nfull,nfast
-	integer i,j,ir,k,nl,ig,ig_c,imol0,jg
+	integer i,j,ir,k,nl,ig,ig_c,imol0,jg,istat
 	integer,allocatable :: inu1(:),inu2(:)
 	character*500 filename
 	logical,save :: first_entry=.true.
@@ -73,32 +73,26 @@ c	n_nu_line=ng*min(j,4)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(n_nu_line,ng,nmol)
-		allocate(k_line(n_nu_line))
-		allocate(ktemp(ng))
-		allocate(kappa(ng))
-		allocate(w_line(n_nu_line))
-		allocate(ifull(nmol))
-		allocate(ifast(nmol))
-		allocate(kappa_tot(0:nmol))
-		allocate(work1(n_nu_line))
-		allocate(work2(n_nu_line))
-		allocate(work3(n_nu_line))
+!$OMP& PRIVATE(istat)
+		allocate(k_line(n_nu_line),stat=istat)
+		allocate(ktemp(ng),stat=istat)
+		allocate(kappa(ng),stat=istat)
+		allocate(w_line(n_nu_line),stat=istat)
+		allocate(ifull(nmol),stat=istat)
+		allocate(ifast(nmol),stat=istat)
+		allocate(kappa_tot(0:nmol),stat=istat)
+		allocate(work1(n_nu_line),stat=istat)
+		allocate(work2(n_nu_line),stat=istat)
+		allocate(work3(n_nu_line),stat=istat)
 !$OMP END PARALLEL
 		first_entry=.false.
 	endif
 
 	do ir=nr,1,-1
 		call tellertje(nr-ir+1,nr)
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& SHARED(cont_tot,nlam)
-!$OMP DO SCHEDULE(STATIC)
 		do i=1,nlam
 			cont_tot(i)=0d0
 		enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
 
 c===============
 c UV cross sections of CO2 from Venot et al.
@@ -144,12 +138,9 @@ c===============
 		if(mixrat_PAH.gt.0d0) call ComputePAH(cont_tot,Csca(ir,1:nlam),computelam)
 		if(mixrat_optEC.gt.0d0) call Compute_optEC(cont_tot,Csca(ir,1:nlam),computelam)
 
-!$OMP DO SCHEDULE(STATIC)
 		do i=1,nlam
 			kappa_mol(1:ng,i,1:nmol)=0d0
 		enddo
-!$OMP END DO
-!$OMP FLUSH
 
 !$OMP DO SCHEDULE(DYNAMIC)
 		do imol=1,nmol
@@ -366,7 +357,6 @@ c					Cs=Cs+12.4*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 	character*30 errtext
 	integer ig,ilam,iT,iP,imol,i,j,ir,ngF,i1,i2
 	real*8 kappa_mol(ng,nlam,nmol),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random,w1,ww
-	real*8,allocatable :: temp(:),wtemp(:)
 	type(databaseKtable),pointer :: Ktab
 
 	Ktab => Ktable(imol)

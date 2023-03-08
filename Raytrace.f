@@ -6,14 +6,16 @@
 	real*8 Ca,Cs,tot,contr,dP
 	integer icloud,isize
 	real*8,allocatable :: rtrace(:),phase0(:)
-	real*8,allocatable :: fluxg_contr(:),fact_contr(:),Ag_contr(:)
-	integer irc
+	real*8,allocatable,save :: fluxg_contr(:),fact_contr(:),Ag_contr(:)
+	integer irc,istat
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig,nsub,j,k,nk
 	logical in
 	integer icc,imol
 	character*500 filename
-	real*8,allocatable :: dtrace(:,:),CaCont(:,:),Ca_cloud(:,:),Cs_cloud(:,:),BBr(:)
+	real*8,allocatable :: dtrace(:,:),CaCont(:,:)
+	real*8,allocatable,save :: Ca_cloud(:,:),Cs_cloud(:,:),BBr(:)
 	integer,allocatable :: irtrace(:,:),nirtrace(:)
+!$OMP THREADPRIVATE(Ca_cloud,Cs_cloud,BBr,fact_contr,fluxg_contr,Ag_contr)
 
 	docloud=.false.
 	do icc=2,ncc
@@ -70,9 +72,9 @@
 	call tellertje(1,nlam)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,fluxg,icc,phase0)
+!$OMP& PRIVATE(ilam,fluxg,icc,phase0,istat)
 !$OMP& SHARED(nlam,nclouds,flux,phase,ncc,docloud,cloudfrac,nphase)
-	allocate(phase0(nphase))
+	allocate(phase0(nphase),stat=istat)
 !$OMP DO SCHEDULE(DYNAMIC)
 	do ilam=1,nlam
 		call tellertje(ilam+1,nlam+1)
@@ -199,15 +201,15 @@
 	endif
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(SHARED)
-!$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,Ca_cloud,Cs_cloud,
-!$OMP&         Ca,Cs,icloud,isize,BBr,imol,irc,contr,fact_contr,fluxg_contr,Ag_contr,nk)
+!$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,
+!$OMP&         Ca,Cs,icloud,isize,imol,irc,contr,nk)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
 !$OMP&			cloud_dens,P,flux_contr,obsA_contr,irtrace,dtrace,nirtrace,
 !$OMP&			nmol,mixrat_r,includemol,computecontrib,wgg)
-	allocate(fact_contr(nr))
-	allocate(fluxg_contr(nr))
-	allocate(Ag_contr(nr))
-	allocate(Ca_cloud(ncc,nr),Cs_cloud(ncc,nr),BBr(0:nr))
+	allocate(fact_contr(nr),stat=istat)
+	allocate(fluxg_contr(nr),stat=istat)
+	allocate(Ag_contr(nr),stat=istat)
+	allocate(Ca_cloud(ncc,nr),Cs_cloud(ncc,nr),BBr(0:nr),stat=istat)
 !$OMP DO SCHEDULE(DYNAMIC)
 	do ilam=1,nlam
 		Ca_cloud(1:ncc,1:nr)=0d0

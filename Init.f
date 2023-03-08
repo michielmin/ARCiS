@@ -666,19 +666,12 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 	allocate(Cext_cont(nr,nlam))
 	allocate(Cabs(nr,nlam,ng))
 	allocate(Csca(nr,nlam))
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& SHARED(Cabs_mol,Cext_cont,Cabs,Csca,nlam,ng,nr,nmol)
-!$OMP DO SCHEDULE(STATIC)
-		do i=1,nlam
-			Cabs_mol(1:ng,i,1:nmol,1:nr)=0d0
-			Cext_cont(1:nr,i)=0d0
-			Cabs(1:nr,i,1:ng)=0d0
-			Csca(1:nr,i)=0d0
-		enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
+	do i=1,nlam
+		Cabs_mol(1:ng,i,1:nmol,1:nr)=0d0
+		Cext_cont(1:nr,i)=0d0
+		Cabs(1:nr,i,1:ng)=0d0
+		Csca(1:nr,i)=0d0
+	enddo
 	do i=1,360
 		theta=(real(i)-0.5d0)*pi/180d0
 		sintheta(i)=sin(theta)
@@ -2263,18 +2256,11 @@ c number of cloud/nocloud combinations
 	allocate(dfreq(nlam))
 	allocate(dlam(nlam))
 	allocate(RTgridpoint(nlam),computelam(nlam))
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& SHARED(computelam,RTgridpoint,lam,nlam)
-!$OMP DO SCHEDULE(STATIC)
-		do i=1,nlam
-			computelam(i)=.true.
-			RTgridpoint(i)=.false.
-			lam(i)=0d0
-		enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
+	do i=1,nlam
+		computelam(i)=.true.
+		RTgridpoint(i)=.false.
+		lam(i)=0d0
+	enddo
 	
 	ilam=0
 	if(useobsgrid) then

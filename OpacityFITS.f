@@ -222,7 +222,9 @@ C	 create the new empty FITS file
 	integer firstpix,nbuffer,npixels
 	integer istat,stat4,tmp_int,stat5,stat6
 	real*8  nullval,tot2,w1,ww,Pl,Planck,tot,l1,l2
-	real*8,allocatable :: lamF(:),Ktemp(:,:,:,:),temp(:),wtemp(:),work1(:),work2(:),work3(:)
+	real*8,allocatable :: lamF(:),Ktemp(:,:,:,:)
+	real*8,allocatable,save :: temp(:),wtemp(:),work1(:),work2(:),work3(:)
+!$OMP THREADPRIVATE(temp,wtemp,work1,work2,work3)
 	logical anynull,truefalse,xs
 	integer naxes(4)
 	character*500 filename
@@ -374,15 +376,15 @@ C	 create the new empty FITS file
 		enddo
 	enddo
 
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(.false.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,ww,w1,iT,iP,l1,l2,work1,work2,work3)
+!$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,j,tot,tot2,ww,w1,iT,iP,l1,l2,istat)
 !$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp,dlam,RTgridpoint,blam,ii1,ii2)
-	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam))
-	allocate(wtemp(Ktable(imol)%ng*Ktable(imol)%nlam))
-	allocate(work1(Ktable(imol)%ng*Ktable(imol)%nlam))
-	allocate(work2(Ktable(imol)%ng*Ktable(imol)%nlam))
-	allocate(work3(Ktable(imol)%ng*Ktable(imol)%nlam))
+	allocate(temp(Ktable(imol)%ng*Ktable(imol)%nlam),stat=istat)
+	allocate(wtemp(Ktable(imol)%ng*Ktable(imol)%nlam),stat=istat)
+	allocate(work1(Ktable(imol)%ng*Ktable(imol)%nlam),stat=istat)
+	allocate(work2(Ktable(imol)%ng*Ktable(imol)%nlam),stat=istat)
+	allocate(work3(Ktable(imol)%ng*Ktable(imol)%nlam),stat=istat)
 !$OMP DO
 	do ilam=1,nlam
 		do iP=1,Ktable(imol)%nP
