@@ -1237,6 +1237,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
 	integer j1,j2,N_reactants_gas,j
 
   INTEGER,parameter            :: N_reactants = 109
+  INTEGER,parameter            :: N_atoms_use = 18
   CHARACTER*40                 :: names_reactants(N_reactants)
   DOUBLE PRECISION             :: molfracs_reactants(N_reactants), &
        massfracs_reactants(N_reactants)
@@ -1245,6 +1246,7 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
   LOGICAL                      :: ini,condensates
   INTEGER                      :: i_t, i_p, i_reac, N_reactants2
 	logical con(N_reactants),didcondens,atoms_used(N_atoms)
+	logical,save :: doinit=.true.
 
 	integer at_re(N_reactants,N_atoms)
 	real*8 tot
@@ -1578,9 +1580,10 @@ subroutine call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,  &
       if(temp.lt.70d0) temp=70d0
       press=Pin
         	ini=.true.
-        call EASY_CHEM(N_atoms,N_reactants2,names_atoms,names_reactants,molfracs_atoms, &
-             molfracs_reactants,massfracs_reactants,temp,press,ini,nabla_ad,gamma2,MMW,rho)
+        call EASY_CHEM(N_atoms_use,N_reactants2,names_atoms,names_reactants,molfracs_atoms, &
+             molfracs_reactants,massfracs_reactants,temp,press,doinit,nabla_ad,gamma2,MMW,rho)
         ini = .FALSE.
+		doinit=.false.
 
 	do i=1,nmol
 		mol_abun(i)=0d0

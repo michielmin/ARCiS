@@ -18,7 +18,7 @@ ifeq ($(debug),true)
   ifeq ($(gfort),true)
     DEBUGGING = -Og -Wall -Wno-unused-variable -fbounds-check -fbacktrace -fcheck=all -ffpe-trap=zero,overflow -g3
   else	
-    DEBUGGING = -check all -g -traceback -check bounds -check uninit -O0
+    DEBUGGING = -check all -g -traceback -check bounds -check uninit -O0 -fpe0
   endif
 endif
 
@@ -53,9 +53,9 @@ ifeq ($(gfort),true)
   FLAG_LINUX    = -ffixed-line-length-none -cpp -malign-double
   FLAG_MAC      = -m64 -ffixed-line-length-none -cpp -malign-double
 else
-  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(MULTICORE) -assume buffered_io -I/usr/local/modules -fp-model strict -heap-arrays $(LIBS_MN) $(LIBS_MCMC)
+  FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(MULTICORE) -assume buffered_io -I/usr/local/modules -fp-model strict -heap-arrays 10 $(LIBS_MN) $(LIBS_MCMC)
   FLAG_LINUX    = -xHOST -fpp
-  FLAG_MAC      = -xHOST -qopt-prefetch -static-intel -fpp -heap-arrays
+  FLAG_MAC      = -xHOST -qopt-prefetch -static-intel -fpp -heap-arrays 10
 endif
 
 LIBS_FITS		= -lcfitsio

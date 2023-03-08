@@ -31,23 +31,11 @@ lmin=0.25d0
 lmax=5.0d0				! when iterating for temperature structure lmax > 30.0
 
 specres=150
-specresdust=50
 
 cia=.true.
 
-compute=.false.
-
 scattering=.false.
 scattstar=.false.
-
-cloud1:type='LAYER'
-cloud1:Ptau=0.01d0
-cloud1:lam_ref=1d0
-cloud1:xi=2d0
-cloud1:fmax=0d0
-cloud1:reff=0.1d0
-cloud1:opacitytype="MATERIAL"
-cloud1:material01="FORSTERITE"
 
 par_tprofile=.true.
 

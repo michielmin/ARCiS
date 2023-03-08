@@ -792,6 +792,8 @@ c	close(unit=50)
 	mol_abun=0d0
 	Xcloud=0d0
 	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates,gas_atoms,methGGchem)
+c	call call_easy_chem(Tg,Pin,mol_abun,mol_names,nmol,ini,condensates,
+c     &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol)
 
 	if(condensates.and.rainout) then
 		molfracs_atoms=gas_atoms/sum(gas_atoms(1:N_atoms))
@@ -813,7 +815,7 @@ c	MMW=2.2
 
 	return
 
-	call call_easy_chem(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,
+	call call_easy_chem(Tg,Pin,mol_abun,mol_names,nmol,ini,condensates,
      &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol)
 	
 	return
