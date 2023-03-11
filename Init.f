@@ -400,20 +400,26 @@ c select at least the species relevant for disequilibrium chemistry
 	if(do_cia) then
 		call getenv('HOME',homedir)
 c find H2-H2 cia file
-		h2h2file=trim(homedir) // '/HITRAN/H2-H2_2011.cia'
+		h2h2file=trim(homedir) // '/HITRAN/H2-H2_combined.cia'
 		inquire(file=h2h2file,exist=existh2h2)
 		if(existh2h2) then
 			ncia0=ncia0+1
 		else
-			h2h2file=trim(homedir) // '/HITRAN/CIA/H2-H2_2011.cia'
+			h2h2file=trim(homedir) // '/HITRAN/CIA/H2-H2_combined.cia'
 			inquire(file=h2h2file,exist=existh2h2)
 			if(existh2h2) then
 				ncia0=ncia0+1
 			else
-				h2h2file=trim(homedir) // '/ARCiS/Data/CIA/H2-H2_2011.cia'
+				h2h2file=trim(homedir) // '/ARCiS/Data/CIA/H2-H2_combined.cia'
 				inquire(file=h2h2file,exist=existh2h2)
 				if(existh2h2) then
 					ncia0=ncia0+1
+				else
+					h2h2file=trim(homedir) // '/ARCiS/Data/CIA/H2-H2_2011.cia'
+					inquire(file=h2h2file,exist=existh2h2)
+					if(existh2h2) then
+						ncia0=ncia0+1
+					endif
 				endif
 			endif
 		endif
@@ -1353,7 +1359,7 @@ c Use formalism from Koll (2022)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j,k,n
+	integer i,j,k,n,nrsurf_tot
 	real*8 g,dp,dz,P0(nr),T0(nr),pp,tt,mr0(nr,nmol),mm(nmol),yp1,ypn
 	real*8,allocatable :: y2(:)
 	character*10 names(nmol)
@@ -1413,12 +1419,13 @@ c Use formalism from Koll (2022)
 				P0(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nr-1))
 			enddo
 		else
-			do i=1,nr-nrsurf
-				P0(i)=exp(log(Pmin)+log((Pmax/Psurf)/Pmin)*real(i-1)/real(nr-nrsurf))
+			nrsurf_tot=nrsurf+nr*(log(Psurf)/log(Pmax/Pmin))
+			if(nrsurf_tot.gt.nr-5) nrsurf_tot=nr-5
+			do i=1,nr-nrsurf_tot
+				P0(i)=exp(log(Pmin)+log((Pmax/Psurf)/Pmin)*real(i-1)/real(nr-nrsurf_tot))
 			enddo
-			do i=nr-nrsurf+1,nr
-				P0(i)=exp(log(Pmax/Psurf)+log(Psurf)*real(i-nr+nrsurf-1)/real(nrsurf-1))
-				P0(i)=Pmax/Psurf+(Pmax-Pmax/Psurf)*real(i-nr+nrsurf-1)/real(nrsurf-1)
+			do i=nr-nrsurf_tot+1,nr
+				P0(i)=exp(log(Pmax/Psurf)+log(Psurf)*real(i-nr+nrsurf_tot-1)/real(nrsurf_tot-1))
 			enddo
 			call sort(P0,nr)
 		endif
