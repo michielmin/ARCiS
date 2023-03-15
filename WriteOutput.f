@@ -148,7 +148,7 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 			write(30,form) lam_out(i),
      &					phase(1:nphase,0,i)+flux(0,i),
      &					Fstar(i)*1d23/distance**2,
-     &					(pi*Rplanet**2)*Fstar(i)*1d23/distance**2/(4d0*Dplanet**2)
+     &					(Rplanet**2)*Fstar(i)*1d23/distance**2/(Dplanet**2)
 			endif
 		enddo
 		close(unit=30)

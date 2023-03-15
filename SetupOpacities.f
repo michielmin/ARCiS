@@ -290,7 +290,7 @@ c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 ll,Cs,ll2
+	real*8 ll,Cs,ll2,RayleighHatom
 	integer ir,i,j
 
 	ll=1d0/lam(i)**2
@@ -303,37 +303,33 @@ c For other than H2 from Sneep & Ubachs (2005)
 			select case(j)
 				case(2) !CO2
 c Sneep & Ubachs (2005)
-c					Cs=Cs+12.4*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 					Cs=Cs+9.950903042454394e-44*mixrat_r(ir,j)*ll2
 				case(4) !N2O
 c Sneep & Ubachs (2005)
-c					Cs=Cs+15.9*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 					Cs=Cs+1.2759625675405231e-43*mixrat_r(ir,j)*ll2
 				case(5) !CO
 c Sneep & Ubachs (2005)
-c					Cs=Cs+6.19*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 					Cs=Cs+4.967426599418766e-44*mixrat_r(ir,j)*ll2
 				case(6) !CH4
 c Sneep & Ubachs (2005)
-c					Cs=Cs+12.47*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 					Cs=Cs+1.000707749511341e-43*mixrat_r(ir,j)*ll2
 				case(22) !N2
 c Sneep & Ubachs (2005)
-c					Cs=Cs+5.1*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 					Cs=Cs+4.0927101222997906e-44*mixrat_r(ir,j)*ll2
 				case(30) !SF6
 c Sneep & Ubachs (2005)
-c					Cs=Cs+32.3*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 					Cs=Cs+2.5920497441232007e-43*mixrat_r(ir,j)*ll2
 				case(45) ! H2
 c Dalgarno & Williams (1962)
 					Cs=Cs+mixrat_r(ir,j)*(8.14d-45*ll2+1.28d-54*ll2*ll+1.61d-64*ll2*ll2)
 				case(1) !H2O
-c					Cs=Cs+4.43*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 					Cs=Cs+3.555040361134916e-44*mixrat_r(ir,j)*ll2
 				case(48) ! He
 c https://www.climate-policy-watcher.org/surface-temperature/scattering-by-molecules-rayleigh-scattering.html
 					Cs=Cs+0.0641*mixrat_r(ir,j)*(8.14d-45*ll2+1.28d-54*ll2*ll+1.61d-64*ll2*ll2)
+				case(64) ! H
+c from Helios source code
+					Cs=Cs+mixrat_r(ir,j)*RayleighHatom(lam(i))
 				case(11) ! NH3
 c https://www.climate-policy-watcher.org/surface-temperature/scattering-by-molecules-rayleigh-scattering.html
 					Cs=Cs+7.3427*mixrat_r(ir,j)*(8.14d-45*ll2+1.28d-54*ll2*ll+1.61d-64*ll2*ll2)
@@ -354,7 +350,6 @@ c Tarafdar and Vardya 1973
 					Cs=Cs+(42.61**2)*mixrat_r(ir,j)*13056.839884384113d-50*ll2
 				case(9) ! SO2 (but taken the value from CO2 as a poor-man's solution)
 c Sneep & Ubachs (2005)
-c					Cs=Cs+12.4*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 					Cs=Cs+9.950903042454394e-44*mixrat_r(ir,j)*ll2
 			end select
 		endif
@@ -362,7 +357,24 @@ c					Cs=Cs+12.4*mixrat_r(ir,j)*1e-27*(sqrt(ll)/18788.4)**4
 
 	return
 	end
+	
+	real*8 function RayleighHatom(lam)
+	IMPLICIT NONE
+	real*8 lam,Cp(10),sigma_T,lam_l,sum_term
+	parameter(Cp = (/1.26563, 3.73828125, 8.813930935, 19.15379502, 
+     &		39.92303232, 81.10881152, 161.9089166, 319.0231631, 622.2679809, 1203.891509/))	
+	parameter(sigma_T = 0.665e-24)
+	parameter(lam_l = 91.2e-7)
+	integer i
 
+	sum_term = 0d0
+	do i=1,10
+		sum_term=sum_term+cp(i)*(lam_l/lam)**(2d0*real(i))
+	enddo
+	RayleighHatom = sigma_T * (lam_l / lam)**4 * sum_term
+
+	return
+	end
 
 	subroutine ReadOpacityFITS(kappa_mol,imol,ir)
 	use GlobalSetup

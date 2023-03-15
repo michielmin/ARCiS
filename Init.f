@@ -1836,7 +1836,7 @@ c  GGchem was still implemented slightly wrong.
 	
 	maxiter=6
 	miniter=5
-	epsiter=1d-4
+	epsiter=3d-2
 
 	maxchemtime=1d200
 	

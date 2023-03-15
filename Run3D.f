@@ -2042,10 +2042,10 @@ c-----------------------------------------------------------------------
 			do inu0=1,nnu0
 				if(inu0.ne.nnu0.and.scattstar) then
 					must=(real(inu0)-0.5)/real(nnu0-1)
-					contr=(Fstar(ilam)/(pi*Dplanet**2))
+					contr=(Fstar(ilam)/(4d0*Dplanet**2))
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
 					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+0.5d0*contr*exp(-tauR(1:nr))*wscat(ilam,ig,1:nr)
-					contr=must*contr*exp(-tauR(1))
+					contr=2d0*must*contr*exp(-tauR(1))
 				else
 					contr=0d0
 				endif

@@ -34,6 +34,13 @@
 			endif
 		endif
 		read(cT,*) CIA(icia)%T(iT)
+		if(iT.gt.1) then
+			if(CIA(icia)%T(iT).le.CIA(icia)%T(iT-1)) then
+				call output("Incorrect CIA file!")
+				call output("order of temperatures not strictly increasing")
+				stop
+			endif
+		endif
 		read(cn,*) n
 		i=nlam
 		read(20,*,end=102,err=1) x0,y0

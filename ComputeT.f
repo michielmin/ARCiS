@@ -145,7 +145,6 @@
 	
 	niter=50
 	nscat=10
-	epsiter=3d-2
 
 	must=betaT
 
