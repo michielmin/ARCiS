@@ -1717,6 +1717,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%hazetype='SOOT'
 		Cloud(i)%nmat=1
 		Cloud(i)%material=' '
+		Cloud(i)%lnkfile=' '
 		Cloud(i)%Kzz=-1d0
 		Cloud(i)%Sigmadot=1d-17
 		Cloud(i)%kappa=1d-2
