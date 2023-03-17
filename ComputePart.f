@@ -352,7 +352,7 @@ c-----------------------------------------------------------------------
 	subroutine readrefindCP(input,grid,e1,e2,n,loglog)
 	IMPLICIT NONE
 	real*8 grid(n)
-	real e1(n),e2(n),x0,y01,y02,x1,y11,y12,wp,gamma
+	real*8 e1(n),e2(n),x0,y01,y02,x1,y11,y12,wp,gamma
 	complex*16 m0,m1,m
 	integer i,j,n
 	character*500 input
