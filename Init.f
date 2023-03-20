@@ -220,6 +220,7 @@ c===============================================================================
 	Pmax=1d+3
 	freePT_fitT=.false.
 	freePT_fitP=.true.
+	Rp_range=20d0
 
 	i2d=0
 
@@ -288,6 +289,8 @@ c===============================================================================
 				read(key%value,*) mixratfile
 			case("diseq")
 				read(key%value,*) disequilibrium
+			case("rp_range")
+				read(key%value,*) Rp_range
 			case("tpfile")
 				read(key%value,'(a)') TPfile
 			case("cloud")
@@ -1739,7 +1742,6 @@ c  GGchem was still implemented slightly wrong.
 	nscaleR=-1
 	massprior=.false.
 	useobsgrid=.false.
-	Rp_range=20d0
 	log_emis=.true.
 	model_err_abs=0d0
 	model_err_rel=0d0
