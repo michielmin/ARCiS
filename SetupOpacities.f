@@ -24,7 +24,7 @@
 	real*8,allocatable,save :: k_line(:),ktemp(:),kappa(:),w_line(:),kappa_tot(:),work1(:),work2(:),work3(:)
 !$OMP THREADPRIVATE(ifull,ifast,k_line,ktemp,kappa,w_line,kappa_tot,work1,work2,work3)
 	integer n_nu_line,iT,nfull,nfast
-	integer i,j,ir,k,nl,ig,ig_c,imol0,jg
+	integer i,j,ir,k,nl,ig,ig_c,imol0,jg,nmap,imap(nmol)
 	integer,allocatable :: inu1(:),inu2(:)
 	character*500 filename
 	logical,save :: first_entry=.true.
@@ -136,7 +136,7 @@ c===============
 !$OMP& PRIVATE(i,j,imol,ig,jg,ig_c,imol0,w1,nfull,nfast)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,computelam,
 !$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid,
-!$OMP&        RTgridpoint,includemol,do_rayleigh,mixrat_PAH,mixrat_optEC)
+!$OMP&        RTgridpoint,includemol,do_rayleigh,mixrat_PAH,mixrat_optEC,nmap,imap)
 
 		if(do_rayleigh) then
 !$OMP DO SCHEDULE(STATIC)
@@ -166,42 +166,46 @@ c===============
 !$OMP END DO
 !$OMP FLUSH
 
+		nmap=0
+		do imol=1,nmol
+			if(opacitymol(imol)) then
+				nmap=nmap+1
+				imap(nmap)=imol
+			endif
+		enddo
+
 !$OMP DO SCHEDULE(DYNAMIC)
 		do i=1,nlam
 			if(computelam(i).and.(emisspec.or.computeT).and.(.not.useobsgrid.or.lamemis(i).or.RTgridpoint(i))) then
 			kappa_tot(0)=cont_tot(i)
-			do imol=1,nmol
-				if(opacitymol(imol)) then
-					kappa_tot(imol)=0d0
-					do ig=1,ng
-						kappa_tot(imol)=kappa_tot(imol)+wgg(ig)*kappa_mol(ig,i,imol)
-					enddo
-					kappa_tot(imol)=kappa_tot(imol)*mixrat_tmp(imol)
-					kappa_tot(0)=kappa_tot(0)+kappa_tot(imol)
-				endif
+			do imol=1,nmap
+				kappa_tot(imol)=0d0
+				do ig=1,ng
+					kappa_tot(imol)=kappa_tot(imol)+wgg(ig)*kappa_mol(ig,i,imap(imol))
+				enddo
+				kappa_tot(imol)=kappa_tot(imol)*mixrat_tmp(imap(imol))
+				kappa_tot(0)=kappa_tot(0)+kappa_tot(imol)
 			enddo
 			nfull=0
 			nfast=0d0
 			do imol=1,nmol
-				if(opacitymol(imol)) then
-					if(kappa_tot(imol).ge.0.01*kappa_tot(0)) then
-						nfull=nfull+1
-						ifull(nfull)=imol
-						kappa_tot(nfull)=-kappa_tot(imol)
-					else
-						nfast=nfast+1
-						ifast(nfast)=imol
-					endif
+				if(kappa_tot(imol).ge.0.01*kappa_tot(0)) then
+					nfull=nfull+1
+					ifull(nfull)=imol
+					kappa_tot(nfull)=-kappa_tot(imol)
+				else
+					nfast=nfast+1
+					ifast(nfast)=imol
 				endif
 			enddo
 			call dpquicksort_indx(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 			kappa(1:ng)=0d0
 			if(nfull.gt.0) then
-				imol=ifull(1)
+				imol=imap(ifull(1))
 				kappa(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 				do j=2,nfull
-					imol=ifull(j)
+					imol=imap(ifull(j))
 					ktemp(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 					ig_c=0
 					do ig=1,ng
@@ -219,7 +223,7 @@ c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 				enddo
 			endif
 			do j=1,nfast
-				imol=ifast(j)
+				imol=imap(ifast(j))
 				kappa(1:ng)=kappa(1:ng)+kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 			enddo
 			else

@@ -1069,6 +1069,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) log_emis
 		case("massprior")
 			read(key%value,*) massprior
+		case("rp_range")
+			read(key%value,*) Rp_range
 		case("mp_prior")
 			read(key%value,*) Mp_prior
 		case("dmp_prior")
@@ -1737,6 +1739,7 @@ c  GGchem was still implemented slightly wrong.
 	nscaleR=-1
 	massprior=.false.
 	useobsgrid=.false.
+	Rp_range=20d0
 	log_emis=.true.
 	model_err_abs=0d0
 	model_err_rel=0d0
@@ -2680,8 +2683,8 @@ c not entirely correct...
 			select case(RetPar(i)%keyword)
 				case("Rp","rp","RP")
 					RetPar(i)%x0=Rplanet
-					RetPar(i)%xmin=max(0d0,Rplanet-dsig*dR1)
-					RetPar(i)%xmax=Rplanet+dsig*dR2
+					RetPar(i)%xmin=max(0d0,Rplanet-Rp_range*dR1)
+					RetPar(i)%xmax=Rplanet+Rp_range*dR2
 					if(RetPar(i)%xmin*Rjup.lt.0.1d0*Rearth) RetPar(i)%xmin=0.1d0*Rearth/Rjup
 		call output("Minimum radius:      " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Rjup")
 		call output("Maximum radius:      " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Rjup")
@@ -2834,8 +2837,8 @@ c not entirely correct...
 			select case(RetPar(i)%keyword)
 				case("Rp","rp","RP")
 					RetPar(i)%x0=Rplanet
-					RetPar(i)%xmin=max(0d0,Rplanet-dsig*dR1)
-					RetPar(i)%xmax=Rplanet+dsig*dR2
+					RetPar(i)%xmin=max(0d0,Rplanet-Rp_range*dR1)
+					RetPar(i)%xmax=Rplanet+Rp_range*dR2
 					if(RetPar(i)%xmin*Rjup.lt.0.1d0*Rearth) RetPar(i)%xmin=0.1d0*Rearth/Rjup
 		call output("Minimum radius:      " // dbl2string(RetPar(i)%xmin,'(f7.2)') // "Rjup")
 		call output("Maximum radius:      " // dbl2string(RetPar(i)%xmax,'(f7.2)') // "Rjup")
