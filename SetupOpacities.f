@@ -131,6 +131,16 @@ c===============
 			endif
 		enddo
 		Csca(ir,1:nlam)=0d0
+		
+		nmap=0
+		do imol=1,nmol
+			if(opacitymol(imol)) then
+				nmap=nmap+1
+				imap(nmap)=imol
+			endif
+		enddo
+
+
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,j,imol,ig,jg,ig_c,imol0,w1,nfull,nfast)
@@ -165,14 +175,6 @@ c===============
 		enddo
 !$OMP END DO
 !$OMP FLUSH
-
-		nmap=0
-		do imol=1,nmol
-			if(opacitymol(imol)) then
-				nmap=nmap+1
-				imap(nmap)=imol
-			endif
-		enddo
 
 !$OMP DO SCHEDULE(DYNAMIC)
 		do i=1,nlam
