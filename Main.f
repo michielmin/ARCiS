@@ -85,10 +85,10 @@ c terms of use
 	use Constants
 	IMPLICIT NONE
 	logical Tconverged
-	real*8 starttime,stoptime,starttime_w,stoptime_w,omp_get_wtime,f
+	real*8 starttime,stoptime,starttime_w,stoptime_w,omp_get_wtime,f,tot,Planck
 	logical recomputeopacities
 	logical computeopac,temp
-	integer i
+	integer i,ilam
 	
 	computeopac=recomputeopacities
 
@@ -151,9 +151,16 @@ c			call SetoutputMode(.false.)
 			do i=1,nlam
 				if(computelam(i).and.lamemis(i)) Lplanet=Lplanet+dfreq(i)*flux(0,i)
 			enddo
-			call output("Teff: " // 
-     &	dbl2string((Lplanet*distance**2*1d-23/(pi*Rplanet**2*((2d0*(pi*kb)**4)/(15d0*hplanck**3*clight**3))))**0.25d0,'(f10.2)')
-     &		// "K" )
+			TeffPoutput=1000d0
+			do i=1,10
+				tot=0d0
+				do ilam=1,nlam
+					tot=tot+dfreq(ilam)*Planck(TeffPoutput,freq(ilam))
+				enddo
+				tot=tot*pi*Rplanet**2*1d23/distance**2
+				TeffPoutput=TeffPoutput*(Lplanet/tot)**0.25
+			enddo
+			call output("Teff: " // dbl2string(TeffPoutput,'(f10.2)') // "K" )
 		endif
 	endif
 

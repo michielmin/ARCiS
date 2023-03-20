@@ -12,6 +12,7 @@
 	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:),Tplanet(:)
 	real*8 ComputeKzz,lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,lm2,lm3,cmin
 	integer i1,i2,ibest
+	character*6000 line
 	
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
 	open(unit=35,file=trim(outputdir) // "/posterior.dat",FORM="FORMATTED",ACCESS="STREAM")
@@ -153,6 +154,18 @@
 		donmodels=min(npew,nmodels)
 	endif
 
+	open(unit=83,file=trim(outputdir) // "pew_output.dat",FORM="FORMATTED",ACCESS="STREAM")
+	line="# "
+	do i=1,n_ret
+		if(i.eq.1) then
+			write(line(3:12),'(a10)') RetPar(i)%keyword
+		else
+			write(line(i*12-11:i*12+1),'(" ",a11)') RetPar(i)%keyword
+		endif
+	enddo
+	write(line(n_ret*12+1:6000),'(3a12)') "C/O","[Z]","Teff"
+	write(83,'(a)') trim(line)
+
 	do i=0,donmodels
 
 	if(i.eq.0) then
@@ -284,8 +297,7 @@
 	dPTstruct(i,nr)=log(T(nr)/T(nr-1))/log(P(nr)/P(nr-1))
 	cloudstruct(i,1:nr)=cloud_dens(1:nr,1)
 	cloudstruct(i,1:nr)=cloudstruct(i,1:nr)/dens(1:nr)
-	Tplanet(i)=(Lplanet*distance**2*1e-23/(pi*Rplanet**2*((2d0*(pi*kb)**4)/(15d0*hplanck**3*clight**3))))**0.25d0
-	
+	Tplanet(i)=TeffPoutput
 	if(do3D.and.fulloutput3D) then
 		PTstruct3D(i,0:nphase,1:nr)=PTaverage3D(0:nphase,1:nr)
 		dPTstruct3D(i,0:nphase,1)=log(PTaverage3D(0:nphase,2)/PTaverage3D(0:nphase,1))/log(P(2)/P(1))
@@ -316,7 +328,10 @@
 			enddo
 		enddo
 	endif
-	
+	if(i.ne.0) then
+		write(line,'("(",i0.4,"es12.4)")') n_ret+3
+		write(83,line) var(imodel,1:n_ret),COratio_der(i),Z_der(i),Tplanet(i)
+	endif
 	if(i.gt.2.and.(100*(i/100).eq.i.or.i.eq.donmodels.or.i.le.10)) then
 		im1=real(i)/2d0-real(i)*0.682689492137086/2d0+0.5d0
 		im2=real(i)/2d0-real(i)*0.954499736103642/2d0+0.5d0

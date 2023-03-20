@@ -3,7 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot,Ag
-	real*8 Ca,Cs,tot,contr,dP
+	real*8 Ca,Cs,tot,contr,dP,tot2,TT
 	integer icloud,isize
 	real*8,allocatable :: rtrace(:),phase0(:)
 	real*8,allocatable :: fluxg_contr(:),fact_contr(:),Ag_contr(:)
@@ -118,12 +118,12 @@
 	if(nsub.eq.0) then
 		do i=1,ndisk
 			k=k+1
-			rtrace(k)=R(nr)*real(i-1)/real(ndisk)
+			rtrace(k)=R(nr)*real(i-1)/real(ndisk-1)
 		enddo
 	else
 		do i=1,ndisk
 			k=k+1
-			rtrace(k)=R(1)*real(i-1)/real(ndisk)
+			rtrace(k)=R(1)*real(i-1)/real(ndisk-1)
 		enddo
 	endif
 	do i=1,nr-1

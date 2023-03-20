@@ -358,7 +358,7 @@ c-----------------------------------------------------------------------
 	character*500 input
 	logical loglog
 
-	open(unit=20,file=input,FORM="FORMATTED",ACCESS="STREAM")
+	open(unit=20,file=input,FORM="FORMATTED")
 	i=1
 1	read(20,*,end=102,err=1) x0,y01,y02
 	if(y02.lt.1d-8) y02=1d-8
