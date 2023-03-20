@@ -188,24 +188,24 @@ c===============
 			enddo
 			nfull=0
 			nfast=0d0
-			do imol=1,nmol
+			do imol=1,nmap
 				if(kappa_tot(imol).ge.0.01*kappa_tot(0)) then
 					nfull=nfull+1
-					ifull(nfull)=imol
+					ifull(nfull)=imap(imol)
 					kappa_tot(nfull)=-kappa_tot(imol)
 				else
 					nfast=nfast+1
-					ifast(nfast)=imol
+					ifast(nfast)=imap(imol)
 				endif
 			enddo
 			call dpquicksort_indx(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 			kappa(1:ng)=0d0
 			if(nfull.gt.0) then
-				imol=imap(ifull(1))
+				imol=ifull(1)
 				kappa(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 				do j=2,nfull
-					imol=imap(ifull(j))
+					imol=ifull(j)
 					ktemp(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 					ig_c=0
 					do ig=1,ng
@@ -223,7 +223,7 @@ c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 				enddo
 			endif
 			do j=1,nfast
-				imol=imap(ifast(j))
+				imol=ifast(j)
 				kappa(1:ng)=kappa(1:ng)+kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 			enddo
 			else
