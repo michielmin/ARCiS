@@ -879,7 +879,11 @@ c Use Band matrix algorithm
 	enddo
 	
 	if(.not.retrieval) then
-		open(unit=20,file=trim(outputdir) // '/crystallinity.dat',FORM="FORMATTED",ACCESS="STREAM")
+		if(do3D) then
+			open(unit=20,file=trim(outputdir) // '/crystallinity' // trim(int2string(i3D,'(i0.4)')) // '.dat',FORM="FORMATTED",ACCESS="STREAM")
+		else
+			open(unit=20,file=trim(outputdir) // '/crystallinity.dat',FORM="FORMATTED",ACCESS="STREAM")
+		endif
 		form='("#",a18,' // trim(int2string(3,'(i4)')) // 'a23,a19)'
 		write(20,form) "P[bar]",(trim(CSname(i)),i=4,6),"T[K]"
 		form='(es19.7E3,' // trim(int2string(3,'(i4)')) // 'es23.7E3,es19.7E3)'
@@ -918,7 +922,7 @@ c correction for silicates
 		else if(Osil.le.4d0) then
 			fsil(2,k)=4d0-Osil
 			fsil(3,k)=Osil-3d0
-		else
+		else if(Osil.gt.0d0) then
 			fsil(3,k)=1d0
 			fsil(4,k)=Osil-4d0
 		endif
@@ -979,11 +983,11 @@ c Silicates
 	x(1:nnr)=fsil(3,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,fsil2(3,1:nr),nr)
 	x(1:nnr)=fsil(4,1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,fsil2(4,1:nr),nr)
 	do k=1,nr
 		tot=sum(fsil2(1:4,k))
 		fsil2(1:4,k)=fsil2(1:4,k)/tot
 	enddo
-	call regridarray(logCloudP,x,nnr,logP,fsil2(4,1:nr),nr)
 	x(1:nnr)=xc(4,1:nnr)+xc(5,1:nnr)+xc(6,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,9),nr)
 	Cloud(ii)%frac(1:nr,2)=Cloud(ii)%frac(1:nr,9)*fsil2(3,1:nr)
@@ -1004,18 +1008,9 @@ c C
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,10),nr)
 c Seed particles
 	x(1:nnr)=xm(1:nnr)
-	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,13),nr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,15),nr)
 
-	do i=1,nr
-		tot=sum(Cloud(ii)%frac(i,1:13))
-		if(tot.gt.0d0) then
-			Cloud(ii)%frac(i,1:13)=Cloud(ii)%frac(i,1:13)/tot
-		else
-			Cloud(ii)%frac(i,1:13)=1d0/13d0
-			cloud_dens(i,ii)=0d0
-		endif
-	enddo
-
+	Cloud(ii)%cryst=Cloud(ii)%cryst0
 	if(Cloud(ii)%computecryst) then
 c Silicates
 		x(1:nnr)=(xc(5,1:nnr)*cryst(5,1:nnr)+xc(6,1:nnr)*cryst(6,1:nnr))/(xc(5,1:nnr)+xc(6,1:nnr))
@@ -1023,15 +1018,12 @@ c Silicates
 			if(.not.x(i).gt.0d0) x(i)=0d0
 			if(.not.x(i).lt.1d0) x(i)=1d0
 		enddo
-		call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%cryst(1:nr,13),nr)
-		Cloud(ii)%cryst(1:nr,14)=Cloud(ii)%cryst(1:nr,13)
-		Cloud(ii)%cryst(1:nr,15)=Cloud(ii)%cryst(1:nr,13)
-		Cloud(ii)%cryst(1:nr,4)=Cloud(ii)%cryst(1:nr,13)
-		Cloud(ii)%cryst(1:nr,5)=Cloud(ii)%cryst(1:nr,13)
-		Cloud(ii)%cryst(1:nr,6)=Cloud(ii)%cryst(1:nr,13)
+		call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%cryst(1:nr,9),nr)
+		Cloud(ii)%cryst(1:nr,2)=Cloud(ii)%cryst(1:nr,9)
+		Cloud(ii)%cryst(1:nr,8)=Cloud(ii)%cryst(1:nr,9)
 c SiO2
 		x(1:nnr)=cryst(4,1:nnr)
-		call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%cryst(1:nr,8),nr)
+		call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%cryst(1:nr,4),nr)
 	endif
 
 	if(.not.retrieval) then
@@ -1045,6 +1037,27 @@ c SiO2
 		enddo
 		close(unit=20)
 	endif
+
+	Cloud(ii)%frac(1:nr,13)=(1d0-Cloud(ii)%cryst(1:nr,2))*Cloud(ii)%frac(1:nr,2)+
+     &			(1d0-Cloud(ii)%cryst(1:nr,8))*Cloud(ii)%frac(1:nr,8)+
+     &			(1d0-Cloud(ii)%cryst(1:nr,9))*Cloud(ii)%frac(1:nr,9)
+	Cloud(ii)%frac(1:nr,2)=Cloud(ii)%cryst(1:nr,2)*Cloud(ii)%frac(1:nr,2)
+	Cloud(ii)%frac(1:nr,8)=Cloud(ii)%cryst(1:nr,8)*Cloud(ii)%frac(1:nr,8)
+	Cloud(ii)%frac(1:nr,9)=Cloud(ii)%cryst(1:nr,9)*Cloud(ii)%frac(1:nr,9)
+
+	Cloud(ii)%frac(1:nr,14)=(1d0-Cloud(ii)%cryst(1:nr,4))*Cloud(ii)%frac(1:nr,4)
+	Cloud(ii)%frac(1:nr,4)=Cloud(ii)%cryst(1:nr,4)*Cloud(ii)%frac(1:nr,4)
+
+	do i=1,nr
+		tot=sum(Cloud(ii)%frac(i,1:15))
+		if(tot.gt.0d0) then
+			Cloud(ii)%frac(i,1:15)=Cloud(ii)%frac(i,1:15)/tot
+		else
+			Cloud(ii)%frac(i,1:15)=1d0/13d0
+			cloud_dens(i,ii)=0d0
+		endif
+	enddo
+
 
 c Elemental abundances
 	allocate(at_ab(nr,N_atoms))

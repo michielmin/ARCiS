@@ -233,7 +233,7 @@ c-----------------------------------------------------------------------
 	external Enstatite_X,Enstatite_Y,Enstatite_Z,checkparticlefile
 	external Forsterite_X,Forsterite_Y,Forsterite_Z
 	external Rutile_xy,Rutile_z,Water,OrganicsHenning,Soot,Tholin
-	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O,MgO,SiC,H2SO4
+	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O,MgO,SiC,H2SO4,AmorphSiO2
 
 	lnkloglog=.true.
 	ngrid=nlam+1
@@ -322,6 +322,12 @@ c-----------------------------------------------------------------------
 					case('QUARTZ','SiO2')
 						Cloud(ii)%nax(i)=1
 						call RegridDataLNK(SiO2,lgrid,e1d,e2d,ngrid,.true.)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=2.648
+					case('A-SiO2')
+						Cloud(ii)%nax(i)=1
+						call RegridDataLNK(AmorphSiO2,lgrid,e1d,e2d,ngrid,.true.)
 						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
 						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
 						Cloud(ii)%rho_mat(i)=2.648

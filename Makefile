@@ -99,6 +99,7 @@ OBJS	= Modules.o \
 		BrookiteData.o \
 		WaterData.o \
 		CorrundumData.o \
+		AmorphSiO2.o \
 		SiO2Data.o \
 		SiOData.o \
 		FeOData.o \

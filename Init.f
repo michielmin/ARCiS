@@ -646,7 +646,7 @@ c	condensates=(condensates.or.cloudcompute)
 			Cloud(i)%cryst=Cloud(i)%cryst0
 			if(Cloud(i)%type.eq.'DIFFUSE') then
 				Cloud(i)%opacitytype="MATERIAL"
-				Cloud(i)%nmat=12
+				Cloud(i)%nmat=14
 				Cloud(i)%material(1)='RUTILE'
 				Cloud(i)%material(2)='FORSTERITE'
 				Cloud(i)%material(3)='SiO'
@@ -659,9 +659,11 @@ c	condensates=(condensates.or.cloudcompute)
 				Cloud(i)%material(10)='CARBON'
 				Cloud(i)%material(11)='SiC'
 				Cloud(i)%material(12)='WATER'
+				Cloud(i)%material(13)='PYROXENE'
+				Cloud(i)%material(14)='A-SiO2'
 				if(Cloud(i)%haze) then
 					Cloud(i)%nmat=Cloud(i)%nmat+1
-					Cloud(i)%material(13)=Cloud(i)%hazetype
+					Cloud(i)%material(15)=Cloud(i)%hazetype
 				endif
 			endif
 		enddo
