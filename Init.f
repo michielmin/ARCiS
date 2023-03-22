@@ -1218,6 +1218,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) emisspec
 		case("transspec")
 			read(key%value,*) transspec
+		case("dotranshide")
+			read(key%value,*) dotranshide
 		case("makeimage")
 			read(key%value,*) makeimage
 		case("makemovie")
@@ -1537,6 +1539,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 
 	transspec=.true.
 	emisspec=.true.
+	dotranshide=.false.
 
 	Mplanet=1d0
 	Rplanet=1d0

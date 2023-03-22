@@ -7,9 +7,9 @@
 	integer icloud,isize
 	real*8,allocatable :: rtrace(:),phase0(:)
 	real*8,allocatable :: fluxg_contr(:),fact_contr(:),Ag_contr(:)
-	integer irc
+	integer irc,imolhide
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig,nsub,j,k,nk
-	logical in
+	logical in,dohide
 	integer icc,imol
 	character*500 filename
 	real*8,allocatable :: dtrace(:,:),CaCont(:,:),Ca_cloud(:,:),Cs_cloud(:,:),BBr(:)
@@ -320,9 +320,122 @@
 
 	if(transspec) then
 	if(.not.allocated(obsA_LC)) allocate(obsA_LC(nrtrace,nlam))
+	allocate(CaCont(nr,nlam))
+
+
+	if(dotranshide) then
+	do imolhide=0,nmol
 	obsA=0d0
 	obsA_LC=0d0
-	allocate(CaCont(nr,nlam))
+	dohide=.false.
+	if(imolhide.eq.0) then
+		if(nclouds.gt.0) dohide=.true.
+	else if(opacitymol(imolhide)) then
+		dohide=.true.
+	endif
+	if(dohide) then
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
+!$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,opacitymol,irtrace,dtrace,Cabs_mol,mixrat_r,
+!$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,Cext_cont,
+!$OMP&		cloudfrac,nirtrace,maxtau,ndisk,nr,obsA_LC,CaCont,imolhide)
+!$OMP DO SCHEDULE(DYNAMIC)
+	do ilam=1,nlam
+		do icc=1,ncc
+		if(cloudfrac(icc).gt.0d0) then
+			if(imolhide.eq.0d0) then
+				do ir=1,nr
+					CaCont(ir,ilam)=Cext_cont(ir,ilam)
+				enddo
+			else
+				do ir=1,nr
+					Ca=Cext_cont(ir,ilam)
+					do icloud=1,nclouds
+						if(docloud(icc,icloud)) then
+							Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+							Ca=Ca+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+						endif
+					enddo
+					CaCont(ir,ilam)=Ca
+				enddo
+			endif
+			do i=1,nrtrace-1
+				if(i.lt.ndisk) then
+					A=0d0
+				else
+					A=1d0
+					nk=nirtrace(i)
+					tautot=0d0
+					do k=1,nk
+						ir=irtrace(k,i)
+						d=dtrace(k,i)
+						tau=d*CaCont(ir,ilam)
+						tautot=tautot+tau
+						ir_next=irtrace(k+1,i)
+						if(tautot.gt.maxtau) then
+							tautot=1d4
+							A=0d0
+							goto 19
+						endif
+						if(ir_next.lt.1) then
+							tautot=1d4
+							A=0d0
+							goto 19
+						endif
+					enddo
+					A=A*exp(-tautot)
+					do imol=1,nmol
+						if(opacitymol(imol).and.imol.ne.imolhide) then
+						Ag=0d0
+						do ig=1,ng
+							tautot=0d0
+							do k=1,nk
+								ir=irtrace(k,i)
+								d=dtrace(k,i)
+								tau=d*Cabs_mol(ig,ilam,imol,ir)
+								tautot=tautot+tau
+								ir_next=irtrace(k+1,i)
+								if(tautot.gt.maxtau) goto 18
+								if(ir_next.lt.1) goto 18
+							enddo
+							Ag=Ag+exp(-tautot)*wgg(ig)
+18							continue
+						enddo
+						A=A*min(Ag,1d0)
+						endif
+					enddo
+19					continue
+				endif
+				if(.not.A.gt.0d0) A=0d0
+				obsA_LC(i,ilam)=obsA_LC(i,ilam)+cloudfrac(icc)*A
+				A=pi*(rtrace(i+1)**2-rtrace(i)**2)*(1d0-A)
+				obsA(icc,ilam)=obsA(icc,ilam)+A
+				obsA(0,ilam)=obsA(0,ilam)+cloudfrac(icc)*A
+			enddo
+		endif
+		enddo
+	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+	if(imolhide.eq.0) then
+		open(unit=83,file=trim(outputdir) // "/trans_hide_clouds",FORM="FORMATTED",ACCESS="STREAM")
+	else
+		open(unit=83,file=trim(outputdir) // "/trans_hide_" // trim(molname(imolhide)),FORM="FORMATTED",ACCESS="STREAM")
+	endif
+	do ilam=1,nlam
+		write(83,*) lam(ilam)*1d4,obsA(0,ilam)/(pi*Rstar**2)
+	enddo
+	close(unit=83)
+	endif
+	enddo
+	endif
+	
+
+	obsA=0d0
+	obsA_LC=0d0
+
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)

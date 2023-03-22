@@ -197,7 +197,7 @@ c===============================================================================
 	real*8 Kzz,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,powvxx,night2day,pole2eq,Rp_range
 	real*8 Kzz_deep,Kzz_1bar,Kzz_P,Kzz_contrast,SOratio,Tsurface,hotspotshift0,exp_ad
 	logical gamma_equal,dopostequalweights,inverseCOratio,setsurfpressure,fixnight2day
-	logical transspec,emisspec,dosimplerainout,computeLC,doscaleR,complexKzz,writeWolk
+	logical transspec,emisspec,dosimplerainout,computeLC,doscaleR,complexKzz,writeWolk,dotranshide
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),dlam(:),blam(:,:),surface_emis(:)
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:),planet_albedo(:,:)
