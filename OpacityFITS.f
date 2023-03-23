@@ -384,7 +384,7 @@ C	 create the new empty FITS file
 	allocate(wtemp(Ktable(imol)%ng*dimax))
 	allocate(work1(Ktable(imol)%ng*dimax))
 	allocate(work2(Ktable(imol)%ng*dimax+1))
-	allocate(work3(Ktable(imol)%ng*dimax))
+	allocate(work3(ng))
 !$OMP DO
 	do ilam=1,nlam
 		do iP=1,Ktable(imol)%nP

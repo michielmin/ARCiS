@@ -258,20 +258,23 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 				endif
 			enddo
 		enddo
-		COret=Ctot/Otot
+		COret=0d0
+		if(Otot.gt.0d0) COret=Ctot/Otot
 		if(Tform.gt.0d0) COret=COratio
-		call output("C/O: " // dbl2string(COret,'(f8.3)'))
-		call output("[O]: " // dbl2string(log10(Otot/Htot)-log10(0.0004509658/0.9207539305),'(f8.3)'))
-		call output("[C]: " // dbl2string(log10(Ctot/Htot)-log10(0.0002478241/0.9207539305),'(f8.3)'))
+		if(Otot.gt.0d0) call output("C/O: " // dbl2string(COret,'(f8.3)'))
+		if(Otot.gt.0d0.and.Htot.gt.0d0) call output("[O]: " // dbl2string(log10(Otot/Htot)-log10(0.0004509658/0.9207539305),'(f8.3)'))
+		if(Ctot.gt.0d0.and.Htot.gt.0d0) call output("[C]: " // dbl2string(log10(Ctot/Htot)-log10(0.0002478241/0.9207539305),'(f8.3)'))
 
 		COratio=COret
+		if(nmol.ge.48) then
 		if(includemol(48)) then
 			do i=1,nr
 				Htot=Htot+Ndens(i)*mixrat_r(i,48)
 				metallicity=metallicity-Ndens(i)*mixrat_r(i,48)
 			enddo
 		endif
-		metallicity=log10(metallicity/Htot)+3.0565202503263760
+		endif
+		if(Htot.gt.0d0) metallicity=log10(metallicity/Htot)+3.0565202503263760
 	endif
 
 	if(.not.retrieval) then
@@ -288,7 +291,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 					Htot=Htot+Ndens(i)*mixrat_r(i,imol)*real(Hatoms(imol))
 				endif
 			enddo
-			write(50,'(es15.4,3f10.3)') P(i),Ctot/Otot,
+			if(Otot.gt.0d0.and.Ctot.gt.0d0.and.Htot.gt.0d0) write(50,'(es15.4,3f10.3)') P(i),Ctot/Otot,
      &			log10(Otot/Htot)-log10(0.0004509658/0.9207539305),
      &			log10(Ctot/Htot)-log10(0.0002478241/0.9207539305)
 		enddo
