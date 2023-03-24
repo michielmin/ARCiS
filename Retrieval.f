@@ -121,7 +121,7 @@
 					call output("File does not exist" // trim(ObsSpec(i)%file))
 					stop
 				endif
-				open(unit=20,file=ObsSpec(i)%file,FORM="FORMATTED",ACCESS="STREAM")
+				open(unit=20,file=ObsSpec(i)%file)
 				j=1
 				ilam=1
 1				read(20,*,end=2,err=1) x,y,dy
@@ -131,7 +131,8 @@
 2				ObsSpec(i)%ndata=ilam-1
 				ObsSpec(i)%nlam=ObsSpec(i)%ndata
 				nj=j-1
-				rewind(20)
+				close(unit=20)
+				open(unit=20,file=ObsSpec(i)%file,FORM="FORMATTED",ACCESS="STREAM")
 				allocate(ObsSpec(i)%lam(ObsSpec(i)%ndata))
 				allocate(ObsSpec(i)%y(ObsSpec(i)%ndata))
 				allocate(ObsSpec(i)%dy(ObsSpec(i)%ndata))
