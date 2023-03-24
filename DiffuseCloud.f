@@ -880,7 +880,8 @@ c Use Band matrix algorithm
 	
 	if(.not.retrieval) then
 		if(do3D) then
-			open(unit=20,file=trim(outputdir) // '/crystallinity' // trim(int2string(i3D,'(i0.4)')) // '.dat',FORM="FORMATTED",ACCESS="STREAM")
+			open(unit=20,file=trim(outputdir) // '/crystallinity' // trim(int2string(i3D,'(i0.4)')) // '.dat',
+     &             FORM="FORMATTED",ACCESS="STREAM")
 		else
 			open(unit=20,file=trim(outputdir) // '/crystallinity.dat',FORM="FORMATTED",ACCESS="STREAM")
 		endif
