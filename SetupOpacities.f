@@ -126,7 +126,8 @@ c===============
 					cont_tot(1:nlam)=cont_tot(1:nlam)+(w1*CIA(i)%Cabs(iT,1:nlam)+(1d0-w1)*CIA(i)%Cabs(iT+1,1:nlam))*
      &									Ndens(ir)*mixrat_tmp(CIA(i)%imol1)*mixrat_tmp(CIA(i)%imol2)
 				else
-					cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(CIA(i)%nT,1:nlam)*Ndens(ir)*mixrat_tmp(CIA(i)%imol1)*mixrat_tmp(CIA(i)%imol2)
+					cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(CIA(i)%nT,1:nlam)*Ndens(ir)*
+     &						mixrat_tmp(CIA(i)%imol1)*mixrat_tmp(CIA(i)%imol2)
 				endif
 			endif
 		enddo
