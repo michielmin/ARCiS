@@ -262,8 +262,10 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		if(Otot.gt.0d0) COret=Ctot/Otot
 		if(Tform.gt.0d0) COret=COratio
 		if(Otot.gt.0d0) call output("C/O: " // dbl2string(COret,'(f8.3)'))
-		if(Otot.gt.0d0.and.Htot.gt.0d0) call output("[O]: " // dbl2string(log10(Otot/Htot)-log10(0.0004509658/0.9207539305),'(f8.3)'))
-		if(Ctot.gt.0d0.and.Htot.gt.0d0) call output("[C]: " // dbl2string(log10(Ctot/Htot)-log10(0.0002478241/0.9207539305),'(f8.3)'))
+		if(Otot.gt.0d0.and.Htot.gt.0d0) call output("[O]: " // 
+     &				dbl2string(log10(Otot/Htot)-log10(0.0004509658/0.9207539305),'(f8.3)'))
+		if(Ctot.gt.0d0.and.Htot.gt.0d0) call output("[C]: " // 
+     &				dbl2string(log10(Ctot/Htot)-log10(0.0002478241/0.9207539305),'(f8.3)'))
 
 		COratio=COret
 		if(nmol.ge.48) then
@@ -484,7 +486,8 @@ c	endif
 	close(unit=50)
 
 	do ii=1,nclouds
-		open(unit=50,file=trim(outputdir) // 'clouddens' // trim(int2string(ii,'(i0.2)')) // trim(side) // '.dat',FORM="FORMATTED",ACCESS="STREAM")
+		open(unit=50,file=trim(outputdir) // 'clouddens' // trim(int2string(ii,'(i0.2)')) // trim(side) // '.dat',
+     &					FORM="FORMATTED",ACCESS="STREAM")
 		form='("#",a12,a15,a15,a15)'
 		write(50,trim(form)) "P [bar]","dens [g/cm^3]","Eq. dens","gas dens"
 		form='(es13.3,es15.3E3,es15.3E3,es15.3E3)'
