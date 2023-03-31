@@ -539,7 +539,7 @@ c Add CO and/or CO2 back to the gas phase if temperature is too high
 	fmin=1d200
 	do i=1,N_atoms
 		if(mol(i).gt.0d0) then
-			f=molfracs_atoms*limit/mol
+			f=molfracs_atoms(i)*limit(i)/mol(i)
 			if(f.lt.fmin) fmin=f
 		endif
 	enddo
