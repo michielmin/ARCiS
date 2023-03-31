@@ -396,8 +396,8 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(model_err_lam(max(nmodel_err,1)))
 	allocate(PhotoReacts(max(nPhotoReacts,1)))
 	do i=1,nPhotoReacts
-		allocate(PhotoReacts%react(nmol_data))
-		allocate(PhotoReacts%product(nmol_data))
+		allocate(PhotoReacts(i)%react(nmol_data))
+		allocate(PhotoReacts(i)%product(nmol_data))
 	enddo
 
 	do i=1,nTpoints
