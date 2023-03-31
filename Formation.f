@@ -533,9 +533,17 @@ c Add CO and/or CO2 back to the gas phase if temperature is too high
 	subroutine remove(mol,limit)
 	use AtomsModule
 	IMPLICIT NONE
-	real*8 f,mol(N_atoms),limit(N_atoms)
+	real*8 f,mol(N_atoms),limit(N_atoms),fmin
+	integer i
 	
-	f=minval(molfracs_atoms*limit/mol)
+	fmin=1d200
+	do i=1,N_atoms
+		if(mol(i).gt.0d0) then
+			f=molfracs_atoms*limit/mol
+			if(f.lt.fmin) fmin=f
+		endif
+	enddo
+	f=fmin
 	molfracs_atoms=molfracs_atoms-mol*f
 	
 	return
