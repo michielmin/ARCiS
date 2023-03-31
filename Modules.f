@@ -189,7 +189,7 @@ c===============================================================================
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS
 	logical,allocatable :: includemol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,twind,epsiter,specres_LR
-	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,metallicity0,vfrag,betaF
+	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,metallicity0,vfrag,betaF,kappaUV
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid,blackbodystar
 	logical didcondens_chem,resume_multinest,disequilibrium,const_eff_multinest
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file,pargridfile,deepredisttype
@@ -203,7 +203,7 @@ c===============================================================================
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:),planet_albedo(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	real*8 planetform_fdust,planetform_fplan,planetform_Mstart,planetform_SolidC
-	real*8 planetform_Macc,planetform_Dmigrate,planetform_Rend,TeffPoutput
+	real*8 planetform_Macc,planetform_Dmigrate,planetform_Rend,TeffPoutput,Hydrogenloss
 	logical planetform,massprior,retrievestar,simAb_converge,log_emis,randomstart
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
@@ -217,7 +217,8 @@ c for exchange when computing secondary atmosphere
 	real*8,allocatable :: model_err_rel(:),model_err_abs(:),model_err_lam(:)
 	integer nmodel_err
 	
-	real*8 nC_PAH,mixrat_PAH,rad_optEC,Eg_optEC,mixrat_optEC
+	real*8 nC_PAH,mixrat_PAH,rad_optEC,Eg_optEC,mixrat_optEC,mixrat_optEC0
+	real*8,allocatable :: mixrat_optEC_r(:)
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb
 	character*20 surfacetype
@@ -406,6 +407,14 @@ c for exchange when computing secondary atmosphere
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 
+
+	type photochem
+		real*8 react(nmol_data),product(nmol_data)
+		real*8 f_eff
+		logical haze
+	end type photochem
+	type(photochem),allocatable :: PhotoReacts(:)
+	integer nPhotoReacts
 
 	type RetrievalPar
 		character*500 keyword

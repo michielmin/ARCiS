@@ -425,7 +425,7 @@
 		open(unit=83,file=trim(outputdir) // "/trans_hide_" // trim(molname(imolhide)),FORM="FORMATTED",ACCESS="STREAM")
 	endif
 	do ilam=1,nlam
-		write(83,*) lam(ilam)*1d4,obsA(0,ilam)/(pi*Rstar**2)
+		if(computelam(ilam)) write(83,*) lam(ilam)*1d4,obsA(0,ilam)/(pi*Rstar**2)
 	enddo
 	close(unit=83)
 	endif

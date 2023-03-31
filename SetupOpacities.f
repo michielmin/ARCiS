@@ -147,7 +147,7 @@ c===============
 !$OMP& PRIVATE(i,j,imol,ig,jg,ig_c,imol0,w1,nfull,nfast)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,computelam,
 !$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid,
-!$OMP&        RTgridpoint,includemol,do_rayleigh,mixrat_PAH,mixrat_optEC,nmap,imap)
+!$OMP&        RTgridpoint,includemol,do_rayleigh,mixrat_PAH,mixrat_optEC0,mixrat_optEC,mixrat_optEC_r,nmap,imap)
 
 		if(do_rayleigh) then
 !$OMP DO SCHEDULE(STATIC)
@@ -159,6 +159,7 @@ c===============
 		endif
 
 		if(mixrat_PAH.gt.0d0) call ComputePAH(cont_tot,Csca(ir,1:nlam),computelam)
+		mixrat_optEC=mixrat_optEC0+mixrat_optEC_r(ir)
 		if(mixrat_optEC.gt.0d0) call Compute_optEC(cont_tot,Csca(ir,1:nlam),computelam)
 
 !$OMP DO SCHEDULE(STATIC)

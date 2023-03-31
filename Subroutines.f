@@ -1045,3 +1045,44 @@ c        print*,'series failed in expint'
 	return
 	end
 	
+	subroutine checkfile(filename)
+	IMPLICIT NONE
+	character(len=*) filename
+	character*500 homedir,filetemp,filetrim
+	logical check
+	integer i
+	
+	inquire(file=filename,exist=check)
+	if(check) return
+	call getenv('HOME',homedir)
+
+	i=index(filename,'~')
+	if(i.ne.0) then
+		write(filetemp,'(a,"/",a)') trim(homedir),
+     &			trim(filename(i+1:len(filename)))
+		write(filename,'(a)') trim(filetemp)
+	endif
+	inquire(file=filename,exist=check)
+	if(check) return
+
+	write(filetrim,'(a)') trim(filename)
+1	i=index(filetrim,'/')
+	if(i.ne.0) then
+		write(filetrim,'(a)') trim(filetrim(i+1:len(filetrim)))
+		write(filetemp,'(a,"/",a)') trim(homedir),
+     &			trim(filetrim)
+		write(filename,'(a)') trim(filetemp)
+		print*,trim(filename)
+	else
+		print*,trim(filename)
+		print*,'failed!'
+		stop
+	endif
+	inquire(file=filename,exist=check)
+	if(check) return
+	goto 1	
+		
+
+	return
+	end
+	

@@ -19,6 +19,7 @@
 	ini = .TRUE.
 
 	minZ=-5d0
+	mixrat_optEC_r=0d0
 
 	niter=3
 	if(dochemistry) niter=3
@@ -210,6 +211,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 				if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=abun_switch_mol(imol)
 			enddo
 		enddo
+		call doPhotoChem()
 		do imol=1,nmol
 			if(isotope(imol).gt.0) then
 				do i=1,nr
@@ -639,6 +641,9 @@ c Setup names and weights of the elements
 		call output("WARNING: final mass of the planet:" // dbl2string(MSimAb/Mjup,'(se10.3)') // " Mjup")
 	endif
 
+	molfracs_atoms(1)=molfracs_atoms(1)*Hydrogenloss
+	molfracs_atoms(2)=molfracs_atoms(2)*Hydrogenloss
+	
 	molfracs_atoms=molfracs_atoms/sum(molfracs_atoms(1:N_atoms))
 	do i=1,N_atoms
 		if(molfracs_atoms(i).lt.1d-50) molfracs_atoms(i)=1d-50
@@ -671,8 +676,6 @@ c Setup names and weights of the elements
 	enddo
 	close(unit=50)
 	endif
-
-	return
 
 	else
 
@@ -1108,6 +1111,47 @@ c-----------------------------------------------------------------------
 	return
 	end
 
+
+	subroutine doPhotoChem()
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 nmax,nreac,Mtot
+	integer i,ir,imol
+	
+	mixrat_optEC_r=0d0
+	do i=1,nPhotoReacts
+		do ir=1,nr
+			nmax=1d200
+			do imol=1,nmol
+				if(includemol(imol).and.PhotoReacts(i)%react(imol).gt.0d0) then
+					nreac=mixrat_r(ir,imol)/PhotoReacts(i)%react(imol)
+					if(nreac.lt.nmax) nmax=nreac
+				endif
+			enddo
+			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-kappaUV*1d6*P(ir)/grav(ir)))
+			Mtot=0d0
+			do imol=1,nmol
+				if(includemol(imol)) then
+					if(PhotoReacts(i)%react(imol).gt.0d0) then
+						mixrat_r(ir,imol)=mixrat_r(ir,imol)-nreac*PhotoReacts(i)%react(imol)
+						Mtot=Mtot+nreac*PhotoReacts(i)%react(imol)*Mmol(imol)
+					endif
+					if(PhotoReacts(i)%product(imol).gt.0d0) then
+						mixrat_r(ir,imol)=mixrat_r(ir,imol)+nreac*PhotoReacts(i)%product(imol)
+						Mtot=Mtot-nreac*PhotoReacts(i)%product(imol)*Mmol(imol)
+					endif
+				endif
+			enddo
+			if(PhotoReacts(i)%haze.and.Mtot.gt.0d0) then
+				Mtot=Mtot*mp*Ndens(ir)/dens(ir)
+				mixrat_optEC_r(ir)=Mtot
+			endif
+		enddo
+	enddo
+
+	return
+	end
 
 
 	real*8 function ComputeKzz(x,Tg,rhog,addmicro)

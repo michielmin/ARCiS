@@ -213,6 +213,7 @@ c===============================================================================
 	nphase=0
 	nVpoints=0
 	nIRpoints=0
+	nPhotoReacts=0
 	nmodel_err=1
 	j=0
 	mixratfile=.false.
@@ -322,6 +323,9 @@ c				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nmodel_err) nmodel_err=key%nr1
+			case("photoreac","photoreactant","photoprod","photoproduct","photoeff")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr1.gt.nPhotoReacts) nPhotoReacts=key%nr1
 			case default
 				do i=1,nmol_data
 					if(key%key.eq.molname(i)) then
@@ -390,6 +394,7 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(model_err_abs(max(nmodel_err,1)))
 	allocate(model_err_rel(max(nmodel_err,1)))
 	allocate(model_err_lam(max(nmodel_err,1)))
+	allocate(PhotoReacts(max(nPhotoReacts,1)))
 
 	do i=1,nTpoints
 		Ppoint(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nTpoints-1))
@@ -631,6 +636,7 @@ c	condensates=(condensates.or.cloudcompute)
 		allocate(didcondens(nr))
 		allocate(mixrat_r(nr,nmol))
 		allocate(mixrat_old_r(nr,nmol))
+		allocate(mixrat_optEC_r(nr))
 		allocate(cloud_dens(nr,max(nclouds,1)))
 		cloud_dens=0d0
 		call InitDens()
@@ -1271,13 +1277,23 @@ c			read(key%value,*) nTpoints
 		case("pah")
 			read(key%value,*) mixrat_PAH
 		case("optec")
-			read(key%value,*) mixrat_optEC
+			read(key%value,*) mixrat_optEC0
 		case("rad_optec")
 			read(key%value,*) rad_optEC
 		case("eg_optec")
 			read(key%value,*) Eg_optEC
 		case("fixmol")
 			call ReadFixMol(key)
+		case("photoreac","photoreactant","photoprod","photoproduct")
+			call ReadPhotoChem(key)
+		case("photoeff")
+			read(key%value,*) PhotoReacts(key%nr1)%f_eff
+		case("photohaze")
+			read(key%value,*) PhotoReacts(key%nr1)%haze
+		case("kappauv")
+			read(key%value,*) kappaUV
+		case("hydrogenloss")
+			read(key%value,*) Hydrogenloss
 		case default
 			do i=1,nmol_data
 				if(key%key.eq.molname(i)) then
@@ -1681,7 +1697,7 @@ c  GGchem was still implemented slightly wrong.
 	nC_PAH=25
 	mixrat_PAH=0d0
 
-	mixrat_optEC=0d0
+	mixrat_optEC0=0d0
 	rad_optEC=0.01
 	Eg_optEC=1.0
 
@@ -1861,7 +1877,15 @@ c  GGchem was still implemented slightly wrong.
 	planetform_Mstart=10d0
 	planetform_SolidC=0d0
 	planetform_Macc=1d-7
-	
+	Hydrogenloss=1d0
+
+	do i=1,nPhotoReacts
+		PhotoReacts(i)%react=0d0
+		PhotoReacts(i)%product=0d0
+		PhotoReacts(i)%f_eff=1d0
+		PhotoReacts(i)%haze=.false.
+	enddo
+
 	return
 	end
 
@@ -2135,6 +2159,36 @@ c number of cloud/nocloud combinations
 	
 	return
 	end
+
+	subroutine ReadPhotoChem(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i,j
+	j=key%nr1
+	if(j.gt.nPhotoReacts) nPhotoReacts=j
+
+	do i=1,nmol_data
+		if(key%orkey2.eq.molname(i)) then
+			if(i.le.nmol) then
+				select case(key%key1)
+					case("photoreac","photoreactant")
+						read(key%value,*) PhotoReacts(j)%react(i)
+					case("photoprod","photoproduct")
+						read(key%value,*) PhotoReacts(j)%product(i)
+				end select
+			endif
+			return
+		endif
+	enddo
+	call output("Molecule not recognised in abun_switch")
+	stop
+	
+	return
+	end
+
 
 	subroutine ReadInstrument(key)
 	use GlobalSetup
