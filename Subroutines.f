@@ -1048,10 +1048,11 @@ c        print*,'series failed in expint'
 	subroutine checkfile(filename)
 	IMPLICIT NONE
 	character(len=*) filename
-	character*500 homedir,filetemp,filetrim
+	character*500 homedir,filetemp,filetrim,filein
 	logical check
 	integer i
-	
+
+	write(filein,'(a)') trim(filename)
 	inquire(file=filename,exist=check)
 	if(check) return
 	call getenv('HOME',homedir)
@@ -1063,7 +1064,11 @@ c        print*,'series failed in expint'
 		write(filename,'(a)') trim(filetemp)
 	endif
 	inquire(file=filename,exist=check)
-	if(check) return
+	if(check) then
+		print*,"replacing: ",trim(filein)
+		print*,"with:      ",trim(filename)
+		return
+	endif
 
 	write(filetrim,'(a)') trim(filename)
 1	i=index(filetrim,'/')
@@ -1072,16 +1077,18 @@ c        print*,'series failed in expint'
 		write(filetemp,'(a,"/",a)') trim(homedir),
      &			trim(filetrim)
 		write(filename,'(a)') trim(filetemp)
-		print*,trim(filename)
 	else
 		print*,trim(filename)
 		print*,'failed!'
 		stop
 	endif
 	inquire(file=filename,exist=check)
-	if(check) return
+	if(check) then
+		print*,"replacing: ",trim(filein)
+		print*,"with:      ",trim(filename)
+		return
+	endif
 	goto 1	
-		
 
 	return
 	end

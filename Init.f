@@ -2471,6 +2471,7 @@ c number of cloud/nocloud combinations
 			Cloud(j)%opacitytype=trim(key%value)
 		case("file")
 			Cloud(j)%file=trim(key%value)
+			call checkfile(Cloud(j)%file)
 		case("fmax")
 			read(key%value,*) Cloud(j)%fmax
 		case("blend")
@@ -2557,21 +2558,25 @@ c number of cloud/nocloud combinations
 			i=key%nr2
 			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
 			Cloud(j)%lnkfile(i,1)=trim(key%value)
+			call checkfile(Cloud(j)%lnkfile(i,1))
 			Cloud(j)%nax(i)=1
 		case("lnkfilex")
 			i=key%nr2
 			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
 			Cloud(j)%lnkfile(i,1)=trim(key%value)
+			call checkfile(Cloud(j)%lnkfile(i,1))
 			Cloud(j)%nax(i)=3
 		case("lnkfiley")
 			i=key%nr2
 			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
 			Cloud(j)%lnkfile(i,2)=trim(key%value)
+			call checkfile(Cloud(j)%lnkfile(i,2))
 			Cloud(j)%nax(i)=3
 		case("lnkfilez")
 			i=key%nr2
 			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
 			Cloud(j)%lnkfile(i,3)=trim(key%value)
+			call checkfile(Cloud(j)%lnkfile(i,3))
 			Cloud(j)%nax(i)=3
 		case default
 			call output("Unknown cloud keyword: " // trim(key%key2))
