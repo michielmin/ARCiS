@@ -9,11 +9,14 @@
 	integer ii,isize
 
 	real cext0,csca0,maxf
-	real minlog,maxlog,pow,e1blend,e2blend,cabs0,totA
+	real minlog,maxlog,pow,cabs0,totA
 	real e1av,e2av,rad,r1,r2,tot,lmax,lmin,Mass,tot2,Ntot
 	real lambda,Vol,rho_av
 	real,allocatable :: r0(:),nr0(:,:),f(:),wf(:),rho(:)
-	real,allocatable :: e1(:,:),e2(:,:),frac(:)
+	real,allocatable :: e1(:,:),e2(:,:)
+	complex*16,allocatable :: m12(:)
+	real*8 e1blend,e2blend
+	real*8,allocatable :: frac(:)
 	real,allocatable :: e1d(:,:),e2d(:,:)
 	integer i,j,k,l,na,nf,ns,nm,ilam,Err,spheres,toolarge
 	complex m,min,mav,alpha
@@ -89,16 +92,19 @@
 			enddo
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(j,e1blend,e2blend)
+!$OMP& PRIVATE(j,e1blend,e2blend,m12)
 !$OMP& SHARED(C,i,e1,e2,frac,e1d,e2d)
+			allocate(m12(C%nmat+1))
 !$OMP DO
 !$OMP& SCHEDULE(STATIC)
 			do j=1,C%nlam
-				call Blender(e1d(1:C%nmat+1,j),e2d(1:C%nmat+1,j),frac(1:C%nmat+1),C%nmat+1,e1blend,e2blend)
+				m12(1:C%nmat+1)=dcmplx(e1d(1:C%nmat+1,j),e2d(1:C%nmat+1,j))
+				call Blender(m12(1:C%nmat+1),frac(1:C%nmat+1),C%nmat+1,e1blend,e2blend)
 				e1(i,j)=e1blend
 				e2(i,j)=e2blend
 			enddo
 !$OMP END DO
+			deallocate(m12)
 !$OMP FLUSH
 !$OMP END PARALLEL
 			rho_av=0d0
@@ -423,45 +429,40 @@ c use the dielectric extrapolation, this is the default
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 
-	subroutine Blender(e1in,e2in,abun,nm,e1out,e2out)
+	subroutine Blender(m,abun,nm,e1out,e2out)
 	IMPLICIT NONE
-	integer nm,j,iter
-	real e1in(nm),e2in(nm),e1out,e2out,abun(nm)
-	complex*16 mm,m(nm),me,sum
+	integer,intent(in) :: nm
+	real*8,intent(in) :: abun(nm)
+	complex*16,intent(in) :: m(nm)
+	real*8,intent(out) :: e1out,e2out
+	integer j,iter
+	complex*16 mm,me,sum,m2(nm)
+	logical doit(nm)
 
-	mm=dcmplx(1d0,0d0)
-	do j=1,nm
-		m(j)=dcmplx(e1in(j),e2in(j))
-	enddo
 c LLL mixing rule (not preferred)
 	mm=0d0
 	do j=1,nm
-		mm=mm+m(j)**(2d0/3d0)*abun(j)
+		doit(j)=(abun(j).gt.0d0)
+		if(doit(j)) then
+			m2(j)=m(j)**2
+			mm=mm+m(j)**(2d0/3d0)*abun(j)
+		endif
 	enddo
-	mm=mm**(3d0/2d0)
+	mm=mm**3d0
+
 	do iter=1,100
 		sum=0d0
 		do j=1,nm
-			sum=sum+((m(j)**2-mm**2)/(m(j)**2+2d0*mm**2))*abun(j)
+			if(doit(j)) sum=sum+((m2(j)-mm)/(m2(j)+2d0*mm))*abun(j)
 		enddo
 		me=(2d0*sum+1d0)/(1d0-sum)
-		me=mm*cdsqrt(me)
+		me=mm*me
 		mm=me
 		if(cdabs(sum).lt.1d-8) exit
 	enddo
 
-	e1out=dreal(me)
-	e2out=dimag(me)
-
-
-c LLL mixing rule (not preferred)
-c	me=0d0
-c	do j=1,nm
-c		me=me+m(j)**(2d0/3d0)*abun(j)
-c	enddo
-c	me=me**(3d0/2d0)
-c	e1out=dreal(me)
-c	e2out=dimag(me)
+	e1out=dreal(cdsqrt(me))
+	e2out=dimag(cdsqrt(me))
 
 	return
 	end
