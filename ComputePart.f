@@ -96,7 +96,7 @@
 !$OMP& SHARED(C,i,e1,e2,frac,e1d,e2d)
 			allocate(m12(C%nmat+1))
 !$OMP DO
-!$OMP& SCHEDULE(STATIC)
+!$OMP& SCHEDULE(DYNAMIC,1)
 			do j=1,C%nlam
 				m12(1:C%nmat+1)=dcmplx(e1d(1:C%nmat+1,j),e2d(1:C%nmat+1,j))
 				call Blender(m12(1:C%nmat+1),frac(1:C%nmat+1),C%nmat+1,e1blend,e2blend)

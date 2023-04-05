@@ -64,6 +64,8 @@
 	nest_tol=tol_multinest
 	nest_ceff=const_eff_multinest
 
+	nest_updInt=nest_update
+
 	if(writeWolk) then
 		if(nest_resume) then
 			call system("mv " //trim(outputdir) // '/Wolk.dat ' //trim(outputdir) // '/Wolk_tmp.dat ')

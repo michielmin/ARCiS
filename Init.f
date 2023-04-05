@@ -1112,6 +1112,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) f_multinest
 		case("tolmultinest","ftol")
 			read(key%value,*) tol_multinest
+		case("nestupdate")
+			read(key%value,*) nest_update
 		case("retrievaltype")
 			read(key%value,*) retrievaltype
 		case("writewolk")
@@ -1792,6 +1794,7 @@ c  GGchem was still implemented slightly wrong.
 	resume_multinest=.false.
 	f_multinest=0.3d0
 	tol_multinest=0.5d0
+	nest_update=100
 	const_eff_multinest=.false.
 	retrievaltype='MN'
 	writeWolk=.true.
