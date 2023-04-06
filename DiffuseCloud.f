@@ -26,7 +26,7 @@
 	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:)
 	integer INCFD,IERR
 	logical SKIP
-	real*8 time,tcrystinv,impurity,ncryst,nucryst,Tcryst
+	real*8 time,tcrystinv,nucryst,Tcryst
 	integer itime
 !$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp,AB)
 
@@ -781,12 +781,11 @@ c end the loop
 
 	if(Cloud(ii)%computecryst) then
 c Compute crystallinity
-	impurity=1d-8
-	ncryst=2.5d0
-	nucryst=93d0
-	Tcryst=112000d0
+	nucryst=2d13
+	Tcryst=41000d0
+c values from Fabian et al. 2000
 
-	cryst=impurity
+	cryst=0d0
 	
 	do iter=1,100
 	maxerr=0d0
@@ -798,7 +797,7 @@ c equations for material
 	j=0
 	i=1
 	j=j+1
-	Aomp(j,ixc(iCS,i))=1d0
+	Aomp(j,ixv(iCS,i))=1d0
 	xomp(j)=0d0
 
 	j=j+1
@@ -806,8 +805,7 @@ c equations for material
 	Aomp(j,ixv(iCS,i))=1d0
 	xomp(j)=xc(4,i)+xc(5,i)+xc(6,i)
 	do i=2,nnr-1
-		tcrystinv=exp(nucryst-Tcryst/CloudT(i))
-		tcrystinv=tcrystinv*ncryst*(-log(max(impurity,1d0-max(impurity,cryst(iCS,i)))))**((ncryst-1d0)/ncryst)
+		tcrystinv=nucryst*exp(-Tcryst/CloudT(i))
 
 		j=j+1
 
@@ -928,7 +926,11 @@ c correction for silicates
 			fsil(4,k)=Osil-4d0
 		endif
 		tot=sum(fsil(1:4,k))
-		fsil(1:4,k)=fsil(1:4,k)/tot
+		if(tot.gt.0d0) then
+			fsil(1:4,k)=fsil(1:4,k)/tot
+		else
+			fsil(1:4,k)=0d0
+		endif
 c correction for FeS
 		f=mu(8)*CSnmol(8)+mu(9)*CSnmol(9)
 		mm=(f/(mu(9)*CSnmol(9))-1d0)*xc(9,k)
@@ -987,7 +989,11 @@ c Silicates
 	call regridarray(logCloudP,x,nnr,logP,fsil2(4,1:nr),nr)
 	do k=1,nr
 		tot=sum(fsil2(1:4,k))
-		fsil2(1:4,k)=fsil2(1:4,k)/tot
+		if(tot.gt.0d0) then
+			fsil2(1:4,k)=fsil2(1:4,k)/tot
+		else
+			fsil2(1:4,k)=0d0
+		endif
 	enddo
 	x(1:nnr)=xc(4,1:nnr)+xc(5,1:nnr)+xc(6,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,9),nr)
@@ -995,6 +1001,12 @@ c Silicates
 	Cloud(ii)%frac(1:nr,4)=Cloud(ii)%frac(1:nr,9)*fsil2(1,1:nr)
 	Cloud(ii)%frac(1:nr,8)=Cloud(ii)%frac(1:nr,9)*fsil2(4,1:nr)
 	Cloud(ii)%frac(1:nr,9)=Cloud(ii)%frac(1:nr,9)*fsil2(2,1:nr)
+	do i=1,nnr
+		tot=xc(4,i)+xc(5,i)+xc(6,i)
+		xc(4,i)=tot*fsil(1,i)
+		xc(5,i)=tot*fsil(2,i)
+		xc(6,i)=tot*fsil(3,i)
+	enddo
 c H2O
 	x(1:nnr)=xc(7,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,12),nr)
@@ -1054,7 +1066,7 @@ c SiO2
 		if(tot.gt.0d0) then
 			Cloud(ii)%frac(i,1:15)=Cloud(ii)%frac(i,1:15)/tot
 		else
-			Cloud(ii)%frac(i,1:15)=1d0/13d0
+			Cloud(ii)%frac(i,1:15)=1d0/15d0
 			cloud_dens(i,ii)=0d0
 		endif
 	enddo
