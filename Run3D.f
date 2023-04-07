@@ -791,6 +791,7 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 	endif
 	if(actually1D) nptrace=1
 	allocate(rtrace(nrtrace))
+	if(n3D.eq.2) nptrace=2
 
 	k=0
 	do i=1,ndisk
@@ -824,12 +825,14 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 		A=pi*(rtrace(irtrace+1)**2-rtrace(irtrace)**2)/real(nptrace)
 		do iptrace=1,nptrace
 c Note we use the symmetry of the North and South here!
-			if(nptrace.eq.1) then
+			if(nptrace.gt.2) then
 				if(2*(nlatt/2).eq.nlatt) then
 					phi=pi*(real(iptrace)-0.5)/real((nlatt-1)*2)
 				else
 					phi=pi*(real(iptrace)-0.5)/real(nlatt-1)
 				endif
+			else if(nptrace.eq.2) then
+				phi=pi*(real(iptrace-1))/real(nptrace-1)
 			else
 				phi=2d0*pi*(real(iptrace)-0.5)/real(nptrace)
 			endif
