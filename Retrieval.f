@@ -592,6 +592,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	use GlobalSetup
 	use Constants
 	use RetrievalMod
+	use Struct3D
 	IMPLICIT NONE
 	integer nvars,i,j,nlamtot,ny,k,maxspec,im,ilam,status,system,ii
 	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars),spectemp(nlam),specsave(nobs,nlam)
@@ -605,7 +606,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	if(dopostequalweights) doscaleR2=.false.
 	if(imodel.gt.nscaleR.and.nscaleR.gt.0) doscaleR2=.false.
 	imodel=imodel+1
-	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel.or.(do3D.and.night2day.ne.1d0)) call output("model number: " 
+	if(.not.useobsgrid.or.100*(imodel/100).eq.imodel.or.(do3D.and.night2day.ne.1d0.and.n3D.gt.2)) call output("model number: " 
      &				// int2string(imodel,'(i7)') // dbl2string(bestchi2,'(f10.2)'))
 
 	var=var_in
