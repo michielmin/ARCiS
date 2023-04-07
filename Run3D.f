@@ -19,7 +19,7 @@
 	integer nx_im,ix,iy,ni,ilatt,ilong,imustar
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1,SiRalb1,tau0
-	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:),SiR0(:,:),SiRalb0(:,:),R3DC(:,:)
+	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:),SiR0(:,:),SiRalb0(:,:),R3DC(:,:),lgrid(:)
 	logical iterateshift,actually1D,do_ibeta(n3D)
 	real*8 vxxmin,vxxmax,ComputeKzz,betamin_term,tot1,tot2
 	logical docloud0(max(nclouds,1))
@@ -670,16 +670,31 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 			Rmin_im=Rmax_im
 		enddo
 		ni=nlam
-		call writefitsfile(file,xy_image,ni,nx_im)
+		allocate(lgrid(nlam))
+		lgrid(1:nlam)=lam(1:nlam)
+		ni=0
+		do i=1,nlam
+			if(computelam(i)) then
+				ni=ni+1
+				if(ni.ne.i) then
+					xy_image(1:nx_im,1:nx_im,ni)=xy_image(1:nx_im,1:nx_im,i)
+					lgrid(ni)=lgrid(i)
+				endif
+			endif
+		enddo
+		do i=1,ni
+			print*,i,lgrid(i)
+		enddo
+		
+		call writefitsfile(file,xy_image(1:nx_im,1:nx_im,1:ni),ni,nx_im)
 
 		file=trim(outputdir) // "imageRGB" //  trim(int2string(int(theta_phase(ipc)),'(i0.3)')) // ".fits"
 		call output("Creating image: " // trim(file))
-		ni=nlam
 		i=0
 		allocate(maxdet(nx_im*nx_im,3))
 		do ix=1,nx_im
 			do iy=1,nx_im
-				call SPECTOXYZ(xy_image(ix,iy,1:ni),lam(1:ni),ni,x,y,z)
+				call SPECTOXYZ(xy_image(ix,iy,1:ni),lgrid(1:ni),ni,x,y,z)
 				xy_image(ix,iy,1)=x
 				xy_image(ix,iy,2)=y
 				xy_image(ix,iy,3)=z
@@ -696,6 +711,7 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 				maxdet(i,3)=z
 			enddo
 		enddo
+		deallocate(lgrid)
 		if(ipc.eq.1.or..not.makemovie) then
 		ni=nx_im*nx_im
 		do i=1,ni/20
