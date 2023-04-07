@@ -682,9 +682,6 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 				endif
 			endif
 		enddo
-		do i=1,ni
-			print*,i,lgrid(i)
-		enddo
 		
 		call writefitsfile(file,xy_image(1:nx_im,1:nx_im,1:ni),ni,nx_im)
 
