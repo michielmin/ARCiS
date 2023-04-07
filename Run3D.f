@@ -155,7 +155,7 @@ c	recomputeopac=.true.
 			if(readFull3D) then
 				ibeta(i,j)=(i-1)*(nlatt-1)+j
 			else
-				if(betamax.eq.betamin.or.(night2day.eq.1d0.and.vxx.eq.0d0.and.pole2eq.eq.1d0)) then
+				if(betamax.eq.betamin.or.(night2day.eq.1d0.and.vxx.eq.0d0.and.pole2eq.eq.1d0.and.n3D.ne.2)) then
 					ibeta(i,j)=1
 				else
 					ibeta(i,j)=(real(n3D)*((beta(i,j)-betamin)/(betamax-betamin)))+1
@@ -805,7 +805,7 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 	enddo
 	obsA=0d0
 	obsA_split=0d0
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(.false.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(vv,tau,tauc,Afact,hit,irtrace,A,iptrace,phi,rr,x,y,z,vx,vy,vz,la,lo,i1,i2,i3,
 !$OMP&			edgeNR,v,i1next,i2next,i3next,edgenext,i,imol,ir,ig,obsA_omp,obsA_split_omp)
