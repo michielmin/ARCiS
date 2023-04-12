@@ -18,6 +18,7 @@
 			call DiffuseCloud(ii)
 			Cloud(ii)%rv=Cloud(ii)%rv*1d4
 			Cloud(ii)%sigma=1d-10
+			Cloud(ii)%onepart=.false.
 			call SetupPartCloud(ii)
 		case("FILE")
 			Cloud(ii)%nlam=nlam
@@ -32,6 +33,7 @@ c 90% MgSiO3
 			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*(4d0*pi*densdust*Cloud(ii)%rv(1:nr)**3)/3d0
 			Cloud(ii)%rv=Cloud(ii)%rv*1d4
 			Cloud(ii)%sigma=1d-10
+			Cloud(ii)%onepart=.false.
 			call SetupPartCloud(ii)
 		case("FILEDRIFT")
 			Cloud(ii)%nlam=nlam
@@ -66,6 +68,7 @@ c 90% MgSiO3
 			call regridN(Cloud(ii)%file,P*1d6,Cloud(ii)%rv(1:nr),nr,2,7,1,4,.true.,.false.)
 			Cloud(ii)%rv=Cloud(ii)%rv*1d4
 			Cloud(ii)%sigma=1d-10
+			Cloud(ii)%onepart=.false.
 			call SetupPartCloud(ii)
 		case("LAYER")
 			Cloud(ii)%nlam=nlam+1
@@ -165,6 +168,7 @@ c-----------------------------------------------------------------------
 	real*8 phi,thet,tot,tot2,fact,tautot(nlam),HG,kabs,ksca
 	logical computelamcloud(nlam),restrictcomputecloud
 	real*8 dens1bar,haze_scale
+	character*100 form
 
 	if(.not.allocated(Cloud(ii)%rv)) allocate(Cloud(ii)%rv(nr))
 	if(.not.allocated(Cloud(ii)%M)) allocate(Cloud(ii)%M(nr))
@@ -197,7 +201,16 @@ c-----------------------------------------------------------------------
 					Cloud(ii)%Ksca(is,1:nlam+1)=Cloud(ii)%Ksca(1,1:nlam+1)
 				enddo
 			else
+				if(.not.retrieval) then
+					open(unit=28,file=trim(outputdir) // 'cloudcomp.dat',RECL=1000)				
+					form='("#",a18,a23,' // trim(int2string(Cloud(ii)%nmat,'(i4)')) // 'a23)'
+					write(28,form) "P[bar]","dens",(trim(Cloud(ii)%material(j)),j=1,Cloud(ii)%nmat)
+					form='(es19.5,es23.5,' // trim(int2string(Cloud(ii)%nmat,'(i4)')) // 'f23.5)'
+				endif
 				do is=nr,1,-1
+					if(.not.retrieval) then
+						write(28,form) P(is),cloud_dens(is,ii),Cloud(ii)%frac(is,1:Cloud(ii)%nmat)
+					endif
 					call tellertje(nr-is+1,nr)
 					call ComputePart(Cloud(ii),ii,is,computelamcloud)
 					if(restrictcomputecloud) then
@@ -209,6 +222,7 @@ c-----------------------------------------------------------------------
 						enddo
 					endif
 				enddo
+				close(unit=28)
 			endif
 		case default
 			call output("Opacity type unknown: " // trim(Cloud(ii)%opacitytype))
