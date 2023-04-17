@@ -762,6 +762,14 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 		enddo
 	endif
 
+	if(pos_dT) then
+		do i=1,n_ret
+			if(RetPar(i)%keyword(1:7).eq."dTpoint") then
+				RetPar(i)%xmin=0d0
+			endif
+		enddo
+	endif
+
 	if(iWolk.gt.0) then
 		open(unit=50,file=trim(outputdir) // "/Wolk.dat",FORM="FORMATTED",ACCESS="STREAM")
 		allocate(var(n_ret),dvar(n_ret))
@@ -1148,12 +1156,16 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) PrefTpoint
 		case("pos_dt_lowest")
 			read(key%value,*) pos_dT_lowest
+		case("pos_dt")
+			read(key%value,*) pos_dT
 		case("faircoverage")
 			read(key%value,*) faircoverage
 		case("speclimits")
 			read(key%value,*) speclimits
 		case("adiabatic","adiabatic_tprofile")
 			read(key%value,*) adiabatic_tprofile
+		case("outflow")
+			read(key%value,*) outflow
 		case("fday")
 			read(key%value,*) fDay
 		case("kxx")
@@ -1222,6 +1234,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) deepredist
 		case("deepredisttype")
 			read(key%value,*) deepredisttype
+		case("tsurface")
+			read(key%value,*) Tsurface0
 		case("readfull3d")
 			read(key%value,*) readFull3D
 		case("computealbedo","planetalbedo")
@@ -1672,6 +1686,7 @@ c  GGchem was still implemented slightly wrong.
 	GGCHEM_P_iter=.true.
 	
 	adiabatic_tprofile=.false.
+	outflow=.false.
 
 	domakeai=.false.
 	nai=1000
@@ -1815,6 +1830,7 @@ c  GGchem was still implemented slightly wrong.
 	outputopacity=.false.
 	forceEbalance=.false.
 	exp_ad=7d0/5d0		! adiabatic exponent
+	Tsurface0=-1d0
 
 	call getenv('HOME',homedir) 
 
@@ -1864,6 +1880,7 @@ c  GGchem was still implemented slightly wrong.
 	dTpoint=0d0
 	chimax=1d0
 	pos_dT_lowest=.false.	
+	pos_dT=.false.	
 	wiggle_err=-1d0
 
 	maxTprofile=1d6

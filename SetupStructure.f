@@ -75,6 +75,7 @@
 		if(Pb(i).eq.Pplanet) Pb(i)=Pb(i)**0.99*P(i)**0.01
 	enddo
 	if(Pb(nr+1).eq.Pplanet) Pb(nr+1)=Pb(nr+1)/1.001
+	if(.not.outflow) then
 	P0=min(Pplanet,Pb(1))
 	do i=1,nr
 		if(Pb(i).ge.P0.and.Pb(i+1).lt.P0) then
@@ -127,6 +128,35 @@
 	R0=Rplanet
 	P0=min(Pplanet,Pb(1))
 	enddo
+	else
+	R(1)=Rplanet
+	do i=1,nr
+		if(.not.dochemistry) then
+			MMW(i)=0d0
+			do imol=1,nmol
+				if(includemol(imol)) MMW(i)=MMW(i)+mixrat_r(i,imol)*Mmol(imol)
+			enddo
+			if(mixratfile) then
+				MMW(i)=MMW(i)+(1d0-sum(mixrat_r(i,1:nmol)))
+			endif
+		endif
+				
+		Ndens(i)=P(i)*Avogadro/(RgasBar*T(i))
+		Hp(i3)=(T(i)*kb)/(grav(i)*mp*MMW(i))
+
+		dz=dlogp*Hp(i)
+		dens(i)=Ndens(i)*mp*MMW(i)
+
+		if(i.lt.nr) then
+			if(Pb(i).ge.1d0.and.Pb(i+1).lt.1d0) then
+				dens1bar=Avogadro*mp*MMW(i)/(RgasBar*T(i))
+			endif
+		endif
+		if(i.gt.1) then
+			R(i)=sqrt(R(i-1)**2*dens(i-1)/dens(i))
+		endif
+	enddo
+	endif
 	Mtot=Mplanet
 	do i=1,nr
 		RHill=(Dplanet*(Mtot/(3d0*Mstar))**(1d0/3d0))

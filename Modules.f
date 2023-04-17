@@ -191,11 +191,11 @@ c===============================================================================
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,twind,epsiter,specres_LR
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,metallicity0,vfrag,betaF,kappaUV
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid,blackbodystar
-	logical didcondens_chem,resume_multinest,disequilibrium,const_eff_multinest
+	logical didcondens_chem,resume_multinest,disequilibrium,const_eff_multinest,outflow
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file,pargridfile,deepredisttype
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
 	real*8 Kzz,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,powvxx,night2day,pole2eq,Rp_range
-	real*8 Kzz_deep,Kzz_1bar,Kzz_P,Kzz_contrast,SOratio,Tsurface,hotspotshift0,exp_ad
+	real*8 Kzz_deep,Kzz_1bar,Kzz_P,Kzz_contrast,SOratio,Tsurface,hotspotshift0,exp_ad,Tsurface0
 	logical gamma_equal,dopostequalweights,inverseCOratio,setsurfpressure,fixnight2day
 	logical transspec,emisspec,dosimplerainout,computeLC,doscaleR,complexKzz,writeWolk,dotranshide
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
@@ -233,7 +233,7 @@ c for exchange when computing secondary atmosphere
 
 	real*8,allocatable :: tau_Vpoint(:),tau_IRpoint(:),dT_Vpoint(:),dT_IRpoint(:)
 	real*8,allocatable :: Ppoint(:),dTpoint(:)
-	logical pos_dT_lowest,freePT_fitT,freePT_fitP
+	logical pos_dT_lowest,pos_dT,freePT_fitT,freePT_fitP
 	real*8 PrefTpoint,wiggle_err
 	integer nVpoints,nIRpoints,nTpoints
 
