@@ -218,22 +218,34 @@
 	endif
 
 	if(retrieval) then
-		maxsig=0d0
-		minsig=1d200
-		do i=1,nobs
-			do j=1,ObsSpec(i)%ndata
-				if(ObsSpec(i)%dy(j).gt.maxsig) maxsig=ObsSpec(i)%dy(j)
-				if(ObsSpec(i)%dy(j).lt.minsig) minsig=ObsSpec(i)%dy(j)
-			enddo
-		enddo
 		do i=1,n_ret
 			if(RetPar(i)%keyword(1:9).eq.'model_err') then
+				read(RetPar(i)%keyword(14:len(trim(RetPar(i)%keyword))),*) it
+				if(it.eq.1) then
+					x=0d0
+				else
+					x=model_err_lam(it-1)
+				endif
+				if(it.eq.nmodel_err) then
+					y=1d200
+				else
+					y=model_err_lam(it)
+				endif
+				maxsig=0d0
+				minsig=1d200
+				do k=1,nobs
+					do j=1,ObsSpec(k)%ndata
+						if(ObsSpec(k)%lam(j).ge.x.and.ObsSpec(k)%lam(j).le.y) then
+							if(ObsSpec(k)%dy(j).gt.maxsig) maxsig=ObsSpec(k)%dy(j)
+							if(ObsSpec(k)%dy(j).lt.minsig) minsig=ObsSpec(k)%dy(j)
+						endif
+					enddo
+				enddo
 				RetPar(i)%xmin=0.1*minsig
 				RetPar(i)%xmax=10d0*maxsig
 			endif
 		enddo
 	endif
-	
 	return
 	end
 
