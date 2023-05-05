@@ -178,10 +178,23 @@ c-----------------------------------------------------------------------
 		allocate(Cloud(ii)%Kext(nr,nlam+1))
 	endif
 
-	call output("Computing inhomogeneous cloud particles")
-
 	select case(Cloud(ii)%opacitytype)
+		case("OPACITY")
+			call output("Using precomputed cloud particles")
+			Cloud(ii)%Kext=0d0
+			Cloud(ii)%Kabs=0d0
+			Cloud(ii)%Ksca=0d0
+			do j=1,Cloud(ii)%nmat
+				do ilam=1,nlam+1
+					do is=1,nr
+						Cloud(ii)%Kext(is,ilam)=Cloud(ii)%Kext(is,ilam)+Cloud(ii)%frac(is,j)*Cloud(ii)%KeFile(j,ilam)
+						Cloud(ii)%Kabs(is,ilam)=Cloud(ii)%Kabs(is,ilam)+Cloud(ii)%frac(is,j)*Cloud(ii)%KaFile(j,ilam)
+						Cloud(ii)%Ksca(is,ilam)=Cloud(ii)%Ksca(is,ilam)+Cloud(ii)%frac(is,j)*Cloud(ii)%KsFile(j,ilam)
+					enddo
+				enddo
+			enddo
 		case("PARAMETERISED")
+			call output("Computing parameterised cloud particles")
 			do ilam=1,nlam
 				Cloud(ii)%Kext(1:nr,ilam)=Cloud(ii)%kappa/(1d0+(lam(ilam)*1d4/Cloud(ii)%klam)**Cloud(ii)%kpow)
 			enddo
@@ -189,6 +202,7 @@ c-----------------------------------------------------------------------
 			Cloud(ii)%Ksca(1:nr,1:nlam)=Cloud(ii)%Kext(1:nr,1:nlam)*Cloud(ii)%albedo
 			Cloud(ii)%Kabs(1:nr,1:nlam)=Cloud(ii)%Kext(1:nr,1:nlam)*(1d0-Cloud(ii)%albedo)
 		case("MATERIAL","REFIND")
+			call output("Computing inhomogeneous cloud particles")
 			computelamcloud(1:nlam)=computelam(1:nlam)
 			tautot=0d0
 			restrictcomputecloud=(.not.computeT.and..not.scattering)
@@ -224,6 +238,13 @@ c-----------------------------------------------------------------------
 				enddo
 				close(unit=28)
 			endif
+			do is=nr,1,-1
+				open(unit=29,file='particle' // trim(int2string(is,'(i0.2)')),RECL=1000)
+				do ilam=1,nlam
+					if(computelam(ilam)) write(29,*) lam(ilam)*1d4,Cloud(ii)%Kabs(is,ilam),Cloud(ii)%Ksca(is,ilam)
+				enddo
+				close(unit=29)
+			enddo
 		case default
 			call output("Opacity type unknown: " // trim(Cloud(ii)%opacitytype))
 			stop
@@ -237,11 +258,11 @@ c-----------------------------------------------------------------------
 
 
 
-	subroutine SetupRefIndCloud()
+	subroutine SetupMaterialCloud()
 	use GlobalSetup
 	IMPLICIT NONE
 	integer ii,i,j,iref,ngrid
-	real*8 lgrid(nlam+1),e1d(nlam+1),e2d(nlam+1)
+	real*8 lgrid(nlam+1),e1d(nlam+1),e2d(nlam+1),kap
 	logical lnkloglog
 	external Carbon_BE_Zubko1996,Mg07Fe03SiO3_Dorschner1995,AstroSilicate
 	external Enstatite_X,Enstatite_Y,Enstatite_Z,checkparticlefile
@@ -439,6 +460,23 @@ c-----------------------------------------------------------------------
 				enddo
 			enddo
 		endif
+		else if(Cloud(ii)%opacitytype.eq."OPACITY") then
+			allocate(Cloud(ii)%KeFile(Cloud(ii)%nmat,ngrid))
+			allocate(Cloud(ii)%KaFile(Cloud(ii)%nmat,ngrid))
+			allocate(Cloud(ii)%KsFile(Cloud(ii)%nmat,ngrid))
+			do i=1,Cloud(ii)%nmat
+				call regridOpacity(Cloud(ii)%material(i),lgrid,
+     &	Cloud(ii)%KeFile(i,1:ngrid),Cloud(ii)%KaFile(i,1:ngrid),Cloud(ii)%KsFile(i,1:ngrid),ngrid)
+				kap=Cloud(ii)%KeFile(i,iref)
+				Cloud(ii)%KeFile(i,iref:nlam)=Cloud(ii)%KeFile(i,iref+1:nlam+1)
+				Cloud(ii)%KeFile(i,nlam+1)=kap
+				kap=Cloud(ii)%KaFile(i,iref)
+				Cloud(ii)%KaFile(i,iref:nlam)=Cloud(ii)%KaFile(i,iref+1:nlam+1)
+				Cloud(ii)%KaFile(i,nlam+1)=kap
+				kap=Cloud(ii)%KsFile(i,iref)
+				Cloud(ii)%KsFile(i,iref:nlam)=Cloud(ii)%KsFile(i,iref+1:nlam+1)
+				Cloud(ii)%KsFile(i,nlam+1)=kap
+			enddo
 		endif
 	enddo
 
@@ -446,5 +484,55 @@ c-----------------------------------------------------------------------
 	return
 	end
 	
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+	
+	subroutine regridOpacity(input,grid,Ke,Ka,Ks,n)
+	IMPLICIT NONE
+	integer i,j,n
+	real*8 grid(n),Ke(n),Ka(n),Ks(n),x0,Ke0,Ka0,Ks0,x1,Ke1,Ka1,Ks1
+	character*500 input
+	logical truefalse
+	inquire(file=input,exist=truefalse)
+	if(.not.truefalse) then
+		write(*,200) input(1:len_trim(input))
+200		format('File "',a,'" does not exist')
+		stop
+	endif
+	open(unit=20,file=input,FORM="FORMATTED",ACCESS="STREAM")
+	i=1
+1	read(20,*,end=102,err=1) x0,Ke0,Ka0,Ks0
+103	if(x0.ge.grid(i)) then
+		Ke(i)=Ke0
+		Ka(i)=Ka0
+		Ks(i)=Ks0
+		i=i+1
+		goto 103
+	endif
+100	read(20,*,end=102) x1,Ke1,Ka1,Ks1
+101	if(grid(i).le.x1.and.grid(i).ge.x0) then
+		Ke(i)=Ke1+(grid(i)-x1)*(Ke0-Ke1)/(x0-x1)
+		Ka(i)=Ka1+(grid(i)-x1)*(Ka0-Ka1)/(x0-x1)
+		Ks(i)=Ks1+(grid(i)-x1)*(Ks0-Ks1)/(x0-x1)
+		i=i+1
+		if(i.gt.n) goto 102
+		goto 101
+	endif
+	x0=x1
+	Ke0=Ke1
+	Ka0=Ka1
+	Ks0=Ks1
+	goto 100
+102	continue
+	do j=i,n
+		Ka(j)=Ka(i-1)*(grid(i-1)/grid(j))**2
+		Ks(j)=Ks(i-1)*(grid(i-1)/grid(j))**4
+		Ke(j)=Ka(j)+Ks(j)
+	enddo
+	close(unit=20)
+	return
+	end
+
 
 

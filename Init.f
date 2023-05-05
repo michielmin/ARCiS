@@ -23,8 +23,11 @@ c==============================================================================
 	character*1000 readline,inputfile,command
 	logical readfile,exist
 
-	call getarg(1,inputfile)
-	if(inputfile.eq.' ') inputfile='input.dat'
+	if(ncommandargs.gt.0) then
+		inputfile=commandargs(1)
+	else
+		inputfile='input.dat'
+	endif
 
 	inquire(file=inputfile,exist=exist)
 	if(.not.exist) then
@@ -55,10 +58,10 @@ c==============================================================================
 		call ignorestar(20)
 		read(20,'(a1000)',end=20,err=20) readline
 	else
-		call getarg(2+ncla,readline)
+		readline=commandargs(2+ncla)
 		if(readline(1:2).eq.'-s') then
 			ncla=ncla+1
-			call getarg(2+ncla,readline)
+			readline=commandargs(2+ncla)
 			call output("Command line argument: " // trim(readline))
 			write(21,'(a)') trim(readline)
 			ncla=ncla+1
@@ -66,7 +69,7 @@ c==============================================================================
 			ncla=ncla+2
 			goto 10
 		else
-			if(readline.ne.' ') then
+			if(readline(1:1).ne.' ') then
 c				try to read another command line argument
 				open(unit=20,file=readline,FORM="FORMATTED")
 				readfile=.true.
@@ -79,7 +82,7 @@ c				all arguments are read
 		endif
 	endif
 
-	if(readline.eq.' ') goto 10
+	if(readline(1:1).eq.' ') goto 10
 
 	allocate(key%next)
 	key => key%next
@@ -506,6 +509,22 @@ c==============================================================================
 c==============================================================================	
 
 
+	subroutine getcommandline()
+	use GlobalSetup
+	IMPLICIT NONE
+	integer i
+	
+	ncommandargs=iargc()
+	allocate(commandargs(ncommandargs+1))
+	do i=1,ncommandargs
+		call getarg(i,commandargs(i))
+	enddo
+	commandargs(ncommandargs+1)=' '
+	
+	return
+	end
+
+
 	subroutine Init()
 	use GlobalSetup
 	use Constants
@@ -677,7 +696,7 @@ c	condensates=(condensates.or.cloudcompute)
 				endif
 			endif
 		enddo
-		call SetupRefIndCloud
+		call SetupMaterialCloud
 	endif
 
 	metallicity0=metallicity
@@ -2265,15 +2284,15 @@ c number of cloud/nocloud combinations
 	use GlobalSetup
 	IMPLICIT NONE
 	integer ncla
-	character*500 readline,command
+	character*1000 readline,command
 
 	outputdir='./outputARCiS/'
 
 	ncla=2
 1	continue
-	call getarg(ncla,readline)
+	readline=commandargs(ncla)
 	if(readline(1:2).eq.'-o') then
-		call getarg(1+ncla,outputdir)
+		outputdir=commandargs(1+ncla)
 		if(outputdir(len_trim(outputdir)-1:len_trim(outputdir)).ne.'/') then
 			outputdir=trim(outputdir) // '/'
 		endif
@@ -2281,7 +2300,7 @@ c number of cloud/nocloud combinations
 		goto 1
 	endif
 	ncla=ncla+1
-	if(readline.ne.' ') goto 1
+	if(readline(1:1).ne.' ') goto 1
 
 	write(command,'("mkdir -p ",a)') trim(outputdir)
 	call system(command)

@@ -152,10 +152,11 @@
 				dens1bar=Avogadro*mp*MMW(i)/(RgasBar*T(i))
 			endif
 		endif
-		if(i.gt.1) then
+		if(i.gt.1.and.i.le.nr) then
 			R(i)=sqrt(R(i-1)**2*dens(i-1)/dens(i))
 		endif
 	enddo
+	R(nr+1)=sqrt(R(nr)**2*dens(nr-1)/dens(nr))
 	endif
 	Mtot=Mplanet
 	do i=1,nr

@@ -182,7 +182,9 @@ c===============================================================================
 	real*8,allocatable :: Jscat(:,:)						! radius, angle
 	integer nT,np,nr,nmol,nlam		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines,ng,ncia,nclouds,nTiter,i3D,nest_update
-	character*500 outputdir
+	character*1000 outputdir
+	character*1000,allocatable :: commandargs(:)
+	integer ncommandargs
 	integer idum,maxiter,miniter,Nphot0,idum0,iWolk
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib,do_rayleigh,isoFstar
@@ -402,7 +404,7 @@ c for exchange when computing secondary atmosphere
 		character*500,allocatable :: lnkfile(:,:),material(:)
 		real*8 Kzz,Sigmadot
 		real*8 kappa,albedo,kpow,klam
-		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:)
+		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:),KeFile(:,:),KaFile(:,:),KsFile(:,:)
 		integer,allocatable :: nax(:)
 	end type CloudType
 

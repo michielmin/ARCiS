@@ -8,9 +8,12 @@
 FC	  = ifort
 LINKER  = ifort
 
+
 ifeq ($(gfort),true)
 	FC	  = gfortran
 	LINKER	  = gfortran
+else
+	F2PYC  = --fcompiler=intel
 endif
 
 # array boundary check
@@ -25,6 +28,7 @@ endif
 # enforce multi core compilation with:
 # cl> make multi=true
 ifeq ($(multi),true)
+	LGOMP     = -lgomp
 	ifeq ($(gfort),true)
 		MULTICORE = -fopenmp -DUSE_OPENMP
 	else
@@ -63,18 +67,20 @@ LIBS_FITS		= -lcfitsio
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) $(DEBUGGING) 
   LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -I$(HOME)/include $(DEBUGGING) 
-  LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) $(LIBS_MN) -llapack Version.f 
+  LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) $(LIBS_MN) -llapack
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING)  
   LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) 
-  LIBS    =  -L/usr/local/lib $(LIBS_FITS) $(LIBS_MN) -llapack Version.f
+  LIBS    =  -L/usr/local/lib $(LIBS_FITS) $(LIBS_MN) -llapack -lm
 endif
 
 
+MAINF	= Main.o
+
 # files to make
 OBJS	= Modules.o \
+		ComputeModel.o \
 		InputOutput.o \
-		Main.o \
 		easy_chem_extra.o \
 		easy_chem.o \
 		ComputeT.o \
@@ -156,6 +162,7 @@ OBJS	= Modules.o \
 
 # program name and install location
 PROGRAM       = ARCiS
+PYLIB		  = pyARCiS
 DEST	      = ${HOME}/bin
 
 # make actions 
@@ -164,6 +171,7 @@ version:;	echo "#define gitversion \"$(shell git rev-parse HEAD)\"" > gitversion
 clean:;		rm -f $(OBJS) $(PROGRAM) *.mod *.i *.i90
 install:	$(PROGRAM)
 		mv $(PROGRAM) $(DEST)
+pylib:		$(PYLIB)
 
 # how to compile program 
 .SUFFIXES : .o .f .f90 .F
@@ -177,8 +185,12 @@ install:	$(PROGRAM)
 .F.o:
 	$(FC) $(LDFLAGS) -c $< -o $@ 
 
-$(PROGRAM):     version  $(OBJS)
-		$(LINKER) $(LDFLAGS) $(OBJS) $(LIBS) -o $(PROGRAM)
+$(PROGRAM):     version  $(OBJS) $(MAINF)
+		$(LINKER) $(LDFLAGS) $(OBJS) $(MAINF) $(LIBS) Version.f -o $(PROGRAM)
+
+$(PYLIB):     version  $(OBJS)
+		f2py3 -m pyARCiS $(F2PYC) -c MainPy.f90 Version.f $(OBJS) --opt='$(LDFLAGS)' $(LIBS) $(LGOMP)
+		python setup.py install
 
 # recompile everything if Modules.f has changed 
 $(OBJS):	Modules.f

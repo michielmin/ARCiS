@@ -285,19 +285,21 @@
 	real*8,allocatable :: chi2_boot(:),count(:)
 	real*8 chi2_boot_av,chi2_boot_sig1,chi2_boot_sig2
 	
-	allocate(obsA0(nlam))
-	allocate(obsA1(nlam))
-	allocate(obsA2(nlam))
-	allocate(dobsA(n_ret,nlam))
-	allocate(emis0(nlam))
-	allocate(emis1(nlam))
-	allocate(emis2(nlam))
-	allocate(demis(n_ret,nlam))
-	allocate(emisR0(nlam))
-	allocate(emisR1(nlam))
-	allocate(emisR2(nlam))
-	allocate(demisR(n_ret,nlam))
-	allocate(bestvar(n_ret))
+	if(.not.allocated(obsA0)) then
+		allocate(obsA0(nlam))
+		allocate(obsA1(nlam))
+		allocate(obsA2(nlam))
+		allocate(dobsA(n_ret,nlam))
+		allocate(emis0(nlam))
+		allocate(emis1(nlam))
+		allocate(emis2(nlam))
+		allocate(demis(n_ret,nlam))
+		allocate(emisR0(nlam))
+		allocate(emisR1(nlam))
+		allocate(emisR2(nlam))
+		allocate(demisR(n_ret,nlam))
+		allocate(bestvar(n_ret))
+	endif
 
 	if(retrievaltype.eq.'MN'.or.retrievaltype.eq.'MultiNest') then
 		call doMultiNest
