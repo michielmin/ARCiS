@@ -66,17 +66,3 @@ c terms of use
 
 	end
 	
-	subroutine ComputeModel(recomputeopacities)
-	use GlobalSetup
-	IMPLICIT NONE
-	logical recomputeopacities
-	
-	if(do3D) then
-		call Run3D(recomputeopacities)
-	else
-		call ComputeModel1D(recomputeopacities)
-	endif
-	
-	return
-	end
-
