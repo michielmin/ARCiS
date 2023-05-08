@@ -53,7 +53,7 @@ endif
 
 # Platform specific compilation options
 ifeq ($(gfort),true)
-  FLAG_ALL      = -O5 -finit-local-zero $(MULTICORE) -I$(HOME)/include -I/usr/local/modules $(LIBS_MN) $(LIBS_MCMC) -frecursive -finit-derived -Wuninitialized
+  FLAG_ALL      = -O5 -finit-local-zero $(MULTICORE) -I$(HOME)/include -I/usr/local/modules $(LIBS_MN) $(LIBS_MCMC) -fPIC -finit-derived -Wuninitialized
   FLAG_LINUX    = -ffixed-line-length-none -cpp -malign-double
   FLAG_MAC      = -m64 -ffixed-line-length-none -cpp -malign-double
 else
