@@ -898,6 +898,10 @@ c			read(key%value,*) nrsurf
 			read(key%value,*) loggPlanet
 		case("constant_g")
 			read(key%value,*) constant_g
+		case("fixmmw")
+			read(key%value,*) fixMMW
+		case("mmw")
+			read(key%value,*) MMW0
 		case("rstar")
 			read(key%value,*) Rstar
 		case("mstar")
@@ -1604,6 +1608,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	loggPlanet=2.5d0
 	Mp_from_logg=.false.
 	constant_g=.false.
+	fixMMW=.false.
+	MMW0=2.2
 	Psurf=10d0
 	
 	Tstar=5777d0

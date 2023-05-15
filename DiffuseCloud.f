@@ -1120,6 +1120,7 @@ c	open(unit=20,file=trim(outputdir) // '/atoms.dat',FORM="FORMATTED",ACCESS="STR
    		endif
 c		write(20,*) P(i),molfracs_atoms(1:N_atoms)
 	enddo
+	if(fixMMW) MMW=MMW0
 c	close(unit=20)
 	deallocate(at_ab)
 

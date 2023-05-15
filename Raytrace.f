@@ -7,7 +7,7 @@
 	integer icloud,isize
 	real*8,allocatable :: rtrace(:),phase0(:)
 	real*8,allocatable :: fluxg_contr(:),fact_contr(:),Ag_contr(:)
-	integer irc,imolhide
+	integer irc,imolhide,jmolhide
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig,nsub,j,k,nk
 	logical in,dohide
 	integer icc,imol
@@ -324,6 +324,7 @@
 
 
 	if(dotranshide) then
+	do jmolhide=1,2
 	do imolhide=0,nmol
 	obsA=0d0
 	obsA_LC=0d0
@@ -338,13 +339,13 @@
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
 !$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,opacitymol,irtrace,dtrace,Cabs_mol,mixrat_r,
-!$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,Cext_cont,
-!$OMP&		cloudfrac,nirtrace,maxtau,ndisk,nr,obsA_LC,CaCont,imolhide)
+!$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,Cext_cont,Rstar,
+!$OMP&		cloudfrac,nirtrace,maxtau,ndisk,nr,obsA_LC,CaCont,imolhide,jmolhide)
 !$OMP DO SCHEDULE(DYNAMIC)
 	do ilam=1,nlam
 		do icc=1,ncc
 		if(cloudfrac(icc).gt.0d0) then
-			if(imolhide.eq.0d0) then
+			if((imolhide.eq.0.and.jmolhide.eq.1).or.(imolhide.ne.0.and.jmolhide.eq.2)) then
 				do ir=1,nr
 					CaCont(ir,ilam)=Cext_cont(ir,ilam)
 				enddo
@@ -361,7 +362,7 @@
 				enddo
 			endif
 			do i=1,nrtrace-1
-				if(i.lt.ndisk) then
+				if(i.lt.ndisk) then !.or.jmolhide.eq.2.and.rtrace(i).lt.sqrt(0.0195)*Rstar) then
 					A=0d0
 				else
 					A=1d0
@@ -386,7 +387,8 @@
 					enddo
 					A=A*exp(-tautot)
 					do imol=1,nmol
-						if(opacitymol(imol).and.imol.ne.imolhide) then
+						if((opacitymol(imol).and.imol.ne.imolhide.and.jmolhide.eq.1).or.
+     &					   (opacitymol(imol).and.imol.eq.imolhide.and.jmolhide.eq.2)) then
 						Ag=0d0
 						do ig=1,ng
 							tautot=0d0
@@ -419,16 +421,28 @@
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
-	if(imolhide.eq.0) then
-		open(unit=83,file=trim(outputdir) // "/trans_hide_clouds",FORM="FORMATTED",ACCESS="STREAM")
+	if(jmolhide.eq.1) then
+		if(imolhide.eq.0) then
+			open(unit=83,file=trim(outputdir) // "/trans_hide_clouds",FORM="FORMATTED",ACCESS="STREAM")
+		else
+			open(unit=83,file=trim(outputdir) // "/trans_hide_" // trim(molname(imolhide)),FORM="FORMATTED",ACCESS="STREAM")
+		endif
+		do ilam=1,nlam
+			if(computelam(ilam)) write(83,*) lam(ilam)*1d4,obsA(0,ilam)/(pi*Rstar**2)
+		enddo
 	else
-		open(unit=83,file=trim(outputdir) // "/trans_hide_" // trim(molname(imolhide)),FORM="FORMATTED",ACCESS="STREAM")
+		if(imolhide.eq.0) then
+			open(unit=83,file=trim(outputdir) // "/trans_only_clouds",FORM="FORMATTED",ACCESS="STREAM")
+		else
+			open(unit=83,file=trim(outputdir) // "/trans_only_" // trim(molname(imolhide)),FORM="FORMATTED",ACCESS="STREAM")
+		endif
+		do ilam=1,nlam
+			if(computelam(ilam)) write(83,*) lam(ilam)*1d4,obsA(0,ilam)/(pi*Rstar**2)
+		enddo
 	endif
-	do ilam=1,nlam
-		if(computelam(ilam)) write(83,*) lam(ilam)*1d4,obsA(0,ilam)/(pi*Rstar**2)
-	enddo
 	close(unit=83)
 	endif
+	enddo
 	enddo
 	endif
 	

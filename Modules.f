@@ -209,8 +209,8 @@ c===============================================================================
 	logical planetform,massprior,retrievestar,simAb_converge,log_emis,randomstart
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
-	real*8 molfracs_atoms_outgas(41)
-	logical secondary_atmosphere,constant_g,forceEbalance
+	real*8 molfracs_atoms_outgas(41),MMW0
+	logical secondary_atmosphere,constant_g,forceEbalance,fixMMW
 	logical,allocatable :: RTgridpoint(:),computelam(:)
 	
 	integer nrsurf

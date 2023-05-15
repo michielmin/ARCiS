@@ -55,6 +55,7 @@
 		do imol=1,nmol
 			if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=abun_switch_mol(imol)
 		enddo
+		call doPhotoChem()
 	enddo
 	endif
 
@@ -63,10 +64,14 @@
 	Mtot=Mplanet
 
 	if(j.eq.1) then
-		MMW=0d0
-		do imol=1,nmol
-			if(includemol(imol)) MMW=MMW+mixrat_r(1,imol)*Mmol(imol)
-		enddo
+		if(fixMMW) then
+			MMW=MMW0
+		else
+			MMW=0d0
+			do imol=1,nmol
+				if(includemol(imol)) MMW=MMW+mixrat_r(1,imol)*Mmol(imol)
+			enddo
+		endif
 	endif
 	call output("Mean molecular weight: " // dbl2string(MMW(1),'(f8.3)'))
 	i1=1
@@ -94,7 +99,7 @@
 			i3=i-1
 		endif
 
-		if(.not.dochemistry) then
+		if(.not.dochemistry.and..not.fixMMW) then
 			MMW(i3)=0d0
 			do imol=1,nmol
 				if(includemol(imol)) MMW(i3)=MMW(i3)+mixrat_r(i3,imol)*Mmol(imol)
@@ -131,7 +136,7 @@
 	else
 	R(1)=Rplanet
 	do i=1,nr
-		if(.not.dochemistry) then
+		if(.not.dochemistry.and..not.fixMMW) then
 			MMW(i)=0d0
 			do imol=1,nmol
 				if(includemol(imol)) MMW(i)=MMW(i)+mixrat_r(i,imol)*Mmol(imol)
@@ -168,7 +173,7 @@ c		endif
 		Mtot=Mtot+dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
 		grav(i)=Ggrav*Mtot/(R(i)*R(i+1))
 	enddo
-c	if(constant_g) grav=Ggrav*Mplanet/(Rplanet)**2
+	if(constant_g) grav=Ggrav*Mplanet/(Rplanet)**2
 	do i=nr,1,-1
 		vescape=sqrt(2d0*Ggrav*Mplanet/R(i))
 		vtherm=sqrt(3d0*kb*T(i)/(mp*MMW(i)))
@@ -218,6 +223,7 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
     			didcondens(i)=didcondens(i-1)
     		endif
 		enddo
+		if(fixMMW) MMW=MMW0
 		if(disequilibrium) then
 c call disequilibrium code
 c input: 	R(1:nr+1) : These are the radial boundaries of the layers (bottom to top)
