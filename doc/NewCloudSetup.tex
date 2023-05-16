@@ -109,7 +109,7 @@ Reference wavelength (in micron, default 1\,$\mu$m)
 
 \subsection{Homogeneous cloud}
 
-This is actually not really a cloud. It is actually a homogeneous component in the atmosphere. There is no top pressure or bottom pressure, the entire atmosphere is filled with the same mass fraction of cloud particles.
+This is actually not really a cloud. It is actually a homogeneous component in the atmosphere. There is only a top pressure but no bottom pressure, the entire atmosphere is filled with the same mass fraction of cloud particles.
 \\
 \inputfile{cloud1:type="HOMOGENEOUS"}
 \\
@@ -121,6 +121,8 @@ You have only a few parameters specifying the cloud distribution
 Has to be set to "HOMOGENEOUS" to form this type of cloud
 \item[\texttt{mixrat}]
 Mass mixing ratio of the cloud particles
+\item[\texttt{Ptop}]
+The top pressure of the cloud (default $P_\mathrm{top}=0$)
 \end{description}
 
 

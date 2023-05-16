@@ -135,7 +135,13 @@ c 90% MgSiO3
 			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
 		case("HOMOGENEOUS")
 			Cloud(ii)%nlam=nlam
-			cloud_dens(1:nr,ii)=dens(1:nr)*Cloud(ii)%mixrat
+			do i=1,nr
+				if(P(i).lt.Cloud(ii)%Pmin) then
+					cloud_dens(i,ii)=0d0
+				else
+					cloud_dens(i,ii)=dens(i)*Cloud(ii)%mixrat
+				endif
+			enddo
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
 			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
