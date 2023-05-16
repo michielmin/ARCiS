@@ -238,13 +238,13 @@ c-----------------------------------------------------------------------
 				enddo
 				close(unit=28)
 			endif
-			do is=nr,1,-1
-				open(unit=29,file='particle' // trim(int2string(is,'(i0.2)')),RECL=1000)
-				do ilam=1,nlam
-					if(computelam(ilam)) write(29,*) lam(ilam)*1d4,Cloud(ii)%Kabs(is,ilam),Cloud(ii)%Ksca(is,ilam)
-				enddo
-				close(unit=29)
-			enddo
+c			do is=nr,1,-1
+c				open(unit=29,file='particle' // trim(int2string(is,'(i0.2)')),RECL=1000)
+c				do ilam=1,nlam
+c					if(computelam(ilam)) write(29,*) lam(ilam)*1d4,Cloud(ii)%Kabs(is,ilam),Cloud(ii)%Ksca(is,ilam)
+c				enddo
+c				close(unit=29)
+c			enddo
 		case default
 			call output("Opacity type unknown: " // trim(Cloud(ii)%opacitytype))
 			stop

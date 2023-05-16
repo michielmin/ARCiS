@@ -5,7 +5,7 @@
 	IMPLICIT NONE
 	real*8 error(n_ret),random,starttime,stoptime,remaining,omp_get_wtime,sig,aver,xmin,xmax
 	real*8,allocatable :: spectrans(:,:),specemis(:,:),specemisR(:,:),sorted(:),hotspotshift_der(:)
-	real*8,allocatable :: PTstruct(:,:),var(:,:),values(:,:),COratio_der(:),Z_der(:),cloudstruct(:,:)
+	real*8,allocatable :: PTstruct(:,:),var(:,:),values(:,:),COratio_der(:),Z_der(:),cloudstruct(:,:),MMW_der(:)
 	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j,iphase,imol,k
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
@@ -45,6 +45,7 @@
 	allocate(values(0:nmodels,n_ret))
 	allocate(COratio_der(0:nmodels))
 	allocate(Z_der(0:nmodels))
+	allocate(MMW_der(0:nmodels))
 	allocate(Tplanet(0:nmodels))
 	if(do3D) allocate(hotspotshift_der(0:nmodels))
 	allocate(sorted(nmodels))
@@ -163,7 +164,7 @@
 			write(line(i*12-11:i*12+1),'(" ",a11)') RetPar(i)%keyword
 		endif
 	enddo
-	write(line(n_ret*12+1:6000),'(3a12)') "C/O","[Z]","Teff"
+	write(line(n_ret*12+1:6000),'(4a12)') "C/O","[Z]","Teff","MMW"
 	write(83,'(a)') trim(line)
 
 	do i=0,donmodels
@@ -206,6 +207,7 @@
 	enddo
 	COratio_der(i)=COratio
 	Z_der(i)=metallicity
+	MMW_der(i)=MMW(1)
 	if(do3D) hotspotshift_der(i)=hotspotshift
 	call SetOutputMode(.true.)
 
@@ -329,8 +331,8 @@
 		enddo
 	endif
 	if(i.ne.0) then
-		write(line,'("(",i0.4,"es12.4)")') n_ret+3
-		write(83,line) var(imodel,1:n_ret),COratio_der(i),Z_der(i),Tplanet(i)
+		write(line,'("(",i0.4,"es12.4)")') n_ret+4
+		write(83,line) var(imodel,1:n_ret),COratio_der(i),Z_der(i),Tplanet(i),MMW_der(i)
 	endif
 	if(i.gt.2.and.(100*(i/100).eq.i.or.i.eq.donmodels.or.i.le.10)) then
 		im1=real(i)/2d0-real(i)*0.682689492137086/2d0+0.5d0
@@ -524,6 +526,9 @@
 			call sort(sorted,i)
 			write(26,'(a10,3es12.4)') "Tplanet",sorted(ime),sorted(im1),sorted(ip1)
 		endif
+		sorted(1:i)=MMW_der(1:i)
+		call sort(sorted,i)
+		write(26,'(a10,3es12.4)') "MMW",sorted(ime),sorted(im1),sorted(ip1)
 
 		close(unit=26)
 
@@ -562,6 +567,7 @@
 	deallocate(values)
 	deallocate(COratio_der)
 	deallocate(Z_der)
+	deallocate(MMW_der)
 	if(do3D) deallocate(hotspotshift_der)
 	deallocate(done)
 	deallocate(var)
