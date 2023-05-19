@@ -121,7 +121,10 @@ c===============
 						if(T(ir).ge.CIA(i)%T(iT).and.T(ir).le.CIA(i)%T(iT+1)) exit
 					enddo
 				endif
-				if(iT.lt.CIA(i)%nT) then
+				if(T(ir).lt.CIA(i)%T(1)) then
+					cont_tot(1:nlam)=cont_tot(1:nlam)+CIA(i)%Cabs(1,1:nlam)*Ndens(ir)*
+     &						mixrat_tmp(CIA(i)%imol1)*mixrat_tmp(CIA(i)%imol2)
+				else if(iT.lt.CIA(i)%nT) then
 					w1=(CIA(i)%T(iT+1)-T(ir))/(CIA(i)%T(iT+1)-CIA(i)%T(iT))
 					cont_tot(1:nlam)=cont_tot(1:nlam)+(w1*CIA(i)%Cabs(iT,1:nlam)+(1d0-w1)*CIA(i)%Cabs(iT+1,1:nlam))*
      &									Ndens(ir)*mixrat_tmp(CIA(i)%imol1)*mixrat_tmp(CIA(i)%imol2)
