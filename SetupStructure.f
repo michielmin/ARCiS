@@ -1,6 +1,7 @@
 	subroutine SetupStructure(compute_mixrat)
 	use GlobalSetup
 	use Constants
+	use AtomsModule
 	IMPLICIT NONE
 	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,met_r,dens1bar,minZ,Tc,Rscale
 	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill,MMW_form,P0,R0,Kzz_r(nr)
@@ -8,7 +9,7 @@
 	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3,ir
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
-	real*8 ComputeKzz
+	real*8 ComputeKzz,molfracs_atoms0(N_atoms)
 		
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
@@ -55,7 +56,7 @@
 		do imol=1,nmol
 			if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=abun_switch_mol(imol)
 		enddo
-		call doPhotoChem()
+		call doPhotoChemMol()
 	enddo
 	endif
 
@@ -212,6 +213,10 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
 		do i=1,nr
 			call tellertje(i,nr)
 			Tc=max(min(T(i),20000d0),100d0)
+			if(nPhotoReacts.gt.0) then
+				molfracs_atoms0=molfracs_atoms
+				call doPhotoChemAtom(i)
+			endif
 			if(P(i).ge.mixP.or.i.eq.1) then
 				call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
      &			XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,dosimplerainout)
@@ -222,6 +227,9 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
     			MMW(i)=MMW(i-1)
     			didcondens(i)=didcondens(i-1)
     		endif
+			if(nPhotoReacts.gt.0) then
+				molfracs_atoms=molfracs_atoms0
+			endif
 		enddo
 		if(fixMMW) MMW=MMW0
 		if(disequilibrium) then
@@ -248,7 +256,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 				if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=abun_switch_mol(imol)
 			enddo
 		enddo
-		call doPhotoChem()
+		call doPhotoChemMol()
 		do imol=1,nmol
 			if(isotope(imol).gt.0) then
 				do i=1,nr
@@ -482,11 +490,11 @@ c	endif
 	endif
 	
 	open(unit=50,file=trim(outputdir) // 'densityprofile' // trim(side) // '.dat',FORM="FORMATTED",ACCESS="STREAM")
-	write(50,'("#",a14,a15,a15,a13,a10,a11,a10)') "radius [cm]","height [cm]","dens [g/cm^3]","N [1/cm^3]","T [K]",
-     & 	"P [bar]","g [cm/s^2]"
+	write(50,'("#",a14,a15,a15,a13,a10,a11,a10,a10)') "radius [cm]","height [cm]","dens [g/cm^3]","N [1/cm^3]","T [K]",
+     & 	"P [bar]","g [cm/s^2]","MMW"
 	do i=1,nr
-		write(50,'(es15.7E3,es15.4E3,es15.4E3,es13.4E3,f10.3,es11.3E3,f10.3)') sqrt(R(i)*R(i+1)),sqrt(R(i)*R(i+1))-Rplanet
-     &			,dens(i),Ndens(i),T(i),P(i),grav(i)
+		write(50,'(es15.7E3,es15.4E3,es15.4E3,es13.4E3,f10.3,es11.3E3,f10.3,f10.3)') sqrt(R(i)*R(i+1)),sqrt(R(i)*R(i+1))-Rplanet
+     &			,dens(i),Ndens(i),T(i),P(i),grav(i),MMW(i)
 	enddo
 	close(unit=50)
 
@@ -1149,7 +1157,7 @@ c-----------------------------------------------------------------------
 	end
 
 
-	subroutine doPhotoChem()
+	subroutine doPhotoChemMol()
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
@@ -1158,6 +1166,7 @@ c-----------------------------------------------------------------------
 	
 	mixrat_optEC_r=0d0
 	do i=1,nPhotoReacts
+		if(.not.PhotoReacts(i)%atomic) then
 		do ir=1,nr
 			nmax=1d200
 			do imol=1,nmol
@@ -1185,6 +1194,60 @@ c-----------------------------------------------------------------------
 				mixrat_optEC_r(ir)=Mtot
 			endif
 		enddo
+		else
+		do ir=1,nr
+			do imol=1,nmol
+				if(includemol(imol)) then
+					mixrat_r(ir,imol)=mixrat_r(ir,imol)+PhotoReacts(i)%abun(ir,imol)
+				endif
+			enddo
+		enddo
+		endif
+	enddo
+
+	return
+	end
+
+	subroutine doPhotoChemAtom(ir)
+	use GlobalSetup
+	use AtomsModule
+	use Constants
+	IMPLICIT NONE
+	real*8 nmax,nreac,Mtot
+	integer i,ir,imol
+	
+	mixrat_optEC_r=0d0
+	do i=1,nPhotoReacts
+		PhotoReacts(i)%abun(ir,1:nmol)=0d0
+		if(PhotoReacts(i)%atomic) then
+			nmax=1d200
+			do imol=1,N_atoms
+				if(PhotoReacts(i)%react(imol).gt.0d0) then
+					nreac=molfracs_atoms(imol)/PhotoReacts(i)%react(imol)
+					if(nreac.lt.nmax) nmax=nreac
+				endif
+			enddo
+			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-kappaUV*1d6*P(ir)/grav(ir)))
+			Mtot=0d0
+			do imol=1,N_atoms
+				if(PhotoReacts(i)%react(imol).gt.0d0) then
+					molfracs_atoms(imol)=molfracs_atoms(imol)-nreac*PhotoReacts(i)%react(imol)
+					Mtot=Mtot+nreac*PhotoReacts(i)%react(imol)*Mmol(imol)
+				endif
+			enddo
+			do imol=1,N_atoms
+				if(includemol(imol)) then
+					if(PhotoReacts(i)%product(imol).gt.0d0) then
+						PhotoReacts(i)%abun(ir,imol)=PhotoReacts(i)%abun(ir,imol)+nreac*PhotoReacts(i)%product(imol)
+						Mtot=Mtot-nreac*PhotoReacts(i)%product(imol)*Mmol(imol)
+					endif
+				endif
+			enddo
+			if(PhotoReacts(i)%haze.and.Mtot.gt.0d0) then
+				Mtot=Mtot*mp*Ndens(ir)/dens(ir)
+				mixrat_optEC_r(ir)=Mtot
+			endif
+		endif
 	enddo
 
 	return

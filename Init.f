@@ -191,6 +191,7 @@ c===============================================================================
 
 	subroutine CountStuff(firstkey)
 	use GlobalSetup
+	use AtomsModule
 	IMPLICIT NONE
 	type(SettingKey),target :: firstkey
 	type(SettingKey),pointer :: key
@@ -399,8 +400,9 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(model_err_lam(max(nmodel_err,1)))
 	allocate(PhotoReacts(max(nPhotoReacts,1)))
 	do i=1,nPhotoReacts
-		allocate(PhotoReacts(i)%react(nmol_data))
+		allocate(PhotoReacts(i)%react(max(nmol_data,N_atoms)))
 		allocate(PhotoReacts(i)%product(nmol_data))
+		allocate(PhotoReacts(i)%abun(nr,nmol_data))
 	enddo
 
 	do i=1,nTpoints
@@ -1589,6 +1591,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	IMPLICIT NONE
 	integer i
 	character*100 homedir
+
+	call SetupAtoms
 	
 	pargridfile=" "
 	idum0=42
@@ -1933,6 +1937,8 @@ c  GGchem was still implemented slightly wrong.
 		PhotoReacts(i)%product=0d0
 		PhotoReacts(i)%f_eff=1d0
 		PhotoReacts(i)%haze=.false.
+		PhotoReacts(i)%nreact=0
+		PhotoReacts(i)%atomic=.false.
 	enddo
 
 	return
@@ -2213,18 +2219,42 @@ c number of cloud/nocloud combinations
 	use GlobalSetup
 	use Constants
 	use ReadKeywords
+	use AtomsModule
 	IMPLICIT NONE
 	type(SettingKey) key
 	integer i,j
 	j=key%nr1
 	if(j.gt.nPhotoReacts) nPhotoReacts=j
 
+	do i=1,N_atoms
+		if(key%orkey2.eq.names_atoms(i)) then
+			if(i.le.nmol) then
+				select case(key%key1)
+					case("photoreac","photoreactant")
+						read(key%value,*) PhotoReacts(j)%react(i)
+						if(.not.PhotoReacts(j)%atomic.and.PhotoReacts(j)%nreact.gt.0) then
+							call output("Mixed atomic/molecular photoreaction not supported")
+							stop
+						endif
+						PhotoReacts(j)%nreact=PhotoReacts(j)%nreact+1
+						PhotoReacts(j)%atomic=.true.
+				end select
+			endif
+			return
+		endif
+	enddo
 	do i=1,nmol_data
 		if(key%orkey2.eq.molname(i)) then
 			if(i.le.nmol) then
 				select case(key%key1)
 					case("photoreac","photoreactant")
 						read(key%value,*) PhotoReacts(j)%react(i)
+						if(PhotoReacts(j)%atomic.and.PhotoReacts(j)%nreact.gt.0) then
+							call output("Mixed atomic/molecular photoreaction not supported")
+							stop
+						endif
+						PhotoReacts(j)%nreact=PhotoReacts(j)%nreact+1
+						PhotoReacts(j)%atomic=.false.
 					case("photoprod","photoproduct")
 						read(key%value,*) PhotoReacts(j)%product(i)
 				end select

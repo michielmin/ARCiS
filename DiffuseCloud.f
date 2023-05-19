@@ -1108,6 +1108,7 @@ c	open(unit=20,file=trim(outputdir) // '/atoms.dat',FORM="FORMATTED",ACCESS="STR
 				molfracs_atoms(j)=1d-50
 			endif
 		enddo
+		if(nPhotoReacts.gt.0) call doPhotoChemAtom(i)
 		if((P(i).ge.mixP.or.i.eq.1).and.dochemistry) then
 			call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
      &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,.false.)
@@ -1148,7 +1149,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 			mixrat_r(1:nr,ifixmol(i))=fixmol_abun(i)*exp(-P(1:nr)/fixmol_P(i))
 		enddo
 	endif
-	call doPhotoChem()
+	call doPhotoChemMol()
 	do j=1,nmol
 		if(isotope(j).gt.0) then
 			do i=1,nr

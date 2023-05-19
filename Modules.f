@@ -411,7 +411,9 @@ c for exchange when computing secondary atmosphere
 	type(CloudType),allocatable :: Cloud(:) 
 
 	type photochem
-		real*8,allocatable :: react(:),product(:)
+		real*8,allocatable :: react(:),product(:),abun(:,:)
+		integer nreact
+		logical atomic
 		real*8 f_eff
 		logical haze
 	end type photochem
