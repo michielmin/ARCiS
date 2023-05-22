@@ -5,6 +5,7 @@
 	real*8 pp,tot,column,tt,z,densdust,CloudMass,x
 	integer ii,i,j,nsubr,isize,ilam
 	real*8 Xc,Xc1,lambdaC,Ca,Cs,tau,P_SI1,P_SI2,veff,frac(nr,10)
+	real*8 CPmin,CPmax,CPtau
 	logical cl
 
 	if(.not.allocated(Cloud(ii)%rv)) then
@@ -79,23 +80,25 @@ c 90% MgSiO3
 				Cloud(ii)%frac(i,1:40)=Cloud(ii)%abun(1:40)
 			enddo
 			call SetupPartCloud(ii)
-			if(Cloud(ii)%Pmin.gt.Cloud(ii)%Pmax) then
-				x=Cloud(ii)%Pmin
-				Cloud(ii)%Pmin=Cloud(ii)%Pmax
-				Cloud(ii)%Pmax=x
+			CPmin=Cloud(ii)%Pmin
+			CPmax=Cloud(ii)%Pmax
+			CPtau=Cloud(ii)%Ptau
+			if(CPmin.gt.CPmax) then
+				x=CPmin
+				CPmin=CPmax
+				CPmax=x
 			endif
-			x=Cloud(ii)%Ptau
-			if(x.lt.0d0) then
-				x=Cloud(ii)%Pmax
+			if(CPtau.lt.0d0) then
+				CPtau=Cloud(ii)%Pmax
 			endif
-			if(x.le.Cloud(ii)%Pmin) then
-				x=Cloud(ii)%Ptau*1.0001
+			if(CPtau.le.CPmin) then
+				CPtau=CPmin*1.0001
 			endif
 			do i=1,nr
 				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
-				if(P(i).gt.Cloud(ii)%Pmin.and.P(i).lt.Cloud(ii)%Pmax) then
+				if(P(i).gt.CPmin.and.P(i).lt.CPmax) then
 					cloud_dens(i,ii)=(grav(i)*Cloud(ii)%xi*Cloud(ii)%tau*P(i)**(Cloud(ii)%xi-1d0))/
-     &					(Cloud(ii)%Kref*1d6*(x**Cloud(ii)%xi-Cloud(ii)%Pmin**Cloud(ii)%xi))
+     &					(Cloud(ii)%Kref*1d6*(CPtau**Cloud(ii)%xi-CPmin**Cloud(ii)%xi))
 				else
 					cloud_dens(i,ii)=0d0
 				endif
@@ -110,16 +113,19 @@ c 90% MgSiO3
 				Cloud(ii)%frac(i,1:40)=Cloud(ii)%abun(1:40)
 			enddo
 			call SetupPartCloud(ii)
-			if(Cloud(ii)%Pmin.gt.Cloud(ii)%Pmax) then
-				x=Cloud(ii)%Pmin
-				Cloud(ii)%Pmin=Cloud(ii)%Pmax
-				Cloud(ii)%Pmax=x
+			CPmin=Cloud(ii)%Pmin
+			CPmax=Cloud(ii)%Pmax
+			CPtau=Cloud(ii)%Ptau
+			if(CPmin.gt.CPmax) then
+				x=CPmin
+				CPmin=CPmax
+				CPmax=x
 			endif
 			do i=1,nr
 				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
-				if(P(i).gt.Cloud(ii)%Pmin.and.P(i).lt.Cloud(ii)%Pmax) then
+				if(P(i).gt.CPmin.and.P(i).lt.CPmax) then
 					cloud_dens(i,ii)=(grav(i)*2d0*Cloud(ii)%tau*P(i))/
-     &					(Cloud(ii)%Kref*1d6*(Cloud(ii)%Pmax*Cloud(ii)%Pmax-Cloud(ii)%Pmin*Cloud(ii)%Pmin))
+     &					(Cloud(ii)%Kref*1d6*(CPmax*CPmax-CPmin*CPmin))
 				else
 					cloud_dens(i,ii)=0d0
 				endif
