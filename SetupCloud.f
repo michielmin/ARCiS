@@ -79,11 +79,17 @@ c 90% MgSiO3
 				Cloud(ii)%frac(i,1:40)=Cloud(ii)%abun(1:40)
 			enddo
 			call SetupPartCloud(ii)
-			if(Cloud(ii)%Ptau.lt.Cloud(ii)%Pmin) then
-				x=Cloud(ii)%Ptau/Cloud(ii)%Pmin
-				Cloud(ii)%Pmin=Cloud(ii)%Ptau*x
+			if(Cloud(ii)%Pmin.gt.Cloud(ii)%Pmax) then
+				x=Cloud(ii)%Pmin
+				Cloud(ii)%Pmin=Cloud(ii)%Pmax
+				Cloud(ii)%Pmax=x
 			endif
-			if(Cloud(ii)%Ptau.eq.Cloud(ii)%Pmin) Cloud(ii)%Pmin=Cloud(ii)%Ptau*1.0001
+			if(Cloud(ii)%Ptau.lt.0d0) then
+				Cloud(ii)%Ptau=Cloud(ii)%Pmax
+			endif
+			if(Cloud(ii)%Ptau.le.Cloud(ii)%Pmin) then
+				Cloud(ii)%Pmin=Cloud(ii)%Ptau*1.0001
+			endif
 			do i=1,nr
 				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
 				if(P(i).gt.Cloud(ii)%Pmin.and.P(i).lt.Cloud(ii)%Pmax) then
@@ -103,11 +109,11 @@ c 90% MgSiO3
 				Cloud(ii)%frac(i,1:40)=Cloud(ii)%abun(1:40)
 			enddo
 			call SetupPartCloud(ii)
-			if(Cloud(ii)%Ptau.lt.Cloud(ii)%Pmin) then
-				x=Cloud(ii)%Ptau/Cloud(ii)%Pmin
-				Cloud(ii)%Pmin=Cloud(ii)%Ptau*x
+			if(Cloud(ii)%Pmin.gt.Cloud(ii)%Pmax) then
+				x=Cloud(ii)%Pmin
+				Cloud(ii)%Pmin=Cloud(ii)%Pmax
+				Cloud(ii)%Pmax=x
 			endif
-			if(Cloud(ii)%Ptau.eq.Cloud(ii)%Pmin) Cloud(ii)%Pmin=Cloud(ii)%Ptau*1.0001
 			do i=1,nr
 				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
 				if(P(i).gt.Cloud(ii)%Pmin.and.P(i).lt.Cloud(ii)%Pmax) then
