@@ -84,17 +84,18 @@ c 90% MgSiO3
 				Cloud(ii)%Pmin=Cloud(ii)%Pmax
 				Cloud(ii)%Pmax=x
 			endif
-			if(Cloud(ii)%Ptau.lt.0d0) then
-				Cloud(ii)%Ptau=Cloud(ii)%Pmax
+			x=Cloud(ii)%Ptau
+			if(x.lt.0d0) then
+				x=Cloud(ii)%Pmax
 			endif
-			if(Cloud(ii)%Ptau.le.Cloud(ii)%Pmin) then
-				Cloud(ii)%Pmin=Cloud(ii)%Ptau*1.0001
+			if(x.le.Cloud(ii)%Pmin) then
+				x=Cloud(ii)%Ptau*1.0001
 			endif
 			do i=1,nr
 				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
 				if(P(i).gt.Cloud(ii)%Pmin.and.P(i).lt.Cloud(ii)%Pmax) then
 					cloud_dens(i,ii)=(grav(i)*Cloud(ii)%xi*Cloud(ii)%tau*P(i)**(Cloud(ii)%xi-1d0))/
-     &					(Cloud(ii)%Kref*1d6*(Cloud(ii)%Ptau**Cloud(ii)%xi-Cloud(ii)%Pmin**Cloud(ii)%xi))
+     &					(Cloud(ii)%Kref*1d6*(x**Cloud(ii)%xi-Cloud(ii)%Pmin**Cloud(ii)%xi))
 				else
 					cloud_dens(i,ii)=0d0
 				endif
