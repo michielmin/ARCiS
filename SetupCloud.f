@@ -89,7 +89,7 @@ c 90% MgSiO3
 				CPmax=x
 			endif
 			if(CPtau.lt.0d0) then
-				CPtau=Cloud(ii)%Pmax
+				CPtau=CPmax
 			endif
 			if(CPtau.le.CPmin) then
 				CPtau=CPmin*1.0001
