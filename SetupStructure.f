@@ -990,7 +990,7 @@ c		call MakePTstruct_T(P,TIR,nr,Ppoint0,Tpoint0,nIRpoints)
 		endif
 	endif
 
-	T=(TV**4+TIR**4+Tfree**4)**0.25
+	T=(TV**4+TIR**4+Tfree**4+Tmin**4)**0.25
 	
 	return
 	end

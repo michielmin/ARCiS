@@ -1888,7 +1888,7 @@ c  GGchem was still implemented slightly wrong.
 
 	nTom=100
 	nPom=50
-	Tmin=71d0
+	Tmin=0d0
 	Tmax=2900d0
 	
 	TP0=600d0
