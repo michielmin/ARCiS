@@ -13,7 +13,7 @@ ifeq ($(gfort),true)
 	FC	  = gfortran
 	LINKER	  = gfortran
 else
-	F2PYC  = --fcompiler=intel
+	F2PYC  = -c --fcompiler=intel
 endif
 
 # array boundary check
@@ -189,7 +189,7 @@ $(PROGRAM):     version  $(OBJS) $(MAINF)
 		$(LINKER) $(LDFLAGS) $(OBJS) $(MAINF) $(LIBS) Version.f -o $(PROGRAM)
 
 $(PYLIB):     version  $(OBJS)
-		f2py3 -c $(F2PYC) -m pyARCiS MainPy.f90 Version.f $(OBJS) --opt='$(LDFLAGS)' $(LIBS) $(LGOMP)
+		f2py3 $(F2PYC) -m pyARCiS MainPy.f90 Version.f $(OBJS) --opt='$(LDFLAGS)' $(LIBS) $(LGOMP)
 		python setup.py install
 
 # recompile everything if Modules.f has changed 
