@@ -162,6 +162,29 @@ c 90% MgSiO3
 				Cloud(ii)%frac(i,1:40)=Cloud(ii)%abun(1:40)
 			enddo
 			call SetupPartCloud(ii)
+		case("GAUSS")
+			Cloud(ii)%nlam=nlam+1
+			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
+			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
+			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
+			do i=1,nr
+				Cloud(ii)%frac(i,1:40)=Cloud(ii)%abun(1:40)
+			enddo
+			call SetupPartCloud(ii)
+			do i=1,nr
+				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
+				cloud_dens(i,ii)=(grav(i)*Cloud(ii)%tau/
+     &					(Cloud(ii)%Kref*1d6*P(i)*Cloud(ii)%dP*sqrt(2d0*pi)))*
+     &					exp(-0.5d0*(log(P(i)/Cloud(ii)%P)/Cloud(ii)%dP)**2)
+			enddo
+			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
+			tot=0d0
+			do i=1,nr
+				tot=tot+cloud_dens(i,ii)*Cloud(ii)%Kext(i,nlam+1)*(R(i+1)-R(i))
+			enddo
+			if(tot.gt.0d0) then
+				cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%tau/tot
+			endif
 		case default
 			call output("Cloud type unknown: " // trim(Cloud(ii)%type))
 			stop
