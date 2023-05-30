@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) (preloaded format=pdflatex 2020.9.17)  14 FEB 2023 14:39
+This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) (preloaded format=pdflatex 2020.9.17)  30 MAY 2023 12:35
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -559,14 +559,18 @@ LaTeX Font Info:    Trying to load font information for TS1+txr on input line 1
 (/usr/local/texlive/2020/texmf-dist/tex/latex/txfonts/ts1txr.fd
 File: ts1txr.fd 2000/12/15 v3.1
 )
+Overfull \hbox (5.63869pt too wide) in paragraph at lines 19--20
+[]\OT1/txr/m/n/12 If in doubt on any of the re-sults, you con-sult with me. Ema
+il: M.Min@sron.nl 
+ []
+
 LaTeX Font Info:    Font shape `OT1/txr/b/n' in size <12> not available
 (Font)              Font shape `OT1/txr/bx/n' tried instead on input line 41.
 LaTeX Font Info:    Trying to load font information for OT1+txtt on input line 
 41.
-
 (/usr/local/texlive/2020/texmf-dist/tex/latex/txfonts/ot1txtt.fd
 File: ot1txtt.fd 2000/12/15 v3.1
-) [2]
+)
 Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
@@ -657,7 +661,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 46--61
 
  []
 
-
+[2]
 Underfull \hbox (badness 10000) in paragraph at lines 63--74
 
  []
@@ -728,17 +732,17 @@ Underfull \hbox (badness 10000) in paragraph at lines 80--85
 
  []
 
-[3]
-Underfull \hbox (badness 10000) in paragraph at lines 86--91
-
- []
-
 
 Underfull \hbox (badness 10000) in paragraph at lines 86--91
 
  []
 
-[4] [5] [6]
+
+Underfull \hbox (badness 10000) in paragraph at lines 86--91
+
+ []
+
+[3] [4] [5] [6]
 Overfull \hbox (12.3428pt too wide) in paragraph at lines 222--223
 []\OT1/txr/m/n/12 Can be "MIRI", "NIR-SPEC", "WFC3", "JWST" or "ARIEL".
  []
@@ -757,7 +761,7 @@ Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 257.
 Here is how much of TeX's memory you used:
  10023 strings out of 480608
  142476 string characters out of 5903630
- 413226 words of memory out of 5000000
+ 415226 words of memory out of 5000000
  25671 multiletter control sequences out of 15000+600000
  568940 words of font info for 113 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
@@ -771,7 +775,7 @@ ts/type1/public/txfonts/txbtt.pfb></usr/local/texlive/2020/texmf-dist/fonts/typ
 e1/public/txfonts/txtt.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/urw/
 times/utmb8a.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/urw/times/utmr
 8a.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on UserGuide.pdf (9 pages, 214938 bytes).
+Output written on UserGuide.pdf (9 pages, 214824 bytes).
 PDF statistics:
  184 PDF objects out of 1000 (max. 8388607)
  160 compressed objects within 2 object streams
