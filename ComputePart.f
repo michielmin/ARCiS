@@ -1,6 +1,7 @@
 	subroutine ComputePart(C,ii,isize,computelamcloud)
 	use GlobalSetup
 	use Constants
+	use AImod
 	IMPLICIT NONE
 
 	type(CloudType) C,Cdust
@@ -24,7 +25,7 @@
 	character*3 meth
 	character*500 filename(MAXMAT),grid,tmp,tmp2,partfile,lnkfile
 
-	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie,KR,theta,dummy,amin,amax,rcore
+	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie,KR,theta,dummy,amin,amax,rcore,camie,fmie
 	logical truefalse,checkparticlefile,lnkloglog
 	integer abun_in_name,LL,LLmax
 	parameter(abun_in_name=2)
@@ -224,13 +225,15 @@ c		endif
 	C%rho=Mass/Vol
 	rho_av=Mass/Vol
 
+	fmie=maxf
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,csca0,cabs0,cext0,theta,i,l,tot,k,Err,spheres,toolarge,
 !$OMP&         rad,wvno,m,r1,rcore,qext,qsca,qbs,gqsc,rmie,lmie,e1mie,e2mie,
-!$OMP&         csmie,cemie,tot2,j,fcomputed)
+!$OMP&         csmie,cemie,camie,tot2,j,fcomputed)
 !$OMP& SHARED(C,na,nm,ns,frac,minlog,maxlog,f,e1,e2,wf,isize,computelamcloud,Mass,
-!$OMP&        pow,lgrid,rho,nf,r0,nr0,Kabs,Ksca,Kext,nlam)
+!$OMP&        pow,lgrid,rho,nf,r0,nr0,Kabs,Ksca,Kext,nlam,fmie,useDLMie,
+!$OMP&		  DLMie_e1max,DLMie_e2max)
 !$OMP DO
 !$OMP& SCHEDULE(STATIC)
 	do ilam=1,C%nlam
@@ -259,6 +262,16 @@ c		endif
 	spheres=0
 	toolarge=0
 	fcomputed=.false.
+	e1mie=e1(l,ilam)
+	e2mie=e2(l,ilam)
+	if(useDLMie.and.e1mie.lt.DLmie_e1max.and.e2mie.lt.DLmie_e2max) then
+		rmie=r1
+		lmie=lgrid(ilam)
+		call DLMie(rmie,lmie,e1mie,e2mie,fmie,camie,csmie)
+		cext0=cext0+nr0(l,k)*(camie+csmie)
+		csca0=csca0+nr0(l,k)*csmie
+	   	cabs0=cabs0+nr0(l,k)*camie
+	else
 	do i=1,nf
 		rad=r1/(1d0-f(i))**(1d0/3d0)
 		m=dcmplx(e1(l,ilam),-e2(l,ilam))
@@ -305,6 +318,7 @@ c		endif
 		csca0=csca0+wf(i)*nr0(l,k)*csmie
 	   	cabs0=cabs0+wf(i)*nr0(l,k)*(cemie-csmie)
 	enddo
+	endif
 	enddo
 10	continue
 	enddo

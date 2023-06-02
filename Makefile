@@ -96,6 +96,7 @@ OBJS	= Modules.o \
 		WriteOutput.o \
 		Subroutines.o \
 		CIA.o \
+		DLMie.o \
 		ComputePart.o \
 		SetupCloud.o \
 		ReadParticleFits.o \

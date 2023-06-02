@@ -854,6 +854,8 @@ c In this case the beta map should be the static one. Make sure this is set prop
 	if(planetform) call InitFormation(Mstar,Tstar,Rstar,planetform_SolidC,planetform_Macc)
 	call Init_optEC
 	
+	if(useDLMie) call InitDLMie()
+	
 	do i=1,nmodel_err-1
 		model_err_lam(i)=10d0**(log10(lam(1))+log10(lam(nlam)/lam(1))*(real(i)/real(nmodel_err)))
 	enddo
@@ -1099,6 +1101,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) alphaZ
 		case("nspike")
 			read(key%value,*) nspike
+		case("dlmie")
+			read(key%value,*) useDLMie
 		case("nphot")
 			read(key%value,*) Nphot0
 		case("retpar","fitpar")
@@ -1804,6 +1808,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%nax=1
 	enddo
 	nspike=0
+	useDLMie=.false.
 
 	isotope=0
 	f_isotope=0d0
