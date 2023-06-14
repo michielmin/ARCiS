@@ -450,8 +450,10 @@ c-----------------------------------------------------------------------
 	complex*16,intent(in) :: m(nm)
 	real*8,intent(out) :: e1out,e2out
 	integer j,iter
-	complex*16 mm,me,sum,m2(nm)
-	logical doit(nm)
+	complex*16,save :: mm,me,sum,m2(100)
+	logical,save :: doit(100)
+!$OMP THREADPRIVATE(mm,me,sum,m2,doit)
+
 
 c LLL mixing rule (not preferred)
 	mm=0d0

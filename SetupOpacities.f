@@ -186,10 +186,7 @@ c===============
 			if(computelam(i).and.(emisspec.or.computeT).and.(.not.useobsgrid.or.lamemis(i).or.RTgridpoint(i))) then
 			kappa_tot(0)=cont_tot(i)
 			do imol=1,nmap
-				kappa_tot(imol)=0d0
-				do ig=1,ng
-					kappa_tot(imol)=kappa_tot(imol)+wgg(ig)*kappa_mol(ig,i,imap(imol))
-				enddo
+				kappa_tot(imol)=dot_product(wgg(1:ng),kappa_mol(1:ng,i,imap(imol)))
 				kappa_tot(imol)=kappa_tot(imol)*mixrat_tmp(imap(imol))
 				kappa_tot(0)=kappa_tot(0)+kappa_tot(imol)
 			enddo
@@ -491,10 +488,7 @@ c Venot et al. 2018
 	integer ig,j,j1,j2
 	real*8 tot0,tot1,ww,bg0,bg1
 	
-	tot0=0d0
-	do ig=1,n0
-		tot0=tot0+k0(ig)*w0(ig)
-	enddo
+	tot0=dot_product(k0,w0)
 	tot0=tot0/sum(w0(1:n0))
 	call dpquicksort_w(k0,w0,n0)
 c	call sortw_2(k0,w0,n0)
@@ -528,6 +522,7 @@ c			call hunt(b0,n0,bg0,j1)
 				if(b0(j2+1).ge.bg1) exit
 			enddo
 c			call hunt(b0(j1:n0),n0-j1+1,bg1,j2)
+c			j2=j2+j1-1
 			if(j1.gt.n0) j1=n0
 			if(j2.gt.n0) j2=n0
 			if(j1.ge.j2) then

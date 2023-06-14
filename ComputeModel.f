@@ -80,22 +80,22 @@ c			call SetoutputMode(.false.)
 	call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 	if(.not.do3D) then
 		call Raytrace()
-		if(emisspec.and..not.useobsgrid.and..not.retrieval) then
-			Lplanet=0d0
-			do i=1,nlam
-				if(computelam(i).and.lamemis(i)) Lplanet=Lplanet+dfreq(i)*flux(0,i)
+	endif
+	if(emisspec.and..not.useobsgrid.and..not.retrieval) then
+		Lplanet=0d0
+		do i=1,nlam
+			if(computelam(i).and.lamemis(i)) Lplanet=Lplanet+dfreq(i)*flux(0,i)
+		enddo
+		TeffPoutput=1000d0
+		do i=1,10
+			tot=0d0
+			do ilam=1,nlam
+				tot=tot+dfreq(ilam)*Planck(TeffPoutput,freq(ilam))
 			enddo
-			TeffPoutput=1000d0
-			do i=1,10
-				tot=0d0
-				do ilam=1,nlam
-					tot=tot+dfreq(ilam)*Planck(TeffPoutput,freq(ilam))
-				enddo
-				tot=tot*pi*Rplanet**2*1d23/distance**2
-				TeffPoutput=TeffPoutput*(Lplanet/tot)**0.25
-			enddo
-			call output("Teff: " // dbl2string(TeffPoutput,'(f10.2)') // "K" )
-		endif
+			tot=tot*pi*Rplanet**2*1d23/distance**2
+			TeffPoutput=TeffPoutput*(Lplanet/tot)**0.25
+		enddo
+		call output("Teff: " // dbl2string(TeffPoutput,'(f10.2)') // "K" )
 	endif
 
 	call cpu_time(stoptime)

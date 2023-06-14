@@ -730,22 +730,32 @@ c Use Band matrix algorithm
 	enddo
 	endif
 
-c	do i=1,nnr
-c correction for silicates to only form up to olivine (i.e. XXSiO4)
-c		SiSil=xc(4,i)*atoms_cloud(4,9)/(CSnmol(4)*mu(4))+
-c     &		xc(5,i)*atoms_cloud(5,9)/(CSnmol(5)*mu(5))+xc(6,i)*atoms_cloud(6,9)/(CSnmol(6)*mu(6))
-c		OSil=xc(4,i)*atoms_cloud(4,5)/(CSnmol(4)*mu(4))+
-c     &		xc(5,i)*atoms_cloud(5,5)/(CSnmol(5)*mu(5))+xc(6,i)*atoms_cloud(6,5)/(CSnmol(6)*mu(6))
-c		Osil=Osil/SiSil
-c		if(Osil.gt.4d0) then
-c			scale=(4d0*SiSil-xc(4,i)*atoms_cloud(4,5)/(CSnmol(4)*mu(4)))/(
-c     &		xc(5,i)*atoms_cloud(5,5)/(CSnmol(5)*mu(5))+xc(6,i)*atoms_cloud(6,5)/(CSnmol(6)*mu(6)))
-c			xv(5,i)=xv(5,i)+xc(5,i)*(1d0-scale)
-c			xc(5,i)=xc(5,i)*scale
-c			xv(6,i)=xv(6,i)+xc(6,i)*(1d0-scale)
-c			xc(6,i)=xc(6,i)*scale
-c		endif
-c	enddo
+	do k=1,nnr
+c correction for FeS
+		f=mu(8)*CSnmol(8)+mu(9)*CSnmol(9)
+		mm=(f/(mu(9)*CSnmol(9))-1d0)*xc(9,k)
+		if(xc(8,k).lt.mm) then
+			f=xc(8,k)/mm
+			xc(8,k)=0d0
+			xv(9,k)=xv(9,k)+xc(9,k)*(1d0-f)
+			xc(9,k)=xc(9,k)*f*(mu(8)*CSnmol(8)+mu(9)*CSnmol(9))/(mu(9)*CSnmol(9))
+		else
+			xc(8,k)=xc(8,k)-mm
+			xc(9,k)=xc(9,k)+mm
+		endif
+c correction for SiC
+		f=mu(10)*CSnmol(10)+mu(11)*CSnmol(11)
+		mm=(f/(mu(11)*CSnmol(11))-1d0)*xc(11,k)
+		if(xc(10,k).lt.mm) then
+			f=xc(10,k)/mm
+			xc(10,k)=0d0
+			xv(11,k)=xv(11,k)+xc(11,k)*(1d0-f)
+			xc(11,k)=xc(11,k)*f*(mu(10)*CSnmol(10)+mu(11)*CSnmol(11))/(mu(11)*CSnmol(11))
+		else
+			xc(10,k)=xc(10,k)-mm
+			xc(11,k)=xc(11,k)+mm
+		endif
+	enddo
 
 	maxerr=0d0
 	do i=1,nnr
@@ -930,30 +940,6 @@ c correction for silicates
 			fsil(1:4,k)=fsil(1:4,k)/tot
 		else
 			fsil(1:4,k)=0d0
-		endif
-c correction for FeS
-		f=mu(8)*CSnmol(8)+mu(9)*CSnmol(9)
-		mm=(f/(mu(9)*CSnmol(9))-1d0)*xc(9,k)
-		if(xc(8,k).lt.mm) then
-			f=xc(8,k)/mm
-			xc(8,k)=0d0
-			xv(9,k)=xv(9,k)+xc(9,k)*(1d0-f)
-			xc(9,k)=xc(9,k)*f*(mu(8)*CSnmol(8)+mu(9)*CSnmol(9))/(mu(9)*CSnmol(9))
-		else
-			xc(8,k)=xc(8,k)-mm
-			xc(9,k)=xc(9,k)+mm
-		endif
-c correction for SiC
-		f=mu(10)*CSnmol(10)+mu(11)*CSnmol(11)
-		mm=(f/(mu(11)*CSnmol(11))-1d0)*xc(11,k)
-		if(xc(10,k).lt.mm) then
-			f=xc(10,k)/mm
-			xc(10,k)=0d0
-			xv(11,k)=xv(11,k)+xc(11,k)*(1d0-f)
-			xc(11,k)=xc(11,k)*f*(mu(10)*CSnmol(10)+mu(11)*CSnmol(11))/(mu(11)*CSnmol(11))
-		else
-			xc(10,k)=xc(10,k)-mm
-			xc(11,k)=xc(11,k)+mm
 		endif
 	enddo
 	allocate(dx(nnr))

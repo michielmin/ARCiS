@@ -169,7 +169,7 @@ DEST	      = ${HOME}/bin
 # make actions 
 all:		$(PROGRAM)
 version:;	echo "#define gitversion \"$(shell git rev-parse HEAD)\"" > gitversion.h
-clean:;		rm -f $(OBJS) $(PROGRAM) *.mod *.i *.i90
+clean:;		rm -f $(OBJS) $(MAINF) $(PROGRAM) *.mod *.i *.i90
 install:	$(PROGRAM)
 		mv $(PROGRAM) $(DEST)
 pylib:		$(PYLIB)

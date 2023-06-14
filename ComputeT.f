@@ -1222,18 +1222,20 @@ c
 		enddo
 	enddo
 
-c	Itot=Si_in
-c	do i=1,2
-c		Si=0d0
-c		do ir=1,nr
-c			do jr=1,nr
-c				Si(ir,1:NRHS)=Si(ir,1:NRHS)+Itot(jr,1:NRHS)*Linv(ir,jr)
-c			enddo
-c		enddo
-c		Si_in=Si_in+Si
-c		Itot=Si
-c	enddo
-c	return
+	if(.false.) then
+		Itot=Si_in
+		i=0
+1		continue
+		Si=0d0
+		do j=1,NRHS
+			Si(1:nr,j)=matmul(Linv,Itot(1:nr,j))
+		enddo
+		Si_in=Si_in+Si
+		Itot=Si
+		i=i+1
+		if(maxval(Si/Si_in).gt.1d-3) goto 1
+		return
+	endif
 	
 	Linv=-Linv
 	do ir=1,nr

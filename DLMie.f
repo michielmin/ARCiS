@@ -96,12 +96,9 @@
 		a(j,1)=max(0d0,a(j,1))
 	enddo
 	do i=2,nlay
-		a(1:nn,i)=b(1:nn,i)
+		a(1:nn,i)=matmul(w(1:nn,1:nn,i),a(1:nn,i-1))+b(1:nn,i)
 		do j=1,nn
-			a(1:nn,i)=a(1:nn,i)+w(1:nn,j,i)*a(j,i-1)
-		enddo
-		do j=1,nn
-			a(j,i)=max(0d0,a(j,i))
+			a(j,i)=max(a(j,i),0d0)
 		enddo
 	enddo
 	Cabs=b(1,nlay+1)

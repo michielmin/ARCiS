@@ -1974,9 +1974,8 @@ c-----------------------------------------------------------------------
 	real*8 nu(nnu),wnu(nnu),must,tauRs(nr),Ijs(nr),eps,Planck,tot,wabs(nlam,ng,nr),wscat(nlam,ng,nr)
 	logical err
 	parameter(eps=1d-20)
-	real*8,allocatable :: tauR(:),Ij(:),Itot(:),Linv(:,:),Lmat(:,:),Iprev(:)
-	integer,allocatable :: IWORKomp(:)
-
+	real*8,allocatable :: tauR(:),Ij(:)
+	
 	do ir=1,nr
 		do ig=1,ng
 			do ilam=1,nlam
