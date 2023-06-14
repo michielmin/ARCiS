@@ -1,6 +1,8 @@
 \documentclass[12pt]{article}
 
 \include{general}
+\usepackage{natbib}
+\bibliographystyle{abbrvnat}
 
 \begin{document}
 
@@ -29,9 +31,9 @@ Note that there are several parts of the code from different developers:
 \item Molecular opacities: \cite{2021A&A...646A..21C} and references therein
 \item Multinest Retrieval tools: \cite{2008MNRAS.384..449F, 2009MNRAS.398.1601F, 2019OJAp....2E..10F}
 \item GGchem when including chemistry: \cite{2018A&A...614A...1W}
-\item Disequilibrium chemistry implementation: Kawashima et al. (in prep)
-\item Diffusion implementation for 3D structures: Chubb et al. (in prep)
-\item Coupling with planet formation parameters: Khorshid et al. (in prep)
+\item Disequilibrium chemistry implementation: \cite{2021A&A...656A..90K}
+\item Diffusion implementation for 3D structures: \cite{2022A&A...665A...2C}
+\item Coupling with planet formation parameters: \cite{2022A&A...667A.147K}
 \end{itemize}
 
 \section{Installing ARCiS}
@@ -251,7 +253,6 @@ File containing the input file for the best fitting model when retrieval was don
 
 There are a few examples in the Example directory downloaded with the git repository for retrieval and forward modelling.
 
-\bibliographystyle{plain} % We choose the "plain" reference style
 \bibliography{refs} % Entries are in the refs.bib file
 
 \end{document}
