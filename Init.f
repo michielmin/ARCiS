@@ -1343,6 +1343,11 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) kappaUV
 		case("hydrogenloss")
 			read(key%value,*) Hydrogenloss
+		case("adderr")
+			do i=key%nr1,key%nr2
+				read(key%value,*) ObsSpec(i)%adderr
+				print*,i,ObsSpec(i)%adderr
+			enddo
 		case default
 			do i=1,nmol_data
 				if(key%key.eq.molname(i)) then
