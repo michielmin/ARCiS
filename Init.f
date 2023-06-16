@@ -1856,6 +1856,7 @@ c  GGchem was still implemented slightly wrong.
 		ObsSpec(i)%i2d=0
 		ObsSpec(i)%iphase=1
 		ObsSpec(i)%slope=0d0
+		ObsSpec(i)%adderr=0d0
 	enddo
 	
 	computeT=.false.
@@ -2077,6 +2078,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) ObsSpec(i)%iphase
 		case("slope")
 			read(key%value,*) ObsSpec(i)%slope
+		case("adderr")
+			read(key%value,*) ObsSpec(i)%adderr
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

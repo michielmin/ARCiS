@@ -674,7 +674,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	do i=1,nobs
 		do j=1,ObsSpec(i)%ndata
 			k=k+1
-			dy(k)=ObsSpec(i)%dy(j)
+			dy(k)=sqrt(ObsSpec(i)%dy(j)**2+ObsSpec(i)%adderr**2)
 			do ii=1,nmodel_err-1
 				if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
 			enddo

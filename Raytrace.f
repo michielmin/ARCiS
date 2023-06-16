@@ -288,6 +288,7 @@
 								endif
 							enddo
 						endif
+						fact_contr=0d0
 					endif
 					if(ir_next.le.0.or.tautot.ge.maxtau) fact=0d0
 					Ag=Ag+A*(1d0-fact)
@@ -445,7 +446,102 @@
 	enddo
 	enddo
 	endif
-	
+
+
+	if(computecontrib) then
+	obsA_contr=0d0
+
+	do j=1,nr
+		call tellertje(j,nr)
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
+!$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,opacitymol,irtrace,dtrace,Cabs_mol,mixrat_r,
+!$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,Cext_cont,
+!$OMP&		cloudfrac,nirtrace,maxtau,ndisk,nr,obsA_contr,CaCont,j)
+!$OMP DO SCHEDULE(DYNAMIC)
+	do ilam=1,nlam
+		do icc=1,ncc
+		if(cloudfrac(icc).gt.0d0) then
+			do ir=1,nr
+				Ca=Cext_cont(ir,ilam)
+				do icloud=1,nclouds
+					if(docloud(icc,icloud)) then
+						Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
+						Ca=Ca+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+					endif
+				enddo
+				CaCont(ir,ilam)=Ca
+			enddo
+			do i=1,nrtrace-1
+				if(i.lt.ndisk) then
+					A=0d0
+				else
+					A=1d0
+					nk=nirtrace(i)
+					tautot=0d0
+					do k=1,nk
+						ir=irtrace(k,i)
+						d=dtrace(k,i)
+						if(ir.ne.j) then
+							tau=d*CaCont(ir,ilam)
+						else
+							tau=0d0
+						endif
+						tautot=tautot+tau
+						ir_next=irtrace(k+1,i)
+						if(tautot.gt.maxtau) then
+							tautot=1d4
+							A=0d0
+							goto 29
+						endif
+						if(ir_next.lt.1) then
+							tautot=1d4
+							A=0d0
+							goto 29
+						endif
+					enddo
+					A=A*exp(-tautot)
+					do imol=1,nmol
+						if(opacitymol(imol)) then
+						Ag=0d0
+						do ig=1,ng
+							tautot=0d0
+							do k=1,nk
+								ir=irtrace(k,i)
+								d=dtrace(k,i)
+								if(ir.ne.j) then
+									tau=d*Cabs_mol(ig,ilam,imol,ir)
+								else
+									tau=0d0
+								endif
+								tautot=tautot+tau
+								ir_next=irtrace(k+1,i)
+								if(tautot.gt.maxtau) goto 28
+								if(ir_next.lt.1) goto 28
+							enddo
+							Ag=Ag+exp(-tautot)*wgg(ig)
+28							continue
+						enddo
+						A=A*min(Ag,1d0)
+						endif
+					enddo
+29					continue
+				endif
+				if(.not.A.gt.0d0) A=0d0
+				A=pi*(rtrace(i+1)**2-rtrace(i)**2)*(1d0-A)
+				obsA_contr(j,ilam)=obsA_contr(j,ilam)+cloudfrac(icc)*A
+			enddo
+		endif
+		enddo
+	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+	enddo
+	endif
+
+
 
 	obsA=0d0
 	obsA_LC=0d0
