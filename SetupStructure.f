@@ -46,18 +46,26 @@
 	do j=1,niter
 
 	if(.not.mixratfile.and.(.not.dochemistry.or.j.eq.1)) then
-	do i=1,nr
-		tot=0d0
-		mixrat_r(i,1:nmol)=mixrat(1:nmol)
-		do imol=1,nmol
-			if(mixrat_r(i,imol).gt.0d0) tot=tot+mixrat_r(i,imol)
-		enddo
-		if(tot.gt.0d0) mixrat_r(i,1:nmol)=mixrat_r(i,1:nmol)/tot
-		do imol=1,nmol
-			if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=abun_switch_mol(imol)
+		do i=1,nr
+			tot=0d0
+			mixrat_r(i,1:nmol)=mixrat(1:nmol)
+			do imol=1,nmol
+				if(mixrat_r(i,imol).gt.0d0) tot=tot+mixrat_r(i,imol)
+			enddo
+			if(tot.gt.0d0) mixrat_r(i,1:nmol)=mixrat_r(i,1:nmol)/tot
+			do imol=1,nmol
+				if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=abun_switch_mol(imol)
+			enddo
 		enddo
 		call doPhotoChemMol()
-	enddo
+		do imol=1,nmol
+			if(isotope(imol).gt.0) then
+				do i=1,nr
+					mixrat_r(i,isotope(imol))=mixrat_r(i,imol)/f_isotope(imol)
+					mixrat_r(i,imol)=mixrat_r(i,imol)*(1d0-1d0/f_isotope(imol))
+				enddo
+			endif
+		enddo
 	endif
 
 	call output("log(g) [cgs]: " // dbl2string(log10(Ggrav*Mplanet/Rplanet**2),'(f8.3)'))
@@ -1283,6 +1291,34 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 		ComputeKzz=ComputeKzz+lmfp*vth/3d0
 	endif
 	
+	return
+	end
+
+	subroutine WaterWorld()
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 c0,c1,c2,c3,c4,Pm
+	integer i
+	
+	c0=2.98605E+01
+	c1=-3.15220E+03
+	c2=-7.30370E+00
+	c3=2.42470E-09
+	c4=1.80900E-06
+
+	Pmax=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750.06157584566
+	Pm=Pmin
+	if(Pm.gt.Pmax/100d0) Pm=Pmax/100d0
+	Pplanet=Pmax
+
+	if(Tsurface.gt.647.096) then
+		call output("Warning! Waterworld ocean reaches critical temperature!")
+		print*,"Warning! Waterworld ocean reaches critical temperature!"
+	endif
+	do i=1,nr
+		P(i)=10d0**(log10(Pmax)+(log10(Pm/Pmax)*real(i-1)/real(nr-1)))
+	enddo
+
 	return
 	end
 	

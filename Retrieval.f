@@ -2226,5 +2226,109 @@ C  computed by DGETRF.
 	end
 
 	
+
+	subroutine ComputeLike(lnew)
+	use GlobalSetup
+	use Constants
+	use RetrievalMod
+	use Struct3D
+	IMPLICIT NONE
+	integer nvars,i,j,nlamtot,ny,k,maxspec,im,ilam,status,system,ii
+	real*8 ymod(nlam*nobs),lnew,spectemp(nlam*nobs),specsave(nobs,nlam*nobs)
+	real*8,allocatable :: spec(:),allspec(:,:)
+	logical recomputeopac,truefalse,doscaleR2
+	real*8 xx,xy,scale,dy(nlam*nobs),tot
+	character*100 command
+	
+	maxspec=0
+	do i=1,nobs
+		if(ObsSpec(i)%ndata.gt.maxspec) maxspec=ObsSpec(i)%ndata
+	enddo
+	allocate(allspec(nobs,maxspec))
+	do i=1,nobs
+		allocate(spec(ObsSpec(i)%ndata))
+		call RemapObs(i,spec,spectemp)
+		if(ObsSpec(i)%i2d.eq.i2d) then
+			allspec(i,1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
+			specsave(i,1:nlam)=spectemp(1:nlam)
+		endif
+		deallocate(spec)
+	enddo
+
+	k=0
+	do i=1,nobs
+		do j=1,ObsSpec(i)%ndata
+			k=k+1
+			dy(k)=sqrt(ObsSpec(i)%dy(j)**2+ObsSpec(i)%adderr**2)
+			do ii=1,nmodel_err-1
+				if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
+			enddo
+			select case(ObsSpec(i)%type)
+				case("emisa","emis","emission","phase")
+					dy(k)=sqrt(dy(k)**2+model_err_abs(ii)**2)
+				case("trans","transmission","emisr","emisR","transC","phaser","phaseR","transM","transE")
+					dy(k)=sqrt(dy(k)**2+model_err_rel(ii)**2)
+			end select
+		enddo
+	enddo
+
+	k=0
+	do i=1,nobs
+		if(ObsSpec(i)%scaling) then
+			xy=0d0
+			xx=0d0
+			do j=1,ObsSpec(i)%ndata
+				k=k+1
+				ymod(k)=allspec(i,j)
+				xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
+				xx=xx+ymod(k)*ymod(k)/dy(k)**2
+			enddo
+			ObsSpec(i)%scale=1d0
+			if(xx.gt.0d0) ObsSpec(i)%scale=xx/xy
+		else
+			ObsSpec(i)%scale=1d0
+			do j=1,ObsSpec(i)%ndata
+				k=k+1
+				ymod(k)=allspec(i,j)
+			enddo
+		endif
+	enddo
+
+	global_chi2=0d0
+	tot=0d0
+	k=0
+	do i=1,nobs
+		do j=1,ObsSpec(i)%ndata
+			k=k+1
+			ymod(k)=allspec(i,j)
+			global_chi2=global_chi2+((ymod(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/(ObsSpec(i)%scale*dy(k)))**2
+			tot=tot-log(sqrt(2d0*pi)*dy(k))
+			ObsSpec(i)%model(j)=allspec(i,j)
+		enddo
+	enddo
+	if(planetform.and..not.simAb_converge) then
+		global_chi2=global_chi2+((Mplanet-MSimAb)/(Mplanet*1d-3))**2
+	endif
+	if(massprior) then
+		global_chi2=global_chi2+((Mplanet/Mjup-Mp_prior)/dMp_prior)**2
+		tot=tot-log(sqrt(2d0*pi)*dMp_prior)
+		k=k+1
+	endif
+	lnew=-global_chi2/2d0+tot
+	global_chi2=global_chi2/real(max(1,k-n_ret))
+	if(free_tprofile.and.wiggle_err.gt.0d0) then
+		tot=-(real(nr-2)/2d0)*log(2d0*pi*wiggle_err)
+		do i=2,nr-1
+			tot=tot-log(T(i+1)*T(i-1)/T(i)**2)**2/(0.5d0*wiggle_err*log(P(i+1)/P(i-1))**2)
+		enddo
+		lnew=lnew+tot
+	endif
+	global_like=lnew
+	
+	deallocate(allspec)
+	
+	return
+	end
+	
 	
 	
