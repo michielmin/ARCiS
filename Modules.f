@@ -210,7 +210,7 @@ c===============================================================================
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
 	real*8 molfracs_atoms_outgas(41),MMW0
-	logical secondary_atmosphere,constant_g,forceEbalance,fixMMW
+	logical secondary_atmosphere,constant_g,forceEbalance,fixMMW,WaterWorld
 	logical,allocatable :: RTgridpoint(:),computelam(:)
 	
 	integer nrsurf

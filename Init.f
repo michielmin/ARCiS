@@ -1091,6 +1091,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			elements_ARCiS=key%value
 		case("secondary_atmosphere")
 			read(key%value,*) secondary_atmosphere
+		case("waterworld")
+			read(key%value,*) WaterWorld
 		case("simplerainout")
 			read(key%value,*) dosimplerainout
 		case("mixp")
@@ -1716,6 +1718,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	faircoverage=.false.
 	
 	secondary_atmosphere=.false.
+	WaterWorld=.false.
 	Poutgas=0d0
 	Toutgas=0d0
 

@@ -154,6 +154,12 @@
      &								.or.ObsSpec(i)%type.eq."phase") then
 							if(log_emis) then
 								dy=dy/y
+								if(y.le.0d0) then
+									call output("negative flux values while using logemis=.true.")
+									call output("please use: logemis=.false.")
+									call output("stopping...")
+									stop
+								endif
 								ObsSpec(i)%y(ilam)=log(y)
 							else
 								ObsSpec(i)%y(ilam)=y

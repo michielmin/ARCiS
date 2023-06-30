@@ -10,7 +10,7 @@
 	logical,allocatable :: docloud0(:,:)
 	real*8,allocatable :: spec(:,:),specR(:),lamR(:),specRexp(:),specErr(:),Fstar_obs(:)
 	real*8 x,specres_obs,expspecres_obs,gasdev,tot,Dmirror,f_phot,noisefloor,molweight(nmol),Tweight,Pweight
-	real*8 lam_out(nlam)
+	real*8 lam_out(nlam),Ca,Cs,tau,tautot
 	integer nlam_out
 	integer ilam,j,nj,nlamR,i_instr,k,ir
 	character*1000 line,instr_add
@@ -210,25 +210,43 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 
 	endif
 	
-	filename=trim(outputdir) // "tau1depth" // trim(side)
-	call output("Writing tau1depth to: " // trim(filename))
-	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
-	if(nclouds.gt.0) then
-		form='("#",a13,' // trim(int2string(ncc,'(i3)')) // 
+	if(.not.retrieval) then
+		filename=trim(outputdir) // "tau1depth" // trim(side)
+		call output("Writing tau1depth to: " // trim(filename))
+		open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
+		if(nclouds.gt.0) then
+			form='("#",a13,' // trim(int2string(ncc,'(i3)')) // 
      &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
      &				trim(int2string(nclouds,'(i3)')) // 'l1))'
-		write(30,form) "lambda [mu]",docloud0(1:nclouds,1:ncc)
-	else
-		write(30,'("#",a13,a19)') "lambda [mu]","P [bar]"
-	endif
-	form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7E3)'
-	do i=1,nlam_out
-		if(computelam(i)) then
-		write(30,form) lam_out(i),tau1depth(1:ncc,i)
+			write(30,form) "lambda [mu]",docloud0(1:nclouds,1:ncc)
+		else
+			write(30,'("#",a13,a19)') "lambda [mu]","P [bar]"
 		endif
-	enddo
-	close(unit=30)
-
+		form='(f14.6,' // int2string(ncc,'(i3)') // 'es19.7E3)'
+		do i=1,nlam_out
+			if(computelam(i)) then
+			do k=1,ncc
+				docloud0(1,1:ncc)=.false.
+				docloud0(1,k)=.true.
+				tautot=0d0
+				do ir=nr,2,-1
+					tau=0d0
+					do j=1,ng
+						call Crossections(ir,i,j,Ca,Cs,docloud0(1,1:ncc))
+						tau=tau+wgg(j)*(P(ir-1)-P(ir))*1d6*(Ca+Cs)/(dens(ir)*grav(ir))
+					enddo
+					if((tau+tautot).gt.1d0) then
+						tau1depth(k,i)=P(ir)+(1d0-tautot)*(P(ir-1)-P(ir))/tau
+						exit
+					endif
+					tautot=tautot+tau
+				enddo
+			enddo
+			write(30,form) lam_out(i),tau1depth(1:ncc,i)
+			endif
+		enddo
+		close(unit=30)
+	endif
 
 	filename=trim(outputdir) // "cloudtau" // trim(side)
 	call output("Writing cloud optical depth to: " // trim(filename))

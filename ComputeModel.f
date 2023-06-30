@@ -29,6 +29,7 @@
 	call cpu_time(starttime)
 	Tconverged=.false.
 	nTiter=0
+	Tsurface=(0.25**0.25)*sqrt(Rstar/(Dplanet))*Tstar
 	if(computeT.and.computeopac) then
 		temp=par_tprofile
 		par_tprofile=.false.
@@ -37,6 +38,7 @@
 		do nTiter=1,maxiter
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
      &					// trim(int2string(maxiter,'(i3)')) // ")")
+
 			call SetupStructure(.true.)
 			call SetupOpacities()
 			if(nTiter.eq.1) then
@@ -44,6 +46,7 @@
 			else
 				f=0.5d0
 				if(forceEbalance) f=f+0.5d0*exp(-real(maxiter-nTiter)/5d0)
+				if(WaterWorld) f=1d0
 			endif
 			if(f.gt.1d0) f=1d0
 			call DoComputeT(Tconverged,f)

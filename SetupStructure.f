@@ -14,6 +14,7 @@
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
 	enddo
+	if(WaterWorld) call doWaterWorld()
 	
 	if(.not.do3D) betaF=betaT
 
@@ -1294,7 +1295,7 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 	return
 	end
 
-	subroutine WaterWorld()
+	subroutine doWaterWorld()
 	use GlobalSetup
 	IMPLICIT NONE
 	real*8 c0,c1,c2,c3,c4,Pm
@@ -1306,7 +1307,16 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 	c3=2.42470E-09
 	c4=1.80900E-06
 
-	Pmax=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750.06157584566
+	Tsurface=T(1)
+	Pm=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750.06157584566
+	Pm=Pm/mixrat(1)
+
+	if(Pm.gt.Pmax) then
+		Pmax=Pm**2/Pmax
+	else
+		Pmax=Pm
+	endif
+
 	Pm=Pmin
 	if(Pm.gt.Pmax/100d0) Pm=Pmax/100d0
 	Pplanet=Pmax
