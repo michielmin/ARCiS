@@ -29,7 +29,7 @@
 	call cpu_time(starttime)
 	Tconverged=.false.
 	nTiter=0
-	Tsurface=(0.25**0.25)*sqrt(Rstar/(Dplanet))*Tstar
+	Tsurface=sqrt(Rstar/(2d0*Dplanet))*Tstar
 	if(computeT.and.computeopac) then
 		temp=par_tprofile
 		par_tprofile=.false.

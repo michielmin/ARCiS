@@ -1307,15 +1307,8 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 	c3=2.42470E-09
 	c4=1.80900E-06
 
-	Tsurface=T(1)
-	Pm=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750.06157584566
-	Pm=Pm/mixrat(1)
-
-	if(Pm.gt.Pmax) then
-		Pmax=Pm**2/Pmax
-	else
-		Pmax=Pm
-	endif
+	Pmax=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750.06157584566
+	Pmax=Pmax/mixrat(1)
 
 	Pm=Pmin
 	if(Pm.gt.Pmax/100d0) Pm=Pmax/100d0
