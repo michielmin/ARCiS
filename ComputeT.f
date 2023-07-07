@@ -482,8 +482,8 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 		dlnP=log(P(ir+1)/P(ir))
 		dlnT=log(T(ir+1)/T(ir))+0.25*log(Fl(ir+1)/Fl(ir))
 		err=(dlnT/dlnP)/nabla_ad(ir)
-c		if(abs(err).gt.abs(maxErr).and..not.Convec(ir)) then
-		if(err.gt.maxErr.and..not.Convec(ir)) then
+		if(abs(err).gt.abs(maxErr).and..not.Convec(ir)) then
+c		if(err.gt.maxErr.and..not.Convec(ir)) then
 			maxErr=err
 			j=ir
 		endif
