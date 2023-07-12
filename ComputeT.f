@@ -52,7 +52,7 @@
 	integer info,IWORK(10*(nr+1)*(nr+1)),NRHS,ii(3),iscat,nscat
 	real*8 tau1,tau2,ee0,ee1,ee2,tauR(nr),Ij(nr),Ih(nr),scale,dtauR(nr),EabDirect(nr)
 	integer nlam_LR
-	real*8 IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact,err,tot1
+	real*8 IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact,err,tot1,Pb(nr+1)
 	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
 	integer i1,i2,ngF,j
 	real*8 ww,w1,w2,FstarBottom,tauRoss
@@ -198,29 +198,22 @@
 
 	converged=.true.
 
+	Pb(1)=P(1)
+	do i=2,nr
+		Pb(i)=sqrt(P(i-1)*P(i))
+	enddo
+	Pb(nr+1)=0d0
 	do ilam=1,nlam_LR
 		do ig=1,ng
 			do jr=nr,1,-1
 				if(jr.eq.nr) then
-					ir=jr
-					d=P(ir)*1d6/grav(ir)
-					tau=d*Ce(ir,ilam,ig)
-				else if(jr.eq.nr-1) then
-					ir=jr
-					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
-					tau=d*Ce(ir,ilam,ig)
-				else if(jr.eq.1) then
-					ir=1
-					d=abs(sqrt(P(ir+1)*P(ir))-P(ir))*1d6/grav(ir)
-					tau=d*Ce(ir,ilam,ig)
-					d=abs(P(ir)*sqrt(P(ir)/P(ir+1))-P(ir))*1d6/grav(ir)
-					tau=tau+d*Ce(ir,ilam,ig)
+					d=(P(jr)-Pb(jr+1))*1d6/grav(jr)
+					tau=d*Ce(jr,ilam,ig)
 				else
-					ir=jr
-					d=abs(sqrt(P(ir+2)*P(ir+1))-P(ir+1))*1d6/grav(ir)
-					tau=d*Ce(ir+1,ilam,ig)
-					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
-					tau=tau+d*Ce(ir,ilam,ig)
+					d=(Pb(jr+1)-P(jr+1))*1d6/grav(jr+1)
+					tau=d*Ce(jr+1,ilam,ig)
+					d=(P(jr)-Pb(jr+1))*1d6/grav(jr)
+					tau=tau+d*Ce(jr,ilam,ig)
 				endif
 				if(.not.tau.gt.0d0) then
 					tau=0d0
@@ -334,7 +327,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
      &					Ca(1:nr,ilam,ig),Cs(1:nr,ilam,ig),Ce(1:nr,ilam,ig),(1d0-SurfEmis_LR(ilam)),nr,nu,wnu,nnu,nr+2)
 
 			do inu=1,nnu
-				tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
+				tauR_omp(1:nr)=dtauR_nu(1:nr,ilam,ig)/abs(nu(inu))
 				call SolveIjhExpN(tauR_omp(1:nr),Si_omp(1:nr,0:nr+1),IhN(1:nr,0:nr+1,inu),IjN(1:nr,0:nr+1,inu),nr,nr+2)
 			enddo
 
@@ -674,7 +667,7 @@ c	Ts=T*Fl**0.25
 	
 	dtau=abs(tau1-tau2)
 
-	if(dtau.lt.1d-3) then
+	if(dtau.lt.1d-4) then
 		I12=0.5*(S1+S2)*dtau
 	else if(dtau.gt.1d4) then
 		I12=S2+(S1-S2)/dtau
@@ -686,73 +679,164 @@ c	Ts=T*Fl**0.25
 	end
 
 
-	subroutine SolveIjhExpN(tau,Si,Ih,Ij,nr,nrhs)
+	subroutine SolveIjhN(dtau,Si,Ih,Ij,nr,nrhs)
+	IMPLICIT NONE
+	integer ir,nr,jr,nrhs,i,info
+	real*8 Ih(nr,nrhs),Ij(nr,nrhs),Si(nr,nrhs),dtau(nr)
+	real*8 y(nr),Ma(nr),Mb(nr),Mc(nr),x(nr),fact,yp1,ypn
+	real*8 Ij1(nrhs),IjN(nrhs),Ih1(nrhs),IhN(nrhs)
+
+	call SolveIjhExpN(dtau,Si,Ih,Ij,nr,nrhs)
+	Ij1=Ij(1,1:nrhs)
+	Ih1=Ih(1,1:nrhs)
+	IjN=Ij(nr,1:nrhs)
+	IhN=Ih(nr,1:nrhs)
+
+	Ma=0d0
+	Mb=0d0
+	Mc=0d0
+	ir=1
+	do ir=2,nr-1
+		fact=1d0/(0.5d0*(dtau(ir)+dtau(ir-1)))
+		Mb(ir)=1d0+fact*(1d0/(dtau(ir))+1d0/(dtau(ir-1)))
+		Ma(ir)=-fact*1d0/(dtau(ir-1))
+		Mc(ir)=-fact*1d0/(dtau(ir))
+	enddo
+	Mb(1)=1d0
+	Mb(nr)=1d0
+
+	do i=1,nrhs
+		x(2:nr-1)=Si(2:nr-1,i)
+		x(1)=Ij1(i)
+		x(nr)=IjN(i)
+		info=0
+		call tridag(Ma,Mb,Mc,x,y,nr,info)
+		Ij(1:nr,i)=y(1:nr)
+	enddo
+
+	do ir=nr-1,2,-1
+		Ih(ir,1:nrhs)=(Ij(ir-1,1:nrhs)-Ij(ir,1:nrhs))/dtau(ir-1)
+	enddo
+
+	x(nr)=0d0
+	do i=nr-1,1,-1
+		x(i)=x(i+1)+dtau(i)
+	enddo
+	do i=1,nrhs
+		x(2:nr-1)=-(Si(2:nr-1,i)-Si(1:nr-2,i))/dtau(2:nr-1)
+		x(1)=Ih1(i)
+		x(nr)=IhN(i)
+		info=0
+		call tridag(Ma,Mb,Mc,x,y,nr,info)
+		Ih(1:nr,i)=y(1:nr)
+	enddo
+
+	return
+	end
+	
+
+
+	subroutine SolveIjhExpN(dtau,Si,Ih,Ij,nr,nrhs)
 	IMPLICIT NONE
 	integer ir,nr,jr,nrhs
-	real*8 Ih(nr,nrhs),Ij(nr,nrhs),Si(nr,nrhs),tau(nr),Im(nr,nrhs),Ip(nr,nrhs)
-	real*8 exptau(nr),dtau(nr),s0(nrhs),s1(nrhs),x1,y(nrhs)
+	real*8 Ih(nr,nrhs),Ij(nr,nrhs),Si(nr,nrhs),dtau(nr)
+	real*8 exptau(nr),s0(nrhs),s1(nrhs),x1,yj(nrhs),yh(nrhs),x2
+	real*8 Ijm(nr,nrhs),Ijp(nr,nrhs),Ihm(nr,nrhs),Ihp(nr,nrhs)
 
-	dtau(nr)=tau(nr)
-	do ir=nr-1,1,-1
-		dtau(ir)=abs(tau(ir+1)-tau(ir))
-	enddo
 	do ir=1,nr
 		exptau(ir)=exp(-dtau(ir))
 	enddo
 
-	Im=0d0
+	Ijm=0d0
+	Ihm=0d0
 	do ir=nr,1,-1
 		if(ir.eq.nr) then
-			s0=0d0
+			s0=Si(nr,1:nrhs)
 		else
 			s0=Si(ir+1,1:nrhs)
 		endif
 		s1=Si(ir,1:nrhs)
 		x1=dtau(ir)
 		if(x1.lt.1d-4) then
-			y=0.5d0*x1*(s0+s1)
+			yh=0.5d0*x1*s0
+			yj=0.5d0*x1*(s0+s1)
 		else if(x1.gt.1d4) then
-			y=s1+(s0-s1)/x1
+			yh=s0/x1
+			yj=s1+(s0-s1)/x1
 		else
-			y=(-(s0*x1-s1+s0)*exptau(ir)+s1*x1-s1+s0)/x1
+			yh=(-(s0*x1+s0)*exptau(ir)+s0)/x1
+			yj=(-(s0*x1-s1+s0)*exptau(ir)+s1*x1-s1+s0)/x1
 		endif
 		if(ir.eq.nr) then
-			Im(ir,1:nrhs)=y(1:nrhs)
+			Ijm(ir,1:nrhs)=yj(1:nrhs)
+			Ihm(ir,1:nrhs)=yh(1:nrhs)
 		else
-			Im(ir,1:nrhs)=Im(ir+1,1:nrhs)*exptau(ir)+y(1:nrhs)
+			Ijm(ir,1:nrhs)=Ijm(ir+1,1:nrhs)*exptau(ir)+yj(1:nrhs)
+			Ihm(ir,1:nrhs)=Ijm(ir+1,1:nrhs)*exptau(ir)+yh(1:nrhs)
 		endif
 	enddo
 
-	Ip=0d0
+	Ijp=0d0
+	Ihp=0d0
 	do ir=1,nr-1
 		s0=Si(ir,1:nrhs)
 		s1=Si(ir+1,1:nrhs)
 		x1=dtau(ir)
 		if(x1.lt.1d-4) then
-			y=0.5d0*x1*(s0+s1)
+			yh=0.5d0*x1*s0
+			yj=0.5d0*x1*(s0+s1)
 		else if(x1.gt.1d4) then
-			y=s1+(s0-s1)/x1
+			yh=s0/x1
+			yj=s1+(s0-s1)/x1
 		else
-			y=(-(s0*x1-s1+s0)*exptau(ir)+s1*x1-s1+s0)/x1
+			yh=(-(s0*x1+s0)*exptau(ir)+s0)/x1
+			yj=(-(s0*x1-s1+s0)*exptau(ir)+s1*x1-s1+s0)/x1
 		endif
-		Ip(ir+1,1:nrhs)=Ip(ir,1:nrhs)*exptau(ir)+y(1:nrhs)
+		Ijp(ir+1,1:nrhs)=Ijp(ir,1:nrhs)*exptau(ir)+yj(1:nrhs)
+		Ihp(ir+1,1:nrhs)=Ijp(ir,1:nrhs)*exptau(ir)+yh(1:nrhs)
 	enddo
 
-	Ih=(Ip-Im)/2d0
-	Ij=(Ip+Im)/2d0
+	Ij=(Ijp+Ijm)/2d0
 
-	do ir=2,nr-1
-		if(tau(ir).gt.1d-6) then
-			s0=(Ip(ir,1:nrhs)+Im(ir,1:nrhs))/2d0
-			s1=(Ip(ir+1,1:nrhs)+Im(ir+1,1:nrhs))/2d0
-			Ih(ir,1:nrhs)=(s0-s1)/dtau(ir)
+	Ih=(Ihp-Ihm)/2d0
+
+	do ir=1,nr
+		s1=Si(ir,1:nrhs)
+		x1=dtau(ir)
+		if(ir.gt.1) then
+			x2=dtau(ir-1)
+			if(x1.lt.1d-4.and.x2.lt.1d-4) then
+				yh=0.5d0*(x2-x1)*s1
+			else
+				yh=s1*((exptau(ir-1)-1d0)*x1-(exptau(ir)-1d0)*x2)
+				yh=yh/(x1*x2)
+			endif
+		else
+			if(x1.lt.1d-4) then
+				yh=-0.5d0*x1*s1
+			else if(x1.gt.1d4) then
+				yh=-s1+s1/x1
+			else
+				yh=-s1*(exptau(ir)+x1-1d0)/x1
+			endif
 		endif
+		Ih(ir,1:nrhs)=Ih(ir,1:nrhs)+yh(1:nrhs)/2d0
 	enddo
 
+c	x1=dtau(nr)
+c	do ir=nr-1,2,-1
+c		x1=x1+dtau(ir)
+c		if(x1.gt.1d-6) then
+c			s0=Ij(ir,1:nrhs)
+c			s1=Ij(ir+1,1:nrhs)
+c			Ih(ir,1:nrhs)=(s0-s1)/dtau(ir)
+c		endif
+c	enddo
 
 	return
 	end
 	
+
 
 
 	subroutine SolveIjExp(tau,Si,Ij,Ih,nr)

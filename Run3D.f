@@ -13,9 +13,9 @@
 	real*8,allocatable :: rtrace(:),wrtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:),cloud3D(:,:)
 	real*8 x,y,z,vx,vy,vz,v,w1,w2
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
-	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),obsA_split_omp(:,:)
+	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),obsA_split_omp(:,:),dtauR_nu(:,:,:,:)
 	real*8,allocatable :: tauc(:),Afact(:),vv(:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
-	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random,xmin,xmax
+	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random,xmin,xmax,Pb(nr+1)
 	integer nx_im,ix,iy,ni,ilatt,ilong,imustar
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1,SiRalb1,tau0
@@ -27,9 +27,10 @@
 	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D))
 	if(computealbedo) allocate(SiSc(nlam,ng,0:nr,nnu0,n3D))
 	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce_cont(nlam,nr,n3D))
+	allocate(dtauR_nu(nlam,ng,n3D,nr))
 	allocate(R3D(n3D,nr+2))
 	allocate(R3D2(n3D,nr+2))
-	allocate(R3DC(n3D,nr+1))
+	allocate(R3DC(n3D,nr+2))
 	allocate(T3D(n3D,0:nr))
 	if(.not.retrieval.and.fulloutput3D) allocate(cloud3D(n3D,0:nr))
 	allocate(mixrat3D(n3D,nr,nmol))
@@ -264,7 +265,6 @@ c Now call the setup for the readFull3D part
 			endif
 			do ir=1,nr+1
 				R3D(i,ir)=R(ir)
-				R3D2(i,ir)=R(ir)**2
 			enddo
 			do ir=1,nr
 				T3D(i,ir)=T(ir)
@@ -316,15 +316,42 @@ c Now call the setup for the readFull3D part
 				call ComputeScatter(BBr(1:nlam,0:nr),SiSc(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i),Cs(1:nlam,1:nr,i))
 				Fstar(1:nlam)=Fstar_temp(1:nlam)
 			endif
+
+			Pb(1)=P(1)
+			do ir=2,nr
+				Pb(ir)=sqrt(P(ir-1)*P(ir))
+			enddo
+			Pb(nr+1)=0d0
+			do ilam=1,nlam
+				do ig=1,ng
+					do ir=nr,1,-1
+						if(ir.eq.nr) then
+							v=(P(ir)-Pb(ir+1))*1d6/grav(ir)
+							tau1=v*(Ca(ilam,ig,ir,i)+Cs(ilam,ir,i))/dens(ir)
+						else
+							v=(Pb(ir+1)-P(ir+1))*1d6/grav(ir+1)
+							tau1=v*(Ca(ilam,ig,ir+1,i)+Cs(ilam,ir+1,i))/dens(ir+1)
+							v=(P(ir)-Pb(ir+1))*1d6/grav(ir)
+							tau1=tau1+v*(Ca(ilam,ig,ir,i)+Cs(ilam,ir,i))/dens(ir)
+						endif
+						if(.not.tau1.gt.0d0) then
+							tau1=0d0
+						endif
+						tau1=tau1+1d-10
+						tau1=1d0/(1d0/tau1+1d-10)
+						dtauR_nu(ilam,ig,i,ir)=tau1
+					enddo
+				enddo
+			enddo
 		else
 			R3D(i,1:nr+1)=R3D(n3D,1:nr+1)
-			R3D2(i,1:nr+1)=R3D2(n3D,1:nr+1)
 			T3D(i,0:nr)=T3D(n3D,0:nr)
 			mixrat3D(i,1:nr,1:nmol)=mixrat3D(n3D,1:nr,1:nmol)
 			Ca(1:nlam,1:ng,1:nr,i)=Ca(1:nlam,1:ng,1:nr,n3D)
 			Cs(1:nlam,1:nr,i)=Cs(1:nlam,1:nr,n3D)
 			Ce_cont(1:nlam,1:nr,i)=Ce_cont(1:nlam,1:nr,n3D)
 			Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,i)=Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,n3D)
+			dtauR_nu(1:nlam,1:ng,i,1:nr)=dtauR_nu(1:nlam,1:ng,n3D,1:nr)
 			Si(1:nlam,1:ng,0:nr,1:nnu0,i)=Si(1:nlam,1:ng,0:nr,1:nnu0,n3D)
 			if(computealbedo) SiSc(1:nlam,1:ng,0:nr,1:nnu0,i)=SiSc(1:nlam,1:ng,0:nr,1:nnu0,n3D)
 		endif
@@ -343,8 +370,14 @@ c Now call the setup for the readFull3D part
 
 	Rmax=Rmax*1.001
 	R3D(1:n3D,nr+2)=Rmax
-	R3D2(1:n3D,nr+2)=Rmax**2
 	R3DC(1:n3D,1:nr+1)=sqrt(R3D(1:n3D,1:nr+1)*R3D(1:n3D,2:nr+2))
+	R3DC(1:n3D,nr+2)=Rmax
+	R3D2(1:n3D,1:nr+2)=R3DC(1:n3D,1:nr+2)**2
+	do ilam=1,nlam
+		do ig=1,ng
+			dtauR_nu(ilam,ig,1:n3D,1:nr)=dtauR_nu(ilam,ig,1:n3D,1:nr)/(R3DC(1:n3D,2:nr+1)-R3DC(1:n3D,1:nr))
+		enddo
+	enddo	
 
 	if(.not.retrieval) then
 		open(unit=20,file=trim(outputdir) // "surfacetemp3D.dat",FORM="FORMATTED",ACCESS="STREAM")
@@ -416,7 +449,7 @@ c Now call the setup for the readFull3D part
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,tau0,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp,SiRalb0,SiRalb1)
-!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,
+!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,
 !$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,R3DC,computelam,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
@@ -512,27 +545,17 @@ c Note we are here using the symmetry between North and South
 					if(lamemis(ilam).and.computelam(ilam)) then
 					do ig=1,ng
 						tau0=0d0
-						tau1=v*(Ca(ilam,ig,i1,i)+Cs(ilam,i1,i))
+						tau1=v*dtauR_nu(ilam,ig,i,i1)
 						exp_tau1=exp(-tau1)
 						rr=sqrt((x+v*vx)**2+(y+v*vy)**2+(z+v*vz)**2)
-						if(rr.gt.R3DC(i,i1).and.i1.eq.nr) then
-							w1=(R3DC(i,i1+1)-rr)/(R3DC(i,i1+1)-R3DC(i,i1))
-							SiR1=Si(ilam,ig,i1,inu,i)*w1
-							if(computealbedo) SiRalb1=SiSc(ilam,ig,i1,inu,i)
-						else if(rr.lt.R3DC(i,i1).and.i1.eq.1) then
-							SiR1=Si(ilam,ig,i1,inu,i)
-							if(computealbedo) SiRalb1=SiSc(ilam,ig,i1,inu,i)
-						else if(rr.gt.R3DC(i,i1)) then
+						if(i1.lt.nr) then
 							w1=(R3DC(i,i1+1)-rr)/(R3DC(i,i1+1)-R3DC(i,i1))
 							w2=1d0-w1
 							SiR1=w1*Si(ilam,ig,i1,inu,i)+w2*Si(ilam,ig,i1+1,inu,i)
-							if(computealbedo) SiRalb1=w1*SiSc(ilam,ig,i1,inu,i)+w2*SiSc(ilam,ig,i1+1,inu,i)
 						else
-							w1=(R3DC(i,i1-1)-rr)/(R3DC(i,i1-1)-R3DC(i,i1))
-							w2=1d0-w1
-							SiR1=w1*Si(ilam,ig,i1,inu,i)+w2*Si(ilam,ig,i1-1,inu,i)
-							if(computealbedo) SiRalb1=w1*SiSc(ilam,ig,i1,inu,i)+w2*SiSc(ilam,ig,i1-1,inu,i)
+							SiR1=Si(ilam,ig,nr,inu,i)
 						endif
+						if(computealbedo) SiRalb1=w1*SiSc(ilam,ig,i1,inu,i)+w2*SiSc(ilam,ig,i1+1,inu,i)
 						call ComputeI12(tau1,tau0,SiR1,SiR0(ilam,ig),contr)
 						ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
 						if(computealbedo) then
@@ -793,6 +816,8 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 
 	if(transspec) then
 
+	R3D2(1:n3D,1:nr+2)=R3D(1:n3D,1:nr+2)**2
+
 	ndisk=4
 	nsub=3
 
@@ -824,7 +849,7 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 !$OMP& PRIVATE(vv,tau,tauc,Afact,hit,irtrace,A,iptrace,phi,rr,x,y,z,vx,vy,vz,la,lo,i1,i2,i3,
 !$OMP&			edgeNR,v,i1next,i2next,i3next,edgenext,i,imol,ir,ig,obsA_omp,obsA_split_omp)
 !$OMP& SHARED(nrtrace,nptrace,nmol_count,nr,nlam,ng,rtrace,ibeta,R3D2,Ce_cont,Ca_mol,wgg,obsA,latt,long,Rmax,
-!$OMP&          nnu0,n3D,nlong,nlatt,obsA_split)
+!$OMP&          nnu0,n3D,nlong,nlatt,obsA_split,dtauR_nu)
 	allocate(obsA_omp(nlam))
 	allocate(obsA_split_omp(nlam,2))
 	allocate(vv(nr,n3D))
@@ -1969,7 +1994,7 @@ c-----------------------------------------------------------------------
 	IMPLICIT NONE
 	integer inu,nnu,ilam,ir,ig,inu0,iter,niter,info,NRHS
 	parameter(nnu=10,niter=500)
-	real*8 tau,d,tauR_nu(0:nr,nlam,ng),contr,Jstar_nu(nr,nlam,ng)
+	real*8 tau,d,tauR_nu(0:nr,nlam,ng),contr,Jstar_nu(nr,nlam,ng),Pb(nr+1)
 	real*8 Si(nlam,ng,0:nr,nnu0),BBr(nlam,0:nr),Ca(nlam,ng,nr),Cs(nlam,nr),Ce(nlam,ng,nr)
 	real*8 nu(nnu),wnu(nnu),must,tauRs(nr),Ijs(nr),eps,Planck,tot,wabs(nlam,ng,nr),wscat(nlam,ng,nr)
 	logical err
@@ -2004,27 +2029,22 @@ c-----------------------------------------------------------------------
 	enddo
 	if(.not.scattering) return
 
+	Pb(1)=P(1)
+	do ir=2,nr
+		Pb(ir)=sqrt(P(ir-1)*P(ir))
+	enddo
+	Pb(nr+1)=0d0
 	tauR_nu=0d0
 	do ilam=1,nlam
 		do ig=1,ng
 			do ir=nr,1,-1
 				if(ir.eq.nr) then
-					d=0.5*P(ir)*1d6/grav(ir)
+					d=(P(ir)-Pb(ir+1))*1d6/grav(ir)
 					tau=d*Ce(ilam,ig,ir)/dens(ir)
-				else if(ir.eq.nr-1) then
-					d=abs(0.5*P(ir+1)-P(ir+1))*1d6/grav(ir)
-					tau=d*Ce(ilam,ig,ir+1)/dens(ir+1)
-					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
-					tau=tau+d*Ce(ilam,ig,ir)/dens(ir)
-				else if(ir.eq.1) then
-					d=abs(sqrt(P(2)*P(1))-P(1))*1d6/grav(1)
-					tau=d*Ce(ilam,ig,1)/dens(1)
-					d=abs(P(1)*sqrt(P(1)/P(2))-P(1))*1d6/grav(1)
-					tau=tau+d*Ce(ilam,ig,1)/dens(1)
 				else
-					d=abs(sqrt(P(ir+2)*P(ir+1))-P(ir+1))*1d6/grav(ir)
+					d=(Pb(ir+1)-P(ir+1))*1d6/grav(ir+1)
 					tau=d*Ce(ilam,ig,ir+1)/dens(ir+1)
-					d=abs(sqrt(P(ir+1)*P(ir))-P(ir+1))*1d6/grav(ir)
+					d=(P(ir)-Pb(ir+1))*1d6/grav(ir)
 					tau=tau+d*Ce(ilam,ig,ir)/dens(ir)
 				endif
 				if(.not.tau.gt.0d0) then
