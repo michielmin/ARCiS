@@ -496,70 +496,7 @@ c		if(err.gt.maxErr.and..not.Convec(ir)) then
 		goto 1
 	endif		
 				
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(ir,E,E0,ilam,iTmin,iTmax,ig,iT,scale)
-!$OMP& SHARED(nr,nlam_LR,dfreq_LR,wgg,BB_LR,Ca,Fl,ng,T,Ts,EabDirect,IntEab,Tsurface,SurfEmis_LR,Convec,IntEabSurf)
-!$OMP DO
-	do ir=1,nr
-		if(Convec(ir).or.Convec(ir-1)) then
-			iT=T(ir)+1
-			if(iT.gt.nBB-1) iT=nBB-1
-			if(iT.lt.1) iT=1
-			E=0d0
-			do ilam=1,nlam_LR
-				do ig=1,ng
-					E=E+dfreq_LR(ilam)*wgg(ig)*BB_LR(ilam,iT)*Ca(ir,ilam,ig)
-				enddo
-			enddo
-			E=E*Fl(ir)
-		else
-			E=EabDirect(ir)
-			iT=Tsurface+1
-			if(iT.gt.nBB-1) iT=nBB-1
-			if(iT.lt.1) iT=1
-			scale=(Tsurface/real(iT))**4
-			do ilam=1,nlam_LR
-				E=E+IntEabSurf(ilam,ir)*scale*BB_LR(ilam,iT)*SurfEmis_LR(ilam)
-			enddo
-			do jr=1,nr
-				iT=T(jr)+1
-				if(iT.gt.nBB-1) iT=nBB-1
-				if(iT.lt.1) iT=1
-				scale=Fl(jr)*(T(jr)/real(iT))**4
-				do ilam=1,nlam_LR
-					E=E+scale*BB_LR(ilam,iT)*IntEab(ilam,ir,jr)
-				enddo
-			enddo
-			E=E/4d0
-		endif
-		iTmin=1
-		iTmax=nBB
-		iT=(iTmax+iTmin)/2
-		do while(abs(iTmax-iTmin).gt.1)
-			E0=0d0
-			do ilam=1,nlam_LR
-				do ig=1,ng
-					E0=E0+dfreq_LR(ilam)*wgg(ig)*BB_LR(ilam,iT)*Ca(ir,ilam,ig)
-				enddo
-			enddo
-			if(E0.gt.E) then
-				iTmax=iT
-			else
-				iTmin=iT
-			endif
-			iT=0.5d0*(iTmax+iTmin)
-			if(iT.lt.1) iT=1
-			if(iT.gt.nBB) iT=nBB
-		enddo
-		Ts(ir)=real(iT)*(E/E0)**0.25
-		if(.not.Ts(ir).gt.0d0) Ts(ir)=T(ir)
-	enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
-
-c	Ts=T*Fl**0.25
+	Ts=T*Fl**0.25
 
 	maxErr=0d0
 	do ir=1,nr-1
