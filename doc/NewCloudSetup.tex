@@ -107,6 +107,28 @@ The powerlaw of the opacity change with pressure (default $\xi=1$)
 Reference wavelength (in micron, default 1\,$\mu$m)
 \end{description}
 
+\subsection{Gaussian cloud layer}
+
+This is a layer with a Gaussian profile at a given pressure level with a given width and optical depth. To get this you have to specify:
+\\
+\inputfile{cloud1:type="GAUSS"}
+\\
+\\
+You have only a few parameters specifying the cloud
+
+\begin{description}
+\item[\texttt{type}]
+Has to be set to "GAUSS" to form this type of cloud
+\item[\texttt{P}]
+The central pressure of the cloud (default $P=10^{-4}$)
+\item[\texttt{dP}]
+The width of the cloud (default $\sigma_P=10$)
+\item[\texttt{tau}]
+Optical depth of the cloud at reference wavelength (default $\tau_\mathrm{cloud}=1$)
+\item[\texttt{lam\_ref}]
+Reference wavelength (in micron, default 1\,$\mu$m)
+\end{description}
+
 \subsection{Homogeneous cloud}
 
 This is actually not really a cloud. It is actually a homogeneous component in the atmosphere. There is only a top pressure but no bottom pressure, the entire atmosphere is filled with the same mass fraction of cloud particles.
