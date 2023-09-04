@@ -746,6 +746,10 @@ c	linear
 				xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
 				xx=xx+ymod(k)*ymod(k)/dy(k)**2
 			enddo
+			if(ObsSpec(i)%dscale.gt.0d0) then
+				xx=xx+1d0/ObsSpec(i)%dscale**2
+				xy=xy+1d0/ObsSpec(i)%dscale**2
+			endif
 			ObsSpec(i)%scale=1d0
 			if(xx.gt.0d0) ObsSpec(i)%scale=xx/xy
 		else
@@ -2289,6 +2293,10 @@ C  computed by DGETRF.
 				xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
 				xx=xx+ymod(k)*ymod(k)/dy(k)**2
 			enddo
+			if(ObsSpec(i)%dscale.gt.0d0) then
+				xx=xx+1d0/ObsSpec(i)%dscale**2
+				xy=xy+1d0/ObsSpec(i)%dscale**2
+			endif
 			ObsSpec(i)%scale=1d0
 			if(xx.gt.0d0) ObsSpec(i)%scale=xx/xy
 		else

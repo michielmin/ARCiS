@@ -1860,6 +1860,7 @@ c  GGchem was still implemented slightly wrong.
 		ObsSpec(i)%beta=1d0
 		ObsSpec(i)%scale=1d0
 		ObsSpec(i)%scaling=.false.
+		ObsSpec(i)%dscale=-1d0
 		ObsSpec(i)%spec=.true.
 		ObsSpec(i)%i2d=0
 		ObsSpec(i)%iphase=1
@@ -2079,6 +2080,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) ObsSpec(i)%beta
 		case("scaling","scale")
 			read(key%value,*) ObsSpec(i)%scaling
+		case("dscale","sigscale")
+			read(key%value,*) ObsSpec(i)%dscale
 		case("i2d")
 			read(key%value,*) ObsSpec(i)%i2d
 			if(ObsSpec(i)%i2d.gt.n2d) n2d=ObsSpec(i)%i2d
