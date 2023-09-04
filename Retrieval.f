@@ -772,6 +772,10 @@ c	linear
 			tot=tot-log(sqrt(2d0*pi)*dy(k))
 			ObsSpec(i)%model(j)=allspec(i,j)
 		enddo
+		if(ObsSpec(i)%scaling.and.ObsSpec(i)%dscale.gt.0d0) then
+			global_chi2=global_chi2+((ObsSpec(i)%scale-1d0)/ObsSpec(i)%dscale)**2
+			tot=tot-log(sqrt(2d0*pi)*ObsSpec(i)%dscale)
+		endif
 	enddo
 	if(planetform.and..not.simAb_converge) then
 		global_chi2=global_chi2+((Mplanet-MSimAb)/(Mplanet*1d-3))**2
@@ -2319,6 +2323,10 @@ C  computed by DGETRF.
 			tot=tot-log(sqrt(2d0*pi)*dy(k))
 			ObsSpec(i)%model(j)=allspec(i,j)
 		enddo
+		if(ObsSpec(i)%scaling.and.ObsSpec(i)%dscale.gt.0d0) then
+			global_chi2=global_chi2+((ObsSpec(i)%scale-1d0)/ObsSpec(i)%dscale)**2
+			tot=tot-log(sqrt(2d0*pi)*ObsSpec(i)%dscale)
+		endif
 	enddo
 	if(planetform.and..not.simAb_converge) then
 		global_chi2=global_chi2+((Mplanet-MSimAb)/(Mplanet*1d-3))**2
