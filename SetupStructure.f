@@ -1297,8 +1297,9 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 
 	subroutine doWaterWorld()
 	use GlobalSetup
+	use Constants
 	IMPLICIT NONE
-	real*8 c0,c1,c2,c3,c4,Pm
+	real*8 c0,c1,c2,c3,c4,Pm,fH2O,PH2Omax
 	integer i
 	
 	c0=2.98605E+01
@@ -1307,17 +1308,32 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 	c3=2.42470E-09
 	c4=1.80900E-06
 
-	Pmax=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750.06157584566
-	Pmax=Pmax/mixrat(1)
-
+	fH2O=2d-4
+	PH2Omax=fH2O*Ggrav*Mplanet**2/(4d0*pi*Rplanet**4*1d6)
+	if(Tsurface.gt.647.096) then
+		call output("Warning! Waterworld ocean reaches critical temperature!")
+		print*,"Warning! Waterworld ocean reaches critical temperature!"
+		Pmax=PH2Omax
+	else
+		Pmax=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750.06157584566
+		if(Pmax.gt.PH2Omax) Pmax=PH2Omax
+	endif
+	if(setsurfpressure) then
+		mixrat(1)=Pmax
+		Pmax=0d0
+		do i=1,nmol
+			Pmax=Pmax+mixrat(i)
+		enddo
+	else
+		Pmax=Pmax/mixrat(1)
+	endif
 	Pm=Pmin
 	if(Pm.gt.Pmax/100d0) Pm=Pmax/100d0
 	Pplanet=Pmax
 
-	if(Tsurface.gt.647.096) then
-		call output("Warning! Waterworld ocean reaches critical temperature!")
-		print*,"Warning! Waterworld ocean reaches critical temperature!"
-	endif
+	call output("Surface pressure: " // dbl2string(Pmax,'(es8.2)'))
+	print*,"Surface pressure: " // dbl2string(Pmax,'(es8.2)')
+
 	do i=1,nr
 		P(i)=10d0**(log10(Pmax)+(log10(Pm/Pmax)*real(i-1)/real(nr-1)))
 	enddo

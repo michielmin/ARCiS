@@ -849,7 +849,7 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 !$OMP& PRIVATE(vv,tau,tauc,Afact,hit,irtrace,A,iptrace,phi,rr,x,y,z,vx,vy,vz,la,lo,i1,i2,i3,
 !$OMP&			edgeNR,v,i1next,i2next,i3next,edgenext,i,imol,ir,ig,obsA_omp,obsA_split_omp)
 !$OMP& SHARED(nrtrace,nptrace,nmol_count,nr,nlam,ng,rtrace,ibeta,R3D2,Ce_cont,Ca_mol,wgg,obsA,latt,long,Rmax,
-!$OMP&          nnu0,n3D,nlong,nlatt,obsA_split,dtauR_nu)
+!$OMP&          nnu0,n3D,nlong,nlatt,obsA_split)
 	allocate(obsA_omp(nlam))
 	allocate(obsA_split_omp(nlam,2))
 	allocate(vv(nr,n3D))

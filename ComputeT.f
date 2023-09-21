@@ -512,6 +512,11 @@ c		if(err.gt.maxErr.and..not.Convec(ir)) then
 	if(maxErr.lt.(epsiter/5d0).and.iter.gt.5) exit
 	enddo
 
+	T1=T
+	do ir=2,nr-1
+		T(ir)=(T1(ir-1)*T1(ir+1)*T1(ir)**2)**0.25
+	enddo
+
 	maxErr=0d0
 	do ir=1,nr-1
 		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.maxErr) maxErr=abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir))
@@ -523,9 +528,11 @@ c		if(err.gt.maxErr.and..not.Convec(ir)) then
 	if(do3D.and..not.retrieval) print*,"Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%"
 	T0(1:nr)=Tinp(1:nr)
 	T1(1:nr)=T(1:nr)
-	do ir=1,nr
-		call computeav50(Tdist(ir,1:nTiter),nTiter,T1(ir))
-	enddo
+	if(.not.WaterWorld) then
+		do ir=1,nr
+			call computeav50(Tdist(ir,1:nTiter),nTiter,T1(ir))
+		enddo
+	endif
 	do ir=1,nr
 		T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
 	enddo

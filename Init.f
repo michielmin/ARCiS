@@ -71,6 +71,9 @@ c==============================================================================
 		else
 			if(readline(1:1).ne.' ') then
 c				try to read another command line argument
+				close(unit=21)
+				call system("cat " // trim(readline) // " >> " // trim(outputdir) // "input.dat")
+				open(unit=21,file=trim(outputdir) // "input.dat",FORM="FORMATTED",ACCESS="APPEND")
 				open(unit=20,file=readline,FORM="FORMATTED")
 				readfile=.true.
 				ncla=ncla+1

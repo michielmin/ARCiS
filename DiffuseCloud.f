@@ -1145,7 +1145,20 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 		endif
 	enddo
 	
-	if(.not.retrieval) call ComputeTevap()
+	if(.not.retrieval) then
+		call ComputeTevap()
+		if(complexKzz) then
+			open(unit=50,file=trim(outputdir) // 'cloudKzz.dat',FORM="FORMATTED",ACCESS="STREAM")
+			form='("#",a12,a13,a13,a13)'
+			write(50,trim(form)) "Kzz [cm^2/s]","P [bar]","Kpart","Kgas"
+			form='(es13.3E3,es13.3E3,es13.3E3,es13.3E3)'
+			do i=1,nnr
+				write(50,trim(form)) Km(i),CloudP(i),Kd(i),Kg(i)
+			enddo
+			close(unit=50)
+		endif
+	endif
+
 
 	deallocate(densv,docondense)
 	deallocate(mpart)
@@ -1164,7 +1177,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(IWORK)
 	deallocate(An)
 	deallocate(logCloudP)
-	deallocate(Kd,Kg)
+	deallocate(Kd,Kg,Km)
 	deallocate(Ma,Mb,Mc)
 	deallocate(fsil,fsil2)
 

@@ -46,7 +46,7 @@
 			else
 				f=0.5d0
 				if(forceEbalance) f=f+0.5d0*exp(-real(maxiter-nTiter)/5d0)
-				if(WaterWorld) f=1d0
+				if(WaterWorld) f=0.5d0
 			endif
 			if(f.gt.1d0) f=1d0
 			call DoComputeT(Tconverged,f)
