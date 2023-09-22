@@ -181,6 +181,38 @@ Temperature gradient when \texttt{computeT=.false.}
 \end{equation}
 \end{description}
 
+\subsection{Other options}
+
+\subsubsection{$K_{zz}$ setup}
+The diffusion of the atmosphere is important for the disequilibrium chemistry and for the cloud formation. For the clouds it is possible to set a separate homogeneous value or use the global defined $K_{zz}$ profile. The disequilibrium chemistry always uses the globally defined $K_{zz}$ profile.
+
+Two cases are considered:\\
+when $K_{zz}^{contrast} > 1$:
+\begin{equation}
+K_{zz}=\max\left[ K_{zz}^{deep} ; \min\left[ \left(K_{zz}^{deep}\cdot K_{zz}^{contrast} \right) ; \left(K_{zz}^{1bar} P^{-|\gamma_{K}|} \right) \right] \right]
+\end{equation}
+when $K_{zz}^{contrast} < 1$:
+\begin{equation}
+K_{zz}=\max\left[ \left(K_{zz}^{deep}\cdot K_{zz}^{contrast} \right) ; \min\left[ K_{zz}^{deep} ; \left(K_{zz}^{1bar} P^{|\gamma_{K}|} \right) \right] \right]
+\end{equation}
+This profile is used when $K_{zz}^{deep}$ and $K_{zz}^{1bar}$ are defined. By default these are set to negative values, which means the homogeneous value for $K_{zz}$ is used.
+
+Keywords:
+\begin{description}
+\item[\texttt{Kzz}]
+Sets the value used for homogeneous global $K_{zz}$
+\item[\texttt{Kzz\_deep}]
+Sets the value used for $K_{zz}^{deep}$
+\item[\texttt{Kzz\_1bar}]
+Sets the value used for $K_{zz}^{1bar}$
+\item[\texttt{Kzz\_contrast}]
+Sets the value used for $K_{zz}^{contrast}$
+\item[\texttt{Kzz\_p}]
+Sets the value of $\gamma_K$ (default is 0.5)
+\end{description}
+
+
+
 \subsection{Retrieval}
 
 \subsubsection{Observations}
