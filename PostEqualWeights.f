@@ -13,6 +13,7 @@
 	real*8 ComputeKzz,lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,lm2,lm3,cmin
 	integer i1,i2,ibest
 	character*6000 line
+	integer*4 counts, count_rate, count_max
 	
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
 	open(unit=35,file=trim(outputdir) // "/posterior.dat",FORM="FORMATTED",ACCESS="STREAM")
@@ -147,7 +148,9 @@
 
 	done=.false.
 	
-	call cpu_time(starttime)
+c	call cpu_time(starttime)
+	call SYSTEM_CLOCK(counts, count_rate, count_max)
+	starttime = DBLE(counts)/DBLE(count_rate)
 
 	if(npew.lt.0) then
 		donmodels=nmodels
@@ -176,7 +179,9 @@
 		if(done(imodel)) goto 5
 		done(imodel)=.true.
 
-		call cpu_time(stoptime)
+c		call cpu_time(stoptime)
+		call SYSTEM_CLOCK(counts, count_rate, count_max)
+		stoptime = DBLE(counts)/DBLE(count_rate)
 
 		call output("model number: " // int2string(imodel,'(i7)') 
      &			// "(" // trim(dbl2string(real(i)*100d0/real(donmodels),'(f5.1)')) // "%)")
