@@ -54,12 +54,12 @@ endif
 # Platform specific compilation options
 ifeq ($(gfort),true)
   FLAG_ALL      = -O5 -finit-local-zero $(MULTICORE) -I$(HOME)/include -I/usr/local/modules $(LIBS_MN) $(LIBS_MCMC) -fPIC -finit-derived -Wuninitialized
-  FLAG_LINUX    = -ffixed-line-length-none -cpp -malign-double -march=native
-  FLAG_MAC      = -m64 -ffixed-line-length-none -cpp -malign-double -march=native
+  FLAG_LINUX    = -ffixed-line-length-none -cpp -malign-double
+  FLAG_MAC      = -m64 -ffixed-line-length-none -cpp -malign-double
 else
   FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(MULTICORE) -assume buffered_io -I/usr/local/modules -fp-model strict -heap-arrays 10 $(LIBS_MN) $(LIBS_MCMC)
-  FLAG_LINUX    = -march=native -fpp
-  FLAG_MAC      = -march=native -qopt-prefetch -static-intel -fpp -heap-arrays 10
+  FLAG_LINUX    = -xHOST -fpp
+  FLAG_MAC      = -xHOST -qopt-prefetch -static-intel -fpp -heap-arrays 10
 endif
 
 LIBS_FITS		= -lcfitsio
