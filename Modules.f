@@ -224,6 +224,7 @@ c for exchange when computing secondary atmosphere
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb
 	character*20 surfacetype
+	character*500 surfacefile
 	integer nTZ,nspike,nai,nboot,npew,nscaleR
 	integer,allocatable :: niso(:),instr_nobs(:)
 	real*8,allocatable :: MMW(:)

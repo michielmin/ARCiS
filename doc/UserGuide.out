@@ -8,9 +8,11 @@
 \BOOKMARK [2][-]{subsection.4.3}{Abundances of the molecules}{section.4}% 8
 \BOOKMARK [2][-]{subsection.4.4}{Opacities and raytracing}{section.4}% 9
 \BOOKMARK [2][-]{subsection.4.5}{Temperature structure}{section.4}% 10
-\BOOKMARK [2][-]{subsection.4.6}{Retrieval}{section.4}% 11
-\BOOKMARK [3][-]{subsubsection.4.6.1}{Observations}{subsection.4.6}% 12
-\BOOKMARK [3][-]{subsubsection.4.6.2}{Parameters}{subsection.4.6}% 13
-\BOOKMARK [2][-]{subsection.4.7}{Very rough instrument simulation \(use at own risk!\)}{section.4}% 14
-\BOOKMARK [1][-]{section.5}{Output files}{}% 15
-\BOOKMARK [1][-]{section.6}{Examples}{}% 16
+\BOOKMARK [2][-]{subsection.4.6}{Other options}{section.4}% 11
+\BOOKMARK [3][-]{subsubsection.4.6.1}{Kzz setup}{subsection.4.6}% 12
+\BOOKMARK [2][-]{subsection.4.7}{Retrieval}{section.4}% 13
+\BOOKMARK [3][-]{subsubsection.4.7.1}{Observations}{subsection.4.7}% 14
+\BOOKMARK [3][-]{subsubsection.4.7.2}{Parameters}{subsection.4.7}% 15
+\BOOKMARK [2][-]{subsection.4.8}{Very rough instrument simulation \(use at own risk!\)}{section.4}% 16
+\BOOKMARK [1][-]{section.5}{Output files}{}% 17
+\BOOKMARK [1][-]{section.6}{Examples}{}% 18

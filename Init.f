@@ -814,6 +814,11 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 
 	allocate(surface_emis(nlam))
 	surface_emis=1d0
+	select case(surfacetype)
+		case("FILE","file")
+			call regridSimple(surfacefile,lam*1d4,surface_emis,nlam)
+			surface_emis=1d0-surface_emis/100d0
+	end select
 	
 	if(makemovie) makeimage=.true.
 
@@ -1324,6 +1329,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) planetform_Macc
 		case("surfacetype")
 			read(key%value,*) surfacetype
+		case("surfacefile")
+			surfacefile=trim(key%value)
 		case("surfacealbedo")
 			read(key%value,*) surfacealbedo
 		case("ncpah","nc_pah")
@@ -1427,7 +1434,10 @@ c	endif
 
 	if(fixnight2day) then
 c Use formalism from Koll (2022)
-		k=1.9	! value for TRAPPIST-1b
+		k=1.2	! value for TRAPPIST-1b
+c k is proportional to Rplanet and grav
+		k=k*(Ggrav*Mplanet/(Rplanet)**2)/795d0
+		k=k*Rplanet/(1.12d0*Rearth)
 		kap=1d0
 		Teq=sqrt(Rstar/(2d0*Dplanet))*Tstar
 		f=(kap**(1./3.)*Pmax*(Teq/600d0)**(-4./3.))

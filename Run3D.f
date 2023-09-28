@@ -2182,10 +2182,10 @@ c		emis(i)=1d0+log(2d0*g+1d0)*(g-1)/(2d0*g)
 c=========================================
 c compute emissivity of the surface
 c=========================================
-	surface_emis=0d0
 
 	select case(surfacetype)
 		case("MIXED","MIX","mixed","mix")
+			surface_emis=0d0
 			tot=0.6d0
 			call RegridDataLNK(Enstatite_X,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam,computelam(1:nlam))
@@ -2213,16 +2213,19 @@ c=========================================
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam,computelam(1:nlam))
 			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
 		case("QUARTZ","quartz","SiO2")
+			surface_emis=0d0
 			tot=1d0
 			call RegridDataLNK(SiO2,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam,computelam(1:nlam))
 			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
 		case("FeO")
+			surface_emis=0d0
 			tot=1d0
 			call RegridDataLNK(FeO,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam,computelam(1:nlam))
 			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
 		case("labradorite","LABRADORITE")
+			surface_emis=0d0
 			tot=1.0d0
 			call RegridDataLNK(Labradorite_X,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam,computelam(1:nlam))
@@ -2239,6 +2242,10 @@ c=========================================
 			surface_emis(1:nlam)=1d0-surfacealbedo
 		case("WHITE","white")
 			surface_emis(1:nlam)=1d-4
+		case("FILE","file")
+		case default
+			call output("Surface type not known!")
+			stop
 	end select
 
 	if(.not.retrieval) then

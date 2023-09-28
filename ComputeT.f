@@ -582,11 +582,36 @@ c		if(err.gt.maxErr.and..not.Convec(ir)) then
 	end
 
 
+	subroutine MidpointDeriv(dx,y,dy,n)
+	IMPLICIT NONE
+	integer n,i
+	real*8 dx(n),y(n),dy(n),dx1,dx2
+
+	do i=1,n-1
+		dx1=dx(i)
+		dx2=dx(i+1)
+		dy(i)=(y(i)-y(i-1))/dx1+dx1*((y(i+1)-y(i))/dx2-(y(i)-y(i-1))/dx1)/(dx1+dx2)
+	enddo
+	dy(n)=(y(n)-y(n-1))/dx(n)
+
+	return
+	end
+	
+
 	subroutine ComputeDeriv(x,y,dy,n,yp1,ypn)
 	IMPLICIT NONE
 	integer n,i
-	real*8 x(n),y(n),dy(n),d2y(n),yp1,ypn
+	real*8 x(n),y(n),dy(n),d2y(n),yp1,ypn,dx1,dx2
 	real*8 A,B
+
+	dy(1)=(y(2)-y(1))/(x(2)-x(1))
+	dy(n)=(y(n)-y(n-1))/(x(n)-x(n-1))
+	do i=2,n-1
+		dx1=(x(i)-x(i-1))
+		dx2=(x(i+1)-x(i))
+		dy(i)=(y(i)-y(i-1))/dx1+dx1*((y(i+1)-y(i))/dx2-(y(i)-y(i-1))/dx1)/(dx1+dx2)
+	enddo
+	return
 
 	do i=1,n-1
 		dy(i)=(y(i+1)-y(i))/(x(i+1)-x(i))

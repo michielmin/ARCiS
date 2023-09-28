@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) (preloaded format=pdflatex 2020.9.17)  14 JUN 2023 13:43
+This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) (preloaded format=pdflatex 2020.9.17)  22 SEP 2023 11:22
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -514,7 +514,7 @@ LaTeX Info: Redefining \nameref on input line 7.
 \openout3 = `UserGuide.out'.
 
 \c@lstlisting=\count282
-<ARCiS.png, id=68, 1445.4pt x 1445.4pt>
+<ARCiS.png, id=76, 1445.4pt x 1445.4pt>
 File: ARCiS.png Graphic file (type png)
 <use ARCiS.png>
 Package pdftex.def Info: ARCiS.png  used on input line 13.
@@ -748,43 +748,58 @@ Underfull \hbox (badness 10000) in paragraph at lines 88--93
 
  []
 
-[4] [5] [6]
-Overfull \hbox (12.3428pt too wide) in paragraph at lines 224--225
+[4] [5]
+
+Package hyperref Warning: Token not allowed in a PDF string (PDFDocEncoding):
+(hyperref)                removing `math shift' on input line 186.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (PDFDocEncoding):
+(hyperref)                removing `subscript' on input line 186.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (PDFDocEncoding):
+(hyperref)                removing `math shift' on input line 186.
+
+[6] [7]
+Overfull \hbox (12.3428pt too wide) in paragraph at lines 256--257
 []\OT1/txr/m/n/12 Can be "MIRI", "NIR-SPEC", "WFC3", "JWST" or "ARIEL".
  []
 
-[7] (./UserGuide.bbl [8])
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 258.
- [9]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 258.
+(./UserGuide.bbl [8] [9])
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 290.
+ [10]
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 290.
  (./UserGuide.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 258.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 258.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 290.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 290.
 Package rerunfilecheck Info: File `UserGuide.out' has not changed.
-(rerunfilecheck)             Checksum: DD92CDBEADC71919AB146DF39F0F5040;987.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 258.
+(rerunfilecheck)             Checksum: 8A42CF62C0425718F36FF99800FC2021;1119.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 290.
  ) 
 Here is how much of TeX's memory you used:
- 10037 strings out of 480608
- 142802 string characters out of 5903630
- 414950 words of memory out of 5000000
- 25682 multiletter control sequences out of 15000+600000
- 568940 words of font info for 113 fonts, out of 8000000 for 9000
+ 10047 strings out of 480608
+ 142934 string characters out of 5903630
+ 414954 words of memory out of 5000000
+ 25685 multiletter control sequences out of 15000+600000
+ 570316 words of font info for 115 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 39i,6n,41p,411b,455s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 39i,6n,41p,411b,459s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2020/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/local/t
 exlive/2020/texmf-dist/fonts/type1/public/txfonts/rtcxr.pfb></usr/local/texlive
 /2020/texmf-dist/fonts/type1/public/txfonts/rtxi.pfb></usr/local/texlive/2020/t
 exmf-dist/fonts/type1/public/txfonts/rtxmi.pfb></usr/local/texlive/2020/texmf-d
 ist/fonts/type1/public/txfonts/rtxr.pfb></usr/local/texlive/2020/texmf-dist/fon
 ts/type1/public/txfonts/txbtt.pfb></usr/local/texlive/2020/texmf-dist/fonts/typ
-e1/public/txfonts/txtt.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/urw/
-times/utmb8a.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/urw/times/utmr
-8a.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on UserGuide.pdf (9 pages, 217013 bytes).
+e1/public/txfonts/txex.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/publ
+ic/txfonts/txsy.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/public/txfo
+nts/txtt.pfb></usr/local/texlive/2020/texmf-dist/fonts/type1/urw/times/utmb8a.p
+fb></usr/local/texlive/2020/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/l
+ocal/texlive/2020/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on UserGuide.pdf (10 pages, 223954 bytes).
 PDF statistics:
- 202 PDF objects out of 1000 (max. 8388607)
- 178 compressed objects within 2 object streams
- 40 named destinations out of 1000 (max. 500000)
- 134 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 225 PDF objects out of 1000 (max. 8388607)
+ 198 compressed objects within 2 object streams
+ 45 named destinations out of 1000 (max. 500000)
+ 150 words of extra memory for PDF output out of 10000 (max. 10000000)
 
