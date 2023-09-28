@@ -50,13 +50,13 @@
 	logical docloud0(max(nclouds,1)),converged,stopscat
 	real*8 tauf(nr),Si(0:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff,TT,maxErr,Fl0(nr),IntH0(nr,nr)
 	integer info,IWORK(10*(nr+1)*(nr+1)),NRHS,ii(3),iscat,nscat
-	real*8 tau1,tau2,ee0,ee1,ee2,tauR(nr),Ij(nr),Ih(nr),scale,dtauR(nr),EabDirect(nr)
+	real*8 tau1,tau2,ee0,ee1,ee2,tauR(nr),Ij(nr),Ih(nr),scale,dtauR(nr)
 	integer nlam_LR
 	real*8 IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact,err,tot1,Pb(nr+1)
 	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
 	integer i1,i2,ngF,j
 	real*8 ww,w1,w2,FstarBottom,tauRoss
-	real*8,allocatable :: Si_omp(:,:),Ih_omp(:),Ij_omp(:),tauR_omp(:),Hsurf(:,:),Hstar_omp(:),EabDirect_omp(:)
+	real*8,allocatable :: Si_omp(:,:),Ih_omp(:),Ij_omp(:),tauR_omp(:),Hsurf(:,:),Hstar_omp(:)
 	real*8,allocatable :: Fstar_LR(:),SurfEmis_LR(:),IntEab(:,:,:),IntHnuSurf(:,:),IntEabSurf(:,:)
 	integer,allocatable :: IP(:)
 	real*8,allocatable :: WS(:),nu(:),wnu(:),Hstar_lam(:),Hsurf_lam(:)
@@ -64,11 +64,10 @@
 	character*500 file
 	integer icloud
 	logical Convec(0:nr)
-	real*8,allocatable,save :: Hstar0(:),EabDirect0(:)
+	real*8,allocatable,save :: Hstar0(:)
 
 	if(deepredist.and.deepredisttype.eq.'fixflux') then
 		if(.not.allocated(Hstar0)) allocate(Hstar0(nr))
-		if(.not.allocated(EabDirect0)) allocate(EabDirect0(nr))
 	endif
 
 	maxfact=4d0
@@ -258,20 +257,18 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	IntHnu(1:nlam_LR,1:nr,1:nr)=0d0
 	IntEab(1:nlam_LR,1:nr,1:nr)=0d0
 	IntHnuSurf(1:nlam_LR,1:nr)=0d0
-	EabDirect(1:nr)=0d0
 	IntEabSurf(1:nlam_LR,1:nr)=0d0
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,EabDirect_omp,HBottom,
+!$OMP& PRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,HBottom,
 !$OMP&			Hstar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,tot,IhN,IjN)
-!$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,
-!$OMP&			Hstar,Dplanet,Fstar_LR,must,wabs,wscat,EabDirect,IntEab,IntHnuSurf,IntEabSurf,betaF,isoFstar)
+!$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,night2day,
+!$OMP&			Hstar,Dplanet,Fstar_LR,must,wabs,wscat,IntEab,IntHnuSurf,IntEabSurf,betaF,isoFstar,do3D)
 	allocate(Si_omp(nr,0:nr+1),tauR_omp(nr),Ih_omp(nr),Ij_omp(nr))
 	allocate(IhN(nr,0:nr+1,nnu),IjN(nr,0:nr+1,nnu))
-	allocate(Hstar_omp(nr),Hstar_lam(nr),Hsurf_lam(nr),EabDirect_omp(nr),HBottom(nr))
+	allocate(Hstar_omp(nr),Hstar_lam(nr),Hsurf_lam(nr),HBottom(nr))
 	Hstar_omp=0d0
-	EabDirect_omp=0d0
 !$OMP DO
 	do ilam=1,nlam_LR
 		call tellertje(ilam,nlam_LR)
@@ -286,15 +283,22 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 					Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
 					Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)*nu(inu)
 					Hstar_lam(1:nr)=Hstar_lam(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
-					EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
 					FstarBottom=FstarBottom+2d0*wnu(inu)*abs(Ih_omp(1))
 				enddo
+				if(do3D) then
+					Hstar_lam(1:nr)=Hstar_lam(1:nr)*night2day
+					FstarBottom=FstarBottom*night2day
+					tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(max(must,1d-5))
+					Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
+					Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)
+					Hstar_lam(1:nr)=Hstar_lam(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)*(1d0-night2day)
+					FstarBottom=FstarBottom+abs(Ih_omp(1))*(1d0-night2day)
+				endif
 			else
 				tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(max(must,1d-5))
 				Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
 				Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)
 				Hstar_lam(1:nr)=Hstar_lam(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
-				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
 				FstarBottom=abs(Ih_omp(1))
 			endif
 
@@ -316,8 +320,6 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)/2d0
 				Hsurf_lam(1:nr)=Hsurf_lam(1:nr)+2d0*FstarBottom*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
      & 								Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
-				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+2d0*FstarBottom*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
-     & 								Ij_omp(1:nr)*(1d0-SurfEmis_LR(ilam))*Ca(1:nr,ilam,ig)
 				IntHnuSurf(ilam,1:nr)=IntHnuSurf(ilam,1:nr)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 				IntEabSurf(ilam,1:nr)=IntEabSurf(ilam,1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
 			enddo
@@ -335,7 +337,6 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				Ih_omp(1:nr)=IhN(1:nr,0,inu)
 				Ij_omp(1:nr)=IjN(1:nr,0,inu)
 				Hstar_lam(1:nr)=Hstar_lam(1:nr)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
-				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
 			enddo
 			HBottom=0d0
 			do ir=1,nr
@@ -365,8 +366,6 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				Hsurf_lam(1:nr)=Hsurf_lam(1:nr)+FstarBottom*4d0*nu(inu)*wnu(inu)*Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
 				IntHnuSurf(ilam,1:nr)=IntHnuSurf(ilam,1:nr)+4d0*nu(inu)*wnu(inu)*Ih_omp(1:nr)
 				IntEabSurf(ilam,1:nr)=IntEabSurf(ilam,1:nr)+4d0*wnu(inu)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
-				EabDirect_omp(1:nr)=EabDirect_omp(1:nr)+FstarBottom*4d0*wnu(inu)*
-     &						Ij_omp(1:nr)*(1d0-SurfEmis_LR(ilam))*Ca(1:nr,ilam,ig)
 			enddo
 
 			do ir=1,nr
@@ -377,20 +376,17 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 !$OMP END DO
 !$OMP CRITICAL
 	Hstar=Hstar+Hstar_omp
-	EabDirect=EabDirect+EabDirect_omp
 !$OMP END CRITICAL
 	deallocate(Si_omp,tauR_omp,Ih_omp,Ij_omp,IhN,IjN)
-	deallocate(Hstar_omp,Hstar_lam,Hsurf_lam,EabDirect_omp,HBottom)
+	deallocate(Hstar_omp,Hstar_lam,Hsurf_lam,HBottom)
 !$OMP FLUSH
 !$OMP END PARALLEL
 
 	if(do3D.and.deepredist.and.deepredisttype.eq.'fixflux') then
 		if(i3D.eq.n3D) then
 			Hstar0(1:nr)=Hstar(1:nr)/betaF
-			EabDirect0(1:nr)=EabDirect(1:nr)
 		else
 			Hstar(1:nr)=Hstar0(1:nr)*betaF
-			EabDirect(1:nr)=EabDirect0(1:nr)
 		endif
 	endif
 
