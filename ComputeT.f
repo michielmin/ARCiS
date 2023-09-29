@@ -393,6 +393,10 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 	iter=1
 	iter2=1
 	Tsurface=T(1)
+
+c=========================================================================================
+c=== start of loop =======================================================================
+c=========================================================================================
 	do while(iter.le.niter.and.iter2.le.niter*5)
 	iter=iter+1
 
@@ -507,10 +511,28 @@ c		if(err.gt.maxErr.and..not.Convec(ir)) then
 
 	if(maxErr.lt.(epsiter/5d0).and.iter.gt.5) exit
 	enddo
+c=========================================================================================
+c=== end of loop =========================================================================
+c=========================================================================================
 
 	T1=T
 	do ir=2,nr-1
 		T(ir)=(T1(ir-1)*T1(ir+1)*T1(ir)**2)**0.25
+	enddo
+
+	if(fixnight2day) then
+		tot=0d0
+		tauLW=0d0
+		iT=Tsurface+1
+		if(iT.gt.nBB-1) iT=nBB-1
+		if(iT.lt.1) iT=1
+		do ilam=1,nlam_LR
+			do ig=1,ng
+				tauLW=tauLW+exp(-tauR_nu(1,ilam,ig))*BB_LR(ilam,iT)*dfreq_LR(ilam)*wgg(ig)
+				tot=tot+BB_LR(ilam,iT)*dfreq_LR(ilam)*wgg(ig)
+			enddo
+		enddo
+		tauLW=-log(tauLW/tot)
 	enddo
 
 	maxErr=0d0

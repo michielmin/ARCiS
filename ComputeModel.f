@@ -39,6 +39,7 @@
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
      &					// trim(int2string(maxiter,'(i3)')) // ")")
 
+			if(fixnight2day.and.(.not.do3D.or.init3D)) call ComputeNight2Day((nTiter.le.1))
 			call SetupStructure(.true.)
 			call SetupOpacities()
 			if(nTiter.eq.1) then

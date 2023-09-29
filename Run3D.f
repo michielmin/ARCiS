@@ -36,6 +36,7 @@
 	allocate(mixrat3D(n3D,nr,nmol))
 	nx_im=200
 
+	init3D=.true.
 	if(retrieval) call SetOutputMode(.false.)
 
 c	recomputeopac=.true.
@@ -47,6 +48,16 @@ c	recomputeopac=.true.
 			call output("WARNING! Cloud coverage fraction does not work in 3D structures!")
 		endif
 	enddo
+
+	if(fixnight2day) then
+		call SetOutputMode(.false.)
+		call InitDens()
+		call ComputeModel1D(recomputeopac)
+		if(.not.retrieval) then
+			call SetOutputMode(.true.)
+			call output("night2day contrast: " // dbl2string(night2day,'(f7.4)'))
+		endif
+	endif
 
 	iterateshift=.false.
 	if(hotspotshift0.ge.-180d0.and.hotspotshift0.le.180d0) then
@@ -205,7 +216,7 @@ c	recomputeopac=.true.
 		enddo
 	endif
 
-
+	init3D=.false.
 	call output("Computing multiple 1D structures")
 
 	call tellertje_perc(0,n3D)

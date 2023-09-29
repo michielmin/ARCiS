@@ -1331,6 +1331,7 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) surfacetype
 		case("surfacefile")
 			surfacefile=trim(key%value)
+			call checkfile(surfacefile)
 		case("surfacealbedo")
 			read(key%value,*) surfacealbedo
 		case("ncpah","nc_pah")
@@ -1432,21 +1433,41 @@ c	endif
 		enddo
 	endif
 
-	if(fixnight2day) then
+	if(fixnight2day) call ComputeNight2Day(.true.)
+
+	return
+	end
+
+
+	subroutine ComputeNight2Day(usekap1)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 k,Teq,f,kap
+	logical usekap1
+	
 c Use formalism from Koll (2022)
-		k=1.2	! value for TRAPPIST-1b
+	k=1.2	! value for TRAPPIST-1b
 c k is proportional to Rplanet and grav
-		k=k*(Ggrav*Mplanet/(Rplanet)**2)/795d0
-		k=k*Rplanet/(1.12d0*Rearth)
+	k=k*(Ggrav*Mplanet/(Rplanet)**2)/795d0
+	k=k*Rplanet/(1.12d0*Rearth)
+	if(usekap1) then
 		kap=1d0
-		Teq=sqrt(Rstar/(2d0*Dplanet))*Tstar
-		f=(kap**(1./3.)*Pmax*(Teq/600d0)**(-4./3.))
-		night2day=f/(2d0*k+f)
-		if(.not.retrieval) call output("night2day contrast: " // dbl2string(night2day,'(f7.4)'))
+	else
+		kap=tauLW/Pmax
+	endif
+	Teq=sqrt(Rstar/(2d0*Dplanet))*Tstar
+	f=(kap**(1./3.)*Pmax*(Teq/600d0)**(-4./3.))
+	night2day=f/(2d0*k+f)
+	betaT=2d0/3d0-(5d0/12d0)*f/(k+f)
+	if(.not.retrieval) then
+		call output("night2day contrast: " // dbl2string(night2day,'(f7.4)'))
+		call output("1D beta value:      " // dbl2string(betaT,'(f7.4)'))
 	endif
 
 	return
 	end
+	
 
 
 	subroutine InitDens()
@@ -2339,6 +2360,7 @@ c number of cloud/nocloud combinations
 		select case(key%key2)
 			case("file")
 				CIA(i)%filename=key%value
+				call checkfile(CIA(i)%filename)
 			case default
 				call output("Keyword not recognised: " // trim(key%key2))
 		end select
