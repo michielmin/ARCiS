@@ -39,7 +39,7 @@
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
      &					// trim(int2string(maxiter,'(i3)')) // ")")
 
-			if(fixnight2day.and.(.not.do3D.or.init3D)) call ComputeNight2Day((nTiter.le.1))
+			if(fixnight2day.and..not.do3D) call ComputeNight2Day((nTiter.le.1))
 			call SetupStructure(.true.)
 			call SetupOpacities()
 			if(nTiter.eq.1) then
@@ -64,17 +64,19 @@ c			call output("PTstruct walltime: " // trim(dbl2string(dble(itimetemp)/dble(ra
 c			call output("Number of PTstruct calls:  " // trim(int2string(ctimetemp,'(i5)')))
 c			call SetoutputMode(.false.)
 		enddo
-		computelam=.not.RTgridpoint
-		if(forceEbalance) computelam=.true.
-		call SetupStructure(.true.)
-		call SetupOpacities()
-		if(forceEbalance) then
-			f=1d0
-			nTiter=1
-			call DoComputeT(Tconverged,f)
+		if(.not.do3D.or..not.init3D) then
 			computelam=.not.RTgridpoint
+			if(forceEbalance) computelam=.true.
+			call SetupStructure(.true.)
+			call SetupOpacities()
+			if(forceEbalance) then
+				f=1d0
+				nTiter=1
+				call DoComputeT(Tconverged,f)
+				computelam=.not.RTgridpoint
+			endif
+			par_tprofile=temp
 		endif
-		par_tprofile=temp
 	else
 		call SetupStructure(computeopac)
 		if(domakeai.and..not.modelsucces) return

@@ -1770,6 +1770,7 @@ c  GGchem was still implemented slightly wrong.
 	nboot=1
 
 	do3D=.false.
+	init3D=.false.
 
 	n3D=10
 	nnu0=10

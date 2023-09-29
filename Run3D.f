@@ -36,7 +36,6 @@
 	allocate(mixrat3D(n3D,nr,nmol))
 	nx_im=200
 
-	init3D=.true.
 	if(retrieval) call SetOutputMode(.false.)
 
 c	recomputeopac=.true.
@@ -50,6 +49,8 @@ c	recomputeopac=.true.
 	enddo
 
 	if(fixnight2day) then
+		do3D=.false.
+		init3D=.true.
 		call SetOutputMode(.false.)
 		call InitDens()
 		call ComputeModel1D(recomputeopac)
@@ -57,6 +58,8 @@ c	recomputeopac=.true.
 			call SetOutputMode(.true.)
 			call output("night2day contrast: " // dbl2string(night2day,'(f7.4)'))
 		endif
+		init3D=.false.
+		do3D=.true.
 	endif
 
 	iterateshift=.false.
@@ -216,7 +219,6 @@ c	recomputeopac=.true.
 		enddo
 	endif
 
-	init3D=.false.
 	call output("Computing multiple 1D structures")
 
 	call tellertje_perc(0,n3D)
