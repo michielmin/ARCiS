@@ -533,7 +533,7 @@ c===============================================================================
 			enddo
 		enddo
 		tauLW=-log(tauLW/tot)
-	enddo
+	endif
 
 	maxErr=0d0
 	do ir=1,nr-1
