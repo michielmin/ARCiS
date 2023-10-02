@@ -385,7 +385,7 @@ c	atoms_cloud(i,3)=1
 		CloudHp(1:nnr)=exp(CloudHp(1:nnr))
 	endif
 
-	if((Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0).or.Cloud(ii)%Kzz.le.0d0) then
+	if(Cloud(ii)%globalKzz.or.Cloud(ii)%Kzz.le.0d0) then
 		do i=1,nnr
 			Km(i)=ComputeKzz(CloudP(i),CloudT(i),Clouddens(i),.false.)
 			Kd(i)=Km(i)
@@ -398,13 +398,7 @@ c	atoms_cloud(i,3)=1
 	else
 		Km=Cloud(ii)%Kzz
 		Kd=Km
-		do i=1,nnr
-			if(complexKzz) then
-				Kg(i)=ComputeKzz(CloudP(i),CloudT(i),Clouddens(i),complexKzz)
-			else
-				Kg(i)=Kd(i)
-			endif
-		enddo
+		Kg=Kd
 	endif
 
 	f=0.1d0
