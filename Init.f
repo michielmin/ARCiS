@@ -1849,6 +1849,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%klam=1d0
 		Cloud(i)%rho_mat=3.0
 		Cloud(i)%nax=1
+		Cloud(i)%globalKzz=.false.
 	enddo
 	nspike=0
 	useDLMie=.false.
