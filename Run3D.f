@@ -48,7 +48,7 @@ c	recomputeopac=.true.
 		endif
 	enddo
 
-	if(fixnight2day) then
+	if(fixnight2day.or.WaterWorld) then
 		do3D=.false.
 		init3D=.true.
 		call SetOutputMode(.false.)

@@ -173,9 +173,9 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 
 	nj=0
 	do i=1,nlam_out
-		if(lamemis(i).and.computelam(i))nj=nj+1
+		if(lamemis(i).and.computelam(i)) nj=nj+1
 	enddo
-	if(nj.lt.350) then
+	if(nj.lt.350.and.nj.gt.0) then
 		allocate(specR(nlam))
 		filename=trim(outputdir) // "phasecurve" // trim(side)
 		call output("Writing phasecurve to: " // trim(filename))

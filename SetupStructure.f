@@ -14,7 +14,7 @@
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
 	enddo
-	if(WaterWorld) call doWaterWorld()
+	if(WaterWorld.and..not.do3D) call doWaterWorld()
 	
 	if(.not.do3D) betaF=betaT
 

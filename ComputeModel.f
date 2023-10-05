@@ -64,7 +64,7 @@ c			call output("PTstruct walltime: " // trim(dbl2string(dble(itimetemp)/dble(ra
 c			call output("Number of PTstruct calls:  " // trim(int2string(ctimetemp,'(i5)')))
 c			call SetoutputMode(.false.)
 		enddo
-		if(.not.do3D.or..not.init3D) then
+		if(.not.init3D) then
 			computelam=.not.RTgridpoint
 			if(forceEbalance) computelam=.true.
 			call SetupStructure(.true.)
@@ -76,6 +76,8 @@ c			call SetoutputMode(.false.)
 				computelam=.not.RTgridpoint
 			endif
 			par_tprofile=temp
+		else
+			return
 		endif
 	else
 		call SetupStructure(computeopac)
