@@ -211,7 +211,65 @@ Sets the value used for $K_{zz}^{contrast}$
 Sets the value of $\gamma_K$ (default is 0.5)
 \end{description}
 
+\subsubsection{Photochemical reactions}
 
+There is the option to simulate photochemical reactions in ARCiS. This is done by converting molecules or atoms above a certain optical depth in the atmosphere into other molecules or hazes.
+The conversion efficiency of the reaction is parameterised by the simple equation
+\begin{equation}
+f_{\rm conversion} = f_{\rm eff}\,e^{-\tau_{\rm UV}},
+\end{equation}
+Here $\tau_{\rm UV}$ is simply computed from the parameter $\kappa_{\rm UV}$ that can be given as an input parameter. The global efficiency $f_{\rm eff}$ determines the maximum efficiency possible. Note that $f_{\rm conversion}$ is capped at $1$ in the code. So it is possible to give $f_{\rm eff}>1$, but this will only result in an efficiency that is equal to $1$ up to lower pressures.
+
+The global keyword is:
+\begin{description}
+\item[\texttt{kappaUV}]
+Sets the value used for $\kappa_{\rm UV}$
+\end{description}
+
+The rest is set per reaction. 
+
+As an example, consider we want to convert sulfur and oxygen into SO2
+\begin{equation}
+\rm S+2\,O \rightarrow SO_2
+\end{equation}
+This is done by setting
+\begin{description}
+\item[\texttt{photoreac1:S=1}]
+Sets the reactant of reaction 1 to contain 1 S atom
+\item[\texttt{photoreac1:O=2}]
+Sets the reactant of reaction 1 to contain 2 O atoms
+\item[\texttt{photoprod1:SO2=1}]
+Sets the product of reaction 1 to contain 1 SO$_2$ molecule
+\end{description}
+Converting atoms to molecules is done before chemical calculations (so the atoms are removed from the atomic mixture and the molecular products are added later on)
+
+We can also convert for example
+\begin{equation}
+\rm H_2S+2\,H_2O \rightarrow SO_2 +3\,H_2
+\end{equation}
+This is done by setting
+\begin{description}
+\item[\texttt{photoreac1:H2S=1}]
+Sets the reactant of reaction 1 to contain 1 H2S molecule
+\item[\texttt{photoreac1:H2O=2}]
+Sets the reactant of reaction 1 to contain 2 H2O molecules
+\item[\texttt{photoprod1:SO2=1}]
+Sets the product of reaction 1 to contain 1 SO$_2$ molecule
+\item[\texttt{photoprod1:H2=3}]
+Sets the product of reaction 1 to contain 3 H$_2$ molecules
+\end{description}
+Converting molecules into other molecules is done after the chemical computations (so first it is determined how much H$_2$S and H$_2$O would be available.
+
+If for a reaction the keyword
+\begin{description}
+\item[\texttt{photohaze1=.true.}]
+\end{description}
+is set. This means that if any mass remains after the conversion of reactants into products, this is converted into haze particles.
+
+Finally the keyword
+\begin{description}
+\item[\texttt{photoeff1}] sets the value for $f_{\rm eff}$ of the reaction
+\end{description}
 
 \subsection{Retrieval}
 
