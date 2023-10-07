@@ -1987,7 +1987,7 @@ c  GGchem was still implemented slightly wrong.
 		PhotoReacts(i)%react=0d0
 		PhotoReacts(i)%product=0d0
 		PhotoReacts(i)%f_eff=1d0
-		PhotoReacts(i)%haze=.false.
+		PhotoReacts(i)%haze=0d0
 		PhotoReacts(i)%nreact=0
 		PhotoReacts(i)%atomic=.false.
 	enddo

@@ -58,6 +58,7 @@
 				if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=abun_switch_mol(imol)
 			enddo
 		enddo
+		mixrat_optEC_r=0d0
 		call doPhotoChemMol()
 		do imol=1,nmol
 			if(isotope(imol).gt.0) then
@@ -1170,10 +1171,9 @@ c-----------------------------------------------------------------------
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 nmax,nreac,Mtot
+	real*8 nmax,nreac
 	integer i,ir,imol
 	
-	mixrat_optEC_r=0d0
 	do i=1,nPhotoReacts
 		if(.not.PhotoReacts(i)%atomic) then
 		do ir=1,nr
@@ -1185,23 +1185,17 @@ c-----------------------------------------------------------------------
 				endif
 			enddo
 			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-kappaUV*1d6*P(ir)/grav(ir)))
-			Mtot=0d0
 			do imol=1,nmol
 				if(includemol(imol)) then
 					if(PhotoReacts(i)%react(imol).gt.0d0) then
 						mixrat_r(ir,imol)=mixrat_r(ir,imol)-nreac*PhotoReacts(i)%react(imol)
-						Mtot=Mtot+nreac*PhotoReacts(i)%react(imol)*Mmol(imol)
 					endif
 					if(PhotoReacts(i)%product(imol).gt.0d0) then
 						mixrat_r(ir,imol)=mixrat_r(ir,imol)+nreac*PhotoReacts(i)%product(imol)
-						Mtot=Mtot-nreac*PhotoReacts(i)%product(imol)*Mmol(imol)
 					endif
 				endif
 			enddo
-			if(PhotoReacts(i)%haze.and.Mtot.gt.0d0) then
-				Mtot=Mtot*mp*Ndens(ir)/dens(ir)
-				mixrat_optEC_r(ir)=Mtot
-			endif
+			mixrat_optEC_r(ir)=nreac*PhotoReacts(i)%haze
 		enddo
 		else
 		do ir=1,nr
@@ -1222,7 +1216,7 @@ c-----------------------------------------------------------------------
 	use AtomsModule
 	use Constants
 	IMPLICIT NONE
-	real*8 nmax,nreac,Mtot
+	real*8 nmax,nreac
 	integer i,ir,imol
 	
 	mixrat_optEC_r=0d0
@@ -1237,25 +1231,19 @@ c-----------------------------------------------------------------------
 				endif
 			enddo
 			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-kappaUV*1d6*P(ir)/grav(ir)))
-			Mtot=0d0
 			do imol=1,N_atoms
 				if(PhotoReacts(i)%react(imol).gt.0d0) then
 					molfracs_atoms(imol)=molfracs_atoms(imol)-nreac*PhotoReacts(i)%react(imol)
-					Mtot=Mtot+nreac*PhotoReacts(i)%react(imol)*Mmol(imol)
 				endif
 			enddo
 			do imol=1,N_atoms
 				if(includemol(imol)) then
 					if(PhotoReacts(i)%product(imol).gt.0d0) then
 						PhotoReacts(i)%abun(ir,imol)=PhotoReacts(i)%abun(ir,imol)+nreac*PhotoReacts(i)%product(imol)
-						Mtot=Mtot-nreac*PhotoReacts(i)%product(imol)*Mmol(imol)
 					endif
 				endif
 			enddo
-			if(PhotoReacts(i)%haze.and.Mtot.gt.0d0) then
-				Mtot=Mtot*mp*Ndens(ir)/dens(ir)
-				mixrat_optEC_r(ir)=Mtot
-			endif
+			mixrat_optEC_r(ir)=nreac*PhotoReacts(i)%haze
 		endif
 	enddo
 

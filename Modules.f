@@ -415,8 +415,7 @@ c for exchange when computing secondary atmosphere
 		real*8,allocatable :: react(:),product(:),abun(:,:)
 		integer nreact
 		logical atomic
-		real*8 f_eff
-		logical haze
+		real*8 f_eff,haze
 	end type photochem
 	type(photochem),allocatable :: PhotoReacts(:)
 	integer nPhotoReacts
