@@ -110,16 +110,9 @@ c	n_nu_line=ng*min(j,4)
 
 	do ir=nr,1,-1
 		call tellertje(nr-ir+1,nr)
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& SHARED(cont_tot,nlam)
-!$OMP DO SCHEDULE(STATIC)
 		do i=1,nlam
 			cont_tot(i)=0d0
 		enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
 
 c===============
 c UV cross sections of CO2 from Venot et al.
@@ -165,6 +158,29 @@ c===============
 			endif
 		enddo
 
+		if(do_rayleigh) then
+			do i=1,nlam
+				if(computelam(i)) call RayleighScattering(Csca(ir,i),ir,i)
+			enddo
+		endif
+
+		if(mixrat_PAH.gt.0d0) call ComputePAH(cont_tot,Csca(ir,1:nlam),computelam)
+		mixrat_optEC=mixrat_optEC0+mixrat_optEC_r(ir)
+		if(do_optEC) then
+			cont_tot=cont_tot+Cabs_optEC*mixrat_optEC
+			Csca(ir,1:nlam)=Csca(ir,1:nlam)+Csca_optEC(1:nlam)*mixrat_optEC
+		endif
+
+		do i=1,nlam
+			kappa_mol(1:ng,i,1:nmol)=0d0
+		enddo
+
+		do imol=1,nmol
+			if(includemol(imol)) then
+				call ReadOpacityFITS(kappa_mol,imol,ir)
+			endif
+		enddo
+
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,j,imol,ig,jg,ig_c,imol0,w1,nfull,nfast)
@@ -172,39 +188,6 @@ c===============
 !$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid,
 !$OMP&        RTgridpoint,includemol,do_rayleigh,mixrat_PAH,mixrat_optEC0,mixrat_optEC,mixrat_optEC_r,nmap,imap,
 !$OMP&        do_optEC,Cabs_optEC,Csca_optEC)
-
-		if(do_rayleigh) then
-!$OMP DO SCHEDULE(STATIC)
-			do i=1,nlam
-				if(computelam(i)) call RayleighScattering(Csca(ir,i),ir,i)
-			enddo
-!$OMP END DO
-!$OMP FLUSH
-		endif
-
-		if(mixrat_PAH.gt.0d0) call ComputePAH(cont_tot,Csca(ir,1:nlam),computelam)
-		mixrat_optEC=mixrat_optEC0+mixrat_optEC_r(ir)
-		if(do_optEC) then
-			cont_tot=cont_tot+Cabs_optEC*(mixrat_optEC0+mixrat_optEC_r(ir))
-			Csca(ir,1:nlam)=Csca(ir,1:nlam)+Csca_optEC(1:nlam)*(mixrat_optEC0+mixrat_optEC_r(ir))
-		endif
-
-!$OMP DO SCHEDULE(STATIC)
-		do i=1,nlam
-			kappa_mol(1:ng,i,1:nmol)=0d0
-		enddo
-!$OMP END DO
-!$OMP FLUSH
-
-!$OMP DO SCHEDULE(DYNAMIC)
-		do imol=1,nmol
-			if(includemol(imol)) then
-				call ReadOpacityFITS(kappa_mol,imol,ir)
-			endif
-		enddo
-!$OMP END DO
-!$OMP FLUSH
-
 !$OMP DO SCHEDULE(DYNAMIC)
 		do i=1,nlam
 			if(computelam(i).and.(emisspec.or.computeT).and.(.not.useobsgrid.or.lamemis(i).or.RTgridpoint(i))) then
