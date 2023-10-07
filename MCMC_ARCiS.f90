@@ -25,17 +25,17 @@ subroutine doMCMCF90(var0,nvar)
 	write(20,'("!!")')
 	write(20,'("&mcmc")')
 	write(20,'("method = ",a)') "'dram'"
-	write(20,'(" ",a12,a2,i)')" nsimu","=",npop
-	write(20,'(" ",a12,a2,i)')" verbosity","=",0
-	write(20,'(" ",a12,a2,i)')" doadapt","=",0
-	write(20,'(" ",a12,a2,i)')" adaptint","=",100
-	write(20,'(" ",a12,a2,i)')" burnintime","=",min(1000,npop/10)
-	write(20,'(" ",a12,a2,i)')" doburnin","=",1
-	write(20,'(" ",a12,a2,i)')" drscale","=",0
-	write(20,'(" ",a12,a2,i)')" printint","=",100
-	write(20,'(" ",a12,a2,i)')" updatesigma","=",0
-	write(20,'(" ",a12,a2,i)')" N0","=",0
-	write(20,'(" ",a12,a2,i)')" S02","=",0
+	write(20,'(" ",a12,a2,i9)')" nsimu","=",npop
+	write(20,'(" ",a12,a2,i9)')" verbosity","=",0
+	write(20,'(" ",a12,a2,i9)')" doadapt","=",0
+	write(20,'(" ",a12,a2,i9)')" adaptint","=",100
+	write(20,'(" ",a12,a2,i9)')" burnintime","=",min(1000,npop/10)
+	write(20,'(" ",a12,a2,i9)')" doburnin","=",1
+	write(20,'(" ",a12,a2,i9)')" drscale","=",0
+	write(20,'(" ",a12,a2,i9)')" printint","=",100
+	write(20,'(" ",a12,a2,i9)')" updatesigma","=",0
+	write(20,'(" ",a12,a2,i9)')" N0","=",0
+	write(20,'(" ",a12,a2,i9)')" S02","=",0
 	write(20,'(" ",a12,a3,a,a)')" chainfile","= '",trim(outputdir) // 'chain.dat',"'"
 	write(20,'(" ",a12,a3,a,a)')" ssfile","= '",trim(outputdir) // 'sschain.dat',"'"
 	write(20,'(" ",a12,a3,a,a)')" parfile","= '",trim(outputdir) // 'mcmcpar.dat',"'"

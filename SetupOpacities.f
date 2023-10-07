@@ -28,6 +28,27 @@
 	integer,allocatable :: inu1(:),inu2(:)
 	character*500 filename
 	logical,save :: first_entry=.true.
+	real*8,allocatable :: Cabs_optEC(:),Csca_optEC(:)
+	logical do_optEC
+	
+	do_optEC=.false.
+	if(mixrat_optEC0.gt.0d0) then
+		do_optEC=.true.
+	else
+		do ir=1,nr
+			if(mixrat_optEC_r(ir).gt.0d0) then
+				do_optEC=.true.
+				exit
+			endif
+		enddo
+	endif
+	if(do_optEC) then
+		allocate(Cabs_optEC(nlam),Csca_optEC(nlam))
+		Cabs_optEC=0d0
+		Csca_optEC=0d0
+		mixrat_optEC=1d0
+		call Compute_optEC(Cabs_optEC,Csca_optEC,computelam)
+	endif
 
 	allocate(cont_tot(nlam))
 	allocate(kaver(nlam))
@@ -144,13 +165,13 @@ c===============
 			endif
 		enddo
 
-
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,j,imol,ig,jg,ig_c,imol0,w1,nfull,nfast)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,computelam,
 !$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid,
-!$OMP&        RTgridpoint,includemol,do_rayleigh,mixrat_PAH,mixrat_optEC0,mixrat_optEC,mixrat_optEC_r,nmap,imap)
+!$OMP&        RTgridpoint,includemol,do_rayleigh,mixrat_PAH,mixrat_optEC0,mixrat_optEC,mixrat_optEC_r,nmap,imap,
+!$OMP&        do_optEC,Cabs_optEC,Csca_optEC)
 
 		if(do_rayleigh) then
 !$OMP DO SCHEDULE(STATIC)
@@ -163,7 +184,10 @@ c===============
 
 		if(mixrat_PAH.gt.0d0) call ComputePAH(cont_tot,Csca(ir,1:nlam),computelam)
 		mixrat_optEC=mixrat_optEC0+mixrat_optEC_r(ir)
-		if(mixrat_optEC.gt.0d0) call Compute_optEC(cont_tot,Csca(ir,1:nlam),computelam)
+		if(do_optEC) then
+			cont_tot=cont_tot+Cabs_optEC*(mixrat_optEC0+mixrat_optEC_r(ir))
+			Csca(ir,1:nlam)=Csca(ir,1:nlam)+Csca_optEC(1:nlam)*(mixrat_optEC0+mixrat_optEC_r(ir))
+		endif
 
 !$OMP DO SCHEDULE(STATIC)
 		do i=1,nlam
@@ -276,7 +300,7 @@ c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 		open(unit=30,file=trim(outputdir) // "opticaldepth.dat",FORM="FORMATTED",ACCESS="STREAM")
 		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
 		do i=1,nlam
-			write(30,'(f12.6,e19.7)') lam(i)/micron,sum(opac_tot(i,1:ng)*wgg(1:ng))
+			if(computelam(i)) write(30,'(f12.6,e19.7)') lam(i)/micron,sum(opac_tot(i,1:ng)*wgg(1:ng))
 		enddo
 		close(unit=30)
 	endif
@@ -287,6 +311,7 @@ c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 	deallocate(kappa_mol)
 	deallocate(nu_line)
 	deallocate(mixrat_tmp)
+	if(do_optEC) deallocate(Cabs_optEC,Csca_optEC)
 
 
 	return

@@ -681,7 +681,7 @@ c	print*,Tstar*(Rstar/Dplanet)**0.5
 			A=2d0*pi*rtrace(irtrace)*wrtrace(irtrace)
 			Rmax_im=sqrt((A+pi*Rmin_im**2)/pi)
 			do iptrace=1,nptrace
-				ni=5d6/real(nrtrace*nptrace)
+				ni=125d0*real(nx_im*nx_im)/real(nrtrace*nptrace)
 				do i=1,ni
 					rr=sqrt(Rmin_im**2+random(idum)*(Rmax_im**2-Rmin_im**2))
 					phi=2d0*pi*(real(iptrace)-random(idum))/real(nptrace)
