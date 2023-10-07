@@ -260,11 +260,17 @@ Sets the product of reaction 1 to contain 3 H$_2$ molecules
 \end{description}
 Converting molecules into other molecules is done after the chemical computations (so first it is determined how much H$_2$S and H$_2$O would be available.
 
-If for a reaction the keyword
+To produce haze, e.g. the reaction
+\begin{equation}
+\rm CH_4 \rightarrow haze
+\end{equation}
+This is done by setting
 \begin{description}
-\item[\texttt{photohaze1=.true.}]
+\item[\texttt{photoreac1:CH4=1}]
+Sets the reactant of reaction 1 to contain 1 CH4 molecule
+\item[\texttt{photohaze1=1}]
+Sets the product of reaction 1 to be haze particles with 1 C atom per converted CH4 molecule
 \end{description}
-is set. This means that if any mass remains after the conversion of reactants into products, this is converted into haze particles.
 
 Finally the keyword
 \begin{description}
