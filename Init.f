@@ -868,6 +868,9 @@ c In this case the beta map should be the static one. Make sure this is set prop
 		model_err_lam(i)=10d0**(log10(lam(1))+log10(lam(nlam)/lam(1))*(real(i)/real(nmodel_err)))
 	enddo
 		
+	allocate(tauUV(nr))
+	tauUV=-1d0
+	
 	return
 	end
 
@@ -1798,6 +1801,8 @@ c  GGchem was still implemented slightly wrong.
 	rad_optEC=0.01
 	Eg_optEC=1.0
 
+	kappaUV=-1d0
+
 	instrument="ARIEL"
 	instr_ntrans=1d0
 	do i=1,n_instr
@@ -1902,6 +1907,7 @@ c  GGchem was still implemented slightly wrong.
 		ObsSpec(i)%iphase=1
 		ObsSpec(i)%slope=0d0
 		ObsSpec(i)%adderr=0d0
+		ObsSpec(i)%filter=' '
 	enddo
 	
 	computeT=.false.
@@ -2112,6 +2118,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) ObsSpec(i)%type
 		case("file")
 			ObsSpec(i)%file=key%value
+		case("filter")
+			ObsSpec(i)%filter=key%value
 		case("beta","weight")
 			read(key%value,*) ObsSpec(i)%beta
 		case("scaling","scale")
@@ -2436,16 +2444,29 @@ c number of cloud/nocloud combinations
 					goto 12
 13					close(unit=30)					
 				case default
-					inquire(file=ObsSpec(i)%file,exist=truefalse)
-					if(.not.truefalse) then
-						call output("File does not exist" // trim(ObsSpec(i)%file))
-						stop
+					if(ObsSpec(i)%filter.ne.' ') then
+						inquire(file=ObsSpec(i)%filter,exist=truefalse)
+						if(.not.truefalse) then
+							call output("File does not exist" // trim(ObsSpec(i)%filter))
+							stop
+						endif
+						open(unit=30,file=ObsSpec(i)%filter,FORM="FORMATTED")
+5						read(30,*,end=6,err=5) x,y
+						nlam=nlam+1
+						goto 5
+6						close(unit=30)
+					else
+						inquire(file=ObsSpec(i)%file,exist=truefalse)
+						if(.not.truefalse) then
+							call output("File does not exist" // trim(ObsSpec(i)%file))
+							stop
+						endif
+						open(unit=30,file=ObsSpec(i)%file,FORM="FORMATTED")
+1						read(30,*,end=2,err=1) x,y,dy,dx
+						nlam=nlam+1
+						goto 1
+2						close(unit=30)
 					endif
-					open(unit=30,file=ObsSpec(i)%file,FORM="FORMATTED")
-1					read(30,*,end=2,err=1) x,y,dy,dx
-					nlam=nlam+1
-					goto 1
-2					close(unit=30)
 			end select
 		enddo
 	else
@@ -2506,21 +2527,31 @@ c number of cloud/nocloud combinations
 					goto 15
 16					close(unit=30)					
 				case default
-					open(unit=30,file=ObsSpec(i)%file,FORM="FORMATTED")
-3					read(30,*,end=4,err=3) x,y,dy,dx
-					ilam=ilam+1
-					lam(ilam)=x*micron
-					dx=x/dx
-					dlam(ilam)=dx*micron
-					do jlam=1,ilam-1
-						if(abs(lam(ilam)-lam(jlam)).lt.(dlam(jlam)*0.1d0).and.
+					if(ObsSpec(i)%filter.ne.' ') then
+						open(unit=30,file=ObsSpec(i)%filter,FORM="FORMATTED")
+7						read(30,*,end=8,err=7) x,dx
+						ilam=ilam+1
+						lam(ilam)=x*micron
+						dlam(ilam)=dx*micron
+						goto 7
+8						close(unit=30)
+					else
+						open(unit=30,file=ObsSpec(i)%file,FORM="FORMATTED")
+3						read(30,*,end=4,err=3) x,y,dy,dx
+						ilam=ilam+1
+						lam(ilam)=x*micron
+						dx=x/dx
+						dlam(ilam)=dx*micron
+						do jlam=1,ilam-1
+							if(abs(lam(ilam)-lam(jlam)).lt.(dlam(jlam)*0.1d0).and.
      &							abs(dlam(jlam)-dlam(ilam))/(dlam(jlam)+dlam(ilam)).lt.0.1d0) then
-     						ilam=ilam-1
-     						goto 3
-     					endif
-     				enddo
-					goto 3
-4					close(unit=30)
+     							ilam=ilam-1
+     							goto 3
+     						endif
+     					enddo
+						goto 3
+4						close(unit=30)
+					endif
 			end select
 		enddo
 	else

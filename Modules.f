@@ -227,7 +227,7 @@ c for exchange when computing secondary atmosphere
 	character*500 surfacefile
 	integer nTZ,nspike,nai,nboot,npew,nscaleR
 	integer,allocatable :: niso(:),instr_nobs(:)
-	real*8,allocatable :: MMW(:)
+	real*8,allocatable :: MMW(:),tauUV(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
 	logical fulloutput3D,deepredist,readFull3D,computealbedo
 	integer nBB
@@ -439,7 +439,7 @@ c for exchange when computing secondary atmosphere
 	integer n_Par3D
 	
 	type ObservedSpec
-		character*500 file
+		character*500 file,filter
 		character*10 type
 		real*8,allocatable :: lam(:),y(:),dy(:),R(:),Rexp(:),model(:)
 		integer,allocatable :: ilam(:)
@@ -448,6 +448,7 @@ c for exchange when computing secondary atmosphere
 		logical spec,scaling
 		integer nlam,nt
 		real*8,allocatable :: LC(:,:),dLC(:,:),t(:),dt(:)
+		real*8,allocatable :: f(:,:)
 	end type ObservedSpec
 	type(ObservedSpec),allocatable :: ObsSpec(:)
 

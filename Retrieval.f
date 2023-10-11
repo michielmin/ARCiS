@@ -189,6 +189,13 @@
 					endif
 				enddo
 		end select
+		if(ObsSpec(i)%filter.ne.' ') then
+			if(ObsSpec(i)%type(1:4).eq.'emis'.or.ObsSpec(i)%type(1:5).eq."phase") lamemis=.true.
+			if(ObsSpec(i)%type(1:5).eq.'trans') lamtrans=.true.
+			allocate(ObsSpec(i)%f(nlam,ObsSpec(i)%ndata))
+			ObsSpec(i)%f=0d0
+			call regridNsimple(ObsSpec(i)%filter,lam*1d4,ObsSpec(i)%f,nlam,1,3,ObsSpec(i)%ndata)
+		endif
 	enddo
 
 	if(faircoverage) then
@@ -1633,7 +1640,9 @@ c			vec(i)=gasdev(idum)
 	select case(ObsSpec(i)%type)
 		case("trans","transmission","transC")
 			specsave(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
-			if(useobsgrid) then
+			if(ObsSpec(i)%filter.ne.' ') then
+				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
+			else if(useobsgrid) then
 				do ilam=1,ObsSpec(i)%ndata
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
@@ -1659,7 +1668,9 @@ c			vec(i)=gasdev(idum)
 			else
 				specsave(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
 			endif
-			if(useobsgrid) then
+			if(ObsSpec(i)%filter.ne.' ') then
+				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
+			else if(useobsgrid) then
 				do ilam=1,ObsSpec(i)%ndata
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
@@ -1681,7 +1692,9 @@ c			vec(i)=gasdev(idum)
 			else
 				specsave(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
 			endif
-			if(useobsgrid) then
+			if(ObsSpec(i)%filter.ne.' ') then
+				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
+			else if(useobsgrid) then
 				do ilam=1,ObsSpec(i)%ndata
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
@@ -1699,7 +1712,9 @@ c			vec(i)=gasdev(idum)
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
 		case("emisr","emisR")
 			specsave(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
-			if(useobsgrid) then
+			if(ObsSpec(i)%filter.ne.' ') then
+				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
+			else if(useobsgrid) then
 				do ilam=1,ObsSpec(i)%ndata
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
@@ -1721,7 +1736,9 @@ c			vec(i)=gasdev(idum)
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
 		case("phaser","phaseR")
 			specsave(1:nlam)=(phase(ObsSpec(i)%iphase,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
-			if(useobsgrid) then
+			if(ObsSpec(i)%filter.ne.' ') then
+				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
+			else if(useobsgrid) then
 				do ilam=1,ObsSpec(i)%ndata
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
@@ -1743,7 +1760,9 @@ c			vec(i)=gasdev(idum)
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
 		case("phase")
 			specsave(1:nlam)=phase(ObsSpec(i)%iphase,0,1:nlam)+flux(0,1:nlam)
-			if(useobsgrid) then
+			if(ObsSpec(i)%filter.ne.' ') then
+				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
+			else if(useobsgrid) then
 				do ilam=1,ObsSpec(i)%ndata
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
@@ -1761,7 +1780,9 @@ c			vec(i)=gasdev(idum)
      		ObsSpec(i)%model(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
 		case("emisa","emis","emission")
 			specsave(1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
-			if(useobsgrid) then
+			if(ObsSpec(i)%filter.ne.' ') then
+				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
+			else if(useobsgrid) then
 				do ilam=1,ObsSpec(i)%ndata
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 				enddo
@@ -2091,6 +2112,29 @@ c	linear
 			enddo
 			y1(i1)=y1(i1)/tot
 		endif
+	enddo
+
+	return
+	end
+	
+
+	subroutine regridfilter(x0,y0,n0,y1,n1,filter,computelam)
+	IMPLICIT NONE
+	integer n0,n1,i0,i1
+	real*8 x0(n0),y0(n0),y1(n1),filter(n0,n1),w,tot
+	logical computelam(n0)
+
+	do i1=1,n1
+		y1(i1)=0d0
+		tot=0d0
+		do i0=1,n0
+			if(computelam(i0)) then
+				w=filter(i0,i1)
+				tot=tot+w
+				y1(i1)=y1(i1)+w*y0(i0)
+			endif
+		enddo
+		y1(i1)=y1(i1)/tot
 	enddo
 
 	return

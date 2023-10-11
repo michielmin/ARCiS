@@ -554,6 +554,17 @@ c	endif
 		close(unit=50)
 	enddo
 
+	if(mixrat_optEC0+sum(mixrat_optEC_r(1:nr)).gt.0d0) then
+		open(unit=50,file=trim(outputdir) // 'optEC' // trim(side) // '.dat',FORM="FORMATTED",ACCESS="STREAM")
+		form='("#",a12,a13)'
+		write(50,trim(form)) "VMR C-atoms","P [bar]"
+		form='(es13.3E3,es13.3E3)'
+		do i=1,nr
+			write(50,trim(form)) mixrat_optEC0+mixrat_optEC_r(i),P(i)
+		enddo
+		close(unit=50)
+	endif
+
 	return
 	end
 	
@@ -1174,6 +1185,14 @@ c-----------------------------------------------------------------------
 	real*8 nmax,nreac
 	integer i,ir,imol
 	
+	do ir=1,nr
+		if(kappaUV.gt.0d0) then
+			tauUV(ir)=kappaUV*1d6*P(ir)/grav(ir)
+		else if(tauUV(ir).lt.0d0) then
+			tauUV(ir)=1d6*P(ir)/grav(ir)
+		endif
+	enddo
+
 	do i=1,nPhotoReacts
 		if(.not.PhotoReacts(i)%atomic) then
 		do ir=1,nr
@@ -1184,7 +1203,7 @@ c-----------------------------------------------------------------------
 					if(nreac.lt.nmax) nmax=nreac
 				endif
 			enddo
-			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-kappaUV*1d6*P(ir)/grav(ir)))
+			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-tauUV(ir)))
 			do imol=1,nmol
 				if(includemol(imol)) then
 					if(PhotoReacts(i)%react(imol).gt.0d0) then
@@ -1219,6 +1238,12 @@ c-----------------------------------------------------------------------
 	real*8 nmax,nreac
 	integer i,ir,imol
 	
+	if(kappaUV.gt.0d0) then
+		tauUV(ir)=kappaUV*1d6*P(ir)/grav(ir)
+	else if(tauUV(ir).lt.0d0) then
+		tauUV(ir)=1d6*P(ir)/grav(ir)
+	endif
+		
 	mixrat_optEC_r=0d0
 	do i=1,nPhotoReacts
 		PhotoReacts(i)%abun(ir,1:nmol)=0d0
@@ -1230,7 +1255,7 @@ c-----------------------------------------------------------------------
 					if(nreac.lt.nmax) nmax=nreac
 				endif
 			enddo
-			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-kappaUV*1d6*P(ir)/grav(ir)))
+			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-tauUV(ir)))
 			do imol=1,N_atoms
 				if(PhotoReacts(i)%react(imol).gt.0d0) then
 					molfracs_atoms(imol)=molfracs_atoms(imol)-nreac*PhotoReacts(i)%react(imol)

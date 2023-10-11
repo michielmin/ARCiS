@@ -412,6 +412,58 @@ c	enddo
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 	
+	subroutine regridNsimple(input,grid,y,n,i1,i2,nn)
+	IMPLICIT NONE
+	integer i,j,n,i1,i2,nn
+	real*8 grid(n),y(n,nn),x0,y0(nn),x1,y1(nn),dummy(max(i1,i2+nn))
+	character*500 input
+	logical truefalse
+	inquire(file=input,exist=truefalse)
+	if(.not.truefalse) then
+		write(*,200) input(1:len_trim(input))
+200		format('File "',a,'" does not exist')
+		stop
+	endif
+
+	y0=0d0
+	y1=0d0
+	y=0d0
+	open(unit=20,file=input,FORM="FORMATTED",ACCESS="STREAM")
+	i=1
+1	read(20,*,end=102,err=1) dummy(1:max(i1,i2+nn-1))
+	x0=dummy(i1)
+	y0(1:nn)=dummy(i2:i2+nn-1)
+103	if(x0.ge.grid(i)) then
+		y(i,1:nn)=y0(1:nn)
+		i=i+1
+		goto 103
+	endif
+100	read(20,*,end=102,err=100) dummy(1:max(i1,i2+nn-1))
+	x1=dummy(i1)
+	y1(1:nn)=dummy(i2:i2+nn-1)
+101	if(grid(i).le.x1.and.grid(i).ge.x0) then
+		y(i,1:nn)=y1(1:nn)+(grid(i)-x1)*(y0(1:nn)-y1(1:nn))/(x0-x1)
+		i=i+1
+		if(i.gt.n) goto 102
+		goto 101
+	endif
+	x0=x1
+	y0=y1
+	goto 100
+102	continue
+	do j=i,n
+		y(j,1:nn)=y0(1:nn)
+	enddo
+	close(unit=20)
+
+	return
+	end
+
+
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+	
 	subroutine regridlog(input,grid,y,n)
 	IMPLICIT NONE
 	integer i,j,n
