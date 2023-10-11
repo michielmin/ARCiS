@@ -1713,7 +1713,11 @@ c			vec(i)=gasdev(idum)
 		case("emisr","emisR")
 			specsave(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
 			if(ObsSpec(i)%filter.ne.' ') then
-				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
+				specuse(1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))
+				starspec(1:nlam)=(Fstar(1:nlam)*1d23/distance**2)
+				call regridfilter(lam,specuse,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
+				call regridfilter(lam,starspec,nlam,starspecregrid,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
+				spec(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)/starspecregrid(1:ObsSpec(i)%ndata)
 			else if(useobsgrid) then
 				do ilam=1,ObsSpec(i)%ndata
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
@@ -1737,7 +1741,11 @@ c			vec(i)=gasdev(idum)
 		case("phaser","phaseR")
 			specsave(1:nlam)=(phase(ObsSpec(i)%iphase,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
 			if(ObsSpec(i)%filter.ne.' ') then
-				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
+				specuse(1:nlam)=(phase(ObsSpec(i)%iphase,0,1:nlam)+flux(0,1:nlam))
+				starspec(1:nlam)=(Fstar(1:nlam)*1d23/distance**2)
+				call regridfilter(lam,specuse,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
+				call regridfilter(lam,starspec,nlam,starspecregrid,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
+				spec(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)/starspecregrid(1:ObsSpec(i)%ndata)
 			else if(useobsgrid) then
 				do ilam=1,ObsSpec(i)%ndata
 					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
