@@ -279,6 +279,8 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 			Hstar_lam(1:nr)=0d0
 			Hsurf_lam(1:nr)=0d0
 			contr=(Fstar_LR(ilam)/(pi*Dplanet**2))
+c Si_omp(0:nr,0) is the direct stellar contribution
+			Si_omp(1:nr,0)=0d0
 			if(isoFstar) then
 				FstarBottom=0d0
 				do inu=1,nnu
@@ -287,6 +289,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 					Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)*nu(inu)
 					Hstar_lam(1:nr)=Hstar_lam(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 					FstarBottom=FstarBottom+2d0*wnu(inu)*abs(Ih_omp(1))
+					Si_omp(1:nr,0)=Si_omp(1:nr,0)+wnu(inu)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)
 					if(lam_LR(ilam).lt.0.4e-4) UVstar_omp(1:nr)=UVstar_omp(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
 				enddo
 				if(do3D) then
@@ -296,6 +299,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 					Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
 					Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)
 					Hstar_lam(1:nr)=Hstar_lam(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)*(1d0-night2day)
+					Si_omp(1:nr,0)=Si_omp(1:nr,0)+0.5d0*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)*(1d0-night2day)
 					FstarBottom=FstarBottom+abs(Ih_omp(1))*(1d0-night2day)
 				endif
 			else
@@ -304,11 +308,10 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 				Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)
 				Hstar_lam(1:nr)=Hstar_lam(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 				FstarBottom=abs(Ih_omp(1))
+				Si_omp(1:nr,0)=Si_omp(1:nr,0)+0.5d0*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)
 				if(lam_LR(ilam).lt.0.4e-4) UVstar_omp(1:nr)=UVstar_omp(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
 			endif
 
-c Si_omp(0:nr,0) is the direct stellar contribution
-			Si_omp(1:nr,0)=Ij_omp(1:nr)*wscat(1:nr,ilam,ig)/2d0
 
 c Si_omp(0:nr,1:nr) is the direct contribution from the atmosphere
 			do ir=1,nr
