@@ -259,6 +259,7 @@ c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
 	IntHnuSurf(1:nlam_LR,1:nr)=0d0
 	IntEabSurf(1:nlam_LR,1:nr)=0d0
 	allocate(UVstar(nr))
+	UVstar=0d0
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)

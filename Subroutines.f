@@ -513,20 +513,14 @@ c The new readstar subroutine uses a boxcar filtering to read in
 c high resolution spectra.
 c-----------------------------------------------------------------------
 
-	subroutine regridstar(input,grid,y,n)
+	subroutine regridstar(input,grid,xedge,y,n)
 	IMPLICIT NONE
 	integer i,j,n,nls
-	real*8 grid(n),y(n),x0,y0,xedge(n+1)
+	real*8 grid(n),y(n),x0,y0,xedge(2,n)
 	real*8 grid2(n),y2(n),tot(n)
 	real*8,allocatable :: ls(:),Fs(:),dls(:)
 	character*500 input
 	logical truefalse,done(n)
-
-	do i=1,n-1
-		xedge(i+1)=sqrt(grid(i)*grid(i+1))
-	enddo
-	xedge(1)=grid(1)**2/xedge(2)
-	xedge(n)=grid(n)**2/xedge(n-1)
 
 	inquire(file=input,exist=truefalse)
 	if(.not.truefalse) then
@@ -558,23 +552,19 @@ c-----------------------------------------------------------------------
 	dls(nls)=dls(nls-1)
 	
 	j=1
-	tot=0d0
 	y=0d0
 	done=.false.
-	do i=1,nls
-5		continue
-		if(ls(i).lt.xedge(j)) goto 6
-		if(ls(i).gt.xedge(j+1)) then
-			j=j+1
-			if(j.gt.n) goto 7
-			goto 5
-		endif
-		y(j)=y(j)+Fs(i)*dls(i)
-		tot(j)=tot(j)+dls(i)
-		done(j)=.true.
-6		continue
+	tot=0d0
+	do j=1,n
+		do i=1,nls
+			if(ls(i).gt.xedge(1,j).and.ls(i).lt.xedge(2,j)) then
+				y(j)=y(j)+Fs(i)*dls(i)
+				tot(j)=tot(j)+dls(i)
+				done(j)=.true.
+			endif
+		enddo
 	enddo
-7	continue
+
 	j=0
 	do i=1,n
 		if(done(i)) then
@@ -594,6 +584,10 @@ c-----------------------------------------------------------------------
 			endif
 		enddo
 	endif
+
+	deallocate(ls)
+	deallocate(dls)
+	deallocate(Fs)
 	
 	return
 	end

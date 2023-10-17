@@ -631,6 +631,8 @@ c allocate the arrays
 
 	if(orbit_P.lt.0d0) orbit_P=sqrt(Dplanet**3/Mstar)*365.25*86400d0
 
+	allocate(tauUV(nr))
+
 	call ConvertUnits()
 
 c	condensates=(condensates.or.cloudcompute)
@@ -731,7 +733,7 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 	enddo
 
 	allocate(Fstar(nlam))
-	call StarSpecSetup(Tstar,logg,1d4*lam,Fstar,nlam,starfile,blackbodystar)
+	call StarSpecSetup(Tstar,logg,1d4*lam,1d4*blam,Fstar,nlam,starfile,blackbodystar)
 	Fstar=Fstar*pi*Rstar**2
 
 	call output("==================================================================")
@@ -867,10 +869,7 @@ c In this case the beta map should be the static one. Make sure this is set prop
 	do i=1,nmodel_err-1
 		model_err_lam(i)=10d0**(log10(lam(1))+log10(lam(nlam)/lam(1))*(real(i)/real(nmodel_err)))
 	enddo
-		
-	allocate(tauUV(nr))
-	tauUV=-1d0
-	
+			
 	return
 	end
 
@@ -1437,6 +1436,7 @@ c	endif
 	endif
 
 	if(fixnight2day) call ComputeNight2Day(.true.)
+	tauUV=-1d0
 
 	return
 	end

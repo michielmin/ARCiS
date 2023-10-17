@@ -13255,11 +13255,11 @@
 
 
 
-	subroutine StarSpecSetup(Tk,loggk,lam,flux,nlam,file,blackbody)
+	subroutine StarSpecSetup(Tk,loggk,lam,blam,flux,nlam,file,blackbody)
 	use Kurucz
 	IMPLICIT NONE
 	integer nlam
-	real*8 Tk,loggk,Planck,lam(nlam),flux(nlam),x0,y0,x1,y1,scale
+	real*8 Tk,loggk,Planck,lam(nlam),flux(nlam),x0,y0,x1,y1,scale,blam(2,nlam)
 	integer iTk,iloggk,i,i0,minT,ming,j,k
 	character*500 file
 	logical usefile,blackbody
@@ -13270,7 +13270,7 @@
 		enddo
 		return
 	else if(file.ne.' ') then
-		call regridstar(file,lam,flux,nlam)
+		call regridstar(file,lam,blam,flux,nlam)
 		return
 	endif
 	
