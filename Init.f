@@ -651,6 +651,7 @@ c	condensates=(condensates.or.cloudcompute)
 	if(opacitydir(len_trim(opacitydir)-1:len_trim(opacitydir)).ne.'/') then
 		opacitydir=trim(opacitydir) // '/'
 	endif
+	call Init_optEC
 	if(opacitymode) then
 		call InitOpacityMode()
 	else
@@ -862,7 +863,6 @@ c In this case the beta map should be the static one. Make sure this is set prop
 	endif
 
 	if(planetform) call InitFormation(Mstar,Tstar,Rstar,planetform_SolidC,planetform_Macc)
-	call Init_optEC
 	
 	if(useDLMie) call InitDLMie()
 	

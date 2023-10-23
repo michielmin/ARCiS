@@ -1910,8 +1910,8 @@ c	linear
 	enddo
 	call ConvertUnits()
 	metallicity0=metallicity
-
 	enddo
+	call RefreshMaterialCloud()
 
 	return
 	end
@@ -1962,8 +1962,8 @@ c	linear, square
 	enddo
 	call ConvertUnits()
 	metallicity0=metallicity
-
 	enddo
+	call RefreshMaterialCloud()
 
 	return
 	end

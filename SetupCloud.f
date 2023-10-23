@@ -527,6 +527,70 @@ c-----------------------------------------------------------------------
 	end
 	
 
+
+	subroutine RefreshMaterialCloud()
+	use GlobalSetup
+	IMPLICIT NONE
+	integer ii,i,j,iref,ngrid
+	real*8 lgrid(nlam+1),e1d(nlam+1),e2d(nlam+1),kap
+	logical lnkloglog
+	external Carbon_BE_Zubko1996,Mg07Fe03SiO3_Dorschner1995,AstroSilicate
+	external Enstatite_X,Enstatite_Y,Enstatite_Z,checkparticlefile
+	external Forsterite_X,Forsterite_Y,Forsterite_Z
+	external Rutile_xy,Rutile_z,Water,OrganicsHenning,Soot,Tholin
+	external SiO,SiO2,Corrundum,Iron,FeO,Mg06Fe04O,MgO,SiC,H2SO4,AmorphSiO2
+
+	lnkloglog=.true.
+	ngrid=nlam+1
+
+	do ii=1,nclouds
+		lgrid(1:nlam)=lam(1:nlam)*1d4
+		lgrid(nlam+1)=Cloud(ii)%lref
+		iref=nlam+1
+		do i=1,nlam
+			if(lam(i)*1d4.gt.Cloud(ii)%lref) then
+				lgrid(i+1:nlam+1)=lam(i:nlam)*1d4
+				lgrid(i)=Cloud(ii)%lref
+				iref=i
+				exit
+			endif
+		enddo
+		if(Cloud(ii)%opacitytype.eq."MATERIAL".or.Cloud(ii)%opacitytype.eq."REFIND") then
+		if(Cloud(ii)%opacitytype.eq.'REFIND') then
+			Cloud(ii)%e1(1,1,1:ngrid)=Cloud(ii)%e1_par
+			Cloud(ii)%e2(1,1,1:ngrid)=Cloud(ii)%e2_par
+			Cloud(ii)%nmat=1
+			Cloud(ii)%nax(1)=1
+		else
+			do i=1,Cloud(ii)%nmat
+				select case(Cloud(ii)%material(i))
+					case("optEC")
+						Cloud(ii)%nax(i)=1
+						call RefInd_optEC(lgrid,e1d,e2d,rad_optEC,Eg_optEC,ngrid)
+						Cloud(ii)%e1(i,1,1:ngrid)=e1d(1:ngrid)
+						Cloud(ii)%e2(i,1,1:ngrid)=e2d(1:ngrid)
+						Cloud(ii)%rho_mat(i)=1.50
+						do j=1,Cloud(ii)%nax(i)
+							e1d(1:iref-1)=Cloud(ii)%e1(i,j,1:iref-1)
+							e1d(iref:nlam)=Cloud(ii)%e1(i,j,iref+1:nlam+1)
+							e1d(nlam+1)=Cloud(ii)%e1(i,j,iref)
+							Cloud(ii)%e1(i,j,1:nlam+1)=e1d(1:nlam+1)
+							e2d(1:iref-1)=Cloud(ii)%e2(i,j,1:iref-1)
+							e2d(iref:nlam)=Cloud(ii)%e2(i,j,iref+1:nlam+1)
+							e2d(nlam+1)=Cloud(ii)%e2(i,j,iref)
+							Cloud(ii)%e2(i,j,1:nlam+1)=e2d(1:nlam+1)
+						enddo
+				end select
+			enddo
+		endif
+		endif
+	enddo
+
+
+	return
+	end
+	
+
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 	

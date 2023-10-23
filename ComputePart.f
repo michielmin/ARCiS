@@ -120,13 +120,16 @@
 	else
 		do j=1,C%nmat
 			do i=1,C%nax(j)
-				nm=nm+1
-				e1(nm,1:C%nlam)=C%e1(j,i,1:C%nlam)
-				e2(nm,1:C%nlam)=C%e2(j,i,1:C%nlam)
-				rho(nm)=C%rho_mat(j)
-				frac(nm)=C%frac(isize,j)/(real(C%nax(j))*rho(nm))
+				if(C%frac(isize,j).gt.0d0) then
+					nm=nm+1
+					e1(nm,1:C%nlam)=C%e1(j,i,1:C%nlam)
+					e2(nm,1:C%nlam)=C%e2(j,i,1:C%nlam)
+					rho(nm)=C%rho_mat(j)
+					frac(nm)=C%frac(isize,j)/(real(C%nax(j))*rho(nm))
+				endif
 			enddo
 		enddo
+		print*,nm,e1(1,1:C%nlam),frac(1)
 		tot=0d0
 		do i=1,nm
 			tot=tot+frac(i)

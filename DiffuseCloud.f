@@ -23,7 +23,7 @@
 	logical,allocatable :: empty(:),docondense(:)
 	integer iCS,ir,nrdo
 	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil,St
-	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:)
+	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:),CloudtauUV(:)
 	integer INCFD,IERR
 	logical SKIP
 	real*8 time,tcrystinv,nucryst,Tcryst
@@ -426,6 +426,22 @@ c	atoms_cloud(i,3)=1
 	tcinv=0d0
 	
 	docondense=.false.
+	if(Cloud(ii)%hazetype.eq.'optEC') then
+		allocate(CloudtauUV(nnr))
+		do ir=1,nr
+			if(kappaUV.gt.0d0) then
+				tauUV(ir)=kappaUV*1d6*P(ir)/grav(ir)
+			else if(tauUV(ir).lt.0d0) then
+				tauUV(ir)=1d6*P(ir)/grav(ir)
+			endif
+		enddo
+		SKIP=.false.
+		INCFD=1
+		logx(1:nr)=tauUV(1:nr)
+		call DPCHIM(nr,logP,logx,dlogx,INCFD)
+		call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudtauUV,IERR)
+		tot=0d0
+	endif
 	do i=1,nnr
 		densv(i,1:nCS)=(mu*mp/(kb*CloudT(i)))*exp(BTP(1:nCS)-ATP(1:nCS)/CloudT(i))
 		do iCS=1,nCS
@@ -436,8 +452,20 @@ c	atoms_cloud(i,3)=1
 			if(densv(i,iCS).lt.Clouddens(i)*xv_bot(iCS)) docondense(iCS)=.true.
 		enddo
 		gz=Ggrav*Mplanet/CloudR(i)**2
-		Sn(i)=(Clouddens(i)*gz*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
+		if(Cloud(ii)%hazetype.eq.'optEC') then
+			Sn(i)=Clouddens(i)*exp(-CloudtauUV(i))
+			if(i.eq.nr) then
+				tot=tot+abs(CloudR(i-1)-CloudR(i))*Sn(i)
+			else if(i.eq.1) then
+				tot=tot+abs(CloudR(i+1)-CloudR(i))*Sn(i)
+			else
+				tot=tot+abs(CloudR(i-1)-CloudR(i+1))*0.5*Sn(i)
+			endif
+		else
+			Sn(i)=(Clouddens(i)*gz*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
+		endif
 	enddo
+	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*betaF*Sigmadot/tot
 
 	SKIP=.false.
 	INCFD=1
@@ -779,7 +807,7 @@ c correction for SiC
 	enddo
 	
 	
-	if(maxerr.lt.1d-3) exit
+	if(maxerr.lt.1d-3.and.iter.gt.5) exit
 	enddo
 c end the loop
 
@@ -1020,7 +1048,12 @@ c SiO2
 	endif
 
 	if(.not.retrieval) then
-		open(unit=20,file=trim(outputdir) // '/cloudstructure.dat',FORM="FORMATTED",ACCESS="STREAM")
+		if(do3D) then
+			open(unit=20,file=trim(outputdir) // '/cloudstructure' // trim(int2string(i3D,'(i0.4)')) // '.dat',
+     &             FORM="FORMATTED",ACCESS="STREAM")
+		else
+			open(unit=20,file=trim(outputdir) // '/cloudstructure.dat',FORM="FORMATTED",ACCESS="STREAM")
+		endif
 		form='("#",a18,a19,a19,' // trim(int2string(nCS+1,'(i4)')) // 'a23,a19,a19,a19)'
 		write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"MgO","r[micron]","T[K]","Jstar"
 		form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+1,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
@@ -1069,6 +1102,7 @@ c Elemental abundances
 	itimecloud=itimecloud+itime
 
 c	open(unit=20,file=trim(outputdir) // '/atoms.dat',FORM="FORMATTED",ACCESS="STREAM")
+	if(dochemistry) then
 	ini=.true.
 	do i=1,nr
 		call tellertje(i,nr)
@@ -1103,6 +1137,7 @@ c		write(20,*) P(i),molfracs_atoms(1:N_atoms)
 	enddo
 	if(fixMMW) MMW=MMW0
 c	close(unit=20)
+	endif
 	deallocate(at_ab)
 
 	if(disequilibrium) then
@@ -1174,6 +1209,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(Kd,Kg,Km)
 	deallocate(Ma,Mb,Mc)
 	deallocate(fsil,fsil2)
+	if(Cloud(ii)%hazetype.eq.'optEC') deallocate(CloudtauUV)
 
 	return
 	end
