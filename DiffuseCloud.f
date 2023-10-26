@@ -465,7 +465,7 @@ c	atoms_cloud(i,3)=1
 			Sn(i)=(Clouddens(i)*gz*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
 		endif
 	enddo
-	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*betaF*Sigmadot/tot
+	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*scaleUV*betaF*Sigmadot/tot
 
 	SKIP=.false.
 	INCFD=1

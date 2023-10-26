@@ -243,13 +243,13 @@ c	file='sedlhs.txt'
 c	call regridlog(file,1d4*lam_LR,Fstar_LR,nlam_LR)
 c	Fstar_LR=Fstar_LR*distance**2/1e23
 c===============================================================
-	E=0d0
-	do ilam=1,nlam_LR
+c	E=0d0
+c	do ilam=1,nlam_LR
 c		Fstar_LR(ilam)=Planck(Tstar,freq_LR(ilam))*pi*Rstar**2
-		E=E+dfreq_LR(ilam)*Fstar_LR(ilam)
-	enddo
-	scale=pi*Rstar**2*((2d0*(pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))/E
-	Fstar_LR=Fstar_LR*scale
+c		E=E+dfreq_LR(ilam)*Fstar_LR(ilam)
+c	enddo
+c	scale=pi*Rstar**2*((2d0*(pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))/E
+c	Fstar_LR=Fstar_LR*scale
 	
 	ff=1d0
 	
@@ -399,6 +399,11 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 	else
 		tauUV=sqrt(-tauUV*log(UVstar))
 	endif
+	scaleUV=0d0
+	do ilam=1,nlam_LR
+		if(lam_LR(ilam).gt.0.1d-4.and.lam_LR(ilam).lt.0.4d-4) scaleUV=scaleUV+dfreq_LR(ilam)*Fstar_LR(ilam)
+	enddo
+	scaleUV=(scaleUV/3.4947466112306125E-008)/(Dplanet**2)
 
 	deallocate(UVstar)
 

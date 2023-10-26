@@ -869,7 +869,7 @@ c In this case the beta map should be the static one. Make sure this is set prop
 	do i=1,nmodel_err-1
 		model_err_lam(i)=10d0**(log10(lam(1))+log10(lam(nlam)/lam(1))*(real(i)/real(nmodel_err)))
 	enddo
-			
+	
 	return
 	end
 
@@ -1437,6 +1437,7 @@ c	endif
 
 	if(fixnight2day) call ComputeNight2Day(.true.)
 	tauUV=-1d0
+	scaleUV=1d0
 
 	return
 	end
