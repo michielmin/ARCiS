@@ -544,7 +544,7 @@ c==============================================================================
 	real*8 tot,tot2,theta,Planck
 	real*8,allocatable :: var(:),dvar(:)
 	character*1000 line
-	character*500 file
+	character*500 file,homedir
 
 	allocate(key)
 	first => key
@@ -821,6 +821,28 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 		case("FILE","file")
 			call regridSimple(surfacefile,lam*1d4,surface_emis,nlam)
 			surface_emis=1d0-surface_emis/100d0
+		case("Earth","EARTH","earth")
+			allocate(surface_emis_ice(nlam))
+			allocate(surface_emis_snow(nlam))
+			allocate(surface_emis_grass(nlam))
+			allocate(surface_emis_sand(nlam))
+			allocate(surface_emis_water(nlam))
+			call getenv('HOME',homedir)
+			file=trim(homedir) // '/ARCiS/Data/Surface/Ice.dat'
+			call regridSimple(file,lam*1d4,surface_emis_ice,nlam)
+			surface_emis_ice=1d0-surface_emis_ice/100d0
+			file=trim(homedir) // '/ARCiS/Data/Surface/Snow.dat'
+			call regridSimple(file,lam*1d4,surface_emis_snow,nlam)
+			surface_emis_snow=1d0-surface_emis_snow/100d0
+			file=trim(homedir) // '/ARCiS/Data/Surface/Grass.dat'
+			call regridSimple(file,lam*1d4,surface_emis_grass,nlam)
+			surface_emis_grass=1d0-surface_emis_grass/100d0
+			file=trim(homedir) // '/ARCiS/Data/Surface/brown-darkbrown-sand.dat'
+			call regridSimple(file,lam*1d4,surface_emis_sand,nlam)
+			surface_emis_sand=1d0-surface_emis_sand/100d0
+			file=trim(homedir) // '/ARCiS/Data/Surface/Water.dat'
+			call regridSimple(file,lam*1d4,surface_emis_water,nlam)
+			surface_emis_water=1d0-surface_emis_water/100d0
 	end select
 	
 	if(makemovie) makeimage=.true.
@@ -834,6 +856,7 @@ c If reading in a full 3D model (from e.g. a GCM model) the number of 3D models 
 c In this case the beta map should be the static one. Make sure this is set properly.
 		night2day=0d0
 		pole2eq=1d0
+		tidallock=.true.
 		vxx=0d0
 		fDay=1d0
 		Kxx=1d0
@@ -1223,6 +1246,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) fixnight2day
 		case("pole2eq")
 			read(key%value,*) pole2eq
+		case("tidallock")
+			read(key%value,*) tidallock
 		case("hotspotshift")
 			read(key%value,*) hotspotshift0
 		case("n3d")
@@ -1336,6 +1361,8 @@ c			read(key%value,*) nTpoints
 			call checkfile(surfacefile)
 		case("surfacealbedo")
 			read(key%value,*) surfacealbedo
+		case("fwater","focean")
+			read(key%value,*) f_surface_water
 		case("ncpah","nc_pah")
 			read(key%value,*) nC_PAH
 		case("pah")
@@ -1683,6 +1710,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	hotspotshift0=-1d5
 	pole2eq=1d0
 	fixnight2day=.false.
+	tidallock=.true.
 	
 	orbit_P=-1d0
 	orbit_e=0d0
@@ -1715,6 +1743,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	surfacetype='BLACK'
 	surfacealbedo=0.5d0
+	f_surface_water=0.6
 
 	dochemistry=.false.
 	elements_ARCiS= 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V el'

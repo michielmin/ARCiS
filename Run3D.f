@@ -63,7 +63,7 @@ c	recomputeopac=.true.
 	endif
 
 	iterateshift=.false.
-	if(hotspotshift0.ge.-180d0.and.hotspotshift0.le.180d0) then
+	if(hotspotshift0.ge.-180d0.and.hotspotshift0.le.180d0.and.tidallock) then
 		iterateshift=.true.
 		vxxmin=-4d0
 		vxxmax=10d0
@@ -82,7 +82,7 @@ c	recomputeopac=.true.
      &		i.lt.999).
      &		or.i.eq.0)
 
-	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,pole2eq,fDay,betamin,betamax)
+	call Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,pole2eq,fDay,betamin,betamax,tidallock)
 
 	if(n3D.eq.2) then
 		do ilong=1,nlong-1
@@ -100,7 +100,7 @@ c	recomputeopac=.true.
 		betamax=1d0
 	endif
 
-	if(vxx.eq.0d0) then
+	if(vxx.eq.0d0.or..not.tidallock) then
 		hotspotshift=0d0
 	else
 		call DetermineShift(long,beta,nlong,nlatt,hotspotshift)
@@ -1073,7 +1073,7 @@ c Note we use the symmetry of the North and South here!
 	end
 	
 
-	subroutine Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,pole2eq,f,betamin,betamax)
+	subroutine Setup3D(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day,pole2eq,f,betamin,betamax,tidallock)
 	IMPLICIT NONE
 	integer i,j,nlong,nlatt
 	real*8 pi
@@ -1081,6 +1081,7 @@ c Note we use the symmetry of the North and South here!
 	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
 	real*8 beta(nlong,nlatt),la,lo,albedo,p,f,tot1,tot2,b1,b2
 	real*8 Kxx,vxx,betamin,betamax,beta1(nlong),night2day,Kyy,powvxx,pole2eq
+	logical tidallock
 
 	do i=1,nlong
 		long(i)=-pi+2d0*pi*real(i-1)/real(nlong-1)
@@ -1092,12 +1093,15 @@ c Note we use the symmetry of the North and South here!
 	betamin=1d0
 	betamax=0d0
 
-	call DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day)
+	if(tidallock) then
+		call DiffuseBeta(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,night2day)
+	else
+		call DiffuseBetaRotate(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,pole2eq)
+	endif
 	beta=beta*f
 
 	do i=1,nlong-1
 		do j=1,nlatt-1
-			beta(i,j)=beta(i,j)*(pole2eq+(1d0-pole2eq)*cos((latt(j)+latt(j+1))/2d0))
 			if(beta(i,j).gt.betamax) betamax=beta(i,j)
 			if(beta(i,j).lt.betamin) betamin=beta(i,j)
 		enddo
@@ -1286,6 +1290,165 @@ c Note we use the symmetry of the North and South here!
 			else
 				betamin=betamin+beta(i,j)*abs(cos(la(j))*cos(lo(i)))
 			endif
+		enddo
+	enddo
+	beta=beta*0.25*tot2/tot1
+	contr=betamin/betamax
+	if(contr.lt.contrast) then
+		smin=scale
+		cmin=contr
+		if(smax.lt.0d0) then
+			scale=scale*10d0
+		else
+			scale=scale+(smax-scale)*(contrast-contr)/(cmax-contr)
+		endif
+	else
+		smax=scale
+		cmax=contr
+		if(smin.lt.0d0) then
+			scale=scale/10d0
+		else
+			scale=scale+(smin-scale)*(contrast-contr)/(cmin-contr)
+		endif
+	endif
+	enddo
+
+	deallocate(IWORK)
+	deallocate(A)
+	
+	return
+	end
+	
+
+
+	subroutine DiffuseBetaRotate(beta,long,latt,nlong,nlatt,Kxx,Kyy,vxx,powvxx,contrast)
+	IMPLICIT NONE
+	integer nlatt,nlong,NN
+	integer,allocatable :: IWORK(:)
+	integer i,info,j,NRHS,ii(nlong-1,nlatt-1)
+	real*8 beta(nlong,nlatt),Kxx,vxx,long(nlong),latt(nlatt),S(nlong-1,nlatt-1)
+	real*8 pi,tot,x((nlatt-1)*(nlong-1)),contrast,eps,Kyy,powvxx
+	parameter(eps=1d-4)
+	real*8 la(nlatt-1),lo(nlong-1),tp,tm,tot1,tot2,cmax,cmin
+	real*8,allocatable :: A(:,:)
+	integer j0,jm,jp,k,niter,maxiter
+	parameter(pi=3.1415926536)
+	real*8 smax,smin,scale,betamin,betamax,contr
+
+	do i=1,nlong-1
+		lo(i)=(long(i)+long(i+1))/2d0
+	enddo
+	do j=1,nlatt-1
+		la(j)=(latt(j)+latt(j+1))/2d0
+	enddo
+	k=0
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			k=k+1
+			ii(i,j)=k
+		enddo
+	enddo
+	if(contrast.le.0d0) then
+		beta=0d0
+		do i=1,nlong-1
+			do j=1,nlatt-1
+				beta(i,j)=abs(cos(la(j)))/pi
+			enddo
+		enddo
+		return
+	else if(contrast.ge.1d0.and.vxx.eq.0d0) then
+		do i=1,nlong-1
+			do j=1,nlatt-1
+				beta(i,j)=0.25
+			enddo
+		enddo
+		return
+	endif
+
+	allocate(IWORK(nlatt*nlong))
+	allocate(A((nlatt-1)*(nlong-1),(nlatt-1)*(nlong-1)))
+
+	smax=-sqrt(2.4)
+	smin=-sqrt(3.2)
+	scale=1d0
+	
+	contr=contrast*10d0
+	maxiter=500
+	niter=0
+	do while(abs((contrast-contr)/(contrast+contr)).gt.eps.and.abs((smax-smin)/(smax+smin)).gt.eps.and.niter.lt.maxiter)
+	if(nlong*nlatt.gt.1600) print*,((contrast-contr)/(contrast+contr))/eps,contr,scale
+	
+	niter=niter+1
+	
+	S=0d0
+	A=0d0
+	tot=0d0
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			S(i,j)=-cos(la(j))/pi
+		enddo
+	enddo
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			j0=ii(i,j)
+			x(j0)=S(i,j)
+			A(j0,j0)=A(j0,j0)-1d0
+			if(i.gt.1) then
+				jm=ii(i-1,j)
+			else
+				jm=ii(nlong-1,j)
+			endif
+			if(i.lt.nlong-1) then
+				jp=ii(i+1,j)
+			else
+				jp=ii(1,j)
+			endif
+			A(j0,jm)=A(j0,jm)+0.5d0*vxx*scale*real(nlong)*cos(la(j))**(powvxx-1d0)
+			A(j0,jp)=A(j0,jp)-0.5d0*vxx*scale*real(nlong)*cos(la(j))**(powvxx-1d0)
+			A(j0,jm)=A(j0,jm)+Kxx*scale*(real(nlong)/cos(la(j)))**2
+			A(j0,j0)=A(j0,j0)-2d0*Kxx*scale*(real(nlong)/cos(la(j)))**2
+			A(j0,jp)=A(j0,jp)+Kxx*scale*(real(nlong)/cos(la(j)))**2
+
+			if(j.gt.1) then
+				jm=ii(i,j-1)
+				tm=latt(j)
+			else
+				k=i+nlong/2
+				if(k.gt.nlong-1) k=k-nlong+1
+				jm=ii(k,1)
+				tm=latt(1)
+			endif
+			if(j.lt.nlatt-1) then
+				jp=ii(i,j+1)
+				tp=latt(j+1)
+			else
+				k=i+nlong/2
+				if(k.gt.nlong-1) k=k-nlong+1
+				jp=ii(k,nlatt-1)
+				tp=latt(nlatt)
+			endif
+			A(j0,jp)=A(j0,jp)+Kxx*Kyy*scale*real(nlatt*2)**2*cos(tp)/cos(la(j))
+			A(j0,jm)=A(j0,jm)+Kxx*Kyy*scale*real(nlatt*2)**2*cos(tm)/cos(la(j))
+			A(j0,j0)=A(j0,j0)-Kxx*Kyy*scale*real(nlatt*2)**2*(cos(tp)+cos(tm))/cos(la(j))
+		enddo
+	enddo
+
+	NRHS=1
+	NN=(nlong-1)*(nlatt-1)
+	call DGESV( NN, NRHS, A, NN, IWORK, x, NN, info )
+
+	betamin=1d0
+	betamax=0d0
+	tot1=0d0
+	tot2=0d0
+	do i=1,nlong-1
+		do j=1,nlatt-1
+			j0=ii(i,j)
+			beta(i,j)=x(j0)
+			tot1=tot1+beta(i,j)*cos(la(j))
+			tot2=tot2+cos(la(j))
+			if(beta(i,j).lt.betamin) betamin=beta(i,j)
+			if(beta(i,j).gt.betamax) betamax=beta(i,j)
 		enddo
 	enddo
 	beta=beta*0.25*tot2/tot1
@@ -2186,7 +2349,7 @@ c		emis(i)=1d0+log(2d0*g+1d0)*(g-1)/(2d0*g)
 	subroutine ComputeSurface()
 	use GlobalSetup
 	IMPLICIT NONE
-	real*8 SurfEmis(nlam),e1(nlam),e2(nlam),tot
+	real*8 SurfEmis(nlam),e1(nlam),e2(nlam),tot,f_ice,f_grass,f_snow,f_sand,f_water
 	external Enstatite_X,Enstatite_Y,Enstatite_Z
 	external Forsterite_X,Forsterite_Y,Forsterite_Z
 	external Labradorite_X,Labradorite_Y,Labradorite_Z,SiO2,FeO
@@ -2255,6 +2418,34 @@ c=========================================
 			surface_emis(1:nlam)=1d0-surfacealbedo
 		case("WHITE","white")
 			surface_emis(1:nlam)=1d-4
+		case("Earth","EARTH","earth")
+c ice fraction according to Ramirez 2023
+			if(Tsurface.lt.239d0) then
+				f_ice=1d0
+			else if(Tsurface.lt.273.15) then
+				f_ice=1d0-exp((Tsurface-273.15)/12.5)
+			else
+				f_ice=0d0
+			endif
+			if(Tsurface.gt.300d0) then
+				f_sand=1d0
+			else if(Tsurface.gt.273.15) then
+				f_sand=((Tsurface-273.15)/(300d0-273.15))**4
+			else
+				f_sand=0d0
+			endif
+			f_grass=(1d0-f_ice)*(1d0-f_surface_water)*(1d0-f_sand)
+			f_sand=(1d0-f_ice)*(1d0-f_surface_water)*f_sand
+			f_water=(1d0-f_ice)*f_surface_water
+			f_snow=f_ice*(1d0-f_surface_water/2d0)
+			f_ice=f_ice*f_surface_water/2d0
+			surface_emis=f_grass*surface_emis_grass+f_sand*surface_emis_sand+
+     &					 f_water*surface_emis_water+f_snow*surface_emis_snow+f_ice*surface_emis_ice
+			print*,'grass: ',f_grass
+			print*,'sand:  ',f_sand
+			print*,'water: ',f_water
+			print*,'snow:  ',f_snow
+			print*,'ice:   ',f_ice
 		case("FILE","file")
 		case default
 			call output("Surface type not known!")
