@@ -2427,10 +2427,10 @@ c ice fraction according to Ramirez 2023
 			else
 				f_ice=0d0
 			endif
-			if(Tsurface.gt.300d0) then
+			if(Tsurface.gt.308.15) then
 				f_sand=1d0
 			else if(Tsurface.gt.273.15) then
-				f_sand=((Tsurface-273.15)/(300d0-273.15))**4
+				f_sand=((Tsurface-273.15)/(308.15-273.15))**4
 			else
 				f_sand=0d0
 			endif

@@ -508,6 +508,43 @@ c-----------------------------------------------------------------------
 	end
 
 
+	subroutine fillblanks(x,y,n,done,dolog)
+	IMPLICIT NONE
+	integer n,i,n0,n1
+	real*8 x(n),y(n),x0(n),y0(n),x1(n),y1(n)
+	logical done(n),dolog
+	
+	n0=0
+	n1=0
+	do i=1,n
+		if(done(i)) then
+			n0=n0+1
+			x0(n0)=x(i)
+			y0(n0)=y(i)
+		else
+			n1=n1+1
+			x1(n1)=x(i)
+		endif
+	enddo
+	if(dolog) then
+		x0(1:n0)=-log(x0(1:n0))
+		y0(1:n0)=log(y0(1:n0))
+		x1(1:n1)=-log(x1(1:n1))
+	endif
+	call regridarray(x0,y0,n0,x1,y1,n1)
+	if(dolog) y1(1:n1)=exp(y1(1:n1))
+	n1=0
+	do i=1,n
+		if(.not.done(i)) then
+			n1=n1+1
+			y(i)=y1(n1)
+		endif
+	enddo
+	
+	return
+	end
+		
+
 c-----------------------------------------------------------------------
 c The new readstar subroutine uses a boxcar filtering to read in 
 c high resolution spectra.

@@ -30,6 +30,8 @@
 	integer itime
 !$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp,AB)
 
+	logical dochemR(nr)
+
 	call cpu_time(time)
 	timecloud=timecloud-time
 	call system_clock(itime)
@@ -1103,9 +1105,16 @@ c Elemental abundances
 
 c	open(unit=20,file=trim(outputdir) // '/atoms.dat',FORM="FORMATTED",ACCESS="STREAM")
 	if(dochemistry) then
+	dochemR=.false.
+	dochemR(1)=.true.
+	dochemR(nr)=.true.
+	do i=1,nr,nrstepchem
+		dochemR(i)=.true.
+	enddo
 	ini=.true.
 	do i=1,nr
 		call tellertje(i,nr)
+		if(dochemR(i)) then
 		molfracs_atoms(1:N_atoms)=at_ab(i,1:N_atoms)
 		molfracs_atoms=molfracs_atoms+molfracs_atoms0
 		molfracs_atoms(3)=molfracs_atoms(3)+COabun
@@ -1134,7 +1143,17 @@ c	open(unit=20,file=trim(outputdir) // '/atoms.dat',FORM="FORMATTED",ACCESS="STR
    			didcondens(i)=didcondens(i-1)
    		endif
 c		write(20,*) P(i),molfracs_atoms(1:N_atoms)
+		endif
 	enddo
+	if(nrstepchem.ne.1) then
+		do i=1,nmol
+			if(includemol(i).or.diseqmol(i)) then
+				call fillblanks(P,mixrat_r(1:nr,i),nr,dochemR,.true.)
+			endif
+		enddo
+		call fillblanks(P,MMW,nr,dochemR,.true.)
+		call fillblanks(P,nabla_ad,nr,dochemR,.true.)
+	endif
 	if(fixMMW) MMW=MMW0
 c	close(unit=20)
 	endif

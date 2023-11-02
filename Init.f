@@ -374,6 +374,7 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(mixrat(nmol))
 	allocate(Pswitch_mol(nmol),abun_switch_mol(nmol))
 	allocate(includemol(nmol))
+	allocate(diseqmol(nmol))
 	allocate(opacitymol(nmol))
 	allocate(Cloud(max(nclouds,1)))
 	do i=1,nclouds
@@ -545,6 +546,13 @@ c==============================================================================
 	real*8,allocatable :: var(:),dvar(:)
 	character*1000 line
 	character*500 file,homedir
+	integer ndiseq_list
+	parameter(ndiseq_list=20)
+	character*10 diseq_list(20)
+	parameter(diseq_list = (/ "CH4       ","CO        ","CO2       ","H2        ","H2O       ",
+     &						  "NH3       ","N2        ","C         ","CH2OH     ","CH3       ",
+     &						  "CH3OH     ","C2H2      ","H         ","O         ","OH        ",
+     &						  "N         ","NH        ","NH2       ","NO        ","N2H3      " /))
 
 	allocate(key)
 	first => key
@@ -739,6 +747,17 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 
 	call output("==================================================================")
 
+	diseqmol=.false.
+	if(disequilibrium) then
+c select at least the species relevant for disequilibrium chemistry
+		do j=1,ndiseq_list
+			do i=1,nmol_data
+				if(diseq_list(j).eq.molname(i)) then
+					diseqmol(i)=.true.
+				endif
+			enddo
+		enddo
+	endif
 	do i=1,nmol
 		opacitymol(i)=.false.
 		if(includemol(i)) call InitReadOpacityFITS(i)
@@ -923,6 +942,8 @@ c			read(key%value,*) nrsurf
 		case("nrcloud","nrhr")
 			read(key%value,*) nr_cloud
 			nr_cloud=max(1,nr_cloud/nr)
+		case("nrstepchem")
+			read(key%value,*) nrstepchem
 		case("mp")
 			Mp_from_logg=.false.
 			read(key%value,*) Mplanet
@@ -1092,6 +1113,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) disequilibrium
 		case("ggchem_piter")
 			read(key%value,*) GGCHEM_P_iter
+		case("ggchem_tfast")
+			read(key%value,*) GGCHEM_Tfast
 		case("kzz")
 			read(key%value,*) Kzz
 		case("kzz_deep")
@@ -1792,6 +1815,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 c This parameter should be true! Only set this to false to reproduce earlier computations when
 c  GGchem was still implemented slightly wrong.
 	GGCHEM_P_iter=.true.
+
+	GGCHEM_Tfast=700d0
 	
 	adiabatic_tprofile=.false.
 	outflow=.false.
@@ -1839,6 +1864,7 @@ c  GGchem was still implemented slightly wrong.
 		instr_nobs(i)=i
 	enddo
 
+	nrstepchem=1
 	nr_cloud=10
 
 	do i=1,nclouds

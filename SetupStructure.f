@@ -10,6 +10,7 @@
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
 	real*8 ComputeKzz,molfracs_atoms0(N_atoms)
+	logical dochemR(nr)
 		
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
@@ -220,8 +221,17 @@ c			if(domakeai.or.retrieval) return
 		call output("==================================================================")
 c		call output("Computing chemistry using easy_chem by Paul Molliere")
 		call output("Computing chemistry using GGchem by Peter Woitke")
+
+		dochemR=.false.
+		dochemR(1)=.true.
+		dochemR(nr)=.true.
+		do i=1,nr,nrstepchem
+			dochemR(i)=.true.
+		enddo
+
 		do i=1,nr
 			call tellertje(i,nr)
+			if(dochemR(i)) then
 			Tc=max(min(T(i),20000d0),100d0)
 			if(nPhotoReacts.gt.0) then
 				molfracs_atoms0=molfracs_atoms
@@ -240,7 +250,18 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
 			if(nPhotoReacts.gt.0) then
 				molfracs_atoms=molfracs_atoms0
 			endif
+			endif
 		enddo
+		if(nrstepchem.ne.1) then
+			do i=1,nmol
+				if(includemol(i).or.diseqmol(i)) then
+					call fillblanks(P,mixrat_r(1:nr,i),nr,dochemR,.true.)
+				endif
+			enddo
+			call fillblanks(P,MMW,nr,dochemR,.true.)
+			call fillblanks(P,nabla_ad,nr,dochemR,.true.)
+		endif
+
 		if(fixMMW) MMW=MMW0
 		if(disequilibrium) then
 c call disequilibrium code

@@ -7,6 +7,7 @@
       logical,allocatable :: usemolGGchem(:)
       character*100 outputdirGGchem
       character(len=200) :: elements_ARCiS
+      real*8 GGCHEM_Tfast
       end MODULE ARCiS_GGCHEM
 
 
@@ -89,8 +90,8 @@
       model_pconst = GGCHEM_P_iter
       model_struc  = 0
       initchem_info      = .false.
-      Npoints      = 100
-      Tfast        = 1000.d0
+      Npoints      = 2
+      Tfast        = GGCHEM_Tfast
       Tmin         = 100.d0
       Tmax         = 6000.d0
       pmin         = 1.d0*bar
@@ -98,8 +99,8 @@
       nHmin        = 4.d+19
       nHmax        = 4.d+19
       UseDataBase  = .true.
-      NewFullIt    = .true.
-      NewBackIt    = 10
+      NewFullIt    = .false.
+      NewBackIt    = 5
       NewBackFac   = 1.E+10
       NewFastLevel = 1
       NewPreMethod = 2

@@ -189,7 +189,7 @@ c===============================================================================
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib,do_rayleigh,isoFstar
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS
-	logical,allocatable :: includemol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
+	logical,allocatable :: includemol(:),diseqmol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,twind,epsiter,specres_LR
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,metallicity0,vfrag,betaF,kappaUV,scaleUV
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid,blackbodystar
@@ -215,7 +215,7 @@ c for exchange when computing secondary atmosphere
 	logical secondary_atmosphere,constant_g,forceEbalance,fixMMW,WaterWorld
 	logical,allocatable :: RTgridpoint(:),computelam(:)
 	
-	integer nrsurf
+	integer nrsurf,nrstepchem
 	real*8 Psurf
 	
 	real*8,allocatable :: model_err_rel(:),model_err_abs(:),model_err_lam(:)
