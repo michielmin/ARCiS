@@ -270,7 +270,6 @@ c	recomputeopac=.true.
 				enddo
 			enddo
 			betaT=betaT/tot
-			print*,i,betaT
 		endif
 
 c Now call the setup for the readFull3D part
