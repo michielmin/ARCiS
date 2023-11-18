@@ -191,7 +191,7 @@ c===============================================================================
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS
 	logical,allocatable :: includemol(:),diseqmol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,twind,epsiter,specres_LR
-	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,metallicity0,vfrag,betaF,kappaUV,scaleUV
+	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,metallicity0,vfrag,betaF,kappaUV0,scaleUV
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid,blackbodystar
 	logical didcondens_chem,resume_multinest,disequilibrium,const_eff_multinest,outflow,useDLMie
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file,pargridfile,deepredisttype
@@ -229,7 +229,7 @@ c for exchange when computing secondary atmosphere
 	character*500 surfacefile
 	integer nTZ,nspike,nai,nboot,npew,nscaleR
 	integer,allocatable :: niso(:),instr_nobs(:)
-	real*8,allocatable :: MMW(:),tauUV(:)
+	real*8,allocatable :: MMW(:),tauUV(:),kappaUV(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
 	logical fulloutput3D,deepredist,readFull3D,computealbedo
 	integer nBB

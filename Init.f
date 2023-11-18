@@ -639,7 +639,7 @@ c allocate the arrays
 
 	if(orbit_P.lt.0d0) orbit_P=sqrt(Dplanet**3/Mstar)*365.25*86400d0
 
-	allocate(tauUV(nr))
+	allocate(tauUV(nr),kappaUV(nr))
 
 	call ConvertUnits()
 
@@ -1405,7 +1405,7 @@ c			read(key%value,*) nTpoints
 		case("photohaze")
 			read(key%value,*) PhotoReacts(key%nr1)%haze
 		case("kappauv")
-			read(key%value,*) kappaUV
+			read(key%value,*) kappaUV0
 		case("hydrogenloss")
 			read(key%value,*) Hydrogenloss
 		case("adderr")
@@ -1856,7 +1856,7 @@ c  GGchem was still implemented slightly wrong.
 	rad_optEC=0.01
 	Eg_optEC=1.0
 
-	kappaUV=-1d0
+	kappaUV0=-1d0
 
 	instrument="ARIEL"
 	instr_ntrans=1d0

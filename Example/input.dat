@@ -46,3 +46,6 @@ TeffP =  1.6729263E+01			! between 0 and 500 K
 
 computeT=.false.
 
+planetname=WASP-107b
+
+

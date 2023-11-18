@@ -265,8 +265,8 @@ c	Fstar_LR=Fstar_LR*scale
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,HBottom,UVstar_omp,
 !$OMP&			Hstar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,tot,IhN,IjN)
-!$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,night2day,
-!$OMP&			Hstar,Dplanet,Fstar_LR,must,wabs,wscat,IntEab,IntHnuSurf,IntEabSurf,betaF,isoFstar,do3D,UVstar,lam_LR)
+!$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,night2day,deepredist,
+!$OMP&			Hstar,Dplanet,Fstar_LR,must,wabs,wscat,IntEab,IntHnuSurf,IntEabSurf,betaF,isoFstar,do3D,UVstar,lam_LR,deepredisttype)
 	allocate(Si_omp(nr,0:nr+1),tauR_omp(nr),Ih_omp(nr),Ij_omp(nr))
 	allocate(IhN(nr,0:nr+1,nnu),IjN(nr,0:nr+1,nnu))
 	allocate(Hstar_omp(nr),Hstar_lam(nr),Hsurf_lam(nr),HBottom(nr))
@@ -289,19 +289,25 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 					Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
 					Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)*nu(inu)
 					Hstar_lam(1:nr)=Hstar_lam(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
-					FstarBottom=FstarBottom+2d0*wnu(inu)*abs(Ih_omp(1))
-					Si_omp(1:nr,0)=Si_omp(1:nr,0)+wnu(inu)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)
-					if(lam_LR(ilam).lt.0.4e-4) UVstar_omp(1:nr)=UVstar_omp(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
+					if(.not.do3D) then
+						Si_omp(1:nr,0)=Si_omp(1:nr,0)+wnu(inu)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)
+						FstarBottom=FstarBottom+2d0*wnu(inu)*abs(Ih_omp(1))
+						if(lam_LR(ilam).lt.0.4e-4) then
+							UVstar_omp(1:nr)=UVstar_omp(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
+						endif
+					endif
 				enddo
 				if(do3D) then
-					Hstar_lam(1:nr)=Hstar_lam(1:nr)*night2day
-					FstarBottom=FstarBottom*night2day
 					tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(max(must,1d-5))
-					Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
+					if(must.eq.0d0) then
+						Ij_omp(1:nr)=0d0
+					else
+						Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
+					endif
 					Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)
-					Hstar_lam(1:nr)=Hstar_lam(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)*(1d0-night2day)
-					Si_omp(1:nr,0)=Si_omp(1:nr,0)+0.5d0*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)*(1d0-night2day)
-					FstarBottom=FstarBottom+abs(Ih_omp(1))*(1d0-night2day)
+					Si_omp(1:nr,0)=Si_omp(1:nr,0)+0.5d0*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)
+					FstarBottom=FstarBottom+abs(Ih_omp(1))
+					if(lam_LR(ilam).lt.0.4e-4) UVstar_omp(1:nr)=UVstar_omp(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
 				endif
 			else
 				tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(max(must,1d-5))
@@ -311,6 +317,9 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 				FstarBottom=abs(Ih_omp(1))
 				Si_omp(1:nr,0)=Si_omp(1:nr,0)+0.5d0*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)
 				if(lam_LR(ilam).lt.0.4e-4) UVstar_omp(1:nr)=UVstar_omp(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
+			endif
+			if(deepredist.and.deepredisttype.eq.'deep'.and.betaF.gt.must) then
+				Hstar_lam(1:nr)=Hstar_lam(1:nr)*must/betaF-(betaF-must)*dfreq_LR(ilam)*wgg(ig)*contr
 			endif
 
 
@@ -404,15 +413,25 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 		if(lam_LR(ilam).gt.0.1d-4.and.lam_LR(ilam).lt.0.4d-4) scaleUV=scaleUV+dfreq_LR(ilam)*Fstar_LR(ilam)
 	enddo
 	scaleUV=(scaleUV/3.4947466112306125E-008)/(Dplanet**2)
+	do ir=nr,1,-1
+		tot=0d0
+		kappaUV(ir)=0d0
+		do ilam=1,nlam_LR
+			do ig=1,ng
+				kappaUV(ir)=kappaUV(ir)+Ca(ir,ilam,ig)*Fstar_LR(ilam)*dfreq_LR(ilam)*wgg(ig)
+				tot=tot+Fstar_LR(ilam)*dfreq_LR(ilam)*wgg(ig)
+			enddo
+		enddo
+		kappaUV(ir)=kappaUV(ir)/tot
+	enddo
 
 	deallocate(UVstar)
 
+	if(init3D.and.deepredist.and.deepredisttype.eq.'fixflux') then
+		Hstar0(1:nr)=Hstar(1:nr)/betaF
+	endif
 	if(do3D.and.deepredist.and.deepredisttype.eq.'fixflux') then
-		if(i3D.eq.n3D) then
-			Hstar0(1:nr)=Hstar(1:nr)/betaF
-		else
-			Hstar(1:nr)=Hstar0(1:nr)*betaF
-		endif
+		Hstar(1:nr)=Hstar0(1:nr)*betaF
 	endif
 
 	iter=1
@@ -553,11 +572,11 @@ c===============================================================================
 		if(iT.lt.1) iT=1
 		do ilam=1,nlam_LR
 			do ig=1,ng
-				tauLW=tauLW+exp(-tauR_nu(1,ilam,ig))*BB_LR(ilam,iT)*dfreq_LR(ilam)*wgg(ig)
+				tauLW=tauLW+BB_LR(ilam,iT)*dfreq_LR(ilam)*wgg(ig)/tauR_nu(1,ilam,ig)
 				tot=tot+BB_LR(ilam,iT)*dfreq_LR(ilam)*wgg(ig)
 			enddo
 		enddo
-		tauLW=-log(tauLW/tot)
+		tauLW=tot/tauLW
 	endif
 	
 

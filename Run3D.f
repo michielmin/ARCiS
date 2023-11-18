@@ -48,9 +48,10 @@ c	recomputeopac=.true.
 		endif
 	enddo
 
-	if(fixnight2day.or.WaterWorld) then
+	if(fixnight2day.or.WaterWorld.or.(deepredist.and.deepredisttype.eq.'fixflux')) then
 		do3D=.false.
 		init3D=.true.
+		if(.not.fixnight2day) betaT=2d0/3d0-(5d0/12d0)*night2day
 		call SetOutputMode(.false.)
 		call InitDens()
 		call ComputeModel1D(recomputeopac)
@@ -254,7 +255,23 @@ c	recomputeopac=.true.
 		if(n3D.eq.2) beta3D(i)=betaT
 
 		betaF=beta3D(i)
-		if(.not.deepredist) betaT=beta3D(i)
+		if(.not.deepredist.or.deepredisttype.ne.'fixbeta') then
+			betaT=beta3D(i)
+			tot=0d0
+			betaT=0d0
+			do ilong=1,nlong-1
+				do ilatt=1,nlatt-1
+					if(ibeta(ilong,ilatt).eq.i) then
+						la=cos((latt(ilatt)+latt(ilatt+1))/2d0-pi/2d0)
+						lo=(long(ilong)+long(ilong+1))/2d0-pi
+						tot=tot+abs(la)
+						if(abs(lo).le.pi/2d0) betaT=betaT+abs(la*la*cos(lo))
+					endif
+				enddo
+			enddo
+			betaT=betaT/tot
+			print*,i,betaT
+		endif
 
 c Now call the setup for the readFull3D part
 		if(readFull3D) then

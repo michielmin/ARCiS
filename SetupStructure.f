@@ -1207,8 +1207,8 @@ c-----------------------------------------------------------------------
 	integer i,ir,imol
 	
 	do ir=1,nr
-		if(kappaUV.gt.0d0) then
-			tauUV(ir)=kappaUV*1d6*P(ir)/grav(ir)
+		if(kappaUV0.gt.0d0) then
+			tauUV(ir)=kappaUV0*1d6*P(ir)/grav(ir)
 		else if(tauUV(ir).lt.0d0) then
 			tauUV(ir)=1d6*P(ir)/grav(ir)
 		endif
@@ -1259,8 +1259,8 @@ c-----------------------------------------------------------------------
 	real*8 nmax,nreac
 	integer i,ir,imol
 	
-	if(kappaUV.gt.0d0) then
-		tauUV(ir)=kappaUV*1d6*P(ir)/grav(ir)
+	if(kappaUV0.gt.0d0) then
+		tauUV(ir)=kappaUV0*1d6*P(ir)/grav(ir)
 	else if(tauUV(ir).lt.0d0) then
 		tauUV(ir)=1d6*P(ir)/grav(ir)
 	endif

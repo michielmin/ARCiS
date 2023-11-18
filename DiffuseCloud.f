@@ -23,7 +23,7 @@
 	logical,allocatable :: empty(:),docondense(:)
 	integer iCS,ir,nrdo
 	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil,St
-	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:),CloudtauUV(:)
+	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:),CloudtauUV(:),CloudkappaUV(:)
 	integer INCFD,IERR
 	logical SKIP
 	real*8 time,tcrystinv,nucryst,Tcryst
@@ -429,10 +429,10 @@ c	atoms_cloud(i,3)=1
 	
 	docondense=.false.
 	if(Cloud(ii)%hazetype.eq.'optEC') then
-		allocate(CloudtauUV(nnr))
+		allocate(CloudtauUV(nnr),CloudkappaUV(nnr))
 		do ir=1,nr
-			if(kappaUV.gt.0d0) then
-				tauUV(ir)=kappaUV*1d6*P(ir)/grav(ir)
+			if(kappaUV0.gt.0d0) then
+				tauUV(ir)=kappaUV0*1d6*P(ir)/grav(ir)
 			else if(tauUV(ir).lt.0d0) then
 				tauUV(ir)=1d6*P(ir)/grav(ir)
 			endif
@@ -442,6 +442,9 @@ c	atoms_cloud(i,3)=1
 		logx(1:nr)=tauUV(1:nr)
 		call DPCHIM(nr,logP,logx,dlogx,INCFD)
 		call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudtauUV,IERR)
+		logx(1:nr)=kappaUV(1:nr)
+		call DPCHIM(nr,logP,logx,dlogx,INCFD)
+		call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudkappaUV,IERR)
 		tot=0d0
 	endif
 	do i=1,nnr
@@ -455,7 +458,7 @@ c	atoms_cloud(i,3)=1
 		enddo
 		gz=Ggrav*Mplanet/CloudR(i)**2
 		if(Cloud(ii)%hazetype.eq.'optEC') then
-			Sn(i)=Clouddens(i)*exp(-CloudtauUV(i))
+			Sn(i)=Clouddens(i)*CloudkappaUV(i)*exp(-CloudtauUV(i))
 			if(i.eq.nr) then
 				tot=tot+abs(CloudR(i-1)-CloudR(i))*Sn(i)
 			else if(i.eq.1) then
@@ -467,7 +470,7 @@ c	atoms_cloud(i,3)=1
 			Sn(i)=(Clouddens(i)*gz*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
 		endif
 	enddo
-	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*scaleUV*betaF*Sigmadot/tot
+	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*scaleUV*betaT*Sigmadot/tot
 
 	SKIP=.false.
 	INCFD=1
@@ -1228,7 +1231,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(Kd,Kg,Km)
 	deallocate(Ma,Mb,Mc)
 	deallocate(fsil,fsil2)
-	if(Cloud(ii)%hazetype.eq.'optEC') deallocate(CloudtauUV)
+	if(Cloud(ii)%hazetype.eq.'optEC') deallocate(CloudtauUV,CloudkappaUV)
 
 	return
 	end

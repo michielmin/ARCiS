@@ -510,30 +510,31 @@ c		call cpu_time(stoptime)
 		endif
 
 		open(unit=26,file=trim(outputdir) // "retrieval",FORM="FORMATTED",ACCESS="STREAM")
+		write(26,'("# ",a8,3a12,"  (",2a12")")') "par","median","1sig lower","1sig upper","3sig lower","3sig upper"
 		do j=1,n_ret
 			sorted(1:i)=values(1:i,j)
 			call sort(sorted,i)
-			write(26,'(a10,3es12.4)') trim(RetPar(j)%keyword),sorted(ime),sorted(im1),sorted(ip1)
+			write(26,'(a10,3es12.4,"  (",2es12.4")")') trim(RetPar(j)%keyword),sorted(ime),sorted(im1),sorted(ip1),sorted(im3),sorted(ip3)
 		enddo
 		sorted(1:i)=COratio_der(1:i)
 		call sort(sorted,i)
-		write(26,'(a10,3es12.4)') "C/O",sorted(ime),sorted(im1),sorted(ip1)
+		write(26,'(a10,3es12.4,"  (",2es12.4")")') "C/O",sorted(ime),sorted(im1),sorted(ip1),sorted(im3),sorted(ip3)
 		sorted(1:i)=Z_der(1:i)
 		call sort(sorted,i)
-		write(26,'(a10,3es12.4)') "[Z]",sorted(ime),sorted(im1),sorted(ip1)
+		write(26,'(a10,3es12.4,"  (",2es12.4")")') "[Z]",sorted(ime),sorted(im1),sorted(ip1),sorted(im3),sorted(ip3)
 		if(do3D) then
 			sorted(1:i)=hotspotshift_der(1:i)
 			call sort(sorted,i)
-			write(26,'(a10,3es12.4)') "hotspot",sorted(ime),sorted(im1),sorted(ip1)
+			write(26,'(a10,3es12.4,"  (",2es12.4")")') "hotspot",sorted(ime),sorted(im1),sorted(ip1),sorted(im3),sorted(ip3)
 		endif
 		if(emisspec.and..not.useobsgrid) then
 			sorted(1:i)=Tplanet(1:i)
 			call sort(sorted,i)
-			write(26,'(a10,3es12.4)') "Tplanet",sorted(ime),sorted(im1),sorted(ip1)
+			write(26,'(a10,3es12.4,"  (",2es12.4")")') "Tplanet",sorted(ime),sorted(im1),sorted(ip1),sorted(im3),sorted(ip3)
 		endif
 		sorted(1:i)=MMW_der(1:i)
 		call sort(sorted,i)
-		write(26,'(a10,3es12.4)') "MMW",sorted(ime),sorted(im1),sorted(ip1)
+		write(26,'(a10,3es12.4,"  (",2es12.4")")') "MMW",sorted(ime),sorted(im1),sorted(ip1),sorted(im3),sorted(ip3)
 
 		close(unit=26)
 
