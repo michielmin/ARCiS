@@ -99,7 +99,7 @@
       nHmin        = 4.d+19
       nHmax        = 4.d+19
       UseDataBase  = .true.
-      NewFullIt    = .false.
+      NewFullIt    = .true.
       NewBackIt    = 5
       NewBackFac   = 1.E+10
       NewFastLevel = 1
