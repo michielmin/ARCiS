@@ -57,13 +57,13 @@
 	integer i1,i2,ngF,j
 	real*8 ww,w1,w2,FstarBottom,tauRoss,HUVstar,HUVstar_omp
 	real*8,allocatable :: Si_omp(:,:),Ih_omp(:),Ij_omp(:),tauR_omp(:),Hsurf(:,:),Hstar_omp(:)
-	real*8,allocatable :: Fstar_LR(:),SurfEmis_LR(:),IntEab(:,:,:),IntHnuSurf(:,:),IntEabSurf(:,:)
+	real*8,allocatable :: Fstar_LR(:),SurfEmis_LR(:),IntHnuSurf(:,:)
 	integer,allocatable :: IP(:)
 	real*8,allocatable :: WS(:),nu(:),wnu(:),Hstar_lam(:),Hsurf_lam(:)
 	real*8,allocatable :: IhN(:,:,:),IjN(:,:,:),HBottom(:),UVstar(:),UVstar_omp(:)
 	character*500 file
 	integer icloud
-	logical Convec(0:nr)
+	logical Convec(0:nr),fixed(nr)
 	real*8,allocatable,save :: Hstar0(:)
 
 	if(deepredist.and.deepredisttype.eq.'fixflux') then
@@ -133,8 +133,6 @@
 	allocate(dtauR_nu(0:nr,nlam_LR,ng))
 	allocate(IntHnu(nlam_LR,nr,nr))
 	allocate(IntHnuSurf(nlam_LR,nr))
-	allocate(IntEab(nlam_LR,nr,nr))
-	allocate(IntEabSurf(nlam_LR,nr))
 	allocate(SurfEmis_LR(nlam_LR))
 
 	docloud0=.false.
@@ -255,9 +253,7 @@ c	Fstar_LR=Fstar_LR*scale
 	
 	Hstar(1:nr)=0d0
 	IntHnu(1:nlam_LR,1:nr,1:nr)=0d0
-	IntEab(1:nlam_LR,1:nr,1:nr)=0d0
 	IntHnuSurf(1:nlam_LR,1:nr)=0d0
-	IntEabSurf(1:nlam_LR,1:nr)=0d0
 	allocate(UVstar(nr))
 	UVstar=0d0
 	HUVstar=0d0
@@ -267,7 +263,7 @@ c	Fstar_LR=Fstar_LR*scale
 !$OMP& PRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,HBottom,UVstar_omp,HUVstar_omp,
 !$OMP&			Hstar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,tot,IhN,IjN)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,night2day,deepredist,
-!$OMP&			Hstar,Dplanet,Fstar_LR,must,wabs,wscat,IntEab,IntHnuSurf,IntEabSurf,betaF,isoFstar,do3D,UVstar,HUVstar,
+!$OMP&			Hstar,Dplanet,Fstar_LR,must,wabs,wscat,IntHnuSurf,betaF,isoFstar,do3D,UVstar,HUVstar,
 !$OMP&			lam_LR,deepredisttype)
 	allocate(Si_omp(nr,0:nr+1),tauR_omp(nr),Ih_omp(nr),Ij_omp(nr))
 	allocate(IhN(nr,0:nr+1,nnu),IjN(nr,0:nr+1,nnu))
@@ -292,7 +288,7 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 					Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
 					Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)*nu(inu)
 					Hstar_lam(1:nr)=Hstar_lam(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
-					Si_omp(1:nr,0)=Si_omp(1:nr,0)+betaF*wnu(inu)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)
+					Si_omp(1:nr,0)=Si_omp(1:nr,0)+wnu(inu)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)
 					FstarBottom=FstarBottom+2d0*wnu(inu)*abs(Ih_omp(1))
 					if(.not.do3D) then
 						if(lam_LR(ilam).lt.0.4e-4) then
@@ -320,7 +316,7 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 				Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)
 				Hstar_lam(1:nr)=Hstar_lam(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 				FstarBottom=abs(Ih_omp(1))
-				Si_omp(1:nr,0)=Si_omp(1:nr,0)+betaF*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)
+				Si_omp(1:nr,0)=Si_omp(1:nr,0)+Ij_omp(1:nr)*wscat(1:nr,ilam,ig)
 				if(lam_LR(ilam).lt.0.4e-4) then
 					UVstar_omp(1:nr)=UVstar_omp(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
 					HUVstar_omp=HUVstar_omp+dfreq_LR(ilam)*wgg(ig)*Ih_omp(nr)
@@ -329,8 +325,7 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 			if(deepredist.and.deepredisttype.eq.'deep'.and.betaF.gt.must) then
 				Hstar_lam(1:nr)=Hstar_lam(1:nr)*must/betaF-(betaF-must)*dfreq_LR(ilam)*wgg(ig)*contr
 			endif
-
-
+			
 c Si_omp(0:nr,1:nr) is the direct contribution from the atmosphere
 			do ir=1,nr
 				Si_omp(1:nr,ir)=0d0
@@ -343,11 +338,10 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
 				Ij_omp(1:nr)=exp(-abs(tauR_omp(1:nr)-tauR_omp(1)))
 				Ih_omp(1:nr)=Ij_omp(1:nr)
-				Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)/2d0
+				Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
 				Hsurf_lam(1:nr)=Hsurf_lam(1:nr)+2d0*FstarBottom*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
      & 								Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
 				IntHnuSurf(ilam,1:nr)=IntHnuSurf(ilam,1:nr)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
-				IntEabSurf(ilam,1:nr)=IntEabSurf(ilam,1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
 			enddo
 			Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)*wscat(1:nr,ilam,ig)
 
@@ -374,7 +368,6 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 					Ih_omp(1:nr)=IhN(1:nr,ir,inu)
 					Ij_omp(1:nr)=IjN(1:nr,ir,inu)
 					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+4d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
-					IntEab(ilam,1:nr,ir)=IntEab(ilam,1:nr,ir)+4d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
 					HBottom(ir)=HBottom(ir)+4d0*nu(inu)*wnu(inu)*Ij_omp(1)
 				enddo
 			enddo
@@ -386,8 +379,6 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				do ir=1,nr
 					IntHnu(ilam,1:nr,ir)=IntHnu(ilam,1:nr,ir)+2d0*HBottom(ir)*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
      &						Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
-					IntEab(ilam,1:nr,ir)=IntEab(ilam,1:nr,ir)+2d0*HBottom(ir)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
-     &						Ij_omp(1:nr)*Ca(1:nr,ilam,ig)*(1d0-SurfEmis_LR(ilam))
 				enddo
 			enddo
 			do inu=1,nnu
@@ -395,7 +386,6 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				Ij_omp(1:nr)=IjN(1:nr,nr+1,inu)
 				Hsurf_lam(1:nr)=Hsurf_lam(1:nr)+FstarBottom*4d0*nu(inu)*wnu(inu)*Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
 				IntHnuSurf(ilam,1:nr)=IntHnuSurf(ilam,1:nr)+4d0*nu(inu)*wnu(inu)*Ih_omp(1:nr)
-				IntEabSurf(ilam,1:nr)=IntEabSurf(ilam,1:nr)+4d0*wnu(inu)*Ij_omp(1:nr)*Ca(1:nr,ilam,ig)
 			enddo
 			if(lam_LR(ilam).lt.0.4e-4) then
 				HUVstar_omp=HUVstar_omp+dfreq_LR(ilam)*wgg(ig)*FstarBottom*SurfEmis_LR(ilam)
@@ -514,6 +504,7 @@ c===============================================================================
 	Fl0=Fl
 	IntH0=IntH
 	Convec(0:nr)=.false.
+	fixed=.false.
 
 1	continue
 	iter2=iter2+1
@@ -550,9 +541,23 @@ c		if(err.gt.maxErr.and..not.Convec(ir)) then
 		IntH=IntH0
 		Convec(j)=.true.
 		goto 1
-	endif		
+	endif
 				
 	Ts=T*Fl**0.25
+
+c	if(i3D.ne.n3D.and..not.init3D) then
+c		do ir=1,nr
+c			if(Ts(ir).gt.Tprev3D(ir).and..not.fixed(ir)) then
+c				IntH0(ir,1:nr)=0d0
+c				IntH0(ir,ir)=1d0
+c				Fl0(ir)=(Tprev3D(ir)/T(ir))**4
+c				Fl=Fl0
+c				IntH=IntH0
+c				fixed(ir)=.true.
+c				goto 1
+c			endif
+c		enddo
+c	endif
 
 	maxErr=0d0
 	do ir=1,nr-1
@@ -648,8 +653,6 @@ c===============================================================================
 	deallocate(Fstar_LR)
 	deallocate(tauR_nu)
 	deallocate(IntHnu)
-	deallocate(IntEab)
-	deallocate(IntEabSurf)
 	deallocate(IntHnuSurf)
 	deallocate(SurfEmis_LR)
 

@@ -229,7 +229,7 @@ c for exchange when computing secondary atmosphere
 	character*500 surfacefile
 	integer nTZ,nspike,nai,nboot,npew,nscaleR
 	integer,allocatable :: niso(:),instr_nobs(:)
-	real*8,allocatable :: MMW(:),tauUV(:),kappaUV(:)
+	real*8,allocatable :: MMW(:),tauUV(:),kappaUV(:),Tprev3D(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
 	logical fulloutput3D,deepredist,readFull3D,computealbedo
 	integer nBB

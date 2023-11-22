@@ -892,6 +892,7 @@ c In this case the beta map should be the static one. Make sure this is set prop
 			endif
 		enddo
 	endif
+	if(do3D) allocate(Tprev3D(nr))
 		
 	allocate(long(nlong),latt(nlatt))
 	allocate(tanx(nlong),tany(nlong))

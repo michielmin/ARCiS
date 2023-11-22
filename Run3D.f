@@ -393,6 +393,9 @@ c Now call the setup for the readFull3D part
 			enddo
 			close(unit=20)
 		endif
+		do ir=1,nr
+			Tprev3D(ir)=maxval(T3D(i3D:n3D,ir))
+		enddo
 		call tellertje_perc(n3D-i+1,n3D)
 	enddo
 
@@ -679,13 +682,13 @@ c Note we are here using the symmetry between North and South
 			write(25,*) PTaverage3D(ipc,ir),P(ir),tmp(1:j)
 		enddo
 	endif
-c	tot=0d0
-c	do ilam=1,nlam
-c		tot=tot+phase(ipc,0,ilam)*dfreq(ilam)
-c	enddo
-c	tot=tot*distance**2/1d23
-c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*Rstar**2*Rplanet**2/(Dplanet**2))
-c	print*,Tstar*(Rstar/Dplanet)**0.5
+	tot=0d0
+	do ilam=1,nlam
+		if(lamemis(ilam).and.computelam(ilam)) tot=tot+phase(ipc,0,ilam)*dfreq(ilam)
+	enddo
+	tot=tot*distance**2/1d23
+	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*Rstar**2*Rplanet**2/(Dplanet**2))
+	print*,Tstar*(Rstar/Dplanet)**0.5
 
 	if(makeimage) then
 		file=trim(outputdir) // "image" //  trim(int2string(int(theta_phase(ipc)),'(i0.3)')) // ".fits"
