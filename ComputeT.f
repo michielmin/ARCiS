@@ -289,7 +289,7 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 					Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)*nu(inu)
 					Hstar_lam(1:nr)=Hstar_lam(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 					Si_omp(1:nr,0)=Si_omp(1:nr,0)+wnu(inu)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)/8d0
-					FstarBottom=FstarBottom+wnu(inu)*abs(Ih_omp(1))
+					FstarBottom=FstarBottom+2d0*wnu(inu)*abs(Ih_omp(1))
 					if(.not.do3D) then
 						if(lam_LR(ilam).lt.0.4e-4) then
 							UVstar_omp(1:nr)=UVstar_omp(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
