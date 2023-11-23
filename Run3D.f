@@ -271,6 +271,7 @@ c	recomputeopac=.true.
 			enddo
 			betaT=betaT/tot
 		endif
+		if(.not.betaT.ge.0d0.or..not.betaT.le.1d0) betaT=betaF
 
 c Now call the setup for the readFull3D part
 		if(readFull3D) then
@@ -682,13 +683,13 @@ c Note we are here using the symmetry between North and South
 			write(25,*) PTaverage3D(ipc,ir),P(ir),tmp(1:j)
 		enddo
 	endif
-	tot=0d0
-	do ilam=1,nlam
-		if(lamemis(ilam).and.computelam(ilam)) tot=tot+phase(ipc,0,ilam)*dfreq(ilam)
-	enddo
-	tot=tot*distance**2/1d23
-	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*Rstar**2*Rplanet**2/(Dplanet**2))
-	print*,Tstar*(Rstar/Dplanet)**0.5
+c	tot=0d0
+c	do ilam=1,nlam
+c		if(lamemis(ilam).and.computelam(ilam)) tot=tot+phase(ipc,0,ilam)*dfreq(ilam)
+c	enddo
+c	tot=tot*distance**2/1d23
+c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*clight**3))*Rstar**2*Rplanet**2/(Dplanet**2))
+c	print*,Tstar*(Rstar/Dplanet)**0.5
 
 	if(makeimage) then
 		file=trim(outputdir) // "image" //  trim(int2string(int(theta_phase(ipc)),'(i0.3)')) // ".fits"
@@ -2275,7 +2276,7 @@ c-----------------------------------------------------------------------
 					contr=(Fstar(ilam)/(4d0*Dplanet**2))
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
 					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+0.5d0*contr*exp(-tauR(1:nr))*wscat(ilam,ig,1:nr)
-					contr=2d0*must*contr*exp(-tauR(1))
+					contr=4d0*must*contr*exp(-tauR(1))/3d0
 				else
 					contr=0d0
 				endif
