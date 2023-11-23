@@ -289,7 +289,7 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 					Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)*nu(inu)
 					Hstar_lam(1:nr)=Hstar_lam(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 					Si_omp(1:nr,0)=Si_omp(1:nr,0)+wnu(inu)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)/8d0
-					FstarBottom=FstarBottom+4d0*wnu(inu)*abs(Ih_omp(1))/3d0
+					FstarBottom=FstarBottom+wnu(inu)*abs(Ih_omp(1))
 					if(.not.do3D) then
 						if(lam_LR(ilam).lt.0.4e-4) then
 							UVstar_omp(1:nr)=UVstar_omp(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
@@ -315,7 +315,7 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 				Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
 				Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)
 				Hstar_lam(1:nr)=Hstar_lam(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
-				FstarBottom=2d0*abs(Ih_omp(1))/3d0
+				FstarBottom=abs(Ih_omp(1))
 				Si_omp(1:nr,0)=Si_omp(1:nr,0)+Ij_omp(1:nr)*wscat(1:nr,ilam,ig)/8d0
 				if(lam_LR(ilam).lt.0.4e-4) then
 					UVstar_omp(1:nr)=UVstar_omp(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
@@ -339,7 +339,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				Ij_omp(1:nr)=exp(-abs(tauR_omp(1:nr)-tauR_omp(1)))
 				Ih_omp(1:nr)=Ij_omp(1:nr)
 				Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
-				Si_omp(1:nr,0)=Si_omp(1:nr,0)+FstarBottom*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)*(1d0-SurfEmis_LR(ilam))/2d0
+				Si_omp(1:nr,0)=Si_omp(1:nr,0)+FstarBottom*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)*(1d0-SurfEmis_LR(ilam))/8d0
 				Hsurf_lam(1:nr)=Hsurf_lam(1:nr)+2d0*FstarBottom*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
      & 								Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
 				IntHnuSurf(ilam,1:nr)=IntHnuSurf(ilam,1:nr)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
@@ -381,8 +381,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			endif
 
 			do ir=1,nr
-c				Hstar_omp(ir)=Hstar_omp(ir)+min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0)
-				Hstar_omp(ir)=Hstar_omp(ir)+Hstar_lam(ir)+Hsurf_lam(ir)
+				Hstar_omp(ir)=Hstar_omp(ir)+min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0)
 			enddo
 		enddo
 	enddo
