@@ -331,7 +331,6 @@ c Si_omp(0:nr,1:nr) is the direct contribution from the atmosphere
 				Si_omp(1:nr,ir)=0d0
 				Si_omp(ir,ir)=wabs(ir,ilam,ig)
 			enddo
-
 c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			Si_omp(1:nr,nr+1)=0d0
 			do inu=1,nnu
@@ -339,7 +338,8 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 				Ij_omp(1:nr)=exp(-abs(tauR_omp(1:nr)-tauR_omp(1)))
 				Ih_omp(1:nr)=Ij_omp(1:nr)
 				Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
-				Si_omp(1:nr,0)=Si_omp(1:nr,0)+FstarBottom*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)*(1d0-SurfEmis_LR(ilam))/8d0
+				Si_omp(1:nr,0)=Si_omp(1:nr,0)+FstarBottom*wnu(inu)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)*
+     &								(1d0-SurfEmis_LR(ilam))/8d0
 				Hsurf_lam(1:nr)=Hsurf_lam(1:nr)+2d0*FstarBottom*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*
      & 								Ih_omp(1:nr)*(1d0-SurfEmis_LR(ilam))
 				IntHnuSurf(ilam,1:nr)=IntHnuSurf(ilam,1:nr)+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
@@ -381,7 +381,8 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			endif
 
 			do ir=1,nr
-				Hstar_omp(ir)=Hstar_omp(ir)+min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0)
+c				Hstar_omp(ir)=Hstar_omp(ir)+min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0)
+				Hstar_omp(ir)=Hstar_omp(ir)+Hstar_lam(ir)+Hsurf_lam(ir)
 			enddo
 		enddo
 	enddo
