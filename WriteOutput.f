@@ -47,6 +47,18 @@
 	enddo
 	close(unit=30)
 
+	filename=trim(outputdir) // "irradiation" // trim(side)
+	call output("Writing spectrum to: " // trim(filename))
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
+	write(30,'("#",a13,a19)') "lambda [mu]","irradiance[W/m^2/micron]"
+	form='(f14.6,es19.7E3)'
+	do i=1,nlam_out
+		if(computelam(i)) then
+			write(30,form) lam_out(i),(Fstar(i)*1d-3/Dplanet**2)*(clight/(lam_out(i)*1d-4))/lam_out(i)
+		endif
+	enddo
+	close(unit=30)
+
 	if(emisspec) then
 	
 	filename=trim(outputdir) // "emis" // trim(side)

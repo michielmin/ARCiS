@@ -409,12 +409,21 @@ c				Hstar_omp(ir)=Hstar_omp(ir)+min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0)
 		kappaUV(ir)=0d0
 		do ilam=1,nlam_LR
 			do ig=1,ng
-				kappaUV(ir)=kappaUV(ir)+Ca(ir,ilam,ig)*Fstar_LR(ilam)*dfreq_LR(ilam)*wgg(ig)
-				tot=tot+Fstar_LR(ilam)*dfreq_LR(ilam)*wgg(ig)
+				if(lam_LR(ilam).lt.0.4e-4) then
+					kappaUV(ir)=kappaUV(ir)+Ca(ir,ilam,ig)*Fstar_LR(ilam)*dfreq_LR(ilam)*wgg(ig)
+					tot=tot+Fstar_LR(ilam)*dfreq_LR(ilam)*wgg(ig)
+				endif
 			enddo
 		enddo
 		kappaUV(ir)=kappaUV(ir)/tot
 	enddo
+c	tot=0d0
+c	do ilam=1,nlam_LR
+c		if(lam_LR(ilam).lt.0.4e-4) then
+c			tot=tot+dfreq_LR(ilam)*Fstar_LR(ilam)/(Dplanet**2)
+c		endif
+c	enddo
+c	print*,'EUV: ',tot
 
 	deallocate(UVstar)
 
