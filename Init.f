@@ -1355,6 +1355,8 @@ c			read(key%value,*) nTpoints
 			end select
 		case("computelc")
 			read(key%value,*) computeLC
+		case("vrot")
+			read(key%value,*) vrot0
 		case("planetform")
 			read(key%value,*) planetform
 		case("fdust")
@@ -1789,6 +1791,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	mixP=0d0
 	vfrag=100d0	!cm/s
 	
+	vrot0=0d0
 	twind=-1d0
 	
 	PRplanet=10d0

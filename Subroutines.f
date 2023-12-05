@@ -543,6 +543,28 @@ c-----------------------------------------------------------------------
 	
 	return
 	end
+
+
+	subroutine shiftarray(x,y,n,f,do1,do2)
+	IMPLICIT NONE
+	integer n,i,n0
+	real*8 x(n),y(n),f,x0(n),y0(n)
+	logical do1(n),do2(n)
+	
+	n0=0
+	do i=1,n
+		if(do1(i).and.do2(i)) then
+			n0=n0+1
+			x0(n0)=x(i)*(1d0-f)
+			y0(n0)=y(i)
+		endif
+	enddo
+
+	call regridarray(x0,y0,n,x,y,n)
+
+	return
+	end
+	
 		
 
 c-----------------------------------------------------------------------

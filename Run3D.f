@@ -21,8 +21,8 @@
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1,SiRalb1,tau0
 	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:),SiR0(:,:),SiRalb0(:,:),R3DC(:,:),lgrid(:)
 	logical iterateshift,actually1D,do_ibeta(n3D)
-	real*8 vxxmin,vxxmax,ComputeKzz,betamin_term,tot1,tot2
-	logical docloud0(max(nclouds,1))
+	real*8 vxxmin,vxxmax,ComputeKzz,betamin_term,tot1,tot2,vrot,dlam_rot
+	logical docloud0(max(nclouds,1)),do_rot
 	
 	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D))
 	if(computealbedo) allocate(SiSc(nlam,ng,0:nr,nnu0,n3D))
@@ -459,6 +459,12 @@ c Now call the setup for the readFull3D part
 	nrtrace=(nr-1)*nsub+ndisk
 	nptrace=(nlatt-1)*2
 	if(actually1D.and.nphase.eq.1.and.theta_phase(1).eq.180d0) nptrace=1
+	if(vrot0.ne.0d0) then
+		do_rot=.true.
+		nptrace=max(10,nptrace)
+	else
+		do_rot=.false.
+	endif
 	
 	if(makeimage) then
 		nrtrace=nrtrace*4
@@ -481,8 +487,9 @@ c Now call the setup for the readFull3D part
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,tau0,
-!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp,SiRalb0,SiRalb1)
-!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,
+!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp,SiRalb0,SiRalb1,
+!$OMP&			vrot,dlam_rot)
+!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,lam,do_rot,
 !$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,R3DC,computelam,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
@@ -511,6 +518,15 @@ c Note we are here using the symmetry between North and South
 			y=rr*cos(phi)
 			z=rr*sin(phi)
 			x=sqrt(Rmax**2-y**2-z**2)
+			if(do_rot) then
+				vrot=vrot0*y/Rmax
+				vx=vrot0*y/Rmax
+				vy=vrot0*x/Rmax
+				vz=0d0
+				rr=sqrt(vx**2+vy**2+vz**2)
+				call rotateY3D(vx,vy,vz,pi/2d0-orbit_inc)
+				vrot=vx*rr/sqrt(vx**2+vy**2+vz**2)
+			endif
 			vx=-1d0
 			vy=0d0
 			vz=0d0
@@ -645,6 +661,10 @@ c Note we are here using the symmetry between North and South
 			j=j+1
 			if(j.lt.nr*2*max(nlatt,nlong)) goto 1
 2			continue
+			if(do_rot) then
+				dlam_rot=vrot/clight
+				call shiftarray(lam,ftot,nlam,dlam_rot,lamemis,computelam)
+			endif
 			fluxp_omp(1:nlam)=fluxp_omp(1:nlam)+ftot(1:nlam)
 			if(makeimage) rphi_image(1:nlam,irtrace,iptrace)=ftot(1:nlam)
 		enddo

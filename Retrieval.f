@@ -2107,6 +2107,7 @@ c	linear
 			y1(i1)=0d0
 			tot=0d0
 			do i0=1,nn0
+				if(abs((xx0(i0)-x1(i1))*2d0*R1(i1)/(x1(i1)))**expR1(i1).lt.50d0) then
 				w=exp(-abs((xx0(i0)-x1(i1))*2d0*R1(i1)/(x1(i1)))**expR1(i1))
 				if(i0.eq.1) then
 					w=w*abs(1d0/xx0(2)-1d0/xx0(1))/2d0
@@ -2117,6 +2118,7 @@ c	linear
 				endif
 				tot=tot+w
 				y1(i1)=y1(i1)+w*yy0(i0)
+				endif
 			enddo
 			y1(i1)=y1(i1)/tot
 		endif
