@@ -431,7 +431,12 @@ c	print*,'EUV: ',tot
 		Hstar0(1:nr)=Hstar(1:nr)/betaF
 	endif
 	if(do3D.and.deepredist.and.deepredisttype.eq.'fixflux') then
-		Hstar(1:nr)=Hstar0(1:nr)*betaF
+		if(betaF.gt.0d0) then
+			Hstar(1:nr)=Hstar(1:nr)*betaT/betaF
+		endif
+		do ir=1,nr
+			Hstar(ir)=min(Hstar(ir)+Hstar0(ir)*(betaF-betaT),0d0)
+		enddo
 	endif
 
 	iter=1
