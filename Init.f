@@ -808,6 +808,14 @@ c select at least the species relevant for disequilibrium chemistry
 		enddo
 	endif
 
+	do i=1,n_ret
+		if(RetPar(i)%keyword(1:6).eq."Tpoint") then
+			RetPar(i)%xmin=Tmin
+			RetPar(i)%xmax=Tmax
+			RetPar(i)%logscale=logTprofile
+		endif
+	enddo
+
 	if(pos_dT) then
 		do i=1,n_ret
 			if(RetPar(i)%keyword(1:7).eq."dTpoint") then
@@ -1013,6 +1021,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Tmin
 		case("tmax")
 			read(key%value,*) Tmax
+		case("logtprofile")
+			read(key%value,*) logTprofile
 		case("eps","epsck")
 			read(key%value,*) epsCk
 		case("epslines","eps_lines")
@@ -2007,6 +2017,8 @@ c  GGchem was still implemented slightly wrong.
 	nPom=50
 	Tmin=0d0
 	Tmax=2900d0
+	
+	logTprofile=.true.
 	
 	TP0=600d0
 	dTP=0.1
