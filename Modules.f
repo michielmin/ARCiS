@@ -207,8 +207,8 @@ c===============================================================================
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:),planet_albedo(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	real*8 planetform_fdust,planetform_fplan,planetform_Mstart,planetform_SolidC,vrot0
-	real*8 planetform_Macc,planetform_Dmigrate,planetform_Rend,TeffPoutput,Hydrogenloss
-	logical planetform,massprior,retrievestar,simAb_converge,log_emis,randomstart,logTprofile
+	real*8 planetform_Macc,planetform_Dmigrate,planetform_Rend,TeffPoutput,Hydrogenloss,taurexsmooth
+	logical planetform,massprior,retrievestar,simAb_converge,log_emis,randomstart,logTprofile,taurexprofile
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
 	real*8 molfracs_atoms_outgas(41),MMW0

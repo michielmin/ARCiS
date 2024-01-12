@@ -996,7 +996,7 @@ c	MMW=2.2
 	IMPLICIT NONE
 	real*8 Ppoint0(nTpoints+nVpoints+nIRpoints),Tpoint0(nTpoints+nVpoints+nIRpoints),PrefTp0
 	real*8 Tc,Gplan,TV(nr),TIR(nr),Tfree(nr)
-	integer i
+	integer i,j,nj
 
 	TV=0d0
 	TIR=0d0
@@ -1033,6 +1033,23 @@ c		call MakePTstruct_T(P,TIR,nr,Ppoint0,Tpoint0,nIRpoints)
 	endif
 
 	T=(TV**4+TIR**4+Tfree**4+Tmin**4)**0.25
+
+	if(taurexprofile) then
+		call regridarray(log10(Ppoint),log10(dTpoint),nTpoints,log10(P),T,nr)
+		T=10d0**T
+		TV=T
+		do i=1,nr
+			nj=0
+			Tc=0d0
+			do j=1,nr
+				if(abs(log10(P(i)/P(j))).le.(taurexsmooth/2d0)) then
+					Tc=Tc+TV(j)
+					nj=nj+1
+				endif
+			enddo
+			if(nj.gt.0) T(i)=Tc/real(nj)
+		enddo
+	endif
 	
 	return
 	end

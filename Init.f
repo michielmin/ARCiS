@@ -1023,6 +1023,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Tmax
 		case("logtprofile")
 			read(key%value,*) logTprofile
+		case("taurexprofile")
+			read(key%value,*) taurexprofile
+		case("taurexsmooth")
+			read(key%value,*) taurexsmooth
 		case("eps","epsck")
 			read(key%value,*) epsCk
 		case("epslines","eps_lines")
@@ -2019,6 +2023,8 @@ c  GGchem was still implemented slightly wrong.
 	Tmax=2900d0
 	
 	logTprofile=.true.
+	taurexprofile=.false.
+	taurexsmooth=1.2
 	
 	TP0=600d0
 	dTP=0.1
