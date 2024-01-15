@@ -3,7 +3,7 @@
 	use Constants
 	use AtomsModule
 	IMPLICIT NONE
-	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,met_r,dens1bar,minZ,Tc,Rscale
+	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,tot2,met_r,dens1bar,minZ,Tc,Rscale
 	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill,MMW_form,P0,R0,Kzz_r(nr)
 	parameter(RgasBar=82.05736*1.01325)
 	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3,ir
@@ -52,12 +52,30 @@
 			tot=0d0
 			mixrat_r(i,1:nmol)=mixrat(1:nmol)
 			do imol=1,nmol
-				if(mixrat_r(i,imol).gt.0d0) tot=tot+mixrat_r(i,imol)
-			enddo
-			if(tot.gt.0d0) mixrat_r(i,1:nmol)=mixrat_r(i,1:nmol)/tot
-			do imol=1,nmol
 				if(P(i).lt.Pswitch_mol(imol)) mixrat_r(i,imol)=abun_switch_mol(imol)
 			enddo
+			if(dobackgroundgas) then
+				do imol=1,nmol
+					if(mixrat_r(i,imol).gt.0d0.and..not.backgroundgas(imol)) tot=tot+mixrat_r(i,imol)
+				enddo
+				if(tot.gt.1d0) then
+					modelfail=.true.
+					return
+				else
+					tot2=0d0
+					do imol=1,nmol
+						if(mixrat_r(i,imol).gt.0d0.and.backgroundgas(imol)) tot2=tot2+mixrat_r(i,imol)
+					enddo
+					do imol=1,nmol
+						if(mixrat_r(i,imol).gt.0d0.and.backgroundgas(imol)) mixrat_r(i,imol)=mixrat_r(i,imol)*(1d0-tot)/tot2
+					enddo
+				endif
+			else
+				do imol=1,nmol
+					if(mixrat_r(i,imol).gt.0d0) tot=tot+mixrat_r(i,imol)
+				enddo
+				if(tot.gt.0d0) mixrat_r(i,1:nmol)=mixrat_r(i,1:nmol)/tot
+			endif
 		enddo
 		mixrat_optEC_r=0d0
 		call doPhotoChemMol()

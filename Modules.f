@@ -188,7 +188,7 @@ c===============================================================================
 	integer idum,maxiter,miniter,Nphot0,idum0,iWolk
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib,do_rayleigh,isoFstar
-	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS
+	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS,modelfail
 	logical,allocatable :: includemol(:),diseqmol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,twind,epsiter,specres_LR
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,metallicity0,vfrag,betaF,kappaUV0,scaleUV
@@ -344,7 +344,7 @@ c for exchange when computing secondary atmosphere
      &				 4,3,2,2,4,3 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt,n_instr
-	logical opacitymode,Mp_from_logg,trend_compute
+	logical opacitymode,Mp_from_logg,trend_compute,backgroundgas(nmol_data),dobackgroundgas
 	integer nPom,nTom
 	character*500 opacitydir,specresfile,starfile
 	character*500,allocatable :: instrument(:)

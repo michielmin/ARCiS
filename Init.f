@@ -788,6 +788,10 @@ c select at least the species relevant for disequilibrium chemistry
 		enddo
 	endif
 
+	dobackgroundgas=.false.
+	do i=1,nmol
+		if(backgroundgas(i)) dobackgroundgas=.true.
+	enddo
 	if(dochemistry.or.secondary_atmosphere) then
 		outputdirGGchem=outputdir
 		allocate(usemolGGchem(nmol))
@@ -797,6 +801,7 @@ c select at least the species relevant for disequilibrium chemistry
 		else
 			call init_GGchem(molname,nmol,condensates)
 		endif
+		dobackgroundgas=.false.
 	endif
 
 	if(pos_dT_lowest) then
@@ -1061,6 +1066,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadPswitch(key)
 		case("abunswitch","abun_switch")
 			call ReadAbunSwitch(key)
+		case("background","backgroundgas")
+			call ReadBackgroundgas(key)
 		case("isotope","f_isotope")
 			call ReadIsotope(key)
 		case("setsurfp","setsurfpressure")
@@ -1775,6 +1782,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Pswitch_mol=0d0
 	abun_switch_mol=0d0
 	setsurfpressure=.false.
+	backgroundgas=.false.
 	
 	Nphot0=2500
 	
@@ -2286,6 +2294,28 @@ c number of cloud/nocloud combinations
 		endif
 	enddo
 	call output("Molecule not recognised in abun_switch")
+	stop
+	
+	return
+	end
+	
+	subroutine ReadBackgroundgas(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i
+	
+	do i=1,nmol_data
+		if(key%orkey2.eq.molname(i)) then
+			if(i.le.nmol) then
+				read(key%value,*) backgroundgas(i)
+			endif
+			return
+		endif
+	enddo
+	call output("Molecule not recognised as background gas")
 	stop
 	
 	return

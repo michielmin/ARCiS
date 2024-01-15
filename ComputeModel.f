@@ -3,6 +3,7 @@
 	IMPLICIT NONE
 	logical recomputeopacities
 	
+	modelfail=.false.
 	if(do3D) then
 		call Run3D(recomputeopacities)
 	else
@@ -41,7 +42,9 @@
 
 			if(fixnight2day.and..not.do3D) call ComputeNight2Day((nTiter.le.1))
 			call SetupStructure(.true.)
+			if(modelfail) return
 			call SetupOpacities()
+			if(modelfail) return
 			if(nTiter.eq.1) then
 				f=1d0
 			else
@@ -51,6 +54,7 @@
 			endif
 			if(f.gt.1d0) f=1d0
 			call DoComputeT(Tconverged,f)
+			if(modelfail) return
 			if(Tconverged.and.nTiter.ge.miniter) exit
 c			call SetoutputMode(.true.)
 c			call output("Chemistry cpu time: " // trim(dbl2string(timechem,'(f10.4)')) // " s")
@@ -68,11 +72,14 @@ c			call SetoutputMode(.false.)
 			computelam=.not.RTgridpoint
 			if(forceEbalance) computelam=.true.
 			call SetupStructure(.true.)
+			if(modelfail) return
 			call SetupOpacities()
+			if(modelfail) return
 			if(forceEbalance) then
 				f=1d0
 				nTiter=1
 				call DoComputeT(Tconverged,f)
+				if(modelfail) return
 				computelam=.not.RTgridpoint
 			endif
 			par_tprofile=temp
@@ -81,8 +88,10 @@ c			call SetoutputMode(.false.)
 		endif
 	else
 		call SetupStructure(computeopac)
+		if(modelfail) return
 		if(domakeai.and..not.modelsucces) return
 		if(computeopac) call SetupOpacities()
+		if(modelfail) return
 	endif
 	call cpu_time(stoptime)
 	call output("Opacity computation: " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
