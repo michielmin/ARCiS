@@ -14,7 +14,7 @@
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,ComputeKzz,err,maxerr
-	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
+	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale,fcond
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
 	logical ini,Tconverged
@@ -305,6 +305,11 @@ c H2O: 7
 	enddo
 	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*scaleUV*Sigmadot/tot
 
+	fcond=0d0
+	if(densv(1,1).lt.Clouddens(1)*xv_bot(1)) then
+		fcond=1d0-densv(1,1)/(Clouddens(1)*xv_bot(1))
+	endif
+
 	SKIP=.false.
 	INCFD=1
 	x(1:nnr)=Kd(1:nnr)*Clouddens(1:nnr)
@@ -357,7 +362,7 @@ c equations for number of Nuclii
 	Mc=0d0
 	x=0d0
 	Mb(1)=1d0
-	x(1)=0d0
+	x(1)=Cloud(ii)%xm_bot
 	do i=2,nnr-1
 		Mb(i)=Mb(i)-drhovsed(i)
 
@@ -417,7 +422,7 @@ c equations for mass in Nuclii
 		Mc=0d0
 		x=0d0
 		Mb(1)=1d0
-		x(1)=0d0
+		x(1)=Cloud(ii)%xm_bot
 		do i=2,nnr-1
 			Mb(i)=Mb(i)-drhovsed(i)
 
@@ -482,11 +487,11 @@ c equations for material
 	i=1
 	j=j+1
 	Aomp(j,ixc(iCS,i))=1d0
-	xomp(j)=0d0
+	xomp(j)=xv_bot(iCS)*fcond
 
 	j=j+1
 	Aomp(j,ixv(iCS,i))=1d0
-	xomp(j)=xv_bot(iCS)
+	xomp(j)=xv_bot(iCS)*(1d0-fcond)
 	do i=2,nnr-1
 		j=j+1
 

@@ -405,7 +405,7 @@ c for exchange when computing secondary atmosphere
 		character*500 species,hazetype,file
 		integer nmat,nlam
 		character*500,allocatable :: lnkfile(:,:),material(:)
-		real*8 Kzz,Sigmadot
+		real*8 Kzz,Sigmadot,xm_bot
 		real*8 kappa,albedo,kpow,klam
 		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:),KeFile(:,:),KaFile(:,:),KsFile(:,:)
 		integer,allocatable :: nax(:)

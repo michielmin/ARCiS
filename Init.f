@@ -1912,6 +1912,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%rpow=0d0
 		Cloud(i)%Pref=1d0
 		Cloud(i)%rnuc=0.001
+		Cloud(i)%xm_bot=0d0
 		Cloud(i)%blend=.true.
 		Cloud(i)%haze=.false.
 		Cloud(i)%condensates=.true.
@@ -2798,6 +2799,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%GlobalKzz
 		case("sigmadot","nucleation")
 			read(key%value,*) Cloud(j)%Sigmadot
+		case("xm_bot")
+			read(key%value,*) Cloud(j)%xm_bot
 		case("reff")
 			read(key%value,*) Cloud(j)%reff
 		case("veff")
