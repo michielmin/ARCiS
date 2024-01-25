@@ -86,6 +86,7 @@ OBJS	= Modules.o \
 		easy_chem.o \
 		ComputeT.o \
 		DiffuseCloud.o \
+		WaterCloud.o \
 		diseq_diffusion.o \
 		diseq_rate.o \
 		diseq_timescale.o \

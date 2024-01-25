@@ -46,7 +46,7 @@
 
 	amin=C%rv(isize)
 	amax=C%rv(isize)
-	if(Cloud(ii)%type.eq."DIFFUSE".and.cloud_dens(isize,ii).lt.1d-40) then
+	if((Cloud(ii)%type.eq."DIFFUSE".or.Cloud(ii)%type.eq."WATER").and.cloud_dens(isize,ii).lt.1d-40) then
 		C%M(isize)=(3d0*4d0*pi*(amin*1d-4)**3)/3d0
 		C%rho=3d0
 		do ilam=1,C%nlam

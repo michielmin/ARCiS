@@ -873,15 +873,15 @@ c===============================================================================
 		Ih(ir,1:nrhs)=Ih(ir,1:nrhs)+yh(1:nrhs)/2d0
 	enddo
 
-c	x1=dtau(nr)
-c	do ir=nr-1,2,-1
-c		x1=x1+dtau(ir)
-c		if(x1.gt.1d-6) then
-c			s0=Ij(ir,1:nrhs)
-c			s1=Ij(ir+1,1:nrhs)
-c			Ih(ir,1:nrhs)=(s0-s1)/dtau(ir)
-c		endif
-c	enddo
+	x1=dtau(nr)
+	do ir=nr-1,1,-1
+		x1=x1+dtau(ir)
+		if(x1.gt.1d-6) then
+			s0=Ij(ir,1:nrhs)
+			s1=Ij(ir+1,1:nrhs)
+			Ih(ir,1:nrhs)=(s0-s1)/dtau(ir)
+		endif
+	enddo
 
 	return
 	end

@@ -21,6 +21,13 @@
 			Cloud(ii)%sigma=1d-10
 			Cloud(ii)%onepart=.false.
 			call SetupPartCloud(ii)
+		case("WATER")
+			Cloud(ii)%nlam=nlam
+			call WaterCloud(ii)
+			Cloud(ii)%rv=Cloud(ii)%rv*1d4
+			Cloud(ii)%sigma=1d-10
+			Cloud(ii)%onepart=.false.
+			call SetupPartCloud(ii)
 		case("FILE")
 			Cloud(ii)%nlam=nlam
 			call regridN(Cloud(ii)%file,P,cloud_dens(1:nr,ii),nr,2,6,1,1,.false.,.false.)
@@ -185,6 +192,12 @@ c 90% MgSiO3
 			if(tot.gt.0d0) then
 				cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%tau/tot
 			endif
+c		case("HELONG")
+c			Cloud(ii)%nlam=nlam
+c			call HelongCloud(ii)
+c			Cloud(ii)%sigma=1d-10
+c			Cloud(ii)%onepart=.false.
+c			call SetupPartCloud(ii)
 		case default
 			call output("Cloud type unknown: " // trim(Cloud(ii)%type))
 			stop

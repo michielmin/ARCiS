@@ -689,7 +689,7 @@ c	condensates=(condensates.or.cloudcompute)
 			enddo
 			allocate(Cloud(i)%cryst(nr,40))
 			Cloud(i)%cryst=Cloud(i)%cryst0
-			if(Cloud(i)%type.eq.'DIFFUSE') then
+			if(Cloud(i)%type.eq.'DIFFUSE'.or.Cloud(i)%type.eq.'WATER') then
 				Cloud(i)%opacitytype="MATERIAL"
 				Cloud(i)%nmat=14
 				Cloud(i)%material(1)='RUTILE'
