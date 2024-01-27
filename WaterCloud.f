@@ -14,16 +14,16 @@
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,ComputeKzz,err,maxerr
-	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale,fcond
+	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale,fcond,mixrat_bot
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
-	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:)
+	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:),CloudMR(:)
 	logical,allocatable :: empty(:),docondense(:),liq(:)
 	integer iCS,ir,nrdo
 	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil,St
-	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:),CloudtauUV(:),CloudkappaUV(:)
+	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:)
 	integer INCFD,IERR
 	logical SKIP
 	real*8 time,tcrystinv,nucryst,Tcryst
@@ -53,7 +53,7 @@
 	endif
 	allocate(Kd(nnr),Kg(nnr),Km(nnr))
 	allocate(logCloudP(nnr))
-	allocate(liq(nnr))
+	allocate(liq(nnr),CloudMR(nnr))
 	if(complexKzz) allocate(CloudHp(nnr))
 	
 	niter=500
@@ -104,6 +104,7 @@ c H2O: 7
 
 	mutot=0d0
 	xv_bot=mixrat_r(1,1)
+	mixrat_bot=mixrat_r(1,1)
 	do i=1,nmol
 		if(includemol(i)) mutot=mutot+mixrat_r(1,i)*Mmol(i)
 	enddo
@@ -216,6 +217,13 @@ c H2O: 7
 	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudR,IERR)
 	CloudR(1:nnr)=exp(CloudR(1:nnr))
 
+	SKIP=.false.
+	INCFD=1
+	logx(1:nr)=log(mixrat_r(1:nr,1))
+	call DPCHIM(nr,logP,logx,dlogx,INCFD)
+	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudMR,IERR)
+	CloudMR(1:nnr)=exp(CloudMR(1:nnr))
+
 	if(complexKzz) then
 		SKIP=.false.
 		INCFD=1
@@ -288,7 +296,7 @@ c H2O: 7
 	do i=1,nnr
 		call PvapH2O(CloudT(i),densv(i,1),liq(i))
 		densv(i,1)=1d6*densv(i,1)*(mu(1)*mp/(kb*CloudT(i)))
-		if(densv(i,1).lt.Clouddens(i)*xv_bot(1)) docondense(1)=.true.
+		if(densv(i,1).lt.Clouddens(i)*xv_bot(1)*CloudMR(i)/mixrat_bot) docondense(1)=.true.
 		gz=Ggrav*Mplanet/CloudR(i)**2
 		if(Cloud(ii)%hazetype.eq.'optEC') then
 			Sn(i)=Clouddens(i)*CloudkappaUV(i)*exp(-CloudtauUV(i))
@@ -327,7 +335,6 @@ c H2O: 7
 	allocate(Aomp(NN,NN))
 	allocate(AB(7,NN))
 !$OMP END PARALLEL
-	allocate(ScTot(2,nCS,NN),cryst(nCS,nnr))
 
 c start the loop
 	do iter=1,niter
@@ -413,7 +420,15 @@ c			call computemedian(tcinv(1:iter,i),iter,tcoaginv)
 c	call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 	call dgtsv(nnr,NRHS,Ma,Mb,Mc,x,nnr,info)
 	
-	xn(1:nnr)=x(1:nnr)
+	if(iter.eq.1) then
+		xn(1:nnr)=x(1:nnr)
+	else
+		maxerr=0d0
+		do i=1,nnr
+			if(x(i).lt.0d0) x(i)=0d0
+		enddo
+		xn(1:nnr)=(xn(1:nnr)+x(1:nnr))/2d0
+	endif
 
 	if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
 c equations for mass in Nuclii
@@ -449,7 +464,14 @@ c equations for mass in Nuclii
 c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 		call dgtsv(nnr,NRHS,Ma,Mb,Mc,x,nnr,info)
 	
-		xm(1:nnr)=x(1:nnr)
+		if(iter.eq.1) then
+			xm(1:nnr)=x(1:nnr)
+		else
+			do i=1,nnr
+				if(x(i).lt.0d0) x(i)=0d0
+			enddo
+			xm(1:nnr)=(xm(1:nnr)+x(1:nnr))/2d0
+		endif
 	else
 		xm=xn
 	endif
@@ -508,7 +530,7 @@ c equations for material
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))
      &					+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 
-		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)!*CloudMR(i)/mixrat_bot
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Sc(i)*densv(i,iCS)/mpart(i)
 		else
 		Aomp(j,ixc(iCS,i))=1d0
@@ -526,7 +548,7 @@ c equations for material
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-2d0*Clouddens(i)*Kg(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))
      &					+1d0/(dz*(CloudR(i)-CloudR(i-1))))
 
-		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-Sc(i)*xn(i)*Clouddens(i)
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-Sc(i)*xn(i)*Clouddens(i)!*CloudMR(i)/mixrat_bot
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Sc(i)*densv(i,iCS)/mpart(i)
 	enddo
 	i=nnr
@@ -561,8 +583,6 @@ c Use Band matrix algorithm
 	enddo
 
 	do i=1,nnr
-		ScTot(1,iCS,i)=Sc(i)*xn(i)*Clouddens(i)
-		ScTot(2,iCS,i)=Sc(i)*densv(i,iCS)/mpart(i)
 		if(empty(i)) xomp(ixc(iCS,i))=0d0
 		xc(iCS,i)=xomp(ixc(iCS,i))
 		xv(iCS,i)=xomp(ixv(iCS,i))

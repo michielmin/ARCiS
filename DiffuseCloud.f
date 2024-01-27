@@ -575,7 +575,15 @@ c			call computemedian(tcinv(1:iter,i),iter,tcoaginv)
 c	call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 	call dgtsv(nnr,NRHS,Ma,Mb,Mc,x,nnr,info)
 	
-	xn(1:nnr)=x(1:nnr)
+	if(iter.eq.1) then
+		xn(1:nnr)=x(1:nnr)
+	else
+		maxerr=0d0
+		do i=1,nnr
+			if(x(i).lt.0d0) x(i)=0d0
+		enddo
+		xn(1:nnr)=(xn(1:nnr)+x(1:nnr))/2d0
+	endif
 
 	if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
 c equations for mass in Nuclii
@@ -611,7 +619,14 @@ c equations for mass in Nuclii
 c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 		call dgtsv(nnr,NRHS,Ma,Mb,Mc,x,nnr,info)
 	
-		xm(1:nnr)=x(1:nnr)
+		if(iter.eq.1) then
+			xm(1:nnr)=x(1:nnr)
+		else
+			do i=1,nnr
+				if(x(i).lt.0d0) x(i)=0d0
+			enddo
+			xm(1:nnr)=(xm(1:nnr)+x(1:nnr))/2d0
+		endif
 	else
 		xm=xn
 	endif

@@ -1368,7 +1368,7 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 c0,c1,c2,c3,c4,Pm,fH2O,PH2Omax,mutot
+	real*8 c0,c1,c2,c3,c4,Pm,fH2O,PH2Omax,mutot,mixrat_tot
 	integer i
 	logical liquid
 	
@@ -1390,9 +1390,14 @@ c		Pmax=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750
 		if(Pmax.gt.PH2Omax) Pmax=PH2Omax
 	endif
 	mutot=0d0
+	mixrat_tot=0d0
 	do i=1,nmol
-		if(includemol(i)) mutot=mutot+mixrat_r(1,i)*Mmol(i)
+		if(includemol(i)) then
+			mutot=mutot+mixrat(1)*Mmol(i)
+			mixrat_tot=mixrat_tot+mixrat(1)
+		endif
 	enddo
+	mutot=mutot/mixrat_tot
 	if(setsurfpressure) then
 		mixrat(1)=Pmax
 		Pmax=0d0
@@ -1400,7 +1405,7 @@ c		Pmax=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750
 			Pmax=Pmax+mixrat(i)*mutot/Mmol(1)
 		enddo
 	else
-		Pmax=Pmax/(mixrat(1)*mutot/Mmol(1))
+		Pmax=Pmax/(mixrat(1)*mutot/(Mmol(1)*mixrat_tot))
 	endif
 	Pm=Pmin
 	if(Pm.gt.Pmax/100d0) Pm=Pmax/100d0
