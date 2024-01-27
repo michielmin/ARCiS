@@ -1175,6 +1175,38 @@ c        print*,'series failed in expint'
 	return
 	end
 
+
+	subroutine computeavlast(x,n,xm)
+	IMPLICIT NONE
+	integer i,n,i1,i2,sig
+	real*8 x(n),xm,tot,w
+
+	sig=20
+	
+	if(n.le.sig) then
+		xm=x(n)
+		return
+	endif
+
+	xm=0d0
+	do i=n-sig+1,n
+		xm=xm+x(i)/real(sig)
+	enddo
+	return
+
+	tot=0d0
+	xm=0d0
+	do i=n,1,-1
+		w=exp(-(real(n-i)/real(sig))**2)
+		tot=tot+w
+		xm=xm+w*x(i)
+		if((n-i-1).gt.10*sig) exit
+	enddo
+	xm=xm/tot
+
+	return
+	end
+
 	subroutine printstats(x,n)
 	IMPLICIT NONE
 	integer i,n

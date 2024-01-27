@@ -19,7 +19,7 @@
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
-	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:),CloudMR(:)
+	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:),CloudMR(:),xn_iter(:,:),xm_iter(:,:)
 	logical,allocatable :: empty(:),docondense(:),liq(:)
 	integer iCS,ir,nrdo
 	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil,St
@@ -56,7 +56,7 @@
 	allocate(liq(nnr),CloudMR(nnr))
 	if(complexKzz) allocate(CloudHp(nnr))
 	
-	niter=500
+	niter=10000
 	if(computeT) then
 		if(nTiter.eq.1) then
 			niter=20
@@ -172,6 +172,7 @@ c H2O: 7
 	allocate(drhoKd(nnr),drhoKg(nnr))
 	allocate(drhovsed(nnr))
 	allocate(tcinv(niter,nnr))
+	allocate(xn_iter(niter,nnr),xm_iter(niter,nnr))
 	allocate(vsed(nnr))
 
 	allocate(ixv(nCS,nnr))
@@ -420,15 +421,13 @@ c			call computemedian(tcinv(1:iter,i),iter,tcoaginv)
 c	call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 	call dgtsv(nnr,NRHS,Ma,Mb,Mc,x,nnr,info)
 	
-	if(iter.eq.1) then
-		xn(1:nnr)=x(1:nnr)
-	else
-		maxerr=0d0
-		do i=1,nnr
-			if(x(i).lt.0d0) x(i)=0d0
-		enddo
-		xn(1:nnr)=(xn(1:nnr)+x(1:nnr))/2d0
-	endif
+	do i=1,nnr
+		if(x(i).lt.0d0) x(i)=0d0
+	enddo
+	xn_iter(iter,1:nnr)=x(1:nnr)
+	do i=1,nnr
+		call computeavlast(xn_iter(1:iter,i),iter,xn(i))
+	enddo
 
 	if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
 c equations for mass in Nuclii
@@ -464,14 +463,13 @@ c equations for mass in Nuclii
 c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 		call dgtsv(nnr,NRHS,Ma,Mb,Mc,x,nnr,info)
 	
-		if(iter.eq.1) then
-			xm(1:nnr)=x(1:nnr)
-		else
-			do i=1,nnr
-				if(x(i).lt.0d0) x(i)=0d0
-			enddo
-			xm(1:nnr)=(xm(1:nnr)+x(1:nnr))/2d0
-		endif
+		do i=1,nnr
+			if(x(i).lt.0d0) x(i)=0d0
+		enddo
+		xm_iter(iter,1:nnr)=x(1:nnr)
+		do i=1,nnr
+			call computeavlast(xm_iter(1:iter,i),iter,xm(i))
+		enddo
 	else
 		xm=xn
 	endif
@@ -620,7 +618,7 @@ c Use Band matrix algorithm
 	enddo
 	
 	
-	if(maxerr.lt.1d-3.and.iter.gt.5) exit
+	if(maxerr.lt.1d-4.and.iter.gt.40) exit
 	enddo
 c end the loop
 
@@ -699,7 +697,7 @@ c H2O
 	deallocate(vth)
 	deallocate(drhoKd,drhoKg)
 	deallocate(drhovsed)
-	deallocate(tcinv)
+	deallocate(tcinv,xn_iter,xm_iter)
 	deallocate(vsed)
 	deallocate(ixv)
 	deallocate(ixc)
