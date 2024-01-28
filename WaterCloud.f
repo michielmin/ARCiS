@@ -429,10 +429,7 @@ c	call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 	do i=1,nnr
 		if(x(i).lt.0d0) x(i)=0d0
 	enddo
-	xn_iter(iter,1:nnr)=x(1:nnr)
-	do i=1,nnr
-		call computeavlast(xn_iter(1:iter,i),iter,xn(i))
-	enddo
+	xn(1:nnr)=x(1:nnr)
 
 	if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
 c equations for mass in Nuclii
@@ -471,10 +468,7 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 		do i=1,nnr
 			if(x(i).lt.0d0) x(i)=0d0
 		enddo
-		xm_iter(iter,1:nnr)=x(1:nnr)
-		do i=1,nnr
-			call computeavlast(xm_iter(1:iter,i),iter,xm(i))
-		enddo
+		xm(1:nnr)=x(1:nnr)
 	else
 		xm=xn
 	endif
