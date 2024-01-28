@@ -1275,7 +1275,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(vth)
 	deallocate(drhoKd,drhoKg)
 	deallocate(drhovsed)
-	deallocate(tcinv,xn_iter,xm_iter)
+	deallocate(tcinv,xn_iter,xm_iter,xc_iter,xv_iter)
 	deallocate(vsed)
 	deallocate(ixv)
 	deallocate(ixc)

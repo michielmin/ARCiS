@@ -19,9 +19,9 @@
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
-	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:),CloudMR(:),xn_iter(:,:),xm_iter(:,:)
+	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:),CloudMR(:),xn_iter(:,:),xm_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
 	logical,allocatable :: empty(:),docondense(:),liq(:)
-	integer iCS,ir,nrdo
+	integer iCS,ir,nrdo,nconv,iconv
 	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil,St
 	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:)
 	integer INCFD,IERR
@@ -56,12 +56,15 @@
 	allocate(liq(nnr),CloudMR(nnr))
 	if(complexKzz) allocate(CloudHp(nnr))
 	
-	niter=10000
+	niter=500
+	nconv=20
 	if(computeT) then
 		if(nTiter.eq.1) then
 			niter=20
+			nconv=5
 		else if(nTiter.le.4) then
 			niter=100
+			nconv=10
 		endif
 	endif
 	
@@ -173,6 +176,7 @@ c H2O: 7
 	allocate(drhovsed(nnr))
 	allocate(tcinv(niter,nnr))
 	allocate(xn_iter(niter,nnr),xm_iter(niter,nnr))
+	allocate(xc_iter(niter,nCS,nnr),xv_iter(niter,nCS,nnr))
 	allocate(vsed(nnr))
 
 	allocate(ixv(nCS,nnr))
@@ -336,7 +340,8 @@ c H2O: 7
 	allocate(Aomp(NN,NN))
 	allocate(AB(7,NN))
 !$OMP END PARALLEL
-
+	
+	iconv=0
 c start the loop
 	do iter=1,niter
 	call tellertje(iter,niter)
@@ -589,6 +594,10 @@ c Use Band matrix algorithm
 		if(xc(iCS,i).lt.0d0) xc(iCS,i)=0d0
 		if(xv(iCS,i).lt.0d0) xv(iCS,i)=0d0
 	enddo
+	xc_iter(iter,1:nCS,1:nnr)=xc(1:nCS,1:nnr)
+	xv_iter(iter,1:nCS,1:nnr)=xv(1:nCS,1:nnr)
+	xn_iter(iter,1:nnr)=xn(1:nnr)
+	xm_iter(iter,1:nnr)=xm(1:nnr)
 
 	maxerr=0d0
 	do i=1,nnr
@@ -616,11 +625,51 @@ c Use Band matrix algorithm
 		if(err.gt.maxerr) maxerr=err
 		rpart(i)=sqrt(rr*rpart(i))
 	enddo
-	
-	
-	if(maxerr.lt.1d-4.and.iter.gt.40) exit
+	if(maxerr.lt.eps) then
+		iconv=iconv+1
+		if(iconv.gt.nconv) exit
+	else
+		iconv=0
+	endif
 	enddo
 c end the loop
+	if(iter.gt.niter) then
+c		if(iconv.eq.0) print*,'Cloud formation not converged: ',maxerr
+		iter=niter
+	endif
+	xn=0d0
+	xm=0d0
+	xc=0d0
+	xv=0d0
+	do i=iter-nconv+1,iter
+		xn(1:nnr)=xn(1:nnr)+xn_iter(i,1:nnr)/real(nconv)
+		xm(1:nnr)=xm(1:nnr)+xm_iter(i,1:nnr)/real(nconv)
+		xc(1:nCS,1:nnr)=xc(1:nCS,1:nnr)+xc_iter(i,1:nCS,1:nnr)/real(nconv)
+		xv(1:nCS,1:nnr)=xv(1:nCS,1:nnr)+xv_iter(i,1:nCS,1:nnr)/real(nconv)
+	enddo
+	do i=1,nnr
+		tot=xm(i)/rho_nuc
+		do iCS=1,nCS
+			tot=tot+xc(iCS,i)/rhodust(iCS)
+		enddo
+		if(tot.gt.0d0) then
+			rho_av(i)=(sum(xc(1:nCS,i))+xm(i))/tot
+		else
+			rho_av(i)=sum(rhodust(1:nCS))/real(nCS)
+		endif
+		tot=sum(xc(1:nCS,i))+xm(i)
+		if(xn(i).gt.0d0) then
+			rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
+			if(.not.rr.ge.Cloud(ii)%rnuc) then
+				rr=Cloud(ii)%rnuc
+				xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
+			endif
+		else
+			rr=Cloud(ii)%rnuc
+			xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
+		endif
+		rpart(i)=rr
+	enddo
 
 
 !$OMP PARALLEL IF(.true.)
@@ -697,7 +746,7 @@ c H2O
 	deallocate(vth)
 	deallocate(drhoKd,drhoKg)
 	deallocate(drhovsed)
-	deallocate(tcinv,xn_iter,xm_iter)
+	deallocate(tcinv,xn_iter,xm_iter,xc_iter,xv_iter)
 	deallocate(vsed)
 	deallocate(ixv)
 	deallocate(ixc)
