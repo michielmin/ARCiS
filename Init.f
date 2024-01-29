@@ -2029,7 +2029,7 @@ c  GGchem was still implemented slightly wrong.
 	nTom=100
 	nPom=50
 	Tmin=2.7d0
-	Tmax=2900d0
+	Tmax=10000d0
 	
 	logTprofile=.true.
 	taurexprofile=.false.
