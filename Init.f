@@ -826,6 +826,10 @@ c select at least the species relevant for disequilibrium chemistry
 			if(RetPar(i)%keyword(1:7).eq."dTpoint") then
 				RetPar(i)%xmin=0d0
 			endif
+			if(RetPar(i)%keyword(1:6).eq."Tpoint") then
+				read(RetPar(i)%keyword(7:len_trim(RetPar(i)%keyword)),*) j
+				if(j.gt.1) RetPar(i)%increase=.true.
+			endif
 		enddo
 	endif
 
