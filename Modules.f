@@ -242,6 +242,9 @@ c for exchange when computing secondary atmosphere
 	real*8 PrefTpoint,wiggle_err
 	integer nVpoints,nIRpoints,nTpoints
 
+	real*8 Rring,dRring,tauRing
+	logical doRing
+
 	logical do3D,init3D
 	real*8 par3Dsteepness
 	

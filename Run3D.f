@@ -826,14 +826,17 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 
 	enddo
 	
-	if(.not.retrieval) then
+	if(.not.retrieval.or.doRing) then
 		Lplanet=0d0
 		do ilam=1,nlam
-			if(computelam(ilam).and.lamemis(ilam)) Lplanet=Lplanet+dfreq(ilam)*phase(1,0,ilam)
+			if(doRing.or.computeT) then
+				if(RTgridpoint(ilam)) Lplanet=Lplanet+dfreq(ilam)*phase(1,0,ilam)
+			else if(computelam(ilam).and.lamemis(ilam)) then
+				Lplanet=Lplanet+dfreq(ilam)*phase(1,0,ilam)
+			endif
 		enddo
-		call output("Teff: " // 
-     &	dbl2string((Lplanet*distance**2*1e-23/(pi*Rplanet**2*((2d0*(pi*kb)**4)/(15d0*hplanck**3*clight**3))))**0.25d0,'(f10.2)')
-     &		// "K" )
+		TeffPoutput=(Lplanet*distance**2*1e-23/(pi*Rplanet**2*((2d0*(pi*kb)**4)/(15d0*hplanck**3*clight**3))))**0.25d0
+		call output("Teff: " // dbl2string(TeffPoutput,'(f10.2)') // "K" )
 	endif
 
 	if(makeimage) then

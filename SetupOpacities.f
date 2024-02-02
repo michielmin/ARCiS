@@ -62,7 +62,7 @@
 	enddo
 	n_nu_line=ng*ng
 c	n_nu_line=ng*min(j,4)
-	if(.not.emisspec.and..not.computeT) n_nu_line=ng
+	if(.not.emisspec.and..not.computeT.and..not.doRing) n_nu_line=ng
 	
 	allocate(nu_line(n_nu_line))
 
@@ -185,12 +185,12 @@ c===============
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,j,imol,ig,jg,ig_c,imol0,w1,nfull,nfast)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,computelam,
-!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,lamemis,useobsgrid,
+!$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,doRing,lamemis,useobsgrid,
 !$OMP&        RTgridpoint,includemol,do_rayleigh,mixrat_PAH,mixrat_optEC0,mixrat_optEC,mixrat_optEC_r,nmap,imap,
 !$OMP&        do_optEC,Cabs_optEC,Csca_optEC)
 !$OMP DO SCHEDULE(DYNAMIC)
 		do i=1,nlam
-			if(computelam(i).and.(emisspec.or.computeT).and.(.not.useobsgrid.or.lamemis(i).or.RTgridpoint(i))) then
+			if(computelam(i).and.(emisspec.or.computeT.or.doRing).and.(.not.useobsgrid.or.lamemis(i).or.RTgridpoint(i))) then
 			kappa_tot(0)=cont_tot(i)
 			do imol=1,nmap
 				kappa_tot(imol)=dot_product(wgg(1:ng),kappa_mol(1:ng,i,imap(imol)))

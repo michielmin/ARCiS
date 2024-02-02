@@ -1436,6 +1436,14 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) kappaUV0
 		case("hydrogenloss")
 			read(key%value,*) Hydrogenloss
+		case("rring")
+			read(key%value,*) Rring
+		case("drring")
+			read(key%value,*) dRring
+		case("tauring")
+			read(key%value,*) tauRing
+		case("doring")
+			read(key%value,*) doRing
 		case("adderr")
 			do i=key%nr1,key%nr2
 				read(key%value,*) ObsSpec(i)%adderr
@@ -1850,6 +1858,11 @@ c  GGchem was still implemented slightly wrong.
 	
 	adiabatic_tprofile=.false.
 	outflow=.false.
+
+	Rring=1.5d0
+	dRring=2.0d0
+	tauRing=0.5d0
+	doRing=.false.
 
 	domakeai=.false.
 	nai=1000
@@ -2590,7 +2603,7 @@ c number of cloud/nocloud combinations
 			nlam=nlam+1
 		enddo
 	endif
-	if(computeT) then
+	if(computeT.or.doRing) then
 		lam0=lminRT
 		nlam=nlam+1
 		do while((lam0+lam0/specres_LR).le.lmaxRT)
@@ -2677,7 +2690,7 @@ c number of cloud/nocloud combinations
 			dlam(ilam)=lam(ilam)/specres
 		enddo
 	endif
-	if(computeT) then
+	if(computeT.or.doRing) then
 		ilam=ilam+1
 		lam(ilam)=lminRT
 		dlam(ilam)=-lam(ilam)/specres_LR
@@ -2699,7 +2712,7 @@ c number of cloud/nocloud combinations
 		endif
 	enddo
 	RTgridpoint=.false.
-	if(computeT) then
+	if(computeT.or.doRing) then
 		do ilam=1,nlam
 			if(dlam(ilam).lt.0d0) then
 				RTgridpoint(ilam)=.true.

@@ -10,7 +10,7 @@
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
 	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:),Tplanet(:)
-	real*8 ComputeKzz,lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,lm2,lm3,cmin
+	real*8 ComputeKzz,lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,cmin
 	integer i1,i2,ibest
 	character*6000 line
 	integer*4 counts, count_rate, count_max
@@ -110,8 +110,6 @@
 	im2=real(nmodels)-real(nmodels)*0.954499736103642+0.5d0
 	im3=real(nmodels)-real(nmodels)*0.997300203936740+0.5d0
 	lm1=sorted(im1)
-	lm2=sorted(im2)
-	lm2=sorted(im3)
 
 	do i=1,nmodels
 		if(.not.(any(var(i,1:n_ret).lt.x1(1:n_ret)).or.any(var(i,1:n_ret).gt.x2(1:n_ret)))) then
@@ -261,6 +259,7 @@ c		call cpu_time(stoptime)
 		endif
 	endif
 
+	if(imodel.gt.0) then
 	if(like(imodel).gt.lm1.or.i.eq.1) then
 		ctrans=maxval(spectrans(i,1:nlam))-minval(spectrans(i,1:nlam))
 		if(ctrans.gt.cmax.or.i.eq.1) then
@@ -288,6 +287,7 @@ c		call cpu_time(stoptime)
 			close(unit=21)	
 		endif
 	endif	
+	endif
 
 	i2d=i2d+1
 	if(i2d.le.n2d) goto 3

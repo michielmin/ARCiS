@@ -12,7 +12,7 @@
 		lamemis=.false.
 		lamtrans=.false.
 	endif
-	if(computeT.and.useobsgrid) lamemis=RTgridpoint
+	if((computeT.or.doRing).and.useobsgrid) lamemis=RTgridpoint
 
 	do i=1,nobs
 		select case(ObsSpec(i)%type)

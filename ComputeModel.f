@@ -2,12 +2,22 @@
 	use GlobalSetup
 	IMPLICIT NONE
 	logical recomputeopacities
+	integer i
+	real*8 fring
 	
+	TeffPoutput=TeffP
 	modelfail=.false.
 	if(do3D) then
 		call Run3D(recomputeopacities)
 	else
 		call ComputeModel1D(recomputeopacities)
+	endif
+
+	if(doRing) then
+	do i=1,nlam
+		call RingFlux(Rplanet,Rstar,Tstar,TeffPoutput,tauRing,Rplanet*Rring,Rplanet*(Rring+dRring),Dplanet,distance,lam(i),fring)
+		flux(0,i)=flux(0,i)+fring
+	enddo
 	endif
 	
 	return
@@ -26,6 +36,7 @@
 	integer i,ilam
 	
 	computeopac=recomputeopacities
+	if(doRing) computelam=.true.
 
 	call cpu_time(starttime)
 	Tconverged=.false.
@@ -98,7 +109,14 @@ c			call SetoutputMode(.false.)
 	if(.not.do3D) then
 		call Raytrace()
 	endif
-	if(emisspec.and..not.useobsgrid.and..not.retrieval) then
+	if(.not.do3D.and.(doRing.or.computeT)) then
+		Lplanet=0d0
+		do ilam=1,nlam
+			if(RTgridpoint(ilam)) Lplanet=Lplanet+dfreq(ilam)*phase(1,0,ilam)
+		enddo
+		TeffPoutput=(Lplanet*distance**2*1e-23/(pi*Rplanet**2*((2d0*(pi*kb)**4)/(15d0*hplanck**3*clight**3))))**0.25d0
+		call output("Teff: " // dbl2string(TeffPoutput,'(f10.2)') // "K" )
+	else if(.not.do3D.and.emisspec.and..not.useobsgrid.and..not.retrieval) then
 		Lplanet=0d0
 		do i=1,nlam
 			if(computelam(i).and.lamemis(i)) Lplanet=Lplanet+dfreq(i)*flux(0,i)
@@ -107,7 +125,7 @@ c			call SetoutputMode(.false.)
 		do i=1,10
 			tot=0d0
 			do ilam=1,nlam
-				tot=tot+dfreq(ilam)*Planck(TeffPoutput,freq(ilam))
+				if(computelam(ilam).and.lamemis(ilam)) tot=tot+dfreq(ilam)*Planck(TeffPoutput,freq(ilam))
 			enddo
 			tot=tot*pi*Rplanet**2*1d23/distance**2
 			TeffPoutput=TeffPoutput*(Lplanet/tot)**0.25
@@ -120,3 +138,36 @@ c			call SetoutputMode(.false.)
 
 	return
 	end
+
+
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+
+	subroutine RingFlux(Rp,Rs,Ts,Tp,tau,Rin,Rout,Dp,Ds,lam,flux)
+	use Constants
+	IMPLICIT NONE
+	real*8 Rp,Rs,Ts,Tp,tau,Rin,Rout,Dp,Ds,flux
+	real*8 T,lam,Planck,nu,A,Ra,Wp,Ws
+	integer i,n
+	parameter(n=100)
+	real*8 R(n)
+
+	nu=1d0/lam
+	do i=1,n
+		R(i)=exp(log(Rin)+log(Rout/Rin)*real(i-1)/real(n-1))
+	enddo
+	flux=0d0
+	Ws=(1d0-sqrt(1d0-(Rs/Dp)**2))
+	do i=1,n-1
+		A=pi*(R(i+1)**2-R(i)**2)
+		Ra=sqrt(R(i+1)*R(i))
+		Wp=(1d0-sqrt(1d0-(Rp/Ra)**2))
+		T=(Ts**4*Ws+Tp**4*Wp)**0.25
+		flux=flux+A*Planck(T,nu)
+	enddo		
+	flux=flux*(1d0-exp(-tau))*1d23/Ds**2
+	
+	return
+	end
+	
