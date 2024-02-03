@@ -24,7 +24,7 @@
 
 	lam_out(1:nlam)=lam(1:nlam)/micron
 	nlam_out=nlam
-c	if(doRing) computelam=.not.RTgridpoint
+	if(doRing) computelam=.not.RTgridpoint
 
 	allocate(docloud0(max(nclouds,1),ncc))
 	allocate(theta(nphase))
