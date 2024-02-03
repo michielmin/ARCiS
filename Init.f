@@ -2065,9 +2065,9 @@ c  GGchem was still implemented slightly wrong.
 	free_tprofile=.false.
 	tau_Vpoint=1d0
 	tau_IRpoint=1d0
-	dT_Vpoint=0d0
-	dT_IRpoint=0d0
-	dTpoint=0d0
+	dT_Vpoint=2d0/7d0
+	dT_IRpoint=2d0/7d0
+	dTpoint=2d0/7d0
 	chimax=1d0
 	pos_dT_lowest=.false.	
 	pos_dT=.false.	
@@ -2165,6 +2165,7 @@ c number of cloud/nocloud combinations
 				else
  				do j=1,nTpoints
 					RetPar(i+j-1)%keyword='dTpoint' // trim(int2string(j,'(i0.3)'))
+					RetPar(i+j-1)%x0=2d0/7d0
 					RetPar(i+j-1)%xmin=-4d0/7d0
 					RetPar(i+j-1)%xmax=4d0/7d0
 					RetPar(i+j-1)%logscale=.false.
