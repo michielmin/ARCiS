@@ -15,7 +15,7 @@
 
 	if(doRing) then
 	do i=1,nlam
-		call RingFlux(Rplanet,Rstar,Tstar,TeffPoutput,tauRing,Rplanet*Rring,Rplanet*(Rring+dRring),Dplanet,distance,lam(i),fring)
+		call RingFlux(Rplanet,Rstar,Tstar,TeffPoutput,tauRing,Rring,dRring,Dplanet,distance,lam(i),fring)
 		flux(0,i)=flux(0,i)+fring
 	enddo
 	endif
@@ -144,10 +144,10 @@ c			call SetoutputMode(.false.)
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 
-	subroutine RingFlux(Rp,Rs,Ts,Tp,tau,Rin,Rout,Dp,Ds,lam,flux)
+	subroutine RingFlux(Rp,Rs,Ts,Tp,tau,Rin,dR,Dp,Ds,lam,flux)
 	use Constants
 	IMPLICIT NONE
-	real*8 Rp,Rs,Ts,Tp,tau,Rin,Rout,Dp,Ds,flux
+	real*8 Rp,Rs,Ts,Tp,tau,Rin,dR,Dp,Ds,flux
 	real*8 T,lam,Planck,nu,A,Ra,Wp,Ws
 	integer i,n
 	parameter(n=100)
@@ -155,7 +155,7 @@ c-----------------------------------------------------------------------
 
 	nu=1d0/lam
 	do i=1,n
-		R(i)=exp(log(Rin)+log(Rout/Rin)*real(i-1)/real(n-1))
+		R(i)=exp(log(Rin*Rp)+log((Rin+dR)/Rin)*real(i-1)/real(n-1))
 	enddo
 	flux=0d0
 	Ws=(1d0-sqrt(1d0-(Rs/Dp)**2))
