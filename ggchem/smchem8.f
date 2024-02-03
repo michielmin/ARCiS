@@ -324,7 +324,10 @@
               f  = f  + coeff(l)*pp**l
               fs = fs + coeff(l)*l*pp**(l-1)
             enddo
-            if (fs==0.d0) print*, "*** fs=0 in smchem8 1d-pre-it."
+            if (fs==0.d0) then
+            	print*, "*** fs=0 in smchem8 1d-pre-it."
+            	return
+            endif
             delta = f/fs
             pp = pp-delta
             if (verbose>1) print'(A2,I3,1pE25.15,1pE10.2)',

@@ -19,7 +19,8 @@ endif
 # array boundary check
 ifeq ($(debug),true)
   ifeq ($(gfort),true)
-    DEBUGGING = -Og -Wall -Wno-unused-variable -fbounds-check -fbacktrace -fcheck=all -ffpe-trap=zero,overflow -g3
+#    DEBUGGING = -Og -Wall -Wno-unused-variable -fbounds-check -fbacktrace -fcheck=all -ffpe-trap=zero,overflow -g3
+    DEBUGGING = -Og -Wall -Wno-unused-variable -fbounds-check -fbacktrace -g3
   else	
     DEBUGGING = -check all -g -traceback -check bounds -check uninit -O0
   endif
