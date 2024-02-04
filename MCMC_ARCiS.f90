@@ -101,9 +101,11 @@ function checkbounds(theta)
 
 end function checkbounds
 #else
-	subroutine doMCMCF90
+	subroutine doMCMCF90(var0,nvar)
 	use GlobalSetup
 	IMPLICIT NONE
+	integer nvar
+	real*8 var0(nvar)
 	call output("ARCiS was compiled without mcmcf90")
 	stop
 	return

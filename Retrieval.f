@@ -826,11 +826,11 @@ c	linear
 						write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j)/ObsSpec(i)%scale,ObsSpec(i)%scale*ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
 					enddo
 					close(unit=20)
-c					open(unit=20,file=trim(outputdir) // "fullobs" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
-c					do j=1,nlam
-c						write(20,*) lam(j)*1d4,specsave(i,j)/ObsSpec(i)%scale
-c					enddo
-c					close(unit=20)
+					open(unit=20,file=trim(outputdir) // "fullobs" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
+					do j=1,nlam
+						write(20,*) lam(j)*1d4,specsave(i,j)/ObsSpec(i)%scale
+					enddo
+					close(unit=20)
 				case("lightcurve")
 					im=0
 					do ilam=1,ObsSpec(i)%nlam

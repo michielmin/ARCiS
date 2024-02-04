@@ -601,10 +601,11 @@ c Note we are here using the symmetry between North and South
 							w1=(R3DC(i,i1+1)-rr)/(R3DC(i,i1+1)-R3DC(i,i1))
 							w2=1d0-w1
 							SiR1=w1*Si(ilam,ig,i1,inu,i)+w2*Si(ilam,ig,i1+1,inu,i)
+							if(computealbedo) SiRalb1=w1*SiSc(ilam,ig,i1,inu,i)+w2*SiSc(ilam,ig,i1+1,inu,i)
 						else
 							SiR1=Si(ilam,ig,nr,inu,i)
+							if(computealbedo) SiRalb1=SiSc(ilam,ig,nr,inu,i)
 						endif
-						if(computealbedo) SiRalb1=w1*SiSc(ilam,ig,i1,inu,i)+w2*SiSc(ilam,ig,i1+1,inu,i)
 						call ComputeI12(tau1,tau0,SiR1,SiR0(ilam,ig),contr)
 						ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
 						if(computealbedo) then
