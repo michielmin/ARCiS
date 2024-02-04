@@ -679,6 +679,10 @@ c	endif
 		tot=sum(molfracs_atoms_outgas(1:N_atoms))
 		molfracs_atoms=molfracs_atoms_outgas/tot
 	endif
+
+	do i=1,N_atoms
+		if(molfracs_atoms(i).lt.1d-40) molfracs_atoms(i)=1d-40
+	enddo
 	
 	return
 	end

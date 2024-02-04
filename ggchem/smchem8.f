@@ -452,6 +452,7 @@
             s3 = 0
             s4 = 0
             lnp3 = g(i3)
+			if(i3.gt.0) then
             do j=1,m_kind(0,i3)
               e = m_kind(j,i3) 
               if (e==i1) then
@@ -464,6 +465,7 @@
               endif  
               lnp3 = lnp3 + m_anz(j,i3)*LOG(anmono(e)*kT)
             enddo
+			endif
             lnp = g(i)
             do j=1,m_kind(0,i)
               e = m_kind(j,i)
