@@ -3,7 +3,6 @@
 	IMPLICIT NONE
 	logical recomputeopacities
 	integer i
-	real*8 fring
 	
 	TeffPoutput=TeffP
 	modelfail=.false.
@@ -15,8 +14,8 @@
 
 	if(doRing) then
 	do i=1,nlam
-		call RingFlux(Rplanet,Rstar,Tstar,TeffPoutput,tauRing,Rring,dRring,Dplanet,distance,lam(i),fring)
-		flux(0,i)=flux(0,i)+fring
+		call RingFlux(Rplanet,Rstar,Tstar,TeffPoutput,tauRing,Rring,dRring,Dplanet,distance,lam(i),FRing(i))
+		flux(0,i)=flux(0,i)+FRing(i)
 	enddo
 	endif
 	

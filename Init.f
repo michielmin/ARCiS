@@ -921,6 +921,8 @@ c In this case the beta map should be the static one. Make sure this is set prop
 		allocate(PTaverage3D(0:nphase,nr))
 		allocate(mixrat_average3D(0:nphase,nr,nmol))
 	endif
+	
+	if(doRing) allocate(FRing(nlam))
 
 	if(planetform) call InitFormation(Mstar,Tstar,Rstar,planetform_SolidC,planetform_Macc)
 	

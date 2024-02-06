@@ -105,6 +105,30 @@ c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
 	enddo
 	close(unit=30)
 
+	if(doRing) then
+	filename=trim(outputdir) // "ring" // trim(side)
+	call output("Writing spectrum to: " // trim(filename))
+	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
+	if(nclouds.gt.0) then
+		form='("#",a13,2a19,' // trim(int2string(ncc,'(i3)')) // 
+     &				 '(' // trim(int2string(19-nclouds,'(i3)')) // '(" "),' // 
+     &				trim(int2string(nclouds,'(i3)')) // 'l1))'
+		write(30,form) "lambda [mu]","flux ring [Jy]","flux [Jy]",docloud0(1:nclouds,1:ncc)
+	else
+		write(30,'("#",a13,a19,a19)') "lambda [mu]","flux ring [Jy]","flux [Jy]"
+	endif
+	form='(f14.6,' // int2string(ncc+2,'(i3)') // 'es19.7E3)'
+	do i=1,nlam_out
+		if(lamemis(i).and.computelam(i)) then
+		write(30,form) lam_out(i),FRing(i),
+c     &					flux(0:ncc,i)
+c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam(i+1))
+     &					(phase(1,j,i)+flux(j,i),j=0,ncc)
+		endif
+	enddo
+	close(unit=30)
+	endif
+
 	endif
 	
 	if(transspec) then

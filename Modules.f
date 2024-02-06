@@ -243,6 +243,7 @@ c for exchange when computing secondary atmosphere
 	integer nVpoints,nIRpoints,nTpoints
 
 	real*8 Rring,dRring,tauRing
+	real*8,allocatable :: FRing(:)
 	logical doRing
 
 	logical do3D,init3D

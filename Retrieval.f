@@ -1644,9 +1644,7 @@ c			vec(i)=gasdev(idum)
 			if(ObsSpec(i)%filter.ne.' ') then
 				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
 			else if(useobsgrid) then
-				do ilam=1,ObsSpec(i)%ndata
-					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
-				enddo
+				spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 			else
 				nuse=0
 				do j=1,nlam
@@ -1672,9 +1670,7 @@ c			vec(i)=gasdev(idum)
 			if(ObsSpec(i)%filter.ne.' ') then
 				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
 			else if(useobsgrid) then
-				do ilam=1,ObsSpec(i)%ndata
-					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
-				enddo
+				spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 			else
 				do j=1,nlam
 					if(computelam(j)) then
@@ -1696,9 +1692,7 @@ c			vec(i)=gasdev(idum)
 			if(ObsSpec(i)%filter.ne.' ') then
 				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
 			else if(useobsgrid) then
-				do ilam=1,ObsSpec(i)%ndata
-					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
-				enddo
+				spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 			else
 				do j=1,nlam
 					if(computelam(j)) then
@@ -1720,9 +1714,7 @@ c			vec(i)=gasdev(idum)
 				call regridfilter(lam,starspec,nlam,starspecregrid,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
 				spec(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)/starspecregrid(1:ObsSpec(i)%ndata)
 			else if(useobsgrid) then
-				do ilam=1,ObsSpec(i)%ndata
-					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
-				enddo
+				spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 			else
 				do j=1,nlam
 					if(computelam(j)) then
@@ -1748,9 +1740,7 @@ c			vec(i)=gasdev(idum)
 				call regridfilter(lam,starspec,nlam,starspecregrid,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
 				spec(1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)/starspecregrid(1:ObsSpec(i)%ndata)
 			else if(useobsgrid) then
-				do ilam=1,ObsSpec(i)%ndata
-					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
-				enddo
+				spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 			else
 				do j=1,nlam
 					if(computelam(j)) then
@@ -1772,9 +1762,7 @@ c			vec(i)=gasdev(idum)
 			if(ObsSpec(i)%filter.ne.' ') then
 				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
 			else if(useobsgrid) then
-				do ilam=1,ObsSpec(i)%ndata
-					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
-				enddo
+				spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 			else
 				do j=1,nlam
 					if(computelam(j)) then
@@ -1792,9 +1780,7 @@ c			vec(i)=gasdev(idum)
 			if(ObsSpec(i)%filter.ne.' ') then
 				call regridfilter(lam,specsave,nlam,spec,ObsSpec(i)%ndata,ObsSpec(i)%f,computelam)
 			else if(useobsgrid) then
-				do ilam=1,ObsSpec(i)%ndata
-					spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
-				enddo
+				spec(1:ObsSpec(i)%ndata)=specsave(ObsSpec(i)%ilam)
 			else
 				do j=1,nlam
 					if(computelam(j)) then
