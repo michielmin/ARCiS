@@ -830,7 +830,7 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 	if(.not.retrieval.or.doRing) then
 		Lplanet=0d0
 		do ilam=1,nlam
-			if(doRing.or.computeT) then
+			if(doRing.and..not.computeT) then
 				if(RTgridpoint(ilam)) Lplanet=Lplanet+dfreq(ilam)*phase(1,0,ilam)
 			else if(computelam(ilam).and.lamemis(ilam)) then
 				Lplanet=Lplanet+dfreq(ilam)*phase(1,0,ilam)
