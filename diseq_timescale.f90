@@ -15,6 +15,8 @@ subroutine timescale(nr, T, nt, nmol, molname, n_eq, COratio, tau)
   !Tsai et al. (2018)
   !H2
   tau(45, 1:nr) = n_eq(45, 1:nr) / (k(17, 1:nr) * n_eq(64, 1:nr) * n_eq(64, 1:nr))
+  !CO2
+  tau(2, 1:nr) = n_eq(2,1:nr)/(k(18,1:nr)*n_eq(5,1:nr)*n_eq(13,1:nr))
 
   if(COratio <= 1.0d0) then
      !CH4

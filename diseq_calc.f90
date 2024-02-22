@@ -57,6 +57,24 @@ subroutine diseq_calc(nr, R, P, T, nmol, molname, mixrat_r, COratio, Kzz)
   end do
 
   !CO2 calculated with pseudo-eq value
-  n(2, 1:nr) = n(5, 1:nr) * n(1, 1:nr) * n_eq(64, 1:nr) / n_eq(5, 1:nr) / n_eq(1, 1:nr) / n(64, 1:nr) * n_eq(2, 1:nr)
+  n_eq(2, 1:nr) = n(5, 1:nr) * n(1, 1:nr) * n_eq(64, 1:nr) / n_eq(5, 1:nr) / n_eq(1, 1:nr) / n(64, 1:nr) * n_eq(2, 1:nr)
+  tau_chem(1:nr, 1:nr) = 0.0d0
+  do j = 1, nr
+  	tau_chem(j, j) = tau(2, j)
+  end do
+  a(1:nr, 1:nr) = e(1:nr, 1:nr) + matmul(tau_chem(1:nr, 1:nr), eddy(1:nr, 1:nr))
+
+  LDA = nr
+  call DGETRF(nr, nr, a(1:nr, 1:nr), LDA, IPIV, INFO)
+
+  LWORK = nr
+  call DGETRI(nr, a(1:nr, 1:nr), LDA, IPIV, WORK, LWORK, INFO)
+
+  n(2, 1:nr) = matmul(a(1:nr, 1:nr), n_eq(2, 1:nr))
+
+  do j = 1, nr
+  	mixrat_r(j, 2) = n(2, j) / nt(j)
+  end do
+
 
 end subroutine diseq_calc
