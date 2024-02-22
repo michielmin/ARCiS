@@ -41,7 +41,7 @@
 	allocate(PTstruct(0:nmodels,nr))
 	allocate(dPTstruct(0:nmodels,nr))
 	allocate(Kzz_struct(0:nmodels,nr))
-	if(dochemistry) allocate(mol_struct(0:nmodels,nr,nmol))
+	if(dochemistry.or..true.) allocate(mol_struct(0:nmodels,nr,nmol))
 	allocate(cloudstruct(0:nmodels,nr))
 	allocate(values(0:nmodels,n_ret))
 	allocate(COratio_der(0:nmodels))
@@ -295,7 +295,7 @@ c		call cpu_time(stoptime)
 	dPTstruct(i,1)=log(T(2)/T(1))/log(P(2)/P(1))
 	do j=1,nr
 		Kzz_struct(i,j)=ComputeKzz(P(j),T(j),dens(j),complexKzz)
-		if(dochemistry) mol_struct(i,j,1:nmol)=mixrat_r(j,1:nmol)
+		if(dochemistry.or..true.) mol_struct(i,j,1:nmol)=mixrat_r(j,1:nmol)
 	enddo
 
 	do j=2,nr-1
@@ -397,7 +397,7 @@ c		call cpu_time(stoptime)
 		enddo
 		close(unit=26)
 
-		if(dochemistry) then
+		if(dochemistry.or..true.) then
 		do imol=1,nmol
 			if(includemol(imol)) then
 				open(unit=26,file=trim(outputdir) // trim(molname(imol)) // "_limits",FORM="FORMATTED",ACCESS="STREAM")

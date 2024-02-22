@@ -353,7 +353,7 @@ c for exchange when computing secondary atmosphere
 	character*500 opacitydir,specresfile,starfile
 	character*500,allocatable :: instrument(:)
 	real*8,allocatable :: instr_ntrans(:)
-	real*8 Tmin,Tmax,minTprofile,maxTprofile,chimax
+	real*8 Tmin,Tmax,minTprofile,maxTprofile,chimax,PphotMol(nmol_data)
 	real*8 sintheta(360),costheta(360)
 	logical,allocatable :: do_dB(:)
 	real*8 COret,COerr(2)

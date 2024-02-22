@@ -1286,6 +1286,11 @@ c-----------------------------------------------------------------------
 		enddo
 		endif
 	enddo
+	do ir=1,nr
+		do imol=1,nmol
+			mixrat_r(ir,imol)=mixrat_r(ir,imol)*exp(-(PphotMol(imol)/P(ir))**2)
+		enddo
+	enddo
 
 	return
 	end

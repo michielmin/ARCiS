@@ -1436,6 +1436,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) PhotoReacts(key%nr1)%haze
 		case("kappauv")
 			read(key%value,*) kappaUV0
+		case("photdestroy","pdestroy")
+			call ReadPhotoDestroy(key)
 		case("hydrogenloss")
 			read(key%value,*) Hydrogenloss
 		case("rring")
@@ -2103,6 +2105,7 @@ c  GGchem was still implemented slightly wrong.
 		PhotoReacts(i)%nreact=0
 		PhotoReacts(i)%atomic=.false.
 	enddo
+	PphotMol=1d-30
 
 	return
 	end
@@ -2403,6 +2406,23 @@ c number of cloud/nocloud combinations
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
+	
+	return
+	end
+
+	subroutine ReadPhotoDestroy(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i,j
+	
+	do j=1,nmol_data
+		if(key%orkey2.eq.molname(j)) then
+			read(key%value,*) PphotMol(j)
+		endif
+	enddo
 	
 	return
 	end
