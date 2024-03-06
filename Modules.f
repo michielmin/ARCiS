@@ -171,13 +171,13 @@ c===============================================================================
 	real*8,allocatable :: R(:),Hp(:)						! radius
 	real*8,allocatable :: mixrat(:)							! component
 	real*8,allocatable :: mixrat_r(:,:),mixrat_old_r(:,:)	! radius,component
-	real*8,allocatable :: Cabs(:,:,:),Csca(:,:)				! radius,wav,g
+	real*8,allocatable :: Cabs(:,:,:,:),Csca(:,:)			! radius,wav,g,velocity
 	real*8,allocatable :: cloud_dens(:,:)					! radius, cloud
 	real*8,allocatable :: Fstar(:)							! wavelength
 	real*8,allocatable :: tau1depth(:,:),cloudtau(:,:)		! ncc,wavelength
 	real*8,allocatable :: Cabs_mol(:,:,:,:),Cext_cont(:,:)
 	real*8,allocatable :: Pswitch_mol(:),abun_switch_mol(:)
-	integer nangle_Jscat
+	integer nangle_Jscat,nvel
 	parameter(nangle_Jscat=60)
 	real*8,allocatable :: Jscat(:,:)						! radius, angle
 	integer nT,np,nr,nmol,nlam		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
@@ -207,6 +207,7 @@ c===============================================================================
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:),planet_albedo(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	real*8 planetform_fdust,planetform_fplan,planetform_Mstart,planetform_SolidC,vrot0
+	real*8,allocatable :: velocity(:)
 	real*8 planetform_Macc,planetform_Dmigrate,planetform_Rend,TeffPoutput,Hydrogenloss,taurexsmooth
 	logical planetform,massprior,retrievestar,simAb_converge,log_emis,randomstart,logTprofile,taurexprofile
 c for exchange when computing secondary atmosphere

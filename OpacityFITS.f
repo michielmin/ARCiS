@@ -81,7 +81,7 @@ C	 create the new empty FITS file
 			ir=ir+1
 			do ilam=1,nlam
 				do ig=1,ng
-					array(ilam,ig,iT,iP)=Cabs(ir,ilam,ig)
+					array(ilam,ig,iT,iP)=Cabs(ir,ilam,ig,0)
 				enddo
 			enddo
 		enddo
@@ -191,7 +191,7 @@ C	 create the new empty FITS file
 	IMPLICIT NONE
 	
 	type databaseKtable
-		real*8,allocatable :: ktable(:,:,:,:)
+		real*8,allocatable :: ktable(:,:,:,:,:)
 		real*8,allocatable :: g(:),wg(:),P(:),T(:)
 		integer nlam,nP,nT,ng
 		real*8 lam1,lam2,P1,P2,T1,T2
@@ -214,6 +214,7 @@ C	 create the new empty FITS file
 
 	subroutine InitReadOpacityFITS(imol)
 	use GlobalSetup
+	use Constants
 	use OpacityFITSdata
 	implicit none
 	character*80 comment,errmessage
@@ -224,7 +225,7 @@ C	 create the new empty FITS file
 	real*8  nullval,tot2,w1,ww,Pl,Planck,tot,l1,l2
 	real*8,allocatable :: lamF(:),Ktemp(:,:,:,:),temp(:),wtemp(:),work1(:),work2(:),work3(:)
 	logical anynull,truefalse,xs
-	integer naxes(4),dimax
+	integer naxes(4),dimax,ivel
 	character*500 filename
 	integer ig,ilam,iT,iP,imol,i,j,i1,i2,ngF,ii1(nlam),ii2(nlam)
 	integer*4 hdutype
@@ -339,8 +340,8 @@ C	 create the new empty FITS file
 	naxes(3)=Ktable(imol)%nT
 	naxes(4)=Ktable(imol)%nP
 	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-	if(.not.allocated(Ktable(imol)%ktable)) allocate(Ktable(imol)%ktable(ng,nlam,naxes(3),naxes(4)))
-	Ktable(imol)%ktable(1:ng,1:nlam,1:Ktable(imol)%nT,1:Ktable(imol)%nP)=0d0
+	if(.not.allocated(Ktable(imol)%ktable)) allocate(Ktable(imol)%ktable(ng,nlam,naxes(3),naxes(4),-nvel:nvel))
+	Ktable(imol)%ktable(1:ng,1:nlam,1:Ktable(imol)%nT,1:Ktable(imol)%nP,-nvel:nvel)=0d0
 	allocate(Ktemp(naxes(1),naxes(2),naxes(3),naxes(4)))
 
 	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktemp,anynull,status)
@@ -363,12 +364,14 @@ C	 create the new empty FITS file
      &			log10(Ktable(imol)%lam2/Ktable(imol)%lam1)*real(ilam-1)/real(Ktable(imol)%nlam))
 	enddo
 
+	do ivel=-nvel,nvel
+	
 	ii1=0
 	ii2=0
 	dimax=0
 	do ilam=1,nlam
-		l1=blam(1,ilam)
-		l2=blam(2,ilam)
+		l1=blam(1,ilam)+velocity(ivel)/clight
+		l2=blam(2,ilam)+velocity(ivel)/clight
 		do i=1,Ktable(imol)%nlam
 			if(l1.ge.lamF(i).and.l1.lt.lamF(i+1)) ii1(ilam)=i
 			if(l2.ge.lamF(i).and.l2.lt.lamF(i+1)) ii2(ilam)=i
@@ -379,7 +382,7 @@ C	 create the new empty FITS file
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,ww,w1,iT,iP,l1,l2,work1,work2,work3)
-!$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp,dlam,RTgridpoint,blam,ii1,ii2,dimax)
+!$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp,dlam,RTgridpoint,blam,ii1,ii2,dimax,velocity,ivel)
 	allocate(temp(Ktable(imol)%ng*dimax))
 	allocate(wtemp(Ktable(imol)%ng*dimax))
 	allocate(work1(Ktable(imol)%ng*dimax))
@@ -392,8 +395,8 @@ C	 create the new empty FITS file
 
 		i1=ii1(ilam)
 		i2=ii2(ilam)
-		l1=blam(1,ilam)
-		l2=blam(2,ilam)
+		l1=blam(1,ilam)+velocity(ivel)/clight
+		l2=blam(2,ilam)+velocity(ivel)/clight
 
 		if(i1.gt.0.and.i2.gt.0) then
 			ngF=0
@@ -414,7 +417,7 @@ C	 create the new empty FITS file
 					wtemp(ngF)=ww*Ktable(imol)%wg(ig)
 				enddo
 			enddo
-			call regridKtable(temp,wtemp,ngF,gg,Ktable(imol)%ktable(1:ng,ilam,iT,iP),wgg,ng,work1,work2,work3)
+			call regridKtable(temp,wtemp,ngF,gg,Ktable(imol)%ktable(1:ng,ilam,iT,iP,ivel),wgg,ng,work1,work2,work3)
 		endif
 		enddo
 		enddo
@@ -425,6 +428,8 @@ C	 create the new empty FITS file
 	deallocate(work1,work2,work3)
 !$OMP FLUSH
 !$OMP END PARALLEL
+	enddo
+
 	deallocate(Ktemp,lamF)
 
 	!------------------------------------------------------------------------

@@ -724,19 +724,25 @@ c	condensates=(condensates.or.cloudcompute)
 
 	metallicity0=metallicity
 
+	allocate(velocity(-nvel:nvel))
+	if(vrot0.ne.0d0) then
+		do i=-nvel,nvel
+			velocity(i)=vrot0*real(i)/real(nvel)
+		enddo
+	endif
 c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 	allocate(Cabs_mol(ng,nlam,nmol,nr))
 	allocate(Cext_cont(nr,nlam))
-	allocate(Cabs(nr,nlam,ng))
+	allocate(Cabs(nr,nlam,ng,-nvel:nvel))
 	allocate(Csca(nr,nlam))
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& SHARED(Cabs_mol,Cext_cont,Cabs,Csca,nlam,ng,nr,nmol)
+!$OMP& SHARED(Cabs_mol,Cext_cont,Cabs,Csca,nlam,ng,nr,nmol,nvel)
 !$OMP DO SCHEDULE(STATIC)
 		do i=1,nlam
 			Cabs_mol(1:ng,i,1:nmol,1:nr)=0d0
 			Cext_cont(1:nr,i)=0d0
-			Cabs(1:nr,i,1:ng)=0d0
+			Cabs(1:nr,i,1:ng,-nvel:nvel)=0d0
 			Csca(1:nr,i)=0d0
 		enddo
 !$OMP END DO
@@ -1391,6 +1397,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) computeLC
 		case("vrot")
 			read(key%value,*) vrot0
+		case("nvrot")
+			read(key%value,*) nvel
 		case("planetform")
 			read(key%value,*) planetform
 		case("fdust")
@@ -1845,6 +1853,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	vfrag=100d0	!cm/s
 	
 	vrot0=0d0
+	nvel=0
 	twind=-1d0
 	
 	PRplanet=10d0

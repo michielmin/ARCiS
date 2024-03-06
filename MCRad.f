@@ -42,7 +42,7 @@ c		ct2=1d0-2d0*real(iphase)/real(nphase)
 	Pb(nr+1)=P(nr)
 	do ig=1,ng
 		do ir=1,nr
-			call Crossections(ir,ilam,ig,Ca(ir),Cs(ir),docloud0)
+			call Crossections(ir,ilam,ig,Ca(ir),Cs(ir),docloud0,0)
 			Ce(ir)=Ca(ir)+Cs(ir)
 			dorw(ir)=.false.
 			Crw(ir)=Ca(ir)+Cs(ir)*(1d0-g(ir))
@@ -350,14 +350,14 @@ c		enddo
 	end
 	
 	
-	subroutine Crossections(ir,ilam,ig,Ca,Cs,docloud0)
+	subroutine Crossections(ir,ilam,ig,Ca,Cs,docloud0,ivel)
 	use GlobalSetup
 	IMPLICIT NONE
-	integer ir,ilam,ig,icloud,isize
+	integer ir,ilam,ig,icloud,isize,ivel
 	real*8 Ca,Cs
 	logical docloud0(nclouds)
 
-	Ca=Cabs(ir,ilam,ig)*Ndens(ir)
+	Ca=Cabs(ir,ilam,ig,ivel)*Ndens(ir)
 	Cs=Csca(ir,ilam)*Ndens(ir)
 	if(.not.Ca.gt.0d0) Ca=0d0
 	if(.not.Cs.gt.0d0) Cs=0d0

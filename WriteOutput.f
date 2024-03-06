@@ -270,7 +270,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 				do ir=nr,2,-1
 					tau=0d0
 					do j=1,ng
-						call Crossections(ir,i,j,Ca,Cs,docloud0(1,1:ncc))
+						call Crossections(ir,i,j,Ca,Cs,docloud0(1,1:ncc),0)
 						tau=tau+wgg(j)*(P(ir-1)-P(ir))*1d6*(Ca+Cs)/(dens(ir)*grav(ir))
 					enddo
 					if((tau+tautot).gt.1d0) then

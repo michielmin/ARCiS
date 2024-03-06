@@ -255,7 +255,7 @@
 					ir=irtrace(k,i)
 					d=dtrace(k,i)
 
-					Ca=Cabs(ir,ilam,ig)*Ndens(ir)+Ca_cloud(icc,ir)
+					Ca=Cabs(ir,ilam,ig,0)*Ndens(ir)+Ca_cloud(icc,ir)
 					Cs=Csca(ir,ilam)*Ndens(ir)+Cs_cloud(icc,ir)
 					tau_a=d*Ca
 					tau=tau_a+d*Cs

@@ -6,17 +6,17 @@
 	integer i,j,icloud,k,irtrace,iptrace,inu,imol
 	real*8 beta(nlong,nlatt),Planck,phi,la,lo,A,rr
 	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta
-	real*8,allocatable :: Ca(:,:,:,:),Cs(:,:,:),BBr(:,:),Si(:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce_cont(:,:,:)
+	real*8,allocatable :: Ca(:,:,:,:,:),Cs(:,:,:),BBr(:,:),Si(:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce_cont(:,:,:)
 	integer ir,ilam,ig,isize,iRmax,ndisk,nsub,nrtrace,nptrace,ipc,npc,nmol_count
 	logical recomputeopac
 	logical,allocatable :: hit(:,:)
 	real*8,allocatable :: rtrace(:),wrtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:),cloud3D(:,:)
 	real*8 x,y,z,vx,vy,vz,v,w1,w2
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
-	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),obsA_split_omp(:,:),dtauR_nu(:,:,:,:)
+	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),obsA_split_omp(:,:),dtauR_nu(:,:,:,:,:)
 	real*8,allocatable :: tauc(:),Afact(:),vv(:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
 	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random,xmin,xmax,Pb(nr+1)
-	integer nx_im,ix,iy,ni,ilatt,ilong,imustar
+	integer nx_im,ix,iy,ni,ilatt,ilong,imustar,ivel
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1,SiRalb1,tau0
 	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:),SiR0(:,:),SiRalb0(:,:),R3DC(:,:),lgrid(:)
@@ -24,10 +24,10 @@
 	real*8 vxxmin,vxxmax,ComputeKzz,betamin_term,tot1,tot2,vrot,dlam_rot
 	logical docloud0(max(nclouds,1)),do_rot
 	
-	allocate(Ca(nlam,ng,nr,n3D),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D))
+	allocate(Ca(nlam,ng,nr,n3D,-nvel:nvel),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D))
 	if(computealbedo) allocate(SiSc(nlam,ng,0:nr,nnu0,n3D))
 	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce_cont(nlam,nr,n3D))
-	allocate(dtauR_nu(nlam,ng,n3D,nr))
+	allocate(dtauR_nu(nlam,ng,n3D,nr,-nvel:nvel))
 	allocate(R3D(n3D,nr+2))
 	allocate(R3D2(n3D,nr+2))
 	allocate(R3DC(n3D,nr+2))
@@ -304,7 +304,9 @@ c Now call the setup for the readFull3D part
 					freq0=freq(ilam)
 					BBr(ilam,ir)=Planck(T(ir),freq0)
 					do ig=1,ng
-						call Crossections(ir,ilam,ig,Ca(ilam,ig,ir,i),Cs(ilam,ir,i),docloud0)
+						do ivel=-nvel,nvel
+							call Crossections(ir,ilam,ig,Ca(ilam,ig,ir,i,ivel),Cs(ilam,ir,i),docloud0,ivel)
+						enddo
 					enddo
 				enddo
 			enddo
@@ -322,7 +324,7 @@ c Now call the setup for the readFull3D part
 				do ilam=1,nlam
 					Ce_cont(ilam,ir,i)=0d0
 					do ig=1,ng
-						Ce_cont(ilam,ir,i)=Ce_cont(ilam,ir,i)+wgg(ig)*Ca(ilam,ig,ir,i)
+						Ce_cont(ilam,ir,i)=Ce_cont(ilam,ir,i)+wgg(ig)*Ca(ilam,ig,ir,i,0)
 					enddo
 				enddo
 				do imol=1,nmol
@@ -338,12 +340,12 @@ c Now call the setup for the readFull3D part
 				enddo
 				nmol_count=k
 			enddo
-			if(emisspec) call ComputeScatter(BBr(1:nlam,0:nr),Si(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i),Cs(1:nlam,1:nr,i))
+			if(emisspec) call ComputeScatter(BBr(1:nlam,0:nr),Si(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i,0),Cs(1:nlam,1:nr,i))
 			if(computealbedo) then
 				BBr(1:nlam,0:nr)=0d0
 				Fstar_temp(1:nlam)=Fstar(1:nlam)
 				Fstar=1d0
-				call ComputeScatter(BBr(1:nlam,0:nr),SiSc(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i),Cs(1:nlam,1:nr,i))
+				call ComputeScatter(BBr(1:nlam,0:nr),SiSc(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i,0),Cs(1:nlam,1:nr,i))
 				Fstar(1:nlam)=Fstar_temp(1:nlam)
 			endif
 
@@ -355,21 +357,23 @@ c Now call the setup for the readFull3D part
 			do ilam=1,nlam
 				do ig=1,ng
 					do ir=nr,1,-1
-						if(ir.eq.nr) then
-							v=(P(ir)-Pb(ir+1))*1d6/grav(ir)
-							tau1=v*(Ca(ilam,ig,ir,i)+Cs(ilam,ir,i))/dens(ir)
-						else
-							v=(Pb(ir+1)-P(ir+1))*1d6/grav(ir+1)
-							tau1=v*(Ca(ilam,ig,ir+1,i)+Cs(ilam,ir+1,i))/dens(ir+1)
-							v=(P(ir)-Pb(ir+1))*1d6/grav(ir)
-							tau1=tau1+v*(Ca(ilam,ig,ir,i)+Cs(ilam,ir,i))/dens(ir)
-						endif
-						if(.not.tau1.gt.0d0) then
-							tau1=0d0
-						endif
-						tau1=tau1+1d-10
-						tau1=1d0/(1d0/tau1+1d-10)
-						dtauR_nu(ilam,ig,i,ir)=tau1
+						do ivel=-nvel,nvel
+							if(ir.eq.nr) then
+								v=(P(ir)-Pb(ir+1))*1d6/grav(ir)
+								tau1=v*(Ca(ilam,ig,ir,i,ivel)+Cs(ilam,ir,i))/dens(ir)
+							else
+								v=(Pb(ir+1)-P(ir+1))*1d6/grav(ir+1)
+								tau1=v*(Ca(ilam,ig,ir+1,i,ivel)+Cs(ilam,ir+1,i))/dens(ir+1)
+								v=(P(ir)-Pb(ir+1))*1d6/grav(ir)
+								tau1=tau1+v*(Ca(ilam,ig,ir,i,ivel)+Cs(ilam,ir,i))/dens(ir)
+							endif
+							if(.not.tau1.gt.0d0) then
+								tau1=0d0
+							endif
+							tau1=tau1+1d-10
+							tau1=1d0/(1d0/tau1+1d-10)
+							dtauR_nu(ilam,ig,i,ir,ivel)=tau1
+						enddo
 					enddo
 				enddo
 			enddo
@@ -377,11 +381,11 @@ c Now call the setup for the readFull3D part
 			R3D(i,1:nr+1)=R3D(n3D,1:nr+1)
 			T3D(i,0:nr)=T3D(n3D,0:nr)
 			mixrat3D(i,1:nr,1:nmol)=mixrat3D(n3D,1:nr,1:nmol)
-			Ca(1:nlam,1:ng,1:nr,i)=Ca(1:nlam,1:ng,1:nr,n3D)
+			Ca(1:nlam,1:ng,1:nr,i,-nvel:nvel)=Ca(1:nlam,1:ng,1:nr,n3D,-nvel:nvel)
 			Cs(1:nlam,1:nr,i)=Cs(1:nlam,1:nr,n3D)
 			Ce_cont(1:nlam,1:nr,i)=Ce_cont(1:nlam,1:nr,n3D)
 			Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,i)=Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,n3D)
-			dtauR_nu(1:nlam,1:ng,i,1:nr)=dtauR_nu(1:nlam,1:ng,n3D,1:nr)
+			dtauR_nu(1:nlam,1:ng,i,1:nr,-nvel:nvel)=dtauR_nu(1:nlam,1:ng,n3D,1:nr,-nvel:nvel)
 			Si(1:nlam,1:ng,0:nr,1:nnu0,i)=Si(1:nlam,1:ng,0:nr,1:nnu0,n3D)
 			if(computealbedo) SiSc(1:nlam,1:ng,0:nr,1:nnu0,i)=SiSc(1:nlam,1:ng,0:nr,1:nnu0,n3D)
 		endif
@@ -408,7 +412,9 @@ c Now call the setup for the readFull3D part
 	R3D2(1:n3D,1:nr+2)=R3DC(1:n3D,1:nr+2)**2
 	do ilam=1,nlam
 		do ig=1,ng
-			dtauR_nu(ilam,ig,1:n3D,1:nr)=dtauR_nu(ilam,ig,1:n3D,1:nr)/(R3DC(1:n3D,2:nr+1)-R3DC(1:n3D,1:nr))
+			do ivel=-nvel,nvel
+				dtauR_nu(ilam,ig,1:n3D,1:nr,ivel)=dtauR_nu(ilam,ig,1:n3D,1:nr,ivel)/(R3DC(1:n3D,2:nr+1)-R3DC(1:n3D,1:nr))
+			enddo
 		enddo
 	enddo	
 
@@ -488,9 +494,9 @@ c Now call the setup for the readFull3D part
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,tau0,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp,SiRalb0,SiRalb1,
-!$OMP&			vrot,dlam_rot)
+!$OMP&			vrot,dlam_rot,ivel)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,lam,do_rot,
-!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,R3DC,computelam,
+!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,R3DC,computelam,nvel,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
 	allocate(fact(nlam,ng))
 	allocate(fluxp_omp(nlam))
@@ -526,6 +532,11 @@ c Note we are here using the symmetry between North and South
 				rr=sqrt(vx**2+vy**2+vz**2)
 				call rotateY3D(vx,vy,vz,pi/2d0-orbit_inc)
 				vrot=vx*rr/sqrt(vx**2+vy**2+vz**2)
+				ivel=real(nvel)*vrot/vrot0
+				if(ivel.lt.-nvel) ivel=-nvel
+				if(ivel.gt.nvel) ivel=nvel
+			else
+				ivel=0
 			endif
 			vx=-1d0
 			vy=0d0
@@ -594,7 +605,7 @@ c Note we are here using the symmetry between North and South
 					if(lamemis(ilam).and.computelam(ilam)) then
 					do ig=1,ng
 						tau0=0d0
-						tau1=v*dtauR_nu(ilam,ig,i,i1)
+						tau1=v*dtauR_nu(ilam,ig,i,i1,ivel)
 						exp_tau1=exp(-tau1)
 						rr=sqrt((x+v*vx)**2+(y+v*vy)**2+(z+v*vz)**2)
 						if(i1.lt.nr) then
@@ -662,10 +673,6 @@ c Note we are here using the symmetry between North and South
 			j=j+1
 			if(j.lt.nr*2*max(nlatt,nlong)) goto 1
 2			continue
-			if(do_rot) then
-				dlam_rot=vrot/clight
-				call shiftarray(lam,ftot,nlam,dlam_rot,lamemis,computelam)
-			endif
 			fluxp_omp(1:nlam)=fluxp_omp(1:nlam)+ftot(1:nlam)
 			if(makeimage) rphi_image(1:nlam,irtrace,iptrace)=ftot(1:nlam)
 		enddo
