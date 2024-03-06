@@ -32,7 +32,7 @@
 	real*8 starttime,stoptime,starttime_w,stoptime_w,omp_get_wtime,f,tot,Planck
 	logical recomputeopacities
 	logical computeopac,temp
-	integer i,ilam
+	integer i,ilam,nvel_temp
 	
 	computeopac=recomputeopacities
 	if(doRing) computelam=.true.
@@ -46,6 +46,8 @@
 		par_tprofile=.false.
 		f=1d0
 		computelam=RTgridpoint
+		nvel_temp=nvel
+		nvel=0
 		do nTiter=1,maxiter
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
      &					// trim(int2string(maxiter,'(i3)')) // ")")
@@ -78,6 +80,7 @@ c			call output("PTstruct walltime: " // trim(dbl2string(dble(itimetemp)/dble(ra
 c			call output("Number of PTstruct calls:  " // trim(int2string(ctimetemp,'(i5)')))
 c			call SetoutputMode(.false.)
 		enddo
+		nvel=nvel_temp
 		if(.not.init3D) then
 			computelam=.not.RTgridpoint
 			if(forceEbalance) computelam=.true.
