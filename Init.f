@@ -641,6 +641,13 @@ c allocate the arrays
 
 	allocate(tauUV(nr),kappaUV(nr))
 
+	if(WaterWorld) then
+		WWInit_Pmax=Pmax
+		WWInit_Pmin=Pmin
+		WWInit_Pplanet=Pplanet
+		WWInit_mixrat(1:nmol)=mixrat(1:nmol)
+	endif
+	
 	call ConvertUnits()
 
 c	condensates=(condensates.or.cloudcompute)
@@ -925,7 +932,7 @@ c In this case the beta map should be the static one. Make sure this is set prop
 	if(doRing) allocate(FRing(nlam))
 
 	if(planetform) call InitFormation(Mstar,Tstar,Rstar,planetform_SolidC,planetform_Macc)
-	
+
 	if(useDLMie) call InitDLMie()
 	
 	do i=1,nmodel_err-1
@@ -1432,6 +1439,8 @@ c			read(key%value,*) nTpoints
 			call ReadPhotoChem(key)
 		case("photoeff")
 			read(key%value,*) PhotoReacts(key%nr1)%f_eff
+		case("photokappa","photoscalekappa")
+			read(key%value,*) PhotoReacts(key%nr1)%scaleKappa
 		case("photohaze")
 			read(key%value,*) PhotoReacts(key%nr1)%haze
 		case("kappauv")
@@ -1453,6 +1462,12 @@ c			read(key%value,*) nTpoints
 				read(key%value,*) ObsSpec(i)%adderr
 				print*,i,ObsSpec(i)%adderr
 			enddo
+		case("h2+he")
+			read(key%value,*) mixrat(45)
+			includemol(45)=.true.
+			includemol(48)=.true.
+			mixrat(48)=0.15*mixrat(45)
+			mixrat(45)=0.85*mixrat(45)			
 		case default
 			do i=1,nmol_data
 				if(key%key.eq.molname(i)) then
@@ -2101,6 +2116,7 @@ c  GGchem was still implemented slightly wrong.
 		PhotoReacts(i)%react=0d0
 		PhotoReacts(i)%product=0d0
 		PhotoReacts(i)%f_eff=1d0
+		PhotoReacts(i)%scaleKappa=1d0
 		PhotoReacts(i)%haze=0d0
 		PhotoReacts(i)%nreact=0
 		PhotoReacts(i)%atomic=.false.

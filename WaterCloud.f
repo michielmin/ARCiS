@@ -67,7 +67,7 @@
 			nconv=10
 		endif
 	endif
-	
+
 	allocate(densv(nnr,nCS),docondense(nCS))
 
 	if(.not.allocated(ATP)) then
@@ -304,7 +304,7 @@ c H2O: 7
 		if(densv(i,1).lt.Clouddens(i)*xv_bot(1)*CloudMR(i)/mixrat_bot) docondense(1)=.true.
 		gz=Ggrav*Mplanet/CloudR(i)**2
 		if(Cloud(ii)%hazetype.eq.'optEC') then
-			Sn(i)=Clouddens(i)*CloudkappaUV(i)*exp(-CloudtauUV(i))
+			Sn(i)=Clouddens(i)*CloudP(i)*exp(-CloudtauUV(i))
 			if(i.eq.nr) then
 				tot=tot+abs(CloudR(i-1)-CloudR(i))*Sn(i)
 			else if(i.eq.1) then
@@ -694,6 +694,9 @@ c		if(iconv.eq.0) print*,'Cloud formation not converged: ',maxerr
 c H2O
 	x(1:nnr)=xc(1,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,12),nr)
+c Seed particles
+	x(1:nnr)=xm(1:nnr)
+	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,15),nr)
 
 	if(.not.retrieval) then
 		if(do3D) then
@@ -706,18 +709,18 @@ c H2O
 		write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"r[micron]","T[K]","Jstar"
 		form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
 		do i=1,nnr
-			write(20,form) CloudP(i),Clouddens(i),xn(i)*m_nuc,xc(1:nCS,i),rpart(i),CloudT(i),
+			write(20,form) CloudP(i),Clouddens(i),xm(i),xc(1:nCS,i),rpart(i),CloudT(i),
      &						Sn(i)/m_nuc
 		enddo
 		close(unit=20)
 	endif
 
 	do i=1,nr
-		tot=sum(Cloud(ii)%frac(i,1:15))
+		tot=sum(Cloud(ii)%frac(i,1:20))
 		if(tot.gt.0d0) then
-			Cloud(ii)%frac(i,1:15)=Cloud(ii)%frac(i,1:15)/tot
+			Cloud(ii)%frac(i,1:20)=Cloud(ii)%frac(i,1:20)/tot
 		else
-			Cloud(ii)%frac(i,1:15)=1d0/15d0
+			Cloud(ii)%frac(i,1:20)=1d0/20d0
 			cloud_dens(i,ii)=0d0
 		endif
 	enddo

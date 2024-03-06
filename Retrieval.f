@@ -805,7 +805,7 @@ c	linear
 	global_like=lnew
 
 	if(writeWolk) write(31,*) imodel,global_chi2,var(1:nvars),COratio,metallicity
-	if((.not.useobsgrid.or.dochemistry.or.do3D).and.writeWolk) call flush(31)
+	if((.not.useobsgrid.or.dochemistry.or.do3D.or.computeT).and.writeWolk) call flush(31)
 
 	if(lnew.gt.bestlike) then
 		inquire(file="improve.sh",exist=truefalse)
@@ -1890,6 +1890,12 @@ c	linear
 	orbit_inc=orbit_inc*180d0/pi
 
 	metallicity=metallicity0
+	if(WaterWorld) then
+		Pmax=WWInit_Pmax
+		Pmin=WWInit_Pmin
+		Pplanet=WWInit_Pplanet
+		mixrat(1:nmol)=WWInit_mixrat(1:nmol)
+	endif
 	do i=1,n_ret
 		readline=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
 		call get_key_value(readline,key%key,key%key1,key%key2,key%orkey1,key%orkey2,key%value,key%nr1,key%nr2,key%key2d)
@@ -1942,6 +1948,12 @@ c	linear, square
 	enddo
 	orbit_inc=orbit_inc*180d0/pi
 
+	if(WaterWorld) then
+		Pmax=WWInit_Pmax
+		Pmin=WWInit_Pmin
+		Pplanet=WWInit_Pplanet
+		mixrat(1:nmol)=WWInit_mixrat(1:nmol)
+	endif
 	do i=1,n_ret
 		readline=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
 		call get_key_value(readline,key%key,key%key1,key%key2,key%orkey1,key%orkey2,key%value,key%nr1,key%nr2,key%key2d)

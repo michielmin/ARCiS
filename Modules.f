@@ -356,7 +356,7 @@ c for exchange when computing secondary atmosphere
 	real*8 Tmin,Tmax,minTprofile,maxTprofile,chimax,PphotMol(nmol_data)
 	real*8 sintheta(360),costheta(360)
 	logical,allocatable :: do_dB(:)
-	real*8 COret,COerr(2)
+	real*8 COret,COerr(2),WWInit_Pmax,WWInit_Pmin,WWInit_Pplanet,WWInit_mixrat(nmol_data)
 	
 	character*10 fixmol_name(nmol_data)
 	real*8 fixmol_abun(nmol_data),fixmol_P(nmol_data)
@@ -421,7 +421,7 @@ c for exchange when computing secondary atmosphere
 		real*8,allocatable :: react(:),product(:),abun(:,:)
 		integer nreact
 		logical atomic
-		real*8 f_eff,haze
+		real*8 f_eff,haze,scaleKappa
 	end type photochem
 	type(photochem),allocatable :: PhotoReacts(:)
 	integer nPhotoReacts

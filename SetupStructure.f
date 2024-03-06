@@ -15,7 +15,6 @@
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
 	enddo
-	if(WaterWorld.and..not.do3D) call doWaterWorld()
 	
 	if(.not.do3D) betaF=betaT
 
@@ -38,6 +37,7 @@
 	grav=Ggrav*Mplanet/(Rplanet)**2
 	if(par_tprofile.or.(computeT.and.nTiter.le.1)) call ComputeParamT(T)
 	if(free_tprofile.and.(.not.computeT.or.nTiter.eq.1)) call MakePTstruct
+	if(WaterWorld.and..not.do3D) call doWaterWorld()
 
 	call SetAbun
 
@@ -1263,7 +1263,7 @@ c-----------------------------------------------------------------------
 					if(nreac.lt.nmax) nmax=nreac
 				endif
 			enddo
-			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-tauUV(ir)))
+			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-tauUV(ir)*PhotoReacts(i)%scaleKappa))
 			do imol=1,nmol
 				if(includemol(imol)) then
 					if(PhotoReacts(i)%react(imol).gt.0d0) then
@@ -1320,7 +1320,7 @@ c-----------------------------------------------------------------------
 					if(nreac.lt.nmax) nmax=nreac
 				endif
 			enddo
-			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-tauUV(ir)))
+			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-tauUV(ir)*PhotoReacts(i)%scaleKappa))
 			do imol=1,N_atoms
 				if(PhotoReacts(i)%react(imol).gt.0d0) then
 					molfracs_atoms(imol)=molfracs_atoms(imol)-nreac*PhotoReacts(i)%react(imol)
@@ -1377,7 +1377,8 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 c0,c1,c2,c3,c4,Pm,fH2O,PH2Omax,mutot,mixrat_tot
+	real*8 c0,c1,c2,c3,c4,Pm,fH2O,PH2Omax,mutot,mixrat_tot,Pold(nr),Told(nr),fact
+	real*8 S(nr),SatBottom
 	integer i
 	logical liquid
 	
@@ -1387,45 +1388,75 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 	c3=2.42470E-09
 	c4=1.80900E-06
 
+	SatBottom=0.75
+
 	fH2O=2d-4
 	PH2Omax=fH2O*Ggrav*Mplanet**2/(4d0*pi*Rplanet**4*1d6)
+
 	if(Tsurface.gt.647.096) then
 		call output("Warning! Waterworld ocean reaches critical temperature!")
-		print*,"Warning! Waterworld ocean reaches critical temperature!"
 		Pmax=PH2Omax
+		liquid=.true.
 	else
 		call PvapH2O(Tsurface,Pmax,liquid)
 c		Pmax=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750.06157584566
+		Pmax=Pmax/0.5d0 ! 50% humidity (atmosphere is not 100% saturated)
 		if(Pmax.gt.PH2Omax) Pmax=PH2Omax
 	endif
+	call PvapH2O(T(nr),Pm,liquid)
+	S(nr)=P(nr)*mixrat(1)/Pm
+	do i=nr-1,1,-1
+		call PvapH2O(T(i),Pm,liquid)
+		S(i)=P(i)*mixrat(1)/Pm
+		if(S(i+1).gt.(1d0/SatBottom).and.S(i).le.(1d0/SatBottom)) then
+			Pmax=P(i+1)+(P(i)-P(i+1))*(S(i+1)-(1d0/SatBottom))/(S(i+1)-S(i))
+			Pmax=Pmax/mixrat(1)
+			exit
+		endif
+	enddo
+
 	mutot=0d0
 	mixrat_tot=0d0
 	do i=1,nmol
 		if(includemol(i)) then
-			mutot=mutot+mixrat(1)*Mmol(i)
-			mixrat_tot=mixrat_tot+mixrat(1)
+			mutot=mutot+mixrat(i)*Mmol(i)
+			mixrat_tot=mixrat_tot+mixrat(i)
 		endif
 	enddo
 	mutot=mutot/mixrat_tot
+	
 	if(setsurfpressure) then
-		mixrat(1)=Pmax
+		fact=Pmax/(mixrat(1))
+		fact=fact**2
+		mixrat(1)=mixrat(1)*sqrt(fact)
 		Pmax=0d0
 		do i=1,nmol
-			Pmax=Pmax+mixrat(i)*mutot/Mmol(1)
+			Pmax=Pmax+mixrat(i)
 		enddo
 	else
-		Pmax=Pmax/(mixrat(1)*mutot/(Mmol(1)*mixrat_tot))
+		mixrat(1:nmol)=mixrat(1:nmol)/mixrat_tot
+		fact=Pmax/(P(1)*mixrat(1))
+		fact=fact**2
+		Pmax=P(1)*sqrt(fact)
 	endif
 	Pm=Pmin
 	if(Pm.gt.Pmax/100d0) Pm=Pmax/100d0
 	Pplanet=Pmax
 
 	call output("Surface pressure: " // dbl2string(Pmax,'(es8.2)'))
-	print*,"Surface pressure: " // dbl2string(Pmax,'(es8.2)')
-	if(.not.liquid) print*,"Ice world!"
+	if(.not.liquid) call output("Ice world!")
 
+	Pold=P
+	Told=T
 	do i=1,nr
 		P(i)=10d0**(log10(Pmax)+(log10(Pm/Pmax)*real(i-1)/real(nr-1)))
+	enddo
+	return
+	call regridarray(-log(Pold),Told,nr,-log(P),T,nr)
+	do i=1,nr
+		if(P(i).gt.Pold(1)) then
+			T(i)=Told(1)/exp(log(Pold(1)/P(i))*(log(Told(1)/Told(2))/log(Pold(1)/Pold(2))))
+		endif
 	enddo
 
 	return

@@ -463,7 +463,7 @@ c	atoms_cloud(i,3)=1
 		enddo
 		gz=Ggrav*Mplanet/CloudR(i)**2
 		if(Cloud(ii)%hazetype.eq.'optEC') then
-			Sn(i)=Clouddens(i)*CloudkappaUV(i)*exp(-CloudtauUV(i))
+			Sn(i)=Clouddens(i)*CloudP(i)*exp(-CloudtauUV(i))
 			if(i.eq.nr) then
 				tot=tot+abs(CloudR(i-1)-CloudR(i))*Sn(i)
 			else if(i.eq.1) then
