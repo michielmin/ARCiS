@@ -727,7 +727,7 @@ c	condensates=(condensates.or.cloudcompute)
 	allocate(velocity(-nvel:nvel))
 	if(vrot0.ne.0d0) then
 		do i=-nvel,nvel
-			velocity(i)=vrot0*real(i)/real(nvel)
+			velocity(i)=vrot0*real(i)/(real(nvel)+0.5d0)
 		enddo
 	endif
 c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage

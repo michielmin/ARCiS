@@ -370,8 +370,8 @@ C	 create the new empty FITS file
 	ii2=0
 	dimax=0
 	do ilam=1,nlam
-		l1=blam(1,ilam)+velocity(ivel)/clight
-		l2=blam(2,ilam)+velocity(ivel)/clight
+		l1=blam(1,ilam)*sqrt((1d0+velocity(ivel)/clight)/(1d0-velocity(ivel)/clight))
+		l2=blam(2,ilam)*sqrt((1d0+velocity(ivel)/clight)/(1d0-velocity(ivel)/clight))
 		do i=1,Ktable(imol)%nlam
 			if(l1.ge.lamF(i).and.l1.lt.lamF(i+1)) ii1(ilam)=i
 			if(l2.ge.lamF(i).and.l2.lt.lamF(i+1)) ii2(ilam)=i
@@ -395,8 +395,8 @@ C	 create the new empty FITS file
 
 		i1=ii1(ilam)
 		i2=ii2(ilam)
-		l1=blam(1,ilam)+velocity(ivel)/clight
-		l2=blam(2,ilam)+velocity(ivel)/clight
+		l1=blam(1,ilam)*sqrt((1d0+velocity(ivel)/clight)/(1d0-velocity(ivel)/clight))
+		l2=blam(2,ilam)*sqrt((1d0+velocity(ivel)/clight)/(1d0-velocity(ivel)/clight))
 
 		if(i1.gt.0.and.i2.gt.0) then
 			ngF=0

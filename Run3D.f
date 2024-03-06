@@ -533,6 +533,7 @@ c Note we are here using the symmetry between North and South
 				call rotateY3D(vx,vy,vz,pi/2d0-orbit_inc)
 				vrot=vx*rr/sqrt(vx**2+vy**2+vz**2)
 				ivel=real(nvel)*vrot/vrot0
+				ivel=(vrot/vrot0)*(real(nvel)+0.5)+0.5*sign(1d0,vrot/vrot0)
 				if(ivel.lt.-nvel) ivel=-nvel
 				if(ivel.gt.nvel) ivel=nvel
 			else
