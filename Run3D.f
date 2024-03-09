@@ -394,7 +394,7 @@ c Now call the setup for the readFull3D part
 			open(unit=20,file=trim(outputdir) // "mixrat" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
 			write(20,'("#",a9,a13,a13)') "T[K]","P[bar]","Kzz[cm^2/s]"
 			do j=1,nr
-				write(20,'(f10.3,2es13.3E3)') T(j),P(j),ComputeKzz(P(j),T(j),dens(j),complexKzz)
+				write(20,'(f10.3,2es13.3E3)') T(j),P(j),ComputeKzz(P(j),T(j),dens(j),Hp(j),complexKzz)
 			enddo
 			close(unit=20)
 		endif

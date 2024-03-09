@@ -640,6 +640,8 @@ c allocate the arrays
 	if(orbit_P.lt.0d0) orbit_P=sqrt(Dplanet**3/Mstar)*365.25*86400d0
 
 	allocate(tauUV(nr),kappaUV(nr))
+	allocate(Kzz_convect(nr))
+	Kzz_convect=0d0
 
 	if(WaterWorld) then
 		WWInit_Pmax=Pmax
@@ -1120,6 +1122,10 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadCloud(key)
 		case("complexkzz")
 			read(key%value,*) complexKzz
+		case("computekzz")
+			read(key%value,*) SCKzz
+		case("convectkzz")
+			read(key%value,*) convectKzz
 		case("scattering")
 			read(key%value,*) scattering
 		case("scattstar","starscatt")
@@ -1849,6 +1855,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	inverseCOratio=.false.
 	element_abun_file=' '
 	complexKzz=.false.
+	SCKzz=.false.
+	convectKzz=.false.
 	mixP=0d0
 	vfrag=100d0	!cm/s
 	

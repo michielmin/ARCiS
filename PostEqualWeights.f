@@ -294,7 +294,7 @@ c		call cpu_time(stoptime)
 	PTstruct(i,1:nr)=T(1:nr)
 	dPTstruct(i,1)=log(T(2)/T(1))/log(P(2)/P(1))
 	do j=1,nr
-		Kzz_struct(i,j)=ComputeKzz(P(j),T(j),dens(j),complexKzz)
+		Kzz_struct(i,j)=ComputeKzz(P(j),T(j),dens(j),Hp(j),complexKzz)
 		if(dochemistry.or..true.) mol_struct(i,j,1:nmol)=mixrat_r(j,1:nmol)
 	enddo
 

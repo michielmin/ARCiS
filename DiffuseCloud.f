@@ -24,6 +24,7 @@
 	integer iCS,ir,nrdo,iconv,nconv
 	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil,St
 	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:),CloudtauUV(:),CloudkappaUV(:)
+	real*8,allocatable :: CloudKzz_convect(:)
 	integer INCFD,IERR
 	logical SKIP
 	real*8 time,tcrystinv,nucryst,Tcryst
@@ -53,7 +54,7 @@
 	endif
 	allocate(Kd(nnr),Kg(nnr),Km(nnr))
 	allocate(logCloudP(nnr))
-	if(complexKzz) allocate(CloudHp(nnr))
+	allocate(CloudHp(nnr),CloudKzz_convect(nnr))
 	
 	niter=500
 	nconv=20
@@ -391,13 +392,22 @@ c	atoms_cloud(i,3)=1
 		call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudHp,IERR)
 		CloudHp(1:nnr)=exp(CloudHp(1:nnr))
 	endif
+	if(convectKzz) then
+		SKIP=.false.
+		INCFD=1
+		logx(1:nr)=Kzz_convect(1:nr)
+		call DPCHIM(nr,logP,logx,dlogx,INCFD)
+		call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudKzz_convect,IERR)
+	else
+		CloudKzz_convect=0d0
+	endif
 
 	if(Cloud(ii)%globalKzz.or.Cloud(ii)%Kzz.le.0d0) then
 		do i=1,nnr
-			Km(i)=ComputeKzz(CloudP(i),CloudT(i),Clouddens(i),.false.)
+			Km(i)=ComputeKzz(CloudP(i),CloudT(i),Clouddens(i),CloudHp(i),.false.)+CloudKzz_convect(i)
 			Kd(i)=Km(i)
 			if(complexKzz) then
-				Kg(i)=ComputeKzz(CloudP(i),CloudT(i),Clouddens(i),complexKzz)
+				Kg(i)=ComputeKzz(CloudP(i),CloudT(i),Clouddens(i),CloudHp(i),complexKzz)+CloudKzz_convect(i)
 			else
 				Kg(i)=Kd(i)
 			endif
@@ -1228,7 +1238,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	   call output("==================================================================")
 	   call output("Computing disequilibrium chemistry")
 		do i=1,nr
-			Kzz_r(i)=ComputeKzz(P(i),T(i),dens(i),complexKzz)
+			Kzz_r(i)=ComputeKzz(P(i),T(i),dens(i),Hp(i),complexKzz)+Kzz_convect(i)
 		enddo
 	   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))
 	endif

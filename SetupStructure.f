@@ -291,7 +291,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		   call output("==================================================================")
 		   call output("Computing disequilibrium chemistry")
 			do i=1,nr
-				Kzz_r(i)=ComputeKzz(P(i),T(i),dens(i),complexKzz)
+				Kzz_r(i)=ComputeKzz(P(i),T(i),dens(i),Hp(i),complexKzz)+Kzz_convect(i)
 			enddo
 		   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))		   
 		endif
@@ -577,7 +577,7 @@ c	endif
 	write(50,trim(form)) "Kzz [cm^2/s]","P [bar]"
 	form='(es13.3E3,es13.3E3)'
 	do i=1,nr
-		write(50,trim(form)) ComputeKzz(P(i),T(i),dens(i),complexKzz),P(i)
+		write(50,trim(form)) ComputeKzz(P(i),T(i),dens(i),Hp(i),complexKzz)+Kzz_convect(i),P(i)
 	enddo
 	close(unit=50)
 
@@ -1341,15 +1341,19 @@ c-----------------------------------------------------------------------
 	end
 
 
-	real*8 function ComputeKzz(x,Tg,rhog,addmicro)
+	real*8 function ComputeKzz(x,Tg,rhog,H,addmicro)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 x,Tg,rhog,lmfp,vth,sigmamol,Kmax,Kmin,Kp
+	real*8 x,Tg,rhog,lmfp,vth,sigmamol,Kmax,Kmin,Kp,H,Te
+	integer i
 	logical addmicro
 	sigmamol=8d-15
 
-	if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
+	if(SCKzz) then
+		Te=(TeffP**4+(Rstar/(Dplanet))**2*Tstar**4)**0.25
+		ComputeKzz=(5d8/sqrt(x))*(H/620d5)*(Te/1450d0)**4
+	else if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
 		if(Kzz_contrast.gt.1d0) then
 			Kmax=Kzz_deep*Kzz_contrast
 			Kmin=Kzz_deep

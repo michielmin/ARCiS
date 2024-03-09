@@ -526,9 +526,9 @@ c===============================================================================
 c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 
 	do ir=1,nr
-		Fl(ir)=min(max(0.5d0,Fl(ir)),2d0)
+		Fl(ir)=min(max(1d-5,Fl(ir)),1d5)
 	enddo
-
+				
 	maxErr=0d0
 	j=1
 	do ir=1,nr-2
@@ -555,6 +555,10 @@ c		if(err.gt.maxErr.and..not.Convec(ir)) then
 		Convec(j)=.true.
 		goto 1
 	endif
+
+	do ir=1,nr
+		Fl(ir)=min(max(0.5d0,Fl(ir)),2d0)
+	enddo
 				
 	Ts=T*Fl**0.25
 
@@ -588,6 +592,67 @@ c	endif
 c=========================================================================================
 c=== end of loop =========================================================================
 c=========================================================================================
+
+c=========================================================================================
+c=== computation of convective flux ======================================================
+c=========================================================================================
+	if(convectKzz) then
+	Hedd=0d0
+	E0=2d0*(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
+	do ir=1,nr
+		Hedd(ir)=Hedd(ir)+E0-Hstar(ir)
+	enddo
+
+	IntH=0d0
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(tot,iT,scale,jr,ir)
+!$OMP& SHARED(nlam_LR,BB_LR,IntH,IntHnu,nr,T,IntHnuSurf,SurfEmis_LR,dfreq_LR)
+!$OMP DO
+	do jr=1,nr
+		iT=T(jr)+1
+		if(iT.gt.nBB-1) iT=nBB-1
+		if(iT.lt.1) iT=1
+		scale=(T(jr)/real(iT))**4
+		do ir=1,nr
+			tot=0d0
+			do ilam=1,nlam_LR
+				tot=tot+scale*BB_LR(ilam,iT)*IntHnu(ilam,ir,jr)
+			enddo
+			IntH(ir,jr)=tot
+		enddo
+	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+	iT=Tsurface+1
+	if(iT.gt.nBB-1) iT=nBB-1
+	if(iT.lt.1) iT=1
+	scale=(Tsurface/real(iT))**4
+	do ir=1,nr
+		do ilam=1,nlam_LR
+			IntH(ir,1)=IntH(ir,1)+scale*BB_LR(ilam,iT)*IntHnuSurf(ilam,ir)*SurfEmis_LR(ilam)
+		enddo
+	enddo
+
+	Fl=Hedd
+	do ir=1,nr
+		if(Convec(ir)) then
+			do jr=1,nr
+				Fl(ir)=Fl(ir)-IntH(ir,jr)
+			enddo
+			Fl(ir)=Fl(ir)*sigma/(2d0*(((pi*kb)**4)/(15d0*hplanck**3*clight**3)))
+			Kzz_convect(ir)=(1d0/3d0)*Hp(ir)*((exp_ad-1d0)*abs(Fl(ir))/(exp_ad*MMW(ir)*dens(ir)))**(1d0/3d0)
+		else
+			Kzz_convect(ir)=0d0
+		endif
+	enddo
+	endif
+c=========================================================================================
+
+
+
+
 
 	T1=T
 	do ir=2,nr-1
