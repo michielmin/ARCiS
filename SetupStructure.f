@@ -1431,7 +1431,7 @@ c		Pmax=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750
 	
 	if(setsurfpressure) then
 		fact=Pmax/(mixrat(1))
-		fact=fact**2
+c		fact=fact**2
 		mixrat(1)=mixrat(1)*sqrt(fact)
 		Pmax=0d0
 		do i=1,nmol
@@ -1440,7 +1440,7 @@ c		Pmax=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750
 	else
 		mixrat(1:nmol)=mixrat(1:nmol)/mixrat_tot
 		fact=Pmax/(P(1)*mixrat(1))
-		fact=fact**2
+c		fact=fact**2
 		Pmax=P(1)*sqrt(fact)
 	endif
 	Pm=Pmin
