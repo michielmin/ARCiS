@@ -1459,6 +1459,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) PhotoReacts(key%nr1)%haze
 		case("kappauv")
 			read(key%value,*) kappaUV0
+		case("gammauv")
+			read(key%value,*) gammaUV
 		case("photdestroy","pdestroy")
 			call ReadPhotoDestroy(key)
 		case("hydrogenloss")
@@ -1555,6 +1557,10 @@ c	endif
 	endif
 
 	if(fixnight2day) call ComputeNight2Day(.true.)
+	if(gammaUV.ge.0d0) then
+		kappaUV=kappaT*gammaUV
+		call output("!!Using gammaUV to determine kappaUV!!")
+	endif
 	tauUV=-1d0
 	scaleUV=1d0
 
@@ -1936,6 +1942,7 @@ c  GGchem was still implemented slightly wrong.
 	Eg_optEC=1.0
 
 	kappaUV0=-1d0
+	gammaUV=-1d0
 
 	instrument="ARIEL"
 	instr_ntrans=1d0

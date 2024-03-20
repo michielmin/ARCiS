@@ -249,12 +249,12 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
 
 		do i=1,nr
 			call tellertje(i,nr)
-			if(dochemR(i)) then
-			Tc=max(min(T(i),20000d0),100d0)
 			if(nPhotoReacts.gt.0) then
 				molfracs_atoms0=molfracs_atoms
 				call doPhotoChemAtom(i)
 			endif
+			if(dochemR(i)) then
+			Tc=max(min(T(i),20000d0),100d0)
 			if(P(i).ge.mixP.or.i.eq.1) then
 				call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
      &			XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,dosimplerainout)
@@ -265,9 +265,9 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
     			MMW(i)=MMW(i-1)
     			didcondens(i)=didcondens(i-1)
     		endif
+			endif
 			if(nPhotoReacts.gt.0) then
 				molfracs_atoms=molfracs_atoms0
-			endif
 			endif
 		enddo
 		if(nrstepchem.ne.1) then
