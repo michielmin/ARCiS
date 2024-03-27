@@ -1,8 +1,6 @@
 	module pyEx
 	IMPLICIT NONE
-	real*8,allocatable :: pyP(:),pyT(:),pytrans(:),pyemis(:,:),pystar(:),pylam(:)
-	real*8,allocatable :: pyobs(:,:)
-	integer pynvars
+	integer nlam,nr
 	end module pyEx
 	
 
@@ -20,7 +18,7 @@
 	subroutine pyInit(pyinputfile,pyoutputdir,cline)
 	use GlobalSetup
 	use RetrievalMod
-	use pyEx
+	use pyEx, py_nlam => nlam, py_nr => nr
 	IMPLICIT NONE
 	character*500 VersionGIT
 	character(*),optional :: cline
@@ -97,27 +95,15 @@ c terms of use
 	imodel=0
 	bestlike=-1d200
 
-	allocate(pyP(nr),pyT(nr),pylam(nlam),pytrans(nlam),pyemis(nphase,nlam),pystar(1:nlam))
-	if(nobs.gt.0) then
-		j=0
-		do i=1,nobs
-			j=j+ObsSpec(i)%ndata
-		enddo
-		allocate(pyobs(4,j))
-		k=0
-		do i=1,nobs
-			do j=1,ObsSpec(i)%ndata
-				k=k+1
-				pyobs(1,k)=ObsSpec(i)%lam(j)*1d4
-				pyobs(2,k)=ObsSpec(i)%y(j)
-				pyobs(3,k)=ObsSpec(i)%dy(j)
-			enddo
-		enddo
-	endif
-
 	call output("==================================================================")
 
 	call SetOutputMode(.false.)
+
+	py_nlam=0
+	do i=1,nlam
+		if(.not.RTgridpoint(i)) py_nlam=py_nlam+1
+	enddo
+	py_nr=nr
 
 	return
 	end
@@ -155,31 +141,6 @@ c terms of use
 
 	call InitDens()
 	call ComputeModel(.true.)
-	
-	pylam(1:nlam)=lam(1:nlam)*1d4
-	pyP(1:nr)=P(1:nr)
-	pyT(1:nr)=pyT(1:nr)
-	pytrans(1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
-	pyemis(1:nphase,1:nlam)=phase(1,1:nphase,1:nlam)+flux(1:nphase,1:nlam)
-	pystar(1:nlam)=Fstar(1:nlam)
-
-	if(nobs.gt.0) then
-		k=0
-		do i=1,nobs
-			if(ObsSpec(i)%ndata.gt.k) k=ObsSpec(i)%ndata
-		enddo
-		allocate(spec(k),spectemp(nlam))
-		k=0
-		do i=1,nobs
-			call RemapObs(i,spec,spectemp)
-			do j=1,ObsSpec(i)%ndata
-				k=k+1
-				pyobs(4,k)=spec(j)
-			enddo
-		enddo
-		deallocate(spec)
-	endif
-
 	
 	return
 	end
@@ -288,6 +249,90 @@ Cf2py indent(inout) var
 	character*500 :: names
 	
 	names=RetPar(n)%keyword
+
+	return
+	end
+
+	subroutine pyGetLam(l)
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 l(:)
+	integer i,j
+	
+	j=0
+	do i=1,nlam
+		if(.not.RTgridpoint(i)) then
+			j=j+1
+			l(j)=lam(i)
+		endif
+	enddo
+
+	return
+	end
+
+	subroutine pyGetTrans(l,trans)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 l(:),trans(:)
+	integer i,j
+	
+	j=0
+	do i=1,nlam
+		if(.not.RTgridpoint(i)) then
+			j=j+1
+			l(j)=lam(i)
+			trans(j)=obsA(0,i)/(pi*Rstar**2)
+		endif
+	enddo
+
+	return
+	end
+
+	subroutine pyGetEmis(l,emis,ip)
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 l(:),emis(:)
+	integer i,ip,j
+	
+	j=0
+	do i=1,nlam
+		if(.not.RTgridpoint(i)) then
+			j=j+1
+			l(j)=lam(i)
+			emis(j)=phase(1,ip,i)+flux(ip,i)
+		endif
+	enddo
+
+	return
+	end
+
+	subroutine pyGetStar(l,star)
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 l(:),star(:)
+	integer i,j
+	
+	j=0
+	do i=1,nlam
+		if(.not.RTgridpoint(i)) then
+			j=j+1
+			l(j)=lam(i)
+			star(j)=Fstar(i)
+		endif
+	enddo
+
+	return
+	end
+
+
+	subroutine pyGetPT(Ppy,Tpy)
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 Ppy(:),Tpy(:)
+
+	Ppy(1:nr)=P(1:nr)
+	Tpy(1:nr)=T(1:nr)
 
 	return
 	end

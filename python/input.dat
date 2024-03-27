@@ -2,12 +2,6 @@ H2=0.85
 He=0.15
 H2O=1d-4
 CO2=1d-4
-CO=1d-4
-CH4=1d-4
-NH3=1d-4
-SiO=1d-4
-Na=1d-4
-K=1d-4
 
 Pp=10d0
 
@@ -28,9 +22,9 @@ pmax=1d+3
 nr=25
 
 lmin=0.25d0
-lmax=5.0d0				! when iterating for temperature structure lmax > 30.0
+lmax=8.0d0
 
-specres=150
+specres=100
 
 cia=.true.
 
