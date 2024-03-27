@@ -228,14 +228,12 @@ c terms of use
 	return
 	end
 
-	function pyGetLike(var) result(lnew)
+	function pyGetLike() result(lnew)
 	use GlobalSetup
 	IMPLICIT NONE
-	real*8 var(:)
-Cf2py indent(inout) var
 	real*8 lnew
 
-	call slikelihood(var,n_ret,lnew)
+	call ComputeLike(lnew)
 	if(.not.lnew.gt.-1d100) lnew=-1d100
 
 	return
