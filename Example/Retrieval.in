@@ -32,25 +32,9 @@ specres=150
 
 cia=.true.
 
-compute=.false.
-
 scattering=.false.
 scattstar=.false.
 
-cloud1:nsubgrains=1
-cloud1:fmax=0d0
-cloud1:standard='DRIFT'
-cloud1:species='DRIFT'
-cloud1:coverage=1d0
-cloud1:Sigmadot=1d-17
-cloud1:dP=10d0
-cloud1:coverage=1d0
-cloud1:Kzz =  2E+06
-cloud1:Sigmadot =  2.3637590E-17
-cloud1:P =  5.2049144E-04
-
-useDRIFT=.true.
-cloudcompute=.true.
 
 obs1:type="trans"
 obs1:file=WASP-17b_Sing_2015_Nature.dat
@@ -66,7 +50,6 @@ fitpar:keyword="gammaT"
 fitpar:min=1e-2
 fitpar:max=1e+2
 fitpar:log=.true.
-fitpar:opacity=.true.
 
 fitpar:keyword="betaT"
 fitpar:min=0.0
@@ -110,24 +93,7 @@ fitpar:max=4.5
 fitpar:log=.false.
 fitpar:opacity=.true.
 
-fitpar:keyword="cloud1:Kzz"
-fitpar:min=1d5
-fitpar:max=1d12
-fitpar:log=.true.
-fitpar:opacity=.true.
-
-fitpar:keyword="cloud1:Sigmadot"
-fitpar:min=1d-17
-fitpar:max=1d-7
-fitpar:log=.true.
-fitpar:opacity=.true.
-
-fitpar:keyword="cloud1:P"
-fitpar:min=1d-7
-fitpar:max=1d+0
-fitpar:log=.true.
-fitpar:opacity=.true.
-
+useobsgrid=.true.
 
 retrieval=.true.
 retrievaltype='MN'
@@ -135,5 +101,4 @@ retrievaltype='MN'
 npop=200
 efr=0.2d0
 resume_nest=.false.
-chi2max=1.5
 
