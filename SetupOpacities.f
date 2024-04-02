@@ -323,22 +323,22 @@ c For other than H2 from Sneep & Ubachs (2005)
 			select case(j)
 				case(2) !CO2
 c Sneep & Ubachs (2005)
-					Cs=Cs+9.950903042454394e-44*mixrat_r(ir,j)*ll2
+					Cs=Cs+28.499d-45*mixrat_r(ir,j)*ll2**(4.1343/4.0)
 				case(4) !N2O
 c Sneep & Ubachs (2005)
-					Cs=Cs+1.2759625675405231e-43*mixrat_r(ir,j)*ll2
+					Cs=Cs+15.90e-27*mixrat_r(ir,j)*(ll2/18788.4**4)
 				case(5) !CO
 c Sneep & Ubachs (2005)
-					Cs=Cs+4.967426599418766e-44*mixrat_r(ir,j)*ll2
+					Cs=Cs+6.19e-27*mixrat_r(ir,j)*(ll2/18788.4**4)
 				case(6) !CH4
 c Sneep & Ubachs (2005)
-					Cs=Cs+1.000707749511341e-43*mixrat_r(ir,j)*ll2
+					Cs=Cs+12.47e-27*mixrat_r(ir,j)*(ll2/18788.4**4)
 				case(22) !N2
 c Sneep & Ubachs (2005)
-					Cs=Cs+4.0927101222997906e-44*mixrat_r(ir,j)*ll2
+					Cs=Cs+16.31d-45*mixrat_r(ir,j)*ll2**(4.0974/4.0)
 				case(30) !SF6
 c Sneep & Ubachs (2005)
-					Cs=Cs+2.5920497441232007e-43*mixrat_r(ir,j)*ll2
+					Cs=Cs+32.3e-27*mixrat_r(ir,j)*(ll2/18788.4**4)
 				case(45) ! H2
 c Dalgarno & Williams (1962)
 					Cs=Cs+mixrat_r(ir,j)*(8.14d-45*ll2+1.28d-54*ll2*ll+1.61d-64*ll2*ll2)
@@ -368,9 +368,9 @@ c Tarafdar and Vardya 1973
 				case(38) ! C2H4
 c Tarafdar and Vardya 1973
 					Cs=Cs+(42.61**2)*mixrat_r(ir,j)*13056.839884384113d-50*ll2
-				case(9) ! SO2 (but taken the value from CO2 as a poor-man's solution)
+c				case(9) ! SO2 (but taken the value from CO2 as a poor-man's solution)
 c Sneep & Ubachs (2005)
-					Cs=Cs+9.950903042454394e-44*mixrat_r(ir,j)*ll2
+c					Cs=Cs+28.499d-47*mixrat_r(ir,j)*ll2**(4.1343/4.0)
 			end select
 		endif
 	enddo
