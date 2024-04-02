@@ -1,6 +1,6 @@
 	module pyEx
 	IMPLICIT NONE
-	integer nlam,nr
+	integer nlam,nr,nret,nobs
 	end module pyEx
 	
 
@@ -18,7 +18,7 @@
 	subroutine pyInit(pyinputfile,pyoutputdir,cline)
 	use GlobalSetup
 	use RetrievalMod
-	use pyEx, py_nlam => nlam, py_nr => nr
+	use pyEx, py_nlam => nlam, py_nr => nr, py_nret => nret, py_nobs => nobs
 	IMPLICIT NONE
 	character*500 VersionGIT
 	character(*),optional :: cline
@@ -63,7 +63,7 @@
 	call output("==================================================================")
 	call output("         ARtful modelling code for exoplanet Science - ARCiS")
 	call output("==================================================================")
-c terms of use
+! terms of use
 	call output("By using ARCiS you agree to the terms of use.")
 	call output("It basically means you offer us co-author rights on any paper")
 	call output("that uses results computed with ARCiS.")
@@ -104,6 +104,8 @@ c terms of use
 		if(.not.RTgridpoint(i)) py_nlam=py_nlam+1
 	enddo
 	py_nr=nr
+	py_nret=n_ret
+	py_nobs=nobs
 
 	return
 	end
@@ -151,6 +153,23 @@ c terms of use
 
 	call WriteStructure()
 	call WriteOutput()
+
+	return
+	end
+	
+	subroutine pyWriteBestfit()
+	use GlobalSetup
+	IMPLICIT NONE
+	integer i,status
+
+	status=system("cp " // trim(outputdir) // "input.dat " // trim(outputdir) // "bestfit.dat")
+	open(unit=21,file=trim(outputdir) // "bestfit.dat",FORM="FORMATTED",access='APPEND')
+	write(21,'("*** retrieval keywords ***")')
+	write(21,'("retrieval=.false.")')
+	do i=1,n_ret
+		write(21,'(a," = ",es14.7)') trim(RetPar(i)%keyword),RetPar(i)%value
+	enddo
+	close(unit=21)	
 
 	return
 	end
@@ -234,7 +253,7 @@ c terms of use
 	real*8 lnew
 
 	call ComputeLike(lnew)
-	if(.not.lnew.gt.-1d100) lnew=-1d100
+ 	if(.not.lnew.gt.-1d100) lnew=-1d100
 
 	return
 	end
@@ -334,4 +353,72 @@ c terms of use
 
 	return
 	end
+
+
+
+	function pyTransformRetPar(var,i) result(x)
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 var,x
+	integer i,j
+
+	if(i.gt.1.and.RetPar(i)%increase) then
+		RetPar(i)%xmin=RetPar(i-1)%value
+	endif
+	if(RetPar(i)%logscale) then
+!	log
+		x=var
+		if(RetPar(i)%keyword(1:6).eq."Ppoint") then
+			read(RetPar(i)%keyword(7:len(RetPar(i)%keyword)),*) j
+			x=1d0-x**(1d0/(real(nTpoints-j+1)))
+		endif
+		x=(log10(RetPar(i)%xmin)+log10(RetPar(i)%xmax/RetPar(i)%xmin)*x)
+	else if(RetPar(i)%squarescale) then
+!	square
+		x=var
+		x=sqrt(RetPar(i)%xmin**2+(RetPar(i)%xmax**2-RetPar(i)%xmin**2)*x)
+	else
+!	linear
+		x=var
+		x=RetPar(i)%xmin+(RetPar(i)%xmax-RetPar(i)%xmin)*x
+	endif
+
+	return
+	end
+
+
+	subroutine pyMapRetrieval(var,nret)
+	IMPLICIT NONE
+	integer nret
+	real*8 var(nret),dvar(2,nret)
+	
+	call MapRetrievalMN(var,dvar)
+	
+	return
+	end
+	
+
+	function pyGetObsN(i) result(n)
+	use GlobalSetup
+	integer n
+	n=ObsSpec(i)%ndata
+	return
+	end
+
+	subroutine pyGetObs(i,l,obs,dobs,model)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 l(:),obs(:),model(:),dobs(:)
+	integer i,n
+	n=ObsSpec(i)%ndata
+	
+	l(1:n)=ObsSpec(i)%lam(1:n)
+	obs(1:n)=ObsSpec(i)%y(1:n)
+	dobs(1:n)=ObsSpec(i)%dy(1:n)
+	model(1:n)=ObsSpec(i)%model(1:n)
+
+	return
+	end
+
 
