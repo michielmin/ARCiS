@@ -193,7 +193,7 @@ $(PROGRAM):     version  $(OBJS) $(MAINF)
 		$(LINKER) $(LDFLAGS) $(OBJS) $(MAINF) $(LIBS) Version.f -o $(PROGRAM)
 
 $(PYLIB):     version  $(OBJS)
-		f2py3 -m pyARCiS $(F2PYC) -c MainPy.f90 Version.f $(OBJS) --opt='$(LDFLAGS)' $(LIBS) $(LGOMP)
+		f2py -m pyARCiS $(F2PYC) -c MainPy.f90 Version.f $(OBJS) --opt='$(LDFLAGS) $(LIBS) $(LGOMP)'
 		python setup.py install
 
 # recompile everything if Modules.f has changed 
