@@ -68,11 +68,11 @@ endif
 LIBS_FITS		= -lcfitsio
 
 ifeq ($(shell uname),Linux)
-  FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) $(DEBUGGING) 
+  FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) $(DEBUGGING) $(FFLAGS)
   LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -I$(HOME)/include $(DEBUGGING) 
   LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) $(LIBS_MN) -llapack
 else
-  FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING)  
+  FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) $(FFLAGS)
   LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) 
   LIBS    =  -L/usr/local/lib $(LIBS_FITS) $(LIBS_MN) -llapack -lm
 endif
