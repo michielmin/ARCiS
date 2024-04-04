@@ -62,7 +62,7 @@
       dispol_file(1) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_BarklemCollet.dat'
       dispol_file(2) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_StockKitzmann_withoutTsuji.dat'
       dispol_file(3) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_WoitkeRefit.dat'
-      dispol_file(4) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_BURCAT.dat'
+      dispol_file(4) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_Burcat_ARCiS.dat'
       inquire(file=dispol_file(4),exist=checkfile)
       if(.not.checkfile) dispol_file(4) = trim(homedir) // '/ARCiS/src/dispol_Burcat.dat'
       elements     = 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V el'
