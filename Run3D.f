@@ -36,7 +36,7 @@
 	allocate(mixrat3D(n3D,nr,nmol))
 	nx_im=200
 
-	if(retrieval) call SetOutputMode(.false.)
+	if(retrieval.or.dopostequalweights) call SetOutputMode(.false.)
 
 c	recomputeopac=.true.
 	cloudfrac=1d0
@@ -55,7 +55,7 @@ c	recomputeopac=.true.
 		call SetOutputMode(.false.)
 		call InitDens()
 		call ComputeModel1D(recomputeopac)
-		if(.not.retrieval) then
+		if(.not.retrieval.and..not.dopostequalweights) then
 			call SetOutputMode(.true.)
 			call output("night2day contrast: " // dbl2string(night2day,'(f7.4)'))
 		endif
@@ -134,7 +134,7 @@ c	recomputeopac=.true.
 
 	if(iterateshift.and.abs(hotspotshift-hotspotshift0).gt.5d-3) call output("Desired hotspot shift could not be obtained!!")
 
-	if(.not.retrieval) then
+	if(.not.retrieval.and..not.dopostequalweights) then
 		open(unit=20,file=trim(outputdir) // "structure3D.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do j=1,nlatt-1
 			write(20,*) beta(1:nlong-1,j)
@@ -200,7 +200,7 @@ c	recomputeopac=.true.
 	enddo
 	beta_c=beta_c/real(2*(nlatt-1))	
 
-	if(.not.retrieval.and..not.domakeai) then
+	if(.not.retrieval.and..not.domakeai.and..not.dopostequalweights) then
 		open(unit=20,file=trim(outputdir) // "parameter3D.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do j=1,nlatt-1
 			do i=1,nlong-1
@@ -389,7 +389,7 @@ c Now call the setup for the readFull3D part
 			Si(1:nlam,1:ng,0:nr,1:nnu0,i)=Si(1:nlam,1:ng,0:nr,1:nnu0,n3D)
 			if(computealbedo) SiSc(1:nlam,1:ng,0:nr,1:nnu0,i)=SiSc(1:nlam,1:ng,0:nr,1:nnu0,n3D)
 		endif
-		if(.not.retrieval) then
+		if(.not.retrieval.and..not.dopostequalweights) then
 			call SetOutputMode(.true.)
 			open(unit=20,file=trim(outputdir) // "mixrat" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
 			write(20,'("#",a9,a13,a13)') "T[K]","P[bar]","Kzz[cm^2/s]"
@@ -418,7 +418,7 @@ c Now call the setup for the readFull3D part
 		enddo
 	enddo	
 
-	if(.not.retrieval) then
+	if(.not.retrieval.and..not.dopostequalweights) then
 		open(unit=20,file=trim(outputdir) // "surfacetemp3D.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do j=1,nlatt-1
 			write(20,*) T3D(ibeta(1:nlong-1,j),0)
@@ -1044,7 +1044,7 @@ c Note we use the symmetry of the North and South here!
 	deallocate(T3D,mixrat3D)
 	if(.not.retrieval.and.fulloutput3D) deallocate(cloud3D)
 
-	if(retrieval) call SetOutputMode(.true.)
+	if(retrieval.or.dopostequalweights) call SetOutputMode(.true.)
 	
 	return
 	end
@@ -2504,7 +2504,7 @@ c ice fraction according to Ramirez 2023
 			stop
 	end select
 
-	if(.not.retrieval) then
+	if(.not.retrieval.and..not.dopostequalweights) then
 		open(unit=93,file=trim(outputdir) // 'surfemis.dat',FORM="FORMATTED",ACCESS="STREAM")
 		do i=1,nlam
 			write(93,*) lam(i),surface_emis(i)

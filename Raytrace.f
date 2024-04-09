@@ -203,7 +203,7 @@
 !$OMP&         Ca,Cs,icloud,isize,BBr,imol,irc,contr,fact_contr,fluxg_contr,Ag_contr,nk)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
 !$OMP&			cloud_dens,P,flux_contr,obsA_contr,irtrace,dtrace,nirtrace,
-!$OMP&			nmol,mixrat_r,includemol,computecontrib,wgg)
+!$OMP&			nmol,mixrat_r,includemol,computecontrib,wgg,surface_emis)
 	allocate(fact_contr(nr))
 	allocate(fluxg_contr(nr))
 	allocate(Ag_contr(nr))
@@ -279,11 +279,11 @@
 					enddo
 
 					if(ir_next.le.0) then
-						fluxg=fluxg+A*BBr(0)*fact
+						fluxg=fluxg+A*BBr(0)*fact*surface_emis(ilam)
 						if(computecontrib) then
 							do irc=1,nr
 								if(ir.ne.irc) then
-									contr=A*BBr(0)*fact_contr(irc)
+									contr=A*BBr(0)*fact_contr(irc)*surface_emis(ilam)
 									fluxg_contr(irc)=fluxg_contr(irc)+contr
 								endif
 							enddo

@@ -18,14 +18,13 @@
 	integer imol
 	real*8 nu1,nu2,tanscale,ll,tot,tot2
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime,cwg(ng),w1
-	real*8,allocatable :: nu_line(:),dnu_line(:),mixrat_tmp(:)
-	real*8,allocatable :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
+	real*8,allocatable,save :: nu_line(:),mixrat_tmp(:)
+	real*8,allocatable,save :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
 	integer,allocatable,save :: ifull(:),ifast(:)
 	real*8,allocatable,save :: k_line(:),ktemp(:),kappa(:,:),w_line(:),kappa_tot(:),work1(:),work2(:),work3(:)
 !$OMP THREADPRIVATE(ifull,ifast,k_line,ktemp,w_line,kappa_tot,work1,work2,work3)
 	integer n_nu_line,iT,nfull,nfast,ivel
 	integer i,j,ir,k,nl,ig,ig_c,imol0,jg,nmap,imap(nmol)
-	integer,allocatable :: inu1(:),inu2(:)
 	character*500 filename
 	logical,save :: first_entry=.true.
 	real*8,allocatable :: Cabs_optEC(:),Csca_optEC(:)
@@ -50,12 +49,6 @@
 		call Compute_optEC(Cabs_optEC,Csca_optEC,computelam)
 	endif
 
-	allocate(cont_tot(nlam))
-	allocate(kaver(nlam))
-	allocate(opac_tot(nlam,ng))
-	allocate(kappa_mol(ng,nlam,nmol))
-	allocate(mixrat_tmp(nmol))
-
 	j=0
 	do i=1,nmol
 		if(opacitymol(i)) j=j+1
@@ -64,7 +57,29 @@
 c	n_nu_line=ng*min(j,4)
 	if(.not.emisspec.and..not.computeT.and..not.doRing) n_nu_line=ng
 	
-	allocate(nu_line(n_nu_line))
+	if(first_entry) then
+		allocate(cont_tot(nlam))
+		allocate(kaver(nlam))
+		allocate(opac_tot(nlam,ng))
+		allocate(kappa_mol(ng,nlam,nmol))
+		allocate(mixrat_tmp(nmol))
+		allocate(nu_line(n_nu_line))
+		allocate(kappa(ng,nlam))
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& SHARED(n_nu_line,ng,nmol)
+		allocate(k_line(n_nu_line))
+		allocate(ktemp(ng))
+		allocate(w_line(n_nu_line))
+		allocate(ifull(nmol))
+		allocate(ifast(nmol))
+		allocate(kappa_tot(0:nmol))
+		allocate(work1(n_nu_line))
+		allocate(work2(n_nu_line+1))
+		allocate(work3(n_nu_line))
+!$OMP END PARALLEL
+		first_entry=.false.
+	endif
 
 	cwg(1)=wgg(1)
 	do ig=2,ng
@@ -89,24 +104,6 @@ c	n_nu_line=ng*min(j,4)
 	do i=1,n_nu_line
 		nu_line(i)=1d0-real(i-1)/real(n_nu_line-1)
 	enddo
-
-	if(first_entry) then
-		allocate(kappa(ng,nlam))
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& SHARED(n_nu_line,ng,nmol)
-		allocate(k_line(n_nu_line))
-		allocate(ktemp(ng))
-		allocate(w_line(n_nu_line))
-		allocate(ifull(nmol))
-		allocate(ifast(nmol))
-		allocate(kappa_tot(0:nmol))
-		allocate(work1(n_nu_line))
-		allocate(work2(n_nu_line+1))
-		allocate(work3(n_nu_line))
-!$OMP END PARALLEL
-		first_entry=.false.
-	endif
 
 	do ir=nr,1,-1
 		call tellertje(nr-ir+1,nr)
@@ -292,12 +289,6 @@ c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 		close(unit=30)
 	endif
 	
-	deallocate(cont_tot)
-	deallocate(kaver)
-	deallocate(opac_tot)
-	deallocate(kappa_mol)
-	deallocate(nu_line)
-	deallocate(mixrat_tmp)
 	if(do_optEC) deallocate(Cabs_optEC,Csca_optEC)
 
 

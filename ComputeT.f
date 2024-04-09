@@ -39,12 +39,12 @@
 	integer iphase,iter,iter2
 	real*8 tau_V,tau_T,Planck,f
 	real*8 g,dlnT,dlnP,d,tau,tautot,fact,contr,tau_a,exp_tau
-	real*8,allocatable :: Ce(:,:,:),Ca(:,:,:),Cs(:,:,:),taustar(:,:),tauR_nu(:,:,:)
-	real*8,allocatable :: wscat(:,:,:),wabs(:,:,:)
+	real*8,allocatable,save :: Ce(:,:,:),Ca(:,:,:),Cs(:,:,:),taustar(:,:),tauR_nu(:,:,:)
+	real*8,allocatable,save :: wscat(:,:,:),wabs(:,:,:)
 	real*8 tot,tot2,tot3,tot4,chi2,must,gamma,dP,Tirr,T0(nr),T1(nr),must_i,E,E0,Tinp(nr)
 	real*8 z,Hstar(nr),Jtot,Htot,Ktot
 	real*8 fedd(nr),Hedd(nr),lH1,lH2,P1,P2
-	real*8,allocatable :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:)
+	real*8,allocatable,save :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:)
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax
 	logical docloud0(max(nclouds,1)),converged,stopscat
 	real*8 tauf(nr),Si(0:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff,TT,maxErr,Fl0(nr),IntH0(nr,nr)
@@ -52,14 +52,16 @@
 	real*8 tau1,tau2,ee0,ee1,ee2,tauR(nr),Ij(nr),Ih(nr),scale,dtauR(nr)
 	integer nlam_LR
 	real*8 IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact,err,tot1,Pb(nr+1)
-	real*8,allocatable :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
+	real*8,allocatable,save :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
 	integer i1,i2,ngF,j
 	real*8 ww,w1,w2,FstarBottom,tauRoss,HUVstar,HUVstar_omp
-	real*8,allocatable :: Si_omp(:,:),Ih_omp(:),Ij_omp(:),tauR_omp(:),Hsurf(:,:),Hstar_omp(:)
-	real*8,allocatable :: Fstar_LR(:),SurfEmis_LR(:),IntHnuSurf(:,:)
-	integer,allocatable :: IP(:)
-	real*8,allocatable :: WS(:),nu(:),wnu(:),Hstar_lam(:),Hsurf_lam(:)
-	real*8,allocatable :: IhN(:,:,:),IjN(:,:,:),UVstar(:),UVstar_omp(:),HBottom(:)
+	real*8,allocatable,save :: Si_omp(:,:),Ih_omp(:),Ij_omp(:),tauR_omp(:),Hsurf(:,:),Hstar_omp(:)
+	real*8,allocatable,save :: Fstar_LR(:),SurfEmis_LR(:),IntHnuSurf(:,:)
+	integer,allocatable,save :: IP(:)
+	real*8,allocatable,save :: WS(:),nu(:),wnu(:),Hstar_lam(:),Hsurf_lam(:)
+	real*8,allocatable,save :: IhN(:,:,:),IjN(:,:,:),UVstar(:),UVstar_omp(:),HBottom(:)
+!$OMP THREADPRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,IhN,IjN,Hstar_omp,Hstar_lam,Hsurf_lam,HBottom,UVstar_omp)
+	logical,save :: first_entry=.true.
 	character*500 file
 	integer icloud
 	logical Convec(0:nr),fixed(nr)
@@ -71,68 +73,89 @@
 
 	maxfact=4d0
 
-	allocate(IP(nr*4+2))
-	IP(1)=(2*(nr)+nr*3+(nr*2+2)*(nr+7))
-	IP(2)=nr*4+2
-	allocate(WS(IP(1)))
-	
+	if(first_entry) then
+		allocate(IP(nr*4+2))
+		IP(1)=(2*(nr)+nr*3+(nr*2+2)*(nr+7))
+		IP(2)=nr*4+2
+		allocate(WS(IP(1)))
+	else
+		IP(1)=(2*(nr)+nr*3+(nr*2+2)*(nr+7))
+		IP(2)=nr*4+2
+	endif
+		
 	nlam_LR=0
 	do ilam=1,nlam
 		if(RTgridpoint(ilam)) then
 			nlam_LR=nlam_LR+1
 		endif
 	enddo
+	nnu=5
 
-	allocate(lam_LR(nlam_LR))
-	allocate(freq_LR(nlam_LR))
-	allocate(dfreq_LR(nlam_LR))
-	nlam_LR=0
-	do ilam=1,nlam
-		if(RTgridpoint(ilam)) then
-			nlam_LR=nlam_LR+1
-			lam_LR(nlam_LR)=lam(ilam)
-			freq_LR(nlam_LR)=freq(ilam)
-			dfreq_LR(nlam_LR)=dfreq(ilam)
-		endif
-	enddo
-
-	allocate(BB_LR(nlam_LR,nBB))
-
-	BB_LR=0d0
+	if(first_entry) then
+		allocate(lam_LR(nlam_LR))
+		allocate(freq_LR(nlam_LR))
+		allocate(dfreq_LR(nlam_LR))
+		allocate(BB_LR(nlam_LR,nBB))
+		nlam_LR=0
+		do ilam=1,nlam
+			if(RTgridpoint(ilam)) then
+				nlam_LR=nlam_LR+1
+				lam_LR(nlam_LR)=lam(ilam)
+				freq_LR(nlam_LR)=freq(ilam)
+				dfreq_LR(nlam_LR)=dfreq(ilam)
+			endif
+		enddo
+		BB_LR=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(TT,j,i,tot,scale)
 !$OMP& SHARED(nlam_LR,BB_LR,freq_LR,dfreq_LR)
 !$OMP DO
-	do j=nBB,1,-1
-		TT=real(j)
-		tot=0d0
-		do i=1,nlam_LR
-			BB_LR(i,j)=Planck(TT,freq_LR(i))
-			tot=tot+dfreq_LR(i)*BB_LR(i,j)
+		do j=nBB,1,-1
+			TT=real(j)
+			tot=0d0
+			do i=1,nlam_LR
+				BB_LR(i,j)=Planck(TT,freq_LR(i))
+				tot=tot+dfreq_LR(i)*BB_LR(i,j)
+			enddo
+			scale=((2d0*(pi*kb*TT)**4)/(15d0*hplanck**3*clight**3))/tot
+			if(scale.gt.0d0.and.tot.gt.0d0) then
+				BB_LR(1:nlam_LR,j)=BB_LR(1:nlam_LR,j)*scale
+			else if(j.lt.nBB) then
+				scale=((2d0*(pi*kb*TT)**4)/(15d0*hplanck**3*clight**3))/((2d0*(pi*kb*real(j+1))**4)/(15d0*hplanck**3*clight**3))
+				BB_LR(1:nlam_LR,j)=BB_LR(1:nlam_LR,j+1)*scale
+			endif
 		enddo
-		scale=((2d0*(pi*kb*TT)**4)/(15d0*hplanck**3*clight**3))/tot
-		if(scale.gt.0d0.and.tot.gt.0d0) then
-			BB_LR(1:nlam_LR,j)=BB_LR(1:nlam_LR,j)*scale
-		else if(j.lt.nBB) then
-			scale=((2d0*(pi*kb*TT)**4)/(15d0*hplanck**3*clight**3))/((2d0*(pi*kb*real(j+1))**4)/(15d0*hplanck**3*clight**3))
-			BB_LR(1:nlam_LR,j)=BB_LR(1:nlam_LR,j+1)*scale
-		endif
-	enddo
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
 
-	allocate(taustar(nlam_LR,ng))
-	allocate(Ce(nr,nlam_LR,ng))
-	allocate(Ca(nr,nlam_LR,ng))
-	allocate(Cs(nr,nlam_LR,ng))
-	allocate(Fstar_LR(nlam_LR))
-	allocate(tauR_nu(0:nr,nlam_LR,ng))
-	allocate(dtauR_nu(0:nr,nlam_LR,ng))
-	allocate(IntHnu(nlam_LR,nr,nr))
-	allocate(IntHnuSurf(nlam_LR,nr))
-	allocate(SurfEmis_LR(nlam_LR))
+		allocate(taustar(nlam_LR,ng))
+		allocate(Ce(nr,nlam_LR,ng))
+		allocate(Ca(nr,nlam_LR,ng))
+		allocate(Cs(nr,nlam_LR,ng))
+		allocate(Fstar_LR(nlam_LR))
+		allocate(tauR_nu(0:nr,nlam_LR,ng))
+		allocate(dtauR_nu(0:nr,nlam_LR,ng))
+		allocate(IntHnu(nlam_LR,nr,nr))
+		allocate(IntHnuSurf(nlam_LR,nr))
+		allocate(SurfEmis_LR(nlam_LR))
+		allocate(wscat(nr,nlam_LR,ng),wabs(nr,nlam_LR,ng))
+		allocate(UVstar(nr))
+		allocate(nu(nnu),wnu(nnu))
+		call gauleg(0d0,1d0,nu,wnu,nnu)
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& SHARED(nr,nnu)
+		allocate(Si_omp(nr,0:nr+1),tauR_omp(nr),Ih_omp(nr),Ij_omp(nr))
+		allocate(IhN(nr,0:nr+1,nnu),IjN(nr,0:nr+1,nnu))
+		allocate(Hstar_omp(nr),Hstar_lam(nr),Hsurf_lam(nr),HBottom(nr))
+		allocate(UVstar_omp(nr))
+!$OMP FLUSH
+!$OMP END PARALLEL
+		first_entry=.false.
+	endif
+
 
 	docloud0=.false.
 	do i=1,nclouds
@@ -172,7 +195,6 @@
 	enddo
 
 	Ce=Ca+Cs
-	allocate(wscat(nr,nlam_LR,ng),wabs(nr,nlam_LR,ng))
 	do ir=1,nr
 		do ilam=1,nlam_LR
 			do ig=1,ng
@@ -230,10 +252,6 @@
 		enddo
 	enddo
 
-	nnu=5
-	allocate(nu(nnu),wnu(nnu))
-	call gauleg(0d0,1d0,nu,wnu,nnu)
-
 c===============================================================
 c quick thing to read in a file!
 c	file='sedlhs.txt'
@@ -253,21 +271,15 @@ c	Fstar_LR=Fstar_LR*scale
 	Hstar(1:nr)=0d0
 	IntHnu(1:nlam_LR,1:nr,1:nr)=0d0
 	IntHnuSurf(1:nlam_LR,1:nr)=0d0
-	allocate(UVstar(nr))
 	UVstar=0d0
 	HUVstar=0d0
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,ilam,ig,ir,inu,jr,UVstar_omp,HUVstar_omp,
-!$OMP&			Hstar_omp,contr,FstarBottom,Hstar_lam,Hsurf_lam,tot,IhN,IjN,HBottom)
+!$OMP& PRIVATE(ilam,ig,ir,inu,jr,contr,FstarBottom,tot,HUVstar_omp)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,night2day,deepredist,
 !$OMP&			Hstar,Dplanet,Fstar_LR,must,wabs,wscat,IntHnuSurf,betaF,isoFstar,do3D,UVstar,HUVstar,
 !$OMP&			lam_LR,deepredisttype,init3D)
-	allocate(Si_omp(nr,0:nr+1),tauR_omp(nr),Ih_omp(nr),Ij_omp(nr))
-	allocate(IhN(nr,0:nr+1,nnu),IjN(nr,0:nr+1,nnu))
-	allocate(Hstar_omp(nr),Hstar_lam(nr),Hsurf_lam(nr),HBottom(nr))
-	allocate(UVstar_omp(nr))
 	Hstar_omp=0d0
 	UVstar_omp=0d0
 	HUVstar_omp=0d0
@@ -402,9 +414,6 @@ c				Hstar_omp(ir)=Hstar_omp(ir)+min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0)
 	UVstar=UVstar+UVstar_omp
 	HUVstar=HUVstar+HUVstar_omp
 !$OMP END CRITICAL
-	deallocate(Si_omp,tauR_omp,Ih_omp,Ij_omp,IhN,IjN)
-	deallocate(Hstar_omp,Hstar_lam,Hsurf_lam,HBottom)
-	deallocate(UVstar_omp)
 !$OMP FLUSH
 !$OMP END PARALLEL
 	scaleUV=max(0d0,-(pi*HUVstar/3.4947466112306125E-009))
@@ -434,8 +443,6 @@ c			tot=tot+dfreq_LR(ilam)*Fstar_LR(ilam)/(Dplanet**2)
 c		endif
 c	enddo
 c	print*,'EUV: ',tot
-
-	deallocate(UVstar)
 
 	if(init3D.and.deepredist.and.deepredisttype.eq.'fixflux') then
 		Hstar0(1:nr)=Hstar(1:nr)/betaF
@@ -683,7 +690,7 @@ c===============================================================================
 	if(.not.allocated(Tdist)) allocate(Tdist(nr,maxiter))
 	Tdist(1:nr,nTiter)=T(1:nr)
 	call output("Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%")
-	if(do3D.and..not.retrieval) print*,"Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%"
+	if(do3D.and..not.retrieval.and..not.dopostequalweights) print*,"Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%"
 	T0(1:nr)=Tinp(1:nr)
 	T1(1:nr)=T(1:nr)
 	do ir=1,nr
@@ -693,9 +700,9 @@ c===============================================================================
 
 	Tsurface=T(1)
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
-	if(do3D.and..not.retrieval) print*,"Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K"
+	if(do3D.and..not.retrieval.and..not.dopostequalweights) print*,"Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K"
 
-	if(.not.retrieval) then
+	if(.not.retrieval.and..not.dopostequalweights) then
 		open(unit=26,file=trim(outputdir) // 'convection.dat',FORM="FORMATTED",ACCESS="STREAM")
 		do ir=1,nr
 			if(Convec(ir)) then
@@ -715,20 +722,6 @@ c===============================================================================
 		call WriteStructure
 	endif
 	call tellertje(niter,niter)
-
-	deallocate(lam_LR)
-	deallocate(freq_LR)
-	deallocate(dfreq_LR)
-	deallocate(BB_LR)
-	deallocate(taustar)
-	deallocate(Ce)
-	deallocate(Ca)
-	deallocate(Cs)
-	deallocate(Fstar_LR)
-	deallocate(tauR_nu)
-	deallocate(IntHnu)
-	deallocate(IntHnuSurf)
-	deallocate(SurfEmis_LR)
 
 	return
 	end
