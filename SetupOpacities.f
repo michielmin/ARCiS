@@ -126,7 +126,7 @@ c===============
 				if(T(ir).lt.CIA(i)%T(1)) then
 					iT=1
 				else if(T(ir).gt.CIA(i)%T(CIA(i)%nT)) then
-					iT=CIA(i)%nT-1
+					iT=CIA(i)%nT
 				else
 					do iT=1,CIA(i)%nT-1
 						if(T(ir).ge.CIA(i)%T(iT).and.T(ir).le.CIA(i)%T(iT+1)) exit

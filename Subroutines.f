@@ -579,7 +579,7 @@ c-----------------------------------------------------------------------
 	real*8 grid2(n),y2(n),tot(n)
 	real*8,allocatable :: ls(:),Fs(:),dls(:)
 	character*500 input
-	logical truefalse,done(n)
+	logical truefalse,done(n),done2(n)
 
 	inquire(file=input,exist=truefalse)
 	if(.not.truefalse) then
@@ -611,13 +611,13 @@ c-----------------------------------------------------------------------
 	dls(nls)=dls(nls-1)
 	
 	j=1
-	y=0d0
+	y2=0d0
 	done=.false.
 	tot=0d0
 	do j=1,n
 		do i=1,nls
 			if(ls(i).gt.xedge(1,j).and.ls(i).lt.xedge(2,j)) then
-				y(j)=y(j)+Fs(i)*dls(i)
+				y2(j)=y2(j)+Fs(i)*dls(i)
 				tot(j)=tot(j)+dls(i)
 				done(j)=.true.
 			endif
@@ -627,19 +627,19 @@ c-----------------------------------------------------------------------
 	j=0
 	do i=1,n
 		if(done(i)) then
-			y(i)=y(i)/tot(i)
+			y(i)=y2(i)/tot(i)
 		else
 			j=j+1
 			grid2(j)=grid(i)
 		endif
 	enddo
 	if(j.ne.0) then
-		call readstar_interpol(input,grid2,y2,j)
+		call readstar_interpol(input,grid2,y2,j,done2)
 		j=0
 		do i=1,n
 			if(.not.done(i)) then
 				j=j+1
-				y(i)=y2(j)
+				if(done2(j)) y(i)=y2(j)
 			endif
 		enddo
 	endif
@@ -655,12 +655,13 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 
-	subroutine readstar_interpol(input,grid,y,n)
+	subroutine readstar_interpol(input,grid,y,n,done)
 	IMPLICIT NONE
 	integer i,j,n
 	real*8 grid(n),y(n),x0,y0,x1,y1
 	character*500 input
-	logical truefalse
+	logical truefalse,done(n)
+	done=.false.
 	inquire(file=input,exist=truefalse)
 	if(.not.truefalse) then
 		write(*,200) input(1:len_trim(input))
@@ -682,6 +683,7 @@ c-----------------------------------------------------------------------
 		else
 			y(i)=y1+(grid(i)-x1)*(y0-y1)/(x0-x1)
 		endif
+		done(i)=.true.
 		i=i+1
 		if(i.gt.n) goto 102
 		goto 101

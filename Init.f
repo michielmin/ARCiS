@@ -1114,6 +1114,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			if(twind.gt.0d0) n2d=max(2,n2d)
 		case("partprofile","par_tprofile")
 			read(key%value,*) par_tprofile
+		case("grey_isot")
+			read(key%value,*) grey_isoT
 		case("ng")
 			read(key%value,*) ng
 		case("distance")
@@ -1829,6 +1831,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	mixrat=0d0
 	includemol=.false.
 	par_tprofile=.false.
+	grey_isoT=.false.
 	do_rayleigh=.true.
 	Pswitch_mol=0d0
 	abun_switch_mol=0d0

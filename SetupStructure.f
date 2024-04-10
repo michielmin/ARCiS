@@ -418,6 +418,10 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 	tau=0d0
 	Tirr=sqrt(Rstar/(Dplanet))*Tstar
 	call output("Irradiation temperature: " // dbl2string(Tirr,'(f8.1)'))
+	if(grey_isoT) then
+		x=(45d0**4+Tirr**4*beta_used)**0.25
+		return
+	endif
 c	if(computeT) then
 c		x=(Tirr**4/sqrt(2d0)+TeffP**4)**0.25
 c		return

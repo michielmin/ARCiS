@@ -13269,9 +13269,6 @@
 			flux(i)=Planck(Tk,1d4/lam(i))
 		enddo
 		return
-	else if(file.ne.' ') then
-		call regridstar(file,lam,blam,flux,nlam)
-		return
 	endif
 	
 	iTk=Tk
@@ -13332,6 +13329,8 @@ c	scale=((Tk/real(kuruczT(i0)))**4)*3.1415926536/3.336e11
 		scale=Planck(Tk,1d4/lam(i))/Planck(1d0*real(kuruczT(i0)),1d4/lam(i))
 		flux(i)=flux(i)*scale
 	enddo
+
+	if(file.ne.' ') call regridstar(file,lam,blam,flux,nlam)
 
 	return
 	end
