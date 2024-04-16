@@ -3206,11 +3206,11 @@ c not entirely correct...
 	read(72,*)
 1	read(72,*,end=2) name,Tstar,x,x,Zc,x,x,Mstar,x,x,Rstar,x,x,logg,x,x,x,x,x,orbit_P,orbit_e,x,x,Dplanet,x,x,
      &					Mp_prior,dM1,dM2,Rplanet,dR1,dR2
-	if(Zc.eq.'-1') then
-		metallicity=0d0
-	else
-		read(Zc,*) metallicity
-	endif
+c	if(Zc.eq.'-1') then
+c		metallicity=0d0
+c	else
+c		read(Zc,*) metallicity
+c	endif
 	i=len_trim(name)
 	if(name(i:i).eq.'b') then
 		name(i:i)=' '
