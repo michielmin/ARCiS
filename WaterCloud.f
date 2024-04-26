@@ -10,7 +10,7 @@
 	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:),CloudHp(:)
 	real*8,allocatable :: at_ab(:,:)
 	real*8,allocatable,save :: Sc(:),vthv(:),Aomp(:,:),xomp(:),IWORKomp(:),AB(:,:)
-	real*8,allocatable :: drhoKd(:),drhoKg(:),drhovsed(:),tcinv(:,:),rho_av(:),densv(:,:),Kd(:),Kg(:),Km(:)
+	real*8,allocatable :: tcinv(:,:),rho_av(:),densv(:,:),Kd(:),Kg(:),Km(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,ComputeKzz,err,maxerr
@@ -172,8 +172,6 @@ c H2O: 7
 	allocate(y(nnr,5))
 	allocate(Sn(nnr))
 	allocate(vth(nnr))
-	allocate(drhoKd(nnr),drhoKg(nnr))
-	allocate(drhovsed(nnr))
 	allocate(tcinv(niter,nnr))
 	allocate(xn_iter(niter,nnr),xm_iter(niter,nnr))
 	allocate(xc_iter(niter,nCS,nnr),xv_iter(niter,nCS,nnr))
@@ -327,13 +325,6 @@ c H2O: 7
 	enddo
 	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*scaleUV*Sigmadot/tot
 
-	SKIP=.false.
-	INCFD=1
-	x(1:nnr)=Kd(1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,CloudR,x,drhoKd,INCFD)
-	x(1:nnr)=Kg(1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,CloudR,x,drhoKg,INCFD)
-
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(nnr,NN)
@@ -362,14 +353,7 @@ c start the loop
 			St=rpart(i)*rho_av(i)*Km(i)/(vth(i)*Clouddens(i)*CloudHp(i)**2)
 			Kd(i)=Km(i)/(1d0+St)
 		enddo
-		x(1:nnr)=Kd(1:nnr)*Clouddens(1:nnr)
-		call DPCHIM(nnr,CloudR,x,drhoKd,INCFD)
 	endif
-
-	SKIP=.false.
-	INCFD=1
-	x(1:nnr)=vsed(1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,CloudR,x,drhovsed,INCFD)
 
 	empty=.false.
 	freeflow=Cloud(ii)%freeflow_nuc
@@ -789,8 +773,6 @@ c Seed particles
 	deallocate(y)
 	deallocate(Sn)
 	deallocate(vth)
-	deallocate(drhoKd,drhoKg)
-	deallocate(drhovsed)
 	deallocate(tcinv,xn_iter,xm_iter,xc_iter,xv_iter)
 	deallocate(vsed)
 	deallocate(ixv)

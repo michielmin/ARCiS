@@ -10,7 +10,7 @@
 	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:),CloudHp(:)
 	real*8,allocatable :: at_ab(:,:)
 	real*8,allocatable,save :: Sc(:),vthv(:),Aomp(:,:),xomp(:),IWORKomp(:),AB(:,:)
-	real*8,allocatable :: drhoKd(:),drhoKg(:),drhovsed(:),tcinv(:,:),rho_av(:),densv(:,:),Kd(:),Kg(:),Km(:)
+	real*8,allocatable :: tcinv(:,:),rho_av(:),densv(:,:),Kd(:),Kg(:),Km(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,ComputeKzz,err,maxerr,dztot
@@ -334,8 +334,6 @@ c	atoms_cloud(i,3)=1
 	allocate(y(nnr,5))
 	allocate(Sn(nnr))
 	allocate(vth(nnr))
-	allocate(drhoKd(nnr),drhoKg(nnr))
-	allocate(drhovsed(nnr))
 	allocate(tcinv(niter,nnr))
 	allocate(xn_iter(niter,nnr),xm_iter(niter,nnr))
 	allocate(xc_iter(niter,nCS,nnr),xv_iter(niter,nCS,nnr))
@@ -487,13 +485,6 @@ c	atoms_cloud(i,3)=1
 	enddo
 	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*scaleUV*Sigmadot/tot
 
-	SKIP=.false.
-	INCFD=1
-	x(1:nnr)=Kd(1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,CloudR,x,drhoKd,INCFD)
-	x(1:nnr)=Kg(1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,CloudR,x,drhoKg,INCFD)
-
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(nnr,NN)
@@ -523,14 +514,7 @@ c start the loop
 			St=rpart(i)*rho_av(i)*Km(i)/(vth(i)*Clouddens(i)*CloudHp(i)**2)
 			Kd(i)=Km(i)/(1d0+St)
 		enddo
-		x(1:nnr)=Kd(1:nnr)*Clouddens(1:nnr)
-		call DPCHIM(nnr,CloudR,x,drhoKd,INCFD)
 	endif
-
-	SKIP=.false.
-	INCFD=1
-	x(1:nnr)=vsed(1:nnr)*Clouddens(1:nnr)
-	call DPCHIM(nnr,CloudR,x,drhovsed,INCFD)
 
 	empty=.false.
 	freeflow=Cloud(ii)%freeflow_nuc
@@ -692,8 +676,8 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku,dztot)
-!$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,drhovsed,Kd,Kg,xn,empty,docondense,
-!$OMP&		NN,rpart,ixc,vsed,drhoKd,drhoKg,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot,xm,freeflow)
+!$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,Kd,Kg,xn,empty,docondense,
+!$OMP&		NN,rpart,ixc,vsed,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot,xm,freeflow)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=1,nCS
@@ -943,9 +927,25 @@ c equations for material
 	j=0
 	i=1
 	j=j+1
-	Aomp(j,ixv(iCS,i))=1d0
-	xomp(j)=0d0
+	if(freeflow) then
+c assume continuous flux at the bottom (dF/dz=Sc=0)
+		tcrystinv=nucryst*exp(-Tcryst/CloudT(i))
+		Aomp(j,ixv(iCS,i))=-Sc(i)*xn(i)*Clouddens(i)!*CloudMR(i)/mixrat_bot
+		Aomp(j,ixc(iCS,i))=Sc(i)*densv(i,iCS)/mpart(i)
+		xomp(j)=0d0
 
+		dztot=(CloudR(i+1)-CloudR(i))
+		dz=(CloudR(i)-CloudR(i+1))
+		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
+
+		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Clouddens(i)*tcrystinv
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-ScTot(2,4,i)-ScTot(2,5,i)-ScTot(2,6,i)
+	else
+		Aomp(j,ixc(iCS,i))=1d0
+		xomp(j)=0d0
+	endif
 	j=j+1
 	Aomp(j,ixc(iCS,i))=1d0
 	Aomp(j,ixv(iCS,i))=1d0
@@ -954,18 +954,14 @@ c equations for material
 		tcrystinv=nucryst*exp(-Tcryst/CloudT(i))
 
 		j=j+1
-
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-drhovsed(i)
-
-		dz=CloudR(i+1)-CloudR(i)
-		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))+(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-(-Clouddens(i)*vsed(i)+drhoKd(i))/dz
-
-		dz=CloudR(i+1)-CloudR(i-1)
-		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i+1)-CloudR(i)))
-		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))+2d0*Clouddens(i)*Kd(i)/(dz*(CloudR(i)-CloudR(i-1)))
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-2d0*Clouddens(i)*Kd(i)*(1d0/(dz*(CloudR(i+1)-CloudR(i)))
-     &					+1d0/(dz*(CloudR(i)-CloudR(i-1))))
+		dztot=(CloudR(i+1)-CloudR(i-1))/2d0
+		dz=(CloudR(i)-CloudR(i+1))
+		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+		dz=(CloudR(i-1)-CloudR(i))
+		Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Clouddens(i)*tcrystinv
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-ScTot(2,4,i)-ScTot(2,5,i)-ScTot(2,6,i)
@@ -1326,8 +1322,6 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 	deallocate(y)
 	deallocate(Sn)
 	deallocate(vth)
-	deallocate(drhoKd,drhoKg)
-	deallocate(drhovsed)
 	deallocate(tcinv,xn_iter,xm_iter,xc_iter,xv_iter)
 	deallocate(vsed)
 	deallocate(ixv)
