@@ -372,10 +372,10 @@ c					Cs=Cs+28.499d-47*mixrat_r(ir,j)*ll2**(4.1343/4.0)
 	real*8 function RayleighHatom(lam)
 	IMPLICIT NONE
 	real*8 lam,Cp(10),sigma_T,lam_l,sum_term
-	parameter(Cp = (/1.26563, 3.73828125, 8.813930935, 19.15379502, 
-     &		39.92303232, 81.10881152, 161.9089166, 319.0231631, 622.2679809, 1203.891509/))	
-	parameter(sigma_T = 0.665e-24)
-	parameter(lam_l = 91.2e-7)
+	parameter(Cp = (/1.26563d0, 3.73828125d0, 8.813930935d0, 19.15379502d0, 
+     &		39.92303232d0, 81.10881152d0, 161.9089166d0, 319.0231631d0, 622.2679809d0, 1203.891509d0/))	
+	parameter(sigma_T = 0.665d-24)
+	parameter(lam_l = 91.2d-7)
 	integer i
 
 	sum_term = 0d0

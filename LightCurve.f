@@ -553,7 +553,7 @@ c	enddo
 	real*8 function Intersect(R1,R2,dist)
 	IMPLICIT NONE
 	real*8 R1,R2,Ar,Br,d,x,y,pi,asinA,asinB,t1,t2,dist
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
 	d=abs(dist)
 	if(R1.gt.R2) then
 		Ar=R1
@@ -613,7 +613,7 @@ c	Ma=Ea-e*sin(Ea)
 	subroutine ComputeTc(omega,e,Ma)
 	IMPLICIT NONE
 	real*8 omega,Ma,Ea,e,nu,pi
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
 
 	nu=pi/2d0-omega
 	Ea=2d0*atan(sqrt((1d0-e)/(1d0+e))*tan(nu/2d0))

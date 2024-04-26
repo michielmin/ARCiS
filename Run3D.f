@@ -1129,7 +1129,7 @@ c Note we use the symmetry of the North and South here!
 	IMPLICIT NONE
 	integer i,j,nlong,nlatt
 	real*8 pi
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
 	real*8 long(nlong),latt(nlatt)	!(Lambda, Phi)
 	real*8 beta(nlong,nlatt),la,lo,albedo,p,f,tot1,tot2,b1,b2
 	real*8 Kxx,vxx,betamin,betamax,beta1(nlong),night2day,Kyy,powvxx,pole2eq
@@ -1169,7 +1169,7 @@ c Note we use the symmetry of the North and South here!
 	IMPLICIT NONE
 	integer nlong,nlatt,i,j,k
 	real*8 shift,beta(nlong,nlatt),max,x1,x2,x3,y1,y2,y3,pi,long(nlong)
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
 	
 	j=nlatt/2
 	max=0d0
@@ -1222,7 +1222,7 @@ c Note we use the symmetry of the North and South here!
 	real*8 la(nlatt-1),lo(nlong-1),tp,tm,tot1,tot2,cmax,cmin
 	real*8,allocatable :: A(:,:)
 	integer j0,jm,jp,k,niter,maxiter
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
 	real*8 smax,smin,scale,betamin,betamax,contr
 
 	do i=1,nlong-1
@@ -1384,7 +1384,7 @@ c Note we use the symmetry of the North and South here!
 	real*8 la(nlatt-1),lo(nlong-1),tp,tm,tot1,tot2,cmax,cmin
 	real*8,allocatable :: A(:,:)
 	integer j0,jm,jp,k,niter,maxiter
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
 	real*8 smax,smin,scale,betamin,betamax,contr
 
 	do i=1,nlong-1
@@ -1543,7 +1543,7 @@ c Note we use the symmetry of the North and South here!
 	real*8 la(nlatt-1),lo(nlong-1),tp,tm,tot1,tot2,cmax,cmin
 	real*8,allocatable :: A(:,:)
 	integer j0,jm,jp,k,niter,maxiter
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
 	real*8 smax,smin,scale,betamin,betamax,contr
 	real*8 f1m,f1p,f2m,f2p,am,ap,a0,bm,bp,b0
 
@@ -1703,7 +1703,7 @@ c Note we use the symmetry of the North and South here!
 	real*8 la(nlatt-1),lo(nlong-1),tp,tm,tot1,tot2
 	real*8,allocatable :: A(:,:)
 	integer j0,jm,jp,k
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
 	allocate(IWORK(50*nlatt*nlong*nlatt*nlong))
 	allocate(A((nlatt-1)*(nlong-1),(nlatt-1)*(nlong-1)))
 
@@ -1802,7 +1802,7 @@ c Note we use the symmetry of the North and South here!
 	integer i,info,IWORK(50*nbeta*nbeta),j,NRHS
 	real*8 beta(nbeta),K,v,theta(nbeta),S(nbeta)
 	real*8 pi,A(nbeta,nbeta),tot
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
 	
 	S=0d0
 	A=0d0

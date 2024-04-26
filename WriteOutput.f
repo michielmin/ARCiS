@@ -10,7 +10,7 @@
 	logical,allocatable :: docloud0(:,:)
 	real*8,allocatable :: spec(:,:),specR(:),lamR(:),specRexp(:),specErr(:),Fstar_obs(:)
 	real*8 x,specres_obs,expspecres_obs,gasdev,tot,Dmirror,f_phot,noisefloor,molweight(nmol),Tweight,Pweight
-	real*8 lam_out(nlam),Ca,Cs,tau,tautot
+	real*8 lam_out(nlam),spec_out(nlam),Ca,Cs,tau,tautot
 	integer nlam_out
 	integer ilam,j,nj,nlamR,i_instr,k,ir
 	character*1000 line,instr_add
@@ -387,7 +387,15 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 	end select
 	allocate(spec(nphase,nlamR))
 	allocate(Fstar_obs(nlamR))
-	call regridspecres(lam,Fstar(1:nlam_out),nlam_out,
+	nlam_out=0
+	do i=1,nlam
+		if(computelam(i)) then
+			nlam_out=nlam_out+1
+			lam_out(nlam_out)=lam(i)
+			spec_out(nlam_out)=Fstar(i)
+		endif
+	enddo
+	call regridspecres(lam_out,spec_out,nlam_out,
      &						lamR,Fstar_obs(1:nlamR),specR,specRexp,nlamR)
 	if(instr_add.ne."simulated".and.instr_add(1:3).ne."obs") then
 		do i=1,nlamR
@@ -408,7 +416,15 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 		do ir=1,nr
 			wr(ir)=0d0
 			if(sum(obsA_contr(ir,1:nlam_out)).gt.0d0) then
-				call regridspecres(lam,obsA_contr(ir,1:nlam_out),nlam_out,lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
+				nlam_out=0
+				do i=1,nlam
+					if(computelam(i)) then
+						nlam_out=nlam_out+1
+						lam_out(nlam_out)=lam(i)
+						spec_out(nlam_out)=obsA_contr(ir,i)
+					endif
+				enddo
+				call regridspecres(lam_out,spec_out,nlam_out,lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
 				do j=1,nlamR
 					x=(spec(1,j)/specErr(j))**2
 					tot=tot+x
@@ -455,7 +471,15 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 		do ir=1,nr
 			wr(ir)=0d0
 			if(sum(obsA_contr(ir,1:nlam_out)).gt.0d0) then
-				call regridspecres(lam,flux_contr(ir,1:nlam_out),nlam_out,lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
+				nlam_out=0
+				do i=1,nlam
+					if(computelam(i)) then
+						nlam_out=nlam_out+1
+						lam_out(nlam_out)=lam(i)
+						spec_out(nlam_out)=flux_contr(ir,i)
+					endif
+				enddo
+				call regridspecres(lam_out,spec_out,nlam_out,lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
 				do j=1,nlamR
 					x=(spec(1,j)/specErr(j))**2
 					tot=tot+x
@@ -494,7 +518,15 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 		close(unit=30)
 	endif
 
-	call regridspecres(lam,obsA(0,1:nlam_out),nlam_out,
+	nlam_out=0
+	do i=1,nlam
+		if(computelam(i)) then
+			nlam_out=nlam_out+1
+			lam_out(nlam_out)=lam(i)
+			spec_out(nlam_out)=obsA(0,i)
+		endif
+	enddo
+	call regridspecres(lam_out,spec_out,nlam_out,
      &					lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
 	spec=spec/(pi*Rstar**2)
 
@@ -546,10 +578,26 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 	close(unit=30)
 
 	do i=1,nphase
-		call regridspecres(lam,phase(i,0,1:nlam_out)+flux(0,1:nlam_out),nlam_out,
+		nlam_out=0
+		do j=1,nlam
+			if(computelam(j)) then
+				nlam_out=nlam_out+1
+				lam_out(nlam_out)=lam(j)
+				spec_out(nlam_out)=phase(i,0,j)+flux(0,j)
+			endif
+		enddo
+		call regridspecres(lam_out,spec_out,nlam_out,
      &						lamR,spec(i,1:nlamR),specR,specRexp,nlamR)
 	enddo
-	call regridspecres(lam,Fstar(1:nlam_out),nlam_out,
+	nlam_out=0
+	do i=1,nlam
+		if(computelam(i)) then
+			nlam_out=nlam_out+1
+			lam_out(nlam_out)=lam(i)
+			spec_out(nlam_out)=Fstar(i)
+		endif
+	enddo
+	call regridspecres(lam_out,spec_out,nlam_out,
      &						lamR,Fstar_obs(1:nlamR),specR,specRexp,nlamR)
 	filename=trim(outputdir) // "obs_emis_" // trim(instr_add) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))

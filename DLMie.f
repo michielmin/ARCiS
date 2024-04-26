@@ -74,7 +74,7 @@
 	IMPLICIT NONE
 	real*8 rad,lam,e1,e2,fmax,Cabs,Csca,x,pi,scaleA,scaleS
 	integer i,j
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
 	x=2d0*pi*rad/lam
 	
 	scaleA=1d0

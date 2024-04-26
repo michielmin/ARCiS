@@ -528,7 +528,7 @@ c-----------------------------------------------------------------------
 	IMPLICIT NONE
 	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie
 	real*8 pi
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
       INTEGER NANG,Err
       REAL GSCA,QBACK,QEXT,QSCA,X
       COMPLEX REFREL
@@ -553,7 +553,7 @@ c-----------------------------------------------------------------------
 	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie,rcore
 	real*8 pi,theta,test
 	integer Err,i
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
       REAL GSCA,QBACK,QEXT,QSCA,X,Y, WVNO
       COMPLEX REFRL1,REFRL2
 
@@ -942,7 +942,7 @@ C prepare single precision complex scattering amplitude for output
 ! Local variables:
 
       DOUBLE COMPLEX II
-      PARAMETER(II=(0.0,1.D0))
+      PARAMETER(II=(0.0d0,1.D0))
       DOUBLE PRECISION DEL
       PARAMETER(DEL=1.D-8)
 

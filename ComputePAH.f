@@ -12,7 +12,7 @@
 	IMPLICIT NONE
 	logical computelamcloud(nlam),ionized
 	real*8 Ca_cont(nlam),Cs_cont(nlam),Ca(nlam),Cs(nlam),Mc,Nc,Mpart
-	parameter(Mc=2e-23) ! in grams
+	parameter(Mc=2d-23) ! in grams
 
 	if(mixrat_optEC.le.0d0) return
 
@@ -84,7 +84,7 @@
 	IMPLICIT NONE
 	integer nlam,ir,iEg,ilam
 	real*8 Cabs(nlam),Csca(nlam),rad,Eg,QEX,QSC,QAB,G,lam(nlam),pi
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
 	real*8 wr1,wr2,wEg1,wEg2,e1x(nlam),e2x(nlam),e1(nl_optEC),e2(nl_optEC)
 	logical computelam(nlam)
 
@@ -108,7 +108,7 @@
 	IMPLICIT NONE
 	integer nlam,ir,iEg,ilam
 	real*8 rad,Eg,QEX,QSC,QAB,G,lam(nlam),pi
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
 	real*8 wr1,wr2,wEg1,wEg2,e1x(nlam),e2x(nlam),e1(nl_optEC),e2(nl_optEC)
 
 	if(rad.le.r_optEC(1)) then
@@ -165,7 +165,7 @@
 	IMPLICIT NONE
 	logical computelamcloud(nlam),ionized
 	real*8 HC,Ca_cont(nlam),Cs_cont(nlam),Ca(nlam),Cs(nlam),Mc
-	parameter(Mc=2e-23) ! in grams
+	parameter(Mc=2d-23) ! in grams
 	
 	if(mixrat_PAH.le.0d0) return
 	
@@ -201,20 +201,20 @@
 	character*100 filename
 	logical ionized,computelam(nlam)
 	real*8 lj(nj),gj(nj),sjn(nj),sji(nj),S(nj),pi
-	parameter(pi=3.1415926536)
-	parameter(Mc=2e-23) ! in grams
-	data (lj(j),j=1,30) / 0.0722, 0.2175,1.050,1.260,1.905,3.300,5.270,5.700,
-     &	6.220,6.690,7.417,7.598,7.850,8.330,8.610,10.68,11.23,11.33,11.99,12.62,
-     &	12.69,13.48,14.19,15.90,16.45,17.04,17.375,17.87,18.92,15.0 /
-	data (gj(j),j=1,30) / 0.195,0.217,0.055,0.11,0.09,0.012,0.034,0.035,0.030,
-     &	0.070,0.126,0.044,0.053,0.052,0.039,0.020,0.012,0.032,0.045,0.042,0.013,
-     &	0.040,0.025,0.020,0.014,0.065,0.012,0.016,0.10,0.8 / 
-	data (sjn(j),j=1,30) / 7.97d7,1.23d7,0.0,0.0,0.0,394.0,2.5,4.0,29.4,7.35,
-     &	20.8,18.1,21.9,6.94,27.8,0.3,18.9,52.0,24.2,35.0,1.3,8.0,0.45,0.04,0.5,
-     &	2.22,0.11,0.067,0.10,50.0 /
-	data (sji(j),j=1,30) / 7.97d7,1.23d7,2.0d4,0.078,-146.5,89.4,20.0,32.0,
-     &	235.0,59.0,181.0,163.0,197.0,48.0,194.0,0.3,17.7,49.0,20.5,31.0,1.3,8.0,
-     &	0.45,0.04,0.5,2.22,0.11,0.067,0.17,50.0 /
+	parameter(pi=3.14159265358979323846264338328d0)
+	parameter(Mc=2d-23) ! in grams
+	data (lj(j),j=1,30) / 0.0722d0, 0.2175d0,1.050d0,1.260d0,1.905d0,3.300d0,5.270d0,5.700d0,
+     &	6.220d0,6.690d0,7.417d0,7.598d0,7.850d0,8.330d0,8.610d0,10.68d0,11.23d0,11.33d0,11.99d0,12.62d0,
+     &	12.69d0,13.48d0,14.19d0,15.90d0,16.45d0,17.04d0,17.375d0,17.87d0,18.92d0,15.0d0 /
+	data (gj(j),j=1,30) / 0.195d0,0.217d0,0.055d0,0.11d0,0.09d0,0.012d0,0.034d0,0.035d0,0.030d0,
+     &	0.070d0,0.126d0,0.044d0,0.053d0,0.052d0,0.039d0,0.020d0,0.012d0,0.032d0,0.045d0,0.042d0,0.013d0,
+     &	0.040d0,0.025d0,0.020d0,0.014d0,0.065d0,0.012d0,0.016d0,0.10d0,0.8d0 / 
+	data (sjn(j),j=1,30) / 7.97d7,1.23d7,0.0d0,0.0d0,0.0d0,394.0d0,2.5d0,4.0d0,29.4d0,7.35d0,
+     &	20.8d0,18.1d0,21.9d0,6.94d0,27.8d0,0.3d0,18.9d0,52.0d0,24.2d0,35.0d0,1.3d0,8.0d0,0.45d0,0.04d0,0.5d0,
+     &	2.22d0,0.11d0,0.067d0,0.10d0,50.0d0 /
+	data (sji(j),j=1,30) / 7.97d7,1.23d7,2.0d4,0.078d0,-146.5d0,89.4d0,20.0d0,32.0d0,
+     &	235.0d0,59.0d0,181.0d0,163.0d0,197.0d0,48.0d0,194.0d0,0.3d0,17.7d0,49.0d0,20.5d0,31.0d0,1.3d0,8.0d0,
+     &	0.45d0,0.04d0,0.5d0,2.22d0,0.11d0,0.067d0,0.17d0,50.0d0 /
 	external Graphite_x,Graphite_y
 
 	r=1d-3*(Nc/468d0)**(1d0/3d0)

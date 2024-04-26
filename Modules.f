@@ -22,13 +22,13 @@ c	parameter(Ggrav=6.6725985d-8) ! in cm^3/g/s^2
 	parameter(Mearth=5.97219d27)
 	parameter(Mjup=1.898d30)
 	parameter(Rearth=6.3781d8)
-	parameter(Rjup=6.9911e9)
+	parameter(Rjup=6.9911d9)
 c	parameter(Rjup=7.1492d9)
 	parameter(year=24d0*60d0*60d0*365.25d0)
 	parameter(micron=1d-4)
-	parameter(Rgas=8.3144621e7)
-	parameter(Avogadro=6.022136736e23)
-	parameter(atm=1.01325)	! bar
+	parameter(Rgas=8.3144621d7)
+	parameter(Avogadro=6.022136736d23)
+	parameter(atm=1.01325d0)	! bar
 	
 	end module Constants
 
@@ -404,7 +404,7 @@ c for exchange when computing secondary atmosphere
 		real*8,allocatable :: frac(:,:),sigma(:),cryst(:,:),abun(:)
 		real*8 rho,fmax,porosity,reff,veff,rpow,Pref,rnuc
 		logical blend,haze,condensates,rainout,globalKzz,computecryst,coagulation
-		logical onepart
+		logical onepart,freeflow_nuc,freeflow_con
 		real*8 mixrat,tau,lref,cryst0,e1_par,e2_par,Kref
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
 		character*500 species,hazetype,file

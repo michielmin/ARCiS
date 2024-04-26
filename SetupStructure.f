@@ -5,7 +5,7 @@
 	IMPLICIT NONE
 	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,tot2,met_r,dens1bar,minZ,Tc,Rscale
 	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill,MMW_form,P0,R0,Kzz_r(nr)
-	parameter(RgasBar=82.05736*1.01325)
+	parameter(RgasBar=82.05736d0*1.01325d0)
 	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3,ir
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
@@ -1385,18 +1385,15 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 c0,c1,c2,c3,c4,Pm,fH2O,PH2Omax,mutot,mixrat_tot,Pold(nr),Told(nr),fact
-	real*8 S(nr),SatBottom
+	real*8 c0,c1,c2,c3,c4,Pm,fH2O,PH2Omax,mutot,mixrat_tot,Pold(nr+1),Told(nr),fact
 	integer i
 	logical liquid
-	
-	c0=2.98605E+01
-	c1=-3.15220E+03
-	c2=-7.30370E+00
-	c3=2.42470E-09
-	c4=1.80900E-06
 
-	SatBottom=0.75
+	c0=2.98605d+01
+	c1=-3.15220d+03
+	c2=-7.30370d+00
+	c3=2.42470d-09
+	c4=1.80900d-06
 
 	fH2O=2d-4
 	PH2Omax=fH2O*Ggrav*Mplanet**2/(4d0*pi*Rplanet**4*1d6)
@@ -1408,20 +1405,9 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 	else
 		call PvapH2O(Tsurface,Pmax,liquid)
 c		Pmax=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750.06157584566
-		Pmax=Pmax/0.5d0 ! 50% humidity (atmosphere is not 100% saturated)
+c		Pmax=Pmax/0.5d0 ! 50% humidity (atmosphere is not 100% saturated)
 		if(Pmax.gt.PH2Omax) Pmax=PH2Omax
 	endif
-	call PvapH2O(T(nr),Pm,liquid)
-	S(nr)=P(nr)*mixrat(1)/Pm
-	do i=nr-1,1,-1
-		call PvapH2O(T(i),Pm,liquid)
-		S(i)=P(i)*mixrat(1)/Pm
-		if(S(i+1).gt.(1d0/SatBottom).and.S(i).le.(1d0/SatBottom)) then
-			Pmax=P(i+1)+(P(i)-P(i+1))*(S(i+1)-(1d0/SatBottom))/(S(i+1)-S(i))
-			Pmax=Pmax/mixrat(1)
-			exit
-		endif
-	enddo
 
 	mutot=0d0
 	mixrat_tot=0d0
@@ -1460,7 +1446,7 @@ c		fact=fact**2
 		P(i)=10d0**(log10(Pmax)+(log10(Pm/Pmax)*real(i-1)/real(nr-1)))
 	enddo
 	return
-	call regridarray(-log(Pold),Told,nr,-log(P),T,nr)
+	call regridarray(-log(Pold(1:nr)),Told,nr,-log(P(1:nr)),T,nr)
 	do i=1,nr
 		if(P(i).gt.Pold(1)) then
 			T(i)=Told(1)/exp(log(Pold(1)/P(i))*(log(Told(1)/Told(2))/log(Pold(1)/Pold(2))))

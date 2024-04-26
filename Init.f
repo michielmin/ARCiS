@@ -2001,6 +2001,8 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%rho_mat=3.0
 		Cloud(i)%nax=1
 		Cloud(i)%globalKzz=.false.
+		Cloud(i)%freeflow_nuc=.false.
+		Cloud(i)%freeflow_con=.false.
 	enddo
 	nspike=0
 	useDLMie=.false.
@@ -2874,6 +2876,10 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%haze
 		case("condensates")
 			read(key%value,*) Cloud(j)%condensates
+		case("freeflow_nuc")
+			read(key%value,*) Cloud(j)%freeflow_nuc
+		case("freeflow_con")
+			read(key%value,*) Cloud(j)%freeflow_con
 		case("mixrat")
 			read(key%value,*) Cloud(j)%mixrat
 		case("kzz")
