@@ -376,7 +376,7 @@ c equations for mass in vapor creating nuclii
 			Ma(i-1)=Ma(i-1)-0.5d0*(Kg(i-1)*Clouddens(i-1)+Kg(i)*Clouddens(i))/dz/dztot
 			Mb(i)=Mb(i)+(0.5d0*(Kg(i-1)*Clouddens(i-1)+Kg(i)*Clouddens(i))/dz)/dztot
 
-			Mb(i)=Mb(i)-Sn(i)
+			Mb(i)=Mb(i)-Sn(i)*mutot/Mmol(6)
 			x(i)=0d0
 		enddo
 		i=nnr
