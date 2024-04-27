@@ -49,7 +49,6 @@
 		allocate(xc(nCS,nnr))
 		allocate(xn(nnr))
 		allocate(xm(nnr))
-		allocate(xnv(nnr))
 		allocate(rpart(nnr))
 	endif
 	allocate(Kd(nnr),Kg(nnr),Km(nnr))
@@ -359,43 +358,6 @@ c start the loop
 	empty=.false.
 	freeflow=Cloud(ii)%freeflow_nuc
 
-	if(Cloud(ii)%hazetype.eq.'optEC') then
-c equations for mass in vapor creating nuclii
-		Ma=0d0
-		Mb=0d0
-		Mc=0d0
-		x=0d0
-		Mb(1)=1d0
-		x(1)=mixrat_r(1,6)
-		do i=2,nnr-1
-			dztot=(CloudR(i+1)-CloudR(i-1))/2d0
-			dz=(CloudR(i)-CloudR(i+1))
-			Mc(i)=Mc(i)-(0.5d0*(Kg(i+1)*Clouddens(i+1)+Kg(i)*Clouddens(i))/dz)/dztot
-			Mb(i)=Mb(i)+(0.5d0*(Kg(i+1)*Clouddens(i+1)+Kg(i)*Clouddens(i))/dz)/dztot
-			dz=(CloudR(i-1)-CloudR(i))
-			Ma(i-1)=Ma(i-1)-0.5d0*(Kg(i-1)*Clouddens(i-1)+Kg(i)*Clouddens(i))/dz/dztot
-			Mb(i)=Mb(i)+(0.5d0*(Kg(i-1)*Clouddens(i-1)+Kg(i)*Clouddens(i))/dz)/dztot
-
-			Mb(i)=Mb(i)-Sn(i)
-			x(i)=0d0
-		enddo
-		i=nnr
-		j=j+1
-		dz=CloudR(i)-CloudR(i-1)
-		Mb(nnr)=Kg(i)/dz
-		Ma(nnr-1)=-Kg(i)/dz
-		x(nnr)=0d0
-
-		NRHS=1
-c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
-		call dgtsv(nnr,NRHS,Ma,Mb,Mc,x,nnr,info)
-	
-		do i=1,nnr
-			if(x(i).lt.0d0) x(i)=0d0
-		enddo
-		xnv(1:nnr)=x(1:nnr)
-	endif
-
 c equations for number of Nuclii
 	Ma=0d0
 	Mb=0d0
@@ -408,7 +370,7 @@ c equations for number of Nuclii
 		Mc(i)=Mc(i)-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 		Mb(i)=Mb(i)+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 		Mb(i)=Mb(i)+Clouddens(i)*vsed(i)/dztot
-		x(i)=-Sn(i)*xnv(i)
+		x(i)=-Sn(i)
 c coagulation
 		if(Cloud(ii)%coagulation) then
 			npart=xn(i)*Clouddens(i)
@@ -439,7 +401,7 @@ c coagulation
 		Mb(i)=Mb(i)+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
 		Mb(i)=Mb(i)+Clouddens(i)*vsed(i)/dztot
 
-		x(i)=-Sn(i)*xnv(i)
+		x(i)=-Sn(i)
 
 c coagulation
 		if(Cloud(ii)%coagulation) then
@@ -767,12 +729,6 @@ c H2O
 c Seed particles
 	x(1:nnr)=xm(1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,15),nr)
-
-	if(Cloud(ii)%hazetype.eq.'optEC') then
-c Seed vapor
-		x(1:nnr)=xnv(1:nnr)
-		call regridarray(logCloudP,x,nnr,logP,mixrat_r(1:nr,6),nr)
-	endif
 
 	if(.not.retrieval) then
 		if(do3D) then

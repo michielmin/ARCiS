@@ -50,6 +50,7 @@
 		allocate(xc(nCS,nnr))
 		allocate(xn(nnr))
 		allocate(xm(nnr))
+		allocate(xnv(nnr))
 		allocate(rpart(nnr))
 	endif
 	allocate(Kd(nnr),Kg(nnr),Km(nnr))
