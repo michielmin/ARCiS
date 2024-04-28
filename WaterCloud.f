@@ -422,10 +422,9 @@ c coagulation
 			vmol=0.5d0*lmfp*vth(i)
 			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
 			tcoaginv=sqrt(pi)*3d0*(sum(xc(1:nCS,i))+xm(i))*Ggrav*Mplanet/(8d0*vth(i)*CloudR(i)**2)
-			tcoaginv=tcoaginv*exp(-(vsed(i)/vfrag)**2)
 			vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
 			if(Dp/rpart(i).lt.vBM) vBM=Dp/rpart(i)
-			tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*vBM*exp(-(vBM/vfrag)**2)
+			tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*vBM
 			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
 			tcinv(iter,i)=tcoaginv
 			tcoaginv=sum(tcinv(1:iter,i))/real(iter)
@@ -458,11 +457,9 @@ c			tcoaginv=2d0*npart*pi*rpart(i)**2*abs(vsed(i))
 c rewritten for better convergence
 			tcoaginv=sqrt(pi)*3d0*(sum(xc(1:nCS,i))+xm(i))*Ggrav*Mplanet/(8d0*vth(i)*CloudR(i)**2)
 
-			tcoaginv=tcoaginv*exp(-(vsed(i)/vfrag)**2)
-
 			vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
 			if(Dp/rpart(i).lt.vBM) vBM=Dp/rpart(i)
-			tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*vBM*exp(-(vBM/vfrag)**2)
+			tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*vBM
 
 			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
 
