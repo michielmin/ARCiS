@@ -324,7 +324,13 @@ c H2O: 7
 			Sn(i)=(Clouddens(i)*gz*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
 		endif
 	enddo
-	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*scaleUV*Sigmadot/tot
+	if(Cloud(ii)%hazetype.eq.'optEC') then
+		if(tot.gt.0d0) then
+			Sn=Sn*scaleUV*Sigmadot/tot
+		else
+			Sn=0d0
+		endif
+	endif
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -768,12 +774,6 @@ c Seed particles
 	x(1:nnr)=xm(1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,15),nr)
 
-	if(Cloud(ii)%hazetype.eq.'optEC') then
-c Seed vapor
-		x(1:nnr)=xnv(1:nnr)
-		call regridarray(logCloudP,x,nnr,logP,mixrat_r(1:nr,6),nr)
-	endif
-
 	if(.not.retrieval) then
 		if(do3D) then
 			open(unit=20,file=trim(outputdir) // '/cloudstructure' // trim(int2string(i3D,'(i0.4)')) // '.dat',
@@ -781,11 +781,11 @@ c Seed vapor
 		else
 			open(unit=20,file=trim(outputdir) // '/cloudstructure.dat',FORM="FORMATTED",ACCESS="STREAM")
 		endif
-		form='("#",a18,a19,a19,' // trim(int2string(nCS,'(i4)')) // 'a23,a19,a19,a19)'
-		write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"r[micron]","T[K]","Jstar"
-		form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
+		form='("#",a18,a19,a19,' // trim(int2string(nCS,'(i4)')) // 'a23,a23,a19,a19,a19)'
+		write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"H2O[v]","r[micron]","T[K]","Jstar"
+		form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS,'(i4)')) // 'es23.7E3,es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
 		do i=1,nnr
-			write(20,form) CloudP(i),Clouddens(i),xm(i),xc(1:nCS,i),rpart(i),CloudT(i),
+			write(20,form) CloudP(i),Clouddens(i),xm(i),xc(1:nCS,i),xv(1,i),rpart(i),CloudT(i),
      &						Sn(i)/m_nuc
 		enddo
 		close(unit=20)
@@ -804,7 +804,15 @@ c Seed vapor
 
 	x(1:nnr)=xv(1,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,logx,nr)
-	mixrat_r(1:nr,1)=logx(1:nr)*mutot/(mu(1)*CSnmol(1))
+	mixrat_r(2:nr,1)=logx(2:nr)*mutot/(mu(1)*CSnmol(1))
+
+	if(Cloud(ii)%hazetype.eq.'optEC') then
+c Seed vapor
+		x(1:nnr)=xnv(1:nnr)
+		call regridarray(logCloudP,x,nnr,logP,logx,nr)
+		mixrat_r(2:nr,6)=logx(2:nr)
+	endif
+
 
 	call cpu_time(time)
 	timecloud=timecloud+time
