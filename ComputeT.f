@@ -279,7 +279,7 @@ c	Fstar_LR=Fstar_LR*scale
 !$OMP& PRIVATE(ilam,ig,ir,inu,jr,contr,FstarBottom,tot,HUVstar_omp)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,night2day,deepredist,
 !$OMP&			Hstar,Dplanet,Fstar_LR,must,wabs,wscat,IntHnuSurf,betaF,isoFstar,do3D,UVstar,HUVstar,
-!$OMP&			lam_LR,deepredisttype,init3D)
+!$OMP&			lam_LR,deepredisttype,init3D,distrUV)
 	Hstar_omp=0d0
 	UVstar_omp=0d0
 	HUVstar_omp=0d0
@@ -301,14 +301,14 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 					Hstar_lam(1:nr)=Hstar_lam(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 					Si_omp(1:nr,0)=Si_omp(1:nr,0)+wnu(inu)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)/8d0
 					FstarBottom=FstarBottom+2d0*wnu(inu)*abs(Ih_omp(1))
-					if(.not.do3D.and..not.init3D) then
+					if((.not.do3D.and..not.init3D).or.distrUV) then
 						if(lam_LR(ilam).lt.0.4e-4) then
 							UVstar_omp(1:nr)=UVstar_omp(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
 							HUVstar_omp=HUVstar_omp+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(nr)
 						endif
 					endif
 				enddo
-				if(do3D.or.init3D) then
+				if((do3D.or.init3D).and..not.distrUV) then
 					tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(max(must,1d-5))
 					if(must.eq.0d0) then
 						Ij_omp(1:nr)=0d0
@@ -421,7 +421,7 @@ c				Hstar_omp(ir)=Hstar_omp(ir)+min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0)
 	if(nTiter.eq.1) then
 		tauUV=-log(UVstar)
 	else
-		tauUV=sqrt(-tauUV*log(UVstar))
+		tauUV=(tauUV-log(UVstar))/2d0
 	endif
 	do ir=nr,1,-1
 		tot=0d0

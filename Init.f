@@ -1463,6 +1463,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) kappaUV0
 		case("gammauv")
 			read(key%value,*) gammaUV
+		case("distruv")
+			read(key%value,*) distrUV
 		case("photdestroy","pdestroy")
 			call ReadPhotoDestroy(key)
 		case("hydrogenloss")
@@ -1946,6 +1948,7 @@ c  GGchem was still implemented slightly wrong.
 
 	kappaUV0=-1d0
 	gammaUV=-1d0
+	distrUV=.false.
 
 	instrument="ARIEL"
 	instr_ntrans=1d0
