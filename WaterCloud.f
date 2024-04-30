@@ -400,6 +400,8 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 			if(x(i).lt.0d0) x(i)=0d0
 		enddo
 		xnv(1:nnr)=x(1:nnr)
+	else
+		xnv=1d0
 	endif
 
 c equations for number of Nuclii

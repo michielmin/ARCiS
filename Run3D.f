@@ -48,7 +48,7 @@ c	recomputeopac=.true.
 		endif
 	enddo
 
-	if(fixnight2day.or.WaterWorld.or.(deepredist.and.deepredisttype.eq.'fixflux')) then
+	if(fixnight2day.or.(WaterWorld.and..not.setsurfpressure).or.(deepredist.and.deepredisttype.eq.'fixflux')) then
 		do3D=.false.
 		init3D=.true.
 		if(.not.fixnight2day) betaT=2d0/3d0-(5d0/12d0)*night2day

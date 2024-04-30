@@ -37,7 +37,7 @@
 	grav=Ggrav*Mplanet/(Rplanet)**2
 	if(par_tprofile.or.(computeT.and.nTiter.le.1)) call ComputeParamT(T)
 	if(free_tprofile.and.(.not.computeT.or.nTiter.eq.1)) call MakePTstruct
-	if(WaterWorld.and..not.do3D) call doWaterWorld()
+	if(WaterWorld.and.(.not.do3D.or.setsurfpressure)) call doWaterWorld()
 
 	call SetAbun
 
