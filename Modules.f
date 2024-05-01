@@ -404,7 +404,7 @@ c for exchange when computing secondary atmosphere
 		real*8,allocatable :: frac(:,:),sigma(:),cryst(:,:),abun(:)
 		real*8 rho,fmax,porosity,reff,veff,rpow,Pref,rnuc
 		logical blend,haze,condensates,rainout,globalKzz,computecryst,coagulation
-		logical onepart,freeflow_nuc,freeflow_con
+		logical onepart,freeflow_nuc,freeflow_con,condenseNaK
 		real*8 mixrat,tau,lref,cryst0,e1_par,e2_par,Kref
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
 		character*500 species,hazetype,file

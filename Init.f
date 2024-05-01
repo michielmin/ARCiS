@@ -2006,6 +2006,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%globalKzz=.false.
 		Cloud(i)%freeflow_nuc=.false.
 		Cloud(i)%freeflow_con=.false.
+		Cloud(i)%condenseNaK=.true.
 	enddo
 	nspike=0
 	useDLMie=.false.
@@ -2879,6 +2880,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%haze
 		case("condensates")
 			read(key%value,*) Cloud(j)%condensates
+		case("condensenak","naksilicates")
+			read(key%value,*) Cloud(j)%condenseNaK
 		case("freeflow_nuc")
 			read(key%value,*) Cloud(j)%freeflow_nuc
 		case("freeflow_con")

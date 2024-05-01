@@ -233,6 +233,9 @@ c	atoms_cloud(i,3)=1
 
 	nCS=i
 
+	docondense=.true.
+	docondense(6)=Cloud(ii)%condenseNaK
+
 	do i=1,nCS
 		mu(i)=sum(mass_atoms(1:N_atoms)*atoms_cloud(i,1:N_atoms))/CSnmol(i)
 	enddo
@@ -243,18 +246,22 @@ c	atoms_cloud(i,3)=1
 		mutot=mutot+mass_atoms(i)*molfracs_atoms(i)
 	enddo
 	do iCS=1,nCS
-		do k=1,N_atoms
-			if(atoms_cloud(iCS,k).gt.0d0) then
-				f=molfracs_atoms(k)/atoms_cloud(iCS,k)
-				if(f.lt.xv_bot(iCS)) then
-					xv_bot(iCS)=f
+		if(docondense(iCS)) then
+			do k=1,N_atoms
+				if(atoms_cloud(iCS,k).gt.0d0) then
+					f=molfracs_atoms(k)/atoms_cloud(iCS,k)
+					if(f.lt.xv_bot(iCS)) then
+						xv_bot(iCS)=f
+					endif
 				endif
-			endif
-		enddo
-		do k=1,N_atoms
-			molfracs_atoms(k)=molfracs_atoms(k)-xv_bot(iCS)*atoms_cloud(iCS,k)
-			if(molfracs_atoms(k).lt.0d0) molfracs_atoms(k)=0d0
-		enddo
+			enddo
+			do k=1,N_atoms
+				molfracs_atoms(k)=molfracs_atoms(k)-xv_bot(iCS)*atoms_cloud(iCS,k)
+				if(molfracs_atoms(k).lt.0d0) molfracs_atoms(k)=0d0
+			enddo
+		else
+			xv_bot(iCS)=0d0
+		endif
 	enddo
 	if(xv_bot(11).gt.xv_bot(10)) xv_bot(11)=xv_bot(10)
 	if(xv_bot(9).gt.xv_bot(8)) xv_bot(9)=xv_bot(8)
@@ -484,6 +491,7 @@ c	atoms_cloud(i,3)=1
 			Sn(i)=(Clouddens(i)*gz*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
 		endif
 	enddo
+	docondense(6)=Cloud(ii)%condenseNaK
 	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*scaleUV*Sigmadot/tot
 
 !$OMP PARALLEL IF(.true.)
@@ -682,7 +690,7 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=1,nCS
-
+	if(docondense(iCS)) then
 	do i=1,nnr
 		cs=sqrt(kb*CloudT(i)/(2.3d0*mp))
 		vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*mu(iCS)*mp))
@@ -792,6 +800,15 @@ c Use Band matrix algorithm
 		if(xc(iCS,i).lt.0d0) xc(iCS,i)=0d0
 		if(xv(iCS,i).lt.0d0) xv(iCS,i)=0d0
 	enddo
+
+	else
+
+	do i=1,nnr
+		xc(iCS,i)=0d0
+		xv(iCS,i)=xv_bot(iCS)
+	enddo
+	
+	endif
 
 	enddo
 !$OMP END DO
@@ -1126,6 +1143,9 @@ c Silicates
 		xc(5,i)=tot*fsil(2,i)
 		xc(6,i)=tot*fsil(3,i)
 	enddo
+	CSname(4)='Silica'
+	CSname(5)='Pyroxene'
+	CSname(6)='Olivine'
 c H2O
 	x(1:nnr)=xc(7,1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,12),nr)
@@ -1166,7 +1186,7 @@ c SiO2
 			open(unit=20,file=trim(outputdir) // '/cloudstructure.dat',FORM="FORMATTED",ACCESS="STREAM")
 		endif
 		form='("#",a18,a19,a19,' // trim(int2string(nCS+1,'(i4)')) // 'a23,a19,a19,a19)'
-		write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"MgO","r[micron]","T[K]","Jstar"
+		write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i)),i=1,nCS),"MgO","r[cm]","T[K]","Jstar"
 		form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+1,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
 		do i=1,nnr
 			write(20,form) CloudP(i),Clouddens(i),xn(i)*m_nuc,xc(1:nCS,i),(xc(4,i)+xc(5,i)+xc(6,i))*fsil(4,i),rpart(i),CloudT(i),

@@ -1404,8 +1404,7 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 		liquid=.true.
 	else
 		call PvapH2O(Tsurface,Pmax,liquid)
-c		Pmax=10d0**(c0+c1/Tsurface+c2*log10(Tsurface)+c3*Tsurface+c4*Tsurface**2)/750.06157584566
-c		Pmax=Pmax/0.5d0 ! 50% humidity (atmosphere is not 100% saturated)
+		Pmax=f_surface_water*Pmax
 		if(Pmax.gt.PH2Omax) Pmax=PH2Omax
 	endif
 
