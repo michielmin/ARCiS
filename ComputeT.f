@@ -1087,25 +1087,25 @@ c===============================================================================
 				y=(s0*x1+s1-s0-exptau(ir)*(s1*x1+s1-s0))/x1
 			endif
 			Ip(jr)=y
-			if(jr.lt.nr) then
-				ir=jr
-				s0=0d0
-				s1=1d0
-				x1=dtau(ir)
-				if(x1.lt.1d-4) then
-					y=0.5d0*x1*(s0+s1)
-				else if(x1.gt.1d4) then
-					y=s0+(s1-s0)/x1
-				else
-					y=(s0*x1+s1-s0-exptau(ir)*(s1*x1+s1-s0))/x1
-				endif
-				Ip(jr+1)=Ip(jr)*exptau(ir)+y
-				if(jr.lt.nr-1) then
-					do ir=jr+2,nr
-						Ip(ir)=Ip(ir-1)*exptau(ir-1)
-						if(Ip(ir).le.0d0) exit
-					enddo
-				endif
+		endif
+		if(jr.lt.nr) then
+			ir=jr
+			s0=0d0
+			s1=1d0
+			x1=dtau(ir)
+			if(x1.lt.1d-4) then
+				y=0.5d0*x1*(s0+s1)
+			else if(x1.gt.1d4) then
+				y=s0+(s1-s0)/x1
+			else
+				y=(s0*x1+s1-s0-exptau(ir)*(s1*x1+s1-s0))/x1
+			endif
+			Ip(jr+1)=Ip(jr)*exptau(ir)+y
+			if(jr.lt.nr-1) then
+				do ir=jr+2,nr
+					Ip(ir)=Ip(ir-1)*exptau(ir-1)
+					if(Ip(ir).le.0d0) exit
+				enddo
 			endif
 		endif
 		Linv(1:nr,jr)=(Ip(1:nr)+Im(1:nr))/2d0

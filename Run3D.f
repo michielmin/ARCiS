@@ -2264,7 +2264,7 @@ c-----------------------------------------------------------------------
 	real*8 nu(nnu),wnu(nnu),must,tauRs(nr),Ijs(nr),eps,Planck,tot,wabs(nlam,ng,nr),wscat(nlam,ng,nr)
 	logical err
 	parameter(eps=1d-20)
-	real*8,allocatable :: tauR(:),Ij(:)
+	real*8,allocatable :: tauR(:),Ij(:),Ih(:)
 	
 	do ir=1,nr
 		do ig=1,ng
@@ -2331,10 +2331,10 @@ c-----------------------------------------------------------------------
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(tauR,Ij,ilam,ig,inu0,inu,contr,must)
+!$OMP& PRIVATE(tauR,Ij,ilam,ig,inu0,inu,contr,must,Ih)
 !$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar,lamemis,
 !$OMP&        nnu0,wscat)
-	allocate(tauR(nr),Ij(nr))
+	allocate(tauR(nr),Ij(nr),Ih(nr))
 !$OMP DO
 	do ilam=1,nlam
 		if(lamemis(ilam)) then
@@ -2354,16 +2354,23 @@ c-----------------------------------------------------------------------
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
 					tauR(1:nr)=abs(tauR(1:nr)-tauR(1))
 					Ij(1:nr)=(BBr(ilam,0)*surface_emis(ilam)+contr*(1d0-surface_emis(ilam)))*exp(-tauR(1:nr))
-					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+wnu(inu)*Ij(1:nr)*wscat(ilam,ig,1:nr)/4d0
+					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+wnu(inu)*Ij(1:nr)*wscat(ilam,ig,1:nr)
 				enddo
 			enddo
 			call AddScatter(Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ilam,ig),
      &	Ca(ilam,ig,1:nr),Cs(ilam,1:nr),Ce(ilam,ig,1:nr),(1d0-surface_emis(ilam)),nr,nu,wnu,nnu,nnu0)
+			do inu0=1,nnu0
+				do inu=1,nnu
+					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
+					call SolveIjExp(tauR,Si(ilam,ig,1:nr,inu0),Ij,Ih,nr)
+					Si(ilam,ig,0,inu0)=Si(ilam,ig,0,inu0)-nu(inu)*Ih(1)*wnu(inu)*(1d0-surface_emis(ilam))
+				enddo
+			enddo
 		enddo
 		endif
 	enddo
 !$OMP END DO
-	deallocate(tauR,Ij)
+	deallocate(tauR,Ij,Ih)
 !$OMP FLUSH
 !$OMP END PARALLEL
 	
