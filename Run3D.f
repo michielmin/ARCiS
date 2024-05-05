@@ -3,7 +3,7 @@
 	use Constants
 	use Struct3D
 	IMPLICIT NONE
-	integer i,j,icloud,k,irtrace,iptrace,inu,imol
+	integer i,j,icloud,k,irtrace,iptrace,inu,imol,i_alb
 	real*8 beta(nlong,nlatt),Planck,phi,la,lo,A,rr
 	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta
 	real*8,allocatable :: Ca(:,:,:,:,:),Cs(:,:,:),BBr(:,:),Si(:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce_cont(:,:,:)
@@ -21,7 +21,7 @@
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1,SiRalb1,tau0
 	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:),SiR0(:,:),SiRalb0(:,:),R3DC(:,:),lgrid(:)
 	logical iterateshift,actually1D,do_ibeta(n3D)
-	real*8 vxxmin,vxxmax,ComputeKzz,betamin_term,tot1,tot2,vrot,dlam_rot
+	real*8 vxxmin,vxxmax,ComputeKzz,betamin_term,tot1,tot2,vrot,dlam_rot,albedo_day,scale,scale_prev
 	logical docloud0(max(nclouds,1)),do_rot
 	
 	allocate(Ca(nlam,ng,nr,n3D,-nvel:nvel),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D))
@@ -32,6 +32,7 @@
 	allocate(R3D2(n3D,nr+2))
 	allocate(R3DC(n3D,nr+2))
 	allocate(T3D(n3D,0:nr))
+	allocate(local_albedo(n3D))
 	if(.not.retrieval.and.fulloutput3D) allocate(cloud3D(n3D,0:nr))
 	allocate(mixrat3D(n3D,nr,nmol))
 	nx_im=200
@@ -222,6 +223,12 @@ c	recomputeopac=.true.
 
 	call output("Computing multiple 1D structures")
 
+	albedo_day=0.5d0
+	local_albedo=0.5d0
+	scale=1d0
+
+	do i_alb=1,nalbedo_iter
+
 	call tellertje_perc(0,n3D)
 	do i=n3D,1,-1
 		call SetOutputMode(.false.)
@@ -254,7 +261,7 @@ c	recomputeopac=.true.
 		call MapPar3D()
 		if(n3D.eq.2) beta3D(i)=betaT
 
-		betaF=beta3D(i)
+		betaF=beta3D(i)*scale
 		if(.not.deepredist.or.deepredisttype.ne.'fixbeta') then
 			betaT=beta3D(i)
 			tot=0d0
@@ -388,6 +395,7 @@ c Now call the setup for the readFull3D part
 			dtauR_nu(1:nlam,1:ng,i,1:nr,-nvel:nvel)=dtauR_nu(1:nlam,1:ng,n3D,1:nr,-nvel:nvel)
 			Si(1:nlam,1:ng,0:nr,1:nnu0,i)=Si(1:nlam,1:ng,0:nr,1:nnu0,n3D)
 			if(computealbedo) SiSc(1:nlam,1:ng,0:nr,1:nnu0,i)=SiSc(1:nlam,1:ng,0:nr,1:nnu0,n3D)
+			local_albedo(i)=local_albedo(n3D)
 		endif
 		if(.not.retrieval.and..not.dopostequalweights) then
 			call SetOutputMode(.true.)
@@ -404,6 +412,34 @@ c Now call the setup for the readFull3D part
 		call tellertje_perc(n3D-i+1,n3D)
 	enddo
 
+	scale_prev=scale
+	albedo_day=0d0
+	tot1=0d0
+	tot2=0d0
+	scale=0d0
+	do i=1,nlong-1
+		lo=(long(i)+long(i+1))/2d0-pi
+		if(abs(lo).le.pi/2d0) then
+			lo=cos(lo)
+			do j=1,nlatt-1
+				la=cos((latt(j)+latt(j+1))/2d0-pi/2d0)
+				albedo_day=albedo_day+local_albedo(ibeta(i,j))*la*lo
+				tot1=tot1+la*lo
+			enddo
+		endif
+		do j=1,nlatt-1
+			la=cos((latt(j)+latt(j+1))/2d0-pi/2d0)
+			scale=scale+(1d0-local_albedo(ibeta(i,j)))*la*beta3D(ibeta(i,j))
+			tot2=tot2+la
+		enddo
+	enddo
+	albedo_day=albedo_day/tot1
+	scale=4d0*scale/tot2
+	scale=(1d0-albedo_day)/scale
+	call output("Day-side albedo: " // trim(dbl2string(albedo_day,'(f5.3)')))
+	if(nalbedo_iter.gt.1) call output("Scaling emission by: " // trim(dbl2string(scale,'(f5.3)')))
+	if(abs(scale-scale_prev)/(scale+scale_prev).lt.0.5d-2) exit
+	enddo
 
 	Rmax=Rmax*1.001
 	R3D(1:n3D,nr+2)=Rmax
@@ -1042,6 +1078,7 @@ c Note we use the symmetry of the North and South here!
 	deallocate(R3D2)
 	deallocate(R3DC)
 	deallocate(T3D,mixrat3D)
+	deallocate(local_albedo)
 	if(.not.retrieval.and.fulloutput3D) deallocate(cloud3D)
 
 	if(retrieval.or.dopostequalweights) call SetOutputMode(.true.)
@@ -2305,10 +2342,10 @@ c-----------------------------------------------------------------------
 			do inu0=1,nnu0
 				if(inu0.ne.nnu0.and.scattstar) then
 					must=(real(inu0)-0.5)/real(nnu0-1)
-					contr=(Fstar(ilam)/(4d0*Dplanet**2))
+					contr=(Fstar(ilam)/(pi*Dplanet**2))
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
-					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+0.5d0*contr*exp(-tauR(1:nr))*wscat(ilam,ig,1:nr)
-					contr=4d0*must*contr*exp(-tauR(1))/3d0
+					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+contr*exp(-tauR(1:nr))*wscat(ilam,ig,1:nr)/4d0
+					contr=contr*exp(-tauR(1))*must
 				else
 					contr=0d0
 				endif
@@ -2317,7 +2354,7 @@ c-----------------------------------------------------------------------
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
 					tauR(1:nr)=abs(tauR(1:nr)-tauR(1))
 					Ij(1:nr)=(BBr(ilam,0)*surface_emis(ilam)+contr*(1d0-surface_emis(ilam)))*exp(-tauR(1:nr))
-					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+wnu(inu)*Ij(1:nr)*wscat(ilam,ig,1:nr)
+					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+wnu(inu)*Ij(1:nr)*wscat(ilam,ig,1:nr)/4d0
 				enddo
 			enddo
 			call AddScatter(Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ilam,ig),

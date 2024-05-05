@@ -215,6 +215,7 @@ c for exchange when computing secondary atmosphere
 	real*8 molfracs_atoms_outgas(41),MMW0
 	logical secondary_atmosphere,constant_g,forceEbalance,fixMMW,WaterWorld
 	logical,allocatable :: RTgridpoint(:),computelam(:)
+	character*20 aim3D
 	
 	integer nrsurf,nrstepchem
 	real*8 Psurf
@@ -508,7 +509,7 @@ c for exchange when computing secondary atmosphere
 	
 	module Struct3D
 	implicit none
-	integer nlong,nlatt
+	integer nlong,nlatt,nalbedo_iter
 	integer n3D,nnu0
 
 	real*8,allocatable :: long(:),latt(:)	!(Lambda, Phi)
@@ -517,7 +518,7 @@ c for exchange when computing secondary atmosphere
 	real*8,allocatable :: beta3D(:),x3D(:)
 	integer,allocatable :: ibeta(:,:)
 
-	real*8,allocatable :: R3D(:,:),R3D2(:,:)
+	real*8,allocatable :: R3D(:,:),R3D2(:,:),local_albedo(:)
 	real*8 hotspotshift
 	end module Struct3D
 

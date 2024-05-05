@@ -1326,12 +1326,16 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) n3D
 		case("par3dsteepness","steepness3d")
 			read(key%value,*) par3Dsteepness
+		case("3daim","aim3d")
+			read(key%value,*) aim3D
 		case("nnu","nnustar")
 			read(key%value,*) nnu0
 		case("nlong")
 			read(key%value,*) nlong
 		case("nlatt")
 			read(key%value,*) nlatt
+		case("nalbedo_iter")
+			read(key%value,*) nalbedo_iter
 		case("betapow")
 			read(key%value,*) betapow
 		case("makeai")
@@ -1925,6 +1929,8 @@ c  GGchem was still implemented slightly wrong.
 	nlong=36
 	nlatt=19
 	i3D=1
+	aim3D='CONTRAST'
+	nalbedo_iter=1
 	
 	deepredist=.false.
 	deepredisttype='fixbeta'

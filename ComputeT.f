@@ -296,15 +296,15 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 			if(isoFstar) then
 				do inu=1,nnu
 					tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
-					Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
-					Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)*nu(inu)
-					Hstar_lam(1:nr)=Hstar_lam(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
-					Si_omp(1:nr,0)=Si_omp(1:nr,0)+wnu(inu)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)/8d0
-					FstarBottom=FstarBottom+2d0*wnu(inu)*abs(Ih_omp(1))
+					Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))*betaF*2d0
+					Ih_omp(1:nr)=-Ij_omp(1:nr)*nu(inu)
+					Hstar_lam(1:nr)=Hstar_lam(1:nr)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
+					Si_omp(1:nr,0)=Si_omp(1:nr,0)+wnu(inu)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)/4d0
+					FstarBottom=FstarBottom+wnu(inu)*abs(Ih_omp(1))
 					if((.not.do3D.and..not.init3D).or.distrUV) then
 						if(lam_LR(ilam).lt.0.4e-4) then
 							UVstar_omp(1:nr)=UVstar_omp(1:nr)+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
-							HUVstar_omp=HUVstar_omp+2d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(nr)
+							HUVstar_omp=HUVstar_omp+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(nr)
 						endif
 					endif
 				enddo
@@ -327,7 +327,7 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 				Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)
 				Hstar_lam(1:nr)=Hstar_lam(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 				FstarBottom=abs(Ih_omp(1))
-				Si_omp(1:nr,0)=Si_omp(1:nr,0)+Ij_omp(1:nr)*wscat(1:nr,ilam,ig)/8d0
+				Si_omp(1:nr,0)=Si_omp(1:nr,0)+Ij_omp(1:nr)*wscat(1:nr,ilam,ig)/4d0
 				if(lam_LR(ilam).lt.0.4e-4) then
 					UVstar_omp(1:nr)=UVstar_omp(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
 					HUVstar_omp=HUVstar_omp+dfreq_LR(ilam)*wgg(ig)*Ih_omp(nr)
@@ -422,6 +422,13 @@ c				Hstar_omp(ir)=Hstar_omp(ir)+min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0)
 		tauUV=-log(UVstar)
 	else
 		tauUV=(tauUV-log(UVstar))/2d0
+	endif
+	if(do3D) then
+		tot=0d0
+		do ilam=1,nlam_LR
+			tot=tot+dfreq_LR(ilam)*(Fstar_LR(ilam)/(pi*Dplanet**2))
+		enddo
+		local_albedo(i3D)=1d0+Hstar(nr)/(tot*betaF)
 	endif
 	do ir=nr,1,-1
 		tot=0d0
