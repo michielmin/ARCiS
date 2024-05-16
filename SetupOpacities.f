@@ -403,11 +403,11 @@ c					Cs=Cs+28.499d-47*mixrat_r(ir,j)*ll2**(4.1343/4.0)
 		return
 	endif
 
-	if(P(ir).lt.Ktab%P1) then
+	if(P(ir).le.Ktab%P1) then
 		iP=1
 		wP1=1d0
 		wP2=0d0
-	else if(P(ir).gt.Ktab%P2) then
+	else if(P(ir).ge.Ktab%P2) then
 		iP=Ktab%nP-1
 		wP1=0d0
 		wP2=1d0
@@ -416,15 +416,25 @@ c					Cs=Cs+28.499d-47*mixrat_r(ir,j)*ll2**(4.1343/4.0)
 c		do iP=1,Ktab%nP
 c			if(P(ir).ge.Ktab%P(iP).and.P(ir).lt.Ktab%P(iP+1)) exit
 c		enddo
-		wP1=1d0-log10(P(ir)/Ktab%P(iP))/log10(Ktab%P(iP+1)/Ktab%P(iP))
-		wP2=1d0-wP1
+		if(iP.lt.1) then
+			iP=1
+			wP1=1d0
+			wP2=0d0
+		else if(iP.ge.Ktab%nP) then
+			iP=Ktab%nP-1
+			wP1=0d0
+			wP2=1d0
+		else
+			wP1=1d0-log10(P(ir)/Ktab%P(iP))/log10(Ktab%P(iP+1)/Ktab%P(iP))
+			wP2=1d0-wP1
+		endif
 	endif
 
-	if(T(ir).lt.Ktab%T1) then
+	if(T(ir).le.Ktab%T1) then
 		iT=1
 		wT1=1d0
 		wT2=0d0
-	else if(T(ir).gt.Ktab%T2) then
+	else if(T(ir).ge.Ktab%T2) then
 		iT=Ktab%nT-1
 		wT1=0d0
 		wT2=1d0
@@ -433,8 +443,18 @@ c		enddo
 c		do iT=1,Ktab%nT
 c			if(T(ir).ge.Ktab%T(iT).and.T(ir).lt.Ktab%T(iT+1)) exit
 c		enddo
-		wT1=1d0-log10(T(ir)/Ktab%T(iT))/log10(Ktab%T(iT+1)/Ktab%T(iT))
-		wT2=1d0-wT1
+		if(iT.lt.1) then
+			iT=1
+			wT1=1d0
+			wT2=0d0
+		else if(iT.ge.Ktab%nT) then
+			iT=Ktab%nT-1
+			wT1=0d0
+			wT2=1d0
+		else
+			wT1=1d0-log10(T(ir)/Ktab%T(iT))/log10(Ktab%T(iT+1)/Ktab%T(iT))
+			wT2=1d0-wT1
+		endif
 	endif
  
 	do ilam=1,nlam

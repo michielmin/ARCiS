@@ -181,7 +181,7 @@ c===============================================================================
 	parameter(nangle_Jscat=60)
 	real*8,allocatable :: Jscat(:,:)						! radius, angle
 	integer nT,np,nr,nmol,nlam		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
-	integer nlines,ng,ncia,nclouds,nTiter,i3D,nest_update
+	integer nlines,ng,ncia,nclouds,nTiter,i3D,i_alb,nest_update
 	character*1000 outputdir
 	character*1000,allocatable :: commandargs(:)
 	integer ncommandargs

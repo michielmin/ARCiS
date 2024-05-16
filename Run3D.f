@@ -3,7 +3,7 @@
 	use Constants
 	use Struct3D
 	IMPLICIT NONE
-	integer i,j,icloud,k,irtrace,iptrace,inu,imol,i_alb
+	integer i,j,icloud,k,irtrace,iptrace,inu,imol
 	real*8 beta(nlong,nlatt),Planck,phi,la,lo,A,rr
 	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta
 	real*8,allocatable :: Ca(:,:,:,:,:),Cs(:,:,:),BBr(:,:),Si(:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce_cont(:,:,:)
@@ -16,7 +16,7 @@
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),obsA_split_omp(:,:),dtauR_nu(:,:,:,:,:)
 	real*8,allocatable :: tauc(:),Afact(:),vv(:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
 	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random,xmin,xmax,Pb(nr+1)
-	integer nx_im,ix,iy,ni,ilatt,ilong,imustar,ivel
+	integer nx_im,ix,iy,ni,ilatt,ilong,imustar,ivel,miniter0
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1,SiRalb1,tau0
 	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:),SiR0(:,:),SiRalb0(:,:),R3DC(:,:),lgrid(:)
@@ -227,6 +227,7 @@ c	recomputeopac=.true.
 	local_albedo=0.5d0
 	scale=1d0
 
+	miniter0=miniter
 	do i_alb=1,nalbedo_iter
 
 	call tellertje_perc(0,n3D)
@@ -289,6 +290,13 @@ c Now call the setup for the readFull3D part
 
 		if((.not.actually1D.and.do_ibeta(i)).or.i.eq.n3D) then
 			call InitDens()
+			if(i_alb.ne.1) then
+				T(1:nr)=T3D(i,1:nr)
+				Tsurface=T3D(i,0)
+				miniter=min(miniter,2)
+			else
+				miniter=miniter0
+			endif
 			call ComputeModel1D(recomputeopac)
 			if(i3D.eq.n3D.and.deepredist.and.deepredisttype.eq.'fixflux') then
 				i3D=1

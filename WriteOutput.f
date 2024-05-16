@@ -185,7 +185,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 			write(30,form) lam_out(i),
      &					phase(1:nphase,0,i)+flux(0,i),
      &					Fstar(i)*1d23/distance**2,
-     &					(Rplanet**2)*Fstar(i)*1d23/distance**2/(Dplanet**2)
+     &					(obsA(0,i)/pi)*Fstar(i)*1d23/distance**2/(Dplanet**2)
 			endif
 		enddo
 		close(unit=30)

@@ -6,7 +6,7 @@
 	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,tot2,met_r,dens1bar,minZ,Tc,Rscale
 	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill,MMW_form,P0,R0,Kzz_r(nr)
 	parameter(RgasBar=82.05736d0*1.01325d0)
-	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3,ir
+	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3,ir,icc
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
 	real*8 ComputeKzz,molfracs_atoms0(N_atoms)
@@ -35,8 +35,8 @@
 
 	nabla_ad=(1d0-1d0/exp_ad)	!2d0/7d0
 	grav=Ggrav*Mplanet/(Rplanet)**2
-	if(par_tprofile.or.(computeT.and.nTiter.le.1)) call ComputeParamT(T)
-	if(free_tprofile.and.(.not.computeT.or.nTiter.eq.1)) call MakePTstruct
+	if((par_tprofile.or.(computeT.and.nTiter.le.1)).and.i_alb.eq.1) call ComputeParamT(T)
+	if(free_tprofile.and.(.not.computeT.or.nTiter.eq.1).and.i_alb.eq.1) call MakePTstruct
 	if(WaterWorld.and.(.not.do3D.or.setsurfpressure)) call doWaterWorld()
 
 	call SetAbun
@@ -219,8 +219,8 @@ c			if(domakeai.or.retrieval) return
 		endif
 	enddo
 
-	if(par_tprofile.or.(computeT.and.nTiter.le.1)) call ComputeParamT(T)
-	if(free_tprofile.and.(.not.computeT.or.nTiter.eq.1)) call MakePTstruct
+	if((par_tprofile.or.(computeT.and.nTiter.le.1)).and.i_alb.eq.1) call ComputeParamT(T)
+	if(free_tprofile.and.(.not.computeT.or.nTiter.eq.1).and.i_alb.eq.1) call MakePTstruct
 	do i=1,nr
 		if(T(i).gt.maxTprofile) T(i)=maxTprofile
 		if(T(i).lt.3d0) T(i)=3d0
@@ -337,6 +337,29 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		do i=1,nclouds
 			call SetupCloud(i)
 		enddo
+		docloud=.false.
+		do icc=2,ncc
+			docloud(icc,1:nclouds)=docloud(icc-1,1:nclouds)
+			i=0
+10			i=i+1
+			docloud(icc,i)=.not.docloud(icc,i)
+			if(.not.docloud(icc,i)) goto 10
+		enddo
+		do icc=1,ncc
+			cloudfrac(icc)=1d0
+			do i=1,nclouds
+				if(docloud(icc,i)) then
+					cloudfrac(icc)=cloudfrac(icc)*Cloud(i)%coverage
+				else
+					cloudfrac(icc)=cloudfrac(icc)*(1d0-Cloud(i)%coverage)
+				endif
+			enddo
+		enddo
+
+		if(ncc.eq.1) then
+			docloud=.true.
+			cloudfrac=1d0
+		endif
 	endif
 
 	if(.not.dochemistry) then
@@ -1407,6 +1430,7 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 		Pmax=f_surface_water*Pmax
 		if(Pmax.gt.PH2Omax) Pmax=PH2Omax
 	endif
+	if(Pmax.le.1d-20) Pmax=1d-20
 
 	mutot=0d0
 	mixrat_tot=0d0

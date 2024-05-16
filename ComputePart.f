@@ -129,7 +129,6 @@
 				endif
 			enddo
 		enddo
-		print*,nm,e1(1,1:C%nlam),frac(1)
 		tot=0d0
 		do i=1,nm
 			tot=tot+frac(i)

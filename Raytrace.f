@@ -15,30 +15,6 @@
 	real*8,allocatable :: dtrace(:,:),CaCont(:,:),Ca_cloud(:,:),Cs_cloud(:,:),BBr(:)
 	integer,allocatable :: irtrace(:,:),nirtrace(:)
 
-	docloud=.false.
-	do icc=2,ncc
-		docloud(icc,1:nclouds)=docloud(icc-1,1:nclouds)
-		i=0
-10		i=i+1
-		docloud(icc,i)=.not.docloud(icc,i)
-		if(.not.docloud(icc,i)) goto 10
-	enddo
-	do icc=1,ncc
-		cloudfrac(icc)=1d0
-		do i=1,nclouds
-			if(docloud(icc,i)) then
-				cloudfrac(icc)=cloudfrac(icc)*Cloud(i)%coverage
-			else
-				cloudfrac(icc)=cloudfrac(icc)*(1d0-Cloud(i)%coverage)
-			endif
-		enddo
-	enddo
-
-	if(ncc.eq.1) then
-		docloud=.true.
-		cloudfrac=1d0
-	endif
-
 	if(.not.retrieval) then
 	do icc=1,ncc
 		do ilam=1,nlam
