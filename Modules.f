@@ -207,7 +207,7 @@ c===============================================================================
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:),planet_albedo(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	real*8 planetform_fdust,planetform_fplan,planetform_Mstart,planetform_SolidC,vrot0
-	real*8,allocatable :: velocity(:),Kzz_convect(:)
+	real*8,allocatable :: velocity(:),Kzz_convect(:),Kzz_g(:),Kzz_b(:)
 	real*8 planetform_Macc,planetform_Dmigrate,planetform_Rend,TeffPoutput,Hydrogenloss,taurexsmooth
 	logical planetform,massprior,retrievestar,simAb_converge,log_emis,randomstart,logTprofile,taurexprofile
 c for exchange when computing secondary atmosphere
@@ -408,7 +408,7 @@ c for exchange when computing secondary atmosphere
 		logical onepart,freeflow_nuc,freeflow_con,condenseNaK
 		real*8 mixrat,tau,lref,cryst0,e1_par,e2_par,Kref
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
-		character*500 species,hazetype,file
+		character*500 species,hazetype,file,composition
 		integer nmat,nlam
 		character*500,allocatable :: lnkfile(:,:),material(:)
 		real*8 Kzz,Sigmadot,xm_bot

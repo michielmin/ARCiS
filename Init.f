@@ -640,7 +640,7 @@ c allocate the arrays
 	if(orbit_P.lt.0d0) orbit_P=sqrt(Dplanet**3/Mstar)*365.25*86400d0
 
 	allocate(tauUV(nr),kappaUV(nr))
-	allocate(Kzz_convect(nr))
+	allocate(Kzz_convect(nr),Kzz_g(nr),Kzz_b(nr))
 	Kzz_convect=0d0
 
 	if(WaterWorld) then
@@ -2880,6 +2880,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%e1_par
 		case("k")
 			read(key%value,*) Cloud(j)%e2_par
+		case("composition")
+			Cloud(j)%composition=trim(key%value)
 		case("coverage")
 			read(key%value,*) Cloud(j)%coverage
 		case("haze")

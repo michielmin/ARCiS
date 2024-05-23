@@ -21,7 +21,7 @@
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1,SiRalb1,tau0
 	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:),SiR0(:,:),SiRalb0(:,:),R3DC(:,:),lgrid(:)
 	logical iterateshift,actually1D,do_ibeta(n3D)
-	real*8 vxxmin,vxxmax,ComputeKzz,betamin_term,tot1,tot2,vrot,dlam_rot,albedo_day,scale,scale_prev
+	real*8 vxxmin,vxxmax,betamin_term,tot1,tot2,vrot,dlam_rot,albedo_day,scale,scale_prev
 	logical docloud0(max(nclouds,1)),do_rot
 	
 	allocate(Ca(nlam,ng,nr,n3D,-nvel:nvel),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D))
@@ -410,7 +410,7 @@ c Now call the setup for the readFull3D part
 			open(unit=20,file=trim(outputdir) // "mixrat" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
 			write(20,'("#",a9,a13,a13)') "T[K]","P[bar]","Kzz[cm^2/s]"
 			do j=1,nr
-				write(20,'(f10.3,2es13.3E3)') T(j),P(j),ComputeKzz(P(j),T(j),dens(j),Hp(j),complexKzz)
+				write(20,'(f10.3,2es13.3E3)') T(j),P(j),Kzz_g(j)
 			enddo
 			close(unit=20)
 		endif

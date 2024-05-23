@@ -28,6 +28,13 @@
 			Cloud(ii)%sigma=1d-10
 			Cloud(ii)%onepart=.false.
 			call SetupPartCloud(ii)
+		case("CONDENSATION")
+			Cloud(ii)%nlam=nlam
+			call CondensationCloud(ii)
+			Cloud(ii)%rv=Cloud(ii)%rv*1d4
+			Cloud(ii)%sigma=1d-10
+			Cloud(ii)%onepart=.false.
+			call SetupPartCloud(ii)
 		case("FILE")
 			Cloud(ii)%nlam=nlam
 			call regridN(Cloud(ii)%file,P,cloud_dens(1:nr,ii),nr,2,6,1,1,.false.,.false.)

@@ -13,7 +13,7 @@
 	real*8,allocatable :: tcinv(:,:),rho_av(:),densv(:,:),Kd(:),Kg(:),Km(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,densv_t,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
-	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,ComputeKzz,err,maxerr,dztot
+	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
 	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:)
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
@@ -24,7 +24,6 @@
 	integer iCS,ir,nrdo,iconv,nconv
 	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil,St
 	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:),CloudtauUV(:),CloudkappaUV(:)
-	real*8,allocatable :: CloudKzz_convect(:)
 	integer INCFD,IERR
 	logical SKIP,freeflow
 	real*8 time,tcrystinv,nucryst,Tcryst
@@ -55,7 +54,7 @@
 	endif
 	allocate(Kd(nnr),Kg(nnr),Km(nnr))
 	allocate(logCloudP(nnr))
-	allocate(CloudHp(nnr),CloudKzz_convect(nnr))
+	allocate(CloudHp(nnr))
 	
 	niter=500
 	nconv=20
@@ -398,22 +397,22 @@ c	atoms_cloud(i,3)=1
 		call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudHp,IERR)
 		CloudHp(1:nnr)=exp(CloudHp(1:nnr))
 	endif
-	if(convectKzz) then
+	if(Cloud(ii)%globalKzz.or.Cloud(ii)%Kzz.le.0d0) then
 		SKIP=.false.
 		INCFD=1
-		logx(1:nr)=Kzz_convect(1:nr)
+		logx(1:nr)=log10(Kzz_b(1:nr))
 		call DPCHIM(nr,logP,logx,dlogx,INCFD)
-		call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudKzz_convect,IERR)
-	else
-		CloudKzz_convect=0d0
-	endif
-
-	if(Cloud(ii)%globalKzz.or.Cloud(ii)%Kzz.le.0d0) then
+		call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,Km,IERR)
+		Km=10d0**Km
 		do i=1,nnr
-			Km(i)=ComputeKzz(CloudP(i),CloudT(i),Clouddens(i),CloudHp(i),.false.)+CloudKzz_convect(i)
 			Kd(i)=Km(i)
 			if(complexKzz) then
-				Kg(i)=ComputeKzz(CloudP(i),CloudT(i),Clouddens(i),CloudHp(i),complexKzz)+CloudKzz_convect(i)
+				SKIP=.false.
+				INCFD=1
+				logx(1:nr)=log10(Kzz_g(1:nr))
+				call DPCHIM(nr,logP,logx,dlogx,INCFD)
+				call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,Kg,IERR)
+				Kg=10d0**Kg
 			else
 				Kg(i)=Kd(i)
 			endif
@@ -1297,10 +1296,7 @@ c       Kzz_r(1:nr) : Diffusion coefficient
 c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now set to equilibrium abundances.
 	   call output("==================================================================")
 	   call output("Computing disequilibrium chemistry")
-		do i=1,nr
-			Kzz_r(i)=ComputeKzz(P(i),T(i),dens(i),Hp(i),complexKzz)+Kzz_convect(i)
-		enddo
-	   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))
+	   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_g(1:nr))
 	endif
 	do i=1,nr
 		do j=1,nmol

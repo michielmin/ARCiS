@@ -4,14 +4,16 @@
 	use AtomsModule
 	IMPLICIT NONE
 	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,tot2,met_r,dens1bar,minZ,Tc,Rscale
-	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill,MMW_form,P0,R0,Kzz_r(nr)
+	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill,MMW_form,P0,R0,Kzz_g_in(nr),Kzz_b_in(nr)
 	parameter(RgasBar=82.05736d0*1.01325d0)
 	integer i,imol,nmix,j,niter,k,i1,i2,di,ii,i3,ir,icc
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
 	real*8 ComputeKzz,molfracs_atoms0(N_atoms)
 	logical dochemR(nr)
-		
+	
+	Kzz_g_in=Kzz_g
+	Kzz_b_in=Kzz_b
 	do i=1,nclouds
 		cloudspecies(i)=Cloud(i)%species
 	enddo
@@ -232,6 +234,23 @@ c			if(domakeai.or.retrieval) return
 		if(.not.modelsucces) return
 	endif
 
+	do i=1,nr
+		if(nTiter.eq.1) then
+			Kzz_b(i)=ComputeKzz(P(i),T(i),dens(i),Hp(i),.false.)+Kzz_convect(i)
+			if(complexKzz) then
+				Kzz_g(i)=ComputeKzz(P(i),T(i),dens(i),Hp(i),complexKzz)+Kzz_convect(i)
+			else
+				Kzz_g(i)=Kzz_b(i)
+			endif
+		else
+			Kzz_b(i)=exp((log(Kzz_b_in(i))*real(nTiter-1)+log(ComputeKzz(P(i),T(i),dens(i),Hp(i),.false.)+Kzz_convect(i)))/real(nTiter))
+			if(complexKzz) then
+				Kzz_g(i)=exp((log(Kzz_g_in(i))*real(nTiter-1)+log(ComputeKzz(P(i),T(i),dens(i),Hp(i),.true.)+Kzz_convect(i)))/real(nTiter))
+			else
+				Kzz_g(i)=Kzz_b(i)
+			endif
+		endif		
+	enddo
 
 	if(dochemistry.and.j.eq.1) then
 	if(compute_mixrat) then
@@ -286,14 +305,11 @@ c call disequilibrium code
 c input: 	R(1:nr+1) : These are the radial boundaries of the layers (bottom to top)
 c			P(1:nr),T(1:nr) : These are the pressure and temperature inside the layers
 c			molname(1:nmol) : names of the molecules included
-c			Kzz_r(1:nr) : Diffusion coefficient
+c			Kzz_g(1:nr) : Diffusion coefficient
 c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now set to equilibrium abundances.
 		   call output("==================================================================")
 		   call output("Computing disequilibrium chemistry")
-			do i=1,nr
-				Kzz_r(i)=ComputeKzz(P(i),T(i),dens(i),Hp(i),complexKzz)+Kzz_convect(i)
-			enddo
-		   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_r(1:nr))		   
+		   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_g(1:nr))		   
 		endif
 		if(nfixmol.gt.0) then
 			do i=1,nfixmol
@@ -553,7 +569,7 @@ c	endif
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 mix(nr,nmol),ComputeKzz
+	real*8 mix(nr,nmol)
 	integer i,imol,nmix,ii
 	character*1000 form
 	character*10 namemix(nmol)
@@ -604,7 +620,7 @@ c	endif
 	write(50,trim(form)) "Kzz [cm^2/s]","P [bar]"
 	form='(es13.3E3,es13.3E3)'
 	do i=1,nr
-		write(50,trim(form)) ComputeKzz(P(i),T(i),dens(i),Hp(i),complexKzz)+Kzz_convect(i),P(i)
+		write(50,trim(form)) Kzz_g(i),P(i)
 	enddo
 	close(unit=50)
 
