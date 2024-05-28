@@ -199,7 +199,7 @@ c===============================================================================
 	real*8 Kzz,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,powvxx,night2day,pole2eq,Rp_range,tauLW
 	real*8 Kzz_deep,Kzz_1bar,Kzz_P,Kzz_contrast,SOratio,Tsurface,hotspotshift0,exp_ad,Tsurface0
 	logical gamma_equal,dopostequalweights,inverseCOratio,setsurfpressure,fixnight2day,tidallock,distrUV
-	logical transspec,emisspec,dosimplerainout,computeLC,doscaleR,complexKzz,convectKzz,SCKzz,writeWolk,dotranshide
+	logical transspec,emisspec,dosimplerainout,computeLC,doscaleR,complexKzz,convectKzz,SCKzz,writeWolk,dotranshide,ComputeTeff
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),dlam(:),blam(:,:),surface_emis(:),surface_emis_ice(:)
 	real*8,allocatable :: surface_emis_snow(:),surface_emis_grass(:),surface_emis_water(:),surface_emis_sand(:)
@@ -410,7 +410,7 @@ c for exchange when computing secondary atmosphere
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
 		character*500 species,hazetype,file,composition
 		integer nmat,nlam
-		character*500,allocatable :: lnkfile(:,:),material(:)
+		character*500,allocatable :: lnkfile(:,:),material(:),condensate(:)
 		real*8 Kzz,Sigmadot,xm_bot
 		real*8 kappa,albedo,kpow,klam
 		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:),KeFile(:,:),KaFile(:,:),KsFile(:,:)

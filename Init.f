@@ -383,6 +383,7 @@ c select at least the species relevant for disequilibrium chemistry
 		allocate(Cloud(i)%rho_mat(40))
 		allocate(Cloud(i)%lnkfile(40,3))
 		allocate(Cloud(i)%material(40))
+		allocate(Cloud(i)%condensate(40))
 	enddo
 	allocate(XeqCloud(nr,max(nclouds,1)))
 	allocate(XeqCloud_old(nr,max(nclouds,1)))
@@ -718,6 +719,11 @@ c	condensates=(condensates.or.cloudcompute)
 				if(Cloud(i)%haze) then
 					Cloud(i)%nmat=Cloud(i)%nmat+1
 					Cloud(i)%material(15)=Cloud(i)%hazetype
+				endif
+			else if(Cloud(i)%type.eq.'CONDENSATION') then
+				if(Cloud(i)%haze) then
+					Cloud(i)%nmat=Cloud(i)%nmat+1
+					Cloud(i)%material(Cloud(i)%nmat)=Cloud(i)%hazetype
 				endif
 			endif
 		enddo
@@ -1128,6 +1134,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) SCKzz
 		case("convectkzz")
 			read(key%value,*) convectKzz
+		case("computeteff")
+			read(key%value,*) ComputeTeff
 		case("scattering")
 			read(key%value,*) scattering
 		case("scattstar","starscatt")
@@ -1872,6 +1880,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	complexKzz=.false.
 	SCKzz=.false.
 	convectKzz=.false.
+	ComputeTeff=.false.
 	mixP=0d0
 	vfrag=100d0	!cm/s
 	
@@ -2001,6 +2010,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%nmat=1
 		Cloud(i)%material=' '
 		Cloud(i)%lnkfile=' '
+		Cloud(i)%condensate='SILICATE'
 		Cloud(i)%Kzz=-1d0
 		Cloud(i)%Sigmadot=1d-17
 		Cloud(i)%kappa=1d-2
@@ -2930,6 +2940,10 @@ c number of cloud/nocloud combinations
 			i=key%nr2
 			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
 			Cloud(j)%material(i)=trim(key%value)
+		case("condensate")
+			i=key%nr2
+			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
+			Cloud(j)%condensate(i)=trim(key%value)
 		case("lnkfile")
 			i=key%nr2
 			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i

@@ -25,7 +25,7 @@
 	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil,St
 	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:),CloudtauUV(:),CloudkappaUV(:)
 	integer INCFD,IERR
-	logical SKIP,freeflow
+	logical SKIP,freeflow,liq
 	real*8 time,tcrystinv,nucryst,Tcryst
 	integer itime
 !$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp,AB)
@@ -271,6 +271,10 @@ c	atoms_cloud(i,3)=1
 	if(Cloud(ii)%rainout) then
 		densv(1,1:nCS)=(mu*mp/(kb*T(1)))*exp(BTP(1:nCS)-ATP(1:nCS)/T(1))
 		do iCS=1,nCS
+			if(CSname(iCS).eq."H2O") then
+				call PvapH2O(T(1),densv(1,iCS),liq)
+				densv(1,iCS)=1d6*densv(1,iCS)*(mu(iCS)*mp/(kb*T(1)))
+			endif
 			if(T(1).gt.maxT(iCS)) densv(1,iCS)=densv(1,iCS)+(mu(iCS)*mp/(kb*T(1)*10d0))*exp(BTP(iCS)-ATP(iCS)/(T(1)*10d0))
 		enddo
 		do iCS=1,nCS
@@ -470,6 +474,10 @@ c	atoms_cloud(i,3)=1
 	do i=1,nnr
 		densv(i,1:nCS)=(mu*mp/(kb*CloudT(i)))*exp(BTP(1:nCS)-ATP(1:nCS)/CloudT(i))
 		do iCS=1,nCS
+			if(CSname(iCS).eq."H2O") then
+				call PvapH2O(CloudT(i),densv(i,iCS),liq)
+				densv(i,iCS)=1d6*densv(i,iCS)*(mu(iCS)*mp/(kb*CloudT(i)))
+			endif
 			if(cloudT(i).gt.maxT(iCS)) densv(i,iCS)=densv(i,iCS)+
      &                    (mu(iCS)*mp/(kb*CloudT(i)*10d0))*exp(BTP(iCS)-ATP(iCS)/(CloudT(i)*10d0))
 		enddo
