@@ -3379,6 +3379,7 @@ c	HG=(1d0-g**2)/((1d0-2d0*g*cos(theta)+g**2)**(3.0/2.0))/2d0
 	end
 	
 	subroutine StandardStar(name0,Tstar,Rstar,Mstar)
+	use Constants
 	IMPLICIT NONE
 	integer nstar,istar,i
 	parameter(nstar=17)
@@ -3433,6 +3434,10 @@ c				Lstar=L(i)
 	print*,'Tstar: ',Tstar
 	print*,'Rstar: ',Rstar
 	print*,'Mstar: ',Mstar
+
+	Rstar=Rstar*Rsun
+	Mstar=Mstar*Msun
+c	Lstar=Lstar*Lsun
 	
 	return
 	end
