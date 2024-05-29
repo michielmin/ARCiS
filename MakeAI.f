@@ -54,6 +54,7 @@
 				call output("Mass:   " // dbl2string(Mplanet/Mjup,'(es10.4)'))
 				if(.not.usefile) goto 1
 			endif
+			if(standardstarname.ne.' ') call StandardStar(standardstarname,Tstar,Rstar,Mstar)
 			call StarSpecSetup(Tstar,logg,1d4*lam,1d4*blam,Fstar,nlam,starfile,blackbodystar)
 			Fstar=Fstar*pi*Rstar**2
 			call SetOutputMode(.false.)

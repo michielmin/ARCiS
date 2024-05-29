@@ -763,6 +763,7 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 	enddo
 
 	allocate(Fstar(nlam))
+	if(standardstarname.ne.' ') call StandardStar(standardstarname,Tstar,Rstar,Mstar)
 	call StarSpecSetup(Tstar,logg,1d4*lam,1d4*blam,Fstar,nlam,starfile,blackbodystar)
 	Fstar=Fstar*pi*Rstar**2
 
@@ -1369,6 +1370,8 @@ c			read(key%value,*) nTpoints
 		case("planetname")
 			read(key%value,*) planetname
 			call ReadPlanetName
+		case("standardstar")
+			read(key%value,*) standardstarname
 		case("trend_compute","dotrend")
 			read(key%value,*) trend_compute
 		case("i2d")
@@ -1813,6 +1816,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	logg=4.5d0
 	blackbodystar=.false.
 	retrievestar=.false.
+	standardstarname='  '
 	
 	fDay=0.5d0
 	betapow=1d0
@@ -3374,3 +3378,63 @@ c	HG=(1d0-g**2)/((1d0-2d0*g*cos(theta)+g**2)**(3.0/2.0))/2d0
 	return
 	end
 	
+	subroutine StandardStar(name0,Tstar,Rstar,Mstar)
+	IMPLICIT NONE
+	integer nstar,istar,i
+	parameter(nstar=17)
+	character*2 name(nstar),name0
+	real*8 T(nstar),R(nstar),L(nstar),M(nstar),w1,w2,Tstar,Rstar,Mstar
+	
+	name=(/ "O2","O6","B0","B5","A0","A5","F0","F5","G0","G2","G5","K0","K5","M0","M5","M8","L1" /)
+	R=(/ 12d0,9.8d0,7.4d0,3.8d0,2.5d0,1.7d0,1.3d0,1.2d0,1.05d0,1d0,0.93d0,0.85d0,0.74d0,0.51d0,
+     &			0.18d0,0.11d0,0.09d0 /)
+	M=(/ 100d0,35d0,18d0,6.5d0,3.2d0,2.1d0,1.7d0,1.3d0,1.1d0,1d0,0.93d0,0.78d0,0.69d0,0.60d0,0.15d0,
+     &			0.08d0,0.07d0 /)
+	L=(/ 8d5,18d4,2d4,800d0,80d0,20d0,6d0,2.5d0,1.26d0,1d0,0.79d0,0.4d0,0.16d0,0.072d0,0.0027d0,
+     &			0.0004d0,0.00017d0 /)
+	T=(/ 50000d0,38000d0,30000d0,16400d0,10800d0,8620d0,7240d0,6540d0,5920d0,5780d0,5610d0,5240d0,
+     &			4410d0,3800d0,3120d0,2650d0,2200d0 /)
+	if(name0.eq.'TS'.or.name0.eq.'Ts') then
+		if(Tstar.gt.T(1)) then
+			print*,'Tstar too low, using lowest T star in grid'
+			istar=1
+			w1=1d0
+			w2=0d0
+		else if(Tstar.lt.T(nstar)) then
+			print*,'Tstar too low, using lowest T star in grid'
+			istar=nstar-1
+			w1=0d0
+			w2=1d0
+		else
+			do i=1,nstar-1
+				if(Tstar.le.T(i).and.Tstar.ge.T(i+1)) then
+					istar=i
+					w1=log(T(i+1)/Tstar)/log(T(i+1)/T(i))
+					w2=1d0-w1
+					exit
+				endif
+			enddo
+		endif
+		Tstar=T(istar)**w1*T(istar+1)**w2
+		Rstar=R(istar)**w1*R(istar+1)**w2
+		Mstar=M(istar)**w1*M(istar+1)**w2
+c		Lstar=L(istar)**w1*L(istar+1)**w2
+	else
+		do i=1,nstar
+			if(name0.eq.name(i)) then		
+				Tstar=T(i)
+				Rstar=R(i)
+				Mstar=M(i)
+c				Lstar=L(i)
+				exit
+			endif
+		enddo
+	endif
+	print*,'Tstar: ',Tstar
+	print*,'Rstar: ',Rstar
+	print*,'Mstar: ',Mstar
+	
+	return
+	end
+
+

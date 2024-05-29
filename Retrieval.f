@@ -664,6 +664,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 
 	call InitDens()
 	if(retrievestar) then
+		if(standardstarname.ne.' ') call StandardStar(standardstarname,Tstar,Rstar,Mstar)
 		call StarSpecSetup(Tstar,logg,1d4*lam,1d4*blam,Fstar,nlam,starfile,blackbodystar)
 		Fstar=Fstar*pi*Rstar**2
 	endif

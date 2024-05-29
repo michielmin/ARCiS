@@ -216,6 +216,7 @@ c for exchange when computing secondary atmosphere
 	logical secondary_atmosphere,constant_g,forceEbalance,fixMMW,WaterWorld
 	logical,allocatable :: RTgridpoint(:),computelam(:)
 	character*20 aim3D
+	character*2 standardstarname
 	
 	integer nrsurf,nrstepchem
 	real*8 Psurf
