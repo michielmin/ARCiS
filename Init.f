@@ -3385,6 +3385,7 @@ c	HG=(1d0-g**2)/((1d0-2d0*g*cos(theta)+g**2)**(3.0/2.0))/2d0
 	parameter(nstar=17)
 	character*2 name(nstar),name0
 	real*8 T(nstar),R(nstar),L(nstar),M(nstar),w1,w2,Tstar,Rstar,Mstar
+c Standard star parameters according to Wikipedia
 	
 	name=(/ "O2","O6","B0","B5","A0","A5","F0","F5","G0","G2","G5","K0","K5","M0","M5","M8","L1" /)
 	R=(/ 12d0,9.8d0,7.4d0,3.8d0,2.5d0,1.7d0,1.3d0,1.2d0,1.05d0,1d0,0.93d0,0.85d0,0.74d0,0.51d0,
