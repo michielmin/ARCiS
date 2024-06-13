@@ -714,8 +714,6 @@ c equations for material
 	j=j+1
 	if(freeflow) then
 c assume continuous flux at the bottom (dF/dz=Sc=0)
-		Aomp(j,ixv(iCS,i))=-Sc(i)*xn(i)*Clouddens(i)!*CloudMR(i)/mixrat_bot
-		Aomp(j,ixc(iCS,i))=Sc(i)*densv(i,iCS)/mpart(i)
 		xomp(j)=0d0
 
 		dztot=(CloudR(i+1)-CloudR(i))

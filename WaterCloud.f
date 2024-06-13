@@ -26,7 +26,7 @@
 	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:)
 	integer INCFD,IERR
 	logical SKIP,freeflow
-	real*8 time,tcrystinv,nucryst,Tcryst
+	real*8 time,tcrystinv,nucryst,Tcryst,fsed
 	integer itime
 !$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp,AB)
 
@@ -352,7 +352,17 @@ c start the loop
 	do i=1,nnr
 		cs=sqrt(kb*CloudT(i)/(2.3d0*mp))
 		vth(i)=sqrt(8d0*kb*CloudT(i)/(pi*2.3d0*mp))
-		vsed(i)=-sqrt(pi)*rpart(i)*rho_av(i)*Ggrav*Mplanet/(2d0*Clouddens(i)*vth(i)*CloudR(i)**2)
+		if(Cloud(ii)%usefsed.and.iter.ne.1) then
+			fsed=Cloud(ii)%fsed_alpha*exp((CloudR(i)-Rplanet)/(6d0*Cloud(ii)%fsed_beta*CloudHp(i)))+1d-2
+			vsed(i)=-fsed*Kd(i)/CloudHp(i)
+			rpart(i)=vsed(i)/(-sqrt(pi)*rho_av(i)*Ggrav*Mplanet/(2d0*Clouddens(i)*vth(i)*CloudR(i)**2))
+			if(rpart(i).lt.Cloud(ii)%rnuc) then
+				rpart(i)=Cloud(ii)%rnuc
+				vsed(i)=-sqrt(pi)*rpart(i)*rho_av(i)*Ggrav*Mplanet/(2d0*Clouddens(i)*vth(i)*CloudR(i)**2)
+			endif
+		else
+			vsed(i)=-sqrt(pi)*rpart(i)*rho_av(i)*Ggrav*Mplanet/(2d0*Clouddens(i)*vth(i)*CloudR(i)**2)
+		endif
 		mpart(i)=rho_av(i)*4d0*pi*rpart(i)**3/3d0
 	enddo
 	if(complexKzz) then
@@ -365,6 +375,17 @@ c start the loop
 	empty=.false.
 	freeflow=Cloud(ii)%freeflow_nuc
 
+	if(Cloud(ii)%usefsed.and.iter.ne.1) then
+		do i=1,nnr
+			tot=sum(xc(1:nCS,i))+xm(i)
+			xn(i)=tot/mpart(i)
+			if(Cloud(ii)%haze) then
+				xm(i)=xn(i)*m_nuc
+			else
+				xm=0d0
+			endif
+		enddo
+	else
 	if(Cloud(ii)%hazetype.eq.'optEC') then
 c equations for mass in vapor creating nuclii
 		Ma=0d0
@@ -552,6 +573,8 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 	endif
 	xn(1:nnr)=xn(1:nnr)/m_nuc
 
+	endif
+
 	freeflow=Cloud(ii)%freeflow_con
 	iCS=1
 
@@ -571,8 +594,6 @@ c equations for material
 	j=j+1
 	if(freeflow) then
 c assume continuous flux at the bottom (dF/dz=Sc=0)
-		Aomp(j,ixv(iCS,i))=-Sc(i)*xn(i)*Clouddens(i)!*CloudMR(i)/mixrat_bot
-		Aomp(j,ixc(iCS,i))=Sc(i)*densv(i,iCS)/mpart(i)
 		xomp(j)=0d0
 
 		dztot=(CloudR(i+1)-CloudR(i))
@@ -811,7 +832,14 @@ c Seed vapor
 		call regridarray(logCloudP,x,nnr,logP,logx,nr)
 		mixrat_r(2:nr,6)=logx(2:nr)
 	endif
-
+	
+	do i=1,nr
+		tot=0d0
+		do j=1,nmol
+			if(mixrat_r(i,j).gt.0d0) tot=tot+mixrat_r(i,j)
+		enddo
+		if(tot.gt.0d0) mixrat_r(i,1:nmol)=mixrat_r(i,1:nmol)/tot
+	enddo
 
 	call cpu_time(time)
 	timecloud=timecloud+time

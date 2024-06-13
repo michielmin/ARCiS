@@ -14,6 +14,10 @@
 	integer i1,i2,ibest
 	character*6000 line
 	integer*4 counts, count_rate, count_max
+	logical variablePgrid
+	real*8 Pgrid(nr),Pg1(nr),Pg2(nr),yy(nr)
+	character*500 lowkey
+	integer ipmin,ipmax
 	
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
 	open(unit=35,file=trim(outputdir) // "/posterior.dat",FORM="FORMATTED",ACCESS="STREAM")
@@ -87,6 +91,39 @@
 		open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do i=1,nmodels
 			read(35,*) var(i,1:n_ret),like(i)
+		enddo
+	endif
+	ipmin=0
+	ipmax=0
+	variablePgrid=WaterWorld
+	do i=1,n_ret
+		lowkey=RetPar(i)%keyword
+		do j=1,len_trim(lowkey)
+			if(iachar(lowkey(j:j)).ge.65.and.iachar(lowkey(j:j)).le.90) then
+				lowkey(j:j)=achar(iachar(lowkey(j:j))+32)
+			endif
+		enddo
+		if(lowkey.eq.'pmin') then
+			variablePgrid=.true.
+			ipmin=i
+		endif
+		if(lowkey.eq.'pmax') then
+			variablePgrid=.true.
+			ipmax=i
+		endif
+	enddo
+	if(variablePgrid) then
+		do i=1,nmodels
+			call MapRetrievalMN(var(i,1:n_ret),error)
+			if(ipmin.gt.0) then
+				if(RetPar(ipmin)%value.lt.Pmin) Pmin=RetPar(ipmin)%value
+			endif
+			if(ipmax.gt.0) then
+				if(RetPar(ipmax)%value.gt.Pmax) Pmax=RetPar(ipmax)%value
+			endif
+		enddo
+		do i=1,nr
+			Pgrid(i)=exp(log(Pmax)+log(Pmin/Pmax)*real(i-1)/real(nr-1))
 		enddo
 	endif
 	i1=nmodels/4
@@ -292,6 +329,53 @@ c		call cpu_time(stoptime)
 
 	i2d=i2d+1
 	if(i2d.le.n2d) goto 3
+
+	if(variablePgrid) then
+		Pg1(1:nr)=-log(P(1:nr))
+		Pg2(1:nr)=-log(Pgrid(1:nr))
+
+		yy(1:nr)=T(1:nr)
+		call regridarray(Pg1,yy,nr,Pg2,T,nr)
+
+		yy(1:nr)=log(Kzz_g(1:nr))
+		call regridarray(Pg1,yy,nr,Pg2,Kzz_g,nr)
+		Kzz_g(1:nr)=exp(Kzz_g(1:nr))
+
+		do imol=1,nmol
+			if(includemol(imol)) then
+				yy(1:nr)=mixrat_r(1:nr,imol)
+				call regridarray(Pg1,yy,nr,Pg2,mixrat_r(1:nr,imol),nr)
+			endif
+		enddo
+		yy(1:nr)=cloud_dens(1:nr,1)
+		call regridarray(Pg1,yy,nr,Pg2,cloud_dens(1:nr,1),nr)
+
+		yy(1:nr)=log(dens(1:nr))
+		call regridarray(Pg1,yy,nr,Pg2,dens,nr)
+		dens(1:nr)=exp(dens(1:nr))
+
+		if(do3D.and.fulloutput3D) then
+			do j=0,nphase
+				yy(1:nr)=PTaverage3D(j,1:nr)
+				call regridarray(Pg1,yy,nr,Pg2,PTaverage3D(j,1:nr),nr)
+				do imol=1,nmol
+					if(includemol(imol)) then
+						yy(1:nr)=mixrat_average3D(j,1:nr,imol)
+						call regridarray(Pg1,yy,nr,Pg2,mixrat_average3D(j,1:nr,imol),nr)
+					endif
+				enddo
+			enddo
+		endif
+		do j=1,nr
+			if((Pgrid(j).lt.P(nr).and.ipmin.ne.0).or.(Pgrid(j).gt.P(1).and.(ipmax.ne.0.or.WaterWorld))) then
+				mixrat_r(j,1:nmol)=1d-50
+				cloud_dens(j,1)=0d0
+				dens(j)=1d-50
+				if(do3D.and.fulloutput3D) mixrat_average3D(0:nphase,j,1:nmol)=1d-50
+			endif
+		enddo
+		P(1:nr)=Pgrid(1:nr)
+	endif
 	PTstruct(i,1:nr)=T(1:nr)
 	dPTstruct(i,1)=log(T(2)/T(1))/log(P(2)/P(1))
 	do j=1,nr

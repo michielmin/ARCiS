@@ -384,6 +384,7 @@ c select at least the species relevant for disequilibrium chemistry
 		allocate(Cloud(i)%lnkfile(40,3))
 		allocate(Cloud(i)%material(40))
 		allocate(Cloud(i)%condensate(40))
+		allocate(Cloud(i)%xv_bot(40))
 	enddo
 	allocate(XeqCloud(nr,max(nclouds,1)))
 	allocate(XeqCloud_old(nr,max(nclouds,1)))
@@ -1129,6 +1130,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) distance
 		case("cloud")
 			call ReadCloud(key)
+		case("kzz_offset")
+			read(key%value,*) Kzz_offset
 		case("complexkzz")
 			read(key%value,*) complexKzz
 		case("computekzz")
@@ -1871,6 +1874,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	nfixmol=0
 	fixmol_P=1d20
 	Kzz=1d8
+	Kzz_offset=0d0
 	metallicity=0d0
 	condensates=.false.
 	dosimplerainout=.false.
@@ -2027,6 +2031,10 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%freeflow_nuc=.false.
 		Cloud(i)%freeflow_con=.false.
 		Cloud(i)%condenseNaK=.true.
+		Cloud(i)%usefsed=.false.
+		Cloud(i)%fsed_alpha=1d0
+		Cloud(i)%fsed_beta=1d20
+		Cloud(i)%xv_bot=1d-5
 	enddo
 	nspike=0
 	useDLMie=.false.
@@ -2930,12 +2938,22 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%computecryst
 		case("coagulation")
 			read(key%value,*) Cloud(j)%coagulation
+		case("usefsed")
+			read(key%value,*) Cloud(j)%usefsed
+		case("alpha","fsed_alpha","fsed")
+			read(key%value,*) Cloud(j)%fsed_alpha
+		case("beta","fsed_beta")
+			read(key%value,*) Cloud(j)%fsed_beta
 		case("cryst")
 			read(key%value,*) Cloud(j)%cryst0
 		case("abun")
 			i=key%nr2
 			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
 			read(key%value,*) Cloud(j)%abun(i)
+		case("xv_bot")
+			i=key%nr2
+			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
+			read(key%value,*) Cloud(j)%xv_bot(i)
 		case("rho_mat")
 			i=key%nr2
 			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i

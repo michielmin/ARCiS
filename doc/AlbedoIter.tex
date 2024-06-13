@@ -1,0 +1,64 @@
+\documentclass[12pt]{article}
+
+\include{general}
+
+\begin{document}
+
+\title{\includegraphics[width=0.9\hsize]{ARCiS}\\Albedo iteration in 3D setups}
+\author{Michiel Min}
+\date{\today}
+\maketitle
+
+\section{Introduction}
+
+In this document the albedo iterations are explained that make sure that also with a varying albedo between day and nightside of the planet, the total energy is conserved. The problem is here that the 3D scheme in principle uses a $\beta$-map that is not aware of if the local PT point is on the day side or on the night side. This creates a problem when the night side has a different reflectivity as the day side as the night side cannot reflect stellar radiation.
+
+\subsection{Equations}
+
+As explained in the WASP-43b paper (Chubb \& Min), the $\beta$-map represents a way of redistributing heat from the day to the night side. We have first the static $\beta$-map:
+\begin{equation}
+\beta_\star=\cos\Lambda\cos\Phi,
+\end{equation}
+on the dayside and
+\begin{equation}
+\beta_\star=0,
+\end{equation}
+on the nightside. Here $\Lambda$ and $\Phi$ are the longitude and latitude respectively.
+The $\beta$ map is computed from a diffusion equation using $\beta_\star$ as source term. Note that $\beta$ and $\beta_\star$ have the property that:
+\begin{equation}
+\label{eq:normalise}
+\int_\mathrm{planet}\beta=\int_\mathrm{planet}\beta_\star=\int_\mathrm{day}\beta_\star=1
+\end{equation}
+
+The total amount of reflected light from the planet is:
+\begin{equation}
+f_\mathrm{ref}=\int_\mathrm{day}\beta_\star\omega
+\end{equation}
+
+If the albedo, $\omega$, is a constant over the day and the night side, the fraction of starlight reflected taken into the computation of the P-T structure is:
+\begin{equation}
+f_\mathrm{ref}^{'}=\int_\mathrm{planet}\beta\omega=\omega \int_\mathrm{planet}\beta = \int_\mathrm{day}\beta_\star\omega =\omega
+\end{equation}
+This only works if the albedo is constant. If the albedo on the day and the night side is different $f_\mathrm{ref}^{'} \ne f_\mathrm{ref}$, which makes the energy balance incorrect.
+
+To solve this issue we can add a scaling to the $\beta$-map. The total emission needs to be $1-f_\mathrm{ref}$. If we take the new $\beta$-map to be:
+\begin{equation}
+\beta^{'}=\gamma\beta
+\end{equation}
+with $\gamma$ a constant. We now have that the emission we use for the computation of the PT structure is equal to
+\begin{equation}
+\gamma-\int_\mathrm{planet}\gamma\beta(\omega)
+\end{equation}
+To have the right energy balance we need to make sure that
+\begin{equation}
+\gamma-\int_\mathrm{planet}\gamma\beta\omega = 1-\int_\mathrm{day}\beta_\star\omega
+\end{equation}
+which gives for the scaling factor
+\begin{equation}
+\gamma=\frac{1-\int_\mathrm{day}\beta_\star\omega}{1-\int_\mathrm{planet}\beta\omega}
+\end{equation}
+Note that for constant $\omega$ we can use Eq.~\ref{eq:normalise} to show that $\gamma=1$ (as expected).
+
+To compute $\gamma$ we need to know the albedo at each location of the planet. For this we start with $\gamma=1$ and compute the albedo everywhere. We use this to compute a new estimate of $\gamma$. Usually this is already enough and the value of $\gamma$ does not change after one iteration. In the case of self-consistent cloud formation the albedo might depend more heavily on the PT structure and more than 1 iteration is required for $\gamma$ to converge.
+
+\end{document}

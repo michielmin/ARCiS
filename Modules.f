@@ -196,7 +196,7 @@ c===============================================================================
 	logical didcondens_chem,resume_multinest,disequilibrium,const_eff_multinest,outflow,useDLMie
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file,pargridfile,deepredisttype
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest
-	real*8 Kzz,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,powvxx,night2day,pole2eq,Rp_range,tauLW
+	real*8 Kzz,Kzz_offset,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,powvxx,night2day,pole2eq,Rp_range,tauLW
 	real*8 Kzz_deep,Kzz_1bar,Kzz_P,Kzz_contrast,SOratio,Tsurface,hotspotshift0,exp_ad,Tsurface0
 	logical gamma_equal,dopostequalweights,inverseCOratio,setsurfpressure,fixnight2day,tidallock,distrUV
 	logical transspec,emisspec,dosimplerainout,computeLC,doscaleR,complexKzz,convectKzz,SCKzz,writeWolk,dotranshide,ComputeTeff
@@ -403,7 +403,7 @@ c for exchange when computing secondary atmosphere
 		character*20 opacitytype,type
 		real*8 P,dP,xi,Pmax,Pmin,Ptau,Phi,coverage
 		real*8,allocatable :: rv(:),M(:)					! dimension nsize
-		real*8,allocatable :: frac(:,:),sigma(:),cryst(:,:),abun(:)
+		real*8,allocatable :: frac(:,:),sigma(:),cryst(:,:),abun(:),xv_bot(:)
 		real*8 rho,fmax,porosity,reff,veff,rpow,Pref,rnuc
 		logical blend,haze,condensates,rainout,globalKzz,computecryst,coagulation
 		logical onepart,freeflow_nuc,freeflow_con,condenseNaK
@@ -416,6 +416,8 @@ c for exchange when computing secondary atmosphere
 		real*8 kappa,albedo,kpow,klam
 		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:),KeFile(:,:),KaFile(:,:),KsFile(:,:)
 		integer,allocatable :: nax(:)
+		logical usefsed
+		real*8 fsed_alpha,fsed_beta
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 

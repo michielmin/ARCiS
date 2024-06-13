@@ -437,13 +437,13 @@ c Now call the setup for the readFull3D part
 		endif
 		do j=1,nlatt-1
 			la=cos((latt(j)+latt(j+1))/2d0-pi/2d0)
-			scale=scale+(1d0-local_albedo(ibeta(i,j)))*la*beta3D(ibeta(i,j))
-			tot2=tot2+la
+			scale=scale+local_albedo(ibeta(i,j))*la*beta3D(ibeta(i,j))
+			tot2=tot2+la*beta3D(ibeta(i,j))
 		enddo
 	enddo
 	albedo_day=albedo_day/tot1
-	scale=4d0*scale/tot2
-	scale=(1d0-albedo_day)/scale
+	scale=scale/tot2
+	scale=(1d0-albedo_day)/(1d0-scale)
 	call output("Day-side albedo: " // trim(dbl2string(albedo_day,'(f5.3)')))
 	if(nalbedo_iter.gt.1) call output("Scaling emission by: " // trim(dbl2string(scale,'(f5.3)')))
 	if(abs(scale-scale_prev)/(scale+scale_prev).lt.0.5d-2) exit

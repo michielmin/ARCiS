@@ -1426,6 +1426,7 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 		vth=sqrt(8d0*kb*Tg/(pi*2.3d0*mp))
 		ComputeKzz=ComputeKzz+lmfp*vth/3d0
 	endif
+	ComputeKzz=ComputeKzz+Kzz_offset
 	
 	return
 	end
