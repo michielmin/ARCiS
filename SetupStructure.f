@@ -244,7 +244,7 @@ c			if(domakeai.or.retrieval) return
 	endif
 
 	do i=1,nr
-		if(nTiter.eq.1) then
+		if(nTiter.le.1) then
 			Kzz_b(i)=ComputeKzz(P(i),T(i),dens(i),Hp(i),.false.)+Kzz_convect(i)
 			if(complexKzz) then
 				Kzz_g(i)=ComputeKzz(P(i),T(i),dens(i),Hp(i),complexKzz)+Kzz_convect(i)
@@ -1310,6 +1310,8 @@ c-----------------------------------------------------------------------
 		do ir=1,nr
 			nmax=1d200
 			do imol=1,nmol
+				nreac=mixrat_r(ir,imol)/PhotoReacts(i)%react(imol)
+				if(includemol(imol)) print*,ir,molname(imol),nreac,PhotoReacts(i)%react(imol)
 				if(includemol(imol).and.PhotoReacts(i)%react(imol).gt.0d0) then
 					nreac=mixrat_r(ir,imol)/PhotoReacts(i)%react(imol)
 					if(nreac.lt.nmax) nmax=nreac
@@ -1427,6 +1429,7 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 		ComputeKzz=ComputeKzz+lmfp*vth/3d0
 	endif
 	ComputeKzz=ComputeKzz+Kzz_offset
+	print*,ComputeKzz
 	
 	return
 	end
