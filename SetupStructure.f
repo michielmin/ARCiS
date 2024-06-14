@@ -46,8 +46,8 @@ c	Add a minimum of 30K for compatibility with cold/old gas Giants
 
 	nabla_ad=(1d0-1d0/exp_ad)	!2d0/7d0
 	grav=Ggrav*Mplanet/(Rplanet)**2
-	if((par_tprofile.or.(computeT.and.nTiter.le.1)).and.i_alb.eq.1) call ComputeParamT(T)
-	if(free_tprofile.and.(.not.computeT.or.nTiter.eq.1).and.i_alb.eq.1) call MakePTstruct
+	if(((par_tprofile.and..not.computeT).or.(computeT.and.nTiter.le.1)).and.i_alb.le.1) call ComputeParamT(T)
+	if(free_tprofile.and.(.not.computeT.or.nTiter.le.1).and.i_alb.le.1) call MakePTstruct
 	if(WaterWorld.and.(.not.do3D.or.setsurfpressure)) call doWaterWorld()
 
 	call SetAbun
@@ -230,8 +230,8 @@ c			if(domakeai.or.retrieval) return
 		endif
 	enddo
 
-	if((par_tprofile.or.(computeT.and.nTiter.le.1)).and.i_alb.eq.1) call ComputeParamT(T)
-	if(free_tprofile.and.(.not.computeT.or.nTiter.eq.1).and.i_alb.eq.1) call MakePTstruct
+	if(((par_tprofile.and..not.computeT).or.(computeT.and.nTiter.le.1)).and.i_alb.le.1) call ComputeParamT(T)
+	if(free_tprofile.and.(.not.computeT.or.nTiter.le.1).and.i_alb.le.1) call MakePTstruct
 	do i=1,nr
 		if(T(i).gt.maxTprofile) T(i)=maxTprofile
 		if(T(i).lt.3d0) T(i)=3d0

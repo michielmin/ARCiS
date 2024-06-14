@@ -6,6 +6,7 @@
 	
 	TeffPoutput=TeffP
 	modelfail=.false.
+	i_alb=0
 	if(do3D) then
 		call Run3D(recomputeopacities)
 	else
