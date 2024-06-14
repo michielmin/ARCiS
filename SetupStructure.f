@@ -1310,8 +1310,6 @@ c-----------------------------------------------------------------------
 		do ir=1,nr
 			nmax=1d200
 			do imol=1,nmol
-				nreac=mixrat_r(ir,imol)/PhotoReacts(i)%react(imol)
-				if(includemol(imol)) print*,ir,molname(imol),nreac,PhotoReacts(i)%react(imol)
 				if(includemol(imol).and.PhotoReacts(i)%react(imol).gt.0d0) then
 					nreac=mixrat_r(ir,imol)/PhotoReacts(i)%react(imol)
 					if(nreac.lt.nmax) nmax=nreac
@@ -1429,7 +1427,6 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 		ComputeKzz=ComputeKzz+lmfp*vth/3d0
 	endif
 	ComputeKzz=ComputeKzz+Kzz_offset
-	print*,ComputeKzz
 	
 	return
 	end
