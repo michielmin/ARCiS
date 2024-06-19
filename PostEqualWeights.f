@@ -15,7 +15,7 @@
 	character*6000 line
 	integer*4 counts, count_rate, count_max
 	logical variablePgrid
-	real*8 Pgrid(nr),Pg1(nr),Pg2(nr),yy(nr)
+	real*8 Pgrid(nr),Pg1(nr),Pg2(nr),yy(nr),Pmin0,Pmax0
 	character*500 lowkey
 	integer ipmin,ipmax
 	
@@ -113,17 +113,19 @@
 		endif
 	enddo
 	if(variablePgrid) then
+		Pmin0=Pmin
+		Pmax0=Pmax
 		do i=1,nmodels
 			call MapRetrievalMN(var(i,1:n_ret),error)
 			if(ipmin.gt.0) then
-				if(RetPar(ipmin)%value.lt.Pmin) Pmin=RetPar(ipmin)%value
+				if(RetPar(ipmin)%value.lt.Pmin0) Pmin0=RetPar(ipmin)%value
 			endif
 			if(ipmax.gt.0) then
-				if(RetPar(ipmax)%value.gt.Pmax) Pmax=RetPar(ipmax)%value
+				if(RetPar(ipmax)%value.gt.Pmax0) Pmax0=RetPar(ipmax)%value
 			endif
 		enddo
 		do i=1,nr
-			Pgrid(i)=exp(log(Pmax)+log(Pmin/Pmax)*real(i-1)/real(nr-1))
+			Pgrid(i)=exp(log(Pmax0)+log(Pmin0/Pmax0)*real(i-1)/real(nr-1))
 		enddo
 	endif
 	i1=nmodels/4
