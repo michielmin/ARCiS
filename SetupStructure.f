@@ -215,20 +215,6 @@ c		endif
 		grav(i)=Ggrav*Mtot/(R(i)*R(i+1))
 	enddo
 	if(constant_g) grav=Ggrav*Mplanet/(Rplanet)**2
-	do i=nr,1,-1
-		vescape=sqrt(2d0*Ggrav*Mplanet/R(i))
-		vtherm=sqrt(3d0*kb*T(i)/(mp*MMW(i)))
-		Mtot=Mtot-dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
-		if(vtherm.gt.vescape) then
-			Ndens(i)=1d-20
-			dens(i)=Ndens(i)*mp*MMW(i)
-			call output("layer" // dbl2string(P(i),'(es10.3E3)') // "escapes to space")
-			modelsucces=.false.
-c			if(domakeai.or.retrieval) return
-		else
-			exit
-		endif
-	enddo
 
 	if(((par_tprofile.and..not.computeT).or.(computeT.and.nTiter.le.1)).and.i_alb.le.1) call ComputeParamT(T)
 	if(free_tprofile.and.(.not.computeT.or.nTiter.le.1).and.i_alb.le.1) call MakePTstruct
@@ -259,6 +245,21 @@ c			if(domakeai.or.retrieval) return
 				Kzz_g(i)=Kzz_b(i)
 			endif
 		endif		
+	enddo
+
+	do i=nr,1,-1
+		vescape=sqrt(2d0*Ggrav*Mplanet/R(i))
+		vtherm=sqrt(3d0*kb*T(i)/(mp*MMW(i)))
+		Mtot=Mtot-dens(i)*(R(i+1)**3-R(i)**3)*4d0*pi/3d0
+		if(vtherm.gt.vescape) then
+			Ndens(i)=1d-20
+			dens(i)=Ndens(i)*mp*MMW(i)
+			call output("layer" // dbl2string(P(i),'(es10.3E3)') // "escapes to space")
+			modelsucces=.false.
+c			if(domakeai.or.retrieval) return
+		else
+			exit
+		endif
 	enddo
 
 	if(dochemistry.and.j.eq.1) then
