@@ -456,9 +456,9 @@ c	atoms_cloud(i,3)=1
 		allocate(CloudtauUV(nnr),CloudkappaUV(nnr))
 		do ir=1,nr
 			if(kappaUV0.gt.0d0) then
-				tauUV(ir)=kappaUV0*1d6*P(ir)/grav(ir)
+				tauUV(ir)=exp(-kappaUV0*1d6*P(ir)/grav(ir))
 			else if(tauUV(ir).lt.0d0) then
-				tauUV(ir)=1d6*P(ir)/grav(ir)
+				tauUV(ir)=exp(-1d6*P(ir)/grav(ir))
 			endif
 		enddo
 		SKIP=.false.
@@ -486,7 +486,7 @@ c	atoms_cloud(i,3)=1
 		enddo
 		gz=Ggrav*Mplanet/CloudR(i)**2
 		if(Cloud(ii)%hazetype.eq.'optEC') then
-			Sn(i)=Clouddens(i)*CloudP(i)*exp(-CloudtauUV(i))
+			Sn(i)=Clouddens(i)*CloudP(i)*CloudtauUV(i)
 			if(i.eq.nnr) then
 				tot=tot+abs(CloudR(i-1)-CloudR(i))*Sn(i)
 			else if(i.eq.1) then

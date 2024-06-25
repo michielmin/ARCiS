@@ -291,9 +291,9 @@ c H2O: 7
 		allocate(CloudtauUV(nnr),CloudkappaUV(nnr))
 		do ir=1,nr
 			if(kappaUV0.gt.0d0) then
-				tauUV(ir)=kappaUV0*1d6*P(ir)/grav(ir)
+				tauUV(ir)=exp(-kappaUV0*1d6*P(ir)/grav(ir))
 			else if(tauUV(ir).lt.0d0) then
-				tauUV(ir)=1d6*P(ir)/grav(ir)
+				tauUV(ir)=exp(-1d6*P(ir)/grav(ir))
 			endif
 		enddo
 		SKIP=.false.
@@ -312,7 +312,7 @@ c H2O: 7
 		if(densv(i,1).lt.Clouddens(i)*xv_bot(1)*CloudMR(i)/mixrat_bot) docondense(1)=.true.
 		gz=Ggrav*Mplanet/CloudR(i)**2
 		if(Cloud(ii)%hazetype.eq.'optEC') then
-			Sn(i)=Clouddens(i)*CloudP(i)*exp(-CloudtauUV(i))
+			Sn(i)=Clouddens(i)*CloudP(i)*CloudtauUV(i)
 			if(i.eq.nnr) then
 				tot=tot+abs(CloudR(i-1)-CloudR(i))*Sn(i)
 			else if(i.eq.1) then

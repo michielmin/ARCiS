@@ -419,9 +419,9 @@ c				Hstar_omp(ir)=Hstar_omp(ir)+min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0)
 	scaleUV=max(0d0,-(pi*HUVstar/3.4947466112306125E-009))
 	UVstar(1:nr)=UVstar(1:nr)/UVstar(nr)
 	if(nTiter.eq.1) then
-		tauUV=-log(UVstar)
+		tauUV=UVstar
 	else
-		tauUV=(tauUV-log(UVstar))/2d0
+		tauUV=(tauUV+UVstar)/2d0
 	endif
 	if(do3D) then
 		tot=0d0

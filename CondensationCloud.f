@@ -19,7 +19,7 @@
 	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
-	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:),xn_iter(:,:),xm_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
+	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:),xn_iter(:,:),xs_iter(:,:),xm_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
 	logical,allocatable :: empty(:),docondense(:)
 	integer iCS,ir,nrdo,iconv,nconv
 	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil,St,fsed
@@ -307,10 +307,12 @@ c KCl
 			if(T(1).gt.maxT(iCS)) densv(1,iCS)=densv(1,iCS)+(mu(iCS)*mp/(kb*T(1)*10d0))*exp(BTP(iCS)-ATP(iCS)/(T(1)*10d0))
 		enddo
 		do iCS=1,nCS
-			if(densv(1,iCS).lt.dens(1)*xv_bot(iCS)) then
-				call output("Rainout of: " // trim(CSname(iCS)) // "(" //
+			if(.not.WaterWorld.or.CSname(iCS).ne."H2O") then
+				if(densv(1,iCS).lt.dens(1)*xv_bot(iCS)) then
+					call output("Rainout of: " // trim(CSname(iCS)) // "(" //
      &		trim(dbl2string(100d0*(1d0-densv(1,iCS)/(dens(1)*xv_bot(iCS))),'(f5.1)')) // " %)")
-				xv_bot(iCS)=densv(1,iCS)/dens(1)
+					xv_bot(iCS)=densv(1,iCS)/dens(1)
+				endif
 			endif
 		enddo
 	endif
@@ -375,7 +377,7 @@ c KCl
 	allocate(Sn(nnr))
 	allocate(vth(nnr))
 	allocate(tcinv(niter,nnr))
-	allocate(xn_iter(niter,nnr),xm_iter(niter,nnr))
+	allocate(xn_iter(niter,nnr),xm_iter(niter,nnr),xs_iter(niter,nnr))
 	allocate(xc_iter(niter,nCS,nnr),xv_iter(niter,nCS,nnr))
 	allocate(vsed(nnr))
 
@@ -485,9 +487,9 @@ c KCl
 		allocate(CloudtauUV(nnr),CloudkappaUV(nnr))
 		do ir=1,nr
 			if(kappaUV0.gt.0d0) then
-				tauUV(ir)=kappaUV0*1d6*P(ir)/grav(ir)
+				tauUV(ir)=exp(-kappaUV0*1d6*P(ir)/grav(ir))
 			else if(tauUV(ir).lt.0d0) then
-				tauUV(ir)=1d6*P(ir)/grav(ir)
+				tauUV(ir)=exp(-1d6*P(ir)/grav(ir))
 			endif
 		enddo
 		SKIP=.false.
@@ -524,7 +526,7 @@ c KCl
 		enddo
 		gz=Ggrav*Mplanet/CloudR(i)**2
 		if(Cloud(ii)%hazetype.eq.'optEC') then
-			Sn(i)=Clouddens(i)*CloudP(i)*exp(-CloudtauUV(i))
+			Sn(i)=Clouddens(i)*CloudP(i)*CloudtauUV(i)
 			if(i.eq.nnr) then
 				tot=tot+abs(CloudR(i-1)-CloudR(i))*Sn(i)
 			else if(i.eq.1) then
@@ -641,7 +643,7 @@ c	call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 	call dgtsv(nnr,NRHS,Ma,Mb,Mc,x,nnr,info)
 	
 	do i=1,nnr
-		if(x(i).lt.0d0) x(i)=0d0
+		if(.not.x(i).gt.0d0) x(i)=0d0
 	enddo
 	xs(1:nnr)=x(1:nnr)
 
@@ -854,7 +856,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+(ScS(i)*xs(i)+ScN(i)*xn(i))*Clouddens(i)
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-ScN(i)*densv(i,iCS)/mpart(i)
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-(ScS(i)+ScN(i))*densv(i,iCS)/mpart(i)
 	else
 		Aomp(j,ixc(iCS,i))=1d0
 		xomp(j)=0d0
@@ -876,7 +878,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+(ScS(i)*xs(i)+ScN(i)*xn(i))*Clouddens(i)
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-ScN(i)*densv(i,iCS)/mpart(i)
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-(ScS(i)+ScN(i))*densv(i,iCS)/mpart(i)
 		else
 		Aomp(j,ixc(iCS,i))=1d0
 		endif
@@ -892,7 +894,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+(0.5d0*(Kg(i-1)*Clouddens(i-1)+Kg(i)*Clouddens(i))/dz)/dztot
 
 		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))-(ScS(i)*xs(i)+ScN(i)*xn(i))*Clouddens(i)
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+ScN(i)*densv(i,iCS)/mpart(i)
+		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(ScS(i)+ScN(i))*densv(i,iCS)/mpart(i)
 	enddo
 	i=nnr
 	dz=CloudR(i)-CloudR(i-1)
@@ -937,7 +939,7 @@ c Use Band matrix algorithm
 
 !$OMP CRITICAL
 	do i=1,nnr
-		ScTot(i)=ScTot(i)+(ScN(i)*xn(i)+ScS(i)*xs(i))*Clouddens(i)*xv(iCS,i)-ScN(i)*densv(i,iCS)*xc(iCS,i)/mpart(i)
+		ScTot(i)=ScTot(i)+(ScN(i)*xn(i)+ScS(i)*xs(i))*Clouddens(i)*xv(iCS,i)!-(ScS(i)+ScN(i))*densv(i,iCS)*xc(iCS,i)/mpart(i)
 	enddo
 !$OMP END CRITICAL
 
@@ -967,6 +969,7 @@ c Use Band matrix algorithm
 	xc_iter(iter,1:nCS,1:nnr)=xc(1:nCS,1:nnr)
 	xv_iter(iter,1:nCS,1:nnr)=xv(1:nCS,1:nnr)
 	xn_iter(iter,1:nnr)=xn(1:nnr)
+	xs_iter(iter,1:nnr)=xs(1:nnr)
 	xm_iter(iter,1:nnr)=xm(1:nnr)
 	maxerr=0d0
 	do i=1,nnr
@@ -1018,11 +1021,13 @@ c		if(iconv.eq.0) print*,'Cloud formation not converged: ',maxerr
 		iter=niter
 	endif
 	xn=0d0
+	xs=0d0
 	xm=0d0
 	xc=0d0
 	xv=0d0
 	do i=iter-nconv+1,iter
 		xn(1:nnr)=xn(1:nnr)+xn_iter(i,1:nnr)/real(nconv)
+		xs(1:nnr)=xs(1:nnr)+xs_iter(i,1:nnr)/real(nconv)
 		xm(1:nnr)=xm(1:nnr)+xm_iter(i,1:nnr)/real(nconv)
 		xc(1:nCS,1:nnr)=xc(1:nCS,1:nnr)+xc_iter(i,1:nCS,1:nnr)/real(nconv)
 		xv(1:nCS,1:nnr)=xv(1:nCS,1:nnr)+xv_iter(i,1:nCS,1:nnr)/real(nconv)
@@ -1065,7 +1070,7 @@ c		if(iconv.eq.0) print*,'Cloud formation not converged: ',maxerr
 	logP(1:nr)=-log(P(1:nr))
 	logCloudP(1:nnr)=-log(CloudP(1:nnr))
 
-	x(1:nnr)=xm(1:nnr)*Clouddens(1:nnr)
+	x(1:nnr)=(xm(1:nnr)+xs(1:nnr)*m_nuc)*Clouddens(1:nnr)
 	do iCS=1,nCS
 		x(1:nnr)=x(1:nnr)+xc(iCS,1:nnr)*Clouddens(1:nnr)
 	enddo
@@ -1082,7 +1087,7 @@ c		if(iconv.eq.0) print*,'Cloud formation not converged: ',maxerr
 	enddo
 c Seed particles
 	if(Cloud(ii)%haze) then
-		x(1:nnr)=xm(1:nnr)
+		x(1:nnr)=xm(1:nnr)+xs(1:nnr)*m_nuc
 		call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,Cloud(ii)%nmat),nr)
 	endif
 
@@ -1097,7 +1102,7 @@ c Seed particles
 		write(20,form) "P[bar]","dens[g/cm^3]","xs","xn",(trim(CSname(i)),i=1,nCS),"r[cm]","T[K]","Jstar"
 		form='(es19.7E3,es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
 		do i=1,nnr
-			write(20,form) CloudP(i),Clouddens(i),xs(i)*m_nuc,xn(i)*m_nuc,xc(1:nCS,i),rpart(i),CloudT(i),Sn(i)/m_nuc
+			write(20,form) CloudP(i),Clouddens(i),xs(i)*m_nuc,xm(i),xc(1:nCS,i),rpart(i),CloudT(i),Sn(i)/m_nuc
 		enddo
 		close(unit=20)
 	endif
@@ -1252,7 +1257,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	deallocate(y)
 	deallocate(Sn)
 	deallocate(vth)
-	deallocate(tcinv,xn_iter,xm_iter,xc_iter,xv_iter)
+	deallocate(tcinv,xn_iter,xs_iter,xm_iter,xc_iter,xv_iter)
 	deallocate(vsed)
 	deallocate(ixv)
 	deallocate(ixc)

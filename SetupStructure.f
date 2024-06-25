@@ -1300,9 +1300,9 @@ c-----------------------------------------------------------------------
 	
 	do ir=1,nr
 		if(kappaUV0.gt.0d0) then
-			tauUV(ir)=kappaUV0*1d6*P(ir)/grav(ir)
+			tauUV(ir)=exp(-kappaUV0*1d6*P(ir)/grav(ir))
 		else if(tauUV(ir).lt.0d0) then
-			tauUV(ir)=1d6*P(ir)/grav(ir)
+			tauUV(ir)=exp(-1d6*P(ir)/grav(ir))
 		endif
 	enddo
 
@@ -1316,7 +1316,7 @@ c-----------------------------------------------------------------------
 					if(nreac.lt.nmax) nmax=nreac
 				endif
 			enddo
-			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-tauUV(ir)*PhotoReacts(i)%scaleKappa))
+			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*tauUV(ir)**(PhotoReacts(i)%scaleKappa))
 			do imol=1,nmol
 				if(includemol(imol)) then
 					if(PhotoReacts(i)%react(imol).gt.0d0) then
@@ -1357,9 +1357,9 @@ c-----------------------------------------------------------------------
 	integer i,ir,imol
 	
 	if(kappaUV0.gt.0d0) then
-		tauUV(ir)=kappaUV0*1d6*P(ir)/grav(ir)
+		tauUV(ir)=exp(-kappaUV0*1d6*P(ir)/grav(ir))
 	else if(tauUV(ir).lt.0d0) then
-		tauUV(ir)=1d6*P(ir)/grav(ir)
+		tauUV(ir)=exp(-1d6*P(ir)/grav(ir))
 	endif
 		
 	mixrat_optEC_r=0d0
@@ -1373,7 +1373,7 @@ c-----------------------------------------------------------------------
 					if(nreac.lt.nmax) nmax=nreac
 				endif
 			enddo
-			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*exp(-tauUV(ir)*PhotoReacts(i)%scaleKappa))
+			nreac=nmax*min(1d0,PhotoReacts(i)%f_eff*tauUV(ir)**(PhotoReacts(i)%scaleKappa))
 			do imol=1,N_atoms
 				if(PhotoReacts(i)%react(imol).gt.0d0) then
 					molfracs_atoms(imol)=molfracs_atoms(imol)-nreac*PhotoReacts(i)%react(imol)
