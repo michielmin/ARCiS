@@ -1236,6 +1236,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadPar3D(key)
 		case("useobsgrid")
 			read(key%value,*) useobsgrid
+		case("eps_dup","duplicate","eps_duplicate")
+			read(key%value,*) eps_dup
 		case("logemis","log_emis")
 			read(key%value,*) log_emis
 		case("massprior")
@@ -2047,6 +2049,7 @@ c  GGchem was still implemented slightly wrong.
 	nscaleR=-1
 	massprior=.false.
 	useobsgrid=.false.
+	eps_dup=0.1
 	log_emis=.true.
 	model_err_abs=0d0
 	model_err_rel=0d0
@@ -2769,8 +2772,8 @@ c number of cloud/nocloud combinations
 						dx=x/dx
 						dlam(ilam)=dx*micron
 						do jlam=1,ilam-1
-							if(abs(lam(ilam)-lam(jlam)).lt.(dlam(jlam)*0.1d0).and.
-     &							abs(dlam(jlam)-dlam(ilam))/(dlam(jlam)+dlam(ilam)).lt.0.1d0) then
+							if(abs(lam(ilam)-lam(jlam)).lt.(dlam(jlam)*eps_dup).and.
+     &							abs(dlam(jlam)-dlam(ilam))/(dlam(jlam)+dlam(ilam)).lt.eps_dup) then
      							ilam=ilam-1
      							goto 3
      						endif
