@@ -464,7 +464,6 @@ c	print*,xv_bot(1:7)
 	logx(1:nr)=MMW(1:nr)
 	call DPCHIM(nr,logP,logx,dlogx,INCFD)
 	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudMMW,IERR)
-c	CloudMMW=2.3
 
 	if(complexKzz) then
 		SKIP=.false.
@@ -542,100 +541,15 @@ c	CloudMMW=2.3
 		tot=0d0
 	endif
 
-
-
-Copen(unit=20,file='Tevap.dat',RECL=6000)
-Cform='("#",a18,' // trim(int2string(nCS,'(i4)')) // 'a23)'
-Cwrite(20,form) "T[K]",(trim(CSname(i))//"[s]",i=1,nCS)
-Cform='(es19.7E3,' // trim(int2string(nCS,'(i4)')) // 'es23.7E3)'
-Cdo i=10,6000,10
-C	tot1=real(i)
-C	do iCS=1,nCS
-C		select case(CSname(iCS))
-C			case default
-C				select case(CSname(iCS))
-C					case("SiO2")
-C						call Gibbs_SiO2_s(tot1,Gibbs)
-C					case("MgSiO3")
-C						call Gibbs_MgSiO3_s(tot1,Gibbs)
-C					case("Mg2SiO4")
-C						call Gibbs_Mg2SiO4_s(tot1,Gibbs)
-C					case("H2O")
-C						call Gibbs_H2O_s(tot1,Gibbs)
-C					case("Fe")
-C						call Gibbs_Fe_s(tot1,Gibbs)
-C					case("FeS")
-C						call Gibbs_FeS_s(tot1,Gibbs)
-C					case("Al2O3")
-C						call Gibbs_Al2O3_s(tot1,Gibbs)
-C					case("NaCl")
-C						call Gibbs_NaCl_s(tot1,Gibbs)
-C					case("KCl")
-C						call Gibbs_KCl_s(tot1,Gibbs)
-C					case("Na2S")
-C						call Gibbs_Na2S_s(tot1,Gibbs)
-C					case("TiO2")
-C						call Gibbs_TiO2_s(tot1,Gibbs)
-C					case("H2SO4")
-C						call Gibbs_H2SO4_s(tot1,Gibbs)
-C					case("ZnS")
-C						call Gibbs_ZnS_s(tot1,Gibbs)
-C				end select
-C				Sat(1,iCS)=Gibbs
-C				do iVS=1,nVS
-C					if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
-C						select case(v_names(iVS))
-C							case("SiO")
-C								call Gibbs_SiO_g(tot1,Gibbs)
-C							case("H2O")
-C								call Gibbs_H2O_g(tot1,Gibbs)
-C							case("Mg")
-C								call Gibbs_Mg_g(tot1,Gibbs)
-C							case("Fe")
-C								call Gibbs_Fe_g(tot1,Gibbs)
-C							case("H2S")
-C								call Gibbs_H2S_g(tot1,Gibbs)
-C							case("Al")
-C								call Gibbs_Al_g(tot1,Gibbs)
-C							case("K")
-C								call Gibbs_K_g(tot1,Gibbs)
-C							case("Na")
-C								call Gibbs_Na_g(tot1,Gibbs)
-C							case("HCl")
-C								call Gibbs_HCl_g(tot1,Gibbs)
-C							case("NH3")
-C								call Gibbs_NH3_g(tot1,Gibbs)
-C							case("TiO")
-C								call Gibbs_TiO_g(tot1,Gibbs)
-C							case default
-C								stop
-C						end select
-C						Sat(1,iCS)=Sat(1,iCS)-Gibbs*v_cloud(iCS,iVS)
-C					endif
-C				enddo
-C				Sat(1,iCS)=exp(-Sat(1,iCS)/(8.314e-3*tot1))
-C		end select
-C		do iVS=1,nVS
-C			if(v_include(iVS)) then
-C				Sat(1,iCS)=Sat(1,iCS)*(xv_bot(iVS)*2.3/muV(iVS))**v_cloud(iCS,iVS)
-C			endif
-C		enddo
-C		Sat(1,iCS)=(1d0/Sat(1,iCS))**(1d0/(v_H2(iCS)+sum(v_cloud(iCS,1:nVS))))
-C	enddo
-C	write(20,form) tot1,Sat(1,1:nCS)		
-Cenddo
-Cclose(unit=20)
-
-
 	do i=1,nnr
 		do iCS=1,nCS
 			select case(CSname(iCS))
 				case("H2O")
 					call PvapH2O(CloudT(i),Sat(i,iCS),liq)
-					Sat(i,iCS)=Clouddens(i)/(1d6*Sat(i,iCS)*(muC(iCS)*mp/(kb*CloudT(i))))
+					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
 				case("NH3")
 					call PvapNH3(CloudT(i),Sat(i,iCS),liq)
-					Sat(i,iCS)=Clouddens(i)/(1d6*Sat(i,iCS)*(muC(iCS)*mp/(kb*CloudT(i))))
+					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
 				case default
 					select case(CSname(iCS))
 						case("SiO2")
@@ -952,7 +866,10 @@ C===============================================================================
 	cs=sqrt(kb*CloudT(i)/(2.3d0*mp))
 	do iCS=1,nCS
 		j=j+1
-		if(freeflow) then
+		if(Cloud(ii)%rainout) then
+			Aomp(j,ixv(iVL(i,iCS),i))=Aomp(j,ixv(iVL(i,iCS),i))+Sc(i,iCS)*xn(i)
+			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
+		else if(freeflow) then
 c assume continuous flux at the bottom (dF/dz=Sc=0)
 			xomp(j)=0d0
 
@@ -1000,7 +917,9 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 			dz=(CloudR(i-1)-CloudR(i))
-			Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
+			if(i.gt.2.or..not.Cloud(ii)%rainout) then
+				Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
+			endif
 			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
 			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
 	
