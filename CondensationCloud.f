@@ -7,7 +7,7 @@
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),dx(:),vth(:)
 	real*8,allocatable :: Sn(:),mpart(:)
-	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:),CloudHp(:)
+	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:),CloudHp(:),CloudMMW(:)
 	real*8,allocatable :: at_ab(:,:)
 	real*8,allocatable,save :: Sc(:,:),vthv(:),Aomp(:,:),xomp(:),IWORKomp(:),AB(:,:)
 	real*8,allocatable :: tcinv(:,:),rho_av(:),Kd(:),Kg(:),Km(:)
@@ -28,7 +28,7 @@
 	logical,allocatable :: v_include(:)
 	integer INCFD,IERR
 	logical SKIP,freeflow,liq
-	real*8 time,kp
+	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr)
 	integer itime
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
 	real*8,allocatable :: xv_out(:)
@@ -95,7 +95,7 @@
 	if(Cloud(ii)%haze) nCS=nCS-1
 	allocate(Kd(nnr),Kg(nnr),Km(nnr))
 	allocate(logCloudP(nnr))
-	allocate(CloudHp(nnr),Sat(nnr,nCS),Sat0(nnr,nCS),fSat(nnr,nCS))
+	allocate(CloudMMW(nnr),CloudHp(nnr),Sat(nnr,nCS),Sat0(nnr,nCS),fSat(nnr,nCS))
 	
 	niter=500
 	nconv=20
@@ -182,6 +182,16 @@
 				v_include(3)=.true.
 				v_include(4)=.true.
 				rhodust(i)=3.21d0
+			case('MgO')
+				CSname(i)='MgO'
+				atoms_cloud(i,7)=1
+				atoms_cloud(i,5)=1
+				v_cloud(i,3)=1
+				v_cloud(i,4)=1
+				v_H2(i)=-1
+				v_include(3)=.true.
+				v_include(4)=.true.
+				rhodust(i)=3.58d0
 			case('H2O','WATER')
 				CSname(i)='H2O'
 				atoms_cloud(i,1)=2
@@ -201,7 +211,7 @@
 				atoms_cloud(i,11)=1
 				v_cloud(i,5)=1
 				v_cloud(i,6)=1
-				v_H2=-1
+				v_H2(i)=-1
 				v_include(5)=.true.
 				v_include(6)=.true.
 				maxT(i)=680d0
@@ -212,7 +222,7 @@
 				atoms_cloud(i,8)=2
 				v_cloud(i,4)=3
 				v_cloud(i,7)=2
-				v_H2=-3
+				v_H2(i)=-3
 				v_include(4)=.true.
 				v_include(7)=.true.
 				rhodust(i)=3.97d0
@@ -222,7 +232,7 @@
 				atoms_cloud(i,12)=1
 				v_cloud(i,8)=1
 				v_cloud(i,10)=1
-				v_H2=-0.5
+				v_H2(i)=-0.5
 				v_include(8)=.true.
 				v_include(10)=.true.
 				rhodust(i)=2.17d0
@@ -232,7 +242,7 @@
 				atoms_cloud(i,12)=1
 				v_cloud(i,9)=1
 				v_cloud(i,10)=1
-				v_H2=-0.5
+				v_H2(i)=-0.5
 				v_include(9)=.true.
 				v_include(10)=.true.
 				rhodust(i)=1.99d0
@@ -242,7 +252,7 @@
 				atoms_cloud(i,11)=2
 				v_cloud(i,8)=1
 				v_cloud(i,5)=1
-				v_H2=-1
+				v_H2(i)=-1
 				v_include(8)=.true.
 				v_include(5)=.true.
 				rhodust(i)=1.86d0
@@ -333,7 +343,7 @@
 	xv_bot=xv_bot*muV/mutot
 
 c	print*,xv_bot(1:7)
-c	xv_bot(1:7) = (/ 6.1e-4, 2.4e-6, 4.1e-4, 1.4e-3, 1.9e-4, 7.6e-4, 3.2e-5 /)
+c	xv_bot(1:7) = 10.0**metallicity*(/ 6.1e-4, 2.4e-6, 4.1e-4, 1.4e-3, 1.9e-4, 7.6e-4, 3.2e-5 /)
 c	print*,xv_bot(1:7)
 
 	Cloud(ii)%frac=0d0
@@ -449,6 +459,13 @@ c	print*,xv_bot(1:7)
 	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudR,IERR)
 	CloudR(1:nnr)=exp(CloudR(1:nnr))
 
+	SKIP=.false.
+	INCFD=1
+	logx(1:nr)=MMW(1:nr)
+	call DPCHIM(nr,logP,logx,dlogx,INCFD)
+	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudMMW,IERR)
+c	CloudMMW=2.3
+
 	if(complexKzz) then
 		SKIP=.false.
 		INCFD=1
@@ -482,8 +499,6 @@ c	print*,xv_bot(1:7)
 		Kd=Km
 		Kg=Kd
 	endif
-
-	f=0.1d0
 
 	allocate(empty(nnr))
 	allocate(x(NN))
@@ -527,6 +542,91 @@ c	print*,xv_bot(1:7)
 		tot=0d0
 	endif
 
+
+
+Copen(unit=20,file='Tevap.dat',RECL=6000)
+Cform='("#",a18,' // trim(int2string(nCS,'(i4)')) // 'a23)'
+Cwrite(20,form) "T[K]",(trim(CSname(i))//"[s]",i=1,nCS)
+Cform='(es19.7E3,' // trim(int2string(nCS,'(i4)')) // 'es23.7E3)'
+Cdo i=10,6000,10
+C	tot1=real(i)
+C	do iCS=1,nCS
+C		select case(CSname(iCS))
+C			case default
+C				select case(CSname(iCS))
+C					case("SiO2")
+C						call Gibbs_SiO2_s(tot1,Gibbs)
+C					case("MgSiO3")
+C						call Gibbs_MgSiO3_s(tot1,Gibbs)
+C					case("Mg2SiO4")
+C						call Gibbs_Mg2SiO4_s(tot1,Gibbs)
+C					case("H2O")
+C						call Gibbs_H2O_s(tot1,Gibbs)
+C					case("Fe")
+C						call Gibbs_Fe_s(tot1,Gibbs)
+C					case("FeS")
+C						call Gibbs_FeS_s(tot1,Gibbs)
+C					case("Al2O3")
+C						call Gibbs_Al2O3_s(tot1,Gibbs)
+C					case("NaCl")
+C						call Gibbs_NaCl_s(tot1,Gibbs)
+C					case("KCl")
+C						call Gibbs_KCl_s(tot1,Gibbs)
+C					case("Na2S")
+C						call Gibbs_Na2S_s(tot1,Gibbs)
+C					case("TiO2")
+C						call Gibbs_TiO2_s(tot1,Gibbs)
+C					case("H2SO4")
+C						call Gibbs_H2SO4_s(tot1,Gibbs)
+C					case("ZnS")
+C						call Gibbs_ZnS_s(tot1,Gibbs)
+C				end select
+C				Sat(1,iCS)=Gibbs
+C				do iVS=1,nVS
+C					if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
+C						select case(v_names(iVS))
+C							case("SiO")
+C								call Gibbs_SiO_g(tot1,Gibbs)
+C							case("H2O")
+C								call Gibbs_H2O_g(tot1,Gibbs)
+C							case("Mg")
+C								call Gibbs_Mg_g(tot1,Gibbs)
+C							case("Fe")
+C								call Gibbs_Fe_g(tot1,Gibbs)
+C							case("H2S")
+C								call Gibbs_H2S_g(tot1,Gibbs)
+C							case("Al")
+C								call Gibbs_Al_g(tot1,Gibbs)
+C							case("K")
+C								call Gibbs_K_g(tot1,Gibbs)
+C							case("Na")
+C								call Gibbs_Na_g(tot1,Gibbs)
+C							case("HCl")
+C								call Gibbs_HCl_g(tot1,Gibbs)
+C							case("NH3")
+C								call Gibbs_NH3_g(tot1,Gibbs)
+C							case("TiO")
+C								call Gibbs_TiO_g(tot1,Gibbs)
+C							case default
+C								stop
+C						end select
+C						Sat(1,iCS)=Sat(1,iCS)-Gibbs*v_cloud(iCS,iVS)
+C					endif
+C				enddo
+C				Sat(1,iCS)=exp(-Sat(1,iCS)/(8.314e-3*tot1))
+C		end select
+C		do iVS=1,nVS
+C			if(v_include(iVS)) then
+C				Sat(1,iCS)=Sat(1,iCS)*(xv_bot(iVS)*2.3/muV(iVS))**v_cloud(iCS,iVS)
+C			endif
+C		enddo
+C		Sat(1,iCS)=(1d0/Sat(1,iCS))**(1d0/(v_H2(iCS)+sum(v_cloud(iCS,1:nVS))))
+C	enddo
+C	write(20,form) tot1,Sat(1,1:nCS)		
+Cenddo
+Cclose(unit=20)
+
+
 	do i=1,nnr
 		do iCS=1,nCS
 			select case(CSname(iCS))
@@ -536,11 +636,6 @@ c	print*,xv_bot(1:7)
 				case("NH3")
 					call PvapNH3(CloudT(i),Sat(i,iCS),liq)
 					Sat(i,iCS)=Clouddens(i)/(1d6*Sat(i,iCS)*(muC(iCS)*mp/(kb*CloudT(i))))
-c				case("Fe")
-c					tot1=48354.
-c					tot2=29.2
-c					Sat(i,iCS)=(muC(iCS)*mp/(kb*CloudT(i)))*exp(tot2-tot1/CloudT(i))
-c					Sat(i,iCS)=Clouddens(i)/(1d6*Sat(i,iCS)*(muC(iCS)*mp/(kb*CloudT(i))))
 				case default
 					select case(CSname(iCS))
 						case("SiO2")
@@ -549,6 +644,8 @@ c					Sat(i,iCS)=Clouddens(i)/(1d6*Sat(i,iCS)*(muC(iCS)*mp/(kb*CloudT(i))))
 							call Gibbs_MgSiO3_s(CloudT(i),Gibbs)
 						case("Mg2SiO4")
 							call Gibbs_Mg2SiO4_s(CloudT(i),Gibbs)
+						case("MgO")
+							call Gibbs_MgO_s(CloudT(i),Gibbs)
 						case("H2O")
 							call Gibbs_H2O_s(CloudT(i),Gibbs)
 						case("Fe")
@@ -833,10 +930,11 @@ C===============================================================================
 					endif
 				endif
 			enddo
-			fSat(i,iCS)=CloudP(i)**v_H2(iCS)*(CloudP(i)*xv(iVL(i,iCS),i))**(v_cloud(iCS,iVL(i,iCS))-1d0)
+			fSat(i,iCS)=CloudP(i)**v_H2(iCS)*(CloudMMW(i)/muV(iVL(i,iCS)))*
+     &				(CloudP(i)*xv(iVL(i,iCS),i)*CloudMMW(i)/muV(iVL(i,iCS)))**(v_cloud(iCS,iVL(i,iCS))-1d0)
 			do iVS=1,nVS
 				if(v_include(iVS).and.iVS.ne.iVL(i,iCS)) then
-					fSat(i,iCS)=fSat(i,iCS)*(CloudP(i)*xv(iVS,i))**v_cloud(iCS,iVS)
+					fSat(i,iCS)=fSat(i,iCS)*(CloudP(i)*xv(iVS,i)*CloudMMW(i)/muV(iVS))**v_cloud(iCS,iVS)
 				endif
 			enddo
 			vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
@@ -1234,6 +1332,7 @@ c			write(20,*) P(i),molfracs_atoms(1:N_atoms)
 		if(fixMMW) MMW=MMW0
 c		close(unit=20)
 		if(disequilibrium) then
+			call AddDiseqAtoms(Otot,Ctot,Ntot)
 c			call disequilibrium code
 c			input: 	R(1:nr+1) : These are the radial boundaries of the layers (bottom to top)
 c			P(1:nr),T(1:nr) : These are the pressure and temperature inside the layers
@@ -1243,6 +1342,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 			call output("==================================================================")
 			call output("Computing disequilibrium chemistry")
 			call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_g(1:nr))
+			call CorrectDiseqAtoms(Otot,Ctot,Ntot)
 		endif
 	else
 		do iVS=1,nVS
@@ -1324,8 +1424,57 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	return
 	end
 	
+	subroutine AddDiseqAtoms(Otot,Ctot,Ntot)	
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 Otot(nr),Ctot(nr),Ntot(nr)
+	integer iCO,iCO2,iH2O,iCH4,iN2,iNH3
 	
+	iH2O=1
+	iCO2=2
+	iCO=5
+	iCH4=6
+	iNH3=11
+	iN2=22
+	
+	Otot(1:nr)=mixrat_r(1:nr,iH2O)+2.0*mixrat_r(1:nr,iCO2)+mixrat_r(1:nr,iCO)
+	Ctot(1:nr)=mixrat_r(1:nr,iCO2)+mixrat_r(1:nr,iCO)+mixrat_r(1:nr,iCH4)
+	Ntot(1:nr)=mixrat_r(1:nr,iNH3)+2.0*mixrat_r(1:nr,iN2)
+	
+	return
+	end
 
+	subroutine CorrectDiseqAtoms(Otot,Ctot,Ntot)	
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 Otot(nr),Ctot(nr),Ntot(nr),f
+	integer iCO,iCO2,iH2O,iCH4,iN2,iNH3
+	integer i
+	
+	iH2O=1
+	iCO2=2
+	iCO=5
+	iCH4=6
+	iNH3=11
+	iN2=22
+	
+	do i=1,nr
+		f=(Otot(i)-mixrat_r(i,iCO))/(2.0*mixrat_r(i,iCO2)+mixrat_r(i,iH2O))
+		if(f.lt.0d0) f=0d0
+		mixrat_r(i,iCO2)=f*mixrat_r(i,iCO2)
+		mixrat_r(i,iH2O)=f*mixrat_r(i,iH2O)
+		f=(Ctot(i)-mixrat_r(i,iCO2))/(mixrat_r(i,iCH4)+mixrat_r(i,iCO))
+		if(f.lt.0d0) f=0d0
+		mixrat_r(i,iCO)=f*mixrat_r(i,iCO)
+		mixrat_r(i,iCH4)=f*mixrat_r(i,iCH4)
+		f=Ntot(i)/(mixrat_r(i,iNH3)+2.0*mixrat_r(i,iN2))
+		mixrat_r(i,iNH3)=f*mixrat_r(i,iNH3)
+		mixrat_r(i,iN2)=f*mixrat_r(i,iN2)
+	enddo
+	
+	return
+	end
+	
 
 	subroutine PvapNH3(T,Pvap,liquid)
 	IMPLICIT NONE
@@ -2427,6 +2576,50 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.23930E+03,-0.22970E+03,-0.22020E+03,-0.21070E+03,-0.20130E+03, 
      & -0.19100E+03,-0.18070E+03,-0.17040E+03,-0.16020E+03,-0.14810E+03, 
      & -0.12820E+03 /
+	if(T.lt.Tgibbs(1)) then
+		G=Ggibbs(1)
+	else if(T.gt.Tgibbs(nG)) then
+		G=Ggibbs(nG)+(T-Tgibbs(nG))*(Ggibbs(nG-1)-Ggibbs(nG))/(Tgibbs(nG-1)-Tgibbs(nG))
+	else
+		do i=1,nG-1
+			if(T.ge.Tgibbs(i).and.T.le.Tgibbs(i+1)) then
+				G=Ggibbs(i)+(T-Tgibbs(i))*(Ggibbs(i+1)-Ggibbs(i))/(Tgibbs(i+1)-Tgibbs(i))
+				return
+			endif
+		enddo
+	endif
+	return
+	end
+	subroutine Gibbs_MgO_s(T,G)
+	IMPLICIT NONE
+	integer nG,j,i
+	real*8 T,G
+	real*8 Tgibbs(          51),Ggibbs(          51)
+	parameter(nG=          51)
+	data (Tgibbs(j),j=1,          51) /
+     &  0.10000E+03, 0.20000E+03, 0.29815E+03, 0.30000E+03, 0.40000E+03, 
+     &  0.50000E+03, 0.60000E+03, 0.70000E+03, 0.80000E+03, 0.90000E+03, 
+     &  0.10000E+04, 0.11000E+04, 0.12000E+04, 0.13000E+04, 0.14000E+04, 
+     &  0.15000E+04, 0.16000E+04, 0.17000E+04, 0.18000E+04, 0.19000E+04, 
+     &  0.20000E+04, 0.21000E+04, 0.22000E+04, 0.23000E+04, 0.24000E+04, 
+     &  0.25000E+04, 0.26000E+04, 0.27000E+04, 0.28000E+04, 0.29000E+04, 
+     &  0.30000E+04, 0.31000E+04, 0.32000E+04, 0.33000E+04, 0.34000E+04, 
+     &  0.35000E+04, 0.36000E+04, 0.37000E+04, 0.38000E+04, 0.39000E+04, 
+     &  0.40000E+04, 0.41000E+04, 0.42000E+04, 0.43000E+04, 0.44000E+04, 
+     &  0.45000E+04, 0.46000E+04, 0.47000E+04, 0.48000E+04, 0.49000E+04, 
+     &  0.50000E+04 /
+	data (Ggibbs(j),j=1,          51) /
+     & -0.58960E+03,-0.57949E+03,-0.56895E+03,-0.56875E+03,-0.55790E+03, 
+     & -0.54708E+03,-0.53631E+03,-0.52560E+03,-0.51493E+03,-0.50429E+03, 
+     & -0.49295E+03,-0.48140E+03,-0.46984E+03,-0.45829E+03,-0.44357E+03, 
+     & -0.42275E+03,-0.40203E+03,-0.38139E+03,-0.36085E+03,-0.34039E+03, 
+     & -0.32002E+03,-0.29973E+03,-0.27951E+03,-0.25937E+03,-0.23930E+03, 
+     & -0.21930E+03,-0.19937E+03,-0.17951E+03,-0.15971E+03,-0.13998E+03, 
+     & -0.12031E+03,-0.10070E+03,-0.83538E+02,-0.66584E+02,-0.49708E+02, 
+     & -0.32905E+02,-0.16174E+02, 0.48700E+00, 0.17083E+02, 0.33615E+02, 
+     &  0.50084E+02, 0.66495E+02, 0.82849E+02, 0.99149E+02, 0.11539E+03, 
+     &  0.13159E+03, 0.14774E+03, 0.16384E+03, 0.17990E+03, 0.19591E+03, 
+     &  0.21189E+03 /
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
