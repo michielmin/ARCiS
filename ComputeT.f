@@ -269,8 +269,12 @@ c	Fstar_LR=Fstar_LR*scale
 	ff=1d0
 	
 	Hstar(1:nr)=0d0
-	IntHnu(1:nlam_LR,1:nr,1:nr)=0d0
-	IntHnuSurf(1:nlam_LR,1:nr)=0d0
+	do ir=1,nr
+		do jr=1,nr
+			IntHnu(:,ir,jr)=0d0
+		enddo
+		IntHnuSurf(:,ir)=0d0
+	enddo
 	UVstar=0d0
 	HUVstar=0d0
 
@@ -481,7 +485,9 @@ c===============================================================================
 		Hedd(ir)=Hedd(ir)+E0-Hstar(ir)
 	enddo
 
-	IntH=0d0
+	do ir=1,nr
+		IntH(:,ir)=0d0
+	enddo
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(tot,iT,scale,jr,ir)
@@ -529,7 +535,9 @@ c===============================================================================
 	NRHS=1
 
 	Fl0=Fl
-	IntH0=IntH
+	do ir=1,nr
+		IntH0(:,ir)=IntH(:,ir)
+	enddo
 	Convec(0:nr)=.false.
 	fixed=.false.
 
@@ -615,9 +623,9 @@ c===============================================================================
 	E0=2d0*(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
 	do ir=1,nr
 		Hedd(ir)=Hedd(ir)+E0-Hstar(ir)
+		IntH(:,ir)=0d0
 	enddo
 
-	IntH=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(tot,iT,scale,jr,ir)

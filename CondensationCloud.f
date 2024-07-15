@@ -9,7 +9,7 @@
 	real*8,allocatable :: Sn(:),mpart(:)
 	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:),CloudHp(:),CloudMMW(:)
 	real*8,allocatable :: at_ab(:,:)
-	real*8,allocatable,save :: Sc(:,:),vthv(:),Aomp(:,:),xomp(:),IWORKomp(:),AB(:,:)
+	real*8,allocatable,save :: Sc(:,:),vthv(:),xomp(:),IWORKomp(:),AB(:,:)
 	real*8,allocatable :: tcinv(:,:),rho_av(:),Kd(:),Kg(:),Km(:)
 	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
@@ -21,11 +21,11 @@
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:),xn_iter(:,:),xm_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
 	logical,allocatable :: empty(:),docondense(:)
-	integer iCS,ir,nrdo,iconv,nconv,iVS,nVS,NStot
+	integer iCS,ir,nrdo,iconv,nconv,iVS,nVS,NStot,ik
 	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed
 	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:)
 	character*10,allocatable :: v_names(:),v_names_out(:)
-	logical,allocatable :: v_include(:)
+	logical,allocatable :: v_include(:),c_rainout(:)
 	integer INCFD,IERR
 	logical SKIP,freeflow,liq
 	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr)
@@ -97,7 +97,7 @@
 	allocate(logCloudP(nnr))
 	allocate(CloudMMW(nnr),CloudHp(nnr),Sat(nnr,nCS),Sat0(nnr,nCS),fSat(nnr,nCS))
 	
-	niter=500
+	niter=1000
 	nconv=20
 	if(computeT) then
 		if(nTiter.eq.1) then
@@ -199,6 +199,7 @@
 				v_cloud(i,4)=1
 				v_include(4)=.true.
 				rhodust(i)=1.0d0
+				maxT(i)=747d0
 			case('Fe','IRON')
 				CSname(i)='Fe'
 				atoms_cloud(i,17)=1
@@ -263,6 +264,7 @@
 				v_cloud(i,11)=1
 				v_include(11)=.true.
 				rhodust(i)=0.87d0
+				maxT(i)=220d0
 			case('TiO2')
 				CSname(i)='TiO2'
 				atoms_cloud(i,5)=1
@@ -294,6 +296,22 @@
 				v_include(12)=.true.
 				v_include(5)=.true.
 				rhodust(i)=4.09d0
+			case('Zn')
+				CSname(i)='Zn'
+				atoms_cloud(i,30)=1
+				v_cloud(i,12)=1
+				v_include(12)=.true.
+				rhodust(i)=7.14d0
+			case('NH4Cl')
+				CSname(i)='NH4Cl'
+				atoms_cloud(i,1)=4
+				atoms_cloud(i,4)=1
+				atoms_cloud(i,12)=1
+				v_cloud(i,10)=1
+				v_cloud(i,11)=1
+				v_include(10)=.true.
+				v_include(11)=.true.
+				rhodust(i)=1.53d0
 			case default
 				call output("Unknown condensate")
 				stop
@@ -341,6 +359,9 @@
 	
 	molfracs_atoms0=molfracs_atoms
 	xv_bot=xv_bot*muV/mutot
+	do iVS=1,nVS
+		if(.not.v_include(iVS)) xv_bot(iVS)=0d0
+	enddo
 
 c	print*,xv_bot(1:7)
 c	xv_bot(1:7) = 10.0**metallicity*(/ 6.1e-4, 2.4e-6, 4.1e-4, 1.4e-3, 1.9e-4, 7.6e-4, 3.2e-5 /)
@@ -358,7 +379,7 @@ c	print*,xv_bot(1:7)
 	
 	sigmamol=8d-15
 
-	eps=1d-3
+	eps=1d-2
 
 	Sigmadot=Cloud(ii)%Sigmadot
 	
@@ -508,16 +529,18 @@ c	print*,xv_bot(1:7)
 	allocate(Mb(nnr))
 	allocate(Mc(nnr))
 
-	rpart=Cloud(ii)%rnuc
-	xn=0d0
-	xm=0d0
-	xv=0d0
-	xc=0d0
-	do j=1,nVS
-		do i=1,nnr
-			xv(j,i)=xv_bot(j)
+	if(.not.computeT.or.nTiter.eq.1) then
+		rpart=Cloud(ii)%rnuc
+		xn=0d0
+		xm=0d0
+		xv=0d0
+		xc=0d0
+		do j=1,nVS
+			do i=1,nnr
+				xv(j,i)=xv_bot(j)
+			enddo
 		enddo
-	enddo
+	endif
 	tcinv=0d0
 	
 	docondense=.true.
@@ -548,38 +571,46 @@ c	print*,xv_bot(1:7)
 					call PvapH2O(CloudT(i),Sat(i,iCS),liq)
 					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
 				case("NH3")
+c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
 					call PvapNH3(CloudT(i),Sat(i,iCS),liq)
 					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
 				case default
 					select case(CSname(iCS))
 						case("SiO2")
-							call Gibbs_SiO2_s(CloudT(i),Gibbs)
+							call Gibbs_SiO2_s(CloudT(i),Gibbs,maxT(iCS))
 						case("MgSiO3")
-							call Gibbs_MgSiO3_s(CloudT(i),Gibbs)
+							call Gibbs_MgSiO3_s(CloudT(i),Gibbs,maxT(iCS))
 						case("Mg2SiO4")
-							call Gibbs_Mg2SiO4_s(CloudT(i),Gibbs)
+							call Gibbs_Mg2SiO4_s(CloudT(i),Gibbs,maxT(iCS))
 						case("MgO")
-							call Gibbs_MgO_s(CloudT(i),Gibbs)
+							call Gibbs_MgO_s(CloudT(i),Gibbs,maxT(iCS))
 						case("H2O")
-							call Gibbs_H2O_s(CloudT(i),Gibbs)
+							call Gibbs_H2O_s(CloudT(i),Gibbs,maxT(iCS))
 						case("Fe")
-							call Gibbs_Fe_s(CloudT(i),Gibbs)
+							call Gibbs_Fe_s(CloudT(i),Gibbs,maxT(iCS))
 						case("FeS")
-							call Gibbs_FeS_s(CloudT(i),Gibbs)
+							call Gibbs_FeS_s(CloudT(i),Gibbs,maxT(iCS))
 						case("Al2O3")
-							call Gibbs_Al2O3_s(CloudT(i),Gibbs)
+							call Gibbs_Al2O3_s(CloudT(i),Gibbs,maxT(iCS))
 						case("NaCl")
-							call Gibbs_NaCl_s(CloudT(i),Gibbs)
+							call Gibbs_NaCl_s(CloudT(i),Gibbs,maxT(iCS))
 						case("KCl")
-							call Gibbs_KCl_s(CloudT(i),Gibbs)
+							call Gibbs_KCl_s(CloudT(i),Gibbs,maxT(iCS))
 						case("Na2S")
-							call Gibbs_Na2S_s(CloudT(i),Gibbs)
+							call Gibbs_Na2S_s(CloudT(i),Gibbs,maxT(iCS))
 						case("TiO2")
-							call Gibbs_TiO2_s(CloudT(i),Gibbs)
+							call Gibbs_TiO2_s(CloudT(i),Gibbs,maxT(iCS))
 						case("H2SO4")
-							call Gibbs_H2SO4_s(CloudT(i),Gibbs)
+							call Gibbs_H2SO4_s(CloudT(i),Gibbs,maxT(iCS))
 						case("ZnS")
-							call Gibbs_ZnS_s(CloudT(i),Gibbs)
+							call Gibbs_ZnS_s(CloudT(i),Gibbs,maxT(iCS))
+						case("Zn")
+							call Gibbs_Zn_s(CloudT(i),Gibbs,maxT(iCS))
+						case("NH3")
+							call Gibbs_NH3_s(CloudT(i),Gibbs,maxT(iCS))
+						case default
+							print*,'Unknown condensate'
+							stop
 					end select
 					Sat(i,iCS)=Gibbs
 					do iVS=1,nVS
@@ -607,7 +638,10 @@ c	print*,xv_bot(1:7)
 									call Gibbs_NH3_g(CloudT(i),Gibbs)
 								case("TiO")
 									call Gibbs_TiO_g(CloudT(i),Gibbs)
+								case("Zn")
+									call Gibbs_Zn_g(CloudT(i),Gibbs)
 								case default
+									print*,'Unknown gas phase'
 									stop
 							end select
 							Sat(i,iCS)=Sat(i,iCS)-Gibbs*v_cloud(iCS,iVS)
@@ -615,6 +649,8 @@ c	print*,xv_bot(1:7)
 					enddo
 					Sat(i,iCS)=exp(-Sat(i,iCS)/(8.314e-3*CloudT(i)))*CloudP(i)
 			end select
+			if(CloudT(i).gt.maxT(iCS)) Sat(i,iCS)=0d0
+			if(Sat(i,iCS).lt.1d-30) Sat(i,iCS)=1d-30
 		enddo
 		gz=Ggrav*Mplanet/CloudR(i)**2
 		if(Cloud(ii)%hazetype.eq.'optEC') then
@@ -631,14 +667,78 @@ c	print*,xv_bot(1:7)
 		endif
 	enddo
 	Sat0=Sat
-	
+
+
+
+	if(Cloud(ii)%rainout) then
+		allocate(c_rainout(nCS))
+		c_rainout=.false.
+		xv(1,1:nVS)=0d0
+		f=0.5
+		i=1
+		xv(i,1:nVS)=xv_bot(1:nVS)
+		do iter=1,100
+1			continue
+			do iCS=1,nCS
+				tot1=1d200
+				iVL(i,iCS)=1
+				do iVS=1,nVS
+					if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
+						tot2=xv_bot(iVS)/v_cloud(iCS,iVS)
+						if(tot2.lt.tot1) then
+							tot1=tot2
+							iVL(i,iCS)=iVS
+						endif
+					endif
+				enddo
+				fSat(i,iCS)=CloudP(i)**v_H2(iCS)
+				do iVS=1,nVS
+					if(v_include(iVS).and.v_cloud(iCS,iVS).ne.0d0) then
+						fSat(i,iCS)=fSat(i,iCS)*(CloudP(i)*xv_bot(iVS)*CloudMMW(i)/muV(iVS))**v_cloud(iCS,iVS)
+					endif
+				enddo
+				tot1=Sat(i,iCS)*fSat(i,iCS)/Cloud(ii)%Srainout
+				if(tot1.gt.1d0) then
+					tot1=xv_bot(iVL(i,iCS))*(1d0-1d0/tot1**f)
+					c_rainout(iCS)=.true.
+					do iVS=1,nVS
+						if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
+							xv(i,iVS)=xv(i,iVS)-tot1*v_cloud(iCS,iVS)/v_cloud(iCS,iVL(i,iCS))
+							if(xv(i,iVS).lt.0d0) then
+								f=f/2d0
+								xv(i,1:nVS)=xv_bot(1:nVS)
+								goto 1
+							endif
+						endif
+					enddo
+				endif
+			enddo
+			maxerr=0d0
+			do iVS=1,nVS
+				if((xv_bot(iVS)+xv(i,iVS)).gt.0d0) then
+					tot1=abs(xv_bot(iVS)-xv(i,iVS))/(xv_bot(iVS)+xv(i,iVS))
+					if(tot1.gt.maxerr) maxerr=tot1
+				endif
+			enddo
+			xv_bot(1:nVS)=xv(i,1:nVS)
+			f=(0.5d0+f)/2d0
+			if(maxerr.lt.1d-2) exit
+		enddo
+		do iCS=1,nCS
+			if(c_rainout(iCS)) then
+				print*,'Partial rainout of ',CSname(iCS)
+			endif
+		enddo
+		deallocate(c_rainout)
+	endif
+	f=0.1
+
 	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*scaleUV*Sigmadot/tot
 
 	allocate(vthv(nnr))
 	allocate(Sc(nnr,nCS))
 	allocate(xomp(NN))
 	allocate(IWORKomp(NN))
-	allocate(Aomp(NN,NN))
 	allocate(AB(2*NStot+NStot+1,NN))
 
 	iconv=0
@@ -677,23 +777,7 @@ c equations for number of Nuclii
 		Mc(i)=Mc(i)-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 		Mb(i)=Mb(i)+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 		Mb(i)=Mb(i)+Clouddens(i)*vsed(i)/dztot
-		x(i)=-Sn(i)
-c coagulation
-		if(Cloud(ii)%coagulation) then
-			npart=xn(i)*Clouddens(i)
-			lmfp=2.3d0*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
-			vmol=0.5d0*lmfp*vth(i)
-			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
-			tcoaginv=sqrt(pi)*3d0*(sum(xc(1:nCS,i))+xm(i))*Ggrav*Mplanet/(8d0*vth(i)*CloudR(i)**2)
-			tcoaginv=tcoaginv*exp(-(vsed(i)/vfrag)**2)
-			vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
-			if(Dp/rpart(i).lt.vBM) vBM=Dp/rpart(i)
-			tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*vBM*exp(-(vBM/vfrag)**2)
-			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
-			tcinv(iter,i)=tcoaginv
-			tcoaginv=sum(tcinv(1:iter,i))/real(iter)
-			Mb(i)=Mb(i)-Clouddens(i)*tcoaginv
-		endif
+		x(i)=0d0!-Sn(i)
 	else
 		Mb(1)=1d0
 		x(1)=Cloud(ii)%xm_bot
@@ -716,24 +800,16 @@ c coagulation
 			lmfp=2.3d0*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
 			vmol=0.5d0*lmfp*vth(i)
 			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
-
 c			tcoaginv=2d0*npart*pi*rpart(i)**2*abs(vsed(i))
 c rewritten for better convergence
 			tcoaginv=sqrt(pi)*3d0*(sum(xc(1:nCS,i))+xm(i))*Ggrav*Mplanet/(8d0*vth(i)*CloudR(i)**2)
-
 			tcoaginv=tcoaginv*exp(-(vsed(i)/vfrag)**2)
-
 			vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
 			if(Dp/rpart(i).lt.vBM) vBM=Dp/rpart(i)
 			tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*vBM*exp(-(vBM/vfrag)**2)
-
 			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
-
 			tcinv(iter,i)=tcoaginv
-			
-c			call computemedian(tcinv(1:iter,i),iter,tcoaginv)
 			tcoaginv=sum(tcinv(1:iter,i))/real(iter)
-
 			Mb(i)=Mb(i)-Clouddens(i)*tcoaginv
 		endif
 	enddo
@@ -764,7 +840,7 @@ c equations for mass in Nuclii
 			Mc(i)=Mc(i)-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 			Mb(i)=Mb(i)+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 			Mb(i)=Mb(i)+Clouddens(i)*vsed(i)/dztot
-			x(i)=-Sn(i)
+			x(i)=0d0!-Sn(i)
 		else
 			Mb(1)=1d0
 			x(1)=Cloud(ii)%xm_bot
@@ -819,7 +895,6 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 	if(Cloud(ii)%condensates) then
 	freeflow=Cloud(ii)%freeflow_con
 
-
 C=========================================================================================
 C=========================================================================================
 C=========================================================================================
@@ -851,6 +926,7 @@ C===============================================================================
 					fSat(i,iCS)=fSat(i,iCS)*(CloudP(i)*xv(iVS,i)*CloudMMW(i)/muV(iVS))**v_cloud(iCS,iVS)
 				endif
 			enddo
+			if(fSat(i,iCS).lt.1d-30) fSat(i,iCS)=1d-30
 			vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
 			Sc(i,iCS)=min(vthv(i)*rpart(i),kb*CloudT(i)*sqrt(8d0*kb*CloudT(i)/(pi*2.3*mp))/(3d0*CloudP(i)*1d6*8e-15))
      &				*4d0*pi*rpart(i)*Clouddens(i)
@@ -859,30 +935,33 @@ C===============================================================================
 	enddo
 	Sat=Sat0*fSat
 
-	Aomp=0d0
 	xomp=0d0
+
+	AB=0d0
+
+	KL=NStot
+	KU=NStot
+
 	j=0
 	i=1
-	cs=sqrt(kb*CloudT(i)/(2.3d0*mp))
 	do iCS=1,nCS
 		j=j+1
-		if(Cloud(ii)%rainout) then
-			Aomp(j,ixv(iVL(i,iCS),i))=Aomp(j,ixv(iVL(i,iCS),i))+Sc(i,iCS)*xn(i)
-			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
-		else if(freeflow) then
+		if(freeflow) then
 c assume continuous flux at the bottom (dF/dz=Sc=0)
 			xomp(j)=0d0
 
 			dztot=(CloudR(i+1)-CloudR(i))
 			dz=(CloudR(i)-CloudR(i+1))
-			Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
 
-			Aomp(j,ixv(iVL(i,iCS),i))=Aomp(j,ixv(iVL(i,iCS),i))+Sc(i,iCS)*xn(i)
-			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
+			ik=KL+KU+1+j-ixc(iCS,i+1)
+			AB(ik,ixc(iCS,i+1))=AB(ik,ixc(iCS,i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+
+			ik=KL+KU+1+j-ixc(iCS,i)
+			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
 		else
-			Aomp(j,ixc(iCS,i))=1d0
+			ik=KL+KU+1+j-ixc(iCS,i)
+			AB(ik,ixc(iCS,i))=1d0
 			xomp(j)=0d0
 		endif
 	enddo
@@ -890,10 +969,8 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 		do iVS=1,nVS
 			if(v_include(iVS)) then
 				j=j+1
-				do iCS=1,nCS
-					Aomp(j,ixc(iCS,i))=v_cloud(iCS,iVS)*muV(iVS)/muC(iCS)
-				enddo
-				Aomp(j,ixv(iVS,i))=1d0
+				ik=KL+KU+1+j-ixv(iVS,i)
+				AB(ik,ixv(iVS,i))=1d0
 				xomp(j)=xv_bot(iVS)
 			endif
 		enddo
@@ -901,35 +978,44 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 		do iVS=1,nVS
 			if(v_include(iVS)) then
 				j=j+1
-				Aomp(j,ixv(iVS,i))=1d0
+				ik=KL+KU+1+j-ixv(iVS,i)
+				AB(ik,ixv(iVS,i))=1d0
 				xomp(j)=xv_bot(iVS)
 			endif
 		enddo
 	endif
 	do i=2,nnr-1
-		cs=sqrt(kb*CloudT(i)/(2.3d0*mp))
 		if(.not.empty(i)) then
 		do iCS=1,nCS
 			j=j+1
 	
 			dztot=(CloudR(i+1)-CloudR(i-1))/2d0
 			dz=(CloudR(i)-CloudR(i+1))
-			Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+			ik=KL+KU+1+j-ixc(iCS,i+1)
+			AB(ik,ixc(iCS,i+1))=AB(ik,ixc(iCS,i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+
+			ik=KL+KU+1+j-ixc(iCS,i)
+			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+
 			dz=(CloudR(i-1)-CloudR(i))
-			if(i.gt.2.or..not.Cloud(ii)%rainout) then
-				Aomp(j,ixc(iCS,i-1))=Aomp(j,ixc(iCS,i-1))-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
-			endif
-			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
-			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
+			ik=KL+KU+1+j-ixc(iCS,i-1)
+			AB(ik,ixc(iCS,i-1))=AB(ik,ixc(iCS,i-1))-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
+
+			ik=KL+KU+1+j-ixc(iCS,i)
+			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
+			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
 	
-			Aomp(j,ixv(iVL(i,iCS),i))=Aomp(j,ixv(iVL(i,iCS),i))+Sc(i,iCS)*xn(i)
-			Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
+			ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
+			AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Sc(i,iCS)*xn(i)
+
+			ik=KL+KU+1+j-ixc(iCS,i)
+			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
 		enddo
 		else
 		do iCS=1,nCS
 			j=j+1
-			Aomp(j,ixc(iCS,i))=1d0
+			ik=KL+KU+1+j-ixc(iCS,i)
+			AB(ik,ixc(iCS,i))=1d0
 		enddo
 		endif
 
@@ -939,33 +1025,51 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 	
 				dztot=(CloudR(i+1)-CloudR(i-1))/2d0
 				dz=(CloudR(i)-CloudR(i+1))
-				Aomp(j,ixv(iVS,i+1))=Aomp(j,ixv(iVS,i+1))-(0.5d0*(Kg(i+1)*Clouddens(i+1)+Kg(i)*Clouddens(i))/dz)/dztot
-				Aomp(j,ixv(iVS,i))=Aomp(j,ixv(iVS,i))+(0.5d0*(Kg(i+1)*Clouddens(i+1)+Kg(i)*Clouddens(i))/dz)/dztot
+				ik=KL+KU+1+j-ixv(iVS,i+1)
+				AB(ik,ixv(iVS,i+1))=AB(ik,ixv(iVS,i+1))-(0.5d0*(Kg(i+1)*Clouddens(i+1)+Kg(i)*Clouddens(i))/dz)/dztot
+
+				ik=KL+KU+1+j-ixv(iVS,i)
+				AB(ik,ixv(iVS,i))=AB(ik,ixv(iVS,i))+(0.5d0*(Kg(i+1)*Clouddens(i+1)+Kg(i)*Clouddens(i))/dz)/dztot
+
 				dz=(CloudR(i-1)-CloudR(i))
-				Aomp(j,ixv(iVS,i-1))=Aomp(j,ixv(iVS,i-1))-0.5d0*(Kg(i-1)*Clouddens(i-1)+Kg(i)*Clouddens(i))/dz/dztot
-				Aomp(j,ixv(iVS,i))=Aomp(j,ixv(iVS,i))+(0.5d0*(Kg(i-1)*Clouddens(i-1)+Kg(i)*Clouddens(i))/dz)/dztot
+				ik=KL+KU+1+j-ixv(iVS,i-1)
+				AB(ik,ixv(iVS,i-1))=AB(ik,ixv(iVS,i-1))-0.5d0*(Kg(i-1)*Clouddens(i-1)+Kg(i)*Clouddens(i))/dz/dztot
+
+				ik=KL+KU+1+j-ixv(iVS,i)
+				AB(ik,ixv(iVS,i))=AB(ik,ixv(iVS,i))+(0.5d0*(Kg(i-1)*Clouddens(i-1)+Kg(i)*Clouddens(i))/dz)/dztot
+
 	
 				do iCS=1,nCS
-					Aomp(j,ixv(iVL(i,iCS),i))=Aomp(j,ixv(iVL(i,iCS),i))-Sc(i,iCS)*xn(i)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))
-					Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Sc(i,iCS)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))/(Sat(i,iCS)*mpart(i))
+					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
+					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Sc(i,iCS)*xn(i)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))
+
+					ik=KL+KU+1+j-ixc(iCS,i)
+					AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Sc(i,iCS)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))/(Sat(i,iCS)*mpart(i))
 				enddo
 			endif
 		enddo
 	enddo
 	i=nnr
-	cs=sqrt(kb*CloudT(i)/(2.3d0*mp))
 	dz=CloudR(i)-CloudR(i-1)
 	do iCS=1,nCS
 		j=j+1
-		Aomp(j,ixc(iCS,i))=Kd(i)/dz-vsed(i)
-		Aomp(j,ixc(iCS,i-1))=-Kd(i)/dz
+		ik=KL+KU+1+j-ixc(iCS,i)
+		AB(ik,ixc(iCS,i))=Kd(i)/dz-vsed(i)
+
+		ik=KL+KU+1+j-ixc(iCS,i-1)
+		AB(ik,ixc(iCS,i-1))=-Kd(i)/dz
+
 		xomp(j)=0d0!-Mc_top/Clouddens(i)
 	enddo
 	do iVS=1,nVS
 		if(v_include(iVS)) then
 			j=j+1
-			Aomp(j,ixv(iVS,i))=Kg(i)/dz
-			Aomp(j,ixv(iVS,i-1))=-Kg(i)/dz
+			ik=KL+KU+1+j-ixv(iVS,i)
+			AB(ik,ixv(iVS,i))=Kg(i)/dz
+
+			ik=KL+KU+1+j-ixv(iVS,i-1)
+			AB(ik,ixv(iVS,i-1))=-Kg(i)/dz
+
 			xomp(j)=0d0!Mc_top/Clouddens(i)
 		endif
 	enddo
@@ -973,30 +1077,24 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 10	continue
 	NRHS=1
 	info=0
-c Use Band matrix algorithm
-	KL=NStot
-	KU=NStot
-	AB=0d0
-	do j=1,NN
-		do i=max(1,j-KU),min(j+KL,NN)
-			AB(KL+KU+1+i-j,j) = Aomp(i,j)
-		enddo
-	enddo
+		
 	j=2*KL+KU+1
+
 	call DGBSV(NN,KL,KU,NRHS,AB,j,IWORKomp,xomp,NN,INFO)	
 
 	do i=1,NN
 		if(.not.xomp(i).gt.0d0) xomp(i)=0d0
 	enddo
 
+	f=0.5
 	do i=1,nnr
 		do iCS=1,nCS
 			if(empty(i)) xomp(ixc(iCS,i))=0d0
-			xc(iCS,i)=(xc(iCS,i)+xomp(ixc(iCS,i)))/2d0
+			xc(iCS,i)=(xc(iCS,i)*f+xomp(ixc(iCS,i))*(1d0-f))
 		enddo
 		do iVS=1,nVS
 			if(v_include(iVS)) then
-				xv(iVS,i)=(xv(iVS,i)+xomp(ixv(iVS,i)))/2d0
+				xv(iVS,i)=(xv(iVS,i)*f+xomp(ixv(iVS,i))*(1d0-f))
 			endif
 		enddo
 	enddo
@@ -1068,7 +1166,7 @@ C===============================================================================
 	enddo
 c end the loop
 	if(iter.gt.niter) then
-c		if(iconv.eq.0) print*,'Cloud formation not converged: ',maxerr
+		if(iconv.eq.0.and.nTiter.gt.4) print*,'Cloud formation not converged: ',maxerr
 		iter=niter
 	endif
 	xn=0d0
@@ -1109,7 +1207,6 @@ c		if(iconv.eq.0) print*,'Cloud formation not converged: ',maxerr
 	deallocate(Sc)
 	deallocate(xomp)
 	deallocate(IWORKomp)
-	deallocate(Aomp)
 	deallocate(AB)
 
 	allocate(dx(nnr))
@@ -1479,10 +1576,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 
 
 
-	subroutine Gibbs_FeS_s(T,G)
+	subroutine Gibbs_FeS_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          39),Ggibbs(          39)
 	parameter(nG=39)
 	data (Tgibbs(j),j=1,          39) /
@@ -1503,6 +1600,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.27639E+02,-0.23187E+02,-0.18718E+02,-0.14235E+02,-0.97360E+01, 
      & -0.52230E+01,-0.69500E+00, 0.11270E+02, 0.26912E+02, 0.42510E+02, 
      &  0.58067E+02, 0.73585E+02, 0.89066E+02, 0.10451E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -1520,7 +1618,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	subroutine Gibbs_Fe_g(T,G)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          64),Ggibbs(          64)
 	parameter(nG=64)
 	data (Tgibbs(j),j=1,          64) /
@@ -1551,6 +1649,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -1565,10 +1664,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 	return
 	end
-	subroutine Gibbs_Fe_s(T,G)
+	subroutine Gibbs_Fe_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          32),Ggibbs(          32)
 	parameter(nG=          32)
 	data (Tgibbs(j),j=1,          32) /
@@ -1587,6 +1686,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.17610E+01, 0.26760E+01, 0.36120E+01, 0.74240E+01, 0.18511E+02, 
      &  0.29541E+02, 0.40516E+02, 0.51439E+02, 0.62313E+02, 0.73140E+02, 
      &  0.83921E+02, 0.94660E+02 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -1604,7 +1704,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	subroutine Gibbs_H2O_g(T,G)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          61),Ggibbs(          61)
 	parameter(nG=61)
 	data (Tgibbs(j),j=1,          61) /
@@ -1635,6 +1735,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.40949E+02, 0.46906E+02, 0.52869E+02, 0.58838E+02, 0.64811E+02, 
      &  0.70791E+02, 0.76777E+02, 0.82769E+02, 0.88767E+02, 0.94770E+02, 
      &  0.10078E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -1649,10 +1750,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 	return
 	end
-	subroutine Gibbs_H2O_s(T,G)
+	subroutine Gibbs_H2O_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          12),Ggibbs(          12)
 	parameter(nG=12)
 	data (Tgibbs(j),j=1,          12) /
@@ -1663,6 +1764,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  -0.23714E+03,-0.23684E+03,-0.23360E+03,-0.23040E+03, 
      & -0.22723E+03,-0.22410E+03,-0.22101E+03,-0.21794E+03,-0.21491E+03, 
      & -0.21191E+03,-0.20894E+03,-0.20600E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -1680,7 +1782,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	subroutine Gibbs_H2S_g(T,G)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          61),Ggibbs(          61)
 	parameter(nG=61)
 	data (Tgibbs(j),j=1,          61) /
@@ -1711,6 +1813,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.15739E+03, 0.16239E+03, 0.16739E+03, 0.17239E+03, 0.17740E+03, 
      &  0.18241E+03, 0.18743E+03, 0.19245E+03, 0.19748E+03, 0.20251E+03, 
      &  0.20754E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -1725,10 +1828,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 	return
 	end
-	subroutine Gibbs_MgSiO3_s(T,G)
+	subroutine Gibbs_MgSiO3_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          31),Ggibbs(          31)
 	parameter(nG=31)
 	data (Tgibbs(j),j=1,          31) /
@@ -1747,6 +1850,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.90565E+03,-0.86922E+03,-0.83298E+03,-0.79693E+03,-0.76105E+03, 
      & -0.72535E+03,-0.68980E+03,-0.65441E+03,-0.61917E+03,-0.58407E+03, 
      & -0.54909E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -1764,7 +1868,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	subroutine Gibbs_Mg_g(T,G)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          64),Ggibbs(          64)
 	parameter(nG=64)
 	data (Tgibbs(j),j=1,          64) /
@@ -1795,6 +1899,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -1809,10 +1914,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 	return
 	end
-	subroutine Gibbs_SiO2_s(T,G)
+	subroutine Gibbs_SiO2_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          46),Ggibbs(          46)
 	parameter(nG=46)
 	data (Tgibbs(j),j=1,          46) /
@@ -1837,6 +1942,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.27175E+03,-0.24318E+03,-0.21417E+03,-0.18521E+03,-0.15631E+03, 
      & -0.12747E+03,-0.98680E+02,-0.69941E+02,-0.41252E+02,-0.12612E+02, 
      &  0.15981E+02 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -1854,7 +1960,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	subroutine Gibbs_SiO_g(T,G)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          64),Ggibbs(          64)
 	parameter(nG=64)
 	data (Tgibbs(j),j=1,          64) /
@@ -1885,6 +1991,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.23874E+03,-0.23170E+03,-0.22464E+03,-0.21757E+03,-0.21049E+03, 
      & -0.20340E+03,-0.19630E+03,-0.18919E+03,-0.18207E+03,-0.17494E+03, 
      & -0.16780E+03,-0.16065E+03,-0.15350E+03,-0.14633E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -1899,10 +2006,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 	return
 	end
-	subroutine Gibbs_Al2O3_s(T,G)
+	subroutine Gibbs_Al2O3_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          41),Ggibbs(          41)
 	parameter(nG=          41)
 	data (Tgibbs(j),j=1,          41) /
@@ -1925,6 +2032,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.70789E+03,-0.66166E+03,-0.61572E+03,-0.57006E+03,-0.52468E+03, 
      & -0.47956E+03,-0.43470E+03,-0.39009E+03,-0.34571E+03,-0.30157E+03, 
      & -0.25766E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -1942,7 +2050,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	subroutine Gibbs_Al_g(T,G)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          64),Ggibbs(          64)
 	parameter(nG=          64)
 	data (Tgibbs(j),j=1,          64) /
@@ -1973,6 +2081,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -1990,7 +2099,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	subroutine Gibbs_HCl_g(T,G)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          64),Ggibbs(          64)
 	parameter(nG=          64)
 	data (Tgibbs(j),j=1,          64) /
@@ -2021,6 +2130,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.11999E+03,-0.12042E+03,-0.12084E+03,-0.12126E+03,-0.12168E+03, 
      & -0.12209E+03,-0.12250E+03,-0.12291E+03,-0.12332E+03,-0.12372E+03, 
      & -0.12412E+03,-0.12452E+03,-0.12492E+03,-0.12532E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -2035,10 +2145,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 	return
 	end
-	subroutine Gibbs_KCl_s(T,G)
+	subroutine Gibbs_KCl_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          21),Ggibbs(          21)
 	parameter(nG=          21)
 	data (Tgibbs(j),j=1,          21) /
@@ -2053,6 +2163,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.34142E+03,-0.32920E+03,-0.31536E+03,-0.30180E+03,-0.28850E+03, 
      & -0.27545E+03,-0.26262E+03,-0.25000E+03,-0.23759E+03,-0.22535E+03, 
      & -0.21330E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -2070,7 +2181,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	subroutine Gibbs_K_g(T,G)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          64),Ggibbs(          64)
 	parameter(nG=          64)
 	data (Tgibbs(j),j=1,          64) /
@@ -2101,6 +2212,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -2115,10 +2227,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 	return
 	end
-	subroutine Gibbs_Na2S_s(T,G)
+	subroutine Gibbs_Na2S_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          29),Ggibbs(          29)
 	parameter(nG=          29)
 	data (Tgibbs(j),j=1,          29) /
@@ -2135,6 +2247,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.14685E+03,-0.12258E+03,-0.98480E+02,-0.74541E+02,-0.50753E+02, 
      & -0.27110E+02,-0.36040E+01, 0.19772E+02, 0.43024E+02, 0.66157E+02, 
      &  0.89176E+02, 0.11209E+03, 0.13489E+03, 0.15760E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -2149,10 +2262,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 	return
 	end
-	subroutine Gibbs_NaCl_s(T,G)
+	subroutine Gibbs_NaCl_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          26),Ggibbs(          26)
 	parameter(nG=          26)
 	data (Tgibbs(j),j=1,          26) /
@@ -2169,6 +2282,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.26079E+03,-0.24735E+03,-0.23408E+03,-0.22096E+03,-0.20800E+03, 
      & -0.19518E+03,-0.18250E+03,-0.16994E+03,-0.15750E+03,-0.14518E+03, 
      & -0.13297E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -2186,7 +2300,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	subroutine Gibbs_Na_g(T,G)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          64),Ggibbs(          64)
 	parameter(nG=          64)
 	data (Tgibbs(j),j=1,          64) /
@@ -2217,6 +2331,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -2231,10 +2346,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 	return
 	end
-	subroutine Gibbs_Mg2SiO4_s(T,G)
+	subroutine Gibbs_Mg2SiO4_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          41),Ggibbs(          41)
 	parameter(nG=          41)
 	data (Tgibbs(j),j=1,          41) /
@@ -2257,54 +2372,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.68699E+03,-0.63235E+03,-0.57790E+03,-0.52361E+03,-0.46949E+03, 
      & -0.41553E+03,-0.35125E+03,-0.28664E+03,-0.22217E+03,-0.15784E+03, 
      & -0.93665E+02 /
-	if(T.lt.Tgibbs(1)) then
-		G=Ggibbs(1)
-	else if(T.gt.Tgibbs(nG)) then
-		G=Ggibbs(nG)+(T-Tgibbs(nG))*(Ggibbs(nG-1)-Ggibbs(nG))/(Tgibbs(nG-1)-Tgibbs(nG))
-	else
-		do i=1,nG-1
-			if(T.ge.Tgibbs(i).and.T.le.Tgibbs(i+1)) then
-				G=Ggibbs(i)+(T-Tgibbs(i))*(Ggibbs(i+1)-Ggibbs(i))/(Tgibbs(i+1)-Tgibbs(i))
-				return
-			endif
-		enddo
-	endif
-	return
-	end
-	subroutine Gibbs_NH3_g(T,G)
-	IMPLICIT NONE
-	integer nG,j,i
-	real*8 T,G
-	real*8 Tgibbs(          61),Ggibbs(          61)
-	parameter(nG=          61)
-	data (Tgibbs(j),j=1,          61) /
-     &  0.10000E+03, 0.20000E+03, 0.29815E+03, 0.30000E+03, 0.40000E+03, 
-     &  0.50000E+03, 0.60000E+03, 0.70000E+03, 0.80000E+03, 0.90000E+03, 
-     &  0.10000E+04, 0.11000E+04, 0.12000E+04, 0.13000E+04, 0.14000E+04, 
-     &  0.15000E+04, 0.16000E+04, 0.17000E+04, 0.18000E+04, 0.19000E+04, 
-     &  0.20000E+04, 0.21000E+04, 0.22000E+04, 0.23000E+04, 0.24000E+04, 
-     &  0.25000E+04, 0.26000E+04, 0.27000E+04, 0.28000E+04, 0.29000E+04, 
-     &  0.30000E+04, 0.31000E+04, 0.32000E+04, 0.33000E+04, 0.34000E+04, 
-     &  0.35000E+04, 0.36000E+04, 0.37000E+04, 0.38000E+04, 0.39000E+04, 
-     &  0.40000E+04, 0.41000E+04, 0.42000E+04, 0.43000E+04, 0.44000E+04, 
-     &  0.45000E+04, 0.46000E+04, 0.47000E+04, 0.48000E+04, 0.49000E+04, 
-     &  0.50000E+04, 0.51000E+04, 0.52000E+04, 0.53000E+04, 0.54000E+04, 
-     &  0.55000E+04, 0.56000E+04, 0.57000E+04, 0.58000E+04, 0.59000E+04, 
-     &  0.60000E+04 /
-	data (Ggibbs(j),j=1,          61) /
-     & -0.34034E+02,-0.25679E+02,-0.16367E+02,-0.16183E+02,-0.59410E+01, 
-     &  0.48000E+01, 0.15879E+02, 0.27190E+02, 0.38662E+02, 0.50247E+02, 
-     &  0.61910E+02, 0.73625E+02, 0.85373E+02, 0.97141E+02, 0.10892E+03, 
-     &  0.12070E+03, 0.13247E+03, 0.14423E+03, 0.15599E+03, 0.16772E+03, 
-     &  0.17945E+03, 0.19115E+03, 0.20284E+03, 0.21451E+03, 0.22616E+03, 
-     &  0.23779E+03, 0.24941E+03, 0.26100E+03, 0.27258E+03, 0.28414E+03, 
-     &  0.29569E+03, 0.30722E+03, 0.31873E+03, 0.33023E+03, 0.34172E+03, 
-     &  0.35319E+03, 0.36465E+03, 0.37610E+03, 0.38754E+03, 0.39897E+03, 
-     &  0.41038E+03, 0.42180E+03, 0.43320E+03, 0.44459E+03, 0.45598E+03, 
-     &  0.46736E+03, 0.47874E+03, 0.49012E+03, 0.50149E+03, 0.51286E+03, 
-     &  0.52422E+03, 0.53559E+03, 0.54695E+03, 0.55832E+03, 0.56968E+03, 
-     &  0.58104E+03, 0.59241E+03, 0.60378E+03, 0.61515E+03, 0.62652E+03, 
-     &  0.63789E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -2322,7 +2390,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	subroutine Gibbs_TiO_g(T,G)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          64),Ggibbs(          64)
 	parameter(nG=          64)
 	data (Tgibbs(j),j=1,          64) /
@@ -2353,6 +2421,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.15679E+03,-0.15048E+03,-0.14414E+03,-0.13776E+03,-0.13136E+03, 
      & -0.12492E+03,-0.11845E+03,-0.11196E+03,-0.10543E+03,-0.98873E+02, 
      & -0.92288E+02,-0.85674E+02,-0.79032E+02,-0.72361E+02 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -2367,10 +2436,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 	return
 	end
-	subroutine Gibbs_TiO2_s(T,G)
+	subroutine Gibbs_TiO2_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          39),Ggibbs(          39)
 	parameter(nG=          39)
 	data (Tgibbs(j),j=1,          39) /
@@ -2391,6 +2460,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.47646E+03,-0.46168E+03,-0.44695E+03,-0.43227E+03,-0.41763E+03, 
      & -0.40303E+03,-0.38848E+03,-0.37396E+03,-0.35948E+03,-0.34504E+03, 
      & -0.32284E+03,-0.29721E+03,-0.27164E+03,-0.24614E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -2405,10 +2475,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 	return
 	end
-	subroutine Gibbs_H2SO4_s(T,G)
+	subroutine Gibbs_H2SO4_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          11),Ggibbs(          11)
 	parameter(nG=          11)
 	data (Tgibbs(j),j=1,          11) /
@@ -2419,6 +2489,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.77730E+03,-0.73377E+03,-0.68992E+03,-0.68915E+03,-0.64797E+03, 
      & -0.60725E+03,-0.56748E+03,-0.52885E+03,-0.49149E+03,-0.45438E+03, 
      & -0.41379E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -2436,7 +2507,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	subroutine Gibbs_Zn_g(T,G)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          64),Ggibbs(          64)
 	parameter(nG=          64)
 	data (Tgibbs(j),j=1,          64) /
@@ -2467,6 +2538,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -2481,10 +2553,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 	return
 	end
-	subroutine Gibbs_ZnS_s(T,G)
+	subroutine Gibbs_ZnS_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          11),Ggibbs(          11)
 	parameter(nG=          11)
 	data (Tgibbs(j),j=1,          11) /
@@ -2495,6 +2567,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.23930E+03,-0.22970E+03,-0.22020E+03,-0.21070E+03,-0.20130E+03, 
      & -0.19100E+03,-0.18070E+03,-0.17040E+03,-0.16020E+03,-0.14810E+03, 
      & -0.12820E+03 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then
@@ -2509,10 +2582,10 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 	return
 	end
-	subroutine Gibbs_MgO_s(T,G)
+	subroutine Gibbs_MgO_s(T,G,Tmax)
 	IMPLICIT NONE
 	integer nG,j,i
-	real*8 T,G
+	real*8 T,G,Tmax
 	real*8 Tgibbs(          51),Ggibbs(          51)
 	parameter(nG=          51)
 	data (Tgibbs(j),j=1,          51) /
@@ -2539,6 +2612,167 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.50084E+02, 0.66495E+02, 0.82849E+02, 0.99149E+02, 0.11539E+03, 
      &  0.13159E+03, 0.14774E+03, 0.16384E+03, 0.17990E+03, 0.19591E+03, 
      &  0.21189E+03 /
+	Tmax=Tgibbs(nG)
+	if(T.lt.Tgibbs(1)) then
+		G=Ggibbs(1)
+	else if(T.gt.Tgibbs(nG)) then
+		G=Ggibbs(nG)+(T-Tgibbs(nG))*(Ggibbs(nG-1)-Ggibbs(nG))/(Tgibbs(nG-1)-Tgibbs(nG))
+	else
+		do i=1,nG-1
+			if(T.ge.Tgibbs(i).and.T.le.Tgibbs(i+1)) then
+				G=Ggibbs(i)+(T-Tgibbs(i))*(Ggibbs(i+1)-Ggibbs(i))/(Tgibbs(i+1)-Tgibbs(i))
+				return
+			endif
+		enddo
+	endif
+	return
+	end
+	subroutine Gibbs_NH3_s(T,G,Tmax)
+	IMPLICIT NONE
+	integer nG,j,i
+	real*8 T,G,Tmax
+	real*8 Tgibbs(          60),Ggibbs(          60)
+	parameter(nG=          60)
+	data (Tgibbs(j),j=1,          60) /
+     &  0.10000E+03, 0.20000E+03, 0.30000E+03, 0.40000E+03, 0.50000E+03, 
+     &  0.60000E+03, 0.70000E+03, 0.80000E+03, 0.90000E+03, 0.10000E+04, 
+     &  0.11000E+04, 0.12000E+04, 0.13000E+04, 0.14000E+04, 0.15000E+04, 
+     &  0.16000E+04, 0.17000E+04, 0.18000E+04, 0.19000E+04, 0.20000E+04, 
+     &  0.21000E+04, 0.22000E+04, 0.23000E+04, 0.24000E+04, 0.25000E+04, 
+     &  0.26000E+04, 0.27000E+04, 0.28000E+04, 0.29000E+04, 0.30000E+04, 
+     &  0.31000E+04, 0.32000E+04, 0.33000E+04, 0.34000E+04, 0.35000E+04, 
+     &  0.36000E+04, 0.37000E+04, 0.38000E+04, 0.39000E+04, 0.40000E+04, 
+     &  0.41000E+04, 0.42000E+04, 0.43000E+04, 0.44000E+04, 0.45000E+04, 
+     &  0.46000E+04, 0.47000E+04, 0.48000E+04, 0.49000E+04, 0.50000E+04, 
+     &  0.51000E+04, 0.52000E+04, 0.53000E+04, 0.54000E+04, 0.55000E+04, 
+     &  0.56000E+04, 0.57000E+04, 0.58000E+04, 0.59000E+04, 0.60000E+04 /
+	data (Ggibbs(j),j=1,          60) /
+     & -0.50676E+02,-0.29793E+02,-0.10202E+02, 0.95258E+01, 0.29510E+02, 
+     &  0.49710E+02, 0.70073E+02, 0.90553E+02, 0.11112E+03, 0.13174E+03, 
+     &  0.15240E+03, 0.17308E+03, 0.19377E+03, 0.21447E+03, 0.23516E+03, 
+     &  0.25584E+03, 0.27651E+03, 0.29716E+03, 0.31780E+03, 0.33842E+03, 
+     &  0.35902E+03, 0.37960E+03, 0.40016E+03, 0.42070E+03, 0.44123E+03, 
+     &  0.46173E+03, 0.48221E+03, 0.50268E+03, 0.52313E+03, 0.54356E+03, 
+     &  0.56398E+03, 0.58438E+03, 0.60476E+03, 0.62513E+03, 0.64549E+03, 
+     &  0.66583E+03, 0.68616E+03, 0.70649E+03, 0.72680E+03, 0.74710E+03, 
+     &  0.76739E+03, 0.78767E+03, 0.80795E+03, 0.82822E+03, 0.84849E+03, 
+     &  0.86875E+03, 0.88900E+03, 0.90925E+03, 0.92950E+03, 0.94975E+03, 
+     &  0.96999E+03, 0.99024E+03, 0.10105E+04, 0.10307E+04, 0.10510E+04, 
+     &  0.10712E+04, 0.10915E+04, 0.11117E+04, 0.11320E+04, 0.11522E+04 /
+	Tmax=Tgibbs(nG)
+	if(T.lt.Tgibbs(1)) then
+		G=Ggibbs(1)
+	else if(T.gt.Tgibbs(nG)) then
+		G=Ggibbs(nG)+(T-Tgibbs(nG))*(Ggibbs(nG-1)-Ggibbs(nG))/(Tgibbs(nG-1)-Tgibbs(nG))
+	else
+		do i=1,nG-1
+			if(T.ge.Tgibbs(i).and.T.le.Tgibbs(i+1)) then
+				G=Ggibbs(i)+(T-Tgibbs(i))*(Ggibbs(i+1)-Ggibbs(i))/(Tgibbs(i+1)-Tgibbs(i))
+				return
+			endif
+		enddo
+	endif
+	return
+	end
+	subroutine Gibbs_NH3_g(T,G)
+	IMPLICIT NONE
+	integer nG,j,i
+	real*8 T,G,Tmax
+	real*8 Tgibbs(          62),Ggibbs(          62)
+	parameter(nG=          62)
+	data (Tgibbs(j),j=1,          62) /
+     &  0.00000E+00, 0.10000E+03, 0.20000E+03, 0.29815E+03, 0.30000E+03, 
+     &  0.40000E+03, 0.50000E+03, 0.60000E+03, 0.70000E+03, 0.80000E+03, 
+     &  0.90000E+03, 0.10000E+04, 0.11000E+04, 0.12000E+04, 0.13000E+04, 
+     &  0.14000E+04, 0.15000E+04, 0.16000E+04, 0.17000E+04, 0.18000E+04, 
+     &  0.19000E+04, 0.20000E+04, 0.21000E+04, 0.22000E+04, 0.23000E+04, 
+     &  0.24000E+04, 0.25000E+04, 0.26000E+04, 0.27000E+04, 0.28000E+04, 
+     &  0.29000E+04, 0.30000E+04, 0.31000E+04, 0.32000E+04, 0.33000E+04, 
+     &  0.34000E+04, 0.35000E+04, 0.36000E+04, 0.37000E+04, 0.38000E+04, 
+     &  0.39000E+04, 0.40000E+04, 0.41000E+04, 0.42000E+04, 0.43000E+04, 
+     &  0.44000E+04, 0.45000E+04, 0.46000E+04, 0.47000E+04, 0.48000E+04, 
+     &  0.49000E+04, 0.50000E+04, 0.51000E+04, 0.52000E+04, 0.53000E+04, 
+     &  0.54000E+04, 0.55000E+04, 0.56000E+04, 0.57000E+04, 0.58000E+04, 
+     &  0.59000E+04, 0.60000E+04 /
+	data (Ggibbs(j),j=1,          62) /
+     & -0.38907E+02,-0.34034E+02,-0.25679E+02,-0.16367E+02,-0.16183E+02, 
+     & -0.59410E+01, 0.48000E+01, 0.15879E+02, 0.27190E+02, 0.38662E+02, 
+     &  0.50247E+02, 0.61910E+02, 0.73625E+02, 0.85373E+02, 0.97141E+02, 
+     &  0.10892E+03, 0.12070E+03, 0.13247E+03, 0.14423E+03, 0.15599E+03, 
+     &  0.16772E+03, 0.17945E+03, 0.19115E+03, 0.20284E+03, 0.21451E+03, 
+     &  0.22616E+03, 0.23779E+03, 0.24941E+03, 0.26100E+03, 0.27258E+03, 
+     &  0.28414E+03, 0.29569E+03, 0.30722E+03, 0.31873E+03, 0.33023E+03, 
+     &  0.34172E+03, 0.35319E+03, 0.36465E+03, 0.37610E+03, 0.38754E+03, 
+     &  0.39897E+03, 0.41038E+03, 0.42180E+03, 0.43320E+03, 0.44459E+03, 
+     &  0.45598E+03, 0.46736E+03, 0.47874E+03, 0.49012E+03, 0.50149E+03, 
+     &  0.51286E+03, 0.52422E+03, 0.53559E+03, 0.54695E+03, 0.55832E+03, 
+     &  0.56968E+03, 0.58104E+03, 0.59241E+03, 0.60378E+03, 0.61515E+03, 
+     &  0.62652E+03, 0.63789E+03 /
+	Tmax=Tgibbs(nG)
+	if(T.lt.Tgibbs(1)) then
+		G=Ggibbs(1)
+	else if(T.gt.Tgibbs(nG)) then
+		G=Ggibbs(nG)+(T-Tgibbs(nG))*(Ggibbs(nG-1)-Ggibbs(nG))/(Tgibbs(nG-1)-Tgibbs(nG))
+	else
+		do i=1,nG-1
+			if(T.ge.Tgibbs(i).and.T.le.Tgibbs(i+1)) then
+				G=Ggibbs(i)+(T-Tgibbs(i))*(Ggibbs(i+1)-Ggibbs(i))/(Tgibbs(i+1)-Tgibbs(i))
+				return
+			endif
+		enddo
+	endif
+	return
+	end
+	subroutine Gibbs_NH4Cl_s(T,G,Tmax)
+	IMPLICIT NONE
+	integer nG,j,i
+	real*8 T,G,Tmax
+	real*8 Tgibbs(          17),Ggibbs(          17)
+	parameter(nG=          17)
+	data (Tgibbs(j),j=1,          17) /
+     &  0.00000E+00, 0.10000E+03, 0.20000E+03, 0.29815E+03, 0.30000E+03, 
+     &  0.40000E+03, 0.45770E+03, 0.60000E+03, 0.70000E+03, 0.80000E+03, 
+     &  0.90000E+03, 0.10000E+04, 0.11000E+04, 0.12000E+04, 0.13000E+04, 
+     &  0.14000E+04, 0.15000E+04 /
+	data (Ggibbs(j),j=1,          17) /
+     & -0.31139E+03,-0.27639E+03,-0.23983E+03,-0.20309E+03,-0.20240E+03, 
+     & -0.16505E+03, 0.50000E+03,-0.92110E+02,-0.56079E+02,-0.20332E+02, 
+     &  0.15037E+02, 0.49958E+02, 0.84389E+02, 0.11831E+03, 0.15172E+03, 
+     &  0.18463E+03, 0.21703E+03 /
+	Tmax=Tgibbs(nG)
+	if(T.lt.Tgibbs(1)) then
+		G=Ggibbs(1)
+	else if(T.gt.Tgibbs(nG)) then
+		G=Ggibbs(nG)+(T-Tgibbs(nG))*(Ggibbs(nG-1)-Ggibbs(nG))/(Tgibbs(nG-1)-Tgibbs(nG))
+	else
+		do i=1,nG-1
+			if(T.ge.Tgibbs(i).and.T.le.Tgibbs(i+1)) then
+				G=Ggibbs(i)+(T-Tgibbs(i))*(Ggibbs(i+1)-Ggibbs(i))/(Tgibbs(i+1)-Tgibbs(i))
+				return
+			endif
+		enddo
+	endif
+	return
+	end
+	subroutine Gibbs_Zn_s(T,G,Tmax)
+	IMPLICIT NONE
+	integer nG,j,i
+	real*8 T,G,Tmax
+	real*8 Tgibbs(          25),Ggibbs(          25)
+	parameter(nG=          25)
+	data (Tgibbs(j),j=1,          25) /
+     &  0.00000E+00, 0.10000E+03, 0.20000E+03, 0.25000E+03, 0.29815E+03, 
+     &  0.30000E+03, 0.35000E+03, 0.40000E+03, 0.45000E+03, 0.50000E+03, 
+     &  0.60000E+03, 0.69273E+03, 0.80000E+03, 0.90000E+03, 0.10000E+04, 
+     &  0.11000E+04, 0.12000E+04, 0.13000E+04, 0.14000E+04, 0.15000E+04, 
+     &  0.16000E+04, 0.17000E+04, 0.18000E+04, 0.19000E+04, 0.20000E+04 /
+	data (Ggibbs(j),j=1,          25) /
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.70000E+03, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.19360E+01, 0.11646E+02, 0.21274E+02, 0.30827E+02, 
+     &  0.40309E+02, 0.49725E+02, 0.59078E+02, 0.68373E+02, 0.77612E+02 /
+	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
 	else if(T.gt.Tgibbs(nG)) then

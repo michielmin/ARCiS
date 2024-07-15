@@ -894,7 +894,9 @@ c Seed vapor
 		Pi=1d-6*Pi
 	endif
 		
-	if(T.lt.198.0) then
+	if(T.gt.747d0) then
+		Pl=1d200
+	else if(T.lt.198.0) then
 		Pl=1d200
 	else
 		Pl=c0_l+c1_l/T+c2_l*log10(T)+c3_l*T+c4_l*T**2

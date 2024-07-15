@@ -25,6 +25,7 @@ c	Use Thorngren & Fortney (2018)
 c	Add a minimum of 30K for compatibility with cold/old gas Giants
 		TeffP=max(TeffP,20d0)
 		if(.not.retrieval) call output("Internal temperature: " // dbl2string(TeffP,'(f6.1)') // "K")
+		if(.not.retrieval) print*,"Internal temperature: " // dbl2string(TeffP,'(f6.1)') // "K"
 	endif
 	
 	if(.not.do3D) betaF=betaT
@@ -1407,7 +1408,6 @@ c-----------------------------------------------------------------------
 c use parametrization from Moses et al. (2022)
 		Te=(TeffP**4+(Rstar/(Dplanet))**2*Tstar**4)**0.25
 		ComputeKzz=(5d8/sqrt(x))*(H/620d5)*(Te/1450d0)**4
-		ComputeKzz=1d0/(1d0/ComputeKzz+1d0/1d12)
 	else if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
 		if(Kzz_contrast.gt.1d0) then
 			Kmax=Kzz_deep*Kzz_contrast

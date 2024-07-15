@@ -2008,6 +2008,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%haze=.false.
 		Cloud(i)%condensates=.true.
 		Cloud(i)%rainout=.false.
+		Cloud(i)%Srainout=1d0
 		Cloud(i)%coagulation=.true.
 		Cloud(i)%computecryst=.false.
 		Cloud(i)%mixrat=0d0
@@ -2937,6 +2938,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%kappa
 		case("rainout")
 			read(key%value,*) Cloud(j)%rainout
+		case("srainout","sat_bot")
+			read(key%value,*) Cloud(j)%Srainout
 		case("computecryst")
 			read(key%value,*) Cloud(j)%computecryst
 		case("coagulation")
