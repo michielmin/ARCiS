@@ -16,14 +16,14 @@
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
 	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),iVL(:,:)
-	real*8 sigmastar,Sigmadot,Pstar,gz,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc,Gibbs
+	real*8 sigmastar,Sigmadot,Pstar,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc,Gibbs
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:),xn_iter(:,:),xm_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
 	logical,allocatable :: empty(:),docondense(:)
 	integer iCS,ir,nrdo,iconv,nconv,iVS,nVS,NStot,ik
 	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed
-	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:)
+	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:),CloudG(:)
 	character*10,allocatable :: v_names(:),v_names_out(:)
 	logical,allocatable :: v_include(:),c_rainout(:)
 	integer INCFD,IERR
@@ -95,9 +95,9 @@
 	if(Cloud(ii)%haze) nCS=nCS-1
 	allocate(Kd(nnr),Kg(nnr),Km(nnr))
 	allocate(logCloudP(nnr))
-	allocate(CloudMMW(nnr),CloudHp(nnr),Sat(nnr,nCS),Sat0(nnr,nCS),fSat(nnr,nCS))
+	allocate(CloudMMW(nnr),CloudHp(nnr),Sat(nnr,nCS),Sat0(nnr,nCS),fSat(nnr,nCS),CloudG(nnr))
 	
-	niter=1000
+	niter=500
 	nconv=20
 	if(computeT) then
 		if(nTiter.eq.1) then
@@ -155,7 +155,7 @@
 				v_H2(i)=-1
 				v_include(1)=.true.
 				v_include(4)=.true.
-				rhodust(i)=2.65d0
+				rhodust(i)=2.65
 			case('MgSiO3','ENSTATITE')
 				CSname(i)='MgSiO3'
 				atoms_cloud(i,7)=1
@@ -168,7 +168,7 @@
 				v_include(1)=.true.
 				v_include(3)=.true.
 				v_include(4)=.true.
-				rhodust(i)=3.19d0
+				rhodust(i)=3.19
 			case('Mg2SiO4','FORSTERITE')
 				CSname(i)='Mg2SiO4'
 				atoms_cloud(i,7)=2
@@ -181,7 +181,7 @@
 				v_include(1)=.true.
 				v_include(3)=.true.
 				v_include(4)=.true.
-				rhodust(i)=3.21d0
+				rhodust(i)=3.21
 			case('MgO')
 				CSname(i)='MgO'
 				atoms_cloud(i,7)=1
@@ -191,21 +191,21 @@
 				v_H2(i)=-1
 				v_include(3)=.true.
 				v_include(4)=.true.
-				rhodust(i)=3.58d0
+				rhodust(i)=3.58
 			case('H2O','WATER')
 				CSname(i)='H2O'
 				atoms_cloud(i,1)=2
 				atoms_cloud(i,5)=1
 				v_cloud(i,4)=1
 				v_include(4)=.true.
-				rhodust(i)=1.0d0
+				rhodust(i)=0.93
 				maxT(i)=747d0
 			case('Fe','IRON')
 				CSname(i)='Fe'
 				atoms_cloud(i,17)=1
 				v_cloud(i,6)=1
 				v_include(6)=.true.
-				rhodust(i)=7.87d0
+				rhodust(i)=7.87
 			case('FeS','TROILITE')
 				CSname(i)='FeS'
 				atoms_cloud(i,17)=1
@@ -216,7 +216,27 @@
 				v_include(5)=.true.
 				v_include(6)=.true.
 				maxT(i)=680d0
-				rhodust(i)=4.83d0
+				rhodust(i)=4.83
+			case('FeO')
+				CSname(i)='FeO'
+				atoms_cloud(i,17)=1
+				atoms_cloud(i,5)=1
+				v_cloud(i,6)=1
+				v_cloud(i,4)=1
+				v_H2(i)=-1
+				v_include(6)=.true.
+				v_include(4)=.true.
+				rhodust(i)=5.9
+			case('Fe2O3')
+				CSname(i)='Fe2O3'
+				atoms_cloud(i,17)=2
+				atoms_cloud(i,5)=3
+				v_cloud(i,6)=2
+				v_cloud(i,4)=3
+				v_H2(i)=-3
+				v_include(6)=.true.
+				v_include(4)=.true.
+				rhodust(i)=5.24
 			case('Al2O3','CORRUNDUM')
 				CSname(i)='Al2O3'
 				atoms_cloud(i,5)=3
@@ -226,7 +246,7 @@
 				v_H2(i)=-3
 				v_include(4)=.true.
 				v_include(7)=.true.
-				rhodust(i)=3.97d0
+				rhodust(i)=3.97
 			case("NaCl")
 				CSname(i)='NaCl'
 				atoms_cloud(i,6)=1
@@ -236,7 +256,7 @@
 				v_H2(i)=-0.5
 				v_include(8)=.true.
 				v_include(10)=.true.
-				rhodust(i)=2.17d0
+				rhodust(i)=2.17
 			case("KCl")
 				CSname(i)='KCl'
 				atoms_cloud(i,13)=1
@@ -246,7 +266,7 @@
 				v_H2(i)=-0.5
 				v_include(9)=.true.
 				v_include(10)=.true.
-				rhodust(i)=1.99d0
+				rhodust(i)=1.99
 			case("Na2S")
 				CSname(i)='Na2S'
 				atoms_cloud(i,6)=1
@@ -256,14 +276,14 @@
 				v_H2(i)=-1
 				v_include(8)=.true.
 				v_include(5)=.true.
-				rhodust(i)=1.86d0
+				rhodust(i)=1.86
 			case("NH3","AMONIA")
 				CSname(i)='NH3'
 				atoms_cloud(i,1)=3
 				atoms_cloud(i,4)=1
 				v_cloud(i,11)=1
 				v_include(11)=.true.
-				rhodust(i)=0.87d0
+				rhodust(i)=0.87
 				maxT(i)=220d0
 			case('TiO2')
 				CSname(i)='TiO2'
@@ -274,7 +294,7 @@
 				v_H2(i)=-1
 				v_include(2)=.true.
 				v_include(4)=.true.
-				rhodust(i)=4.23d0
+				rhodust(i)=4.23
 			case('H2SO4')
 				CSname(i)='H2SO4'
 				atoms_cloud(i,1)=2
@@ -295,7 +315,7 @@
 				v_H2(i)=-1
 				v_include(12)=.true.
 				v_include(5)=.true.
-				rhodust(i)=4.09d0
+				rhodust(i)=4.09
 			case('Zn')
 				CSname(i)='Zn'
 				atoms_cloud(i,30)=1
@@ -311,7 +331,7 @@
 				v_cloud(i,11)=1
 				v_include(10)=.true.
 				v_include(11)=.true.
-				rhodust(i)=1.53d0
+				rhodust(i)=1.53
 			case default
 				call output("Unknown condensate")
 				stop
@@ -588,6 +608,10 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 							call Gibbs_H2O_s(CloudT(i),Gibbs,maxT(iCS))
 						case("Fe")
 							call Gibbs_Fe_s(CloudT(i),Gibbs,maxT(iCS))
+						case("FeO")
+							call Gibbs_FeO_s(CloudT(i),Gibbs,maxT(iCS))
+						case("Fe2O3")
+							call Gibbs_Fe2O3_s(CloudT(i),Gibbs,maxT(iCS))
 						case("FeS")
 							call Gibbs_FeS_s(CloudT(i),Gibbs,maxT(iCS))
 						case("Al2O3")
@@ -650,9 +674,9 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 					Sat(i,iCS)=exp(-Sat(i,iCS)/(8.314e-3*CloudT(i)))*CloudP(i)
 			end select
 			if(CloudT(i).gt.maxT(iCS)) Sat(i,iCS)=0d0
-			if(Sat(i,iCS).lt.1d-30) Sat(i,iCS)=1d-30
+			if(Sat(i,iCS).lt.1d-40) Sat(i,iCS)=1d-40
 		enddo
-		gz=Ggrav*Mplanet/CloudR(i)**2
+		CloudG(i)=Ggrav*Mplanet/CloudR(i)**2
 		if(Cloud(ii)%hazetype.eq.'optEC') then
 			Sn(i)=Clouddens(i)*CloudP(i)*CloudtauUV(i)
 			if(i.eq.nnr) then
@@ -663,7 +687,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 				tot=tot+abs(CloudR(i-1)-CloudR(i+1))*0.5*Sn(i)
 			endif
 		else
-			Sn(i)=(Clouddens(i)*gz*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
+			Sn(i)=(Clouddens(i)*CloudG(i)*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
 		endif
 	enddo
 	Sat0=Sat
@@ -748,10 +772,10 @@ c start the loop
 
 	vsed=0d0
 	do i=1,nnr
-		cs=sqrt(kb*CloudT(i)/(2.3d0*mp))
-		vth(i)=sqrt(8d0*kb*CloudT(i)/(pi*2.3d0*mp))
-		vsed(i)=-sqrt(pi)*rpart(i)*rho_av(i)*Ggrav*Mplanet/(2d0*Clouddens(i)*vth(i)*CloudR(i)**2)
-		lmfp=2.3d0*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
+		cs=sqrt(kb*CloudT(i)/(CloudMMW(i)*mp))
+		vth(i)=sqrt(8d0*kb*CloudT(i)/(pi*CloudMMW(i)*mp))
+		vsed(i)=-rpart(i)*rho_av(i)*CloudG(i)/(Clouddens(i)*vth(i))
+		lmfp=CloudMMW(i)*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
 		vsed(i)=vsed(i)*max(1d0,4d0*rpart(i)/(9d0*lmfp))
 		mpart(i)=rho_av(i)*4d0*pi*rpart(i)**3/3d0
 	enddo
@@ -797,19 +821,19 @@ c equations for number of Nuclii
 c coagulation
 		if(Cloud(ii)%coagulation) then
 			npart=xn(i)*Clouddens(i)
-			lmfp=2.3d0*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
+			lmfp=CloudMMW(i)*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
 			vmol=0.5d0*lmfp*vth(i)
 			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
-c			tcoaginv=2d0*npart*pi*rpart(i)**2*abs(vsed(i))
-c rewritten for better convergence
-			tcoaginv=sqrt(pi)*3d0*(sum(xc(1:nCS,i))+xm(i))*Ggrav*Mplanet/(8d0*vth(i)*CloudR(i)**2)
-			tcoaginv=tcoaginv*exp(-(vsed(i)/vfrag)**2)
 			vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
 			if(Dp/rpart(i).lt.vBM) vBM=Dp/rpart(i)
-			tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*vBM*exp(-(vBM/vfrag)**2)
+			tcoaginv=npart*pi*rpart(i)**2*(abs(vsed(i))*exp(-(vsed(i)/vfrag)**2)+2d0*vBM*exp(-(vBM/vfrag)**2))
+
 			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
+
 			tcinv(iter,i)=tcoaginv
-			tcoaginv=sum(tcinv(1:iter,i))/real(iter)
+			j=max(1,iter-10)
+			tcoaginv=sum(tcinv(j:iter,i))/real(iter-j+1)
+
 			Mb(i)=Mb(i)-Clouddens(i)*tcoaginv
 		endif
 	enddo
@@ -825,7 +849,7 @@ c	call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 	do i=1,nnr
 		if(x(i).lt.0d0) x(i)=0d0
 	enddo
-	xn(1:nnr)=x(1:nnr)
+	xn(1:nnr)=(x(1:nnr)+xn(1:nnr)*m_nuc)/2d0
 
 	if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
 c equations for mass in Nuclii
@@ -871,7 +895,7 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 		do i=1,nnr
 			if(x(i).lt.0d0) x(i)=0d0
 		enddo
-		xm(1:nnr)=x(1:nnr)
+		xm(1:nnr)=(x(1:nnr)+xm(1:nnr))/2d0
 	else
 		xm=xn
 	endif
@@ -926,11 +950,12 @@ C===============================================================================
 					fSat(i,iCS)=fSat(i,iCS)*(CloudP(i)*xv(iVS,i)*CloudMMW(i)/muV(iVS))**v_cloud(iCS,iVS)
 				endif
 			enddo
-			if(fSat(i,iCS).lt.1d-30) fSat(i,iCS)=1d-30
+			if(fSat(i,iCS).lt.1d-40) fSat(i,iCS)=1d-40
 			vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
-			Sc(i,iCS)=min(vthv(i)*rpart(i),kb*CloudT(i)*sqrt(8d0*kb*CloudT(i)/(pi*2.3*mp))/(3d0*CloudP(i)*1d6*8e-15))
-     &				*4d0*pi*rpart(i)*Clouddens(i)
-			Sc(i,iCS)=fstick*Clouddens(i)*Sc(i,iCS)*muC(iCS)/(muV(iVL(i,iCS))*v_cloud(iCS,iVL(i,iCS)))
+
+			Dp=kb*CloudT(i)*vthv(i)/(3d0*CloudP(i)*1d6*sigmamol)
+			Sc(i,iCS)=fstick*Clouddens(i)**2*(muC(iCS)/(muV(iVL(i,iCS))*v_cloud(iCS,iVL(i,iCS))))*
+     &						pi*rpart(i)*min(rpart(i)*vthv(i),4d0*Dp)
 		enddo
 	enddo
 	Sat=Sat0*fSat
@@ -1144,18 +1169,30 @@ C===============================================================================
 		endif
 		tot=sum(xc(1:nCS,i))+xm(i)
 		if(xn(i).gt.0d0) then
-			rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
+			if(Cloud(ii)%haze) then
+				rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
+			else
+				rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i))+Cloud(ii)%rnuc**3)**(1d0/3d0)
+			endif
 			if(.not.rr.ge.Cloud(ii)%rnuc) then
 				rr=Cloud(ii)%rnuc
-				xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
+				if(Cloud(ii)%haze) then
+					xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
+				else
+					xn(i)=(3d0*(tot/(rr**3-Cloud(ii)%rnuc**3))/(4d0*pi*rho_av(i)))
+				endif
 			endif
 		else
 			rr=Cloud(ii)%rnuc
-			xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
+			if(Cloud(ii)%haze) then
+				xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
+			else
+				xn(i)=(3d0*(tot/(rr**3-Cloud(ii)%rnuc**3))/(4d0*pi*rho_av(i)))
+			endif
 		endif
 		err=abs(rr-rpart(i))/(rr+rpart(i))
 		if(err.gt.maxerr.and..not.empty(i)) maxerr=err
-		rpart(i)=sqrt(rr*rpart(i))
+		rpart(i)=rr!sqrt(rr*rpart(i))
 	enddo
 	if(maxerr.lt.eps) then
 		iconv=iconv+1
@@ -1165,6 +1202,7 @@ C===============================================================================
 	endif
 	enddo
 c end the loop
+
 	if(iter.gt.niter) then
 		if(iconv.eq.0.and.nTiter.gt.4) print*,'Cloud formation not converged: ',maxerr
 		iter=niter
@@ -1184,21 +1222,32 @@ c end the loop
 		do iCS=1,nCS
 			tot=tot+xc(iCS,i)/rhodust(iCS)
 		enddo
+		if(xn(i).gt.0d0) then
+			if(Cloud(ii)%haze) then
+				rr=(3d0*(tot/xn(i))/(4d0*pi))**(1d0/3d0)
+			else
+				rr=(3d0*(tot/xn(i))/(4d0*pi)+Cloud(ii)%rnuc**3)**(1d0/3d0)
+			endif
+			if(.not.rr.ge.Cloud(ii)%rnuc) then
+				rr=Cloud(ii)%rnuc
+				if(Cloud(ii)%haze) then
+					xn(i)=3d0*(tot/(rr**3))/(4d0*pi)
+				else
+					xn(i)=3d0*(tot/(rr**3-Cloud(ii)%rnuc**3))/(4d0*pi)
+				endif
+			endif
+		else
+			rr=Cloud(ii)%rnuc
+			if(Cloud(ii)%haze) then
+				xn(i)=3d0*(tot/(rr**3))/(4d0*pi)
+			else
+				xn(i)=3d0*(tot/(rr**3-Cloud(ii)%rnuc**3))/(4d0*pi)
+			endif
+		endif
 		if(tot.gt.0d0) then
 			rho_av(i)=(sum(xc(1:nCS,i))+xm(i))/tot
 		else
 			rho_av(i)=sum(rhodust(1:nCS))/real(nCS)
-		endif
-		tot=sum(xc(1:nCS,i))+xm(i)
-		if(xn(i).gt.0d0) then
-			rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
-			if(.not.rr.ge.Cloud(ii)%rnuc) then
-				rr=Cloud(ii)%rnuc
-				xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
-			endif
-		else
-			rr=Cloud(ii)%rnuc
-			xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
 		endif
 		rpart(i)=rr
 	enddo
@@ -2772,6 +2821,84 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.00000E+00, 0.70000E+03, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.19360E+01, 0.11646E+02, 0.21274E+02, 0.30827E+02, 
      &  0.40309E+02, 0.49725E+02, 0.59078E+02, 0.68373E+02, 0.77612E+02 /
+	Tmax=Tgibbs(nG)
+	if(T.lt.Tgibbs(1)) then
+		G=Ggibbs(1)
+	else if(T.gt.Tgibbs(nG)) then
+		G=Ggibbs(nG)+(T-Tgibbs(nG))*(Ggibbs(nG-1)-Ggibbs(nG))/(Tgibbs(nG-1)-Tgibbs(nG))
+	else
+		do i=1,nG-1
+			if(T.ge.Tgibbs(i).and.T.le.Tgibbs(i+1)) then
+				G=Ggibbs(i)+(T-Tgibbs(i))*(Ggibbs(i+1)-Ggibbs(i))/(Tgibbs(i+1)-Tgibbs(i))
+				return
+			endif
+		enddo
+	endif
+	return
+	end
+	subroutine Gibbs_FeO_s(T,G,Tmax)
+	IMPLICIT NONE
+	integer nG,j,i
+	real*8 T,G,Tmax
+	real*8 Tgibbs(          49),Ggibbs(          49)
+	parameter(nG=          49)
+	data (Tgibbs(j),j=1,          49) /
+     &  0.00000E+00, 0.30000E+03, 0.40000E+03, 0.50000E+03, 0.60000E+03, 
+     &  0.70000E+03, 0.80000E+03, 0.90000E+03, 0.10000E+04, 0.11000E+04, 
+     &  0.12000E+04, 0.13000E+04, 0.14000E+04, 0.15000E+04, 0.16000E+04, 
+     &  0.16500E+04, 0.18000E+04, 0.19000E+04, 0.20000E+04, 0.21000E+04, 
+     &  0.22000E+04, 0.23000E+04, 0.24000E+04, 0.25000E+04, 0.26000E+04, 
+     &  0.27000E+04, 0.28000E+04, 0.29000E+04, 0.30000E+04, 0.31000E+04, 
+     &  0.32000E+04, 0.33000E+04, 0.34000E+04, 0.35000E+04, 0.36000E+04, 
+     &  0.37000E+04, 0.38000E+04, 0.39000E+04, 0.40000E+04, 0.41000E+04, 
+     &  0.42000E+04, 0.43000E+04, 0.44000E+04, 0.45000E+04, 0.46000E+04, 
+     &  0.47000E+04, 0.48000E+04, 0.49000E+04, 0.50000E+04 /
+	data (Ggibbs(j),j=1,          49) /
+     &  0.60752E+02,-0.25130E+03,-0.24454E+03,-0.23802E+03,-0.23167E+03, 
+     & -0.22543E+03,-0.21926E+03,-0.21312E+03,-0.20696E+03,-0.20067E+03, 
+     & -0.19432E+03,-0.18795E+03,-0.18165E+03,-0.17541E+03,-0.16924E+03, 
+     &  0.17000E+04,-0.15916E+03,-0.15383E+03,-0.14845E+03,-0.14309E+03, 
+     & -0.13774E+03,-0.13241E+03,-0.12709E+03,-0.12178E+03,-0.11648E+03, 
+     & -0.11119E+03,-0.10592E+03,-0.10065E+03,-0.95385E+02,-0.90131E+02, 
+     & -0.77460E+02,-0.61133E+02,-0.44869E+02,-0.28665E+02,-0.12518E+02, 
+     &  0.35750E+01, 0.19616E+02, 0.35608E+02, 0.51552E+02, 0.67453E+02, 
+     &  0.83310E+02, 0.99128E+02, 0.11491E+03, 0.13065E+03, 0.14636E+03, 
+     &  0.16203E+03, 0.17768E+03, 0.19330E+03, 0.20888E+03 /
+	Tmax=Tgibbs(nG)
+	if(T.lt.Tgibbs(1)) then
+		G=Ggibbs(1)
+	else if(T.gt.Tgibbs(nG)) then
+		G=Ggibbs(nG)+(T-Tgibbs(nG))*(Ggibbs(nG-1)-Ggibbs(nG))/(Tgibbs(nG-1)-Tgibbs(nG))
+	else
+		do i=1,nG-1
+			if(T.ge.Tgibbs(i).and.T.le.Tgibbs(i+1)) then
+				G=Ggibbs(i)+(T-Tgibbs(i))*(Ggibbs(i+1)-Ggibbs(i))/(Tgibbs(i+1)-Tgibbs(i))
+				return
+			endif
+		enddo
+	endif
+	return
+	end
+	subroutine Gibbs_Fe2O3_s(T,G,Tmax)
+	IMPLICIT NONE
+	integer nG,j,i
+	real*8 T,G,Tmax
+	real*8 Tgibbs(          27),Ggibbs(          27)
+	parameter(nG=          27)
+	data (Tgibbs(j),j=1,          27) /
+     &  0.00000E+00, 0.10000E+03, 0.20000E+03, 0.29815E+03, 0.30000E+03, 
+     &  0.40000E+03, 0.50000E+03, 0.60000E+03, 0.70000E+03, 0.80000E+03, 
+     &  0.90000E+03, 0.95000E+03, 0.10500E+04, 0.12000E+04, 0.13000E+04, 
+     &  0.14000E+04, 0.15000E+04, 0.16000E+04, 0.17000E+04, 0.18000E+04, 
+     &  0.19000E+04, 0.20000E+04, 0.21000E+04, 0.22000E+04, 0.23000E+04, 
+     &  0.24000E+04, 0.25000E+04 /
+	data (Ggibbs(j),j=1,          27) /
+     & -0.81902E+03,-0.79744E+03,-0.77057E+03,-0.74352E+03,-0.74301E+03, 
+     & -0.71573E+03,-0.68893E+03,-0.66264E+03,-0.63684E+03,-0.61148E+03, 
+     & -0.58651E+03, 0.10000E+04, 0.11000E+04,-0.51237E+03,-0.48756E+03, 
+     & -0.46289E+03,-0.43835E+03,-0.41391E+03,-0.38952E+03,-0.36512E+03, 
+     & -0.33934E+03,-0.31341E+03,-0.28747E+03,-0.26153E+03,-0.23558E+03, 
+     & -0.20962E+03,-0.18365E+03 /
 	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)

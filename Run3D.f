@@ -396,13 +396,17 @@ c Now call the setup for the readFull3D part
 			R3D(i,1:nr+1)=R3D(n3D,1:nr+1)
 			T3D(i,0:nr)=T3D(n3D,0:nr)
 			mixrat3D(i,1:nr,1:nmol)=mixrat3D(n3D,1:nr,1:nmol)
-			Ca(1:nlam,1:ng,1:nr,i,-nvel:nvel)=Ca(1:nlam,1:ng,1:nr,n3D,-nvel:nvel)
-			Cs(1:nlam,1:nr,i)=Cs(1:nlam,1:nr,n3D)
-			Ce_cont(1:nlam,1:nr,i)=Ce_cont(1:nlam,1:nr,n3D)
-			Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,i)=Ca_mol(1:nlam,1:ng,1:nmol_count,1:nr,n3D)
-			dtauR_nu(1:nlam,1:ng,i,1:nr,-nvel:nvel)=dtauR_nu(1:nlam,1:ng,n3D,1:nr,-nvel:nvel)
-			Si(1:nlam,1:ng,0:nr,1:nnu0,i)=Si(1:nlam,1:ng,0:nr,1:nnu0,n3D)
-			if(computealbedo) SiSc(1:nlam,1:ng,0:nr,1:nnu0,i)=SiSc(1:nlam,1:ng,0:nr,1:nnu0,n3D)
+			do ir=1,nr
+				Ca(1:nlam,1:ng,ir,i,-nvel:nvel)=Ca(1:nlam,1:ng,ir,n3D,-nvel:nvel)
+				Cs(1:nlam,ir,i)=Cs(1:nlam,ir,n3D)
+				Ce_cont(1:nlam,ir,i)=Ce_cont(1:nlam,ir,n3D)
+				Ca_mol(1:nlam,1:ng,1:nmol_count,ir,i)=Ca_mol(1:nlam,1:ng,1:nmol_count,ir,n3D)
+				dtauR_nu(1:nlam,1:ng,i,ir,-nvel:nvel)=dtauR_nu(1:nlam,1:ng,n3D,ir,-nvel:nvel)
+			enddo
+			do ir=0,nr
+				Si(1:nlam,1:ng,ir,1:nnu0,i)=Si(1:nlam,1:ng,ir,1:nnu0,n3D)
+				if(computealbedo) SiSc(1:nlam,1:ng,ir,1:nnu0,i)=SiSc(1:nlam,1:ng,ir,1:nnu0,n3D)
+			enddo
 			local_albedo(i)=local_albedo(n3D)
 		endif
 		if(.not.retrieval.and..not.dopostequalweights) then
