@@ -347,11 +347,20 @@
 		muV(i)=sum(mass_atoms(1:N_atoms)*v_atoms(i,1:N_atoms))
 	enddo
 
-	mutot=COabun*(mass_atoms(3)+mass_atoms(5))
-	xv_bot=1d200
-	do i=1,N_atoms
-		mutot=mutot+mass_atoms(i)*molfracs_atoms(i)
-	enddo
+	if(dochemistry) then
+		mutot=COabun*(mass_atoms(3)+mass_atoms(5))
+		xv_bot=1d200
+		do i=1,N_atoms
+			mutot=mutot+mass_atoms(i)*molfracs_atoms(i)
+		enddo
+	else
+		mutot=0d0
+		do i=1,nmol
+			if(includemol(i)) then
+				mutot=mutot+Mmol(i)*mixrat_r(1,i)
+			endif
+		enddo
+	endif
 	do iVS=1,nVS
 		if(v_include(iVS)) then
 			if(dochemistry) then
@@ -399,7 +408,7 @@ c	print*,xv_bot(1:7)
 	
 	sigmamol=8d-15
 
-	eps=1d-2
+	eps=1d-3
 
 	Sigmadot=Cloud(ii)%Sigmadot
 	
@@ -1192,7 +1201,7 @@ C===============================================================================
 		endif
 		err=abs(rr-rpart(i))/(rr+rpart(i))
 		if(err.gt.maxerr.and..not.empty(i)) maxerr=err
-		rpart(i)=rr!sqrt(rr*rpart(i))
+		rpart(i)=sqrt(rr*rpart(i))
 	enddo
 	if(maxerr.lt.eps) then
 		iconv=iconv+1
