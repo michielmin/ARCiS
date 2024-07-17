@@ -1375,6 +1375,7 @@ c			read(key%value,*) nTpoints
 		case("planetname")
 			read(key%value,*) planetname
 			call ReadPlanetName
+			standardstarname=' '
 		case("standardstar")
 			standardstarname=key%value 
 		case("trend_compute","dotrend")

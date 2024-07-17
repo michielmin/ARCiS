@@ -15,7 +15,7 @@
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
 	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
-	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),iVL(:,:)
+	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),iVL(:,:),ixn(:),ixm(:)
 	real*8 sigmastar,Sigmadot,Pstar,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc,Gibbs
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
@@ -27,7 +27,7 @@
 	character*10,allocatable :: v_names(:),v_names_out(:)
 	logical,allocatable :: v_include(:),c_rainout(:)
 	integer INCFD,IERR
-	logical SKIP,freeflow,liq
+	logical SKIP,liq
 	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr)
 	integer itime
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
@@ -41,7 +41,7 @@
 	itimecloud=itimecloud-itime
 	ctimecloud=ctimecloud+1
 
-	nVS=12
+	nVS=13
 	allocate(v_names(nVS),v_atoms(nVS,N_atoms),v_include(nVS))
 	
 	v_atoms=0d0
@@ -87,6 +87,9 @@
 
 	v_names(12)="Zn"
 	v_atoms(12,30)=1
+
+	v_names(13)="Mn"
+	v_atoms(13,27)=1
 
 	v_include=.false.
 
@@ -316,12 +319,28 @@
 				v_include(12)=.true.
 				v_include(5)=.true.
 				rhodust(i)=4.09
+			case('MnS')
+				CSname(i)='MnS'
+				atoms_cloud(i,27)=1
+				atoms_cloud(i,11)=1
+				v_cloud(i,13)=1
+				v_cloud(i,5)=1
+				v_H2(i)=-1
+				v_include(13)=.true.
+				v_include(5)=.true.
+				rhodust(i)=4.08
 			case('Zn')
 				CSname(i)='Zn'
 				atoms_cloud(i,30)=1
 				v_cloud(i,12)=1
 				v_include(12)=.true.
 				rhodust(i)=7.14d0
+			case('Mn')
+				CSname(i)='Mn'
+				atoms_cloud(i,27)=1
+				v_cloud(i,13)=1
+				v_include(13)=.true.
+				rhodust(i)=7.43d0
 			case('NH4Cl')
 				CSname(i)='NH4Cl'
 				atoms_cloud(i,1)=4
@@ -332,6 +351,14 @@
 				v_include(10)=.true.
 				v_include(11)=.true.
 				rhodust(i)=1.53
+			case('SiO')
+				CSname(i)='SiO'
+				atoms_cloud(i,9)=1
+				atoms_cloud(i,5)=1
+				v_cloud(i,1)=1
+				v_include(1)=.true.
+				rhodust(i)=2.18
+				maxT(i)=5000d0
 			case default
 				call output("Unknown condensate")
 				stop
@@ -462,9 +489,17 @@ c	print*,xv_bot(1:7)
 
 	allocate(ixv(nVS,nnr))
 	allocate(ixc(nCS,nnr))
+	allocate(ixn(nnr))
+	allocate(ixm(nnr))
 
 	j=0
 	do i=1,nnr
+		j=j+1
+		ixn(i)=j
+		if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+			j=j+1
+			ixm(i)=j
+		endif
 		do iCS=1,nCS
 			j=j+1
 			ixc(iCS,i)=j
@@ -603,6 +638,10 @@ c	print*,xv_bot(1:7)
 c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
 					call PvapNH3(CloudT(i),Sat(i,iCS),liq)
 					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
+				case("SiO")
+c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
+					call PvapSiO(CloudT(i),Sat(i,iCS),liq)
+					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
 				case default
 					select case(CSname(iCS))
 						case("SiO2")
@@ -635,12 +674,18 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 							call Gibbs_TiO2_s(CloudT(i),Gibbs,maxT(iCS))
 						case("H2SO4")
 							call Gibbs_H2SO4_s(CloudT(i),Gibbs,maxT(iCS))
+						case("NH3")
+							call Gibbs_NH3_s(CloudT(i),Gibbs,maxT(iCS))
 						case("ZnS")
 							call Gibbs_ZnS_s(CloudT(i),Gibbs,maxT(iCS))
 						case("Zn")
 							call Gibbs_Zn_s(CloudT(i),Gibbs,maxT(iCS))
-						case("NH3")
-							call Gibbs_NH3_s(CloudT(i),Gibbs,maxT(iCS))
+						case("MnS")
+							Gibbs=4.184*(1.12482E+05/CloudT(i)-1.81938E+05
+     &			+5.87107E+01*CloudT(i)+8.89360E-05*CloudT(i)**2-4.20876E-09*CloudT(i)**3)
+							maxT(iCS)=5000d0
+						case("Mn")
+							call Gibbs_Mn_s(CloudT(i),Gibbs,maxT(iCS))
 						case default
 							print*,'Unknown condensate'
 							stop
@@ -673,6 +718,8 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 									call Gibbs_TiO_g(CloudT(i),Gibbs)
 								case("Zn")
 									call Gibbs_Zn_g(CloudT(i),Gibbs)
+								case("Mn")
+									call Gibbs_Mn_g(CloudT(i),Gibbs)
 								case default
 									print*,'Unknown gas phase'
 									stop
@@ -795,139 +842,6 @@ c start the loop
 		enddo
 	endif
 
-	empty=.false.
-	freeflow=Cloud(ii)%freeflow_nuc
-
-c equations for number of Nuclii
-	Ma=0d0
-	Mb=0d0
-	Mc=0d0
-	x=0d0
-	if(freeflow) then
-		i=1
-		dztot=(CloudR(i+1)-CloudR(i))
-		dz=(CloudR(i)-CloudR(i+1))
-		Mc(i)=Mc(i)-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-		Mb(i)=Mb(i)+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-		Mb(i)=Mb(i)+Clouddens(i)*vsed(i)/dztot
-		x(i)=0d0!-Sn(i)
-	else
-		Mb(1)=1d0
-		x(1)=Cloud(ii)%xm_bot
-	endif
-	do i=2,nnr-1
-		dztot=(CloudR(i+1)-CloudR(i-1))/2d0
-		dz=(CloudR(i)-CloudR(i+1))
-		Mc(i)=Mc(i)-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-		Mb(i)=Mb(i)+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-		dz=(CloudR(i-1)-CloudR(i))
-		Ma(i-1)=Ma(i-1)-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
-		Mb(i)=Mb(i)+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
-		Mb(i)=Mb(i)+Clouddens(i)*vsed(i)/dztot
-
-		x(i)=-Sn(i)
-
-c coagulation
-		if(Cloud(ii)%coagulation) then
-			npart=xn(i)*Clouddens(i)
-			lmfp=CloudMMW(i)*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
-			vmol=0.5d0*lmfp*vth(i)
-			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
-			vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
-			if(Dp/rpart(i).lt.vBM) vBM=Dp/rpart(i)
-			tcoaginv=npart*pi*rpart(i)**2*(abs(vsed(i))*exp(-(vsed(i)/vfrag)**2)+2d0*vBM*exp(-(vBM/vfrag)**2))
-
-			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
-
-			tcinv(iter,i)=tcoaginv
-			j=max(1,iter-10)
-			tcoaginv=sum(tcinv(j:iter,i))/real(iter-j+1)
-
-			Mb(i)=Mb(i)-Clouddens(i)*tcoaginv
-		endif
-	enddo
-	dz=CloudR(i)-CloudR(i-1)
-	Mb(nnr)=Kd(i)/dz-vsed(i)
-	Ma(nnr-1)=-Kd(i)/dz
-	x(nnr)=0d0
-
-	NRHS=1
-c	call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
-	call dgtsv(nnr,NRHS,Ma,Mb,Mc,x,nnr,info)
-	
-	do i=1,nnr
-		if(x(i).lt.0d0) x(i)=0d0
-	enddo
-	xn(1:nnr)=(x(1:nnr)+xn(1:nnr)*m_nuc)/2d0
-
-	if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
-c equations for mass in Nuclii
-		Ma=0d0
-		Mb=0d0
-		Mc=0d0
-		x=0d0
-		if(freeflow) then
-			i=1
-			dztot=(CloudR(i+1)-CloudR(i))
-			dz=(CloudR(i)-CloudR(i+1))
-			Mc(i)=Mc(i)-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-			Mb(i)=Mb(i)+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-			Mb(i)=Mb(i)+Clouddens(i)*vsed(i)/dztot
-			x(i)=0d0!-Sn(i)
-		else
-			Mb(1)=1d0
-			x(1)=Cloud(ii)%xm_bot
-		endif
-		do i=2,nnr-1
-			dztot=(CloudR(i+1)-CloudR(i-1))/2d0
-			dz=(CloudR(i)-CloudR(i+1))
-			Mc(i)=Mc(i)-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-			Mb(i)=Mb(i)+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-			dz=(CloudR(i-1)-CloudR(i))
-			Ma(i-1)=Ma(i-1)-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
-			Mb(i)=Mb(i)+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
-			Mb(i)=Mb(i)+Clouddens(i)*vsed(i)/dztot
-
-			x(i)=-Sn(i)
-		enddo
-		i=nnr
-		j=j+1
-		dz=CloudR(i)-CloudR(i-1)
-		Mb(nnr)=Kd(i)/dz-vsed(i)
-		Ma(nnr-1)=-Kd(i)/dz
-		x(nnr)=0d0
-
-		NRHS=1
-c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
-		call dgtsv(nnr,NRHS,Ma,Mb,Mc,x,nnr,info)
-	
-		do i=1,nnr
-			if(x(i).lt.0d0) x(i)=0d0
-		enddo
-		xm(1:nnr)=(x(1:nnr)+xm(1:nnr))/2d0
-	else
-		xm=xn
-	endif
-
-	do i=1,nnr
-		if(.not.xm(i).gt.0d0.or..not.xn(i).gt.0d0) then
-			xn(i)=0d0
-			xm(i)=0d0
-			empty(i)=.true.
-		endif
-		if(xn(i).gt.xm(i)) then
-			xn(i)=xm(i)
-		endif
-	enddo
-
-	if(.not.Cloud(ii)%haze) then
-		xm=0d0
-	endif
-	xn(1:nnr)=xn(1:nnr)/m_nuc
-
-	if(Cloud(ii)%condensates) then
-	freeflow=Cloud(ii)%freeflow_con
-
 C=========================================================================================
 C=========================================================================================
 C=========================================================================================
@@ -978,9 +892,48 @@ C===============================================================================
 
 	j=0
 	i=1
+
+	j=j+1
+	if(Cloud(ii)%freeflow_nuc) then
+		xomp(j)=0d0
+
+		dztot=(CloudR(i+1)-CloudR(i))
+		dz=(CloudR(i)-CloudR(i+1))
+
+		ik=KL+KU+1+j-ixn(i+1)
+		AB(ik,ixn(i+1))=AB(ik,ixn(i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+
+		ik=KL+KU+1+j-ixn(i)
+		AB(ik,ixn(i))=AB(ik,ixn(i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+		AB(ik,ixn(i))=AB(ik,ixn(i))+Clouddens(i)*vsed(i)/dztot
+	else
+		ik=KL+KU+1+j-ixn(i)
+		AB(ik,ixn(i))=1d0
+		xomp(j)=Cloud(ii)%xm_bot
+	endif
+	if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+		j=j+1
+		if(Cloud(ii)%freeflow_nuc) then
+			xomp(j)=0d0
+	
+			dztot=(CloudR(i+1)-CloudR(i))
+			dz=(CloudR(i)-CloudR(i+1))
+	
+			ik=KL+KU+1+j-ixm(i+1)
+			AB(ik,ixm(i+1))=AB(ik,ixm(i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+	
+			ik=KL+KU+1+j-ixm(i)
+			AB(ik,ixm(i))=AB(ik,ixm(i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+			AB(ik,ixm(i))=AB(ik,ixm(i))+Clouddens(i)*vsed(i)/dztot
+		else
+			ik=KL+KU+1+j-ixm(i)
+			AB(ik,ixm(i))=1d0
+			xomp(j)=Cloud(ii)%xm_bot
+		endif
+	endif
 	do iCS=1,nCS
 		j=j+1
-		if(freeflow) then
+		if(Cloud(ii)%freeflow_con) then
 c assume continuous flux at the bottom (dF/dz=Sc=0)
 			xomp(j)=0d0
 
@@ -1019,7 +972,67 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 		enddo
 	endif
 	do i=2,nnr-1
-		if(.not.empty(i)) then
+		j=j+1
+
+		dztot=(CloudR(i+1)-CloudR(i-1))/2d0
+		dz=(CloudR(i)-CloudR(i+1))
+		ik=KL+KU+1+j-ixn(i+1)
+		AB(ik,ixn(i+1))=AB(ik,ixn(i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+
+		ik=KL+KU+1+j-ixn(i)
+		AB(ik,ixn(i))=AB(ik,ixn(i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+
+		dz=(CloudR(i-1)-CloudR(i))
+		ik=KL+KU+1+j-ixn(i-1)
+		AB(ik,ixn(i-1))=AB(ik,ixn(i-1))-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
+
+		ik=KL+KU+1+j-ixn(i)
+		AB(ik,ixn(i))=AB(ik,ixn(i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
+		AB(ik,ixn(i))=AB(ik,ixn(i))+Clouddens(i)*vsed(i)/dztot
+
+		xomp(j)=-Sn(i)/m_nuc
+
+c coagulation
+		if(Cloud(ii)%coagulation) then
+			npart=xn(i)*Clouddens(i)
+			lmfp=CloudMMW(i)*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
+			vmol=0.5d0*lmfp*vth(i)
+			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
+			vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
+			if(Dp/rpart(i).lt.vBM) vBM=Dp/rpart(i)
+			tcoaginv=npart*pi*rpart(i)**2*(abs(vsed(i))*exp(-(vsed(i)/vfrag)**2)+2d0*vBM*exp(-(vBM/vfrag)**2))
+
+			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
+
+			tcinv(iter,i)=tcoaginv
+			tcoaginv=sum(tcinv(max(1,iter-10):iter,i))/real(iter-max(1,iter-10)+1)
+
+			ik=KL+KU+1+j-ixn(i)
+			AB(ik,ixn(i))=AB(ik,ixn(i))-Clouddens(i)*tcoaginv
+		endif
+
+		if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+			j=j+1
+	
+			dztot=(CloudR(i+1)-CloudR(i-1))/2d0
+			dz=(CloudR(i)-CloudR(i+1))
+			ik=KL+KU+1+j-ixm(i+1)
+			AB(ik,ixm(i+1))=AB(ik,ixm(i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+	
+			ik=KL+KU+1+j-ixm(i)
+			AB(ik,ixm(i))=AB(ik,ixm(i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+	
+			dz=(CloudR(i-1)-CloudR(i))
+			ik=KL+KU+1+j-ixm(i-1)
+			AB(ik,ixm(i-1))=AB(ik,ixm(i-1))-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
+	
+			ik=KL+KU+1+j-ixm(i)
+			AB(ik,ixm(i))=AB(ik,ixm(i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
+			AB(ik,ixm(i))=AB(ik,ixm(i))+Clouddens(i)*vsed(i)/dztot
+	
+			xomp(j)=-Sn(i)
+		endif
+
 		do iCS=1,nCS
 			j=j+1
 	
@@ -1045,13 +1058,6 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			ik=KL+KU+1+j-ixc(iCS,i)
 			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
 		enddo
-		else
-		do iCS=1,nCS
-			j=j+1
-			ik=KL+KU+1+j-ixc(iCS,i)
-			AB(ik,ixc(iCS,i))=1d0
-		enddo
-		endif
 
 		do iVS=1,nVS
 			if(v_include(iVS)) then
@@ -1071,7 +1077,6 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 
 				ik=KL+KU+1+j-ixv(iVS,i)
 				AB(ik,ixv(iVS,i))=AB(ik,ixv(iVS,i))+(0.5d0*(Kg(i-1)*Clouddens(i-1)+Kg(i)*Clouddens(i))/dz)/dztot
-
 	
 				do iCS=1,nCS
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
@@ -1085,6 +1090,26 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 	enddo
 	i=nnr
 	dz=CloudR(i)-CloudR(i-1)
+
+	j=j+1
+	ik=KL+KU+1+j-ixn(i)
+	AB(ik,ixn(i))=Kd(i)/dz-vsed(i)
+
+	ik=KL+KU+1+j-ixn(i-1)
+	AB(ik,ixn(i-1))=-Kd(i)/dz
+
+	xomp(j)=0d0
+
+	if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+		j=j+1
+		ik=KL+KU+1+j-ixm(i)
+		AB(ik,ixm(i))=Kd(i)/dz-vsed(i)
+	
+		ik=KL+KU+1+j-ixm(i-1)
+		AB(ik,ixm(i-1))=-Kd(i)/dz
+	
+		xomp(j)=0d0
+	endif
 	do iCS=1,nCS
 		j=j+1
 		ik=KL+KU+1+j-ixc(iCS,i)
@@ -1122,6 +1147,16 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 
 	f=0.5
 	do i=1,nnr
+		xn(i)=(xn(i)*f+xomp(ixn(i))*(1d0-f))
+		if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+			xm(i)=(xm(i)*f+xomp(ixm(i))*(1d0-f))
+		else
+			if(.not.Cloud(ii)%haze) then
+				xm(i)=0d0
+			else
+				xm(i)=xn(i)*m_nuc
+			endif
+		endif
 		do iCS=1,nCS
 			if(empty(i)) xomp(ixc(iCS,i))=0d0
 			xc(iCS,i)=(xc(iCS,i)*f+xomp(ixc(iCS,i))*(1d0-f))
@@ -1140,19 +1175,6 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			if(xv(iVS,i).lt.0d0) xv(iVS,i)=0d0
 		enddo
 	enddo
-
-	else
-
-	do i=1,nnr
-		do iCS=1,nCS
-			xc(iCS,i)=0d0
-		enddo
-		do iVS=1,nVS
-			xv(iVS,i)=xv_bot(iVS)
-		enddo
-	enddo
-
-	endif
 
 C=========================================================================================
 C=========================================================================================
@@ -1558,6 +1580,20 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	parameter(c0=10.53,c1=-2161.0,c2=-86596.0)
 
 	Pvap=exp(c0+c1/T+c2/T**2)
+	liquid=.true.
+
+	return
+	end
+	
+
+	subroutine PvapSiO(T,Pvap,liquid)
+	IMPLICIT NONE
+	real*8 T,Pvap,Pl,Pi
+	logical liquid
+	real*8 c0,c1
+	parameter(c0=-4.95200E+04,c1=3.25200E+01)
+
+	Pvap=1d-6*exp(c0/T+c1)
 	liquid=.true.
 
 	return
@@ -2908,6 +2944,92 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      & -0.46289E+03,-0.43835E+03,-0.41391E+03,-0.38952E+03,-0.36512E+03, 
      & -0.33934E+03,-0.31341E+03,-0.28747E+03,-0.26153E+03,-0.23558E+03, 
      & -0.20962E+03,-0.18365E+03 /
+	Tmax=Tgibbs(nG)
+	if(T.lt.Tgibbs(1)) then
+		G=Ggibbs(1)
+	else if(T.gt.Tgibbs(nG)) then
+		G=Ggibbs(nG)+(T-Tgibbs(nG))*(Ggibbs(nG-1)-Ggibbs(nG))/(Tgibbs(nG-1)-Tgibbs(nG))
+	else
+		do i=1,nG-1
+			if(T.ge.Tgibbs(i).and.T.le.Tgibbs(i+1)) then
+				G=Ggibbs(i)+(T-Tgibbs(i))*(Ggibbs(i+1)-Ggibbs(i))/(Tgibbs(i+1)-Tgibbs(i))
+				return
+			endif
+		enddo
+	endif
+	return
+	end
+	subroutine Gibbs_Mn_g(T,G)
+	IMPLICIT NONE
+	integer nG,j,i
+	real*8 T,G,Tmax
+	real*8 Tgibbs(          65),Ggibbs(          65)
+	parameter(nG=          65)
+	data (Tgibbs(j),j=1,          65) /
+     &  0.00000E+00, 0.10000E+03, 0.20000E+03, 0.25000E+03, 0.29815E+03, 
+     &  0.30000E+03, 0.35000E+03, 0.40000E+03, 0.45000E+03, 0.50000E+03, 
+     &  0.60000E+03, 0.70000E+03, 0.80000E+03, 0.90000E+03, 0.10000E+04, 
+     &  0.11000E+04, 0.12000E+04, 0.13000E+04, 0.14000E+04, 0.15000E+04, 
+     &  0.16000E+04, 0.17000E+04, 0.18000E+04, 0.19000E+04, 0.20000E+04, 
+     &  0.21000E+04, 0.22000E+04, 0.23000E+04, 0.24000E+04, 0.25000E+04, 
+     &  0.26000E+04, 0.27000E+04, 0.28000E+04, 0.29000E+04, 0.30000E+04, 
+     &  0.31000E+04, 0.32000E+04, 0.33000E+04, 0.34000E+04, 0.35000E+04, 
+     &  0.36000E+04, 0.37000E+04, 0.38000E+04, 0.39000E+04, 0.40000E+04, 
+     &  0.41000E+04, 0.42000E+04, 0.43000E+04, 0.44000E+04, 0.45000E+04, 
+     &  0.46000E+04, 0.47000E+04, 0.48000E+04, 0.49000E+04, 0.50000E+04, 
+     &  0.51000E+04, 0.52000E+04, 0.53000E+04, 0.54000E+04, 0.55000E+04, 
+     &  0.56000E+04, 0.57000E+04, 0.58000E+04, 0.59000E+04, 0.60000E+04 /
+	data (Ggibbs(j),j=1,          65) /
+     &  0.28205E+03, 0.26932E+03, 0.25500E+03, 0.24785E+03, 0.24101E+03, 
+     &  0.24075E+03, 0.23369E+03, 0.22667E+03, 0.21971E+03, 0.21280E+03, 
+     &  0.19912E+03, 0.18562E+03, 0.17230E+03, 0.15916E+03, 0.14624E+03, 
+     &  0.13367E+03, 0.12125E+03, 0.10899E+03, 0.96927E+02, 0.85238E+02, 
+     &  0.74375E+02, 0.63820E+02, 0.53414E+02, 0.43148E+02, 0.33015E+02, 
+     &  0.23008E+02, 0.13121E+02, 0.33480E+01, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00 /
+	Tmax=Tgibbs(nG)
+	if(T.lt.Tgibbs(1)) then
+		G=Ggibbs(1)
+	else if(T.gt.Tgibbs(nG)) then
+		G=Ggibbs(nG)+(T-Tgibbs(nG))*(Ggibbs(nG-1)-Ggibbs(nG))/(Tgibbs(nG-1)-Tgibbs(nG))
+	else
+		do i=1,nG-1
+			if(T.ge.Tgibbs(i).and.T.le.Tgibbs(i+1)) then
+				G=Ggibbs(i)+(T-Tgibbs(i))*(Ggibbs(i+1)-Ggibbs(i))/(Tgibbs(i+1)-Tgibbs(i))
+				return
+			endif
+		enddo
+	endif
+	return
+	end
+	subroutine Gibbs_Mn_s(T,G,Tmax)
+	IMPLICIT NONE
+	integer nG,j,i
+	real*8 T,G,Tmax
+	real*8 Tgibbs(          35),Ggibbs(          35)
+	parameter(nG=          35)
+	data (Tgibbs(j),j=1,          35) /
+     &  0.00000E+00, 0.10000E+03, 0.20000E+03, 0.25000E+03, 0.29815E+03, 
+     &  0.30000E+03, 0.35000E+03, 0.40000E+03, 0.45000E+03, 0.50000E+03, 
+     &  0.60000E+03, 0.70000E+03, 0.80000E+03, 0.90000E+03, 0.98000E+03, 
+     &  0.11000E+04, 0.12000E+04, 0.13000E+04, 0.13610E+04, 0.14120E+04, 
+     &  0.15190E+04, 0.17000E+04, 0.18000E+04, 0.19000E+04, 0.20000E+04, 
+     &  0.21000E+04, 0.22000E+04, 0.23000E+04, 0.24000E+04, 0.25000E+04, 
+     &  0.26000E+04, 0.27000E+04, 0.28000E+04, 0.29000E+04, 0.30000E+04 /
+	data (Ggibbs(j),j=1,          35) /
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.10000E+04, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.14000E+04, 0.15000E+04, 
+     &  0.16000E+04, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.63150E+01, 0.15874E+02, 
+     &  0.25334E+02, 0.34698E+02, 0.43970E+02, 0.53155E+02, 0.62256E+02 /
 	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
