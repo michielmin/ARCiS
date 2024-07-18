@@ -41,7 +41,7 @@
 	itimecloud=itimecloud-itime
 	ctimecloud=ctimecloud+1
 
-	nVS=13
+	nVS=14
 	allocate(v_names(nVS),v_atoms(nVS,N_atoms),v_include(nVS))
 	
 	v_atoms=0d0
@@ -90,6 +90,9 @@
 
 	v_names(13)="Mn"
 	v_atoms(13,27)=1
+
+	v_names(14)="Cr"
+	v_atoms(14,26)=1
 
 	v_include=.false.
 
@@ -341,6 +344,12 @@
 				v_cloud(i,13)=1
 				v_include(13)=.true.
 				rhodust(i)=7.43d0
+			case('Cr')
+				CSname(i)='Cr'
+				atoms_cloud(i,26)=1
+				v_cloud(i,14)=1
+				v_include(14)=.true.
+				rhodust(i)=7.19d0
 			case('NH4Cl')
 				CSname(i)='NH4Cl'
 				atoms_cloud(i,1)=4
@@ -686,6 +695,8 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 							maxT(iCS)=5000d0
 						case("Mn")
 							call Gibbs_Mn_s(CloudT(i),Gibbs,maxT(iCS))
+						case("Cr")
+							call Gibbs_Cr_s(CloudT(i),Gibbs,maxT(iCS))
 						case default
 							print*,'Unknown condensate'
 							stop
@@ -720,6 +731,8 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 									call Gibbs_Zn_g(CloudT(i),Gibbs)
 								case("Mn")
 									call Gibbs_Mn_g(CloudT(i),Gibbs)
+								case("Cr")
+									call Gibbs_Cr_g(CloudT(i),Gibbs)
 								case default
 									print*,'Unknown gas phase'
 									stop
@@ -3030,6 +3043,94 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.63150E+01, 0.15874E+02, 
      &  0.25334E+02, 0.34698E+02, 0.43970E+02, 0.53155E+02, 0.62256E+02 /
+	Tmax=Tgibbs(nG)
+	if(T.lt.Tgibbs(1)) then
+		G=Ggibbs(1)
+	else if(T.gt.Tgibbs(nG)) then
+		G=Ggibbs(nG)+(T-Tgibbs(nG))*(Ggibbs(nG-1)-Ggibbs(nG))/(Tgibbs(nG-1)-Tgibbs(nG))
+	else
+		do i=1,nG-1
+			if(T.ge.Tgibbs(i).and.T.le.Tgibbs(i+1)) then
+				G=Ggibbs(i)+(T-Tgibbs(i))*(Ggibbs(i+1)-Ggibbs(i))/(Tgibbs(i+1)-Tgibbs(i))
+				return
+			endif
+		enddo
+	endif
+	return
+	end
+	subroutine Gibbs_Cr_s(T,G,Tmax)
+	IMPLICIT NONE
+	integer nG,j,i
+	real*8 T,G,Tmax
+	real*8 Tgibbs(          40),Ggibbs(          40)
+	parameter(nG=          40)
+	data (Tgibbs(j),j=1,          40) /
+     &  0.00000E+00, 0.10000E+03, 0.20000E+03, 0.25000E+03, 0.29815E+03, 
+     &  0.30000E+03, 0.35000E+03, 0.40000E+03, 0.45000E+03, 0.50000E+03, 
+     &  0.60000E+03, 0.70000E+03, 0.80000E+03, 0.90000E+03, 0.10000E+04, 
+     &  0.11000E+04, 0.12000E+04, 0.13000E+04, 0.14000E+04, 0.15000E+04, 
+     &  0.16000E+04, 0.17000E+04, 0.18000E+04, 0.19000E+04, 0.20000E+04, 
+     &  0.21000E+04, 0.22000E+04, 0.23000E+04, 0.24000E+04, 0.25000E+04, 
+     &  0.26000E+04, 0.27000E+04, 0.28000E+04, 0.29000E+04, 0.30000E+04, 
+     &  0.31000E+04, 0.32000E+04, 0.33000E+04, 0.34000E+04, 0.35000E+04 /
+	data (Ggibbs(j),j=1,          40) /
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.55080E+01, 
+     &  0.16982E+02, 0.28430E+02, 0.39855E+02, 0.51258E+02, 0.62641E+02 /
+	Tmax=Tgibbs(nG)
+	if(T.lt.Tgibbs(1)) then
+		G=Ggibbs(1)
+	else if(T.gt.Tgibbs(nG)) then
+		G=Ggibbs(nG)+(T-Tgibbs(nG))*(Ggibbs(nG-1)-Ggibbs(nG))/(Tgibbs(nG-1)-Tgibbs(nG))
+	else
+		do i=1,nG-1
+			if(T.ge.Tgibbs(i).and.T.le.Tgibbs(i+1)) then
+				G=Ggibbs(i)+(T-Tgibbs(i))*(Ggibbs(i+1)-Ggibbs(i))/(Tgibbs(i+1)-Tgibbs(i))
+				return
+			endif
+		enddo
+	endif
+	return
+	end
+	subroutine Gibbs_Cr_g(T,G)
+	IMPLICIT NONE
+	integer nG,j,i
+	real*8 T,G,Tmax
+	real*8 Tgibbs(          65),Ggibbs(          65)
+	parameter(nG=          65)
+	data (Tgibbs(j),j=1,          65) /
+     &  0.00000E+00, 0.10000E+03, 0.20000E+03, 0.25000E+03, 0.29815E+03, 
+     &  0.30000E+03, 0.35000E+03, 0.40000E+03, 0.45000E+03, 0.50000E+03, 
+     &  0.60000E+03, 0.70000E+03, 0.80000E+03, 0.90000E+03, 0.10000E+04, 
+     &  0.11000E+04, 0.12000E+04, 0.13000E+04, 0.14000E+04, 0.15000E+04, 
+     &  0.16000E+04, 0.17000E+04, 0.18000E+04, 0.19000E+04, 0.20000E+04, 
+     &  0.21000E+04, 0.22000E+04, 0.23000E+04, 0.24000E+04, 0.25000E+04, 
+     &  0.26000E+04, 0.27000E+04, 0.28000E+04, 0.29000E+04, 0.30000E+04, 
+     &  0.31000E+04, 0.32000E+04, 0.33000E+04, 0.34000E+04, 0.35000E+04, 
+     &  0.36000E+04, 0.37000E+04, 0.38000E+04, 0.39000E+04, 0.40000E+04, 
+     &  0.41000E+04, 0.42000E+04, 0.43000E+04, 0.44000E+04, 0.45000E+04, 
+     &  0.46000E+04, 0.47000E+04, 0.48000E+04, 0.49000E+04, 0.50000E+04, 
+     &  0.51000E+04, 0.52000E+04, 0.53000E+04, 0.54000E+04, 0.55000E+04, 
+     &  0.56000E+04, 0.57000E+04, 0.58000E+04, 0.59000E+04, 0.60000E+04 /
+	data (Ggibbs(j),j=1,          65) /
+     &  0.39534E+03, 0.38238E+03, 0.36737E+03, 0.35982E+03, 0.35255E+03, 
+     &  0.35227E+03, 0.34475E+03, 0.33725E+03, 0.32979E+03, 0.32235E+03, 
+     &  0.30755E+03, 0.29288E+03, 0.27831E+03, 0.26385E+03, 0.24950E+03, 
+     &  0.23526E+03, 0.22114E+03, 0.20713E+03, 0.19325E+03, 0.17949E+03, 
+     &  0.16586E+03, 0.15237E+03, 0.13901E+03, 0.12578E+03, 0.11269E+03, 
+     &  0.99743E+02, 0.87589E+02, 0.75788E+02, 0.64044E+02, 0.52350E+02, 
+     &  0.40702E+02, 0.29096E+02, 0.17528E+02, 0.59940E+01, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00 /
 	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
