@@ -2137,8 +2137,8 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%rho_mat=3.0
 		Cloud(i)%nax=1
 		Cloud(i)%globalKzz=.false.
-		Cloud(i)%freeflow_nuc=.false.
-		Cloud(i)%freeflow_con=.false.
+		Cloud(i)%freeflow_nuc=.true.
+		Cloud(i)%freeflow_con=.true.
 		Cloud(i)%condenseNaK=.true.
 		Cloud(i)%usefsed=.false.
 		Cloud(i)%fsed_alpha=1d0

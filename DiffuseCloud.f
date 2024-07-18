@@ -25,7 +25,7 @@
 	real*8 logP(nr),logx(nr),dlogx(nr),SiSil,OSil,St
 	real*8,allocatable :: logCloudP(:),ScTot(:,:,:),cryst(:,:),fsil(:,:),fsil2(:,:),CloudtauUV(:),CloudkappaUV(:)
 	integer INCFD,IERR
-	logical SKIP,freeflow,liq
+	logical SKIP,liq
 	real*8 time,tcrystinv,nucryst,Tcryst
 	integer itime
 !$OMP THREADPRIVATE(Sc,vthv,Aomp,xomp,IWORKomp,AB)
@@ -533,41 +533,14 @@ c start the loop
 	endif
 
 	empty=.false.
-	freeflow=Cloud(ii)%freeflow_nuc
 
 c equations for number of Nuclii
 	Ma=0d0
 	Mb=0d0
 	Mc=0d0
 	x=0d0
-	if(freeflow) then
-		i=1
-		dztot=(CloudR(i+1)-CloudR(i))
-		dz=(CloudR(i)-CloudR(i+1))
-		Mc(i)=Mc(i)-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-		Mb(i)=Mb(i)+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-		Mb(i)=Mb(i)+Clouddens(i)*vsed(i)/dztot
-		x(i)=-Sn(i)
-c coagulation
-		if(Cloud(ii)%coagulation) then
-			npart=xn(i)*Clouddens(i)
-			lmfp=2.3d0*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
-			vmol=0.5d0*lmfp*vth(i)
-			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
-			tcoaginv=sqrt(pi)*3d0*(sum(xc(1:nCS,i))+xm(i))*Ggrav*Mplanet/(8d0*vth(i)*CloudR(i)**2)
-			tcoaginv=tcoaginv*exp(-(vsed(i)/vfrag)**2)
-			vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
-			if(Dp/rpart(i).lt.vBM) vBM=Dp/rpart(i)
-			tcoaginv=tcoaginv+2d0*pi*rpart(i)**2*npart*vBM*exp(-(vBM/vfrag)**2)
-			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
-			tcinv(iter,i)=tcoaginv
-			tcoaginv=sum(tcinv(1:iter,i))/real(iter)
-			Mb(i)=Mb(i)-Clouddens(i)*tcoaginv
-		endif
-	else
-		Mb(1)=1d0
-		x(1)=Cloud(ii)%xm_bot
-	endif
+	Mb(1)=1d0
+	x(1)=Cloud(ii)%xm_bot
 	do i=2,nnr-1
 		dztot=(CloudR(i+1)-CloudR(i-1))/2d0
 		dz=(CloudR(i)-CloudR(i+1))
@@ -627,18 +600,8 @@ c equations for mass in Nuclii
 		Mb=0d0
 		Mc=0d0
 		x=0d0
-		if(freeflow) then
-			i=1
-			dztot=(CloudR(i+1)-CloudR(i))
-			dz=(CloudR(i)-CloudR(i+1))
-			Mc(i)=Mc(i)-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-			Mb(i)=Mb(i)+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-			Mb(i)=Mb(i)+Clouddens(i)*vsed(i)/dztot
-			x(i)=-Sn(i)
-		else
-			Mb(1)=1d0
-			x(1)=Cloud(ii)%xm_bot
-		endif
+		Mb(1)=1d0
+		x(1)=Cloud(ii)%xm_bot
 		do i=2,nnr-1
 			dztot=(CloudR(i+1)-CloudR(i-1))/2d0
 			dz=(CloudR(i)-CloudR(i+1))
@@ -687,13 +650,12 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 	xn(1:nnr)=xn(1:nnr)/m_nuc
 
 	if(Cloud(ii)%condensates) then
-	freeflow=Cloud(ii)%freeflow_con
 
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku,dztot)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,Kd,Kg,xn,empty,docondense,
-!$OMP&		NN,rpart,ixc,vsed,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot,xm,freeflow)
+!$OMP&		NN,rpart,ixc,vsed,ixv,m_nuc,mpart,xv_bot,xc,xv,iter,nTiter,i3D,ScTot,xm)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do iCS=1,nCS
@@ -712,22 +674,8 @@ c equations for material
 	j=0
 	i=1
 	j=j+1
-	if(freeflow) then
-c assume continuous flux at the bottom (dF/dz=Sc=0)
-		xomp(j)=0d0
-
-		dztot=(CloudR(i+1)-CloudR(i))
-		dz=(CloudR(i)-CloudR(i+1))
-		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
-
-		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Sc(i)*xn(i)*Clouddens(i)!*CloudMR(i)/mixrat_bot
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-Sc(i)*densv(i,iCS)/mpart(i)
-	else
-		Aomp(j,ixc(iCS,i))=1d0
-		xomp(j)=0d0
-	endif
+	Aomp(j,ixc(iCS,i))=1d0
+	xomp(j)=0d0
 	j=j+1
 	Aomp(j,ixv(iCS,i))=1d0
 	xomp(j)=xv_bot(iCS)
@@ -950,25 +898,8 @@ c equations for material
 	j=0
 	i=1
 	j=j+1
-	if(freeflow) then
-c assume continuous flux at the bottom (dF/dz=Sc=0)
-		tcrystinv=nucryst*exp(-Tcryst/CloudT(i))
-		Aomp(j,ixv(iCS,i))=-Sc(i)*xn(i)*Clouddens(i)!*CloudMR(i)/mixrat_bot
-		Aomp(j,ixc(iCS,i))=Sc(i)*densv(i,iCS)/mpart(i)
-		xomp(j)=0d0
-
-		dztot=(CloudR(i+1)-CloudR(i))
-		dz=(CloudR(i)-CloudR(i+1))
-		Aomp(j,ixc(iCS,i+1))=Aomp(j,ixc(iCS,i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
-
-		Aomp(j,ixv(iCS,i))=Aomp(j,ixv(iCS,i))+Clouddens(i)*tcrystinv
-		Aomp(j,ixc(iCS,i))=Aomp(j,ixc(iCS,i))-ScTot(2,4,i)-ScTot(2,5,i)-ScTot(2,6,i)
-	else
-		Aomp(j,ixc(iCS,i))=1d0
-		xomp(j)=0d0
-	endif
+	Aomp(j,ixc(iCS,i))=1d0
+	xomp(j)=0d0
 	j=j+1
 	Aomp(j,ixc(iCS,i))=1d0
 	Aomp(j,ixv(iCS,i))=1d0
