@@ -722,6 +722,111 @@ c	condensates=(condensates.or.cloudcompute)
 					Cloud(i)%material(15)=Cloud(i)%hazetype
 				endif
 			else if(Cloud(i)%type.eq.'CONDENSATION') then
+				if(Cloud(i)%opacitytype.eq.'AUTO') Cloud(i)%opacitytype='MATERIAL'
+				if(Cloud(i)%opacitytype.eq.'MATERIAL') then
+					call getenv('HOME',homedir)
+					do j=1,Cloud(i)%nmat
+						if(Cloud(i)%material(j).eq.'AUTO') then
+							select case(Cloud(i)%condensate(j))
+								case('SiO2','QUARTZ')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/SiO2_amorph.dat'
+									Cloud(i)%nax(j)=1
+								case('MgSiO3','ENSTATITE')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/MgSiO3_amorph_glass.dat'
+									Cloud(i)%nax(j)=1
+								case('Mg2SiO4','FORSTERITE')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Mg2SiO4_amorph_sol-gel.dat'
+									Cloud(i)%nax(j)=1
+								case('MgO')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/MgO.dat'
+									Cloud(i)%nax(j)=1
+								case('H2O','WATER')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/H2O_s.dat'
+									Cloud(i)%nax(j)=1
+								case('Fe','IRON')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Fe.dat'
+									Cloud(i)%nax(j)=1
+								case('FeS','TROILITE')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/FeS.dat'
+									Cloud(i)%nax(j)=1
+								case('FeO')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/FeO.dat'
+									Cloud(i)%nax(j)=1
+								case('Fe2O3')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Fe2O3.dat'
+									Cloud(i)%nax(j)=1
+								case('Al2O3','CORRUNDUM')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Al2O3.dat'
+									Cloud(i)%nax(j)=1
+								case("NaCl")
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/NaCl.dat'
+									Cloud(i)%nax(j)=1
+								case("KCl")
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/KCl.dat'
+									Cloud(i)%nax(j)=1
+								case("Na2S")
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Na2S.dat'
+									Cloud(i)%nax(j)=1
+								case("NH3","AMONIA")
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/NH3.dat'
+									Cloud(i)%nax(j)=1
+								case('TiO2')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/TiO2_anatase.dat'
+									Cloud(i)%nax(j)=1
+								case('H2SO4')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/H2SO4.dat'
+									Cloud(i)%nax(j)=1
+								case('ZnS')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/ZnS.dat'
+									Cloud(i)%nax(j)=1
+								case('MnS')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/MnS.dat'
+									Cloud(i)%nax(j)=1
+								case('Zn')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Zn.dat'
+									Cloud(i)%nax(j)=1
+								case('Mn')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Mn.dat'
+									Cloud(i)%nax(j)=1
+								case('Cr')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Cr.dat'
+									Cloud(i)%nax(j)=1
+								case('NH4Cl')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/NH4Cl.dat'
+									Cloud(i)%nax(j)=1
+								case('SiO')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/SiO.dat'
+									Cloud(i)%nax(j)=1
+								case default
+									call output("Unknown condensate")
+									stop
+							end select
+						endif
+					enddo
+				endif
 				if(Cloud(i)%haze) then
 					Cloud(i)%nmat=Cloud(i)%nmat+1
 					Cloud(i)%material(Cloud(i)%nmat)=Cloud(i)%hazetype
@@ -1986,7 +2091,7 @@ c  GGchem was still implemented slightly wrong.
 	nr_cloud=10
 
 	do i=1,nclouds
-		Cloud(i)%opacitytype=' '
+		Cloud(i)%opacitytype='AUTO'
 		Cloud(i)%type=' '
 		Cloud(i)%P=1d-4
 		Cloud(i)%dP=10d0
@@ -2020,7 +2125,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%e2_par=0.01
 		Cloud(i)%hazetype='SOOT'
 		Cloud(i)%nmat=1
-		Cloud(i)%material=' '
+		Cloud(i)%material='AUTO'
 		Cloud(i)%lnkfile=' '
 		Cloud(i)%condensate='SILICATE'
 		Cloud(i)%Kzz=-1d0
