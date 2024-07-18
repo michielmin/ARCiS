@@ -7,11 +7,11 @@
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),dx(:),vth(:)
 	real*8,allocatable :: Sn(:),mpart(:)
-	real*8,allocatable :: An(:,:),y(:,:),Ma(:),Mb(:),Mc(:),CloudHp(:),CloudMMW(:)
+	real*8,allocatable :: y(:,:),CloudHp(:),CloudMMW(:)
 	real*8,allocatable :: at_ab(:,:)
-	real*8,allocatable,save :: Sc(:,:),vthv(:),xomp(:),IWORKomp(:),AB(:,:)
+	real*8,allocatable,save :: Sc(:,:),vthv(:),IWORKomp(:),AB(:,:)
 	real*8,allocatable :: tcinv(:,:),rho_av(:),Kd(:),Kg(:),Km(:)
-	real*8 dz,z12,z13,z12_2,z13_2,g,rr,mutot,npart,tot,lambda,tot1,tot2,tot3
+	real*8 dz,g,rr,mutot,npart,tot,lambda,tot1,tot2,tot3
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
 	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
@@ -19,7 +19,7 @@
 	real*8 sigmastar,Sigmadot,Pstar,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc,Gibbs
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
-	real*8,allocatable :: CrV_prev0(:),CrT_prev0(:),xn_iter(:,:),xm_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
+	real*8,allocatable :: xn_iter(:,:),xm_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
 	logical,allocatable :: empty(:),docondense(:)
 	integer iCS,ir,nrdo,iconv,nconv,iVS,nVS,NStot,ik
 	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed
@@ -597,11 +597,6 @@ c	print*,xv_bot(1:7)
 	allocate(x(NN))
 	allocate(IWORK(10*NN*NN))
 
-	allocate(An(nnr,nnr))
-	allocate(Ma(nnr))
-	allocate(Mb(nnr))
-	allocate(Mc(nnr))
-
 	if(.not.computeT.or.nTiter.eq.1) then
 		rpart=Cloud(ii)%rnuc
 		xn=0d0
@@ -830,7 +825,6 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 
 	allocate(vthv(nnr))
 	allocate(Sc(nnr,nCS))
-	allocate(xomp(NN))
 	allocate(IWORKomp(NN))
 	allocate(AB(2*NStot+NStot+1,NN))
 
@@ -896,7 +890,7 @@ C===============================================================================
 	enddo
 	Sat=Sat0*fSat
 
-	xomp=0d0
+	x=0d0
 
 	AB=0d0
 
@@ -908,7 +902,7 @@ C===============================================================================
 
 	j=j+1
 	if(Cloud(ii)%freeflow_nuc) then
-		xomp(j)=0d0
+		x(j)=0d0
 
 		dztot=(CloudR(i+1)-CloudR(i))
 		dz=(CloudR(i)-CloudR(i+1))
@@ -922,12 +916,12 @@ C===============================================================================
 	else
 		ik=KL+KU+1+j-ixn(i)
 		AB(ik,ixn(i))=1d0
-		xomp(j)=Cloud(ii)%xm_bot
+		x(j)=Cloud(ii)%xm_bot
 	endif
 	if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
 		j=j+1
 		if(Cloud(ii)%freeflow_nuc) then
-			xomp(j)=0d0
+			x(j)=0d0
 	
 			dztot=(CloudR(i+1)-CloudR(i))
 			dz=(CloudR(i)-CloudR(i+1))
@@ -941,14 +935,14 @@ C===============================================================================
 		else
 			ik=KL+KU+1+j-ixm(i)
 			AB(ik,ixm(i))=1d0
-			xomp(j)=Cloud(ii)%xm_bot
+			x(j)=Cloud(ii)%xm_bot
 		endif
 	endif
 	do iCS=1,nCS
 		j=j+1
 		if(Cloud(ii)%freeflow_con) then
 c assume continuous flux at the bottom (dF/dz=Sc=0)
-			xomp(j)=0d0
+			x(j)=0d0
 
 			dztot=(CloudR(i+1)-CloudR(i))
 			dz=(CloudR(i)-CloudR(i+1))
@@ -962,7 +956,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 		else
 			ik=KL+KU+1+j-ixc(iCS,i)
 			AB(ik,ixc(iCS,i))=1d0
-			xomp(j)=0d0
+			x(j)=0d0
 		endif
 	enddo
 	if(dochemistry) then
@@ -971,7 +965,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 				j=j+1
 				ik=KL+KU+1+j-ixv(iVS,i)
 				AB(ik,ixv(iVS,i))=1d0
-				xomp(j)=xv_bot(iVS)
+				x(j)=xv_bot(iVS)
 			endif
 		enddo
 	else
@@ -980,7 +974,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 				j=j+1
 				ik=KL+KU+1+j-ixv(iVS,i)
 				AB(ik,ixv(iVS,i))=1d0
-				xomp(j)=xv_bot(iVS)
+				x(j)=xv_bot(iVS)
 			endif
 		enddo
 	endif
@@ -1003,7 +997,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 		AB(ik,ixn(i))=AB(ik,ixn(i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
 		AB(ik,ixn(i))=AB(ik,ixn(i))+Clouddens(i)*vsed(i)/dztot
 
-		xomp(j)=-Sn(i)/m_nuc
+		x(j)=-Sn(i)/m_nuc
 
 c coagulation
 		if(Cloud(ii)%coagulation) then
@@ -1043,7 +1037,7 @@ c coagulation
 			AB(ik,ixm(i))=AB(ik,ixm(i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
 			AB(ik,ixm(i))=AB(ik,ixm(i))+Clouddens(i)*vsed(i)/dztot
 	
-			xomp(j)=-Sn(i)
+			x(j)=-Sn(i)
 		endif
 
 		do iCS=1,nCS
@@ -1111,7 +1105,7 @@ c coagulation
 	ik=KL+KU+1+j-ixn(i-1)
 	AB(ik,ixn(i-1))=-Kd(i)/dz
 
-	xomp(j)=0d0
+	x(j)=0d0
 
 	if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
 		j=j+1
@@ -1121,7 +1115,7 @@ c coagulation
 		ik=KL+KU+1+j-ixm(i-1)
 		AB(ik,ixm(i-1))=-Kd(i)/dz
 	
-		xomp(j)=0d0
+		x(j)=0d0
 	endif
 	do iCS=1,nCS
 		j=j+1
@@ -1131,7 +1125,7 @@ c coagulation
 		ik=KL+KU+1+j-ixc(iCS,i-1)
 		AB(ik,ixc(iCS,i-1))=-Kd(i)/dz
 
-		xomp(j)=0d0!-Mc_top/Clouddens(i)
+		x(j)=0d0!-Mc_top/Clouddens(i)
 	enddo
 	do iVS=1,nVS
 		if(v_include(iVS)) then
@@ -1142,7 +1136,7 @@ c coagulation
 			ik=KL+KU+1+j-ixv(iVS,i-1)
 			AB(ik,ixv(iVS,i-1))=-Kg(i)/dz
 
-			xomp(j)=0d0!Mc_top/Clouddens(i)
+			x(j)=0d0!Mc_top/Clouddens(i)
 		endif
 	enddo
 	
@@ -1152,17 +1146,17 @@ c coagulation
 		
 	j=2*KL+KU+1
 
-	call DGBSV(NN,KL,KU,NRHS,AB,j,IWORKomp,xomp,NN,INFO)	
+	call DGBSV(NN,KL,KU,NRHS,AB,j,IWORKomp,x,NN,INFO)	
 
 	do i=1,NN
-		if(.not.xomp(i).gt.0d0) xomp(i)=0d0
+		if(.not.x(i).gt.0d0) x(i)=0d0
 	enddo
 
 	f=0.5
 	do i=1,nnr
-		xn(i)=(xn(i)*f+xomp(ixn(i))*(1d0-f))
+		xn(i)=(xn(i)*f+x(ixn(i))*(1d0-f))
 		if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
-			xm(i)=(xm(i)*f+xomp(ixm(i))*(1d0-f))
+			xm(i)=(xm(i)*f+x(ixm(i))*(1d0-f))
 		else
 			if(.not.Cloud(ii)%haze) then
 				xm(i)=0d0
@@ -1171,12 +1165,12 @@ c coagulation
 			endif
 		endif
 		do iCS=1,nCS
-			if(empty(i)) xomp(ixc(iCS,i))=0d0
-			xc(iCS,i)=(xc(iCS,i)*f+xomp(ixc(iCS,i))*(1d0-f))
+			if(empty(i)) x(ixc(iCS,i))=0d0
+			xc(iCS,i)=(xc(iCS,i)*f+x(ixc(iCS,i))*(1d0-f))
 		enddo
 		do iVS=1,nVS
 			if(v_include(iVS)) then
-				xv(iVS,i)=(xv(iVS,i)*f+xomp(ixv(iVS,i))*(1d0-f))
+				xv(iVS,i)=(xv(iVS,i)*f+x(ixv(iVS,i))*(1d0-f))
 			endif
 		enddo
 	enddo
@@ -1298,7 +1292,6 @@ c end the loop
 
 	deallocate(vthv)
 	deallocate(Sc)
-	deallocate(xomp)
 	deallocate(IWORKomp)
 	deallocate(AB)
 
@@ -1524,10 +1517,8 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	deallocate(x,dx)
 	deallocate(empty)
 	deallocate(IWORK)
-	deallocate(An)
 	deallocate(logCloudP)
 	deallocate(Kd,Kg,Km)
-	deallocate(Ma,Mb,Mc)
 	if(Cloud(ii)%hazetype.eq.'optEC') deallocate(CloudtauUV,CloudkappaUV)
 
 	return
