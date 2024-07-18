@@ -23,7 +23,67 @@ In the remainder of this document I will always use as an example for the keywor
 
 \section{Self consistent cloud formation}
 
-This setup follows the method from \cite{2019A&A...622A.121O}. The clouds are formed using diffusion and sedimentation.
+\subsection{Condensation cloud new scheme (recommended)}
+
+This setup follows the method from Huang et al. (submitted). The clouds are formed using diffusion and sedimentation following detailed condensation physics using the Gibbs free energies.
+
+\begin{description}
+\item[\texttt{type}]
+Has to be set to "CONDENSATION" to form this type of cloud
+\item[\texttt{SigmaDot}]
+The nucleation rate in g/cm$^2$
+\item[\texttt{globalKzz}]
+Set to .false. to use a value for $K_{zz}$ different from the profile set globally in the atmosphere (default is .true.)
+\item[\texttt{Kzz}]
+Value for $K_{zz}$ to use. Only used when globalKzz=.false.
+\item[\texttt{P}]
+The pressure of maximum nucleation rate in bar (default is $10^{-4}$)
+\item[\texttt{dP}]
+Width of the nucleation rate profile (default is a factor of 10)
+\item[\texttt{coagulation}] 
+When switched on computes the coagulation of cloud particles (default is .true.)
+\item[\texttt{rainout}] 
+When switched on materials that are (partly) thermally stable at the lower boundary of the atmospheric setup are (partly) removed from the mixture (default is .false.)
+\item[\texttt{Srainout}] 
+Determines the saturation ratio at the bottom above which cloud material is rained out (default is 1)
+\item[\texttt{haze}]
+Compute the cloud nuclii. In the original paper the mass and opacity of the cloud nuclii is ignored. (default is .false.)
+\item[\texttt{hazetype}]
+Determines the composition of the haze particles (only when haze=.true.). Can be any of the build-in material types.
+\item[\texttt{fmax}]
+Sets the maximum value used in the DHS computation (default is 0.8)
+\item[\texttt{freeflow\_con}]
+Sets the lower boundary condition for the condensate species to be a free-flow boundary condition in stead of fully evaporated (default is .true.)
+\item[\texttt{freeflow\_nuc}]
+Sets the lower boundary condition for the cloud nuclii to be a free-flow boundary condition in stead of $x_n=0$ (default is .true.)
+\end{description}
+
+The list of condensates currently included is:
+\begin{description}
+\item[Silicates:] SiO2, MgSiO3, Mg2SiO4, SiO
+\item[Oxides:] MgO, FeO, Fe2O3, Al2O3, TiO2
+\item[Sulfides:] FeS, Na2S, ZnS, MnS
+\item[Salts:] NaCl, KCl, NH4Cl
+\item[Metals:] Fe, Zn, Mn, Cr
+\item[Ices:] H2O, NH3
+\end{description}
+
+By default the cloud refractive index is found in the ARCiS data directorty ((\$HOME)/ARCiS/Data/refind/). This might require an update of the data directory.
+
+As an example if you want to setup a cloud layer that is computed and follows the global $K_{zz}$ profile all you have to do is:
+\\
+\inputfile{cloud1:type="CONDENSATION"}
+\inputfile{cloud1:SigmaDot=1d-12}
+\inputfile{cloud1:condensate01="SiO2"}
+\inputfile{cloud1:condensate02="MgSiO3"}
+\inputfile{cloud1:condensate03="Mg2SiO4"}
+\\
+\\
+Note that for these self-consistent cloud layers the opacities are by default computed using DHS and effective medium theory. Note that in principle any number of condensates can be defined (at the cost of increased computing time).
+
+\subsection{Condensation cloud (old scheme, not recommended)}
+
+This setup follows the method from \cite{2019A&A...622A.121O}. The clouds are formed using diffusion and sedimentation. The cloud species are condensed one by one following a prescribed condensation sequence. This has the disadvantage over the method above that multiple materials might be constrained by the same atoms in the gas phase.
 
 \begin{description}
 \item[\texttt{type}]
