@@ -12,7 +12,7 @@
 	real*8,allocatable,save :: Sc(:,:),vthv(:),IWORKomp(:),AB(:,:)
 	real*8,allocatable :: tcinv(:,:),rho_av(:),Kd(:),Kg(:),Km(:)
 	real*8 dz,g,rr,mutot,npart,tot,lambda,tot1,tot2,tot3
-	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku
+	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku,jCS
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
 	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),iVL(:,:),ixn(:),ixm(:)
@@ -20,7 +20,7 @@
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: xn_iter(:,:),xm_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
-	logical,allocatable :: empty(:),docondense(:)
+	logical,allocatable :: docondense(:)
 	integer iCS,ir,nrdo,iconv,nconv,iVS,nVS,NStot,ik
 	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed
 	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:),CloudG(:)
@@ -503,11 +503,13 @@ c	print*,xv_bot(1:7)
 
 	j=0
 	do i=1,nnr
-		j=j+1
-		ixn(i)=j
-		if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+		if(.not.Cloud(ii)%usefsed) then
 			j=j+1
-			ixm(i)=j
+			ixn(i)=j
+			if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+				j=j+1
+				ixm(i)=j
+			endif
 		endif
 		do iCS=1,nCS
 			j=j+1
@@ -559,7 +561,7 @@ c	print*,xv_bot(1:7)
 	call DPCHIM(nr,logP,logx,dlogx,INCFD)
 	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudMMW,IERR)
 
-	if(complexKzz) then
+	if(complexKzz.or.Cloud(ii)%usefsed) then
 		SKIP=.false.
 		INCFD=1
 		logx(1:nr)=log(Hp(1:nr))
@@ -593,7 +595,6 @@ c	print*,xv_bot(1:7)
 		Kg=Kd
 	endif
 
-	allocate(empty(nnr))
 	allocate(x(NN))
 	allocate(IWORK(10*NN*NN))
 
@@ -764,7 +765,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 		xv(1,1:nVS)=0d0
 		f=0.5
 		i=1
-		xv(i,1:nVS)=xv_bot(1:nVS)
+		xv(1:nVS,i)=xv_bot(1:nVS)
 		do iter=1,100
 1			continue
 			do iCS=1,nCS
@@ -791,10 +792,10 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 					c_rainout(iCS)=.true.
 					do iVS=1,nVS
 						if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
-							xv(i,iVS)=xv(i,iVS)-tot1*v_cloud(iCS,iVS)/v_cloud(iCS,iVL(i,iCS))
-							if(xv(i,iVS).lt.0d0) then
+							xv(iVS,i)=xv(iVS,i)-tot1*v_cloud(iCS,iVS)/v_cloud(iCS,iVL(i,iCS))
+							if(xv(iVS,i).lt.0d0) then
 								f=f/2d0
-								xv(i,1:nVS)=xv_bot(1:nVS)
+								xv(1:nVS,i)=xv_bot(1:nVS)
 								goto 1
 							endif
 						endif
@@ -803,12 +804,12 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 			enddo
 			maxerr=0d0
 			do iVS=1,nVS
-				if((xv_bot(iVS)+xv(i,iVS)).gt.0d0) then
-					tot1=abs(xv_bot(iVS)-xv(i,iVS))/(xv_bot(iVS)+xv(i,iVS))
+				if((xv_bot(iVS)+xv(iVS,i)).gt.0d0) then
+					tot1=abs(xv_bot(iVS)-xv(iVS,i))/(xv_bot(iVS)+xv(iVS,i))
 					if(tot1.gt.maxerr) maxerr=tot1
 				endif
 			enddo
-			xv_bot(1:nVS)=xv(i,1:nVS)
+			xv_bot(1:nVS)=xv(1:nVS,i)
 			f=(0.5d0+f)/2d0
 			if(maxerr.lt.1d-2) exit
 		enddo
@@ -835,32 +836,6 @@ c start the loop
 
 	vsed=0d0
 	do i=1,nnr
-		cs=sqrt(kb*CloudT(i)/(CloudMMW(i)*mp))
-		vth(i)=sqrt(8d0*kb*CloudT(i)/(pi*CloudMMW(i)*mp))
-		vsed(i)=-rpart(i)*rho_av(i)*CloudG(i)/(Clouddens(i)*vth(i))
-		lmfp=CloudMMW(i)*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
-		vsed(i)=vsed(i)*max(1d0,4d0*rpart(i)/(9d0*lmfp))
-		mpart(i)=rho_av(i)*4d0*pi*rpart(i)**3/3d0
-	enddo
-	if(complexKzz) then
-		do i=1,nnr
-			St=rpart(i)*rho_av(i)*Km(i)/(vth(i)*Clouddens(i)*CloudHp(i)**2)
-			Kd(i)=Km(i)/(1d0+St)
-		enddo
-	endif
-
-C=========================================================================================
-C=========================================================================================
-C=========================================================================================
-C=========================================================================================
-C=========================================================================================
-c equations for material
-C=========================================================================================
-C=========================================================================================
-C=========================================================================================
-C=========================================================================================
-C=========================================================================================
-	do i=1,nnr
 		do iCS=1,nCS
 			tot1=1d200
 			iVL(i,iCS)=1
@@ -881,6 +856,65 @@ C===============================================================================
 				endif
 			enddo
 			if(fSat(i,iCS).lt.1d-40) fSat(i,iCS)=1d-40
+		enddo
+
+		cs=sqrt(kb*CloudT(i)/(CloudMMW(i)*mp))
+		vth(i)=sqrt(8d0*kb*CloudT(i)/(pi*CloudMMW(i)*mp))
+		if(Cloud(ii)%usefsed) then
+			fsed=Cloud(ii)%fsed_alpha*exp((CloudR(i)-Rplanet)/(6d0*Cloud(ii)%fsed_beta*CloudHp(i)))+1d-2
+			vsed(i)=-fsed*Kd(i)/CloudHp(i)
+			rpart(i)=vsed(i)/(-sqrt(pi)*rho_av(i)*Ggrav*Mplanet/(2d0*Clouddens(i)*vth(i)*CloudR(i)**2))
+			if(rpart(i).lt.Cloud(ii)%rnuc) then
+				rpart(i)=Cloud(ii)%rnuc
+				vsed(i)=-rpart(i)*rho_av(i)*CloudG(i)/(Clouddens(i)*vth(i))
+				lmfp=2.3d0*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
+				vsed(i)=vsed(i)*max(1d0,4d0*rpart(i)/(9d0*lmfp))
+			endif
+			mpart(i)=rho_av(i)*4d0*pi*rpart(i)**3/3d0
+			if(iter.eq.1) then
+				tot=0d0
+				do iCS=1,nCS
+					do iVS=1,nVS
+						tot=tot+xv_bot(iVL(i,iCS))*v_cloud(iCS,iVS)*muV(iVS)/muV(iVL(i,iCS))
+					enddo
+				enddo
+			else
+				tot=sum(xc(1:nCS,i))+xm(i)
+			endif
+			xn(i)=tot/mpart(i)
+			if(Cloud(ii)%haze) then
+				xm(i)=xn(i)*m_nuc
+			else
+				xm=0d0
+			endif
+		else
+			vsed(i)=-rpart(i)*rho_av(i)*CloudG(i)/(Clouddens(i)*vth(i))
+			lmfp=CloudMMW(i)*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
+			vsed(i)=vsed(i)*max(1d0,4d0*rpart(i)/(9d0*lmfp))
+			mpart(i)=rho_av(i)*4d0*pi*rpart(i)**3/3d0
+		endif
+	enddo
+	Sat=Sat0*fSat
+	if(complexKzz) then
+		do i=1,nnr
+			St=rpart(i)*rho_av(i)*Km(i)/(vth(i)*Clouddens(i)*CloudHp(i)**2)
+			Kd(i)=Km(i)/(1d0+St)
+		enddo
+	endif
+
+C=========================================================================================
+C=========================================================================================
+C=========================================================================================
+C=========================================================================================
+C=========================================================================================
+c equations for material
+C=========================================================================================
+C=========================================================================================
+C=========================================================================================
+C=========================================================================================
+C=========================================================================================
+	do i=1,nnr
+		do iCS=1,nCS
 			vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
 
 			Dp=kb*CloudT(i)*vthv(i)/(3d0*CloudP(i)*1d6*sigmamol)
@@ -888,7 +922,6 @@ C===============================================================================
      &						pi*rpart(i)*min(rpart(i)*vthv(i),4d0*Dp)
 		enddo
 	enddo
-	Sat=Sat0*fSat
 
 	x=0d0
 
@@ -900,25 +933,7 @@ C===============================================================================
 	j=0
 	i=1
 
-	j=j+1
-	if(Cloud(ii)%freeflow_nuc) then
-		x(j)=0d0
-
-		dztot=(CloudR(i+1)-CloudR(i))
-		dz=(CloudR(i)-CloudR(i+1))
-
-		ik=KL+KU+1+j-ixn(i+1)
-		AB(ik,ixn(i+1))=AB(ik,ixn(i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-
-		ik=KL+KU+1+j-ixn(i)
-		AB(ik,ixn(i))=AB(ik,ixn(i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-		AB(ik,ixn(i))=AB(ik,ixn(i))+Clouddens(i)*vsed(i)/dztot
-	else
-		ik=KL+KU+1+j-ixn(i)
-		AB(ik,ixn(i))=1d0
-		x(j)=Cloud(ii)%xm_bot
-	endif
-	if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+	if(.not.Cloud(ii)%usefsed) then
 		j=j+1
 		if(Cloud(ii)%freeflow_nuc) then
 			x(j)=0d0
@@ -926,16 +941,36 @@ C===============================================================================
 			dztot=(CloudR(i+1)-CloudR(i))
 			dz=(CloudR(i)-CloudR(i+1))
 	
-			ik=KL+KU+1+j-ixm(i+1)
-			AB(ik,ixm(i+1))=AB(ik,ixm(i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+			ik=KL+KU+1+j-ixn(i+1)
+			AB(ik,ixn(i+1))=AB(ik,ixn(i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 	
-			ik=KL+KU+1+j-ixm(i)
-			AB(ik,ixm(i))=AB(ik,ixm(i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-			AB(ik,ixm(i))=AB(ik,ixm(i))+Clouddens(i)*vsed(i)/dztot
+			ik=KL+KU+1+j-ixn(i)
+			AB(ik,ixn(i))=AB(ik,ixn(i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+			AB(ik,ixn(i))=AB(ik,ixn(i))+Clouddens(i)*vsed(i)/dztot
 		else
-			ik=KL+KU+1+j-ixm(i)
-			AB(ik,ixm(i))=1d0
+			ik=KL+KU+1+j-ixn(i)
+			AB(ik,ixn(i))=1d0
 			x(j)=Cloud(ii)%xm_bot
+		endif
+		if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+			j=j+1
+			if(Cloud(ii)%freeflow_nuc) then
+				x(j)=0d0
+		
+				dztot=(CloudR(i+1)-CloudR(i))
+				dz=(CloudR(i)-CloudR(i+1))
+		
+				ik=KL+KU+1+j-ixm(i+1)
+				AB(ik,ixm(i+1))=AB(ik,ixm(i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+		
+				ik=KL+KU+1+j-ixm(i)
+				AB(ik,ixm(i))=AB(ik,ixm(i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+				AB(ik,ixm(i))=AB(ik,ixm(i))+Clouddens(i)*vsed(i)/dztot
+			else
+				ik=KL+KU+1+j-ixm(i)
+				AB(ik,ixm(i))=1d0
+				x(j)=Cloud(ii)%xm_bot
+			endif
 		endif
 	endif
 	do iCS=1,nCS
@@ -979,67 +1014,68 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 		enddo
 	endif
 	do i=2,nnr-1
-		j=j+1
-
-		dztot=(CloudR(i+1)-CloudR(i-1))/2d0
-		dz=(CloudR(i)-CloudR(i+1))
-		ik=KL+KU+1+j-ixn(i+1)
-		AB(ik,ixn(i+1))=AB(ik,ixn(i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-
-		ik=KL+KU+1+j-ixn(i)
-		AB(ik,ixn(i))=AB(ik,ixn(i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-
-		dz=(CloudR(i-1)-CloudR(i))
-		ik=KL+KU+1+j-ixn(i-1)
-		AB(ik,ixn(i-1))=AB(ik,ixn(i-1))-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
-
-		ik=KL+KU+1+j-ixn(i)
-		AB(ik,ixn(i))=AB(ik,ixn(i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
-		AB(ik,ixn(i))=AB(ik,ixn(i))+Clouddens(i)*vsed(i)/dztot
-
-		x(j)=-Sn(i)/m_nuc
-
-c coagulation
-		if(Cloud(ii)%coagulation) then
-			npart=xn(i)*Clouddens(i)
-			lmfp=CloudMMW(i)*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
-			vmol=0.5d0*lmfp*vth(i)
-			Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
-			vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
-			if(Dp/rpart(i).lt.vBM) vBM=Dp/rpart(i)
-			tcoaginv=npart*pi*rpart(i)**2*(abs(vsed(i))*exp(-(vsed(i)/vfrag)**2)+2d0*vBM*exp(-(vBM/vfrag)**2))
-
-			if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
-
-			tcinv(iter,i)=tcoaginv
-			tcoaginv=sum(tcinv(max(1,iter-10):iter,i))/real(iter-max(1,iter-10)+1)
-
-			ik=KL+KU+1+j-ixn(i)
-			AB(ik,ixn(i))=AB(ik,ixn(i))-Clouddens(i)*tcoaginv
-		endif
-
-		if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+		if(.not.Cloud(ii)%usefsed) then
 			j=j+1
 	
 			dztot=(CloudR(i+1)-CloudR(i-1))/2d0
 			dz=(CloudR(i)-CloudR(i+1))
-			ik=KL+KU+1+j-ixm(i+1)
-			AB(ik,ixm(i+1))=AB(ik,ixm(i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+			ik=KL+KU+1+j-ixn(i+1)
+			AB(ik,ixn(i+1))=AB(ik,ixn(i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 	
-			ik=KL+KU+1+j-ixm(i)
-			AB(ik,ixm(i))=AB(ik,ixm(i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+			ik=KL+KU+1+j-ixn(i)
+			AB(ik,ixn(i))=AB(ik,ixn(i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 	
 			dz=(CloudR(i-1)-CloudR(i))
-			ik=KL+KU+1+j-ixm(i-1)
-			AB(ik,ixm(i-1))=AB(ik,ixm(i-1))-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
+			ik=KL+KU+1+j-ixn(i-1)
+			AB(ik,ixn(i-1))=AB(ik,ixn(i-1))-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
 	
-			ik=KL+KU+1+j-ixm(i)
-			AB(ik,ixm(i))=AB(ik,ixm(i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
-			AB(ik,ixm(i))=AB(ik,ixm(i))+Clouddens(i)*vsed(i)/dztot
+			ik=KL+KU+1+j-ixn(i)
+			AB(ik,ixn(i))=AB(ik,ixn(i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
+			AB(ik,ixn(i))=AB(ik,ixn(i))+Clouddens(i)*vsed(i)/dztot
 	
-			x(j)=-Sn(i)
+			x(j)=-Sn(i)/m_nuc
+	
+c coagulation
+			if(Cloud(ii)%coagulation) then
+				npart=xn(i)*Clouddens(i)
+				lmfp=CloudMMW(i)*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
+				vmol=0.5d0*lmfp*vth(i)
+				Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
+				vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
+				if(Dp/rpart(i).lt.vBM) vBM=Dp/rpart(i)
+				tcoaginv=npart*pi*rpart(i)**2*(abs(vsed(i))*exp(-(vsed(i)/vfrag)**2)+2d0*vBM*exp(-(vBM/vfrag)**2))
+	
+				if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
+	
+				tcinv(iter,i)=tcoaginv
+				tcoaginv=sum(tcinv(max(1,iter-10):iter,i))/real(iter-max(1,iter-10)+1)
+	
+				ik=KL+KU+1+j-ixn(i)
+				AB(ik,ixn(i))=AB(ik,ixn(i))-Clouddens(i)*tcoaginv
+			endif
+	
+			if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+				j=j+1
+		
+				dztot=(CloudR(i+1)-CloudR(i-1))/2d0
+				dz=(CloudR(i)-CloudR(i+1))
+				ik=KL+KU+1+j-ixm(i+1)
+				AB(ik,ixm(i+1))=AB(ik,ixm(i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+		
+				ik=KL+KU+1+j-ixm(i)
+				AB(ik,ixm(i))=AB(ik,ixm(i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+		
+				dz=(CloudR(i-1)-CloudR(i))
+				ik=KL+KU+1+j-ixm(i-1)
+				AB(ik,ixm(i-1))=AB(ik,ixm(i-1))-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
+		
+				ik=KL+KU+1+j-ixm(i)
+				AB(ik,ixm(i))=AB(ik,ixm(i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
+				AB(ik,ixm(i))=AB(ik,ixm(i))+Clouddens(i)*vsed(i)/dztot
+		
+				x(j)=-Sn(i)
+			endif
 		endif
-
 		do iCS=1,nCS
 			j=j+1
 	
@@ -1098,24 +1134,26 @@ c coagulation
 	i=nnr
 	dz=CloudR(i)-CloudR(i-1)
 
-	j=j+1
-	ik=KL+KU+1+j-ixn(i)
-	AB(ik,ixn(i))=Kd(i)/dz-vsed(i)
-
-	ik=KL+KU+1+j-ixn(i-1)
-	AB(ik,ixn(i-1))=-Kd(i)/dz
-
-	x(j)=0d0
-
-	if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+	if(.not.Cloud(ii)%usefsed) then
 		j=j+1
-		ik=KL+KU+1+j-ixm(i)
-		AB(ik,ixm(i))=Kd(i)/dz-vsed(i)
+		ik=KL+KU+1+j-ixn(i)
+		AB(ik,ixn(i))=Kd(i)/dz-vsed(i)
 	
-		ik=KL+KU+1+j-ixm(i-1)
-		AB(ik,ixm(i-1))=-Kd(i)/dz
+		ik=KL+KU+1+j-ixn(i-1)
+		AB(ik,ixn(i-1))=-Kd(i)/dz
 	
 		x(j)=0d0
+	
+		if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+			j=j+1
+			ik=KL+KU+1+j-ixm(i)
+			AB(ik,ixm(i))=Kd(i)/dz-vsed(i)
+		
+			ik=KL+KU+1+j-ixm(i-1)
+			AB(ik,ixm(i-1))=-Kd(i)/dz
+		
+			x(j)=0d0
+		endif
 	endif
 	do iCS=1,nCS
 		j=j+1
@@ -1154,18 +1192,19 @@ c coagulation
 
 	f=0.5
 	do i=1,nnr
-		xn(i)=(xn(i)*f+x(ixn(i))*(1d0-f))
-		if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
-			xm(i)=(xm(i)*f+x(ixm(i))*(1d0-f))
-		else
-			if(.not.Cloud(ii)%haze) then
-				xm(i)=0d0
+		if(.not.Cloud(ii)%usefsed) then
+			xn(i)=(xn(i)*f+x(ixn(i))*(1d0-f))
+			if(Cloud(ii)%coagulation.and.Cloud(ii)%haze) then
+				xm(i)=(xm(i)*f+x(ixm(i))*(1d0-f))
 			else
-				xm(i)=xn(i)*m_nuc
+				if(.not.Cloud(ii)%haze) then
+					xm(i)=0d0
+				else
+					xm(i)=xn(i)*m_nuc
+				endif
 			endif
 		endif
 		do iCS=1,nCS
-			if(empty(i)) x(ixc(iCS,i))=0d0
 			xc(iCS,i)=(xc(iCS,i)*f+x(ixc(iCS,i))*(1d0-f))
 		enddo
 		do iVS=1,nVS
@@ -1207,29 +1246,17 @@ C===============================================================================
 		endif
 		tot=sum(xc(1:nCS,i))+xm(i)
 		if(xn(i).gt.0d0) then
-			if(Cloud(ii)%haze) then
-				rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
-			else
-				rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i))+Cloud(ii)%rnuc**3)**(1d0/3d0)
-			endif
+			rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
 			if(.not.rr.ge.Cloud(ii)%rnuc) then
 				rr=Cloud(ii)%rnuc
-				if(Cloud(ii)%haze) then
-					xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
-				else
-					xn(i)=(3d0*(tot/(rr**3-Cloud(ii)%rnuc**3))/(4d0*pi*rho_av(i)))
-				endif
+				xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
 			endif
 		else
 			rr=Cloud(ii)%rnuc
-			if(Cloud(ii)%haze) then
-				xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
-			else
-				xn(i)=(3d0*(tot/(rr**3-Cloud(ii)%rnuc**3))/(4d0*pi*rho_av(i)))
-			endif
+			xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
 		endif
 		err=abs(rr-rpart(i))/(rr+rpart(i))
-		if(err.gt.maxerr.and..not.empty(i)) maxerr=err
+		if(err.gt.maxerr.and.tot.gt.1d-20) maxerr=err
 		rpart(i)=sqrt(rr*rpart(i))
 	enddo
 	if(maxerr.lt.eps) then
@@ -1515,7 +1542,6 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	deallocate(ixv)
 	deallocate(ixc)
 	deallocate(x,dx)
-	deallocate(empty)
 	deallocate(IWORK)
 	deallocate(logCloudP)
 	deallocate(Kd,Kg,Km)

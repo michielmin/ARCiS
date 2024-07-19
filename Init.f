@@ -2140,6 +2140,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%freeflow_nuc=.true.
 		Cloud(i)%freeflow_con=.true.
 		Cloud(i)%condenseNaK=.true.
+c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abstract
 		Cloud(i)%usefsed=.false.
 		Cloud(i)%fsed_alpha=1d0
 		Cloud(i)%fsed_beta=1d20
