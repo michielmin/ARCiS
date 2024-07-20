@@ -17,7 +17,7 @@
 	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
 	integer,allocatable :: IWORK(:),ixv(:,:),ixc(:,:),iVL(:,:),ixn(:),ixm(:)
 	real*8 sigmastar,Sigmadot,Pstar,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc,Gibbs
-	logical ini,Tconverged
+	logical ini,Tconverged,haze_nuc
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: xn_iter(:,:),xm_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
 	logical,allocatable :: docondense(:)
@@ -41,7 +41,7 @@
 	itimecloud=itimecloud-itime
 	ctimecloud=ctimecloud+1
 
-	nVS=14
+	nVS=15
 	allocate(v_names(nVS),v_atoms(nVS,N_atoms),v_include(nVS))
 	
 	v_atoms=0d0
@@ -93,6 +93,10 @@
 
 	v_names(14)="Cr"
 	v_atoms(14,26)=1
+
+	v_names(15)="CH4"
+	v_atoms(15,1)=4
+	v_atoms(15,3)=1
 
 	v_include=.false.
 
@@ -376,6 +380,35 @@
 
 	docondense=.true.
 
+	select case(Cloud(ii)%hazetype)
+		case("SOOT","soot","Soot")
+			rho_nuc=1.00
+		case("THOLIN","tholin","Tholin")
+			rho_nuc=1.00
+		case("optEC")
+			rho_nuc=1.50
+			ihaze=15
+			v_include(15)=(.not.dochemistry)
+			haze_nuc=(.not.dochemistry)
+		case("SiC")
+			rho_nuc=3.22
+		case("CARBON","Carbon","carbon")
+			rho_nuc=1.80
+		case("CORRUNDUM","Corrundum","corrundum","Al2O3")
+			rho_nuc=3.97
+		case("IRON","Iron","iron","Fe")
+			rho_nuc=7.87
+		case("SiO")
+			rho_nuc=2.18
+		case("TiO2")
+			rho_nuc=4.23
+		case("Enstatite","enstatite","ENSTATITE")
+			rho_nuc=3.20
+		case default
+			call output("hazetype unknown")
+			stop
+	end select
+
 	do i=1,nCS
 		muC(i)=sum(mass_atoms(1:N_atoms)*atoms_cloud(i,1:N_atoms))
 	enddo
@@ -448,41 +481,6 @@ c	print*,xv_bot(1:7)
 
 	Sigmadot=Cloud(ii)%Sigmadot
 	
-	select case(Cloud(ii)%hazetype)
-		case("SOOT","soot","Soot")
-			rho_nuc=1.00
-			ihaze=10
-		case("THOLIN","tholin","Tholin")
-			rho_nuc=1.00
-			ihaze=10
-		case("optEC")
-			rho_nuc=1.50
-			ihaze=10
-		case("SiC")
-			rho_nuc=3.22
-			ihaze=11
-		case("CARBON","Carbon","carbon")
-			rho_nuc=1.80
-			ihaze=10
-		case("CORRUNDUM","Corrundum","corrundum","Al2O3")
-			rho_nuc=3.97
-			ihaze=3
-		case("IRON","Iron","iron","Fe")
-			rho_nuc=7.87
-			ihaze=8
-		case("SiO")
-			rho_nuc=2.18
-			ihaze=4
-		case("TiO2")
-			rho_nuc=4.23
-			ihaze=1
-		case("Enstatite","enstatite","ENSTATITE")
-			rho_nuc=3.20
-			ihaze=5
-		case default
-			call output("hazetype unknown")
-			stop
-	end select
 
 	m_nuc=4d0*pi*Cloud(ii)%rnuc**3*rho_nuc/3d0
 
@@ -755,9 +753,9 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 			Sn(i)=(Clouddens(i)*CloudG(i)*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
 		endif
 	enddo
+	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*scaleUV*Sigmadot/tot
+
 	Sat0=Sat
-
-
 
 	if(Cloud(ii)%rainout) then
 		allocate(c_rainout(nCS))
@@ -822,8 +820,6 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 	endif
 	f=0.1
 
-	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*scaleUV*Sigmadot/tot
-
 	allocate(vthv(nnr))
 	allocate(Sc(nnr,nCS))
 	allocate(IWORKomp(NN))
@@ -863,7 +859,7 @@ c start the loop
 		if(Cloud(ii)%usefsed) then
 			fsed=Cloud(ii)%fsed_alpha*exp((CloudR(i)-Rplanet)/(6d0*Cloud(ii)%fsed_beta*CloudHp(i)))+1d-2
 			vsed(i)=-fsed*Kd(i)/CloudHp(i)
-			rpart(i)=vsed(i)/(-sqrt(pi)*rho_av(i)*Ggrav*Mplanet/(2d0*Clouddens(i)*vth(i)*CloudR(i)**2))
+			rpart(i)=vsed(i)/(-sqrt(pi)*rho_av(i)*CloudG(i)/(2d0*Clouddens(i)*vth(i)))
 			if(rpart(i).lt.Cloud(ii)%rnuc) then
 				rpart(i)=Cloud(ii)%rnuc
 				vsed(i)=-rpart(i)*rho_av(i)*CloudG(i)/(Clouddens(i)*vth(i))
@@ -881,7 +877,7 @@ c start the loop
 			else
 				tot=sum(xc(1:nCS,i))+xm(i)
 			endif
-			xn(i)=tot/mpart(i)
+			xn(i)=(xn(i)+tot/mpart(i))/2d0
 			if(Cloud(ii)%haze) then
 				xm(i)=xn(i)*m_nuc
 			else
@@ -988,19 +984,30 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			ik=KL+KU+1+j-ixc(iCS,i)
 			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
+
+			ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
+			AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Sc(i,iCS)*xn(i)
+
+			ik=KL+KU+1+j-ixc(iCS,i)
+			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
 		else
 			ik=KL+KU+1+j-ixc(iCS,i)
 			AB(ik,ixc(iCS,i))=1d0
 			x(j)=0d0
 		endif
 	enddo
-	if(dochemistry) then
+	if(Cloud(ii)%freeflow_con) then
 		do iVS=1,nVS
 			if(v_include(iVS)) then
 				j=j+1
 				ik=KL+KU+1+j-ixv(iVS,i)
 				AB(ik,ixv(iVS,i))=1d0
 				x(j)=xv_bot(iVS)
+
+				do iCS=1,nCS
+					ik=KL+KU+1+j-ixc(iCS,i)
+					AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+v_cloud(iCS,iVS)*muV(iVS)/muC(iCS)
+				enddo
 			endif
 		enddo
 	else
@@ -1033,7 +1040,12 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			AB(ik,ixn(i))=AB(ik,ixn(i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
 			AB(ik,ixn(i))=AB(ik,ixn(i))+Clouddens(i)*vsed(i)/dztot
 	
-			x(j)=-Sn(i)/m_nuc
+			if(haze_nuc) then
+				ik=KL+KU+1+j-ixv(ihaze,i)
+				AB(ik,ixv(ihaze,i))=AB(ik,ixv(ihaze,i))+(CloudMMW(i)/muV(ihaze))*Sn(i)/m_nuc
+			else
+				x(j)=-Sn(i)/m_nuc
+			endif
 	
 c coagulation
 			if(Cloud(ii)%coagulation) then
@@ -1073,7 +1085,12 @@ c coagulation
 				AB(ik,ixm(i))=AB(ik,ixm(i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
 				AB(ik,ixm(i))=AB(ik,ixm(i))+Clouddens(i)*vsed(i)/dztot
 		
-				x(j)=-Sn(i)
+				if(haze_nuc) then
+					ik=KL+KU+1+j-ixv(ihaze,i)
+					AB(ik,ixv(ihaze,i))=AB(ik,ixv(ihaze,i))+(CloudMMW(i)/muV(ihaze))*Sn(i)
+				else
+					x(j)=-Sn(i)
+				endif
 			endif
 		endif
 		do iCS=1,nCS
@@ -1128,6 +1145,12 @@ c coagulation
 					ik=KL+KU+1+j-ixc(iCS,i)
 					AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Sc(i,iCS)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))/(Sat(i,iCS)*mpart(i))
 				enddo
+
+				if(haze_nuc.and.iVS.eq.ihaze) then
+					ik=KL+KU+1+j-ixv(ihaze,i)
+					AB(ik,ixv(ihaze,i))=AB(ik,ixv(ihaze,i))-(CloudMMW(i)/muV(ihaze))*Sn(i)
+				endif
+
 			endif
 		enddo
 	enddo
@@ -1362,9 +1385,17 @@ c Seed particles
 				v_names_out(j)=v_names(iVS)
 			endif
 		enddo
-		form='("#",a18,a19,a19,' // trim(int2string(nCS+j+1,'(i4)')) // 'a23,a19,a19,a19)'
-		write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i))//"[s]",i=1,nCS),(trim(v_names_out(i))//"[v]",i=1,j),"r[cm]","T[K]","Jstar"
-		form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+j,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
+		if(Cloud(ii)%haze) then
+			form='("#",a18,a19,a19,' // trim(int2string(nCS+j+2,'(i4)')) // 'a23,a19,a19,a19)'
+			write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i))//"[s]",i=1,nCS),trim(Cloud(ii)%hazetype)//"[s]",
+     &				(trim(v_names_out(i))//"[v]",i=1,j),"r[cm]","T[K]","Jstar"
+			form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+j+1,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
+		else
+			form='("#",a18,a19,a19,' // trim(int2string(nCS+j+1,'(i4)')) // 'a23,a19,a19,a19)'
+			write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i))//"[s]",i=1,nCS),
+     &				(trim(v_names_out(i))//"[v]",i=1,j),"r[cm]","T[K]","Jstar"
+			form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+j,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3)'
+		endif
 		do i=1,nnr
 			j=0
 			do iVS=1,nVS
@@ -1373,7 +1404,11 @@ c Seed particles
 					xv_out(j)=xv(iVS,i)
 				endif
 			enddo
-			write(20,form) CloudP(i),Clouddens(i),xn(i)*m_nuc,xc(1:nCS,i),xv_out(1:j),rpart(i),CloudT(i),Sn(i)/m_nuc
+			if(Cloud(ii)%haze) then
+				write(20,form) CloudP(i),Clouddens(i),xn(i)*m_nuc,xc(1:nCS,i),xm(i),xv_out(1:j),rpart(i),CloudT(i),Sn(i)/m_nuc
+			else
+				write(20,form) CloudP(i),Clouddens(i),xn(i)*m_nuc,xc(1:nCS,i),xv_out(1:j),rpart(i),CloudT(i),Sn(i)/m_nuc
+			endif
 		enddo
 		close(unit=20)
 	endif
