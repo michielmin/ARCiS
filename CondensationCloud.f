@@ -380,6 +380,7 @@
 
 	docondense=.true.
 
+	haze_nuc=.false.
 	select case(Cloud(ii)%hazetype)
 		case("SOOT","soot","Soot")
 			rho_nuc=1.00
@@ -1318,19 +1319,11 @@ c end the loop
 			endif
 			if(.not.rr.ge.Cloud(ii)%rnuc) then
 				rr=Cloud(ii)%rnuc
-				if(Cloud(ii)%haze) then
-					xn(i)=3d0*(tot/(rr**3))/(4d0*pi)
-				else
-					xn(i)=3d0*(tot/(rr**3-Cloud(ii)%rnuc**3))/(4d0*pi)
-				endif
+				xn(i)=3d0*(tot/(rr**3))/(4d0*pi)
 			endif
 		else
 			rr=Cloud(ii)%rnuc
-			if(Cloud(ii)%haze) then
-				xn(i)=3d0*(tot/(rr**3))/(4d0*pi)
-			else
-				xn(i)=3d0*(tot/(rr**3-Cloud(ii)%rnuc**3))/(4d0*pi)
-			endif
+			xn(i)=3d0*(tot/(rr**3))/(4d0*pi)
 		endif
 		if(tot.gt.0d0) then
 			rho_av(i)=(sum(xc(1:nCS,i))+xm(i))/tot
