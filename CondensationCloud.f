@@ -1270,14 +1270,14 @@ C===============================================================================
 		endif
 		tot=sum(xc(1:nCS,i))+xm(i)
 		if(xn(i).gt.0d0) then
-			rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
-			if(.not.rr.ge.Cloud(ii)%rnuc) then
-				rr=Cloud(ii)%rnuc
-				xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
+			if(Cloud(ii)%haze) then
+				rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
+			else
+				rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i))+Cloud(ii)%rnuc**3)**(1d0/3d0)
 			endif
+			if(.not.rr.ge.Cloud(ii)%rnuc) rr=Cloud(ii)%rnuc
 		else
 			rr=Cloud(ii)%rnuc
-			xn(i)=(3d0*(tot/(rr**3))/(4d0*pi*rho_av(i)))
 		endif
 		err=abs(rr-rpart(i))/(rr+rpart(i))
 		if(err.gt.maxerr.and.tot.gt.1d-20) maxerr=err
