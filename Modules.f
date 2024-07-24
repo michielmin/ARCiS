@@ -438,7 +438,7 @@ c for exchange when computing secondary atmosphere
 		real*8 kappa,albedo,kpow,klam
 		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:),KeFile(:,:),KaFile(:,:),KsFile(:,:)
 		integer,allocatable :: nax(:)
-		logical usefsed
+		logical usefsed,computeJn
 		real*8 fsed_alpha,fsed_beta,Srainout
 	end type CloudType
 

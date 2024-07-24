@@ -1820,10 +1820,15 @@ c		enddo
 c	endif
 
 	P(nr+1)=0d0
-	do i=1,nr
-		T(i)=T0(nr+1-i)
-		P(i)=P0(nr+1-i)
-	enddo
+	if(P0(1).lt.P0(nr)) then
+		do i=1,nr
+			T(i)=T0(nr+1-i)
+			P(i)=P0(nr+1-i)
+		enddo
+	else
+		P(1:nr)=P0(1:nr)
+		T(1:nr)=T0(1:nr)
+	endif
 
 c	if(par_tprofile) call ComputeParamT(T)
 	do i=1,nr
@@ -2139,6 +2144,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%globalKzz=.false.
 		Cloud(i)%freeflow_nuc=.true.
 		Cloud(i)%freeflow_con=.true.
+		Cloud(i)%computeJn=.false.
 		Cloud(i)%condenseNaK=.true.
 c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abstract
 		Cloud(i)%usefsed=.false.
@@ -3027,6 +3033,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%freeflow_nuc
 		case("freeflow_con")
 			read(key%value,*) Cloud(j)%freeflow_con
+		case("computejn")
+			read(key%value,*) Cloud(j)%computeJn
 		case("mixrat")
 			read(key%value,*) Cloud(j)%mixrat
 		case("kzz")
