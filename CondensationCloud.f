@@ -31,7 +31,7 @@
 	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr)
 	integer itime
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
-	real*8,allocatable :: xv_out(:),Jn_xv(:,:),A_J(:),B_j(:)
+	real*8,allocatable :: xv_out(:),Jn_xv(:,:),A_J(:),B_j(:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:),Jn_out(:)
 
 	logical dochemR(nr)
 
@@ -144,7 +144,7 @@
 	allocate(muV(nVS))
 	allocate(v_cloud(nCS,nVS),iVL(nnr,nCS),v_H2(nCS))
 	allocate(icryst(nCS),iamorph(nCS),tcrystinv(nnr))
-	allocate(A_J(nCS),B_J(nCS),do_nuc(nCS),Jn_xv(nnr,nCS))
+	allocate(A_J(nCS),B_J(nCS),do_nuc(nCS),Jn_xv(nnr,nCS),sigma_nuc(nCS),r0_nuc(nCS),Nf_nuc(nCS),Nc_nuc(nnr,nCS))
 	allocate(inuc(nCS))
 
 	call SetAbun
@@ -215,6 +215,11 @@
 				v_include(4)=.true.
 				rhodust(i)=0.93
 				maxT(i)=747d0
+				do_nuc(i)=Cloud(ii)%ComputeJn
+				inuc(i)=4
+				sigma_nuc(i)=109.0
+				r0_nuc(i)=1.973e-8
+				Nf_nuc(i)=1d0
 			case('Fe','IRON')
 				CSname(i)='Fe'
 				atoms_cloud(i,17)=1
@@ -272,6 +277,11 @@
 				v_include(8)=.true.
 				v_include(10)=.true.
 				rhodust(i)=2.17
+				do_nuc(i)=Cloud(ii)%ComputeJn
+				inuc(i)=10
+				sigma_nuc(i)=113.3
+				r0_nuc(i)=2.205e-8
+				Nf_nuc(i)=1d0
 			case("KCl")
 				CSname(i)='KCl'
 				atoms_cloud(i,13)=1
@@ -282,6 +292,11 @@
 				v_include(9)=.true.
 				v_include(10)=.true.
 				rhodust(i)=1.99
+				do_nuc(i)=Cloud(ii)%ComputeJn
+				inuc(i)=10
+				sigma_nuc(i)=100.3
+				r0_nuc(i)=2.462e-8
+				Nf_nuc(i)=1d0
 			case("Na2S")
 				CSname(i)='Na2S'
 				atoms_cloud(i,6)=1
@@ -300,6 +315,11 @@
 				v_include(11)=.true.
 				rhodust(i)=0.87
 				maxT(i)=220d0
+				do_nuc(i)=Cloud(ii)%ComputeJn
+				inuc(i)=11
+				sigma_nuc(i)=23.4
+				r0_nuc(i)=1.980e-8
+				Nf_nuc(i)=1d0
 			case('TiO2')
 				CSname(i)='TiO2'
 				atoms_cloud(i,5)=1
@@ -314,6 +334,9 @@
 				A_J(i)=1.112e12
 				B_J(i)=-24.0
 				inuc(i)=2
+				sigma_nuc(i)=480.6
+				r0_nuc(i)=1.956e-8
+				Nf_nuc(i)=0d0
 			case('H2SO4')
 				CSname(i)='H2SO4'
 				atoms_cloud(i,1)=2
@@ -363,6 +386,11 @@
 				v_cloud(i,14)=1
 				v_include(14)=.true.
 				rhodust(i)=7.19d0
+				do_nuc(i)=Cloud(ii)%ComputeJn
+				inuc(i)=14
+				sigma_nuc(i)=3330.0
+				r0_nuc(i)=1.421
+				Nf_nuc(i)=1d0
 			case('NH4Cl')
 				CSname(i)='NH4Cl'
 				atoms_cloud(i,1)=4
@@ -385,6 +413,9 @@
 				A_J(i)=4.4e12
 				B_J(i)=1.33
 				inuc(i)=1
+				sigma_nuc(i)=849.4
+				r0_nuc(i)=2.0e-8
+				Nf_nuc(i)=1d0
 			case default
 				call output("Unknown condensate")
 				stop
@@ -491,6 +522,13 @@
 c	print*,xv_bot(1:7)
 c	xv_bot(1:7) = 10.0**metallicity*(/ 6.1e-4, 2.4e-6, 4.1e-4, 1.4e-3, 1.9e-4, 7.6e-4, 3.2e-5 /)
 c	print*,xv_bot(1:7)
+
+	do iCS=1,nCS
+		if(do_nuc(iCS).and.CSname(iCS).ne.'SiO'.and.CSname(iCS).eq.'TiO2') then
+			A_J(iCS)=(16.*pi*sigma_nuc(iCS)**3*(muC(iCS)*mp/rhodust(iCS))**2/(3.*kb**3))
+			B_J(iCS)=log(sqrt(2.*sigma_nuc(iCS)/(pi*muC(iCS)*mp))*(muC(iCS)*mp/rhodust(iCS)))
+		endif
+	enddo
 
 	Cloud(ii)%frac=0d0
 
@@ -631,6 +669,7 @@ c	if(.not.computeT.or.nTiter.eq.1) then
 c	endif
 	tcinv=0d0
 	Jn_xv=0d0
+	Nc_nuc=0d0
 	
 	docondense=.true.
 	if(Cloud(ii)%hazetype.eq.'optEC') then
@@ -1068,12 +1107,20 @@ C===============================================================================
 			if(do_nuc(iCS)) then
 				tot1=Sat0(i,iCS)*fSat(i,iCS)*xv(iVL(i,iCS),i)
 				tot2=CloudP(i)*CloudMMW(i)/(muV(inuc(iCS))*kb*CloudT(i))
-				call ComputeJ_xv(xv(inuc(iCS),i),tot2,CloudT(i),tot1,Jn_xv(i,iCS),A_J(iCS),B_J(iCS))
+				select case(CSname(iCS))
+					case('SiO','TiO2')
+						call ComputeJ_xv(xv(inuc(iCS),i),tot2,CloudT(i),tot1,Jn_xv(i,iCS),A_J(iCS),B_J(iCS))
+						Nc_nuc(i,iCS)=m_nuc/(muC(iCS)*mp)
+					case default
+						tot2=tot2*xv(inuc(iCS),i)
+						call ComputeJ(CloudT(i),tot1,tot2,vthv(i),sigma_nuc(iCS),r0_nuc(iCS),Nf_nuc(iCS),Jn_xv(i,iCS),Nc_nuc(i,iCS))
+				end select
 			else
 				Jn_xv(i,iCS)=0d0
 			endif
 		enddo
 	enddo
+	Nc_nuc=Nc_nuc*mp
 
 	x=0d0
 
@@ -1121,20 +1168,20 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
 
-			if(iamorph(iCS).ne.0) then
-				ik=KL+KU+1+j-ixc(iamorph(iCS),i)
-				AB(ik,ixc(iamorph(iCS),i))=AB(ik,ixc(iamorph(iCS),i))+Clouddens(i)*tcrystinv(i)
-			else
-				ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Sc(i,iCS)*xn(i)
-			endif
-			if(icryst(iCS).ne.0) then
-				ik=KL+KU+1+j-ixc(iCS,i)
-				AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Clouddens(i)*tcrystinv(i)
-			endif
-
-			ik=KL+KU+1+j-ixc(iCS,i)
-			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
+c			if(iamorph(iCS).ne.0) then
+c				ik=KL+KU+1+j-ixc(iamorph(iCS),i)
+c				AB(ik,ixc(iamorph(iCS),i))=AB(ik,ixc(iamorph(iCS),i))+Clouddens(i)*tcrystinv(i)
+c			else
+c				ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
+c				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Sc(i,iCS)*xn(i)
+c			endif
+c			if(icryst(iCS).ne.0) then
+c				ik=KL+KU+1+j-ixc(iCS,i)
+c				AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Clouddens(i)*tcrystinv(i)
+c			endif
+c
+c			ik=KL+KU+1+j-ixc(iCS,i)
+c			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
 		else
 			ik=KL+KU+1+j-ixc(iCS,i)
 			AB(ik,ixc(iCS,i))=1d0
@@ -1250,7 +1297,7 @@ c coagulation
 
 			if(do_nuc(iCS)) then
 				ik=KL+KU+1+j-ixv(inuc(iCS),i)
-				AB(ik,ixv(inuc(iCS),i))=AB(ik,ixv(inuc(iCS),i))+Jn_xv(i,iCS)*m_nuc
+				AB(ik,ixv(inuc(iCS),i))=AB(ik,ixv(inuc(iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
 			endif
 
 			ik=KL+KU+1+j-ixc(iCS,i)
@@ -1286,7 +1333,7 @@ c coagulation
 
 					if(do_nuc(iCS)) then
 						ik=KL+KU+1+j-ixv(inuc(iCS),i)
-						AB(ik,ixv(inuc(iCS),i))=AB(ik,ixv(inuc(iCS),i))-Jn_xv(i,iCS)*m_nuc*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))
+						AB(ik,ixv(inuc(iCS),i))=AB(ik,ixv(inuc(iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
 					endif
 				enddo
 
@@ -1350,12 +1397,10 @@ c		endif
 		if(.not.x(ixn(i)).gt.0d0) x(ixn(i))=0d0
 		do iCS=1,nCS
 			if(.not.x(ixc(iCS,i)).gt.0d0) x(ixc(iCS,i))=0d0
-c			if(.not.x(ixc(iCS,i)).lt.1d0) x(ixc(iCS,i))=1d0
 		enddo
 		do iVS=1,nVS
 			if(v_include(iVS)) then
 				if(.not.x(ixv(iVS,i)).gt.0d0) x(ixv(iVS,i))=0d0
-c				if(.not.x(ixv(iVS,i)).lt.xv_bot(iVS)) x(ixv(iVS,i))=xv_bot(iVS)
 			endif
 		enddo
 	enddo
@@ -1363,14 +1408,26 @@ c				if(.not.x(ixv(iVS,i)).lt.xv_bot(iVS)) x(ixv(iVS,i))=xv_bot(iVS)
 	f=0.5
 	do i=1,nnr
 		if(.not.Cloud(ii)%usefsed) then
-			xn(i)=(xn(i)*f+x(ixn(i))*(1d0-f))
+			if(iter.eq.1) then
+				xn(i)=x(ixn(i))
+			else
+				xn(i)=(xn(i)*f+x(ixn(i))*(1d0-f))
+			endif
 		endif
 		do iCS=1,nCS
-			xc(iCS,i)=(xc(iCS,i)*f+x(ixc(iCS,i))*(1d0-f))
+			if(iter.eq.1) then
+				xc(iCS,i)=x(ixc(iCS,i))
+			else
+				xc(iCS,i)=(xc(iCS,i)*f+x(ixc(iCS,i))*(1d0-f))
+			endif
 		enddo
 		do iVS=1,nVS
 			if(v_include(iVS)) then
-				xv(iVS,i)=(xv(iVS,i)*f+x(ixv(iVS,i))*(1d0-f))
+				if(iter.eq.1) then
+					xv(iVS,i)=x(ixv(iVS,i))
+				else
+					xv(iVS,i)=(xv(iVS,i)*f+x(ixv(iVS,i))*(1d0-f))
+				endif
 			endif
 		enddo
 	enddo
@@ -1403,7 +1460,7 @@ C===============================================================================
 			else
 				rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i))+Cloud(ii)%rnuc**3)**(1d0/3d0)
 			endif
-			if(.not.rr.ge.Cloud(ii)%rnuc) rr=Cloud(ii)%rnuc
+c			if(.not.rr.ge.Cloud(ii)%rnuc) rr=Cloud(ii)%rnuc
 		else
 			rr=Cloud(ii)%rnuc
 		endif
@@ -1489,10 +1546,12 @@ c end the loop
 	enddo
 
 	if(.not.retrieval) then
+		allocate(Jn_out(nCS))
 		do i=1,nnr
 			do iCS=1,nCS
 				if(do_nuc(iCS)) then
-					Sn(i)=Sn(i)+Jn_xv(i,iCS)*xv(inuc(iCS),i)*m_nuc
+					Jn_xv(i,iCS)=Jn_xv(i,iCS)*xv(inuc(iCS),i)*Nc_nuc(i,iCS)*muC(iCS)/m_nuc
+					Sn(i)=Sn(i)+Jn_xv(i,iCS)
 				endif
 			enddo
 		enddo
@@ -1523,7 +1582,7 @@ c end the loop
 				endif
 			enddo
 			write(20,form) CloudP(i),Clouddens(i),xn(i)*m_nuc,xc(1:nCS,i),xv_out(1:j),rpart(i),
-     &							CloudT(i),Sn(i)/m_nuc,-vsed(i)*CloudHp(i)/Kd(i)
+     &							CloudT(i),Sn(i),-vsed(i)*CloudHp(i)/Kd(i)
 		enddo
 		close(unit=20)
 	endif
@@ -1709,9 +1768,49 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	else
 		J=xv*scale**2*exp(B-A/(T**3*(log(Sat))**2))
 	endif
+	if(.not.J.gt.0d0) J=0d0
 	
 	return
 	end
+
+
+	subroutine ComputeJ(T,Sat,nx,vth,sigma,r0,Nf,J,Nc)
+	IMPLICIT NONE
+	real*8 T,nx,sigma,Sat,vth,J
+	real*8 Nstar1,theta,r0,A0,logSat
+	real*8 Tmax,mu,tau,xv,MMW
+	real*8 pi,Z,dGRT,Nstar_inf,Nf,kb,mp,Nc
+	parameter(pi=3.14159265358979323846264338328d0)
+	parameter(kb=1.3806503d-16)
+	parameter(mp=1.660539040d-24)	!atomic mass unit
+	
+	logSat=log(Sat)
+
+	A0=4d0*pi*r0**2
+
+	theta=A0*sigma/(kb*T)
+
+	Nstar_inf=(2d0*theta/(3d0*logSat))**3
+	Nstar1=(Nstar_inf/8d0)*(1d0+sqrt(1d0+2d0*(Nf/Nstar_inf)**(1d0/3d0))-2d0*(Nf/Nstar_inf)**(1d0/3d0))**3
+
+	Z=sqrt(theta*(2d0*Nstar1**(1d0/3d0)+3d0*Nf**(1d0/3d0))/(6d0*pi))/(Nstar1**(1d0/3d0)+Nf**(1d0/3d0))
+
+	dGRT=theta*Nstar1/(Nstar1**(1d0/3d0)+Nf**(1d0/3d0))
+
+	tau=nx*vth*(Nstar1+1d0)**(2./3.)*A0
+
+	J=(nx*tau)*Z*exp(Nstar1*logSat-dGRT)
+	Nc=Nstar1+1d0
+
+	if(.not.J.gt.0d0) then
+		J=0d0
+		Nc=1d0
+	endif
+
+	return	
+	end
+
+
 	
 	subroutine AddDiseqAtoms(Otot,Ctot,Ntot)	
 	use GlobalSetup
