@@ -22,7 +22,7 @@
 	real*8,allocatable :: xn_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
 	logical,allocatable :: docondense(:)
 	integer iCS,ir,nrdo,iconv,nconv,iVS,nVS,NStot,ik
-	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed
+	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed,fscale,pscale
 	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:),CloudG(:)
 	character*10,allocatable :: v_names(:),v_names_out(:)
 	logical,allocatable :: v_include(:),c_rainout(:),do_nuc(:)
@@ -31,7 +31,7 @@
 	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr)
 	integer itime
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
-	real*8,allocatable :: xv_out(:),Jn_xv(:,:),A_J(:),B_j(:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:),Jn_out(:)
+	real*8,allocatable :: xv_out(:),Jn_xv(:,:),A_J(:),B_j(:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:)
 
 	logical dochemR(nr)
 
@@ -107,17 +107,18 @@
 	allocate(logCloudP(nnr))
 	allocate(CloudMMW(nnr),CloudHp(nnr),Sat(nnr,nCS),Sat0(nnr,nCS),fSat(nnr,nCS),CloudG(nnr))
 	
-	niter=500
+	niter=1000
 	nconv=20
 	if(computeT) then
 		if(nTiter.eq.1) then
-			niter=20
+			niter=50
 			nconv=5
-		else if(nTiter.le.4) then
+		else if(nTiter.le.3) then
 			niter=100
 			nconv=10
 		endif
 	endif
+	if(Cloud(ii)%computeJn) niter=niter*10
 	
 	allocate(docondense(nCS))
 
@@ -416,6 +417,19 @@
 				sigma_nuc(i)=849.4
 				r0_nuc(i)=2.0e-8
 				Nf_nuc(i)=1d0
+			case('Na2SiO3')
+				CSname(i)='Na2SiO3'
+				atoms_cloud(i,9)=1
+				atoms_cloud(i,5)=3
+				atoms_cloud(i,11)=2
+				v_cloud(i,1)=1
+				v_cloud(i,4)=2
+				v_cloud(i,8)=2
+				v_H2(i)=-2
+				v_include(1)=.true.
+				v_include(4)=.true.
+				v_include(8)=.true.
+				rhodust(i)=2.4
 			case default
 				call output("Unknown condensate")
 				stop
@@ -692,7 +706,7 @@ c	endif
 		tot=0d0
 	endif
 
-	if(.not.retrieval) then
+	if(.not.retrieval.and..false.) then
 		open(unit=20,file='Tevap.dat',RECL=6000)
 		form='("#",a18,' // trim(int2string(nCS,'(i4)')) // 'a23)'
 		write(20,form) "T[K]",(trim(CSname(i)),i=1,nCS)
@@ -758,6 +772,8 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 								call Gibbs_Mn_s(tot1,Gibbs,maxT(iCS))
 							case("Cr")
 								call Gibbs_Cr_s(tot1,Gibbs,maxT(iCS))
+							case("Na2SiO3")
+								call Gibbs_Na2SiO3_s(tot1,Gibbs,maxT(iCS))
 							case default
 								print*,'Unknown condensate'
 								stop
@@ -883,6 +899,8 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 							call Gibbs_Mn_s(CloudT(i),Gibbs,maxT(iCS))
 						case("Cr")
 							call Gibbs_Cr_s(CloudT(i),Gibbs,maxT(iCS))
+						case("Na2SiO3")
+							call Gibbs_Na2SiO3_s(tot1,Gibbs,maxT(iCS))
 						case default
 							print*,'Unknown condensate'
 							stop
@@ -953,7 +971,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 	if(Cloud(ii)%rainout) then
 		allocate(c_rainout(nCS))
 		c_rainout=.false.
-		xv(1,1:nVS)=0d0
+		xv(1:nVS,1)=0d0
 		f=0.5
 		i=1
 		xv(1:nVS,i)=xv_bot(1:nVS)
@@ -1011,7 +1029,15 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 		enddo
 		deallocate(c_rainout)
 	endif
-	f=0.1
+	if(Cloud(ii)%computeJn) then
+		fscale=1d-30
+		pscale=(1d0/fscale)**(2d0/real(niter))
+		f=0.95
+	else
+		fscale=1d0
+		pscale=1d0
+		f=0.6
+	endif
 
 	allocate(vthv(nnr))
 	allocate(Sc(nnr,nCS))
@@ -1024,6 +1050,14 @@ c start the loop
 	call tellertje(iter,niter)
 
 	vsed=0d0
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,tot1,tot2,cs,fsed,tot,iCS,iVS,lmfp,St,Dp)
+!$OMP& SHARED(nnr,nCS,nVS,iVL,v_cloud,CloudT,xv,muV,fSat,Sat0,Sat,v_include,CloudP,CloudMMW,v_H2,vth,ii,CloudR,Rplanet,sigmamol,
+!$OMP&		vsed,Kd,CloudHp,rpart,rho_av,CloudG,Clouddens,Cloud,mpart,xv_bot,xn,xc,Km,vthv,Sc,muC,do_nuc,CSname,Nc_nuc,Jn_xv,m_nuc,
+!$OMP&		iter,complexKzz,fstick,inuc,A_J,B_J,Nf_nuc,r0_nuc,sigma_nuc)
+!$OMP DO
+!$OMP& SCHEDULE(DYNAMIC, 1)
 	do i=1,nnr
 		do iCS=1,nCS
 			tot1=1d200
@@ -1077,14 +1111,41 @@ c start the loop
 			vsed(i)=vsed(i)*max(1d0,4d0*rpart(i)/(9d0*lmfp))
 			mpart(i)=rho_av(i)*4d0*pi*rpart(i)**3/3d0
 		endif
-	enddo
-	Sat=Sat0*fSat
-	if(complexKzz) then
-		do i=1,nnr
+		Sat(i,1:nCS)=Sat0(i,1:nCS)*fSat(i,1:nCS)
+		if(complexKzz) then
 			St=rpart(i)*rho_av(i)*Km(i)/(vth(i)*Clouddens(i)*CloudHp(i)**2)
 			Kd(i)=Km(i)/(1d0+St)
+		endif
+
+		do iCS=1,nCS
+			vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
+
+			Dp=kb*CloudT(i)*vthv(i)/(3d0*CloudP(i)*1d6*sigmamol)
+			Sc(i,iCS)=fstick*Clouddens(i)**2*(muC(iCS)/(muV(iVL(i,iCS))*v_cloud(iCS,iVL(i,iCS))))*
+     &						pi*rpart(i)*min(rpart(i)*vthv(i),4d0*Dp)
+			if(do_nuc(iCS)) then
+				tot1=Sat(i,iCS)*xv(iVL(i,iCS),i)
+				tot2=CloudP(i)*CloudMMW(i)/(muV(inuc(iCS))*kb*CloudT(i))
+				select case(CSname(iCS))
+					case('SiO','TiO2')
+						call ComputeJ_xv(xv(iVL(i,iCS),i),tot2,CloudT(i),tot1,Jn_xv(i,iCS),A_J(iCS),B_J(iCS))
+						Nc_nuc(i,iCS)=m_nuc/(muC(iCS)*mp)
+					case default
+						tot2=tot2*xv(iVL(i,iCS),i)
+						call ComputeJ(CloudT(i),tot1,tot2,vthv(i),sigma_nuc(iCS),r0_nuc(iCS),Nf_nuc(iCS),Jn_xv(i,iCS),Nc_nuc(i,iCS))
+				end select
+			else
+				Jn_xv(i,iCS)=0d0
+			endif
 		enddo
-	endif
+	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
+
+	fscale=min(1d0,fscale*pscale)
+	Nc_nuc=Nc_nuc*mp
+	
 
 C=========================================================================================
 C=========================================================================================
@@ -1097,30 +1158,6 @@ C===============================================================================
 C=========================================================================================
 C=========================================================================================
 C=========================================================================================
-	do i=1,nnr
-		do iCS=1,nCS
-			vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
-
-			Dp=kb*CloudT(i)*vthv(i)/(3d0*CloudP(i)*1d6*sigmamol)
-			Sc(i,iCS)=fstick*Clouddens(i)**2*(muC(iCS)/(muV(iVL(i,iCS))*v_cloud(iCS,iVL(i,iCS))))*
-     &						pi*rpart(i)*min(rpart(i)*vthv(i),4d0*Dp)
-			if(do_nuc(iCS)) then
-				tot1=Sat0(i,iCS)*fSat(i,iCS)*xv(iVL(i,iCS),i)
-				tot2=CloudP(i)*CloudMMW(i)/(muV(inuc(iCS))*kb*CloudT(i))
-				select case(CSname(iCS))
-					case('SiO','TiO2')
-						call ComputeJ_xv(xv(inuc(iCS),i),tot2,CloudT(i),tot1,Jn_xv(i,iCS),A_J(iCS),B_J(iCS))
-						Nc_nuc(i,iCS)=m_nuc/(muC(iCS)*mp)
-					case default
-						tot2=tot2*xv(inuc(iCS),i)
-						call ComputeJ(CloudT(i),tot1,tot2,vthv(i),sigma_nuc(iCS),r0_nuc(iCS),Nf_nuc(iCS),Jn_xv(i,iCS),Nc_nuc(i,iCS))
-				end select
-			else
-				Jn_xv(i,iCS)=0d0
-			endif
-		enddo
-	enddo
-	Nc_nuc=Nc_nuc*mp
 
 	x=0d0
 
@@ -1196,10 +1233,10 @@ c			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
 				AB(ik,ixv(iVS,i))=1d0
 				x(j)=xv_bot(iVS)
 
-				do iCS=1,nCS
-					ik=KL+KU+1+j-ixc(iCS,i)
-					AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+v_cloud(iCS,iVS)*muV(iVS)/muC(iCS)
-				enddo
+c				do iCS=1,nCS
+c					ik=KL+KU+1+j-ixc(iCS,i)
+c					AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+v_cloud(iCS,iVS)*muV(iVS)/muC(iCS)
+c				enddo
 			endif
 		enddo
 	else
@@ -1241,8 +1278,8 @@ c			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
 			
 			do iCS=1,nCS
 				if(do_nuc(iCS)) then
-					ik=KL+KU+1+j-ixv(inuc(iCS),i)
-					AB(ik,ixv(inuc(iCS),i))=AB(ik,ixv(inuc(iCS),i))+Jn_xv(i,iCS)
+					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
+					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)
 				endif
 			enddo
 c coagulation
@@ -1296,8 +1333,8 @@ c coagulation
 			endif
 
 			if(do_nuc(iCS)) then
-				ik=KL+KU+1+j-ixv(inuc(iCS),i)
-				AB(ik,ixv(inuc(iCS),i))=AB(ik,ixv(inuc(iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
+				ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
+				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)*fscale
 			endif
 
 			ik=KL+KU+1+j-ixc(iCS,i)
@@ -1332,8 +1369,8 @@ c coagulation
 					AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Sc(i,iCS)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))/(Sat(i,iCS)*mpart(i))
 
 					if(do_nuc(iCS)) then
-						ik=KL+KU+1+j-ixv(inuc(iCS),i)
-						AB(ik,ixv(inuc(iCS),i))=AB(ik,ixv(inuc(iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
+						ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
+						AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)*fscale
 					endif
 				enddo
 
@@ -1405,20 +1442,19 @@ c		endif
 		enddo
 	enddo
 
-	f=0.5
 	do i=1,nnr
 		if(.not.Cloud(ii)%usefsed) then
 			if(iter.eq.1) then
 				xn(i)=x(ixn(i))
 			else
-				xn(i)=(xn(i)*f+x(ixn(i))*(1d0-f))
+				xn(i)=xn(i)*f+x(ixn(i))*(1d0-f)
 			endif
 		endif
 		do iCS=1,nCS
 			if(iter.eq.1) then
 				xc(iCS,i)=x(ixc(iCS,i))
 			else
-				xc(iCS,i)=(xc(iCS,i)*f+x(ixc(iCS,i))*(1d0-f))
+				xc(iCS,i)=xc(iCS,i)*f+x(ixc(iCS,i))*(1d0-f)
 			endif
 		enddo
 		do iVS=1,nVS
@@ -1426,7 +1462,7 @@ c		endif
 				if(iter.eq.1) then
 					xv(iVS,i)=x(ixv(iVS,i))
 				else
-					xv(iVS,i)=(xv(iVS,i)*f+x(ixv(iVS,i))*(1d0-f))
+					xv(iVS,i)=xv(iVS,i)*f+x(ixv(iVS,i))*(1d0-f)
 				endif
 			endif
 		enddo
@@ -1457,10 +1493,11 @@ C===============================================================================
 		if(xn(i).gt.0d0) then
 			if(Cloud(ii)%computeJn) then
 				rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i)))**(1d0/3d0)
+				if(.not.rr.ge.1e-8) rr=1e-8
 			else
 				rr=(3d0*(tot/xn(i))/(4d0*pi*rho_av(i))+Cloud(ii)%rnuc**3)**(1d0/3d0)
+				if(.not.rr.ge.Cloud(ii)%rnuc) rr=Cloud(ii)%rnuc
 			endif
-c			if(.not.rr.ge.Cloud(ii)%rnuc) rr=Cloud(ii)%rnuc
 		else
 			rr=Cloud(ii)%rnuc
 		endif
@@ -1469,20 +1506,21 @@ c			if(.not.rr.ge.Cloud(ii)%rnuc) rr=Cloud(ii)%rnuc
 			maxerr=err
 			j=i
 		endif
-		rpart(i)=sqrt(rr*rpart(i))
+		rpart(i)=rr!sqrt(rr*rpart(i))
 		if(Cloud(ii)%computeJn) xn(i)=tot/(4d0*rpart(i)**3*pi*rho_av(i)/3d0)
 	enddo
-	if(maxerr.lt.eps) then
+	if(maxerr.lt.eps.and.fscale.ge.1d0) then
 		iconv=iconv+1
 		if(iconv.gt.nconv) exit
 	else
 		iconv=0
 	endif
+c	print*,iter,maxerr,fscale
 	enddo
 c end the loop
 
 	if(iter.gt.niter) then
-		if(iconv.eq.0.and.nTiter.gt.4) print*,'Cloud formation not converged: ',maxerr
+		if(iconv.eq.0.and.(nTiter.gt.4.or..not.computeT)) print*,'Cloud formation not converged: ',maxerr
 		iter=niter
 	endif
 	xn=0d0
@@ -1546,11 +1584,10 @@ c end the loop
 	enddo
 
 	if(.not.retrieval) then
-		allocate(Jn_out(nCS))
 		do i=1,nnr
 			do iCS=1,nCS
 				if(do_nuc(iCS)) then
-					Jn_xv(i,iCS)=Jn_xv(i,iCS)*xv(inuc(iCS),i)*Nc_nuc(i,iCS)*muC(iCS)/m_nuc
+					Jn_xv(i,iCS)=Jn_xv(i,iCS)*xv(iVL(i,iCS),i)*Nc_nuc(i,iCS)*muC(iCS)/m_nuc
 					Sn(i)=Sn(i)+Jn_xv(i,iCS)
 				endif
 			enddo
@@ -2620,14 +2657,14 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	real*8 Tgibbs(          29),Ggibbs(          29)
 	parameter(nG=          29)
 	data (Tgibbs(j),j=1,          29) /
-     &  0.00000E+00, 0.30000E+03, 0.40000E+03, 0.50000E+03, 0.60000E+03, 
+     &  0.29815E+03, 0.30000E+03, 0.40000E+03, 0.50000E+03, 0.60000E+03, 
      &  0.70000E+03, 0.80000E+03, 0.90000E+03, 0.10000E+04, 0.11000E+04, 
      &  0.12000E+04, 0.13000E+04, 0.14000E+04, 0.15000E+04, 0.16000E+04, 
      &  0.17000E+04, 0.18000E+04, 0.19000E+04, 0.20000E+04, 0.21000E+04, 
      &  0.22000E+04, 0.23000E+04, 0.24000E+04, 0.25000E+04, 0.26000E+04, 
      &  0.27000E+04, 0.28000E+04, 0.29000E+04, 0.30000E+04 /
 	data (Ggibbs(j),j=1,          29) /
-     &  0.96232E+02,-0.35448E+03,-0.35013E+03,-0.34409E+03,-0.33776E+03, 
+     & -0.35455E+03,-0.35448E+03,-0.35013E+03,-0.34409E+03,-0.33776E+03, 
      & -0.33132E+03,-0.32484E+03,-0.31728E+03,-0.30488E+03,-0.29265E+03, 
      & -0.27586E+03,-0.24818E+03,-0.22143E+03,-0.19594E+03,-0.17130E+03, 
      & -0.14685E+03,-0.12258E+03,-0.98480E+02,-0.74541E+02,-0.50753E+02, 
@@ -3183,7 +3220,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.00000E+00, 0.30000E+03, 0.40000E+03, 0.50000E+03, 0.60000E+03, 
      &  0.70000E+03, 0.80000E+03, 0.90000E+03, 0.10000E+04, 0.11000E+04, 
      &  0.12000E+04, 0.13000E+04, 0.14000E+04, 0.15000E+04, 0.16000E+04, 
-     &  0.16500E+04, 0.18000E+04, 0.19000E+04, 0.20000E+04, 0.21000E+04, 
+     &  0.17000E+04, 0.18000E+04, 0.19000E+04, 0.20000E+04, 0.21000E+04, 
      &  0.22000E+04, 0.23000E+04, 0.24000E+04, 0.25000E+04, 0.26000E+04, 
      &  0.27000E+04, 0.28000E+04, 0.29000E+04, 0.30000E+04, 0.31000E+04, 
      &  0.32000E+04, 0.33000E+04, 0.34000E+04, 0.35000E+04, 0.36000E+04, 
@@ -3194,7 +3231,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.60752E+02,-0.25130E+03,-0.24454E+03,-0.23802E+03,-0.23167E+03, 
      & -0.22543E+03,-0.21926E+03,-0.21312E+03,-0.20696E+03,-0.20067E+03, 
      & -0.19432E+03,-0.18795E+03,-0.18165E+03,-0.17541E+03,-0.16924E+03, 
-     &  0.17000E+04,-0.15916E+03,-0.15383E+03,-0.14845E+03,-0.14309E+03, 
+     & -0.16383E+03,-0.15916E+03,-0.15383E+03,-0.14845E+03,-0.14309E+03, 
      & -0.13774E+03,-0.13241E+03,-0.12709E+03,-0.12178E+03,-0.11648E+03, 
      & -0.11119E+03,-0.10592E+03,-0.10065E+03,-0.95385E+02,-0.90131E+02, 
      & -0.77460E+02,-0.61133E+02,-0.44869E+02,-0.28665E+02,-0.12518E+02, 
@@ -3410,6 +3447,41 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
      &  0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00 /
+	Tmax=Tgibbs(nG)
+	if(T.lt.Tgibbs(1)) then
+		G=Ggibbs(1)
+	else if(T.gt.Tgibbs(nG)) then
+		G=Ggibbs(nG)+(T-Tgibbs(nG))*(Ggibbs(nG-1)-Ggibbs(nG))/(Tgibbs(nG-1)-Tgibbs(nG))
+	else
+		do i=1,nG-1
+			if(T.ge.Tgibbs(i).and.T.le.Tgibbs(i+1)) then
+				G=Ggibbs(i)+(T-Tgibbs(i))*(Ggibbs(i+1)-Ggibbs(i))/(Tgibbs(i+1)-Tgibbs(i))
+				return
+			endif
+		enddo
+	endif
+	return
+	end
+	subroutine Gibbs_Na2SiO3_s(T,G,Tmax)
+	IMPLICIT NONE
+	integer nG,j,i
+	real*8 T,G,Tmax
+	real*8 Tgibbs(          27),Ggibbs(          27)
+	parameter(nG=          27)
+	data (Tgibbs(j),j=1,          27) /
+     &  0.00000E+00, 0.10000E+03, 0.20000E+03, 0.29815E+03, 0.30000E+03, 
+     &  0.40000E+03, 0.50000E+03, 0.60000E+03, 0.70000E+03, 0.80000E+03, 
+     &  0.90000E+03, 0.10000E+04, 0.11000E+04, 0.12000E+04, 0.13000E+04, 
+     &  0.14000E+04, 0.15000E+04, 0.16000E+04, 0.17000E+04, 0.18000E+04, 
+     &  0.19000E+04, 0.20000E+04, 0.21000E+04, 0.22000E+04, 0.23000E+04, 
+     &  0.24000E+04, 0.25000E+04 /
+	data (Ggibbs(j),j=1,          27) /
+     & -0.15512E+04,-0.15282E+04,-0.14981E+04,-0.14673E+04,-0.14667E+04, 
+     & -0.14347E+04,-0.14016E+04,-0.13686E+04,-0.13359E+04,-0.13034E+04, 
+     & -0.12713E+04,-0.12395E+04,-0.12081E+04,-0.11721E+04,-0.11248E+04, 
+     & -0.10794E+04,-0.10368E+04,-0.99450E+03,-0.95209E+03,-0.90745E+03, 
+     & -0.86311E+03,-0.81904E+03,-0.77523E+03,-0.73166E+03,-0.68833E+03, 
+     & -0.64522E+03,-0.60232E+03 /
 	Tmax=Tgibbs(nG)
 	if(T.lt.Tgibbs(1)) then
 		G=Ggibbs(1)
