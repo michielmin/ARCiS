@@ -21,7 +21,7 @@
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: xn_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
 	logical,allocatable :: docondense(:)
-	integer iCS,ir,nrdo,iconv,nconv,iVS,nVS,NStot,ik
+	integer iCS,ir,nrdo,iconv,nconv,iVS,nVS,NStot,ik,nfscale
 	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed,fscale,pscale
 	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:),CloudG(:)
 	character*10,allocatable :: v_names(:),v_names_out(:)
@@ -1030,13 +1030,15 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 		deallocate(c_rainout)
 	endif
 	if(Cloud(ii)%computeJn) then
-		fscale=1d-30
-		pscale=(1d0/fscale)**(2d0/real(niter))
+		fscale=1d-8
+		pscale=(1d0/fscale)**(1d0/100d0)
 		f=0.95
+		nfscale=0
 	else
 		fscale=1d0
 		pscale=1d0
 		f=0.6
+		nfscale=1000
 	endif
 
 	allocate(vthv(nnr))
@@ -1055,7 +1057,7 @@ c start the loop
 !$OMP& PRIVATE(i,tot1,tot2,cs,fsed,tot,iCS,iVS,lmfp,St,Dp)
 !$OMP& SHARED(nnr,nCS,nVS,iVL,v_cloud,CloudT,xv,muV,fSat,Sat0,Sat,v_include,CloudP,CloudMMW,v_H2,vth,ii,CloudR,Rplanet,sigmamol,
 !$OMP&		vsed,Kd,CloudHp,rpart,rho_av,CloudG,Clouddens,Cloud,mpart,xv_bot,xn,xc,Km,vthv,Sc,muC,do_nuc,CSname,Nc_nuc,Jn_xv,m_nuc,
-!$OMP&		iter,complexKzz,fstick,inuc,A_J,B_J,Nf_nuc,r0_nuc,sigma_nuc)
+!$OMP&		iter,complexKzz,fstick,inuc,A_J,B_J,Nf_nuc,r0_nuc,sigma_nuc,fscale)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do i=1,nnr
@@ -1125,6 +1127,7 @@ c start the loop
      &						pi*rpart(i)*min(rpart(i)*vthv(i),4d0*Dp)
 			if(do_nuc(iCS)) then
 				tot1=Sat(i,iCS)*xv(iVL(i,iCS),i)
+				tot1=exp(log(tot1)*fscale)
 				tot2=CloudP(i)*CloudMMW(i)/(muV(inuc(iCS))*kb*CloudT(i))
 				select case(CSname(iCS))
 					case('SiO','TiO2')
@@ -1143,7 +1146,11 @@ c start the loop
 !$OMP FLUSH
 !$OMP END PARALLEL
 
-	fscale=min(1d0,fscale*pscale)
+	fscale=fscale*pscale
+	if(fscale.gt.1d0) then
+		fscale=1d0
+		nfscale=nfscale+1
+	endif
 	Nc_nuc=Nc_nuc*mp
 	
 
@@ -1334,7 +1341,7 @@ c coagulation
 
 			if(do_nuc(iCS)) then
 				ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)*fscale
+				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
 			endif
 
 			ik=KL+KU+1+j-ixc(iCS,i)
@@ -1370,7 +1377,7 @@ c coagulation
 
 					if(do_nuc(iCS)) then
 						ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-						AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)*fscale
+						AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
 					endif
 				enddo
 
@@ -1509,7 +1516,7 @@ C===============================================================================
 		rpart(i)=rr!sqrt(rr*rpart(i))
 		if(Cloud(ii)%computeJn) xn(i)=tot/(4d0*rpart(i)**3*pi*rho_av(i)/3d0)
 	enddo
-	if(maxerr.lt.eps.and.fscale.ge.1d0) then
+	if(maxerr.lt.eps.and.nfscale.gt.100) then
 		iconv=iconv+1
 		if(iconv.gt.nconv) exit
 	else
@@ -1814,12 +1821,18 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	subroutine ComputeJ(T,Sat,nx,vth,sigma,r0,Nf,J,Nc)
 	IMPLICIT NONE
 	real*8 T,nx,sigma,Sat,vth,J
-	real*8 Nstar1,theta,r0,A0,logSat
+	real*8 Nstar1,theta,r0,A0,logSat,Nstar
 	real*8 Tmax,mu,tau,xv,MMW
-	real*8 pi,Z,dGRT,Nstar_inf,Nf,kb,mp,Nc
+	real*8 pi,Z,dGRT,Nstar_inf,Nf,kb,mp,Nc,x0,x1,x2,x3,dgdn,thetaN,nst
 	parameter(pi=3.14159265358979323846264338328d0)
 	parameter(kb=1.3806503d-16)
 	parameter(mp=1.660539040d-24)	!atomic mass unit
+	
+	if(Sat.le.1d0) then
+		J=0d0
+		Nc=1d0
+		return
+	endif
 	
 	logSat=log(Sat)
 
@@ -1830,6 +1843,8 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	Nstar_inf=(2d0*theta/(3d0*logSat))**3
 	Nstar1=(Nstar_inf/8d0)*(1d0+sqrt(1d0+2d0*(Nf/Nstar_inf)**(1d0/3d0))-2d0*(Nf/Nstar_inf)**(1d0/3d0))**3
 
+	if(.not.Nstar1.gt.1d-6) Nstar1=1d-6
+
 	Z=sqrt(theta*(2d0*Nstar1**(1d0/3d0)+3d0*Nf**(1d0/3d0))/(6d0*pi))/(Nstar1**(1d0/3d0)+Nf**(1d0/3d0))
 
 	dGRT=theta*Nstar1/(Nstar1**(1d0/3d0)+Nf**(1d0/3d0))
@@ -1839,7 +1854,30 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	J=(nx*tau)*Z*exp(Nstar1*logSat-dGRT)
 	Nc=Nstar1+1d0
 
-	if(.not.J.gt.0d0) then
+      A0 = 4.d0*pi*r0**2
+      theta = A0*sigma/kb
+      x0     = 2.d0*theta/(3.d0*T*logSat)
+      x1     = Nf**(1.d0/3.d0)
+      x2     = x1/x0
+      x3     = 0.5d0*(1.d0+DSQRT(1.d0+2.d0*x2)) - x2
+      Nstar  = 1.d0 + (x0*x3)**3 
+      if (Nstar<=1.d0) Nstar=1.000000001d0
+ 
+ 
+      x0     = x0*logSat
+      x2     = (Nstar-1.d0)**(1.d0/3.d0) + x1
+      x3     = 1.d0/(Nstar-1.d0)**(2.d0/3.d0)
+      dgdn   = x0*x3* ( 1.d0/x2**2 + x1/x2**3 ) / 3.d0
+      Z = SQRT(dgdn/(2.d0*pi))
+      thetaN = theta/(1.d0+(Nf/(Nstar-1.d0))**(1.d0/3.d0))
+      x1     = (Nstar-1.d0)*logSat - (thetaN/T)
+     &         *(Nstar-1.d0)**(2.d0/3.d0)
+      nst    = nx*EXP(x1)
+ 
+      J = tau*nst*Z
+      Nc=Nstar
+
+	if(.not.J.gt.0d0.or..not.Nc.gt.1d0) then
 		J=0d0
 		Nc=1d0
 	endif
