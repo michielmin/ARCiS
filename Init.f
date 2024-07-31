@@ -740,7 +740,15 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Mg2SiO4_amorph_sol-gel.dat'
 									Cloud(i)%nax(j)=1
-								case('Na2SiO3')
+								case('FeSiO3','FERROSILITE')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/pyrmg40.lnk'
+									Cloud(i)%nax(j)=1
+								case('Fe2SiO4','FAYALITE')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/olmg40.lnk'
+									Cloud(i)%nax(j)=1
+								case('NaAlSi3O8')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/naalsi3o8_02.36_0000_001.lnk'
 									Cloud(i)%nax(j)=1
