@@ -28,7 +28,7 @@
 	logical,allocatable :: v_include(:),c_rainout(:),do_nuc(:)
 	integer INCFD,IERR
 	logical SKIP,liq
-	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr),compGibbs
+	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr),compGibbs,ffrag
 	integer itime
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
 	real*8,allocatable :: xv_out(:),Jn_xv(:,:),A_J(:),B_j(:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:)
@@ -162,7 +162,7 @@
 			nconv=10
 		endif
 	endif
-	if(Cloud(ii)%computeJn) niter=niter*10
+	if(Cloud(ii)%computeJn) niter=niter*4
 	
 	allocate(docondense(nCS))
 
@@ -360,6 +360,11 @@
 				v_cloud(i,6)=1
 				v_include(6)=.true.
 				rhodust(i)=7.87
+				do_nuc(i)=.false.!Cloud(ii)%ComputeJn
+				inuc(i)=6
+				sigma_nuc(i)=1870	! from Brooks et al. 2001
+				r0_nuc(i)=3.7e-9
+				Nf_nuc(i)=1d0
 				bc(i,0)=4.989867e+04
 				bc(i,1)=-6.889399e-01
 				bc(i,2)=-1.461748e+01
@@ -476,7 +481,7 @@
 				CSname(i)='Na2S'
 				atoms_cloud(i,6)=1
 				atoms_cloud(i,11)=2
-				v_cloud(i,8)=1
+				v_cloud(i,8)=2
 				v_cloud(i,5)=1
 				v_H2(i)=-1
 				v_include(8)=.true.
@@ -586,6 +591,34 @@
 				r0_nuc(i)=2.0e-8
 				Nf_nuc(i)=1d0
 				ifit(i)=-1
+			case('ZnS')
+				CSname(i)='ZnS'
+				atoms_cloud(i,30)=1
+				atoms_cloud(i,11)=1
+				v_cloud(i,12)=1
+				v_cloud(i,5)=1
+				v_H2(i)=-1
+				v_include(12)=.true.
+				v_include(5)=.true.
+				rhodust(i)=4.09
+				bc(i,0)=7.30636867e+04
+				bc(i,1)=-2.72297464e+00
+				bc(i,2)=-1.60451251e+01
+				bc(i,3)=3.44107646e-03
+				bc(i,4)=-2.56383825e-07
+				ifit(i)=0
+			case('Zn')
+				CSname(i)='Zn'
+				atoms_cloud(i,30)=1
+				v_cloud(i,12)=1
+				v_include(12)=.true.
+				rhodust(i)=7.14d0
+				bc(i,0)=1.56414E+04     
+				bc(i,1)=-1.32671E+00
+				bc(i,2)=-7.87964E+00
+				bc(i,3)=4.59419E-03
+				bc(i,4)=-1.46651E-06
+				ifit(i)=0
 			case default
 				call output("Unknown condensate: " // trim(Cloud(ii)%condensate(i)))
 				print*,'unknown condensate: ', trim(Cloud(ii)%condensate(i))
@@ -722,6 +755,7 @@ c	print*,xv_bot(1:7)
 	sigmamol=8d-15
 
 	eps=1d-3
+	if(Cloud(ii)%computeJn) eps=1d-2
 
 	Sigmadot=Cloud(ii)%Sigmadot
 	
@@ -977,76 +1011,15 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 
 	Sat0=Sat
 
-	if(Cloud(ii)%rainout) then
-		allocate(c_rainout(nCS))
-		c_rainout=.false.
-		xv(1:nVS,1)=0d0
-		f=0.5
-		i=1
-		xv(1:nVS,i)=xv_bot(1:nVS)
-		do iter=1,100
-1			continue
-			do iCS=1,nCS
-				tot1=1d200
-				iVL(i,iCS)=1
-				do iVS=1,nVS
-					if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
-						tot2=xv_bot(iVS)/v_cloud(iCS,iVS)
-						if(tot2.lt.tot1) then
-							tot1=tot2
-							iVL(i,iCS)=iVS
-						endif
-					endif
-				enddo
-				fSat(i,iCS)=CloudP(i)**v_H2(iCS)
-				do iVS=1,nVS
-					if(v_include(iVS).and.v_cloud(iCS,iVS).ne.0d0) then
-						fSat(i,iCS)=fSat(i,iCS)*(CloudP(i)*xv_bot(iVS)*CloudMMW(i)/muV(iVS))**v_cloud(iCS,iVS)
-					endif
-				enddo
-				tot1=Sat(i,iCS)*fSat(i,iCS)/Cloud(ii)%Srainout
-				if(tot1.gt.1d0) then
-					tot1=xv_bot(iVL(i,iCS))*(1d0-1d0/tot1**f)
-					c_rainout(iCS)=.true.
-					do iVS=1,nVS
-						if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
-							xv(iVS,i)=xv(iVS,i)-tot1*v_cloud(iCS,iVS)/v_cloud(iCS,iVL(i,iCS))
-							if(xv(iVS,i).lt.0d0) then
-								f=f/2d0
-								xv(1:nVS,i)=xv_bot(1:nVS)
-								goto 1
-							endif
-						endif
-					enddo
-				endif
-			enddo
-			maxerr=0d0
-			do iVS=1,nVS
-				if((xv_bot(iVS)+xv(iVS,i)).gt.0d0) then
-					tot1=abs(xv_bot(iVS)-xv(iVS,i))/(xv_bot(iVS)+xv(iVS,i))
-					if(tot1.gt.maxerr) maxerr=tot1
-				endif
-			enddo
-			xv_bot(1:nVS)=xv(1:nVS,i)
-			f=(0.5d0+f)/2d0
-			if(maxerr.lt.1d-2) exit
-		enddo
-		do iCS=1,nCS
-			if(c_rainout(iCS)) then
-				print*,'Partial rainout of ',CSname(iCS)
-			endif
-		enddo
-		deallocate(c_rainout)
-	endif
 	if(Cloud(ii)%computeJn) then
 		fscale=1d-8
-		pscale=(1d0/fscale)**(1d0/min(real(niter/2),100.0))
+		pscale=(1d0/fscale)**(1d0/min(real(niter/2),50.0))
 		f=0.95
 		nfscale=0
 	else
 		fscale=1d0
 		pscale=1d0
-		f=0.6
+		f=0.95
 		nfscale=1000
 	endif
 
@@ -1136,7 +1109,7 @@ c start the loop
      &						pi*rpart(i)*min(rpart(i)*vthv(i),4d0*Dp)
 			if(do_nuc(iCS)) then
 				tot1=Sat(i,iCS)*xv(iVL(i,iCS),i)
-				tot1=exp(log(tot1)*fscale)
+				if(tot1.gt.2d0) tot1=2d0*exp(log(tot1/2d0)*fscale)
 				tot2=CloudP(i)*CloudMMW(i)/(muV(inuc(iCS))*kb*CloudT(i))
 				select case(CSname(iCS))
 					case('SiO','TiO2')
@@ -1207,7 +1180,7 @@ C===============================================================================
 	endif
 	do iCS=1,nCS
 		j=j+1
-		if(Cloud(ii)%freeflow_con) then
+		if(Cloud(ii)%freeflow_con.or.Cloud(ii)%rainout) then
 c assume continuous flux at the bottom (dF/dz=Sc=0)
 			x(j)=0d0
 
@@ -1218,30 +1191,17 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			AB(ik,ixc(iCS,i+1))=AB(ik,ixc(iCS,i+1))-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 
 			ik=KL+KU+1+j-ixc(iCS,i)
-			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
-
-c			if(iamorph(iCS).ne.0) then
-c				ik=KL+KU+1+j-ixc(iamorph(iCS),i)
-c				AB(ik,ixc(iamorph(iCS),i))=AB(ik,ixc(iamorph(iCS),i))+Clouddens(i)*tcrystinv(i)
-c			else
-c				ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-c				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Sc(i,iCS)*xn(i)
-c			endif
-c			if(icryst(iCS).ne.0) then
-c				ik=KL+KU+1+j-ixc(iCS,i)
-c				AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Clouddens(i)*tcrystinv(i)
-c			endif
-c
-c			ik=KL+KU+1+j-ixc(iCS,i)
-c			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
+			if(.not.Cloud(ii)%rainout) then
+				AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
+			endif
 		else
 			ik=KL+KU+1+j-ixc(iCS,i)
 			AB(ik,ixc(iCS,i))=1d0
 			x(j)=0d0
 		endif
 	enddo
-	if(Cloud(ii)%freeflow_con) then
+	if(Cloud(ii)%freeflow_con.or.Cloud(ii)%rainout) then
 		do iVS=1,nVS
 			if(v_include(iVS)) then
 				j=j+1
@@ -1306,9 +1266,11 @@ c coagulation
 				Dp=kb*CloudT(i)/(6d0*pi*rpart(i)*vmol*Clouddens(i))
 				vBM=sqrt(16d0*kb*CloudT(i)/(pi*mpart(i)))
 				if(Dp/rpart(i).lt.vBM) vBM=Dp/rpart(i)
-				tcoaginv=npart*pi*rpart(i)**2*(abs(vsed(i))*exp(-(vsed(i)/vfrag)**2)+2d0*vBM*exp(-(vBM/vfrag)**2))
+				tcoaginv=npart*pi*rpart(i)**2*(abs(vsed(i))+2d0*vBM)
 	
 				if(.not.tcoaginv.gt.0d0) tcoaginv=0d0
+				ffrag=1d0-2d0/(1d0+exp(-10d0*((abs(vsed(i))+2d0*vBM)-vfrag)/vfrag))
+				tcoaginv=tcoaginv*ffrag
 	
 				tcinv(iter,i)=tcoaginv
 				tcoaginv=sum(tcinv(max(1,iter-10):iter,i))/real(iter-max(1,iter-10)+1)
@@ -1329,8 +1291,10 @@ c coagulation
 			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 
 			dz=(CloudR(i-1)-CloudR(i))
-			ik=KL+KU+1+j-ixc(iCS,i-1)
-			AB(ik,ixc(iCS,i-1))=AB(ik,ixc(iCS,i-1))-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
+			if(.not.Cloud(ii)%rainout.or.i.gt.3) then
+				ik=KL+KU+1+j-ixc(iCS,i-1)
+				AB(ik,ixc(iCS,i-1))=AB(ik,ixc(iCS,i-1))-0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz/dztot
+			endif
 
 			ik=KL+KU+1+j-ixc(iCS,i)
 			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
@@ -1478,7 +1442,11 @@ c		endif
 				if(iter.eq.1) then
 					xv(iVS,i)=x(ixv(iVS,i))
 				else
-					xv(iVS,i)=xv(iVS,i)*f+x(ixv(iVS,i))*(1d0-f)
+					if(Cloud(ii)%computeJn) then
+						xv(iVS,i)=xv(iVS,i)**f*x(ixv(iVS,i))**(1d0-f)
+					else
+						xv(iVS,i)=xv(iVS,i)*f+x(ixv(iVS,i))*(1d0-f)
+					endif
 				endif
 			endif
 		enddo
@@ -1522,8 +1490,7 @@ C===============================================================================
 			maxerr=err
 			j=i
 		endif
-		rpart(i)=rr!sqrt(rr*rpart(i))
-		if(Cloud(ii)%computeJn) xn(i)=tot/(4d0*rpart(i)**3*pi*rho_av(i)/3d0)
+		rpart(i)=sqrt(rpart(i)*rr)
 	enddo
 	if(maxerr.lt.eps.and.nfscale.gt.100) then
 		iconv=iconv+1
