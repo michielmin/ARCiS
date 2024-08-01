@@ -1201,7 +1201,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			x(j)=0d0
 		endif
 	enddo
-	if(Cloud(ii)%freeflow_con.or.Cloud(ii)%rainout) then
+	if(Cloud(ii)%rainout) then
 		do iVS=1,nVS
 			if(v_include(iVS)) then
 				j=j+1
