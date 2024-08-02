@@ -755,7 +755,7 @@ c	print*,xv_bot(1:7)
 	sigmamol=8d-15
 
 	eps=1d-3
-	if(Cloud(ii)%computeJn) eps=1d-2
+	if(Cloud(ii)%computeJn) eps=5d-3
 
 	Sigmadot=Cloud(ii)%Sigmadot
 	
@@ -869,17 +869,15 @@ c	print*,xv_bot(1:7)
 	allocate(x(NN),x0(NN))
 	allocate(IWORK(10*NN*NN))
 
-c	if(.not.computeT.or.nTiter.eq.1) then
-		rpart=Cloud(ii)%rnuc
-		xn=0d0
-		xv=0d0
-		xc=0d0
-		do j=1,nVS
-			do i=1,nnr
-				xv(j,i)=xv_bot(j)
-			enddo
+	rpart=Cloud(ii)%rnuc
+	xn=0d0
+	xv=0d0
+	xc=0d0
+	do j=1,nVS
+		do i=1,nnr
+			xv(j,i)=xv_bot(j)
 		enddo
-c	endif
+	enddo
 	tcinv=0d0
 	Jn_xv=0d0
 	Nc_nuc=0d0
@@ -1019,7 +1017,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 	else
 		fscale=1d0
 		pscale=1d0
-		f=0.95
+		f=0.75
 		nfscale=1000
 	endif
 
@@ -1029,6 +1027,11 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 	allocate(AB(2*NStot+NStot+1,NN))
 
 	iconv=0
+	
+	
+	
+	
+	
 c start the loop
 	do iter=1,niter
 	call tellertje(iter,niter)
@@ -1039,7 +1042,7 @@ c start the loop
 !$OMP& PRIVATE(i,tot1,tot2,cs,fsed,tot,iCS,iVS,lmfp,St,Dp)
 !$OMP& SHARED(nnr,nCS,nVS,iVL,v_cloud,CloudT,xv,muV,fSat,Sat0,Sat,v_include,CloudP,CloudMMW,v_H2,vth,ii,CloudR,Rplanet,sigmamol,
 !$OMP&		vsed,Kd,CloudHp,rpart,rho_av,CloudG,Clouddens,Cloud,mpart,xv_bot,xn,xc,Km,vthv,Sc,muC,do_nuc,CSname,Nc_nuc,Jn_xv,m_nuc,
-!$OMP&		iter,complexKzz,fstick,inuc,A_J,B_J,Nf_nuc,r0_nuc,sigma_nuc,fscale)
+!$OMP&		iter,complexKzz,fstick,inuc,A_J,B_J,Nf_nuc,r0_nuc,sigma_nuc,fscale,nfscale)
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC, 1)
 	do i=1,nnr
@@ -1110,14 +1113,13 @@ c start the loop
 			if(do_nuc(iCS)) then
 				tot1=Sat(i,iCS)*xv(iVL(i,iCS),i)
 				if(tot1.gt.2d0) tot1=2d0*exp(log(tot1/2d0)*fscale)
-				tot2=CloudP(i)*CloudMMW(i)/(muV(inuc(iCS))*kb*CloudT(i))
+				tot2=CloudP(i)*CloudMMW(i)/(muV(iVL(i,iCS))*kb*CloudT(i))
 				select case(CSname(iCS))
 					case('SiO','TiO2')
 						call ComputeJ_xv(xv(iVL(i,iCS),i),tot2,CloudT(i),tot1,Jn_xv(i,iCS),A_J(iCS),B_J(iCS))
 						Nc_nuc(i,iCS)=m_nuc/(muC(iCS)*mp)
 					case default
-						tot2=tot2*xv(iVL(i,iCS),i)
-						call ComputeJ(CloudT(i),tot1,tot2,vthv(i),sigma_nuc(iCS),r0_nuc(iCS),Nf_nuc(iCS),Jn_xv(i,iCS),Nc_nuc(i,iCS))
+						call ComputeJ(CloudT(i),tot1,tot2,xv(iVL(i,iCS),i),vthv(i),sigma_nuc(iCS),r0_nuc(iCS),Nf_nuc(iCS),Jn_xv(i,iCS),Nc_nuc(i,iCS))
 				end select
 			else
 				Jn_xv(i,iCS)=0d0
@@ -1422,7 +1424,30 @@ c		endif
 		enddo
 	enddo
 
+	xc_iter(iter,1:nCS,1:nnr)=xc(1:nCS,1:nnr)
+	xv_iter(iter,1:nVS,1:nnr)=xv(1:nVS,1:nnr)
+	xn_iter(iter,1:nnr)=xn(1:nnr)
+
+	maxerr=0d0
 	do i=1,nnr
+		err=abs(xn(i)-x(ixn(i)))/(xn(i)+x(ixn(i)))
+		if(err.gt.maxerr.and.tot.gt.1d-20.and.(xn(i)*m_nuc.gt.1d-20.or.x(ixn(i))*m_nuc.gt.1d-20)) then
+			maxerr=err
+		endif
+		do iCS=1,nCS
+			err=abs(xc(iCS,i)-x(ixc(iCS,i)))/(xc(iCS,i)+x(ixc(iCS,i)))
+			if(err.gt.maxerr.and.tot.gt.1d-20.and.(xc(iCS,i).gt.1d-20.or.x(ixc(iCS,i)).gt.1d-20)) then
+				maxerr=err
+			endif
+		enddo
+		do iVS=1,nVS
+			if(v_include(iVS)) then
+				err=abs(xv(iVS,i)-x(ixv(iVS,i)))/(xv(iVS,i)+x(ixv(iVS,i)))
+				if(err.gt.maxerr.and.tot.gt.1d-20.and.(xv(iVS,i).gt.1d-20.or.x(ixv(iVS,i)).gt.1d-20)) then
+					maxerr=err
+				endif
+			endif
+		enddo
 		if(.not.Cloud(ii)%usefsed) then
 			if(iter.eq.1) then
 				xn(i)=x(ixn(i))
@@ -1459,10 +1484,6 @@ C===============================================================================
 C=========================================================================================
 
 
-	xc_iter(iter,1:nCS,1:nnr)=xc(1:nCS,1:nnr)
-	xv_iter(iter,1:nVS,1:nnr)=xv(1:nVS,1:nnr)
-	xn_iter(iter,1:nnr)=xn(1:nnr)
-	maxerr=0d0
 	do i=1,nnr
 		tot=0d0
 		do iCS=1,nCS
@@ -1490,7 +1511,7 @@ C===============================================================================
 			maxerr=err
 			j=i
 		endif
-		rpart(i)=sqrt(rpart(i)*rr)
+		rpart(i)=rr!sqrt(rpart(i)*rr)
 	enddo
 	if(maxerr.lt.eps.and.nfscale.gt.100) then
 		iconv=iconv+1
@@ -1498,9 +1519,13 @@ C===============================================================================
 	else
 		iconv=0
 	endif
-c	print*,iter,maxerr,fscale
+c	print*,iter,maxerr
 	enddo
 c end the loop
+
+
+
+
 
 	if(iter.gt.niter) then
 		if(iconv.eq.0.and.(nTiter.gt.4.or..not.computeT)) print*,'Cloud formation not converged: ',maxerr
@@ -1794,11 +1819,11 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	end
 
 
-	subroutine ComputeJ(T,Sat,nx,vth,sigma,r0,Nf,J,Nc)
+	subroutine ComputeJ(T,Sat,scale,xv,vth,sigma,r0,Nf,J,Nc)
 	IMPLICIT NONE
 	real*8 T,nx,sigma,Sat,vth,J
 	real*8 Nstar1,theta,r0,A0,logSat,Nstar
-	real*8 Tmax,mu,tau,xv,MMW
+	real*8 Tmax,mu,tau,MMW,scale,xv
 	real*8 pi,Z,dGRT,Nstar_inf,Nf,kb,mp,Nc,x0,x1,x2,x3,dgdn,thetaN,nst
 	parameter(pi=3.14159265358979323846264338328d0)
 	parameter(kb=1.3806503d-16)
@@ -1809,6 +1834,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 		Nc=1d0
 		return
 	endif
+	nx=scale*xv
 	
 	logSat=log(Sat)
 
@@ -1827,7 +1853,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 
 	tau=nx*vth*(Nstar1+1d0)**(2./3.)*A0
 
-	J=(nx*tau)*Z*exp(Nstar1*logSat-dGRT)
+	J=scale*tau*Z*exp(Nstar1*logSat-dGRT)
 	Nc=Nstar1+1d0
 
       A0 = 4.d0*pi*r0**2
@@ -1848,7 +1874,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
       thetaN = theta/(1.d0+(Nf/(Nstar-1.d0))**(1.d0/3.d0))
       x1     = (Nstar-1.d0)*logSat - (thetaN/T)
      &         *(Nstar-1.d0)**(2.d0/3.d0)
-      nst    = nx*EXP(x1)
+      nst    = scale*EXP(x1)
  
       J = tau*nst*Z
       Nc=Nstar
