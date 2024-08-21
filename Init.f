@@ -732,22 +732,40 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/SiO2_amorph.dat'
 									Cloud(i)%nax(j)=1
-								case('MgSiO3','ENSTATITE')
+								case('MgSiO3')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/MgSiO3_amorph_glass.dat'
 									Cloud(i)%nax(j)=1
-								case('Mg2SiO4','FORSTERITE')
+								case('ENSTATITE')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/enst_x.lnk'
+									Cloud(i)%lnkfile(j,2)=trim(homedir) // '/ARCiS/Data/refind/enst_y.lnk'
+									Cloud(i)%lnkfile(j,3)=trim(homedir) // '/ARCiS/Data/refind/enst_z.lnk'
+									Cloud(i)%nax(j)=3
+								case('Mg2SiO4')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Mg2SiO4_amorph_sol-gel.dat'
 									Cloud(i)%nax(j)=1
+								case('FORSTERITE')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/for_x.lnk'
+									Cloud(i)%lnkfile(j,2)=trim(homedir) // '/ARCiS/Data/refind/for_y.lnk'
+									Cloud(i)%lnkfile(j,3)=trim(homedir) // '/ARCiS/Data/refind/for_z.lnk'
+									Cloud(i)%nax(j)=3
 								case('FeSiO3','FERROSILITE')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/pyrmg40.lnk'
 									Cloud(i)%nax(j)=1
-								case('Fe2SiO4','FAYALITE')
+								case('Fe2SiO4')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/olmg40.lnk'
 									Cloud(i)%nax(j)=1
+								case('FAYALITE')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/fay_x.lnk'
+									Cloud(i)%lnkfile(j,2)=trim(homedir) // '/ARCiS/Data/refind/fay_y.lnk'
+									Cloud(i)%lnkfile(j,3)=trim(homedir) // '/ARCiS/Data/refind/fay_z.lnk'
+									Cloud(i)%nax(j)=3
 								case('NaAlSi3O8')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/naalsi3o8_02.36_0000_001.lnk'
@@ -1249,6 +1267,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadCloud(key)
 		case("kzz_offset")
 			read(key%value,*) Kzz_offset
+		case("kzz_max")
+			read(key%value,*) Kzz_max
 		case("complexkzz")
 			read(key%value,*) complexKzz
 		case("computekzz")
@@ -2000,6 +2020,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	fixmol_P=1d20
 	Kzz=1d8
 	Kzz_offset=0d0
+	Kzz_max=1d20
 	metallicity=0d0
 	condensates=.false.
 	dosimplerainout=.false.
