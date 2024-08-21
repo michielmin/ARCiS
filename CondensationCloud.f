@@ -1104,7 +1104,7 @@ c start the loop
 	call tellertje(iter,niter)
 
 	vsed=0d0
-!$OMP PARALLEL IF(.false.)
+!$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,tot1,tot2,cs,fsed,tot,iCS,iVS,lmfp,St,Dp,Jn_temp)
 !$OMP& SHARED(nnr,nCS,nVS,iVL,v_cloud,CloudT,xv,muV,fSat,Sat0,Sat,v_include,CloudP,CloudMMW,v_H2,vth,ii,CloudR,Rplanet,sigmamol,
@@ -1544,13 +1544,15 @@ C===============================================================================
 C=========================================================================================
 
 
-	do i=1,nnr
+	do i=nnr,1,-1
 		tot=0d0
 		do iCS=1,nCS
 			tot=tot+xc(iCS,i)/rhodust(iCS)
 		enddo
 		if(tot.gt.0d0) then
 			rho_av(i)=sum(xc(1:nCS,i))/tot
+		else if(i.lt.nnr) then
+			rho_av(i)=rho_av(i+1)
 		else
 			rho_av(i)=sum(rhodust(1:nCS))/real(nCS)
 		endif
@@ -1570,7 +1572,7 @@ C===============================================================================
 		if(err.gt.maxerr.and.tot.gt.1d-20.and.i.gt.1.and..not.Cloud(ii)%usefsed) then
 			maxerr=err
 		endif
-		rpart(i)=rr!sqrt(rpart(i)*rr)
+		if(.not.Cloud(ii)%usefsed) rpart(i)=rr!sqrt(rpart(i)*rr)
 	enddo
 	if(Cloud(ii)%computeJn.and.maxerr.lt.eps.and.nfscale.gt.100.and.iconv.ge.nconv.and.eps.gt.5d-3) then
 		iconv=0
@@ -1604,7 +1606,7 @@ c end the loop
 		xc(1:nCS,1:nnr)=xc(1:nCS,1:nnr)+xc_iter(i,1:nCS,1:nnr)/real(nconv)
 		xv(1:nVS,1:nnr)=xv(1:nVS,1:nnr)+xv_iter(i,1:nVS,1:nnr)/real(nconv)
 	enddo
-	do i=1,nnr
+	do i=nnr,1,-1
 		tot=0d0
 		do iCS=1,nCS
 			tot=tot+xc(iCS,i)/rhodust(iCS)
@@ -1625,10 +1627,12 @@ c end the loop
 		endif
 		if(tot.gt.0d0) then
 			rho_av(i)=sum(xc(1:nCS,i))/tot
+		else if(i.lt.nnr) then
+			rho_av(i)=rho_av(i+1)
 		else
 			rho_av(i)=sum(rhodust(1:nCS))/real(nCS)
 		endif
-		rpart(i)=rr
+		if(.not.Cloud(ii)%usefsed) rpart(i)=rr
 	enddo
 
 	deallocate(vthv)
