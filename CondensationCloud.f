@@ -1009,12 +1009,11 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 	if(Cloud(ii)%rainout) then
 		allocate(c_rainout(nCS))
 		c_rainout=.false.
-		xv(1,1:nVS)=0d0
-		f=1d0/real(nCS)
+		f=1d-4
 		i=1
-		xv(i,1:nVS)=xv_bot(1:nVS)
 		do iter=1,10000
-1			continue
+			xv(i,1:nVS)=0d0
+			j=0
 			do iCS=1,nCS
 				tot1=1d200
 				iVL(i,iCS)=1
@@ -1035,40 +1034,34 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 				enddo
 				tot1=Sat(i,iCS)*fSat(i,iCS)/Cloud(ii)%Srainout
 				if(tot1.gt.1d0) then
-					tot1=xv_bot(iVL(i,iCS))*(1d0-1d0/tot1)*f
+					j=j+1
+					tot1=xv_bot(iVL(i,iCS))*(1d0-1d0/tot1)
 					c_rainout(iCS)=.true.
 					do iVS=1,nVS
 						if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
-							xv(i,iVS)=xv(i,iVS)-tot1*v_cloud(iCS,iVS)/v_cloud(iCS,iVL(i,iCS))
-							if(xv(i,iVS).lt.0d0) then
-								f=f/2d0
-								xv(i,1:nVS)=xv_bot(1:nVS)
-								goto 1
-							endif
+							xv(i,iVS)=xv(i,iVS)+tot1*v_cloud(iCS,iVS)*muV(iVS)/(v_cloud(iCS,iVL(i,iCS))*muV(iVL(i,iCS)))
 						endif
 					enddo
 				endif
 			enddo
-			maxerr=0d0
+			if(j.eq.0) exit
+			maxerr=1d200
 			do iVS=1,nVS
-				if((xv_bot(iVS)+xv(i,iVS)).gt.0d0) then
-					tot1=abs(xv_bot(iVS)-xv(i,iVS))/(xv_bot(iVS)+xv(i,iVS))
-					if(tot1.gt.maxerr) maxerr=tot1
+				if(v_include(iVS).and.xv(i,iVS).gt.0d0) then
+					err=xv_bot(iVS)/xv(i,iVS)
+					if(err.lt.maxerr) maxerr=err
 				endif
 			enddo
-			xv_bot(1:nVS)=xv(i,1:nVS)
-			f=(1d0/real(nCS)+f)/2d0
-			if(maxerr.lt.1d-2) exit
+			if(.not.maxerr.lt.1d100) exit
+			xv_bot(1:nVS)=xv_bot(1:nVS)-maxerr*0.1*xv(i,1:nVS)
 		enddo
-		do iCS=1,nCS
-			if(c_rainout(iCS)) then
-				print*,'Partial rainout of ',CSname(iCS)
-			endif
-		enddo
+c		do iCS=1,nCS
+c			if(c_rainout(iCS)) then
+c				print*,'Partial rainout of ',CSname(iCS)
+c			endif
+c		enddo
 		deallocate(c_rainout)
 	endif
-
-
 
 	if(Cloud(ii)%computeJn) then
 		fscale=1d-8
@@ -1255,7 +1248,7 @@ C===============================================================================
 	endif
 	do iCS=1,nCS
 		j=j+1
-		if(Cloud(ii)%freeflow_con.and..not.Cloud(ii)%rainout) then
+		if(Cloud(ii)%freeflow_con) then
 c assume continuous flux at the bottom (dF/dz=Sc=0)
 			x(j)=0d0
 
@@ -1271,7 +1264,6 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 		else
 			ik=KL+KU+1+j-ixc(iCS,i)
 			AB(ik,ixc(iCS,i))=1d0
-			x(j)=0d0
 		endif
 	enddo
 	do iVS=1,nVS
