@@ -42,7 +42,7 @@
 	itimecloud=itimecloud-itime
 	ctimecloud=ctimecloud+1
 
-	nVS=15
+	nVS=16
 	allocate(v_names(nVS),v_atoms(nVS,N_atoms),v_include(nVS))
 	allocate(bv(nVS,0:4),bH2(0:4))
 	bv=0d0
@@ -141,6 +141,15 @@
 	bv(15,2)=5.27931E+00
 	bv(15,3)=2.75677E-03
 	bv(15,4)=-1.39667E-07
+
+	v_names(16)="SO2"
+	v_atoms(16,11)=1
+	v_atoms(16,5)=2
+	bv(16,0)=1.27905E+05
+	bv(16,1)=-3.68505E+00
+	bv(16,2)=-5.04460E+00
+	bv(16,3)=1.38250E-03
+	bv(16,4)=-8.66752E-08
 
 	v_include=.false.
 
@@ -535,11 +544,19 @@
 				atoms_cloud(i,1)=2
 				atoms_cloud(i,5)=4
 				atoms_cloud(i,11)=1
-				v_cloud(i,4)=4
-				v_cloud(i,5)=1
-				v_H2(i)=-4
+
+				v_cloud(i,4)=2
+				v_cloud(i,16)=1
+				v_H2(i)=-1
 				v_include(4)=.true.
-				v_include(5)=.true.
+				v_include(16)=.true.
+
+c				v_cloud(i,4)=4
+c				v_cloud(i,5)=1
+c				v_H2(i)=-4
+c				v_include(4)=.true.
+c				v_include(5)=.true.
+
 				rhodust(i)=1.84d0
 				bc(i,0)=9.70368E+05
 				bc(i,1)=-2.53825E+06
