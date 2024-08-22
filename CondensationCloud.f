@@ -1603,7 +1603,7 @@ c end the loop
 
 
 
-	if(iter.gt.niter) then
+	if(iter.gt.niter.and..not.retrieval) then
 		if(iconv.eq.0.and.(nTiter.gt.4.or..not.computeT)) print*,'Cloud formation not converged: ',maxerr
 		iter=niter
 	endif
