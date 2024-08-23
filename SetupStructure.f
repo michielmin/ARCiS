@@ -1408,6 +1408,9 @@ c-----------------------------------------------------------------------
 c use parametrization from Moses et al. (2022)
 		Te=(TeffP**4+(Rstar/(Dplanet))**2*Tstar**4)**0.25
 		ComputeKzz=(5d8/sqrt(x))*(H/620d5)*(Te/1450d0)**4
+c put some limits on the Kzz
+		ComputeKzz=ComputeKzz+Kzz_offset
+		ComputeKzz=1d0/(1d0/ComputeKzz+1d0/Kzz_max)
 	else if(Kzz_deep.gt.0d0.and.Kzz_1bar.gt.0d0) then
 		if(Kzz_contrast.gt.1d0) then
 			Kmax=Kzz_deep*Kzz_contrast
@@ -1428,8 +1431,6 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 		vth=sqrt(8d0*kb*Tg/(pi*2.3d0*mp))
 		ComputeKzz=ComputeKzz+lmfp*vth/3d0
 	endif
-	ComputeKzz=ComputeKzz+Kzz_offset
-	ComputeKzz=1d0/(1d0/ComputeKzz+1d0/Kzz_max)
 	
 	return
 	end

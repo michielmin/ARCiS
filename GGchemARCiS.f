@@ -455,45 +455,31 @@ c          print '("p-it=",i3,"  mu=",2(1pE20.12))',it,mu/amu,dmu/mu
 
 	tot=sum(nmol(1:NMOLE))+sum(nat(1:NELEM))
 
-c		print*,Pin,Tin
-c		do i=1,NMOLE
-c			if(nmol(i)/tot.gt.1d-8) then
-c				print*,nmol(i)/tot,trim(cmol(i))
-c			endif
-c		enddo
-
-
-	mol_abuns_in=0d0
-	do j=1,n_mol_in
-c		call To_upper_ARCiS(mol_names_in(j),uppername)
-c		do i=1,NMOLE
-c			if(uppername.eq.cmol(i)) then
-c				mol_abuns_in(j)=mol_abuns_in(j)+nmol(i)/tot
-c			endif
-c		enddo
-c		do i=1,NELEM
-c			if(mol_names_in(j).eq.elnam(i)) then
-c				mol_abuns_in(j)=mol_abuns_in(j)+nat(i)/tot
-c			endif
-c		enddo
-		i=linkmol(j)
-		if(i.ne.0) then
-			mol_abuns_in(j)=nmol(i)/tot
-		endif
-		i=linkele(j)
-		if(i.ne.0) then
-			mol_abuns_in(j)=nat(i)/tot
-		endif
-	enddo
-
-	MMW=0d0
-	do i=1,NMOLE
-		MMW=MMW+nmol(i)*mmol(i)/tot
-	enddo
-	do i=1,NELEM
-		MMW=MMW+nat(i)*mass(i)/tot
-	enddo
-	MMW=MMW/amu
+	if(.not.tot.gt.0d0) then
+		mol_abuns_in=0d0
+		MMW=1d0
+	else
+		mol_abuns_in=0d0
+		do j=1,n_mol_in
+			i=linkmol(j)
+			if(i.ne.0) then
+				mol_abuns_in(j)=nmol(i)/tot
+			endif
+			i=linkele(j)
+			if(i.ne.0) then
+				mol_abuns_in(j)=nat(i)/tot
+			endif
+		enddo
+	
+		MMW=0d0
+		do i=1,NMOLE
+			MMW=MMW+nmol(i)*mmol(i)/tot
+		enddo
+		do i=1,NELEM
+			MMW=MMW+nat(i)*mass(i)/tot
+		enddo
+		MMW=MMW/amu
+	endif
 	
 	imethod=2
 	

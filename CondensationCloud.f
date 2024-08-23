@@ -2002,14 +2002,15 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	
 	do i=1,nr
 		f=(Otot(i)-mixrat_r(i,iCO))/(2.0*mixrat_r(i,iCO2)+mixrat_r(i,iH2O))
-		if(f.lt.0d0) f=0d0
+		if(.not.f.gt.0d0) f=0d0
 		mixrat_r(i,iCO2)=f*mixrat_r(i,iCO2)
 		mixrat_r(i,iH2O)=f*mixrat_r(i,iH2O)
 		f=(Ctot(i)-mixrat_r(i,iCO2))/(mixrat_r(i,iCH4)+mixrat_r(i,iCO))
-		if(f.lt.0d0) f=0d0
+		if(.not.f.gt.0d0) f=0d0
 		mixrat_r(i,iCO)=f*mixrat_r(i,iCO)
 		mixrat_r(i,iCH4)=f*mixrat_r(i,iCH4)
 		f=Ntot(i)/(mixrat_r(i,iNH3)+2.0*mixrat_r(i,iN2))
+		if(.not.f.gt.0d0) f=0d0
 		mixrat_r(i,iNH3)=f*mixrat_r(i,iNH3)
 		mixrat_r(i,iN2)=f*mixrat_r(i,iN2)
 	enddo
