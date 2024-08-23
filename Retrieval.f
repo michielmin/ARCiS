@@ -363,8 +363,8 @@ c	enddo
 	allocate(dvarq(n_ret))
 
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
-c		call doMCMCF90(var0,n_ret)
-		call MCMC(MCMCfunc,var0,n_ret,npop,npop*100,ny)
+		call doMCMCF90(var0,n_ret)
+c		call MCMC(MCMCfunc,var0,n_ret,npop,npop*100,ny)
 		return
 	endif
 	
