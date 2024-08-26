@@ -277,16 +277,7 @@ c-----------------------------------------------------------------------
 					Cloud(ii)%Ksca(is,1:nlam+1)=Cloud(ii)%Ksca(1,1:nlam+1)
 				enddo
 			else
-				if(.not.retrieval) then
-					open(unit=28,file=trim(outputdir) // 'cloudcomp.dat',RECL=1000)				
-					form='("#",a18,a23,' // trim(int2string(Cloud(ii)%nmat,'(i4)')) // 'a23)'
-					write(28,form) "P[bar]","dens",(trim(Cloud(ii)%material(j)),j=1,Cloud(ii)%nmat)
-					form='(es19.5,es23.5,' // trim(int2string(Cloud(ii)%nmat,'(i4)')) // 'f23.5)'
-				endif
 				do is=nr,1,-1
-					if(.not.retrieval) then
-						write(28,form) P(is),cloud_dens(is,ii),Cloud(ii)%frac(is,1:Cloud(ii)%nmat)
-					endif
 					call tellertje(nr-is+1,nr)
 					call ComputePart(Cloud(ii),ii,is,computelamcloud)
 					if(restrictcomputecloud) then
@@ -298,15 +289,17 @@ c-----------------------------------------------------------------------
 						enddo
 					endif
 				enddo
+			endif
+			if(.not.retrieval) then
+				open(unit=28,file=trim(outputdir) // 'cloudcomp.dat',RECL=1000)				
+				form='("#",a18,a23,' // trim(int2string(Cloud(ii)%nmat,'(i4)')) // 'a23)'
+				write(28,form) "P[bar]","dens",(trim(Cloud(ii)%condensate(j)) // '[s]',j=1,Cloud(ii)%nmat)
+				form='(es19.5,es23.5,' // trim(int2string(Cloud(ii)%nmat,'(i4)')) // 'f23.5)'
+				do is=nr,1,-1
+					write(28,form) P(is),cloud_dens(is,ii),Cloud(ii)%frac(is,1:Cloud(ii)%nmat)
+				enddo
 				close(unit=28)
 			endif
-c			do is=nr,1,-1
-c				open(unit=29,file='particle' // trim(int2string(is,'(i0.2)')),RECL=1000)
-c				do ilam=1,nlam
-c					if(computelam(ilam)) write(29,*) lam(ilam)*1d4,Cloud(ii)%Kabs(is,ilam),Cloud(ii)%Ksca(is,ilam)
-c				enddo
-c				close(unit=29)
-c			enddo
 		case default
 			call output("Opacity type unknown: " // trim(Cloud(ii)%opacitytype))
 			stop

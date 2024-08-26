@@ -1114,14 +1114,6 @@ c start the loop
 	call tellertje(iter,niter)
 
 	vsed=0d0
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,tot1,tot2,cs,fsed,tot,iCS,iVS,lmfp,St,Dp,Jn_temp)
-!$OMP& SHARED(nnr,nCS,nVS,iVL,v_cloud,CloudT,xv,muV,fSat,Sat0,Sat,v_include,CloudP,CloudMMW,v_H2,vth,ii,CloudR,Rplanet,sigmamol,
-!$OMP&		vsed,Kd,CloudHp,rpart,rho_av,CloudG,Clouddens,Cloud,mpart,xv_bot,xn,xc,Km,vthv,Sc,muC,do_nuc,CSname,Nc_nuc,Jn_xv,m_nuc,
-!$OMP&		iter,complexKzz,fstick,inuc,A_J,B_J,Nf_nuc,r0_nuc,sigma_nuc,fscale,nfscale,f)
-!$OMP DO
-!$OMP& SCHEDULE(DYNAMIC, 1)
 	do i=1,nnr
 		do iCS=1,nCS
 			tot1=1d200
@@ -1209,9 +1201,6 @@ c start the loop
 			endif
 		enddo
 	enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
 
 	fscale=fscale*pscale
 	if(fscale.gt.1d0) then

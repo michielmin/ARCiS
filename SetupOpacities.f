@@ -18,11 +18,11 @@
 	integer imol
 	real*8 nu1,nu2,tanscale,ll,tot,tot2
 	real*8 x1,x2,rr,gasdev,random,dnu,Saver,starttime,stoptime,cwg(ng),w1
-	real*8,allocatable,save :: nu_line(:),mixrat_tmp(:)
+	real*8,allocatable,save :: nu_line(:),mixrat_tmp(:),kappa_omp(:,:)
 	real*8,allocatable,save :: opac_tot(:,:),cont_tot(:),kaver(:),kappa_mol(:,:,:)
 	integer,allocatable,save :: ifull(:),ifast(:)
-	real*8,allocatable,save :: k_line(:),ktemp(:),kappa(:,:),w_line(:),kappa_tot(:),work1(:),work2(:),work3(:)
-!$OMP THREADPRIVATE(ifull,ifast,k_line,ktemp,w_line,kappa_tot,work1,work2,work3)
+	real*8,allocatable,save :: k_line(:),ktemp(:),kappa(:),w_line(:),kappa_tot(:),work1(:),work2(:),work3(:)
+!$OMP THREADPRIVATE(ifull,ifast,k_line,ktemp,w_line,kappa_tot,work1,work2,work3,kappa)
 	integer n_nu_line,iT,nfull,nfast,ivel
 	integer i,j,ir,k,nl,ig,ig_c,imol0,jg,nmap,imap(nmol)
 	character*500 filename
@@ -64,10 +64,10 @@ c	n_nu_line=ng*min(j,4)
 		allocate(kappa_mol(ng,nlam,nmol))
 		allocate(mixrat_tmp(nmol))
 		allocate(nu_line(n_nu_line))
-		allocate(kappa(ng,nlam))
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(n_nu_line,ng,nmol)
+		allocate(kappa(ng))
 		allocate(k_line(n_nu_line))
 		allocate(ktemp(ng))
 		allocate(w_line(n_nu_line))
@@ -185,7 +185,7 @@ c===============
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,computelam,
 !$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,doRing,lamemis,useobsgrid,
 !$OMP&        RTgridpoint,includemol,do_rayleigh,mixrat_PAH,mixrat_optEC0,mixrat_optEC,mixrat_optEC_r,nmap,imap,
-!$OMP&        do_optEC,Cabs_optEC,Csca_optEC,ivel,kappa)
+!$OMP&        do_optEC,Cabs_optEC,Csca_optEC,ivel)
 !$OMP DO SCHEDULE(DYNAMIC)
 		do i=1,nlam
 			if(computelam(i).and.(emisspec.or.computeT.or.doRing).and.(.not.useobsgrid.or.lamemis(i).or.RTgridpoint(i))) then
@@ -209,10 +209,10 @@ c===============
 			enddo
 			call dpquicksort_indx(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
-			kappa(1:ng,i)=0d0
+			kappa(1:ng)=0d0
 			if(nfull.gt.0) then
 				imol=ifull(1)
-				kappa(1:ng,i)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
+				kappa(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 				do j=2,nfull
 					imol=ifull(j)
 					ktemp(1:ng)=kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
@@ -220,7 +220,7 @@ c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 					do ig=1,ng
 						do jg=1,ng
 							ig_c=ig_c+1
-							k_line(ig_c)=kappa(ig,i)+ktemp(jg)
+							k_line(ig_c)=kappa(ig)+ktemp(jg)
 							w_line(ig_c)=wgg(ig)*wgg(jg)
 						enddo
 					enddo
@@ -228,24 +228,24 @@ c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 					do ig=1,n_nu_line
 						if(.not.k_line(ig).ge.1d-80) k_line(ig)=1d-80
 					enddo
-					call regridKtable(k_line,w_line,n_nu_line,gg,kappa(1:ng,i),wgg,ng,work1,work2,work3)
+					call regridKtable(k_line,w_line,n_nu_line,gg,kappa(1:ng),wgg,ng,work1,work2,work3)
 				enddo
 			endif
 			do j=1,nfast
 				imol=ifast(j)
-				kappa(1:ng,i)=kappa(1:ng,i)+kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
+				kappa(1:ng)=kappa(1:ng)+kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 			enddo
 			else
-			kappa(1:ng,i)=0d0
+			kappa(1:ng)=0d0
 			do imol=1,nmol
 				if(opacitymol(imol)) then
-					kappa(1:ng,i)=kappa(1:ng,i)+kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
+					kappa(1:ng)=kappa(1:ng)+kappa_mol(1:ng,i,imol)*mixrat_tmp(imol)
 				endif
 			enddo
 			endif
 
-			kappa(1:ng,i)=kappa(1:ng,i)+cont_tot(i)
-			Cabs(ir,i,1:ng,ivel)=kappa(1:ng,i)
+			kappa(1:ng)=kappa(1:ng)+cont_tot(i)
+			Cabs(ir,i,1:ng,ivel)=kappa(1:ng)
 			do ig=1,ng
 				if(Cabs(ir,i,ig,ivel).lt.1d-6*Csca(ir,i)) Cabs(ir,i,ig,ivel)=1d-6*Csca(ir,i)
 			enddo

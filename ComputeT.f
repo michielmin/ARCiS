@@ -106,11 +106,6 @@
 			endif
 		enddo
 		BB_LR=0d0
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(TT,j,i,tot,scale)
-!$OMP& SHARED(nlam_LR,BB_LR,freq_LR,dfreq_LR)
-!$OMP DO
 		do j=nBB,1,-1
 			TT=real(j)
 			tot=0d0
@@ -126,9 +121,6 @@
 				BB_LR(1:nlam_LR,j)=BB_LR(1:nlam_LR,j+1)*scale
 			endif
 		enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
 
 		allocate(taustar(nlam_LR,ng))
 		allocate(Ce(nr,nlam_LR,ng))
@@ -488,11 +480,6 @@ c===============================================================================
 	do ir=1,nr
 		IntH(:,ir)=0d0
 	enddo
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(tot,iT,scale,jr,ir)
-!$OMP& SHARED(nlam_LR,BB_LR,IntH,IntHnu,nr,T,IntHnuSurf,SurfEmis_LR,dfreq_LR)
-!$OMP DO
 	do jr=1,nr
 		iT=T(jr)+1
 		if(iT.gt.nBB-1) iT=nBB-1
@@ -506,9 +493,6 @@ c===============================================================================
 			IntH(ir,jr)=tot
 		enddo
 	enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
 	iT=Tsurface+1
 	if(iT.gt.nBB-1) iT=nBB-1
 	if(iT.lt.1) iT=1
@@ -626,11 +610,6 @@ c===============================================================================
 		IntH(:,ir)=0d0
 	enddo
 
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(tot,iT,scale,jr,ir)
-!$OMP& SHARED(nlam_LR,BB_LR,IntH,IntHnu,nr,T,IntHnuSurf,SurfEmis_LR,dfreq_LR)
-!$OMP DO
 	do jr=1,nr
 		iT=T(jr)+1
 		if(iT.gt.nBB-1) iT=nBB-1
@@ -644,9 +623,6 @@ c===============================================================================
 			IntH(ir,jr)=tot
 		enddo
 	enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
 	iT=Tsurface+1
 	if(iT.gt.nBB-1) iT=nBB-1
 	if(iT.lt.1) iT=1
