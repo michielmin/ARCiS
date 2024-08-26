@@ -5,15 +5,18 @@
 	real*8 rr,xx1,xx2,si,exp_tau,A,d,s,fluxg,Planck,fact,tau,freq0,tau_a,tautot,Ag
 	real*8 Ca,Cs,tot,contr,dP,tot2,TT
 	integer icloud,isize
-	real*8,allocatable :: rtrace(:),phase0(:)
-	real*8,allocatable :: fluxg_contr(:),fact_contr(:),Ag_contr(:)
+	real*8,allocatable :: phase0(:)
 	integer irc,imolhide,jmolhide
 	integer nrtrace,ndisk,i,ir,ir_next,ilam,ig,nsub,j,k,nk
 	logical in,dohide
 	integer icc,imol
 	character*500 filename
-	real*8,allocatable :: dtrace(:,:),CaCont(:,:),Ca_cloud(:,:),Cs_cloud(:,:),BBr(:)
-	integer,allocatable :: irtrace(:,:),nirtrace(:)
+	real*8,allocatable,save :: rtrace(:),dtrace(:,:)
+	integer,allocatable,save :: irtrace(:,:),nirtrace(:)
+	real*8,allocatable,save :: CaCont(:),obsA_omp(:,:),obsA_LC_omp(:,:),Ca_cloud(:,:),Cs_cloud(:,:),BBr(:)
+	real*8,allocatable,save :: fluxg_contr(:),fact_contr(:),Ag_contr(:)
+!$OMP THREADPRIVATE(CaCont,obsA_omp,obsA_LC_omp,Ca_cloud,Cs_cloud,BBr,fluxg_contr,fact_contr,Ag_contr)
+	logical,save :: first_entry=.true.
 
 	if(.not.retrieval) then
 	do icc=1,ncc
@@ -88,7 +91,31 @@
 	endif
 	
 	nrtrace=(nr-1)*nsub+ndisk
-	allocate(rtrace(nrtrace))
+
+	if(first_entry) then
+!$OMP PARALLEL IF(.true.)
+		allocate(CaCont(nr))
+		allocate(obsA_omp(0:ncc,1:nlam))
+		allocate(obsA_LC_omp(nrtrace,nlam))
+!$OMP FLUSH
+!$OMP END PARALLEL
+		if(emisspec.or.computecontrib) then
+!$OMP PARALLEL IF(.true.)
+			allocate(fact_contr(nr))
+			allocate(fluxg_contr(nr))
+			allocate(Ag_contr(nr))
+			allocate(Ca_cloud(ncc,nr),Cs_cloud(ncc,nr),BBr(0:nr))
+!$OMP FLUSH
+!$OMP END PARALLEL
+		endif
+
+		allocate(dtrace(nr*2,nrtrace))
+		allocate(irtrace(nr*2+1,nrtrace))
+		allocate(nirtrace(nrtrace))
+		allocate(rtrace(nrtrace))
+
+		first_entry=.false.
+	endif
 
 	k=0
 	if(nsub.eq.0) then
@@ -109,9 +136,6 @@
 		enddo
 	enddo
 
-	allocate(dtrace(nr*2,nrtrace))
-	allocate(irtrace(nr*2+1,nrtrace))
-	allocate(nirtrace(nrtrace))
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,rr,ir,k,si,xx1,in,xx2,d,ir_next)
@@ -175,15 +199,11 @@
 	endif
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(SHARED)
-!$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,Ca_cloud,Cs_cloud,
-!$OMP&         Ca,Cs,icloud,isize,BBr,imol,irc,contr,fact_contr,fluxg_contr,Ag_contr,nk)
+!$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,
+!$OMP&         Ca,Cs,icloud,isize,imol,irc,contr,nk)
 !$OMP& SHARED(nlam,freq,obsA,flux,cloudfrac,ncc,docloud,nrtrace,ng,rtrace,nr,R,Ndens,Cabs,Csca,T,lam,maxtau,nclouds,Cloud,
 !$OMP&			cloud_dens,P,flux_contr,obsA_contr,irtrace,dtrace,nirtrace,
 !$OMP&			nmol,mixrat_r,includemol,computecontrib,wgg,surface_emis)
-	allocate(fact_contr(nr))
-	allocate(fluxg_contr(nr))
-	allocate(Ag_contr(nr))
-	allocate(Ca_cloud(ncc,nr),Cs_cloud(ncc,nr),BBr(0:nr))
 !$OMP DO SCHEDULE(DYNAMIC)
 	do ilam=1,nlam
 		Ca_cloud(1:ncc,1:nr)=0d0
@@ -287,24 +307,16 @@
 		enddo
 	enddo
 !$OMP END DO
-	deallocate(fact_contr)
-	deallocate(fluxg_contr)
-	deallocate(Ag_contr)
-	deallocate(Ca_cloud,Cs_cloud,BBr)
 !$OMP FLUSH
 !$OMP END PARALLEL
 	endif
 
 	if(transspec) then
 	if(.not.allocated(obsA_LC)) allocate(obsA_LC(nrtrace,nlam))
-	allocate(CaCont(nr,nlam))
-
 
 	if(dotranshide) then
 	do jmolhide=1,2
 	do imolhide=0,nmol
-	obsA=0d0
-	obsA_LC=0d0
 	dohide=.false.
 	if(imolhide.eq.0) then
 		if(nclouds.gt.0) dohide=.true.
@@ -317,14 +329,16 @@
 !$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
 !$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,opacitymol,irtrace,dtrace,Cabs_mol,mixrat_r,
 !$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,Cext_cont,Rstar,
-!$OMP&		cloudfrac,nirtrace,maxtau,ndisk,nr,obsA_LC,CaCont,imolhide,jmolhide)
+!$OMP&		cloudfrac,nirtrace,maxtau,ndisk,nr,obsA_LC,imolhide,jmolhide)
+	obsA_omp=0d0
+	obsA_LC_omp=0d0
 !$OMP DO SCHEDULE(DYNAMIC)
 	do ilam=1,nlam
 		do icc=1,ncc
 		if(cloudfrac(icc).gt.0d0) then
 			if((imolhide.eq.0.and.jmolhide.eq.1).or.(imolhide.ne.0.and.jmolhide.eq.2)) then
 				do ir=1,nr
-					CaCont(ir,ilam)=Cext_cont(ir,ilam)
+					CaCont(ir)=Cext_cont(ir,ilam)
 				enddo
 			else
 				do ir=1,nr
@@ -335,7 +349,7 @@
 							Ca=Ca+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 						endif
 					enddo
-					CaCont(ir,ilam)=Ca
+					CaCont(ir)=Ca
 				enddo
 			endif
 			do i=1,nrtrace-1
@@ -348,7 +362,7 @@
 					do k=1,nk
 						ir=irtrace(k,i)
 						d=dtrace(k,i)
-						tau=d*CaCont(ir,ilam)
+						tau=d*CaCont(ir)
 						tautot=tautot+tau
 						ir_next=irtrace(k+1,i)
 						if(tautot.gt.maxtau) then
@@ -387,15 +401,19 @@
 19					continue
 				endif
 				if(.not.A.gt.0d0) A=0d0
-				obsA_LC(i,ilam)=obsA_LC(i,ilam)+cloudfrac(icc)*A
+				obsA_LC_omp(i,ilam)=obsA_LC_omp(i,ilam)+cloudfrac(icc)*A
 				A=pi*(rtrace(i+1)**2-rtrace(i)**2)*(1d0-A)
-				obsA(icc,ilam)=obsA(icc,ilam)+A
-				obsA(0,ilam)=obsA(0,ilam)+cloudfrac(icc)*A
+				obsA_omp(icc,ilam)=obsA_omp(icc,ilam)+A
+				obsA_omp(0,ilam)=obsA_omp(0,ilam)+cloudfrac(icc)*A
 			enddo
 		endif
 		enddo
 	enddo
 !$OMP END DO
+!$OMP CRITICAL
+	obsA_LC(1:nrtrace,1:nlam)=obsA_LC(1:nrtrace,1:nlam)+obsA_LC_omp(1:nrtrace,1:nlam)
+	obsA(0:ncc,1:nlam)=obsA(0:ncc,1:nlam)+obsA_omp(0:ncc,1:nlam)
+!$OMP END CRITICAL
 !$OMP FLUSH
 !$OMP END PARALLEL
 	if(jmolhide.eq.1) then
@@ -434,7 +452,7 @@
 !$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
 !$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,opacitymol,irtrace,dtrace,Cabs_mol,mixrat_r,
 !$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,Cext_cont,
-!$OMP&		cloudfrac,nirtrace,maxtau,ndisk,nr,obsA_contr,CaCont,j)
+!$OMP&		cloudfrac,nirtrace,maxtau,ndisk,nr,obsA_contr,j)
 !$OMP DO SCHEDULE(DYNAMIC)
 	do ilam=1,nlam
 		do icc=1,ncc
@@ -447,7 +465,7 @@
 						Ca=Ca+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 					endif
 				enddo
-				CaCont(ir,ilam)=Ca
+				CaCont(ir)=Ca
 			enddo
 			do i=1,nrtrace-1
 				if(i.lt.ndisk) then
@@ -460,7 +478,7 @@
 						ir=irtrace(k,i)
 						d=dtrace(k,i)
 						if(ir.ne.j) then
-							tau=d*CaCont(ir,ilam)
+							tau=d*CaCont(ir)
 						else
 							tau=0d0
 						endif
@@ -527,7 +545,7 @@
 !$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
 !$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,opacitymol,irtrace,dtrace,Cabs_mol,mixrat_r,
 !$OMP&		wgg,P,Cloud,nclouds,cloud_dens,obsA,rtrace,docloud,Cext_cont,
-!$OMP&		cloudfrac,nirtrace,maxtau,ndisk,nr,obsA_LC,CaCont)
+!$OMP&		cloudfrac,nirtrace,maxtau,ndisk,nr,obsA_LC)
 !$OMP DO SCHEDULE(DYNAMIC)
 	do ilam=1,nlam
 		do icc=1,ncc
@@ -540,7 +558,7 @@
 						Ca=Ca+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 					endif
 				enddo
-				CaCont(ir,ilam)=Ca
+				CaCont(ir)=Ca
 			enddo
 			do i=1,nrtrace-1
 				if(i.lt.ndisk) then
@@ -552,7 +570,7 @@
 					do k=1,nk
 						ir=irtrace(k,i)
 						d=dtrace(k,i)
-						tau=d*CaCont(ir,ilam)
+						tau=d*CaCont(ir)
 						tautot=tautot+tau
 						ir_next=irtrace(k+1,i)
 						if(tautot.gt.maxtau) then
@@ -601,7 +619,6 @@
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
-	deallocate(CaCont)
 	obsA_LC=1d0-obsA_LC
 	if(computeLC) then
 c		call LightCurve(rtrace,nrtrace)
@@ -611,10 +628,6 @@ c		call LightCurveRetrieval(rtrace,nrtrace)
 	endif
 	endif
 
-	deallocate(dtrace)
-	deallocate(irtrace)
-	deallocate(nirtrace)
-	
 	if(computecontrib) then
 		filename=trim(outputdir) // "contribution.fits.gz"
 		do irc=1,nr
@@ -639,8 +652,6 @@ c		call LightCurveRetrieval(rtrace,nrtrace)
 
 	flux=flux*1d23/distance**2
 	phase=phase*1d23/distance**2
-
-	deallocate(rtrace)
 
 	return
 	end
