@@ -1174,6 +1174,9 @@ c start the loop
 			mpart(i)=rho_av(i)*4d0*pi*rpart(i)**3/3d0
 		endif
 		Sat(i,1:nCS)=Sat0(i,1:nCS)*fSat(i,1:nCS)
+		do iCS=1,nCS
+			if(Sat(i,iCS).gt.1d0) Sat(i,iCS)=exp(log(Sat(i,iCS))*fscale)
+		enddo
 
 		do iCS=1,nCS
 			vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
@@ -1198,7 +1201,6 @@ c start the loop
 			endif
 		enddo
 	enddo
-	Sc=Sc*fscale
 
 	fscale=fscale*pscale
 	if(fscale.gt.1d0) then
