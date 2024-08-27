@@ -160,14 +160,14 @@
 	allocate(logCloudP(nnr))
 	allocate(CloudMMW(nnr),CloudHp(nnr),Sat(nnr,nCS),Sat0(nnr,nCS),fSat(nnr,nCS),CloudG(nnr))
 	
-	niter=1000
+	niter=2000
 	nconv=20
 	if(computeT) then
 		if(nTiter.eq.1) then
-			niter=50
+			niter=150
 			nconv=5
 		else if(nTiter.le.3) then
-			niter=100
+			niter=200
 			nconv=10
 		endif
 	endif
@@ -1174,9 +1174,6 @@ c start the loop
 			mpart(i)=rho_av(i)*4d0*pi*rpart(i)**3/3d0
 		endif
 		Sat(i,1:nCS)=Sat0(i,1:nCS)*fSat(i,1:nCS)
-		do iCS=1,nCS
-			if(Sat(i,iCS).gt.1d0) Sat(i,iCS)=exp(log(Sat(i,iCS))*fscale)
-		enddo
 
 		do iCS=1,nCS
 			vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
@@ -1201,6 +1198,7 @@ c start the loop
 			endif
 		enddo
 	enddo
+	Sc=Sc*fscale
 
 	fscale=fscale*pscale
 	if(fscale.gt.1d0) then
@@ -1487,20 +1485,20 @@ c		endif
 		if(i.gt.1) then
 			if(.not.Cloud(ii)%usefsed) then
 				err=abs(xn(i)-x(ixn(i)))/(xn(i)+x(ixn(i)))
-				if(err.gt.maxerr.and.tot.gt.1d-20.and.(xn(i)*m_nuc.gt.1d-20.or.x(ixn(i))*m_nuc.gt.1d-20)) then
+				if(err.gt.maxerr.and.(xn(i)*m_nuc.gt.1d-20.or.x(ixn(i))*m_nuc.gt.1d-20)) then
 					maxerr=err
 				endif
 			endif
 			do iCS=1,nCS
 				err=abs(xc(iCS,i)-x(ixc(iCS,i)))/(xc(iCS,i)+x(ixc(iCS,i)))
-				if(err.gt.maxerr.and.tot.gt.1d-20.and.(xc(iCS,i).gt.1d-20.or.x(ixc(iCS,i)).gt.1d-20)) then
+				if(err.gt.maxerr.and.(xc(iCS,i).gt.1d-20.or.x(ixc(iCS,i)).gt.1d-20)) then
 					maxerr=err
 				endif
 			enddo
 			do iVS=1,nVS
 				if(v_include(iVS)) then
 					err=abs(xv(iVS,i)-x(ixv(iVS,i)))/(xv(iVS,i)+x(ixv(iVS,i)))
-					if(err.gt.maxerr.and.tot.gt.1d-20.and.(xv(iVS,i).gt.1d-20.or.x(ixv(iVS,i)).gt.1d-20)) then
+					if(err.gt.maxerr.and.(xv(iVS,i).gt.1d-20.or.x(ixv(iVS,i)).gt.1d-20)) then
 						maxerr=err
 					endif
 				endif
