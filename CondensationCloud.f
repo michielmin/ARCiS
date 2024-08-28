@@ -160,7 +160,7 @@
 	allocate(logCloudP(nnr))
 	allocate(CloudMMW(nnr),CloudHp(nnr),Sat(nnr,nCS),Sat0(nnr,nCS),fSat(nnr,nCS),CloudG(nnr))
 	
-	niter=2000
+	niter=1000
 	nconv=20
 	if(computeT) then
 		if(nTiter.eq.1) then
@@ -171,7 +171,7 @@
 			nconv=10
 		endif
 	endif
-	if(Cloud(ii)%computeJn) niter=niter*4
+	if(Cloud(ii)%computeJn) niter=niter*2
 	
 	allocate(docondense(nCS))
 
@@ -1080,22 +1080,15 @@ c		enddo
 		deallocate(c_rainout)
 	endif
 
+	fscale=1d-8
+	pscale=(1d0/fscale)**(1d0/min(real(niter/2),50.0))
+	nfscale=0
 	if(Cloud(ii)%computeJn) then
-		fscale=1d-8
-		pscale=(1d0/fscale)**(1d0/min(real(niter/2),50.0))
 		f=0.98
-		nfscale=0
 		eps=1d-2
 	else
-		fscale=1d0
-		pscale=1d0
 		f=0.75
-		nfscale=1000
 		eps=1d-3
-
-		fscale=1d-8
-		pscale=(1d0/fscale)**(1d0/min(real(niter/2),50.0))
-		nfscale=0
 	endif
 
 	allocate(vthv(nnr))
@@ -1186,7 +1179,6 @@ c start the loop
      &						pi*rpart(i)*min(rpart(i)*vthv(i),4d0*Dp)
 			if(do_nuc(iCS)) then
 				tot1=Sat(i,iCS)*xv(iVL(i,iCS),i)
-				if(tot1.gt.2d0) tot1=2d0*exp(log(tot1/2d0)*fscale)
 				tot2=CloudP(i)*CloudMMW(i)/(muV(iVL(i,iCS))*kb*CloudT(i))
 				select case(CSname(iCS))
 					case('SiO','TiO2')
@@ -1195,7 +1187,7 @@ c start the loop
 					case default
 						call ComputeJ(CloudT(i),tot1,tot2,xv(iVL(i,iCS),i),vthv(i),sigma_nuc(iCS),r0_nuc(iCS),Nf_nuc(iCS),Jn_temp,Nc_nuc(i,iCS))
 				end select
-				Jn_xv(i,iCS)=Jn_xv(i,iCS)*0.5+Jn_temp*(1d0-0.5)*fscale
+				Jn_xv(i,iCS)=Jn_xv(i,iCS)*f+Jn_temp*(1d0-f)
 			else
 				Jn_xv(i,iCS)=0d0
 			endif
@@ -1311,6 +1303,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 				if(do_nuc(iCS)) then
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)
+c					x(j)=x(j)-xv(iVL(i,iCS),i)*Jn_xv(i,iCS)
 				endif
 			enddo
 c coagulation
@@ -1368,6 +1361,7 @@ c coagulation
 			if(do_nuc(iCS)) then
 				ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
+c				x(j)=x(j)-xv(iVL(i,iCS),i)*Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
 			endif
 
 			ik=KL+KU+1+j-ixc(iCS,i)
@@ -1404,6 +1398,7 @@ c coagulation
 					if(do_nuc(iCS)) then
 						ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 						AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
+c						x(j)=x(j)+xv(iVL(i,iCS),i)*Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
 					endif
 				enddo
 

@@ -456,6 +456,8 @@ c-----------------------------------------------------------------------
 	logical,save :: doit(100)
 !$OMP THREADPRIVATE(mm,me,sum,m2,doit)
 
+c	call BlenderCDE(m,abun,nm,e1out,e2out)
+c	return
 
 c LLL mixing rule (not preferred)
 	mm=0d0
@@ -485,6 +487,44 @@ c LLL mixing rule (not preferred)
 	return
 	end
 	
+
+	subroutine BlenderCDE(m,abun,nm,e1out,e2out)
+	IMPLICIT NONE
+	integer,intent(in) :: nm
+	real*8,intent(in) :: abun(nm)
+	complex*16,intent(in) :: m(nm)
+	real*8,intent(out) :: e1out,e2out
+	integer j,iter
+	complex*16 me,fx,dfx,m2(100),dme,mme2
+
+	do j=1,nm
+		m2(j)=m(j)**2
+	enddo
+	me=dcmplx(1d0,0d0)
+
+	do iter=1,100
+		fx=0d0
+		dfx=0d0
+		do j=1,nm
+			mme2=(m(j)/me)**2
+			if(abs(mme2-1d0).lt.1d-3) then
+				fx=fx+abun(j)*(-1d0+(mme2-1d0)/2d0-(mme2-1d0)**2/6d0)
+				dfx=dfx-abun(j)*(m(j)*(4d0*me-m(j))/(3d0*me**3))
+			else
+				fx=fx+abun(j)*(2d0*mme2*log(mme2)/(mme2-1d0)-2d0)
+				dfx=dfx+abun(j)*(4d0*m(j)**2*((log(mme2)+1d0)*me**2-m(j)**2)/(me*(me**2-m(j)**2)**2))
+			endif
+		enddo
+		dme=fx/dfx
+		if(abs(dme/me).lt.1d-8) exit
+		me=me-dme
+	enddo
+
+	e1out=dreal(me)
+	e2out=dimag(me)
+
+	return
+	end
 
 
 c-----------------------------------------------------------------------
