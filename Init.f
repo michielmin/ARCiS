@@ -1966,7 +1966,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	retrievestar=.false.
 	standardstarname='  '
 	
-	fDay=0.5d0
+	fDay=1d0
 	betapow=1d0
 	Kxx=1d0
 	Kyy=1d0
