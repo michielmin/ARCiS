@@ -171,7 +171,10 @@
 			nconv=10
 		endif
 	endif
-	if(Cloud(ii)%computeJn) niter=niter*2
+	if(Cloud(ii)%computeJn) then
+		niter=niter*2
+		nconv=nconv*5
+	endif
 	
 	allocate(docondense(nCS))
 
@@ -1084,10 +1087,10 @@ c		enddo
 	pscale=(1d0/fscale)**(1d0/min(real(niter/2),50.0))
 	nfscale=0
 	if(Cloud(ii)%computeJn) then
-		f=0.98
+		f=0.6
 		eps=1d-2
 	else
-		f=0.75
+		f=0.6
 		eps=1d-3
 	endif
 
@@ -1099,8 +1102,7 @@ c		enddo
 	iconv=0
 	Jn_xv=0d0
 	
-	
-	
+
 	
 c start the loop
 	do iter=1,niter
@@ -1473,9 +1475,17 @@ c		endif
 		enddo
 	enddo
 
-	xc_iter(iter,1:nCS,1:nnr)=xc(1:nCS,1:nnr)
-	xv_iter(iter,1:nVS,1:nnr)=xv(1:nVS,1:nnr)
-	xn_iter(iter,1:nnr)=xn(1:nnr)
+	do i=1,nnr
+		xn_iter(iter,i)=x(ixn(i))
+		do iCS=1,nCS
+			xc_iter(iter,iCS,i)=x(ixc(iCS,i))
+		enddo
+		do iVS=1,nVS
+			if(v_include(iVS)) then
+				xv_iter(iter,iVS,i)=x(ixv(iVS,i))
+			endif
+		enddo
+	enddo
 
 	maxerr=0d0
 	do i=1,nnr
@@ -1529,6 +1539,7 @@ c		endif
 			endif
 		enddo
 	enddo
+
 
 C=========================================================================================
 C=========================================================================================
