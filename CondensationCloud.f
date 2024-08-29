@@ -1476,7 +1476,7 @@ c		endif
 	enddo
 
 	do i=1,nnr
-		xn_iter(iter,i)=x(ixn(i))
+		if(.not.Cloud(ii)%usefsed) xn_iter(iter,i)=x(ixn(i))
 		do iCS=1,nCS
 			xc_iter(iter,iCS,i)=x(ixc(iCS,i))
 		enddo
@@ -1492,20 +1492,20 @@ c		endif
 		if(i.gt.1) then
 			if(.not.Cloud(ii)%usefsed) then
 				err=abs(xn(i)-x(ixn(i)))/(xn(i)+x(ixn(i)))
-				if(err.gt.maxerr.and.(xn(i)*m_nuc.gt.1d-20.or.x(ixn(i))*m_nuc.gt.1d-20)) then
+				if(err.gt.maxerr.and.(xn(i)*m_nuc.gt.1d-10.or.x(ixn(i))*m_nuc.gt.1d-10)) then
 					maxerr=err
 				endif
 			endif
 			do iCS=1,nCS
 				err=abs(xc(iCS,i)-x(ixc(iCS,i)))/(xc(iCS,i)+x(ixc(iCS,i)))
-				if(err.gt.maxerr.and.(xc(iCS,i).gt.1d-20.or.x(ixc(iCS,i)).gt.1d-20)) then
+				if(err.gt.maxerr.and.(xc(iCS,i).gt.1d-10.or.x(ixc(iCS,i)).gt.1d-10)) then
 					maxerr=err
 				endif
 			enddo
 			do iVS=1,nVS
 				if(v_include(iVS)) then
 					err=abs(xv(iVS,i)-x(ixv(iVS,i)))/(xv(iVS,i)+x(ixv(iVS,i)))
-					if(err.gt.maxerr.and.(xv(iVS,i).gt.1d-20.or.x(ixv(iVS,i)).gt.1d-20)) then
+					if(err.gt.maxerr.and.(xv(iVS,i).gt.1d-10.or.x(ixv(iVS,i)).gt.1d-10)) then
 						maxerr=err
 					endif
 				endif
@@ -1572,17 +1572,8 @@ C===============================================================================
 		else
 			rr=Cloud(ii)%rnuc
 		endif
-		err=abs(rr-rpart(i))/(rr+rpart(i))
-		if(err.gt.maxerr.and.tot.gt.1d-20.and.i.gt.1.and..not.Cloud(ii)%usefsed) then
-			maxerr=err
-		endif
 		if(.not.Cloud(ii)%usefsed) rpart(i)=rr!sqrt(rpart(i)*rr)
 	enddo
-	if(Cloud(ii)%computeJn.and.maxerr.lt.eps.and.nfscale.gt.100.and.iconv.ge.nconv.and.eps.gt.5d-3) then
-		iconv=0
-		eps=1d-3
-		f=0.999
-	endif
 	if(maxerr.lt.eps.and.nfscale.gt.100) then
 		iconv=iconv+1
 		if(iconv.gt.nconv) exit
@@ -1599,8 +1590,9 @@ c end the loop
 
 
 	if(iter.gt.niter) then
-		if(iconv.eq.0.and.(nTiter.gt.4.or..not.computeT).and..not.retrieval) print*,'Cloud formation not converged: ',maxerr
+c		if(iconv.eq.0.and.(nTiter.gt.4.or..not.computeT).and..not.retrieval) print*,'Cloud formation not converged: ',maxerr
 		iter=niter
+		nconv=min(iter/2,nconv*5)
 	endif
 	xn=0d0
 	xc=0d0
@@ -1610,6 +1602,42 @@ c end the loop
 		xc(1:nCS,1:nnr)=xc(1:nCS,1:nnr)+xc_iter(i,1:nCS,1:nnr)/real(nconv)
 		xv(1:nVS,1:nnr)=xv(1:nVS,1:nnr)+xv_iter(i,1:nVS,1:nnr)/real(nconv)
 	enddo
+	if(iter.eq.niter) then
+		xn_iter(1,1:nnr)=0d0
+		xc_iter(1,1:nCS,1:nnr)=0d0
+		xv_iter(1,1:nVS,1:nnr)=0d0
+		j=max(2,iter-2*nconv+1)
+		do i=j,j+nconv-1
+			xn_iter(1,1:nnr)=xn_iter(1,1:nnr)+xn_iter(i,1:nnr)/real(nconv)
+			xc_iter(1,1:nCS,1:nnr)=xc_iter(1,1:nCS,1:nnr)+xc_iter(i,1:nCS,1:nnr)/real(nconv)
+			xv_iter(1,1:nVS,1:nnr)=xv_iter(1,1:nVS,1:nnr)+xv_iter(i,1:nVS,1:nnr)/real(nconv)
+		enddo
+		maxerr=0d0
+		do i=2,nnr
+c			if(.not.Cloud(ii)%usefsed) then
+c				err=abs(xn(i)-xn_iter(1,i))/(xn(i)+xn_iter(1,i))
+c				if(err.gt.maxerr.and.(xn(i)*m_nuc.gt.1d-20.or.xn_iter(1,i)*m_nuc.gt.1d-20)) then
+c					maxerr=err
+c				endif
+c			endif
+			do iCS=1,nCS
+				err=abs(xc(iCS,i)-xc_iter(1,iCS,i))/(xc(iCS,i)+xc_iter(1,iCS,i))
+				if(err.gt.maxerr.and.(xc(iCS,i).gt.1d-10.or.xc_iter(1,iCS,i).gt.1d-10)) then
+					maxerr=err
+				endif
+			enddo
+			do iVS=1,nVS
+				if(v_include(iVS)) then
+					err=abs(xv(iVS,i)-xv_iter(1,iVS,i))/(xv(iVS,i)+xv_iter(1,iVS,i))
+					if(err.gt.maxerr.and.(xv(iVS,i).gt.1d-10.or.xv_iter(1,iVS,i).gt.1d-10)) then
+						maxerr=err
+					endif
+				endif
+			enddo
+		enddo
+		if(maxerr.gt.eps.and..not.retrieval) print*,'Cloud formation not converged: ',maxerr
+	endif
+
 	do i=nnr,1,-1
 		tot=0d0
 		do iCS=1,nCS
