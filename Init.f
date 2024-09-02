@@ -374,6 +374,8 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(mixrat(nmol))
 	allocate(Pswitch_mol(nmol),abun_switch_mol(nmol))
 	allocate(includemol(nmol))
+	allocate(includemol_raytrace(nmol))
+	allocate(includemol_default(nmol))
 	allocate(diseqmol(nmol))
 	allocate(opacitymol(nmol))
 	allocate(Cloud(max(nclouds,1)))
@@ -1090,6 +1092,11 @@ c In this case the beta map should be the static one. Make sure this is set prop
 		model_err_lam(i)=10d0**(log10(lam(1))+log10(lam(nlam)/lam(1))*(real(i)/real(nmodel_err)))
 	enddo
 	
+	includemol_default=includemol
+	do i=1,nmol
+		if(.not.includemol(i)) includemol_raytrace(i)=.false.
+	enddo
+	
 	return
 	end
 
@@ -1232,6 +1239,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadAbunSwitch(key)
 		case("background","backgroundgas")
 			call ReadBackgroundgas(key)
+		case("dotrace","trace")
+			call ReadRaytraceMol(key)
 		case("isotope","f_isotope")
 			call ReadIsotope(key)
 		case("setsurfp","setsurfpressure")
@@ -1996,6 +2005,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 
 	mixrat=0d0
 	includemol=.false.
+	includemol_raytrace=.true.
 	par_tprofile=.false.
 	grey_isoT=.false.
 	do_rayleigh=.true.
@@ -2571,6 +2581,29 @@ c number of cloud/nocloud combinations
 	
 	return
 	end
+
+	subroutine ReadRaytraceMol(key)
+	use GlobalSetup
+	use Constants
+	use ReadKeywords
+	IMPLICIT NONE
+	type(SettingKey) key
+	integer i
+	
+	do i=1,nmol_data
+		if(key%orkey2.eq.molname(i)) then
+			if(i.le.nmol) then
+				read(key%value,*) includemol_raytrace(i)
+			endif
+			return
+		endif
+	enddo
+	call output("Molecule not recognised")
+	stop
+	
+	return
+	end
+
 	
 	subroutine ReadIsotope(key)
 	use GlobalSetup

@@ -190,6 +190,7 @@ c===============================================================================
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib,do_rayleigh,isoFstar
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS,modelfail
 	logical,allocatable :: includemol(:),diseqmol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
+	logical,allocatable :: includemol_raytrace(:),includemol_default(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,twind,epsiter,specres_LR
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,metallicity0,vfrag,betaF,kappaUV0,scaleUV,gammaUV,eps_dup
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid,blackbodystar,grey_isoT
