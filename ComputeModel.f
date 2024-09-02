@@ -87,7 +87,9 @@ c			call SetoutputMode(.false.)
 			if(forceEbalance) computelam=.true.
 			call SetupStructure(.true.)
 			if(modelfail) return
+			includemol=includemol_raytrace
 			call SetupOpacities()
+			includemol=includemol_default
 			if(modelfail) return
 			if(forceEbalance) then
 				f=1d0
@@ -138,6 +140,16 @@ c			call SetoutputMode(.false.)
 
 	call cpu_time(stoptime)
 	call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+
+c	call output("Chemistry cpu time: " // trim(dbl2string(timechem,'(f10.4)')) // " s")
+c	call output("Chemistry walltime: " // trim(dbl2string(dble(itimechem)/dble(rate),'(f10.4)')) // " s")
+c	call output("Number of chemistry calls: " // trim(int2string(ctimechem,'(i5)')))
+c	call output("Cloud cpu time:    " // trim(dbl2string(timecloud,'(f10.4)')) // " s")
+c	call output("Cloud walltime:    " // trim(dbl2string(dble(itimecloud)/dble(rate),'(f10.4)')) // " s")
+c	call output("Number of cloud calls:     " // trim(int2string(ctimecloud,'(i5)')))
+c	call output("PTstruct cpu time: " // trim(dbl2string(timetemp,'(f10.4)')) // " s")
+c	call output("PTstruct walltime: " // trim(dbl2string(dble(itimetemp)/dble(rate),'(f10.4)')) // " s")
+c	call output("Number of PTstruct calls:  " // trim(int2string(ctimetemp,'(i5)')))
 
 	return
 	end
