@@ -33,6 +33,7 @@
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
 	real*8,allocatable :: xv_out(:),Jn_xv(:,:),A_J(:),B_j(:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:)
 	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),x0(:)
+	real*8,allocatable,save :: xv_prev(:,:),xc_prev(:,:),xn_prev(:)
 
 	logical dochemR(nr)
 
@@ -160,7 +161,7 @@
 	allocate(logCloudP(nnr))
 	allocate(CloudMMW(nnr),CloudHp(nnr),Sat(nnr,nCS),Sat0(nnr,nCS),fSat(nnr,nCS),CloudG(nnr))
 	
-	niter=1000
+	niter=500
 	nconv=20
 	if(computeT) then
 		if(nTiter.eq.1) then
@@ -204,6 +205,12 @@
 	allocate(A_J(nCS),B_J(nCS),do_nuc(nCS),Jn_xv(nnr,nCS),sigma_nuc(nCS),r0_nuc(nCS),Nf_nuc(nCS),Nc_nuc(nnr,nCS))
 	allocate(inuc(nCS))
 	allocate(bc(nCS,0:4),ifit(nCS))
+	if(.not.allocated(xn_prev)) then
+		allocate(xv_prev(nVS,nnr))
+		allocate(xc_prev(nCS,nnr))
+		allocate(xn_prev(nnr))
+	endif
+
 	bc=0d0
 	ifit=0
 
@@ -897,6 +904,14 @@ c	print*,xv_bot(1:7)
 	tcinv=0d0
 	Jn_xv=0d0
 	Nc_nuc=0d0
+
+	if(nTiter.le.1.and.computeT) then
+		xc_prev=0d0
+		xn_prev=0d0
+		do i=1,nnr
+			xv_prev(1:nVS,i)=xv_bot(1:nVS)
+		enddo
+	endif
 	
 	docondense=.true.
 	if(Cloud(ii)%hazetype.eq.'optEC') then
@@ -1087,7 +1102,7 @@ c		enddo
 	pscale=(1d0/fscale)**(1d0/min(real(niter/2),50.0))
 	nfscale=0
 	if(Cloud(ii)%computeJn) then
-		f=0.6
+		f=0.8
 		eps=1d-2
 	else
 		f=0.6
@@ -1137,6 +1152,8 @@ c start the loop
 		if(complexKzz) then
 			St=rpart(i)*rho_av(i)*Km(i)/(vth(i)*Clouddens(i)*CloudHp(i)**2)
 			Kd(i)=Km(i)/(1d0+St)
+		else
+			Kd(i)=Km(i)
 		endif
 		if(Cloud(ii)%usefsed) then
 			fsed=Cloud(ii)%fsed_alpha*exp((CloudR(i)-Rplanet)/(6d0*Cloud(ii)%fsed_beta*CloudHp(i)))+1d-2
@@ -1530,11 +1547,11 @@ c		endif
 				if(iter.eq.1) then
 					xv(iVS,i)=x(ixv(iVS,i))
 				else
-					if(Cloud(ii)%computeJn.or.Cloud(ii)%usefsed) then
-						xv(iVS,i)=xv(iVS,i)**f*x(ixv(iVS,i))**(1d0-f)
-					else
+c					if(Cloud(ii)%computeJn.or.Cloud(ii)%usefsed) then
+c						xv(iVS,i)=xv(iVS,i)**f*x(ixv(iVS,i))**(1d0-f)
+c					else
 						xv(iVS,i)=xv(iVS,i)*f+x(ixv(iVS,i))*(1d0-f)
-					endif
+c					endif
 				endif
 			endif
 		enddo
@@ -1637,6 +1654,19 @@ c			endif
 		enddo
 		if(maxerr.gt.eps.and..not.retrieval) print*,'Cloud formation not converged: ',maxerr
 	endif
+c	f=1e-10**(1d0/real(min(maxiter/2,20)))
+	if(computeT) then
+		if(nTiter.gt.1) then
+			f=0.4/(1+3*exp(-real(nTiter-2)))-0.1
+			xn=xn*(1d0-f)+xn_prev*f
+			xc=xc*(1d0-f)+xc_prev*f
+			xv=xv*(1d0-f)+xv_prev*f
+		endif
+		xn_prev=xn
+		xc_prev=xc
+		xv_prev=xv
+	endif
+	
 
 	do i=nnr,1,-1
 		tot=0d0
