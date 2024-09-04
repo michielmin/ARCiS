@@ -1260,7 +1260,7 @@ C===============================================================================
 	endif
 	do iCS=1,nCS
 		j=j+1
-		if(Cloud(ii)%freeflow_con) then
+		if(Cloud(ii)%freeflow_con.and..not.Cloud(ii)%rainout) then
 c assume continuous flux at the bottom (dF/dz=Sc=0)
 			x(j)=0d0
 
