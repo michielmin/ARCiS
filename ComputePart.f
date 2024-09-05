@@ -80,8 +80,8 @@
 		else
 			frac=1d0/real(C%nmat)
 		endif
-		frac(C%nmat+1)=C%porosity
-		frac(1:C%nmat)=frac(1:C%nmat)*(1d0-C%porosity)
+		frac(C%nmat+1)=C%porosity(isize)
+		frac(1:C%nmat)=frac(1:C%nmat)*(1d0-C%porosity(isize))
 		e1d(C%nmat+1,1:C%nlam)=1d0
 		e2d(C%nmat+1,1:C%nlam)=0d0
 		rho(1:C%nmat)=C%rho_mat(1:C%nmat)
@@ -93,19 +93,16 @@
 			enddo
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(j,e1blend,e2blend,m12)
+!$OMP& PRIVATE(j,e1blend,e2blend)
 !$OMP& SHARED(C,i,e1,e2,frac,e1d,e2d)
-			allocate(m12(C%nmat+1))
 !$OMP DO
 !$OMP& SCHEDULE(DYNAMIC,1)
 			do j=1,C%nlam
-				m12(1:C%nmat+1)=dcmplx(e1d(1:C%nmat+1,j),e2d(1:C%nmat+1,j))
-				call Blender(m12(1:C%nmat+1),frac(1:C%nmat+1),C%nmat+1,e1blend,e2blend)
+				call Blender(e1d(1:C%nmat+1,j),e2d(1:C%nmat+1,j),frac(1:C%nmat+1),C%nmat+1,e1blend,e2blend)
 				e1(i,j)=e1blend
 				e2(i,j)=e2blend
 			enddo
 !$OMP END DO
-			deallocate(m12)
 !$OMP FLUSH
 !$OMP END PARALLEL
 			rho_av=0d0
@@ -445,7 +442,7 @@ c use the dielectric extrapolation, this is the default
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 
-	subroutine Blender(m,abun,nm,e1out,e2out)
+	subroutine BlenderOld(m,abun,nm,e1out,e2out)
 	IMPLICIT NONE
 	integer,intent(in) :: nm
 	real*8,intent(in) :: abun(nm)
@@ -488,47 +485,141 @@ c LLL mixing rule (not preferred)
 	end
 	
 
-	subroutine BlenderCDE(m,abun,nm,e1out,e2out)
+!-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+
+	subroutine Blender(e1in,e2in,abun,nm,e1out,e2out)
 	IMPLICIT NONE
-	integer,intent(in) :: nm
-	real*8,intent(in) :: abun(nm)
-	complex*16,intent(in) :: m(nm)
-	real*8,intent(out) :: e1out,e2out
-	integer j,iter
-	complex*16 me,fx,dfx,m2(100),dme,mme2
+	integer nm,j,iter,niter,iguess,nguess,i1,i2
+	real e1in(nm),e2in(nm)
+	real*8 e1out,e2out,abun(nm)
+	complex*16 mm,m(nm),me,fx,dfx,dme,m2
+	complex*16 a1,a2,a3,a4,a5,mguess(10)
+	logical CDE
+	real*8 fmax,eps,f,amax,e1max,e2max,minfx
 
 	do j=1,nm
-		m2(j)=m(j)**2
+		m(j)=dcmplx(e1in(j),e2in(j))
 	enddo
-	me=dcmplx(1d0,0d0)
+	call BlenderOld(m,abun,nm,e1out,e2out)
+	return
 
-	do iter=1,100
+	eps=1d-5
+	niter=100
+	f=1d0
+
+	me=0d0
+	e1max=0d0
+	e2max=0d0
+	amax=0d0
+	do j=1,nm
+		me=me+m(j)**(2d0/3d0)*abun(j)
+		if(real(m(j)).gt.e1max) e1max=real(m(j))
+		if(imag(m(j)).gt.e2max) e2max=imag(m(j))
+		if(abun(j).gt.amax) then
+			mguess(1)=m(j)
+			amax=abun(j)
+		endif
+	enddo
+	me=me**(3d0/2d0)
+	mguess(2)=me
+
+	mguess(4)=cmplx(1d0,0d0)
+	mguess(5)=cmplx(e1max,e2max)
+	mguess(6)=cmplx((e1max-1d0)/2d0+1d0,e2max/2d0)
+	nguess=6
+	
+	fmax=0.0001d0
+	CDE=.false.
+
+	iguess=1
+
+1	continue
+
+	if(iguess.eq.3) then
+		mm=mguess(2)
+		do iter=1,niter
+			fx=0d0
+			do j=1,nm
+				fx=fx+((m(j)**2-mm)/(m(j)**2+2d0*mm))*abun(j)
+			enddo
+			me=(2d0*fx+1d0)/(1d0-fx)
+			me=mm*me
+			mm=me
+			if(cdabs(fx).lt.eps) exit
+		enddo
+		mguess(3)=cdsqrt(me)
+	endif
+	me=mguess(iguess)
+	do iter=1,niter
 		fx=0d0
 		dfx=0d0
 		do j=1,nm
-			mme2=(m(j)/me)**2
-			if(abs(mme2-1d0).lt.1d-3) then
-				fx=fx+abun(j)*(-1d0+(mme2-1d0)/2d0-(mme2-1d0)**2/6d0)
-				dfx=dfx-abun(j)*(m(j)*(4d0*me-m(j))/(3d0*me**3))
+			m2=(m(j)/me)**2
+			if(CDE) then
+!	CDE
+				if(abs(m2-1d0).lt.1d-2) then
+					fx=fx+abun(j)*(-1d0+(m2-1d0)/2d0-(m2-1d0)**2/6d0)
+					dfx=dfx-abun(j)*(m(j)*(4d0*me-m(j))/(3d0*me**3))
+				else
+					fx=fx+abun(j)*(2d0*m2*log(m2)/(m2-1d0)-2d0)
+					dfx=dfx+abun(j)*(4d0*m(j)**2*((log(m2)+1d0)*me**2-m(j)**2)/(me*(me**2-m(j)**2)**2))
+				endif
+!	DHS
 			else
-				fx=fx+abun(j)*(2d0*mme2*log(mme2)/(mme2-1d0)-2d0)
-				dfx=dfx+abun(j)*(4d0*m(j)**2*((log(mme2)+1d0)*me**2-m(j)**2)/(me*(me**2-m(j)**2)**2))
+				m2=(m(j)/me)**2
+				a1=m2+2d0
+				a2=m2-1d0
+				a3=2d0*m2+1d0
+				a4=6d0*fmax*a2**2*(m2+1d0)
+				a5=a1*a3-2d0*fmax*a2**2
+				if(abs(a2).lt.1d-2) then
+					fx=fx+abun(j)*3d0*a2/a1
+					dfx=dfx+abun(j)*((18d0*m2*(a1-3d0*(m2+1d0)))/(a1**2*a3)+(18d0*a2**2*fmax**2*m2*(a1-6d0*(m2+1d0)))/(a1**3*a3**2))
+				else
+					fx=fx+abun(j)*((3d0*a3)/(2d0*a2*fmax))*cdlog((a1*a3)/a5)
+					dfx=dfx+abun(j)*9d0*m2*(a1*a5*cdlog(a1*a3/a5)-a4)/(fmax*a1*a5*a2**2)
+				endif
 			endif
 		enddo
 		dme=fx/dfx
-		if(abs(dme/me).lt.1d-8) exit
-		me=me-dme
+		if(abs(dme/me).lt.eps) exit
+2		me=me-dme*f
+		e1out=dreal(me)
+		e2out=dimag(me)
+		if(e1out.lt.0d0.or.e1out.gt.e1max.or.e2out.lt.0d0.or.e2out.gt.e2max) then
+			me=me+dme*f
+			f=f/2d0
+			goto 2
+		endif
 	enddo
-
 	e1out=dreal(me)
 	e2out=dimag(me)
+	if(e1out.lt.0d0.or.e2out.lt.0d0.or.abs(dme/me).gt.1d-2) then
+		if(f.gt.0.1) then
+			f=f/2d0
+			goto 1
+		else
+			f=1d0
+			if(iguess.lt.nguess) then
+				iguess=iguess+1
+				goto 1
+			else
+				print*,'failed!'
+				me=mguess(2)
+				e1out=dreal(me)
+				e2out=dimag(me)
+			endif		
+		endif
+	endif
 
 	return
 	end
+	
 
 
-c-----------------------------------------------------------------------
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
 
       SUBROUTINE gauleg2(x1,x2,x,w,n)
       INTEGER n
