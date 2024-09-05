@@ -426,8 +426,8 @@ c for exchange when computing secondary atmosphere
 		character*20 opacitytype,type
 		real*8 P,dP,xi,Pmax,Pmin,Ptau,Phi,coverage
 		real*8,allocatable :: rv(:),M(:)					! dimension nsize
-		real*8,allocatable :: frac(:,:),sigma(:),cryst(:,:),abun(:),xv_bot(:)
-		real*8 rho,fmax,porosity,reff,veff,rpow,Pref,rnuc
+		real*8,allocatable :: frac(:,:),sigma(:),cryst(:,:),abun(:),xv_bot(:),porosity(:)
+		real*8 rho,fmax,porosity0,reff,veff,rpow,Pref,rnuc,fractalDim
 		logical blend,haze,condensates,rainout,globalKzz,computecryst,coagulation
 		logical onepart,freeflow_nuc,freeflow_con,condenseNaK
 		real*8 mixrat,tau,lref,cryst0,e1_par,e2_par,Kref
@@ -440,7 +440,7 @@ c for exchange when computing secondary atmosphere
 		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:),KeFile(:,:),KaFile(:,:),KsFile(:,:)
 		integer,allocatable :: nax(:)
 		logical usefsed,computeJn
-		real*8 fsed_alpha,fsed_beta,Srainout
+		real*8 fsed_alpha,fsed_beta,Srainout,fstick
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 
@@ -496,7 +496,7 @@ c for exchange when computing secondary atmosphere
 	IMPLICIT NONE
 	integer nr_cloud
 	real*8,allocatable :: CloudP(:),CloudT(:),CloudR(:),Clouddens(:),CSnmol(:),SatRat(:)
-	real*8,allocatable :: xv(:,:),xn(:),xc(:,:),xm(:),rpart(:),xnv(:)
+	real*8,allocatable :: xv(:,:),xn(:),xc(:,:),xm(:),rpart(:),xa(:)
 	real*8,allocatable :: ATP(:),BTP(:),rhodust(:),atoms_cloud(:,:),maxT(:),mu(:),xv_bot(:)
 	character*25,allocatable :: CSname(:)
 	integer nCS,nnr

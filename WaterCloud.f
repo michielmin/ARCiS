@@ -49,7 +49,7 @@
 		allocate(xc(nCS,nnr))
 		allocate(xn(nnr))
 		allocate(xm(nnr))
-		allocate(xnv(nnr))
+		allocate(xa(nnr))
 		allocate(rpart(nnr))
 	endif
 	allocate(Kd(nnr),Kg(nnr),Km(nnr))
@@ -420,9 +420,9 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 		do i=1,nnr
 			if(x(i).lt.0d0) x(i)=0d0
 		enddo
-		xnv(1:nnr)=x(1:nnr)
+		xa(1:nnr)=x(1:nnr)
 	else
-		xnv=1d0
+		xa=1d0
 	endif
 
 c equations for number of Nuclii
@@ -437,7 +437,7 @@ c equations for number of Nuclii
 		Mc(i)=Mc(i)-(Clouddens(i+1)*vsed(i+1)+0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 		Mb(i)=Mb(i)+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
 		Mb(i)=Mb(i)+Clouddens(i)*vsed(i)/dztot
-		x(i)=-Sn(i)*xnv(i)
+		x(i)=-Sn(i)*xa(i)
 c coagulation
 		if(Cloud(ii)%coagulation) then
 			npart=xn(i)*Clouddens(i)
@@ -467,7 +467,7 @@ c coagulation
 		Mb(i)=Mb(i)+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
 		Mb(i)=Mb(i)+Clouddens(i)*vsed(i)/dztot
 
-		x(i)=-Sn(i)*xnv(i)
+		x(i)=-Sn(i)*xa(i)
 
 c coagulation
 		if(Cloud(ii)%coagulation) then
@@ -828,7 +828,7 @@ c Seed particles
 
 	if(Cloud(ii)%hazetype.eq.'optEC') then
 c Seed vapor
-		x(1:nnr)=xnv(1:nnr)
+		x(1:nnr)=xa(1:nnr)
 		call regridarray(logCloudP,x,nnr,logP,logx,nr)
 		mixrat_r(2:nr,6)=logx(2:nr)
 	endif

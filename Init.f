@@ -387,6 +387,7 @@ c select at least the species relevant for disequilibrium chemistry
 		allocate(Cloud(i)%material(40))
 		allocate(Cloud(i)%condensate(40))
 		allocate(Cloud(i)%xv_bot(40))
+		allocate(Cloud(i)%porosity(40))
 	enddo
 	allocate(XeqCloud(nr,max(nclouds,1)))
 	allocate(XeqCloud_old(nr,max(nclouds,1)))
@@ -702,6 +703,7 @@ c	condensates=(condensates.or.cloudcompute)
 			enddo
 			allocate(Cloud(i)%cryst(nr,40))
 			Cloud(i)%cryst=Cloud(i)%cryst0
+			Cloud(i)%porosity=Cloud(i)%porosity0
 			if(Cloud(i)%type.eq.'DIFFUSE'.or.Cloud(i)%type.eq.'WATER') then
 				Cloud(i)%opacitytype="MATERIAL"
 				Cloud(i)%nmat=14
@@ -2046,7 +2048,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	convectKzz=.false.
 	ComputeTeff=.false.
 	mixP=0d0
-	vfrag=100d0	!cm/s
+	vfrag=1d200	!cm/s
 	
 	vrot0=0d0
 	nvel=0
@@ -2151,7 +2153,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%coverage=1d0
 		Cloud(i)%abun=1d0
 		Cloud(i)%fmax=0d0
-		Cloud(i)%porosity=0d0
+		Cloud(i)%porosity0=0d0
 		Cloud(i)%reff=1d0
 		Cloud(i)%veff=0.1
 		Cloud(i)%rpow=0d0
@@ -2183,6 +2185,8 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%kpow=4d0
 		Cloud(i)%klam=1d0
 		Cloud(i)%rho_mat=3.0
+		Cloud(i)%fstick=1d0
+		Cloud(i)%fractalDim=3d0
 		Cloud(i)%nax=1
 		Cloud(i)%globalKzz=.false.
 		Cloud(i)%freeflow_nuc=.true.
@@ -3048,7 +3052,7 @@ c number of cloud/nocloud combinations
 		case("blend")
 			read(key%value,*) Cloud(j)%blend
 		case("porosity")
-			read(key%value,*) Cloud(j)%porosity
+			read(key%value,*) Cloud(j)%porosity0
 		case("hazetype")
 			Cloud(j)%hazetype=trim(key%value)
 		case("pressure","p")
@@ -3117,6 +3121,10 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%veff
 		case("kappa")
 			read(key%value,*) Cloud(j)%kappa
+		case("fstick")
+			read(key%value,*) Cloud(j)%fstick
+		case("df","fractaldim")
+			read(key%value,*) Cloud(j)%fractalDim
 		case("rainout")
 			read(key%value,*) Cloud(j)%rainout
 		case("srainout","sat_bot")
