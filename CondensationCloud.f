@@ -164,17 +164,18 @@ c fractal dimension created by coagulating collisions
 	allocate(logCloudP(nnr))
 	allocate(CloudMMW(nnr),CloudHp(nnr),Sat(nnr,nCS),Sat0(nnr,nCS),fSat(nnr,nCS),CloudG(nnr))
 	
-	niter=10000
+	niter=1000
 	nconv=20
 	if(computeT) then
 		if(nTiter.eq.1) then
-			niter=500
+			niter=150
 			nconv=5
 		else if(nTiter.le.2) then
-			niter=1000
+			niter=250
 			nconv=10
 		endif
 	endif
+	if(Cloud(ii)%computeJn) niter=niter*10
 	
 	allocate(docondense(nCS))
 
@@ -1024,6 +1025,8 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 
 	Sat0=Sat
 
+	allocate(vthv(nnr))
+	allocate(Sc(nnr,nCS))
 
 	allocate(c_rainout(nCS))
 	c_rainout=.false.
@@ -1082,13 +1085,28 @@ c		do iCS=1,nCS
 c			if(c_rainout(iCS)) print*,'Rainout of ',CSname(iCS)
 c		enddo
 		v_include=.false.
+		j=0
 		do iCS=1,nCS
 			if(.not.c_rainout(iCS)) then
+				j=j+1
 				do iVS=1,nVS
 					if(v_cloud(iCS,iVS).ne.0d0) v_include(iVS)=.true.
 				enddo
 			endif
 		enddo
+		if(j.eq.0) then
+			do i=1,nnr
+				xv(i,1:nVS)=xv_bot(1:nVS)
+				xc(i,1:nCS)=0d0
+				xn(i)=1d-50/m_nuc
+				xa(i)=1d-50/m_nuc
+			enddo
+			NN=nnr
+			allocate(IWORK(NN))
+			allocate(x(NN))
+			allocate(AB(2*NStot+NStot+1,NN))
+			goto 100
+		endif
 		if(Cloud(ii)%hazetype.eq."optEC") v_include(15)=(.not.dochemistry)
 	endif
 
@@ -1124,7 +1142,7 @@ c		enddo
 		pscale=0.999
 	else
 		fmin=0.6
-		fmax=0.8
+		fmax=0.6
 		eps=1d-3
 		fscale=1d0
 		pscale=0.5
@@ -1139,8 +1157,6 @@ c		enddo
 		pscale=0.5
 	endif
 
-	allocate(vthv(nnr))
-	allocate(Sc(nnr,nCS))
 	allocate(IWORK(NN))
 	allocate(x(NN))
 	allocate(AB(2*NStot+NStot+1,NN))
@@ -1805,7 +1821,7 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter,
 		xv_prev=xv
 	endif
 	
-
+100	continue
 	do i=nnr,1,-1
 		if(xa(i).lt.xn(i)) xa(i)=xn(i)
 		if(xn(i).gt.0d0) then
