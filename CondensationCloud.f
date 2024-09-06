@@ -1140,6 +1140,12 @@ c		enddo
 		eps=0.3
 		fscale=1d-10
 		pscale=0.999
+	else if(computeT.and.nTiter.gt.2) then
+		fmin=0.6
+		fmax=0.95
+		eps=1d-2
+		fscale=1d0
+		pscale=0.5
 	else
 		fmin=0.6
 		fmax=0.6
