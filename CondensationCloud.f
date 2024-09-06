@@ -16,13 +16,13 @@
 	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
 	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
 	integer,allocatable :: ixv(:,:),ixc(:,:),iVL(:,:),ixn(:),ixa(:),icryst(:),iamorph(:),inuc(:),ifit(:)
-	real*8 sigmastar,Sigmadot,Pstar,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,rho_nuc,Gibbs
+	real*8 sigmastar,Sigmadot,Pstar,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,fmax,rho_nuc,Gibbs
 	logical ini,Tconverged,haze_nuc
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: xn_iter(:,:),xa_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
 	logical,allocatable :: docondense(:)
 	integer iCS,ir,nrdo,iconv,nconv,iVS,nVS,NStot,ik
-	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed,Jn_temp,fscale
+	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed,Jn_temp,fscale,pscale
 	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:),CloudG(:)
 	character*10,allocatable :: v_names(:),v_names_out(:)
 	logical,allocatable :: v_include(:),c_rainout(:),do_nuc(:)
@@ -164,20 +164,16 @@ c fractal dimension created by coagulating collisions
 	allocate(logCloudP(nnr))
 	allocate(CloudMMW(nnr),CloudHp(nnr),Sat(nnr,nCS),Sat0(nnr,nCS),fSat(nnr,nCS),CloudG(nnr))
 	
-	niter=500
+	niter=10000
 	nconv=20
 	if(computeT) then
 		if(nTiter.eq.1) then
-			niter=150
+			niter=500
 			nconv=5
-		else if(nTiter.le.3) then
-			niter=200
+		else if(nTiter.le.2) then
+			niter=1000
 			nconv=10
 		endif
-	endif
-	if(Cloud(ii)%computeJn) then
-		niter=niter*2
-		nconv=nconv*5
 	endif
 	
 	allocate(docondense(nCS))
@@ -1121,11 +1117,26 @@ c		enddo
 	NN=j
 
 	if(Cloud(ii)%computeJn) then
-		f=0.8
-		eps=1d-2
+		fmin=0.8
+		fmax=1.0
+		eps=0.3
+		fscale=1d-10
+		pscale=0.999
 	else
-		f=0.6
+		fmin=0.6
+		fmax=0.8
 		eps=1d-3
+		fscale=1d0
+		pscale=0.5
+	endif
+
+	if(computeT.and.nTiter.gt.2) then
+		xn=xn_prev
+		xa=xa_prev
+		xc=xc_prev
+		xv=xv_prev
+		fscale=1d0
+		pscale=0.5
 	endif
 
 	allocate(vthv(nnr))
@@ -1137,8 +1148,7 @@ c		enddo
 	iconv=0
 	Jn_xv=0d0
 	
-	xv=0d0
-	fscale=1d-10
+	xv=xv*fscale
 	
 c start the loop
 	do iter=1,niter
@@ -1634,32 +1644,37 @@ c		endif
 	enddo
 
 	maxerr=0d0
-	f=1.1-0.4/(1+3*exp(-(real(i)/real(niter/4))**4))
+c	f=1.1-0.4/(1.0+3.0*exp(-(real(iter)/real(min(niter/4,200)))**2))
 	do i=1,nnr
 		if(i.gt.1) then
 			if(.not.Cloud(ii)%usefsed) then
-				err=abs(xn(i)-x(ixn(i)))/(xn(i)+x(ixn(i)))
-				if(err.gt.maxerr.and.(xn(i)*m_nuc.gt.1d-10.or.x(ixn(i))*m_nuc.gt.1d-10)) then
+				err=abs(max(xn(i)*m_nuc,1d-10)-max(x(ixn(i))*m_nuc,1d-10))/(max(xn(i)*m_nuc,1d-10)+max(x(ixn(i))*m_nuc,1d-10))
+				if(err.gt.maxerr) then
 					maxerr=err
 				endif
 			endif
 			do iCS=1,nCS
 				if(.not.c_rainout(iCS)) then
-					err=abs(xc(iCS,i)-x(ixc(iCS,i)))/(xc(iCS,i)+x(ixc(iCS,i)))
-					if(err.gt.maxerr.and.(xc(iCS,i).gt.1d-10.or.x(ixc(iCS,i)).gt.1d-10)) then
-						maxerr=err
+					if(Sat(i,iCS)*xv(iVL(i,iCS),i).gt.(1d0/real(nCS)).or.Sat(i,iCS)*x(ixv(iVL(i,iCS),i)).gt.(1d0/real(nCS))) then
+						err=abs(max(xc(iCS,i),1d-10)-max(x(ixc(iCS,i)),1d-10))/(max(xc(iCS,i),1d-10)+max(x(ixc(iCS,i)),1d-10))
+						if(err.gt.maxerr) then
+							maxerr=err
+						endif
 					endif
 				endif
 			enddo
 			do iVS=1,nVS
 				if(v_include(iVS)) then
-					err=abs(xv(iVS,i)-x(ixv(iVS,i)))/(xv(iVS,i)+x(ixv(iVS,i)))
-					if(err.gt.maxerr.and.(xv(iVS,i).gt.1d-10.or.x(ixv(iVS,i)).gt.1d-10)) then
+					err=abs(max(xv(iVS,i),1d-10)-max(x(ixv(iVS,i)),1d-10))/(max(xv(iVS,i),1d-10)+max(x(ixv(iVS,i)),1d-10))
+					if(err.gt.maxerr) then
 						maxerr=err
 					endif
 				endif
 			enddo
 		endif
+	enddo
+	f=fmax-(fmax-fmin)*maxerr**3
+	do i=1,nnr
 		if(.not.Cloud(ii)%usefsed) then
 			if(iter.eq.1) then
 				xn(i)=x(ixn(i))
@@ -1685,18 +1700,13 @@ c		endif
 				if(iter.eq.1) then
 					xv(iVS,i)=x(ixv(iVS,i))
 				else
-c					if(Cloud(ii)%computeJn.or.Cloud(ii)%usefsed) then
-c						xv(iVS,i)=xv(iVS,i)**f*x(ixv(iVS,i))**(1d0-f)
-c					else
-						xv(iVS,i)=xv(iVS,i)*f+x(ixv(iVS,i))*(1d0-f)
-c					endif
+					xv(iVS,i)=xv(iVS,i)*f+x(ixv(iVS,i))*(1d0-f)
 				endif
 			else
 				xv(iVS,i)=xv_bot(iVS)
 			endif
 		enddo
 	enddo
-
 
 C=========================================================================================
 C=========================================================================================
@@ -1745,19 +1755,19 @@ C===============================================================================
 		endif
 		if(.not.Cloud(ii)%usefsed) rpart(i)=rr
 	enddo
-	fscale=fscale*2d0
+	fscale=1.1*fscale**pscale
 	if(maxerr.lt.eps.and.fscale.gt.1d0) then
 		iconv=iconv+1
 		if(iconv.gt.nconv) exit
 	else
 		iconv=0
 	endif
-	if(fscale.gt.1d0)fscale=1d0
-c	print*,iter,maxerr
+	if(fscale.gt.1d0) fscale=1d0
+c	print*,iter,maxerr,fscale
 20	continue
 	enddo
 c end the loop
-
+c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter," iterations"
 
 	v_include=.false.
 	do iCS=1,nCS
