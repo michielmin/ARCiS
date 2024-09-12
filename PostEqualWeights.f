@@ -14,27 +14,32 @@
 	integer i1,i2,ibest
 	character*6000 line
 	integer*4 counts, count_rate, count_max
-	logical variablePgrid
+	logical variablePgrid,multinestpost
 	real*8 Pgrid(nr),Pg1(nr),Pg2(nr),yy(nr),Pmin0,Pmax0
 	character*500 lowkey
 	integer ipmin,ipmax
 	
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
-	open(unit=35,file=trim(outputdir) // "/posterior.dat",FORM="FORMATTED",ACCESS="STREAM")
-	i=1
-11	read(35,*,end=12) error(1:n_ret),j
-	i=i+j
-	goto 11
-12	close(unit=35)
-	nmodels=i-1
+		open(unit=35,file=trim(outputdir) // "/posterior.dat",FORM="FORMATTED",ACCESS="STREAM")
+		i=1
+11		read(35,*,end=12) error(1:n_ret),j
+		i=i+j
+		goto 11
+12		close(unit=35)
+		nmodels=i-1
 	else
-	open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",FORM="FORMATTED",ACCESS="STREAM")
-	i=1
-1	read(35,*,end=2) error(1:n_ret)
-	i=i+1
-	goto 1
-2	close(unit=35)
-	nmodels=i-1
+		inquire(file=trim(outputdir) // "/post_equal_weights.dat",exist=multinestpost)
+		if(multinestpost) then
+			open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",FORM="FORMATTED",ACCESS="STREAM")
+		else
+			open(unit=35,file=trim(outputdir) // "/post_equal_weights.txt",FORM="FORMATTED",ACCESS="STREAM")
+		endif
+		i=1
+1		read(35,*,end=2) error(1:n_ret)
+		i=i+1
+		goto 1
+2		close(unit=35)
+		nmodels=i-1
 	endif
 
 	print*,nmodels
@@ -88,10 +93,19 @@
 			like(i:i+k-1)=1d0
 		enddo
 	else
-		open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",FORM="FORMATTED",ACCESS="STREAM")
-		do i=1,nmodels
-			read(35,*) var(i,1:n_ret),like(i)
-		enddo
+		inquire(file=trim(outputdir) // "/post_equal_weights.dat",exist=multinestpost)
+		if(multinestpost) then
+			open(unit=35,file=trim(outputdir) // "/post_equal_weights.dat",FORM="FORMATTED",ACCESS="STREAM")
+			do i=1,nmodels
+				read(35,*) var(i,1:n_ret),like(i)
+			enddo
+		else
+			open(unit=35,file=trim(outputdir) // "/post_equal_weights.txt",FORM="FORMATTED",ACCESS="STREAM")
+			do i=1,nmodels
+				read(35,*) var(i,1:n_ret)
+				like(i)=1d0
+			enddo
+		endif
 	endif
 	ipmin=0
 	ipmax=0
