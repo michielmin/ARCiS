@@ -317,6 +317,8 @@
 	if(dotranshide) then
 	do jmolhide=1,2
 	do imolhide=0,nmol
+	obsA=0d0
+	obsA_LC=0d0
 	dohide=.false.
 	if(imolhide.eq.0) then
 		if(nclouds.gt.0) dohide=.true.
