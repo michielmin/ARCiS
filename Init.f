@@ -802,6 +802,10 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Fe2O3.dat'
 									Cloud(i)%nax(j)=1
+								case('Fe3O4')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Fe3O4.dat'
+									Cloud(i)%nax(j)=1
 								case('Al2O3','CORRUNDUM')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Al2O3.dat'

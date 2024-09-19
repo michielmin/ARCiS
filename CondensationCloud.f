@@ -437,6 +437,22 @@ c fractal dimension created by coagulating collisions
 				bc(i,3)=8.724692e-03
 				bc(i,4)=-1.038569e-06
 				ifit(i)=0
+			case('Fe3O4')
+				CSname(i)='Fe3O4'
+				atoms_cloud(i,17)=3
+				atoms_cloud(i,5)=4
+				v_cloud(i,6)=3
+				v_cloud(i,4)=4
+				v_H2(i)=-4
+				v_include(6)=.true.
+				v_include(4)=.true.
+				rhodust(i)=5.17
+				bc(i,0)=4.019320e+05
+				bc(i,1)=-8.960632e+00
+				bc(i,2)=-7.101785e+01
+				bc(i,3)=1.191424e-02
+				bc(i,4)=-1.404312e-06
+				ifit(i)=0
 			case('Al2O3','CORRUNDUM')
 				CSname(i)='Al2O3'
 				atoms_cloud(i,5)=3
@@ -650,7 +666,7 @@ c				v_include(5)=.true.
 				atoms_cloud(i,1)=4
 				atoms_cloud(i,3)=1
 				v_cloud(i,15)=1
-				v_include(15)=(.not.dochemistry)
+				v_include(15)=(.not.dochemistry.or.Cloud(ii)%EqChemBoundary)
 				rhodust(i)=1.8d0
 				do_con(i)=.false.
 				do_nuc(i)=.true.
@@ -1174,7 +1190,7 @@ c	enddo
 		allocate(AB(2*NStot+NStot+1,NN))
 		goto 100
 	endif
-	if(include_phothaze) v_include(15)=(.not.dochemistry)
+	if(include_phothaze) v_include(15)=(.not.dochemistry.or.Cloud(ii)%EqChemBoundary)
 
 	j=0
 	do i=1,nnr
@@ -1432,7 +1448,12 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 
 			if(do_nuc(iCS)) then
 				if(CSname(iCS).eq.'optEC') then
-					x(j)=x(j)-Sn_phot(i)
+					if(v_include(15)) then
+						ik=KL+KU+1+j-ixv(15,i)
+						AB(ik,ixv(15,i))=AB(ik,ixv(15,i))+Sn_phot(i)
+					else
+						x(j)=x(j)-Sn_phot(i)
+					endif
 				else
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
@@ -1479,7 +1500,14 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 	
 			x(j)=-Sn(i)/m_nuc
 			
-			if(include_phothaze) x(j)=x(j)-Sn_phot(i)/m_phothaze
+			if(include_phothaze) then
+				if(v_include(15)) then
+					ik=KL+KU+1+j-ixv(15,i)
+					AB(ik,ixv(15,i))=AB(ik,ixv(15,i))+Sn_phot(i)/m_phothaze
+				else
+					x(j)=x(j)-Sn_phot(i)/m_phothaze
+				endif
+			endif
 			
 			do iCS=1,nCS
 				if(c_include(iCS).and.do_nuc(iCS).and.do_con(iCS)) then
@@ -1528,7 +1556,14 @@ c coagulation
 	
 			x(j)=-Sn(i)/m_nuc
 
-			if(include_phothaze) x(j)=x(j)-Sn_phot(i)/m_phothaze
+			if(include_phothaze) then
+				if(v_include(15)) then
+					ik=KL+KU+1+j-ixv(15,i)
+					AB(ik,ixv(15,i))=AB(ik,ixv(15,i))+Sn_phot(i)/m_phothaze
+				else
+					x(j)=x(j)-Sn_phot(i)/m_phothaze
+				endif
+			endif
 			
 			do iCS=1,nCS
 				if(c_include(iCS).and.do_nuc(iCS).and.do_con(iCS)) then
@@ -1573,7 +1608,12 @@ c coagulation
 
 			if(do_nuc(iCS)) then
 				if(CSname(iCS).eq.'optEC') then
-					x(j)=x(j)-Sn_phot(i)
+					if(v_include(15)) then
+						ik=KL+KU+1+j-ixv(15,i)
+						AB(ik,ixv(15,i))=AB(ik,ixv(15,i))+Sn_phot(i)
+					else
+						x(j)=x(j)-Sn_phot(i)
+					endif
 				else
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
@@ -1616,8 +1656,15 @@ c coagulation
 					AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Sc(i,iCS)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))/(Sat(i,iCS)*mpart(i))
 
 					if(do_nuc(iCS)) then
-						ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-						AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
+						if(CSname(iCS).eq.'optEC') then
+							if(v_include(15)) then
+								ik=KL+KU+1+j-ixv(15,i)
+								AB(ik,ixv(15,i))=AB(ik,ixv(15,i))-Sn_phot(i)*v_cloud(iCS,iVS)*muV(iVS)/muC(iCS)
+							endif
+						else
+							ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
+							AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
+						endif
 					endif
 					endif
 				enddo
@@ -1854,7 +1901,7 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter,
 			if(v_cloud(iCS,iVS).ne.0d0) v_include(iVS)=.true.
 		enddo
 	enddo
-	if(include_phothaze) v_include(15)=(.not.dochemistry)
+	if(include_phothaze) v_include(15)=(.not.dochemistry.or.Cloud(ii)%EqChemBoundary)
 
 	if(iter.gt.niter) then
 		iter=niter
