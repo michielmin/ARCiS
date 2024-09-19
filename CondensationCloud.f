@@ -6,28 +6,27 @@
 	use TimingModule
 	IMPLICIT NONE
 	real*8,allocatable :: x(:),vsed(:),dx(:),vth(:)
-	real*8,allocatable :: Sn(:),mpart(:)
+	real*8,allocatable :: Sn(:),mpart(:),Sn_phot(:)
 	real*8,allocatable :: y(:,:),CloudHp(:),CloudMMW(:)
 	real*8,allocatable :: at_ab(:,:)
 	real*8,allocatable,save :: Sc(:,:),vthv(:),IWORK(:),AB(:,:)
 	real*8,allocatable :: tcinv(:,:),rho_av(:),Kd(:),Kg(:),Km(:),tcrystinv(:)
 	real*8 dz,g,rr,mutot,npart,tot,lambda,tot1,tot2,tot3,nucryst,Tcryst
-	integer info,i,j,iter,NN,NRHS,niter,ii,k,ihaze,kl,ku,jCS
-	real*8 cs,eps,frac_nuc,m_nuc,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
+	integer info,i,j,iter,NN,NRHS,niter,ii,k,kl,ku,jCS
+	real*8 cs,eps,frac_nuc,m_nuc,m_phothaze,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
 	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
 	integer,allocatable :: ixv(:,:),ixc(:,:),iVL(:,:),ixn(:),ixa(:),icryst(:),iamorph(:),inuc(:),ifit(:)
 	real*8 sigmastar,Sigmadot,Pstar,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,fmax,rho_nuc,Gibbs
-	logical ini,Tconverged,haze_nuc
+	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: xn_iter(:,:),xa_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
-	logical,allocatable :: docondense(:)
 	integer iCS,ir,nrdo,iconv,nconv,iVS,nVS,NStot,ik
 	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed,Jn_temp,fscale,pscale
 	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:),CloudG(:)
 	character*10,allocatable :: v_names(:),v_names_out(:)
-	logical,allocatable :: v_include(:),c_include(:),do_nuc(:)
+	logical,allocatable :: v_include(:),c_include(:),do_nuc(:),do_con(:)
 	integer INCFD,IERR
-	logical SKIP,liq
+	logical SKIP,liq,include_phothaze
 	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr),compGibbs,ffrag,mmono,ffill,nmono,Df,rgyr
 	integer itime
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
@@ -159,7 +158,6 @@ c fractal dimension created by coagulating collisions
 
 	nnr=(nr-1)*nr_cloud+1
 	nCS=Cloud(ii)%nmat
-	if(Cloud(ii)%haze) nCS=nCS-1
 	allocate(Kd(nnr),Kg(nnr),Km(nnr))
 	allocate(logCloudP(nnr))
 	allocate(CloudMMW(nnr),CloudHp(nnr),Sat(nnr,nCS),Sat0(nnr,nCS),fSat(nnr,nCS),CloudG(nnr))
@@ -177,8 +175,6 @@ c fractal dimension created by coagulating collisions
 	endif
 	if(Cloud(ii)%computeJn) niter=niter*10
 	
-	allocate(docondense(nCS))
-
 	if(.not.allocated(CloudP)) then
 		allocate(CloudP(nnr))
 		allocate(CloudT(nnr))
@@ -204,7 +200,7 @@ c fractal dimension created by coagulating collisions
 	allocate(v_cloud(nCS,nVS),iVL(nnr,nCS),v_H2(nCS))
 	allocate(icryst(nCS),iamorph(nCS),tcrystinv(nnr))
 	allocate(A_J(nCS),B_J(nCS),do_nuc(nCS),Jn_xv(nnr,nCS),sigma_nuc(nCS),r0_nuc(nCS),Nf_nuc(nCS),Nc_nuc(nnr,nCS))
-	allocate(inuc(nCS))
+	allocate(inuc(nCS),do_con(nCS))
 	allocate(bc(nCS,0:4),ifit(nCS))
 	if(.not.allocated(xn_prev)) then
 		allocate(xv_prev(nVS,nnr))
@@ -227,6 +223,7 @@ c fractal dimension created by coagulating collisions
 	icryst=0
 	iamorph=0
 	do_nuc=.false.
+	do_con=.true.
 	maxT=10000d0
 	sigma_nuc=400d0
 	do i=1,nCS
@@ -648,6 +645,16 @@ c				v_include(5)=.true.
 				bc(i,3)=4.59419E-03
 				bc(i,4)=-1.46651E-06
 				ifit(i)=0
+			case('optEC')
+				CSname(i)='optEC'
+				atoms_cloud(i,1)=4
+				atoms_cloud(i,3)=1
+				v_cloud(i,15)=1
+				v_include(15)=(.not.dochemistry)
+				rhodust(i)=1.8d0
+				do_con(i)=.false.
+				do_nuc(i)=.true.
+				include_phothaze=.true.
 			case default
 				call output("Unknown condensate: " // trim(Cloud(ii)%condensate(i)))
 				print*,'unknown condensate: ', trim(Cloud(ii)%condensate(i))
@@ -676,9 +683,6 @@ c				v_include(5)=.true.
 		enddo
 	enddo
 
-	docondense=.true.
-
-	haze_nuc=.false.
 	select case(Cloud(ii)%hazetype)
 		case("SOOT","soot","Soot")
 			rho_nuc=1.00
@@ -686,9 +690,6 @@ c				v_include(5)=.true.
 			rho_nuc=1.00
 		case("optEC")
 			rho_nuc=1.50
-			ihaze=15
-			v_include(15)=(.not.dochemistry)
-			haze_nuc=(.not.dochemistry)
 		case("SiC")
 			rho_nuc=3.22
 		case("CARBON","Carbon","carbon")
@@ -729,9 +730,56 @@ c				v_include(5)=.true.
 			endif
 		enddo
 	endif
-	do iVS=1,nVS
-		if(v_include(iVS)) then
-			if(dochemistry) then
+
+	if(.not.Cloud(ii)%EqChemBoundary) then
+		do iVS=1,nVS
+			if(v_include(iVS)) then
+				if(dochemistry) then
+					do k=1,N_atoms
+						if(v_atoms(iVS,k).gt.0d0) then
+							f=molfracs_atoms(k)/v_atoms(iVS,k)
+							if(f.lt.xv_bot(iVS)) then
+								xv_bot(iVS)=f
+							endif
+						endif
+					enddo
+					do k=1,N_atoms
+						molfracs_atoms(k)=molfracs_atoms(k)-xv_bot(iVS)*v_atoms(iVS,k)
+						if(molfracs_atoms(k).lt.0d0) molfracs_atoms(k)=0d0
+					enddo
+				else
+					do k=1,nmol
+						if(molname(k).eq.v_names(iVS)) then
+							xv_bot(iVS)=mixrat_r(1,k)
+						endif
+					enddo
+				endif
+			endif
+		enddo
+	else
+		molfracs_atoms(3)=molfracs_atoms(3)+COabun
+		molfracs_atoms(5)=molfracs_atoms(5)+COabun
+		COabun=0d0
+		call call_chemistry(T(1),P(1),mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
+     &				XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),MMW(1),didcondens(1),includemol,.false.)
+		do iVS=1,nVS
+			if(v_include(iVS)) then
+				do k=1,nmol
+					if(molname(k).eq.v_names(iVS)) then
+						xv_bot(iVS)=mixrat_r(1,k)
+						exit
+					endif
+				enddo
+				if(k.le.nmol) then
+					do k=1,N_atoms
+						molfracs_atoms(k)=molfracs_atoms(k)-xv_bot(iVS)*v_atoms(iVS,k)
+						if(molfracs_atoms(k).lt.0d0) molfracs_atoms(k)=0d0
+					enddo
+				endif
+			endif
+		enddo
+		do iVS=1,nVS
+			if(v_include(iVS).and.xv_bot(iVS).gt.1d50) then
 				do k=1,N_atoms
 					if(v_atoms(iVS,k).gt.0d0) then
 						f=molfracs_atoms(k)/v_atoms(iVS,k)
@@ -744,15 +792,10 @@ c				v_include(5)=.true.
 					molfracs_atoms(k)=molfracs_atoms(k)-xv_bot(iVS)*v_atoms(iVS,k)
 					if(molfracs_atoms(k).lt.0d0) molfracs_atoms(k)=0d0
 				enddo
-			else
-				do k=1,nmol
-					if(molname(k).eq.v_names(iVS)) then
-						xv_bot(iVS)=mixrat_r(1,k)
-					endif
-				enddo
 			endif
-		endif
-	enddo
+		enddo
+	endif
+
 	
 	molfracs_atoms0=molfracs_atoms
 	xv_bot=xv_bot*muV/mutot
@@ -787,11 +830,14 @@ c	print*,xv_bot(1:7)
 	
 
 	m_nuc=4d0*pi*Cloud(ii)%rnuc**3*rho_nuc/3d0
+! photochemical haze particles are 20 nm with a density of 1.8 g/cm^3
+	m_phothaze=4d0*pi*(20e-7)**3*1.8d0/3d0
 
 	allocate(mpart(nnr))
 	allocate(rho_av(nnr))
 	allocate(y(nnr,5))
 	allocate(Sn(nnr))
+	if(include_phothaze) allocate(Sn_phot(nnr))
 	allocate(vth(nnr))
 	allocate(tcinv(niter,nnr))
 	allocate(xn_iter(niter,nnr),xa_iter(niter,nnr))
@@ -899,8 +945,7 @@ c	print*,xv_bot(1:7)
 		endif
 	endif
 	
-	docondense=.true.
-	if(Cloud(ii)%hazetype.eq.'optEC') then
+	if(include_phothaze) then
 		allocate(CloudtauUV(nnr),CloudkappaUV(nnr))
 		do ir=1,nr
 			if(kappaUV0.gt.0d0) then
@@ -1007,21 +1052,24 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 			if(CloudT(i).gt.maxT(iCS)) Sat(i,iCS)=0d0
 		enddo
 		CloudG(i)=Ggrav*Mplanet/CloudR(i)**2
-		if(Cloud(ii)%hazetype.eq.'optEC') then
-			Sn(i)=Clouddens(i)*CloudP(i)*CloudtauUV(i)
+		if(include_phothaze) then
+			Sn_phot(i)=Clouddens(i)*CloudP(i)*CloudtauUV(i)
 			if(i.eq.nnr) then
-				tot=tot+abs(CloudR(i-1)-CloudR(i))*Sn(i)
+				tot=tot+abs(CloudR(i-1)-CloudR(i))*Sn_phot(i)
 			else if(i.eq.1) then
-				tot=tot+abs(CloudR(i+1)-CloudR(i))*Sn(i)
+				tot=tot+abs(CloudR(i+1)-CloudR(i))*Sn_phot(i)
 			else
-				tot=tot+abs(CloudR(i-1)-CloudR(i+1))*0.5*Sn(i)
+				tot=tot+abs(CloudR(i-1)-CloudR(i+1))*0.5*Sn_phot(i)
 			endif
-		else
+		endif
+		if(.not.Cloud(ii)%computeJn) then
 			Sn(i)=(Clouddens(i)*CloudG(i)*Sigmadot/(sigmastar*CloudP(i)*1d6*sqrt(2d0*pi)))*exp(-log(CloudP(i)/Pstar)**2/(2d0*sigmastar**2))
+		else
+			Sn(i)=0d0
 		endif
 		tcrystinv(i)=nucryst*exp(-Tcryst/CloudT(i))
 	enddo
-	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*scaleUV*Sigmadot/tot
+	if(include_phothaze) Sn_phot=Sn_phot*scaleUV*Cloud(ii)%Sigmadot_phot/tot
 
 	Sat0=Sat
 
@@ -1037,6 +1085,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 			xv(i,1:nVS)=0d0
 			j=0
 			do iCS=1,nCS
+				if(do_con(iCS)) then
 				tot1=1d200
 				iVL(i,iCS)=1
 				do iVS=1,nVS
@@ -1069,6 +1118,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 						endif
 					enddo
 				endif
+				endif
 			enddo
 			if(j.eq.0) exit
 			maxerr=1d200
@@ -1083,7 +1133,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 		enddo
 	endif
 	do iCS=1,nCS
-		if(c_include(iCS)) then
+		if(c_include(iCS).and.do_con(iCS)) then
 			do i=1,nnr
 				fSat(i,iCS)=CloudP(i)**(v_H2(iCS)-1d0)
 				do iVS=1,nVS
@@ -1124,7 +1174,7 @@ c	enddo
 		allocate(AB(2*NStot+NStot+1,NN))
 		goto 100
 	endif
-	if(Cloud(ii)%hazetype.eq."optEC") v_include(15)=(.not.dochemistry)
+	if(include_phothaze) v_include(15)=(.not.dochemistry)
 
 	j=0
 	do i=1,nnr
@@ -1352,7 +1402,7 @@ C===============================================================================
 	do iCS=1,nCS
 		if(c_include(iCS)) then
 		j=j+1
-		if(Cloud(ii)%freeflow_con) then
+		if(Cloud(ii)%freeflow_con.or.(do_nuc(iCS).and..not.do_con(iCS).and.Cloud(ii)%freeflow_nuc)) then
 c assume continuous flux at the bottom (dF/dz=Sc=0)
 			x(j)=0d0
 
@@ -1371,7 +1421,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 					ik=KL+KU+1+j-ixc(iamorph(iCS),i)
 					AB(ik,ixc(iamorph(iCS),i))=AB(ik,ixc(iamorph(iCS),i))+Clouddens(i)*tcrystinv(i)
 				endif
-			else
+			else if(do_con(iCS)) then
 				ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Sc(i,iCS)*xn(i)
 			endif
@@ -1381,13 +1431,18 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			endif
 
 			if(do_nuc(iCS)) then
-				ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
-c				x(j)=x(j)-xv(iVL(i,iCS),i)*Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
+				if(CSname(iCS).eq.'optEC') then
+					x(j)=x(j)-Sn_phot(i)
+				else
+					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
+					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
+				endif
 			endif
 
-			ik=KL+KU+1+j-ixc(iCS,i)
-			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
+			if(do_con(iCS)) then
+				ik=KL+KU+1+j-ixc(iCS,i)
+				AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
+			endif
 		else
 			ik=KL+KU+1+j-ixc(iCS,i)
 			AB(ik,ixc(iCS,i))=1d0
@@ -1422,20 +1477,14 @@ c				x(j)=x(j)-xv(iVL(i,iCS),i)*Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
 			AB(ik,ixn(i))=AB(ik,ixn(i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
 			AB(ik,ixn(i))=AB(ik,ixn(i))+Clouddens(i)*vsed(i)/dztot
 	
-			if(haze_nuc) then
-				ik=KL+KU+1+j-ixv(ihaze,i)
-				AB(ik,ixv(ihaze,i))=AB(ik,ixv(ihaze,i))+(CloudMMW(i)/muV(ihaze))*Sn(i)/m_nuc
-			else
-				x(j)=-Sn(i)/m_nuc
-			endif
+			x(j)=-Sn(i)/m_nuc
+			
+			if(include_phothaze) x(j)=x(j)-Sn_phot(i)/m_phothaze
 			
 			do iCS=1,nCS
-				if(c_include(iCS)) then
-				if(do_nuc(iCS)) then
+				if(c_include(iCS).and.do_nuc(iCS).and.do_con(iCS)) then
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)
-c					x(j)=x(j)-xv(iVL(i,iCS),i)*Jn_xv(i,iCS)
-				endif
 				endif
 			enddo
 c coagulation
@@ -1477,20 +1526,14 @@ c coagulation
 			AB(ik,ixa(i))=AB(ik,ixa(i))+(0.5d0*(Kd(i-1)*Clouddens(i-1)+Kd(i)*Clouddens(i))/dz)/dztot
 			AB(ik,ixa(i))=AB(ik,ixa(i))+Clouddens(i)*vsed(i)/dztot
 	
-			if(haze_nuc) then
-				ik=KL+KU+1+j-ixv(ihaze,i)
-				AB(ik,ixv(ihaze,i))=AB(ik,ixv(ihaze,i))+(CloudMMW(i)/muV(ihaze))*Sn(i)/m_nuc
-			else
-				x(j)=-Sn(i)/m_nuc
-			endif
+			x(j)=-Sn(i)/m_nuc
+
+			if(include_phothaze) x(j)=x(j)-Sn_phot(i)/m_phothaze
 			
 			do iCS=1,nCS
-				if(c_include(iCS)) then
-				if(do_nuc(iCS)) then
+				if(c_include(iCS).and.do_nuc(iCS).and.do_con(iCS)) then
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)
-c					x(j)=x(j)-xv(iVL(i,iCS),i)*Jn_xv(i,iCS)
-				endif
 				endif
 			enddo
 		endif
@@ -1519,7 +1562,7 @@ c					x(j)=x(j)-xv(iVL(i,iCS),i)*Jn_xv(i,iCS)
 					ik=KL+KU+1+j-ixc(iamorph(iCS),i)
 					AB(ik,ixc(iamorph(iCS),i))=AB(ik,ixc(iamorph(iCS),i))+Clouddens(i)*tcrystinv(i)
 				endif
-			else
+			else if(do_con(iCS)) then
 				ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Sc(i,iCS)*xn(i)
 			endif
@@ -1529,13 +1572,18 @@ c					x(j)=x(j)-xv(iVL(i,iCS),i)*Jn_xv(i,iCS)
 			endif
 
 			if(do_nuc(iCS)) then
-				ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
-c				x(j)=x(j)-xv(iVL(i,iCS),i)*Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
+				if(CSname(iCS).eq.'optEC') then
+					x(j)=x(j)-Sn_phot(i)
+				else
+					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
+					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
+				endif
 			endif
 
-			ik=KL+KU+1+j-ixc(iCS,i)
-			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
+			if(do_con(iCS)) then
+				ik=KL+KU+1+j-ixc(iCS,i)
+				AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
+			endif
 			endif
 		enddo
 
@@ -1559,7 +1607,7 @@ c				x(j)=x(j)-xv(iVL(i,iCS),i)*Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
 				AB(ik,ixv(iVS,i))=AB(ik,ixv(iVS,i))+(0.5d0*(Kg(i-1)*Clouddens(i-1)+Kg(i)*Clouddens(i))/dz)/dztot
 	
 				do iCS=1,nCS
-					if(c_include(iCS)) then
+					if(c_include(iCS).and.do_con(iCS)) then
 					if(iamorph(iCS).eq.0) then
 						ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 						AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Sc(i,iCS)*xn(i)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))
@@ -1570,16 +1618,9 @@ c				x(j)=x(j)-xv(iVL(i,iCS),i)*Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
 					if(do_nuc(iCS)) then
 						ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 						AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
-c						x(j)=x(j)+xv(iVL(i,iCS),i)*Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
 					endif
 					endif
 				enddo
-
-				if(haze_nuc.and.iVS.eq.ihaze) then
-					ik=KL+KU+1+j-ixv(ihaze,i)
-					AB(ik,ixv(ihaze,i))=AB(ik,ixv(ihaze,i))-(CloudMMW(i)/muV(ihaze))*Sn(i)
-				endif
-
 			endif
 		enddo
 	enddo
@@ -1692,7 +1733,7 @@ c	f=1.1-0.4/(1.0+3.0*exp(-(real(iter)/real(min(niter/4,200)))**2))
 				endif
 			endif
 			do iCS=1,nCS
-				if(c_include(iCS)) then
+				if(c_include(iCS).and.do_con(iCS)) then
 					if(Sat(i,iCS)*xv(iVL(i,iCS),i).gt.(1d0/real(nCS)).or.Sat(i,iCS)*x(ixv(iVL(i,iCS),i)).gt.(1d0/real(nCS))) then
 						err=abs(max(xc(iCS,i),1d-10)-max(x(ixc(iCS,i)),1d-10))/(max(xc(iCS,i),1d-10)+max(x(ixc(iCS,i)),1d-10))
 						if(err.gt.maxerr) then
@@ -1813,7 +1854,7 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter,
 			if(v_cloud(iCS,iVS).ne.0d0) v_include(iVS)=.true.
 		enddo
 	enddo
-	if(Cloud(ii)%hazetype.eq."optEC") v_include(15)=(.not.dochemistry)
+	if(include_phothaze) v_include(15)=(.not.dochemistry)
 
 	if(iter.gt.niter) then
 		iter=niter
@@ -2111,7 +2152,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	endif
 
 
-	deallocate(Sat,docondense)
+	deallocate(Sat)
 	deallocate(mpart,rmono)
 	deallocate(rho_av)
 	deallocate(y)
@@ -2125,7 +2166,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	deallocate(logCloudP)
 	deallocate(Kd,Kg,Km)
 	deallocate(c_include)
-	if(Cloud(ii)%hazetype.eq.'optEC') deallocate(CloudtauUV,CloudkappaUV)
+	if(include_phothaze) deallocate(CloudtauUV,CloudkappaUV,Sn_phot)
 
 	return
 	end
@@ -2219,7 +2260,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	use GlobalSetup
 	IMPLICIT NONE
 	real*8 Otot(nr),Ctot(nr),Ntot(nr)
-	integer iCO,iCO2,iH2O,iCH4,iN2,iNH3
+	integer iCO,iCO2,iH2O,iCH4,iN2,iNH3,i
 	
 	iH2O=1
 	iCO2=2
@@ -2231,6 +2272,12 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	Otot(1:nr)=mixrat_r(1:nr,iH2O)+2.0*mixrat_r(1:nr,iCO2)+mixrat_r(1:nr,iCO)
 	Ctot(1:nr)=mixrat_r(1:nr,iCO2)+mixrat_r(1:nr,iCO)+mixrat_r(1:nr,iCH4)
 	Ntot(1:nr)=mixrat_r(1:nr,iNH3)+2.0*mixrat_r(1:nr,iN2)
+
+	do i=1,nr
+		if(.not.Otot(i).gt.0d0) Otot(i)=0d0
+		if(.not.Ctot(i).gt.0d0) Ctot(i)=0d0
+		if(.not.Ntot(i).gt.0d0) Ntot(i)=0d0
+	enddo
 	
 	return
 	end
@@ -2238,9 +2285,12 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	subroutine CorrectDiseqAtoms(Otot,Ctot,Ntot)	
 	use GlobalSetup
 	IMPLICIT NONE
-	real*8 Otot(nr),Ctot(nr),Ntot(nr),f
+	real*8 Otot(nr),Ctot(nr),Ntot(nr),f,A(8,5),x(4)
 	integer iCO,iCO2,iH2O,iCH4,iN2,iNH3
-	integer i
+	integer i,j,IP(200),N
+	real*8 WS(200)
+	integer ME,MA,MG,MODE,MDW
+	real*8 PRGOPT(10),RNORME,RNORML
 	
 	iH2O=1
 	iCO2=2
@@ -2250,14 +2300,61 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	iN2=22
 	
 	do i=1,nr
-		f=(Otot(i)-mixrat_r(i,iCO))/(2.0*mixrat_r(i,iCO2)+mixrat_r(i,iH2O))
-		if(.not.f.gt.0d0) f=0d0
-		mixrat_r(i,iCO2)=f*mixrat_r(i,iCO2)
-		mixrat_r(i,iH2O)=f*mixrat_r(i,iH2O)
-		f=(Ctot(i)-mixrat_r(i,iCO2))/(mixrat_r(i,iCH4)+mixrat_r(i,iCO))
-		if(.not.f.gt.0d0) f=0d0
-		mixrat_r(i,iCO)=f*mixrat_r(i,iCO)
-		mixrat_r(i,iCH4)=f*mixrat_r(i,iCH4)
+		N=4
+		ME=2
+		MA=2
+		MG=4
+		MDW=8
+	
+		PRGOPT(1)=1
+		IP(1)=200
+		IP(2)=200
+
+		A(1,1)=1d0
+		A(1,2)=2d0
+		A(1,3)=1d0
+		A(1,4)=0d0
+		A(1,5)=max(Otot(i),0d0)
+
+		A(2,1)=0d0
+		A(2,2)=1d0
+		A(2,3)=1d0
+		A(2,4)=1d0
+		A(2,5)=max(Ctot(i),0d0)
+
+		A(3,1)=mixrat_r(i,iCO2)+mixrat_r(i,iCO)
+		A(3,2)=-mixrat_r(i,iH2O)
+		A(3,3)=-mixrat_r(i,iH2O)
+		A(3,4)=0d0
+		A(3,5)=0d0
+
+		A(4,1)=0d0
+		A(4,2)=-mixrat_r(i,iCH4)
+		A(4,3)=-mixrat_r(i,iCH4)
+		A(4,4)=mixrat_r(i,iCO2)+mixrat_r(i,iCO)
+		A(4,5)=0d0
+
+		do j=1,4
+			A(4+j,1:5)=0d0
+			A(4+j,j)=1d0
+		enddo
+
+		call dlsei(A, MDW, ME, MA, MG, N, PRGOPT, x, RNORME, RNORML, MODE, WS, IP)
+		if(MODE.eq.0) then
+			mixrat_r(i,iH2O)=max(x(1),1d-50)
+			mixrat_r(i,iCO2)=max(x(2),1d-50)
+			mixrat_r(i,iCO)=max(x(3),1d-50)
+			mixrat_r(i,iCH4)=max(x(4),1d-50)
+		else
+			mixrat_r(i,iH2O)=Otot(i)
+			mixrat_r(i,iCO2)=1d-50
+			mixrat_r(i,iCO)=1d-50
+			mixrat_r(i,iCH4)=Ctot(i)
+		endif
+
+		print*,'O',Otot(i)/(mixrat_r(i,iH2O)+2d0*mixrat_r(i,iCO2)+mixrat_r(i,iCO)),Otot(i)
+		print*,'C',Ctot(i)/(mixrat_r(i,iCH4)+mixrat_r(i,iCO2)+mixrat_r(i,iCO)),Ctot(i)
+		
 		f=Ntot(i)/(mixrat_r(i,iNH3)+2.0*mixrat_r(i,iN2))
 		if(.not.f.gt.0d0) f=0d0
 		mixrat_r(i,iNH3)=f*mixrat_r(i,iNH3)
@@ -2267,6 +2364,19 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	return
 	end
 	
+
+	subroutine MatInv(A,n)
+	implicit none
+	integer n,info
+	real*8 A(n,n),Ainv(n,n)
+	real*8 work(n)
+	integer ipiv(n)
+	Ainv=A
+	call dgetrf(n,n,Ainv,n,ipiv,info)
+	call dgetri(n,Ainv,n,ipiv,work,n,info)
+	A=Ainv
+	return
+	end
 
 	subroutine PvapNH3(T,Pvap,liquid)
 	IMPLICIT NONE

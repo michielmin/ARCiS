@@ -74,7 +74,9 @@ subroutine diseq_calc(nr, R, P, T, nmol, molname, mixrat_r, COratio, Kzz)
 
   do j = 1, nr
   	mixrat_r(j, 2) = n(2, j) / nt(j)
+	do i=1,nmol
+		if(.not.mixrat_r(j,i).gt.0d0) mixrat_r(j,i)=0d0
+	enddo
   end do
-
 
 end subroutine diseq_calc

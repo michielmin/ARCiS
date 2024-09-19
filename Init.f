@@ -387,7 +387,7 @@ c select at least the species relevant for disequilibrium chemistry
 		allocate(Cloud(i)%material(40))
 		allocate(Cloud(i)%condensate(40))
 		allocate(Cloud(i)%xv_bot(40))
-		allocate(Cloud(i)%porosity(40))
+		allocate(Cloud(i)%porosity(nr))
 	enddo
 	allocate(XeqCloud(nr,max(nclouds,1)))
 	allocate(XeqCloud_old(nr,max(nclouds,1)))
@@ -726,6 +726,10 @@ c	condensates=(condensates.or.cloudcompute)
 					Cloud(i)%material(15)=Cloud(i)%hazetype
 				endif
 			else if(Cloud(i)%type.eq.'CONDENSATION') then
+				if(Cloud(i)%EqChemBoundary.and..not.dochemistry) then
+					call output("cannot set cloud boundary to EqCehmistry when not using chemistry")
+					Cloud(i)%EqChemBoundary=.false.
+				endif
 				if(Cloud(i)%opacitytype.eq.'AUTO') Cloud(i)%opacitytype='MATERIAL'
 				if(Cloud(i)%opacitytype.eq.'MATERIAL') then
 					call getenv('HOME',homedir)
@@ -854,16 +858,14 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/SiO.dat'
 									Cloud(i)%nax(j)=1
+								case('optEC')
+									Cloud(i)%material(j)='optEC'
 								case default
 									call output("Unknown condensate")
 									stop
 							end select
 						endif
 					enddo
-				endif
-				if(Cloud(i)%haze) then
-					Cloud(i)%nmat=Cloud(i)%nmat+1
-					Cloud(i)%material(Cloud(i)%nmat)=Cloud(i)%hazetype
 				endif
 			endif
 		enddo
@@ -2167,6 +2169,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%Srainout=1d0
 		Cloud(i)%coagulation=.true.
 		Cloud(i)%computecryst=.false.
+		Cloud(i)%EqChemBoundary=.false.
 		Cloud(i)%mixrat=0d0
 		Cloud(i)%tau=1d0
 		Cloud(i)%lref=1d0
@@ -2180,6 +2183,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%condensate='SILICATE'
 		Cloud(i)%Kzz=-1d0
 		Cloud(i)%Sigmadot=1d-17
+		Cloud(i)%Sigmadot_phot=1d-17
 		Cloud(i)%kappa=1d-2
 		Cloud(i)%albedo=0.99d0
 		Cloud(i)%kpow=4d0
@@ -3113,6 +3117,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%GlobalKzz
 		case("sigmadot","nucleation")
 			read(key%value,*) Cloud(j)%Sigmadot
+		case("sigmadot_phot","nuc_phot")
+			read(key%value,*) Cloud(j)%Sigmadot_phot
 		case("xm_bot")
 			read(key%value,*) Cloud(j)%xm_bot
 		case("reff")
@@ -3133,6 +3139,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%computecryst
 		case("coagulation")
 			read(key%value,*) Cloud(j)%coagulation
+		case("eqchemboundary")
+			read(key%value,*) Cloud(j)%EqChemBoundary
 		case("usefsed")
 			read(key%value,*) Cloud(j)%usefsed
 		case("alpha","fsed_alpha","fsed")

@@ -435,11 +435,11 @@ c for exchange when computing secondary atmosphere
 		character*500 species,hazetype,file,composition
 		integer nmat,nlam
 		character*500,allocatable :: lnkfile(:,:),material(:),condensate(:)
-		real*8 Kzz,Sigmadot,xm_bot
+		real*8 Kzz,Sigmadot,xm_bot,Sigmadot_phot
 		real*8 kappa,albedo,kpow,klam
 		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:),KeFile(:,:),KaFile(:,:),KsFile(:,:)
 		integer,allocatable :: nax(:)
-		logical usefsed,computeJn
+		logical usefsed,computeJn,EqChemBoundary
 		real*8 fsed_alpha,fsed_beta,Srainout,fstick
 	end type CloudType
 
