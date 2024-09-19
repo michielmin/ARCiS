@@ -22,8 +22,8 @@
 c	Use Thorngren & Fortney (2018)
 		Tc=sqrt(Rstar/(Dplanet))*Tstar
 		TeffP=0.39*Tc*exp(-(log10(4d-9*sigma*Tc**4)-0.14)**2/1.095)
-c	Add a minimum of 30K for compatibility with cold/old gas Giants
-		TeffP=max(TeffP,20d0)
+c	Add a minimum of 85K for compatibility with cold/old gas Giants
+		TeffP=(TeffP**4+85d0**4)**0.25
 		if(.not.retrieval) call output("Internal temperature: " // dbl2string(TeffP,'(f6.1)') // "K")
 		if(.not.retrieval) print*,"Internal temperature: " // dbl2string(TeffP,'(f6.1)') // "K"
 	endif
