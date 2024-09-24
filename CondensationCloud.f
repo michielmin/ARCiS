@@ -1860,7 +1860,7 @@ c	print*,iter,maxerr,fscale
 20	continue
 	enddo
 c end the loop
-	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter," iterations"
+c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter," iterations"
 
 	v_include=.false.
 	do iCS=1,nCS
