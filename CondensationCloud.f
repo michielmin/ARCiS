@@ -15,7 +15,7 @@
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,kl,ku,jCS
 	real*8 cs,eps,frac_nuc,m_nuc,m_phothaze,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
 	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
-	integer,allocatable :: ixv(:,:),ixc(:,:),iVL(:,:),ixn(:),ixa(:),icryst(:),iamorph(:),inuc(:),ifit(:)
+	integer,allocatable :: ixv(:,:),ixc(:,:),iVL(:,:),ixn(:),ixa(:),icryst(:),iamorph(:),ifit(:)
 	real*8 sigmastar,Sigmadot,Pstar,sigmamol,COabun,lmfp,fstick,kappa_cloud,fmin,fmax,rho_nuc,Gibbs
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
@@ -25,7 +25,7 @@
 	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:),CloudG(:)
 	character*10,allocatable :: v_names(:),v_names_out(:)
 	logical,allocatable :: v_include(:),c_include(:),do_nuc(:),do_con(:)
-	integer INCFD,IERR
+	integer INCFD,IERR,iCS_phot
 	logical SKIP,liq,include_phothaze
 	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr),compGibbs,ffrag,mmono,ffill,nmono,Df,rgyr
 	integer itime
@@ -45,7 +45,7 @@ c fractal dimension created by coagulating collisions
 	itimecloud=itimecloud-itime
 	ctimecloud=ctimecloud+1
 
-	nVS=16
+	nVS=15
 	allocate(v_names(nVS),v_atoms(nVS,N_atoms),v_include(nVS))
 	allocate(bv(nVS,0:4),bH2(0:4))
 	bv=0d0
@@ -136,23 +136,8 @@ c fractal dimension created by coagulating collisions
 	v_names(14)="Cr"
 	v_atoms(14,26)=1
 
-	v_names(15)="CH4"
-	v_atoms(15,1)=4
-	v_atoms(15,3)=1
-	bv(15,0)=1.97846E+05
-	bv(15,1)=-8.83168E+00
-	bv(15,2)=5.27931E+00
-	bv(15,3)=2.75677E-03
-	bv(15,4)=-1.39667E-07
-
-	v_names(16)="SO2"
-	v_atoms(16,11)=1
-	v_atoms(16,5)=2
-	bv(16,0)=1.27905E+05
-	bv(16,1)=-3.68505E+00
-	bv(16,2)=-5.04460E+00
-	bv(16,3)=1.38250E-03
-	bv(16,4)=-8.66752E-08
+	v_names(15)="W"
+	v_atoms(15,41)=1
 
 	v_include=.false.
 
@@ -200,7 +185,7 @@ c fractal dimension created by coagulating collisions
 	allocate(v_cloud(nCS,nVS),iVL(nnr,nCS),v_H2(nCS))
 	allocate(icryst(nCS),iamorph(nCS),tcrystinv(nnr))
 	allocate(A_J(nCS),B_J(nCS),do_nuc(nCS),Jn_xv(nnr,nCS),sigma_nuc(nCS),r0_nuc(nCS),Nf_nuc(nCS),Nc_nuc(nnr,nCS))
-	allocate(inuc(nCS),do_con(nCS))
+	allocate(do_con(nCS))
 	allocate(bc(nCS,0:4),ifit(nCS))
 	if(.not.allocated(xn_prev)) then
 		allocate(xv_prev(nVS,nnr))
@@ -367,7 +352,6 @@ c fractal dimension created by coagulating collisions
 				rhodust(i)=0.93
 				maxT(i)=747d0
 				do_nuc(i)=Cloud(ii)%ComputeJn
-				inuc(i)=4
 				sigma_nuc(i)=109.0
 				r0_nuc(i)=1.973e-8
 				Nf_nuc(i)=1d0
@@ -379,7 +363,6 @@ c fractal dimension created by coagulating collisions
 				v_include(6)=.true.
 				rhodust(i)=7.87
 				do_nuc(i)=.false.!Cloud(ii)%ComputeJn
-				inuc(i)=6
 				sigma_nuc(i)=1870	! from Brooks et al. 2001
 				r0_nuc(i)=3.7e-9
 				Nf_nuc(i)=1d0
@@ -480,7 +463,6 @@ c fractal dimension created by coagulating collisions
 				v_include(10)=.true.
 				rhodust(i)=2.17
 				do_nuc(i)=Cloud(ii)%ComputeJn
-				inuc(i)=10
 				sigma_nuc(i)=113.3
 				r0_nuc(i)=2.205e-8
 				Nf_nuc(i)=1d0
@@ -501,7 +483,6 @@ c fractal dimension created by coagulating collisions
 				v_include(10)=.true.
 				rhodust(i)=1.99
 				do_nuc(i)=Cloud(ii)%ComputeJn
-				inuc(i)=10
 				sigma_nuc(i)=100.3
 				r0_nuc(i)=2.462e-8
 				Nf_nuc(i)=1d0
@@ -536,7 +517,6 @@ c fractal dimension created by coagulating collisions
 				rhodust(i)=0.87
 				maxT(i)=220d0
 				do_nuc(i)=Cloud(ii)%ComputeJn
-				inuc(i)=11
 				sigma_nuc(i)=23.4
 				r0_nuc(i)=1.980e-8
 				Nf_nuc(i)=1d0
@@ -554,7 +534,6 @@ c fractal dimension created by coagulating collisions
 				do_nuc(i)=Cloud(ii)%ComputeJn
 				A_J(i)=1.112e12
 				B_J(i)=-24.0
-				inuc(i)=2
 				sigma_nuc(i)=480.6
 				r0_nuc(i)=1.956e-8
 				Nf_nuc(i)=0d0
@@ -570,17 +549,11 @@ c fractal dimension created by coagulating collisions
 				atoms_cloud(i,5)=4
 				atoms_cloud(i,11)=1
 
-				v_cloud(i,4)=2
-				v_cloud(i,16)=1
-				v_H2(i)=-1
+				v_cloud(i,4)=4
+				v_cloud(i,5)=1
+				v_H2(i)=-4
 				v_include(4)=.true.
-				v_include(16)=.true.
-
-c				v_cloud(i,4)=4
-c				v_cloud(i,5)=1
-c				v_H2(i)=-4
-c				v_include(4)=.true.
-c				v_include(5)=.true.
+				v_include(5)=.true.
 
 				rhodust(i)=1.84d0
 				bc(i,0)=9.70368E+05
@@ -612,7 +585,6 @@ c				v_include(5)=.true.
 				v_include(14)=.true.
 				rhodust(i)=7.19d0
 				do_nuc(i)=Cloud(ii)%ComputeJn
-				inuc(i)=14
 				sigma_nuc(i)=3330.0
 				r0_nuc(i)=1.421
 				Nf_nuc(i)=1d0
@@ -628,7 +600,6 @@ c				v_include(5)=.true.
 				do_nuc(i)=Cloud(ii)%computeJn
 				A_J(i)=4.4e12
 				B_J(i)=1.33
-				inuc(i)=1
 				sigma_nuc(i)=849.4
 				r0_nuc(i)=2.0e-8
 				Nf_nuc(i)=1d0
@@ -661,16 +632,26 @@ c				v_include(5)=.true.
 				bc(i,3)=4.59419E-03
 				bc(i,4)=-1.46651E-06
 				ifit(i)=0
+			case('W')
+				CSname(i)='W'
+				atoms_cloud(i,41)=1
+				v_cloud(i,15)=1
+				v_include(15)=.true.
+				rhodust(i)=19.25d0
+				do_nuc(i)=Cloud(ii)%ComputeJn
+				sigma_nuc(i)=3340
+				r0_nuc(i)=3.3578745379356140E-008
+				Nf_nuc(i)=10d0
+				ifit(i)=-1
 			case('optEC')
 				CSname(i)='optEC'
 				atoms_cloud(i,1)=4
 				atoms_cloud(i,3)=1
-				v_cloud(i,15)=1
-				v_include(15)=(.not.dochemistry.or.Cloud(ii)%EqChemBoundary)
 				rhodust(i)=1.8d0
-				do_con(i)=.false.
 				do_nuc(i)=.true.
+				do_con(i)=.false.
 				include_phothaze=.true.
+				iCS_phot=i
 			case default
 				call output("Unknown condensate: " // trim(Cloud(ii)%condensate(i)))
 				print*,'unknown condensate: ', trim(Cloud(ii)%condensate(i))
@@ -1005,6 +986,10 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
 						call PvapCr(tot1,Sat(1,iCS),liq)
 						Sat(1,iCS)=1d0/Sat(1,iCS)
+					case("W")
+c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
+						call PvapW(tot1,Sat(1,iCS),liq)
+						Sat(1,iCS)=1d0/Sat(1,iCS)
 					case default
 						Gibbs=compGibbs(tot1,bc(iCS,0:4),ifit(iCS))
 						Sat(1,iCS)=Gibbs-v_H2(iCS)*compGibbs(tot1,bH2(0:4),0)
@@ -1053,6 +1038,10 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 				case("Cr")
 c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
 					call PvapCr(CloudT(i),Sat(i,iCS),liq)
+					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
+				case("W")
+c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
+					call PvapW(CloudT(i),Sat(i,iCS),liq)
 					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
 				case default
 					Gibbs=compGibbs(CloudT(i),bc(iCS,0:4),ifit(iCS))
@@ -1163,9 +1152,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 			if(i.gt.nnr) c_include(iCS)=.false.
 		endif
 	enddo
-c	do iCS=1,nCS
-c		print*,CSname(iCS),c_include(iCS)
-c	enddo
+	if(include_phothaze) c_include(iCS_phot)=.true.
 
 	v_include=.false.
 	j=0
@@ -1190,7 +1177,6 @@ c	enddo
 		allocate(AB(2*NStot+NStot+1,NN))
 		goto 100
 	endif
-	if(include_phothaze) v_include(15)=(.not.dochemistry.or.Cloud(ii)%EqChemBoundary)
 
 	j=0
 	do i=1,nnr
@@ -1218,8 +1204,8 @@ c	enddo
 
 	if(Cloud(ii)%computeJn) then
 		fmin=0.8
-		fmax=1.0
-		eps=0.3
+		fmax=0.97
+		eps=1d-2
 		fscale=1d-10
 		pscale=0.999
 	else if(computeT.and.nTiter.gt.2) then
@@ -1327,26 +1313,38 @@ c start the loop
 		enddo
 
 		do iCS=1,nCS
-			vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
-
-			Dp=kb*CloudT(i)*vthv(i)/(3d0*CloudP(i)*1d6*sigmamol)
-			Sc(i,iCS)=fstick*Clouddens(i)**2*(muC(iCS)/(muV(iVL(i,iCS))*v_cloud(iCS,iVL(i,iCS))))*
+			if(c_include(iCS)) then
+				vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
+				Dp=kb*CloudT(i)*vthv(i)/(3d0*CloudP(i)*1d6*sigmamol)
+				if(do_con(iCS)) then
+					Sc(i,iCS)=fstick*Clouddens(i)**2*(muC(iCS)/(muV(iVL(i,iCS))*v_cloud(iCS,iVL(i,iCS))))*
      &						pi*rpart(i)*min(rpart(i)*vthv(i),4d0*Dp)
-			if(do_nuc(iCS)) then
-				tot1=Sat(i,iCS)*xv(iVL(i,iCS),i)
-				tot2=CloudP(i)*CloudMMW(i)/(muV(iVL(i,iCS))*kb*CloudT(i))
-				select case(CSname(iCS))
-					case('SiO','TiO2')
-						call ComputeJ_xv(xv(iVL(i,iCS),i),tot2,CloudT(i),tot1,Jn_temp,A_J(iCS),B_J(iCS))
-						Nc_nuc(i,iCS)=m_nuc/(muC(iCS)*mp)
-					case default
-						call ComputeJ(CloudT(i),tot1,tot2,xv(iVL(i,iCS),i),vthv(i),sigma_nuc(iCS),r0_nuc(iCS),Nf_nuc(iCS),Jn_temp,Nc_nuc(i,iCS))
-				end select
-				Jn_xv(i,iCS)=Jn_xv(i,iCS)*f+Jn_temp*(1d0-f)
+				endif
+				if(do_nuc(iCS)) then
+					tot1=Sat(i,iCS)*xv(iVL(i,iCS),i)
+					tot2=CloudP(i)*CloudMMW(i)/(muV(iVL(i,iCS))*kb*CloudT(i))
+					select case(CSname(iCS))
+						case('SiO','TiO2')
+							call ComputeJ_xv(xv(iVL(i,iCS),i),tot2,CloudT(i),tot1,Jn_temp,A_J(iCS),B_J(iCS))
+							Nc_nuc(i,iCS)=m_nuc/(muC(iCS)*mp)
+						case default
+							call ComputeJ(CloudT(i),tot1,tot2,xv(iVL(i,iCS),i),vthv(i),sigma_nuc(iCS),r0_nuc(iCS),
+     &								Nf_nuc(iCS),Jn_temp,Nc_nuc(i,iCS))
+					end select
+					Jn_xv(i,iCS)=Jn_xv(i,iCS)*f+Jn_temp*(1d0-f)
+				else
+					Jn_xv(i,iCS)=0d0
+				endif
 			else
+				Sc(i,iCS)=0d0
 				Jn_xv(i,iCS)=0d0
 			endif
 		enddo
+		if(include_phothaze) then
+			tot1=(muC(iCS_phot)*mp/(kb*CloudT(i)))*exp(36.7-93646./CloudT(i))
+			Sc(i,iCS_phot)=fstick*min(vthv(i)*rpart(i),4d0*Dp)*pi*rpart(i)*Clouddens(i)*tot1
+			Sat(i,iCS_phot)=1d0
+		endif
 c	The Kelvin effect for condensation onto a curved surface
 c		do iCS=1,nCS
 c			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)/rhodust(iCS))/(rmono(i)*Rgas*CloudT(i)))
@@ -1447,23 +1445,16 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			endif
 
 			if(do_nuc(iCS)) then
-				if(CSname(iCS).eq.'optEC') then
-					if(v_include(15)) then
-						ik=KL+KU+1+j-ixv(15,i)
-						AB(ik,ixv(15,i))=AB(ik,ixv(15,i))+Sn_phot(i)
-					else
-						x(j)=x(j)-Sn_phot(i)
-					endif
+				if(iCS.eq.iCS_phot) then
+					x(j)=x(j)-Sn_phot(i)
 				else
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
 				endif
 			endif
 
-			if(do_con(iCS)) then
-				ik=KL+KU+1+j-ixc(iCS,i)
-				AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
-			endif
+			ik=KL+KU+1+j-ixc(iCS,i)
+			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
 		else
 			ik=KL+KU+1+j-ixc(iCS,i)
 			AB(ik,ixc(iCS,i))=1d0
@@ -1501,12 +1492,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			x(j)=-Sn(i)/m_nuc
 			
 			if(include_phothaze) then
-				if(v_include(15)) then
-					ik=KL+KU+1+j-ixv(15,i)
-					AB(ik,ixv(15,i))=AB(ik,ixv(15,i))+Sn_phot(i)/m_phothaze
-				else
-					x(j)=x(j)-Sn_phot(i)/m_phothaze
-				endif
+				x(j)=x(j)-Sn_phot(i)/m_phothaze
 			endif
 			
 			do iCS=1,nCS
@@ -1557,12 +1543,7 @@ c coagulation
 			x(j)=-Sn(i)/m_nuc
 
 			if(include_phothaze) then
-				if(v_include(15)) then
-					ik=KL+KU+1+j-ixv(15,i)
-					AB(ik,ixv(15,i))=AB(ik,ixv(15,i))+Sn_phot(i)/m_phothaze
-				else
-					x(j)=x(j)-Sn_phot(i)/m_phothaze
-				endif
+				x(j)=x(j)-Sn_phot(i)/m_phothaze
 			endif
 			
 			do iCS=1,nCS
@@ -1607,23 +1588,16 @@ c coagulation
 			endif
 
 			if(do_nuc(iCS)) then
-				if(CSname(iCS).eq.'optEC') then
-					if(v_include(15)) then
-						ik=KL+KU+1+j-ixv(15,i)
-						AB(ik,ixv(15,i))=AB(ik,ixv(15,i))+Sn_phot(i)
-					else
-						x(j)=x(j)-Sn_phot(i)
-					endif
+				if(iCS.eq.iCS_phot) then
+					x(j)=x(j)-Sn_phot(i)
 				else
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
 				endif
 			endif
 
-			if(do_con(iCS)) then
-				ik=KL+KU+1+j-ixc(iCS,i)
-				AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
-			endif
+			ik=KL+KU+1+j-ixc(iCS,i)
+			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
 			endif
 		enddo
 
@@ -1648,24 +1622,17 @@ c coagulation
 	
 				do iCS=1,nCS
 					if(c_include(iCS).and.do_con(iCS)) then
-					if(iamorph(iCS).eq.0) then
-						ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-						AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Sc(i,iCS)*xn(i)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))
-					endif
-					ik=KL+KU+1+j-ixc(iCS,i)
-					AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Sc(i,iCS)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))/(Sat(i,iCS)*mpart(i))
+						if(iamorph(iCS).eq.0) then
+							ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
+							AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Sc(i,iCS)*xn(i)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))
+						endif
+						ik=KL+KU+1+j-ixc(iCS,i)
+						AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Sc(i,iCS)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))/(Sat(i,iCS)*mpart(i))
 
-					if(do_nuc(iCS)) then
-						if(CSname(iCS).eq.'optEC') then
-							if(v_include(15)) then
-								ik=KL+KU+1+j-ixv(15,i)
-								AB(ik,ixv(15,i))=AB(ik,ixv(15,i))-Sn_phot(i)*v_cloud(iCS,iVS)*muV(iVS)/muC(iCS)
-							endif
-						else
+						if(do_nuc(iCS)) then
 							ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 							AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
 						endif
-					endif
 					endif
 				enddo
 			endif
@@ -1743,7 +1710,7 @@ c		endif
 		do iVS=1,nVS
 			if(v_include(iVS)) then
 				if(.not.x(ixv(iVS,i)).gt.0d0) x(ixv(iVS,i))=0d0
-				if(.not.x(ixv(iVS,i)).lt.xv_bot(iVS)) x(ixv(iVS,i))=xv_bot(iVS)
+c				if(.not.x(ixv(iVS,i)).lt.xv_bot(iVS)) x(ixv(iVS,i))=xv_bot(iVS)
 			endif
 		enddo
 	enddo
@@ -1889,7 +1856,7 @@ C===============================================================================
 		iconv=0
 	endif
 	if(fscale.gt.1d0) fscale=1d0
-c	print*,iter,maxerr,fscale
+	print*,iter,maxerr,fscale
 20	continue
 	enddo
 c end the loop
@@ -1901,7 +1868,6 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter,
 			if(v_cloud(iCS,iVS).ne.0d0) v_include(iVS)=.true.
 		enddo
 	enddo
-	if(include_phothaze) v_include(15)=(.not.dochemistry.or.Cloud(ii)%EqChemBoundary)
 
 	if(iter.gt.niter) then
 		iter=niter
@@ -2540,6 +2506,39 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	Pl=c0_l/T+c1_l+c2_l*T+c3_l*T**2+c4_l*T**3
 
 	if(Pi.lt.Pl.and.T.lt.2981d0) then
+		Pvap=Pi
+		liquid=.false.
+	else
+		Pvap=Pl
+		liquid=.true.
+	endif
+	Pvap=1d-6*exp(Pvap)
+		
+	return
+	end
+
+	subroutine PvapW(T,Pvap,liquid)
+	IMPLICIT NONE
+	real*8 T,Pvap,Pl,Pi
+	logical liquid
+	real*8 c0_i,c1_i,c2_i,c3_i,c4_i
+	real*8 c0_l,c1_l,c2_l,c3_l,c4_l
+	parameter(	
+     &	c0_i=-1.02351E+05,
+     &	c1_i=3.07543E+01,
+     &	c2_i=-6.13643E-06,
+     &	c3_i=5.36528E-08,
+     &	c4_i=-1.19522E-11,
+     &	c0_l=-9.66863E+04,
+     &	c1_l=2.90491E+01,
+     &	c2_l=2.11260E-04,
+     &	c3_l=-5.93323E-08,
+     &	c4_l=6.15431E-12)
+
+	Pi=c0_i/T+c1_i+c2_i*T+c3_i*T**2+c4_i*T**3
+	Pl=c0_l/T+c1_l+c2_l*T+c3_l*T**2+c4_l*T**3
+
+	if(Pi.lt.Pl.and.T.lt.4431d0) then
 		Pvap=Pi
 		liquid=.false.
 	else
