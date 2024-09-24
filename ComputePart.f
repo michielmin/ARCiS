@@ -343,7 +343,10 @@ c		endif
 	C%Kext(isize,1:C%nlam)=Kext(1:C%nlam)
 	C%Ksca(isize,1:C%nlam)=Ksca(1:C%nlam)
 	
-300	continue	
+	if(outputopacity) call WriteOpacity(isize,"wolk",1d4/lgrid(1:C%nlam),Kabs(1:C%nlam),C%nlam,1)
+
+	
+300	continue
 
 	deallocate(r0)
 	deallocate(nr0)

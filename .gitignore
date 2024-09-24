@@ -27,8 +27,6 @@ plotscripts/cornerplot.pdf
 plotscripts/PT.pdf
 plotscripts/Spec.pdf
 pyARCiS.cpython-39-darwin.so
-python/.ipynb_checkpoints/ARCiS_notebook-checkpoint.ipynb
-python/.ipynb_checkpoints/ARCiS_retrieval-checkpoint.ipynb
 python/output/convection.dat
 python/output/COprofile.dat
 python/output/density.dat
@@ -42,5 +40,7 @@ python/output/opticaldepth.dat
 python/output/surfemis.dat
 Untitled.ipynb
 warnings
-python/.ipynb_checkpoints/ARCiS_notebook-checkpoint.ipynb
-python/.ipynb_checkpoints/ARCiS_retrieval-checkpoint.ipynb
+pyARCiS.*
+*/.ipynb_checkpoints/*
+python/.ipynb_checkpoints
+dist

@@ -30,9 +30,10 @@
 	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr),compGibbs,ffrag,mmono,ffill,nmono,Df,rgyr
 	integer itime
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
-	real*8,allocatable :: xv_out(:),Jn_xv(:,:),A_J(:),B_j(:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:)
+	real*8,allocatable :: xv_out(:),Jn_xv(:,:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:)
 	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),rmono(:)
 	real*8,allocatable,save :: xv_prev(:,:),xc_prev(:,:),xn_prev(:),xa_prev(:)
+	integer jSiO,jTiO2,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW
 
 	logical dochemR(nr)
 
@@ -57,87 +58,124 @@ c fractal dimension created by coagulating collisions
 	bH2(4)=-5.35403E-09
 	
 	v_atoms=0d0
+	i=0
 
-	v_names(1)="SiO"
-	v_atoms(1,9)=1
-	v_atoms(1,5)=1
-	bv(1,0)=9.58807E+04
-	bv(1,1)=-1.26716E+00
-	bv(1,2)=-5.98429E+00
-	bv(1,3)=2.61720E-04
-	bv(1,4)=-1.67404E-08
+	i=i+1
+	jSiO=i
+	v_names(i)="SiO"
+	v_atoms(i,9)=1
+	v_atoms(i,5)=1
+	bv(i,0)=9.58807E+04
+	bv(i,1)=-1.26716E+00
+	bv(i,2)=-5.98429E+00
+	bv(i,3)=2.61720E-04
+	bv(i,4)=-1.67404E-08
 
-	v_names(2)="TiO"
-	v_atoms(2,5)=1
-	v_atoms(2,15)=1
-	bv(2,0)=8.02469E+04
-	bv(2,1)=-8.46602E-01
-	bv(2,2)=-7.67141E+00
-	bv(2,3)=1.51196E-04
-	bv(2,4)=-2.20473E-08
+	i=i+1
+	jTiO2=i
+	v_names(i)="TiO2"
+	v_atoms(i,5)=2
+	v_atoms(i,15)=1
+	bv(i,0)=1.53310E+05
+	bv(i,1)=-1.71501E+00
+	bv(i,2)=-1.83346E+01
+	bv(i,3)=4.42822E-04
+	bv(i,4)=-4.38786E-08
+	
+	i=i+1
+	jMg=i
+	v_names(i)="Mg"
+	v_atoms(i,7)=1
 
-	v_names(3)="Mg"
-	v_atoms(3,7)=1
+	i=i+1
+	jH2O=i
+	v_names(i)="H2O"
+	v_atoms(i,1)=2
+	v_atoms(i,5)=1
+	bv(i,0)=1.10336E+05
+	bv(i,1)=-4.17836E+00
+	bv(i,2)=3.17447E+00
+	bv(i,3)=9.40647E-04
+	bv(i,4)=-4.04825E-08
 
-	v_names(4)="H2O"
-	v_atoms(4,1)=2
-	v_atoms(4,5)=1
-	bv(4,0)=1.10336E+05
-	bv(4,1)=-4.17836E+00
-	bv(4,2)=3.17447E+00
-	bv(4,3)=9.40647E-04
-	bv(4,4)=-4.04825E-08
+	i=i+1
+	jH2S=i
+	v_names(i)="H2S"
+	v_atoms(i,1)=2
+	v_atoms(i,11)=1
+	bv(i,0)=8.71685E+04
+	bv(i,1)=-4.03150E+00
+	bv(i,2)=3.16992E+00
+	bv(i,3)=1.08827E-03
+	bv(i,4)=-5.46714E-08
 
-	v_names(5)="H2S"
-	v_atoms(5,1)=2
-	v_atoms(5,11)=1
-	bv(5,0)=8.71685E+04
-	bv(5,1)=-4.03150E+00
-	bv(5,2)=3.16992E+00
-	bv(5,3)=1.08827E-03
-	bv(5,4)=-5.46714E-08
+	i=i+1
+	jFe=i
+	v_names(i)="Fe"
+	v_atoms(i,17)=1
 
-	v_names(6)="Fe"
-	v_atoms(6,17)=1
+	i=i+1
+	jAl=i
+	v_names(i)="Al"
+	v_atoms(i,8)=1
 
-	v_names(7)="Al"
-	v_atoms(7,8)=1
+	i=i+1
+	jNa=i
+	v_names(i)="Na"
+	v_atoms(i,6)=1
 
-	v_names(8)="Na"
-	v_atoms(8,6)=1
+	i=i+1
+	jK=i
+	v_names(i)="K"
+	v_atoms(i,13)=1
 
-	v_names(9)="K"
-	v_atoms(9,13)=1
+	i=i+1
+	jHCl=i
+	v_names(i)="HCl"
+	v_atoms(i,1)=1
+	v_atoms(i,12)=1
+	bv(i,0)=5.13028E+04
+	bv(i,1)=-2.13173E+00
+	bv(i,2)=2.87709E+00
+	bv(i,3)=4.45605E-04
+	bv(i,4)=-1.92144E-08
 
-	v_names(10)="HCl"
-	v_atoms(10,1)=1
-	v_atoms(10,12)=1
-	bv(10,0)=5.13028E+04
-	bv(10,1)=-2.13173E+00
-	bv(10,2)=2.87709E+00
-	bv(10,3)=4.45605E-04
-	bv(10,4)=-1.92144E-08
+	i=i+1
+	jNH3=i
+	v_names(i)="NH3"
+	v_atoms(i,1)=3
+	v_atoms(i,4)=1
+	bv(i,0)=1.39343E+05
+	bv(i,1)=-6.39532E+00
+	bv(i,2)=4.95981E+00
+	bv(i,3)=1.81530E-03
+	bv(i,4)=-8.85794E-08
 
-	v_names(11)="NH3"
-	v_atoms(11,1)=3
-	v_atoms(11,4)=1
-	bv(11,0)=1.39343E+05
-	bv(11,1)=-6.39532E+00
-	bv(11,2)=4.95981E+00
-	bv(11,3)=1.81530E-03
-	bv(11,4)=-8.85794E-08
+	i=i+1
+	jZn=i
+	v_names(i)="Zn"
+	v_atoms(i,30)=1
 
-	v_names(12)="Zn"
-	v_atoms(12,30)=1
+	i=i+1
+	jMn=i
+	v_names(i)="Mn"
+	v_atoms(i,27)=1
 
-	v_names(13)="Mn"
-	v_atoms(13,27)=1
+	i=i+1
+	jCr=i
+	v_names(i)="Cr"
+	v_atoms(i,26)=1
 
-	v_names(14)="Cr"
-	v_atoms(14,26)=1
+	i=i+1
+	jW=i
+	v_names(i)="W"
+	v_atoms(i,41)=1
 
-	v_names(15)="W"
-	v_atoms(15,41)=1
+	if(i.gt.nVS) then
+		print*,'something is wrong',i,nVS
+		stop
+	endif
+	nVS=i
 
 	v_include=.false.
 
@@ -184,7 +222,7 @@ c fractal dimension created by coagulating collisions
 	allocate(muV(nVS))
 	allocate(v_cloud(nCS,nVS),iVL(nnr,nCS),v_H2(nCS))
 	allocate(icryst(nCS),iamorph(nCS),tcrystinv(nnr))
-	allocate(A_J(nCS),B_J(nCS),do_nuc(nCS),Jn_xv(nnr,nCS),sigma_nuc(nCS),r0_nuc(nCS),Nf_nuc(nCS),Nc_nuc(nnr,nCS))
+	allocate(do_nuc(nCS),Jn_xv(nnr,nCS),sigma_nuc(nCS),r0_nuc(nCS),Nf_nuc(nCS),Nc_nuc(nnr,nCS))
 	allocate(do_con(nCS))
 	allocate(bc(nCS,0:4),ifit(nCS))
 	if(.not.allocated(xn_prev)) then
@@ -217,11 +255,8 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='SiO2'
 				atoms_cloud(i,9)=1
 				atoms_cloud(i,5)=2
-				v_cloud(i,1)=1
-				v_cloud(i,4)=1
-				v_H2(i)=-1
-				v_include(1)=.true.
-				v_include(4)=.true.
+				v_cloud(i,jSiO)=1
+				v_cloud(i,jH2O)=1
 				rhodust(i)=2.65
 				bc(i,0)=2.222506e+05
 				bc(i,1)=-5.478967e+00
@@ -234,13 +269,9 @@ c fractal dimension created by coagulating collisions
 				atoms_cloud(i,7)=1
 				atoms_cloud(i,9)=1
 				atoms_cloud(i,5)=3
-				v_cloud(i,1)=1
-				v_cloud(i,3)=1
-				v_cloud(i,4)=2
-				v_H2(i)=-2
-				v_include(1)=.true.
-				v_include(3)=.true.
-				v_include(4)=.true.
+				v_cloud(i,jSiO)=1
+				v_cloud(i,jMg)=1
+				v_cloud(i,jH2O)=2
 				rhodust(i)=3.19
 				bc(i,0)=3.458775e+05
 				bc(i,1)=-7.257035e+00
@@ -253,13 +284,9 @@ c fractal dimension created by coagulating collisions
 				atoms_cloud(i,7)=2
 				atoms_cloud(i,9)=1
 				atoms_cloud(i,5)=4
-				v_cloud(i,1)=1
-				v_cloud(i,3)=2
-				v_cloud(i,4)=3
-				v_H2(i)=-3
-				v_include(1)=.true.
-				v_include(3)=.true.
-				v_include(4)=.true.
+				v_cloud(i,jSiO)=1
+				v_cloud(i,jMg)=2
+				v_cloud(i,jH2O)=3
 				rhodust(i)=3.21
 				bc(i,0)=4.685652e+05
 				bc(i,1)=-9.176566e+00
@@ -272,13 +299,9 @@ c fractal dimension created by coagulating collisions
 				atoms_cloud(i,17)=1
 				atoms_cloud(i,9)=1
 				atoms_cloud(i,5)=3
-				v_cloud(i,1)=1
-				v_cloud(i,6)=1
-				v_cloud(i,4)=2
-				v_H2(i)=-2
-				v_include(1)=.true.
-				v_include(6)=.true.
-				v_include(4)=.true.
+				v_cloud(i,jSiO)=1
+				v_cloud(i,jFe)=1
+				v_cloud(i,jH2O)=2
 				rhodust(i)=3.5
 				bc(i,0)=3.361566e+05
 				bc(i,1)=-6.749696e+00
@@ -291,13 +314,9 @@ c fractal dimension created by coagulating collisions
 				atoms_cloud(i,17)=2
 				atoms_cloud(i,9)=1
 				atoms_cloud(i,5)=4
-				v_cloud(i,1)=1
-				v_cloud(i,6)=2
-				v_cloud(i,4)=3
-				v_H2(i)=-3
-				v_include(1)=.true.
-				v_include(6)=.true.
-				v_include(4)=.true.
+				v_cloud(i,jSiO)=1
+				v_cloud(i,jFe)=2
+				v_cloud(i,jH2O)=3
 				rhodust(i)=4.39
 				bc(i,0)=4.495737e+05
 				bc(i,1)=-9.271411e+00
@@ -311,15 +330,10 @@ c fractal dimension created by coagulating collisions
 				atoms_cloud(i,8)=1
 				atoms_cloud(i,9)=3
 				atoms_cloud(i,5)=8
-				v_cloud(i,1)=3
-				v_cloud(i,4)=5
-				v_cloud(i,7)=1
-				v_cloud(i,8)=1
-				v_H2(i)=-5
-				v_include(1)=.true.
-				v_include(4)=.true.
-				v_include(7)=.true.
-				v_include(8)=.true.
+				v_cloud(i,jSiO)=3
+				v_cloud(i,jH2O)=5
+				v_cloud(i,jAl)=1
+				v_cloud(i,jNa)=1
 				rhodust(i)=2.36
 				bc(i,0)=9.232283e+05
 				bc(i,1)=-2.012507e+01
@@ -331,11 +345,8 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='MgO'
 				atoms_cloud(i,7)=1
 				atoms_cloud(i,5)=1
-				v_cloud(i,3)=1
-				v_cloud(i,4)=1
-				v_H2(i)=-1
-				v_include(3)=.true.
-				v_include(4)=.true.
+				v_cloud(i,jMg)=1
+				v_cloud(i,jH2O)=1
 				rhodust(i)=3.58
 				bc(i,0)=1.195366e+05
 				bc(i,1)=-2.104910e+00
@@ -347,24 +358,20 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='H2O'
 				atoms_cloud(i,1)=2
 				atoms_cloud(i,5)=1
-				v_cloud(i,4)=1
-				v_include(4)=.true.
+				v_cloud(i,jH2O)=1
 				rhodust(i)=0.93
 				maxT(i)=747d0
 				do_nuc(i)=Cloud(ii)%ComputeJn
 				sigma_nuc(i)=109.0
-				r0_nuc(i)=1.973e-8
 				Nf_nuc(i)=1d0
 				ifit(i)=-1
 			case('Fe','IRON')
 				CSname(i)='Fe'
 				atoms_cloud(i,17)=1
-				v_cloud(i,6)=1
-				v_include(6)=.true.
+				v_cloud(i,jFe)=1
 				rhodust(i)=7.87
-				do_nuc(i)=.false.!Cloud(ii)%ComputeJn
+				do_nuc(i)=Cloud(ii)%ComputeJn
 				sigma_nuc(i)=1870	! from Brooks et al. 2001
-				r0_nuc(i)=3.7e-9
 				Nf_nuc(i)=1d0
 				bc(i,0)=4.989867e+04
 				bc(i,1)=-6.889399e-01
@@ -376,11 +383,8 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='FeS'
 				atoms_cloud(i,17)=1
 				atoms_cloud(i,11)=1
-				v_cloud(i,5)=1
-				v_cloud(i,6)=1
-				v_H2(i)=-1
-				v_include(5)=.true.
-				v_include(6)=.true.
+				v_cloud(i,jFe)=1
+				v_cloud(i,jH2S)=1
 				rhodust(i)=4.83
 				bc(i,0)=9.450871e+04
 				bc(i,1)=-2.495865e+00
@@ -392,11 +396,8 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='FeO'
 				atoms_cloud(i,17)=1
 				atoms_cloud(i,5)=1
-				v_cloud(i,6)=1
-				v_cloud(i,4)=1
-				v_H2(i)=-1
-				v_include(6)=.true.
-				v_include(4)=.true.
+				v_cloud(i,jFe)=1
+				v_cloud(i,jH2O)=1
 				rhodust(i)=5.9
 				bc(i,0)=1.121860e+05
 				bc(i,1)=-2.152325e+00
@@ -408,11 +409,8 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='Fe2O3'
 				atoms_cloud(i,17)=2
 				atoms_cloud(i,5)=3
-				v_cloud(i,6)=2
-				v_cloud(i,4)=3
-				v_H2(i)=-3
-				v_include(6)=.true.
-				v_include(4)=.true.
+				v_cloud(i,jFe)=2
+				v_cloud(i,jH2O)=3
 				rhodust(i)=5.24
 				bc(i,0)=2.876529e+05
 				bc(i,1)=-6.810027e+00
@@ -424,11 +422,8 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='Fe3O4'
 				atoms_cloud(i,17)=3
 				atoms_cloud(i,5)=4
-				v_cloud(i,6)=3
-				v_cloud(i,4)=4
-				v_H2(i)=-4
-				v_include(6)=.true.
-				v_include(4)=.true.
+				v_cloud(i,jFe)=3
+				v_cloud(i,jH2O)=4
 				rhodust(i)=5.17
 				bc(i,0)=4.019320e+05
 				bc(i,1)=-8.960632e+00
@@ -440,11 +435,8 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='Al2O3'
 				atoms_cloud(i,5)=3
 				atoms_cloud(i,8)=2
-				v_cloud(i,4)=3
-				v_cloud(i,7)=2
-				v_H2(i)=-3
-				v_include(4)=.true.
-				v_include(7)=.true.
+				v_cloud(i,jH2O)=3
+				v_cloud(i,jAl)=2
 				rhodust(i)=3.97
 				bc(i,0)=3.686315e+05
 				bc(i,1)=-8.641215e+00
@@ -456,15 +448,11 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='NaCl'
 				atoms_cloud(i,6)=1
 				atoms_cloud(i,12)=1
-				v_cloud(i,8)=1
-				v_cloud(i,10)=1
-				v_H2(i)=-0.5
-				v_include(8)=.true.
-				v_include(10)=.true.
+				v_cloud(i,jNa)=1
+				v_cloud(i,jHCl)=1
 				rhodust(i)=2.17
 				do_nuc(i)=Cloud(ii)%ComputeJn
 				sigma_nuc(i)=113.3
-				r0_nuc(i)=2.205e-8
 				Nf_nuc(i)=1d0
 				bc(i,0)=7.717022e+04
 				bc(i,1)=3.607723e-01
@@ -476,15 +464,11 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='KCl'
 				atoms_cloud(i,13)=1
 				atoms_cloud(i,12)=1
-				v_cloud(i,9)=1
-				v_cloud(i,10)=1
-				v_H2(i)=-0.5
-				v_include(9)=.true.
-				v_include(10)=.true.
+				v_cloud(i,jK)=1
+				v_cloud(i,jHCl)=1
 				rhodust(i)=1.99
 				do_nuc(i)=Cloud(ii)%ComputeJn
 				sigma_nuc(i)=100.3
-				r0_nuc(i)=2.462e-8
 				Nf_nuc(i)=1d0
 				bc(i,0)=7.801979e+04
 				bc(i,1)=4.147547e-01
@@ -496,11 +480,8 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='Na2S'
 				atoms_cloud(i,6)=1
 				atoms_cloud(i,11)=2
-				v_cloud(i,8)=2
-				v_cloud(i,5)=1
-				v_H2(i)=-1
-				v_include(8)=.true.
-				v_include(5)=.true.
+				v_cloud(i,jNa)=2
+				v_cloud(i,jH2S)=1
 				rhodust(i)=1.86
 				bc(i,0)=1.99053E+06
 				bc(i,1)=-8.70027E+05
@@ -512,30 +493,21 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='NH3'
 				atoms_cloud(i,1)=3
 				atoms_cloud(i,4)=1
-				v_cloud(i,11)=1
-				v_include(11)=.true.
+				v_cloud(i,jNH3)=1
 				rhodust(i)=0.87
 				maxT(i)=220d0
 				do_nuc(i)=Cloud(ii)%ComputeJn
 				sigma_nuc(i)=23.4
-				r0_nuc(i)=1.980e-8
 				Nf_nuc(i)=1d0
 				ifit(i)=-1
 			case('TiO2')
 				CSname(i)='TiO2'
 				atoms_cloud(i,5)=1
 				atoms_cloud(i,15)=2
-				v_cloud(i,2)=1
-				v_cloud(i,4)=1
-				v_H2(i)=-1
-				v_include(2)=.true.
-				v_include(4)=.true.
+				v_cloud(i,jTiO2)=1
 				rhodust(i)=4.23
 				do_nuc(i)=Cloud(ii)%ComputeJn
-				A_J(i)=1.112e12
-				B_J(i)=-24.0
 				sigma_nuc(i)=480.6
-				r0_nuc(i)=1.956e-8
 				Nf_nuc(i)=0d0
 				bc(i,0)=2.296961e+05
 				bc(i,1)=-3.392573e+00
@@ -548,13 +520,8 @@ c fractal dimension created by coagulating collisions
 				atoms_cloud(i,1)=2
 				atoms_cloud(i,5)=4
 				atoms_cloud(i,11)=1
-
-				v_cloud(i,4)=4
-				v_cloud(i,5)=1
-				v_H2(i)=-4
-				v_include(4)=.true.
-				v_include(5)=.true.
-
+				v_cloud(i,jH2O)=4
+				v_cloud(i,jH2S)=1
 				rhodust(i)=1.84d0
 				bc(i,0)=9.70368E+05
 				bc(i,1)=-2.53825E+06
@@ -566,11 +533,8 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='MnS'
 				atoms_cloud(i,27)=1
 				atoms_cloud(i,11)=1
-				v_cloud(i,13)=1
-				v_cloud(i,5)=1
-				v_H2(i)=-1
-				v_include(13)=.true.
-				v_include(5)=.true.
+				v_cloud(i,jMn)=1
+				v_cloud(i,jH2S)=1
 				rhodust(i)=4.08
 				bc(i,0)=1.12482E+05
 				bc(i,1)=-1.81938E+05
@@ -581,38 +545,29 @@ c fractal dimension created by coagulating collisions
 			case('Cr')
 				CSname(i)='Cr'
 				atoms_cloud(i,26)=1
-				v_cloud(i,14)=1
-				v_include(14)=.true.
+				v_cloud(i,jCr)=1
 				rhodust(i)=7.19d0
 				do_nuc(i)=Cloud(ii)%ComputeJn
 				sigma_nuc(i)=3330.0
-				r0_nuc(i)=1.421
 				Nf_nuc(i)=1d0
 				ifit(i)=-1
 			case('SiO')
 				CSname(i)='SiO'
 				atoms_cloud(i,9)=1
 				atoms_cloud(i,5)=1
-				v_cloud(i,1)=1
-				v_include(1)=.true.
+				v_cloud(i,jSiO)=1
 				rhodust(i)=2.18
 				maxT(i)=5000d0
 				do_nuc(i)=Cloud(ii)%computeJn
-				A_J(i)=4.4e12
-				B_J(i)=1.33
 				sigma_nuc(i)=849.4
-				r0_nuc(i)=2.0e-8
 				Nf_nuc(i)=1d0
 				ifit(i)=-1
 			case('ZnS')
 				CSname(i)='ZnS'
 				atoms_cloud(i,30)=1
 				atoms_cloud(i,11)=1
-				v_cloud(i,12)=1
-				v_cloud(i,5)=1
-				v_H2(i)=-1
-				v_include(12)=.true.
-				v_include(5)=.true.
+				v_cloud(i,jZn)=1
+				v_cloud(i,jH2S)=1
 				rhodust(i)=4.09
 				bc(i,0)=7.30636867e+04
 				bc(i,1)=-2.72297464e+00
@@ -623,9 +578,10 @@ c fractal dimension created by coagulating collisions
 			case('Zn')
 				CSname(i)='Zn'
 				atoms_cloud(i,30)=1
-				v_cloud(i,12)=1
-				v_include(12)=.true.
+				v_cloud(i,jZn)=1
 				rhodust(i)=7.14d0
+				do_nuc(i)=Cloud(ii)%ComputeJn
+				sigma_nuc(i)=750 ! value estimated from Ferri et al. (2024)
 				bc(i,0)=1.56414E+04     
 				bc(i,1)=-1.32671E+00
 				bc(i,2)=-7.87964E+00
@@ -635,12 +591,10 @@ c fractal dimension created by coagulating collisions
 			case('W')
 				CSname(i)='W'
 				atoms_cloud(i,41)=1
-				v_cloud(i,15)=1
-				v_include(15)=.true.
+				v_cloud(i,jW)=1
 				rhodust(i)=19.25d0
 				do_nuc(i)=Cloud(ii)%ComputeJn
 				sigma_nuc(i)=3340
-				r0_nuc(i)=3.3578745379356140E-008
 				Nf_nuc(i)=10d0
 				ifit(i)=-1
 			case('optEC')
@@ -659,7 +613,16 @@ c fractal dimension created by coagulating collisions
 		end select
 	enddo
 	
+	v_include=.false.
 	do iCS=1,nCS
+		tot1=0d0
+		do iVS=1,nVS
+			if(v_cloud(iCS,iVS).gt.0d0) v_include(iVS)=.true.
+			tot1=tot1+v_cloud(iCS,iVS)*v_atoms(iVS,1)
+		enddo
+		tot1=tot1-atoms_cloud(iCS,1)
+		v_H2(iCS)=-tot1/2d0
+		
 		do jCS=1,nCS
 			if(Cloud(ii)%condensate(iCS).eq.'FORSTERITE'.and.Cloud(ii)%condensate(jCS).eq.'Mg2SiO4') then
 				iamorph(iCS)=jCS
@@ -711,6 +674,9 @@ c fractal dimension created by coagulating collisions
 	enddo
 	do i=1,nVS
 		muV(i)=sum(mass_atoms(1:N_atoms)*v_atoms(i,1:N_atoms))
+	enddo
+	do i=1,nCS
+		if(do_nuc(i)) r0_nuc(i)=(3d0*muC(i)*mp/(4d0*pi*rhodust(i)))**(1d0/3d0)
 	enddo
 
 	if(dochemistry) then
@@ -803,13 +769,6 @@ c fractal dimension created by coagulating collisions
 c	print*,xv_bot(1:7)
 c	xv_bot(1:7) = 10.0**metallicity*(/ 6.1e-4, 2.4e-6, 4.1e-4, 1.4e-3, 1.9e-4, 7.6e-4, 3.2e-5 /)
 c	print*,xv_bot(1:7)
-
-	do iCS=1,nCS
-		if(do_nuc(iCS).and.CSname(iCS).ne.'SiO'.and.CSname(iCS).eq.'TiO2') then
-			A_J(iCS)=(16.*pi*sigma_nuc(iCS)**3*(muC(iCS)*mp/rhodust(iCS))**2/(3.*kb**3))
-			B_J(iCS)=log(sqrt(2.*sigma_nuc(iCS)/(pi*muC(iCS)*mp))*(muC(iCS)*mp/rhodust(iCS)))
-		endif
-	enddo
 
 	Cloud(ii)%frac=0d0
 
@@ -1323,14 +1282,8 @@ c start the loop
 				if(do_nuc(iCS)) then
 					tot1=Sat(i,iCS)*xv(iVL(i,iCS),i)
 					tot2=CloudP(i)*CloudMMW(i)/(muV(iVL(i,iCS))*kb*CloudT(i))
-					select case(CSname(iCS))
-						case('SiO','TiO2')
-							call ComputeJ_xv(xv(iVL(i,iCS),i),tot2,CloudT(i),tot1,Jn_temp,A_J(iCS),B_J(iCS))
-							Nc_nuc(i,iCS)=m_nuc/(muC(iCS)*mp)
-						case default
-							call ComputeJ(CloudT(i),tot1,tot2,xv(iVL(i,iCS),i),vthv(i),sigma_nuc(iCS),r0_nuc(iCS),
-     &								Nf_nuc(iCS),Jn_temp,Nc_nuc(i,iCS))
-					end select
+					call ComputeJ(CloudT(i),tot1,tot2,xv(iVL(i,iCS),i),vthv(i),sigma_nuc(iCS),r0_nuc(iCS),
+     &							Nf_nuc(iCS),Jn_temp,Nc_nuc(i,iCS))
 					Jn_xv(i,iCS)=Jn_xv(i,iCS)*f+Jn_temp*(1d0-f)
 				else
 					Jn_xv(i,iCS)=0d0
