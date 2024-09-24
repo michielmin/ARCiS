@@ -158,7 +158,7 @@ c fractal dimension created by coagulating collisions
 			nconv=10
 		endif
 	endif
-	if(Cloud(ii)%computeJn) niter=niter*10
+	if(Cloud(ii)%computeJn) niter=niter*5
 	
 	if(.not.allocated(CloudP)) then
 		allocate(CloudP(nnr))
