@@ -1205,7 +1205,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 	if(Cloud(ii)%computeJn) then
 		fmin=0.8
 		fmax=0.97
-		eps=1d-2
+		eps=5d-2
 		fscale=1d-10
 		pscale=0.999
 	else if(computeT.and.nTiter.gt.2) then
@@ -1860,7 +1860,7 @@ c	print*,iter,maxerr,fscale
 20	continue
 	enddo
 c end the loop
-c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter," iterations"
+	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter," iterations"
 
 	v_include=.false.
 	do iCS=1,nCS
