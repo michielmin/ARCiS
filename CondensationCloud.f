@@ -1856,7 +1856,7 @@ C===============================================================================
 		iconv=0
 	endif
 	if(fscale.gt.1d0) fscale=1d0
-	print*,iter,maxerr,fscale
+c	print*,iter,maxerr,fscale
 20	continue
 	enddo
 c end the loop
