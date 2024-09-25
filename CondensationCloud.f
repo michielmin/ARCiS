@@ -1389,7 +1389,7 @@ C===============================================================================
 	do iCS=1,nCS
 		if(c_include(iCS)) then
 		j=j+1
-		if(Cloud(ii)%freeflow_con.or.(do_nuc(iCS).and..not.do_con(iCS).and.Cloud(ii)%freeflow_nuc)) then
+		if(Cloud(ii)%freeflow_con.and..not.Cloud(ii)%rainout) then
 c assume continuous flux at the bottom (dF/dz=Sc=0)
 			x(j)=0d0
 
