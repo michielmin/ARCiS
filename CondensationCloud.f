@@ -250,6 +250,7 @@ c fractal dimension created by coagulating collisions
 	v_H2=0d0
 	icryst=0
 	iamorph=0
+	iCS_phot=0
 	do_nuc=.false.
 	do_con=.true.
 	maxT=10000d0
