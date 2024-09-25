@@ -866,6 +866,10 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/W.dat'
 									Cloud(i)%nax(j)=1
+								case('Ni')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Ni.dat'
+									Cloud(i)%nax(j)=1
 								case('optEC')
 									Cloud(i)%material(j)='optEC'
 								case default

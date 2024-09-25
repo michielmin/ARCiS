@@ -33,7 +33,7 @@
 	real*8,allocatable :: xv_out(:),Jn_xv(:,:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:)
 	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),rmono(:)
 	real*8,allocatable,save :: xv_prev(:,:),xc_prev(:,:),xn_prev(:),xa_prev(:)
-	integer jSiO,jTiO2,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW
+	integer jSiO,jTiO2,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi
 
 	logical dochemR(nr)
 
@@ -46,7 +46,7 @@ c fractal dimension created by coagulating collisions
 	itimecloud=itimecloud-itime
 	ctimecloud=ctimecloud+1
 
-	nVS=15
+	nVS=16
 	allocate(v_names(nVS),v_atoms(nVS,N_atoms),v_include(nVS))
 	allocate(bv(nVS,0:4),bH2(0:4))
 	bv=0d0
@@ -170,6 +170,11 @@ c fractal dimension created by coagulating collisions
 	jW=i
 	v_names(i)="W"
 	v_atoms(i,41)=1
+
+	i=i+1
+	jNi=i
+	v_names(i)="Ni"
+	v_atoms(i,18)=1
 
 	if(i.gt.nVS) then
 		print*,'something is wrong',i,nVS
@@ -451,7 +456,7 @@ c fractal dimension created by coagulating collisions
 				v_cloud(i,jNa)=1
 				v_cloud(i,jHCl)=1
 				rhodust(i)=2.17
-				do_nuc(i)=Cloud(ii)%ComputeJn
+				do_nuc(i)=.false.!Cloud(ii)%ComputeJn
 				sigma_nuc(i)=113.3
 				Nf_nuc(i)=1d0
 				bc(i,0)=7.717022e+04
@@ -467,7 +472,7 @@ c fractal dimension created by coagulating collisions
 				v_cloud(i,jK)=1
 				v_cloud(i,jHCl)=1
 				rhodust(i)=1.99
-				do_nuc(i)=Cloud(ii)%ComputeJn
+				do_nuc(i)=.false.!Cloud(ii)%ComputeJn
 				sigma_nuc(i)=100.3
 				Nf_nuc(i)=1d0
 				bc(i,0)=7.801979e+04
@@ -597,6 +602,20 @@ c fractal dimension created by coagulating collisions
 				sigma_nuc(i)=3340
 				Nf_nuc(i)=10d0
 				ifit(i)=-1
+			case('Ni')
+				CSname(i)='Ni'
+				atoms_cloud(i,18)=1
+				v_cloud(i,jNi)=1
+				rhodust(i)=8.91d0
+				do_nuc(i)=Cloud(ii)%ComputeJn
+				sigma_nuc(i)=1800	! value estimated from Werkovits et al. (2020)
+				Nf_nuc(i)=1d0
+				bc(i,0)=5.178431e+04   
+				bc(i,1)=-5.284788e-02
+				bc(i,2)=-1.837439e+01
+				bc(i,3)=6.292585e-04
+				bc(i,4)=-3.003321e-08
+				ifit(i)=0
 			case('optEC')
 				CSname(i)='optEC'
 				atoms_cloud(i,1)=4
@@ -1299,9 +1318,9 @@ c start the loop
 			Sat(i,iCS_phot)=1d0
 		endif
 c	The Kelvin effect for condensation onto a curved surface
-c		do iCS=1,nCS
-c			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)/rhodust(iCS))/(rmono(i)*Rgas*CloudT(i)))
-c		enddo
+		do iCS=1,nCS
+			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)/rhodust(iCS))/(rmono(i)*Rgas*CloudT(i)))
+		enddo
 	enddo
 
 	Nc_nuc=Nc_nuc*mp
