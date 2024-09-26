@@ -21,13 +21,13 @@
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: xn_iter(:,:),xa_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
 	integer iCS,ir,nrdo,iconv,nconv,iVS,nVS,NStot,ik
-	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed,Jn_temp,fscale,pscale
+	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed,Jn_temp,fscale,pscale,min_maxerr
 	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:),CloudG(:)
 	character*10,allocatable :: v_names(:),v_names_out(:)
-	logical,allocatable :: v_include(:),c_include(:),do_nuc(:),do_con(:)
-	integer INCFD,IERR,iCS_phot
+	logical,allocatable :: v_include(:),c_include(:),do_nuc(:),do_con(:),layercon(:)
+	integer INCFD,IERR,iCS_phot,nscale,ibest
 	logical SKIP,liq,include_phothaze
-	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr),compGibbs,ffrag,mmono,ffill,nmono,Df,rgyr
+	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr),compGibbs,ffrag,mmono,ffill,nmono,Df,rgyr,xv_use
 	integer itime
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
 	real*8,allocatable :: xv_out(:),Jn_xv(:,:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:)
@@ -196,12 +196,12 @@ c fractal dimension created by coagulating collisions
 		if(nTiter.eq.1) then
 			niter=150
 			nconv=5
-		else if(nTiter.le.2) then
+		else if(nTiter.le.3) then
 			niter=250
 			nconv=10
 		endif
 	endif
-	if(Cloud(ii)%computeJn) niter=niter*5
+	if(Cloud(ii)%computeJn) niter=niter*2
 	
 	if(.not.allocated(CloudP)) then
 		allocate(CloudP(nnr))
@@ -824,6 +824,7 @@ c	print*,xv_bot(1:7)
 	allocate(ixc(nCS,nnr))
 	allocate(ixn(nnr))
 	allocate(ixa(nnr))
+	allocate(layercon(nnr))
 
 	rho_av=sum(rhodust)/real(nCS)
 
@@ -861,14 +862,12 @@ c	print*,xv_bot(1:7)
 	call DPCHIM(nr,logP,logx,dlogx,INCFD)
 	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudMMW,IERR)
 
-	if(complexKzz.or.Cloud(ii)%usefsed) then
-		SKIP=.false.
-		INCFD=1
-		logx(1:nr)=log(Hp(1:nr))
-		call DPCHIM(nr,logP,logx,dlogx,INCFD)
-		call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudHp,IERR)
-		CloudHp(1:nnr)=exp(CloudHp(1:nnr))
-	endif
+	SKIP=.false.
+	INCFD=1
+	logx(1:nr)=log(Hp(1:nr))
+	call DPCHIM(nr,logP,logx,dlogx,INCFD)
+	call DPCHFE(nr,logP,logx,dlogx,INCFD,SKIP,nnr,logCloudP,CloudHp,IERR)
+	CloudHp(1:nnr)=exp(CloudHp(1:nnr))
 	if(Cloud(ii)%globalKzz.or.Cloud(ii)%Kzz.le.0d0) then
 		SKIP=.false.
 		INCFD=1
@@ -1183,10 +1182,10 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 
 	if(Cloud(ii)%computeJn) then
 		fmin=0.6
-		fmax=0.95
-		eps=5d-2
-		fscale=1d-20
-		pscale=0.9
+		fmax=0.99
+		eps=1d-2
+		fscale=1d-15
+		pscale=0.95
 	else if(computeT.and.nTiter.gt.2) then
 		fmin=0.6
 		fmax=0.95
@@ -1200,6 +1199,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 		fscale=1d0
 		pscale=0.5
 	endif
+	min_maxerr=1d0
 
 	allocate(IWORK(NN))
 	allocate(x(NN))
@@ -1207,12 +1207,15 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 
 	iconv=0
 	Jn_xv=0d0
+	nscale=0
+	ibest=0
 		
 c start the loop
 	do iter=1,niter
 	call tellertje(iter,niter)
 
 	vsed=0d0
+	layercon=.false.
 	do i=1,nnr
 		do iCS=1,nCS
 			tot1=1d200
@@ -1243,7 +1246,7 @@ c start the loop
 		else
 			Kd(i)=Km(i)
 		endif
-		if(Cloud(ii)%usefsed) then
+		if(Cloud(ii)%usefsed.or.iter.eq.1) then
 			fsed=Cloud(ii)%fsed_alpha*exp((CloudR(i)-Rplanet)/(6d0*Cloud(ii)%fsed_beta*CloudHp(i)))+1d-2
 			vsed(i)=-fsed*Kd(i)/CloudHp(i)
 			lmfp=CloudMMW(i)*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
@@ -1266,7 +1269,11 @@ c start the loop
 			else
 				tot=sum(xc(1:nCS,i))
 			endif
-			xn(i)=xn(i)*f+(tot/mpart(i))*(1d0-f)
+			if(iter.eq.1) then
+				xn(i)=tot/mpart(i)
+			else
+				xn(i)=xn(i)*f+(tot/mpart(i))*(1d0-f)
+			endif
 			xa(i)=xn(i)
 		else
 			vsed(i)=-rpart(i)*rho_av(i)*CloudG(i)/(Clouddens(i)*vth(i))
@@ -1278,6 +1285,7 @@ c start the loop
 		do iCS=1,nCS
 			if(.not.Sat(i,iCS).gt.1d-50) Sat(i,iCS)=1d-50
 			if(Sat(i,iCS).gt.1d100) Sat(i,iCS)=1d100
+			if(Sat(i,iCS).gt.1d0) layercon(i)=.true.
 		enddo
 
 		do iCS=1,nCS
@@ -1289,9 +1297,10 @@ c start the loop
      &						pi*rpart(i)*min(rpart(i)*vthv(i),4d0*Dp)
 				endif
 				if(do_nuc(iCS)) then
-					tot1=Sat(i,iCS)*xv(iVL(i,iCS),i)
+					xv_use=xv(iVL(i,iCS),i)
+					tot1=Sat(i,iCS)*xv_use
 					tot2=CloudP(i)*CloudMMW(i)/(muV(iVL(i,iCS))*kb*CloudT(i))
-					call ComputeJ(CloudT(i),tot1,tot2,xv(iVL(i,iCS),i),vthv(i),sigma_nuc(iCS),r0_nuc(iCS),
+					call ComputeJ(CloudT(i),tot1,tot2,xv_use,vthv(i),sigma_nuc(iCS),r0_nuc(iCS),
      &							Nf_nuc(iCS),Jn_temp,Nc_nuc(i,iCS))
 					Jn_xv(i,iCS)=Jn_xv(i,iCS)*f+Jn_temp*(1d0-f)
 				else
@@ -1312,9 +1321,9 @@ c	The Kelvin effect for condensation onto a curved surface
 			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)/rhodust(iCS))/(rmono(i)*Rgas*CloudT(i)))
 		enddo
 	enddo
-	Jn_xv=Jn_xv*fscale
+
 	Nc_nuc=Nc_nuc*mp
-	
+	Jn_xv=Jn_xv*fscale
 
 C=========================================================================================
 C=========================================================================================
@@ -1701,7 +1710,7 @@ c				if(.not.x(ixv(iVS,i)).lt.xv_bot(iVS)) x(ixv(iVS,i))=xv_bot(iVS)
 	maxerr=0d0
 c	f=1.1-0.4/(1.0+3.0*exp(-(real(iter)/real(min(niter/4,200)))**2))
 	do i=1,nnr
-		if(i.gt.1) then
+		if(i.gt.1.and.layercon(i)) then
 			if(.not.Cloud(ii)%usefsed) then
 				err=abs(max(xn(i)*m_nuc,1d-10)-max(x(ixn(i))*m_nuc,1d-10))/(max(xn(i)*m_nuc,1d-10)+max(x(ixn(i))*m_nuc,1d-10))
 				if(err.gt.maxerr) then
@@ -1728,7 +1737,13 @@ c	f=1.1-0.4/(1.0+3.0*exp(-(real(iter)/real(min(niter/4,200)))**2))
 			enddo
 		endif
 	enddo
-	f=fmax-(fmax-fmin)*maxerr**3
+	if(maxerr.lt.min_maxerr.and.nscale.gt.3) then
+		min_maxerr=maxerr
+		ibest=iter
+c	else if(maxerr.gt.min_maxerr) then
+c		min_maxerr=sqrt(min_maxerr*maxerr)
+	endif
+	f=fmax-(fmax-fmin)*min_maxerr**6
 	do i=1,nnr
 		if(.not.Cloud(ii)%usefsed) then
 			if(iter.eq.1) then
@@ -1737,6 +1752,10 @@ c	f=1.1-0.4/(1.0+3.0*exp(-(real(iter)/real(min(niter/4,200)))**2))
 			else
 				xn(i)=xn(i)*f+x(ixn(i))*(1d0-f)
 				xa(i)=xa(i)*f+x(ixa(i))*(1d0-f)
+				if(ibest.ne.0) then
+					xn(i)=xn(i)*f+xn_iter(ibest,i)*(1d0-f)
+					xa(i)=xa(i)*f+xa_iter(ibest,i)*(1d0-f)
+				endif
 			endif
 		endif
 		do iCS=1,nCS
@@ -1745,6 +1764,9 @@ c	f=1.1-0.4/(1.0+3.0*exp(-(real(iter)/real(min(niter/4,200)))**2))
 					xc(iCS,i)=x(ixc(iCS,i))
 				else
 					xc(iCS,i)=xc(iCS,i)*f+x(ixc(iCS,i))*(1d0-f)
+					if(ibest.ne.0) then
+						xc(iCS,i)=xc(iCS,i)*f+xc_iter(ibest,iCS,i)*(1d0-f)
+					endif
 				endif
 			else
 				xc(iCS,i)=0d0
@@ -1756,6 +1778,9 @@ c	f=1.1-0.4/(1.0+3.0*exp(-(real(iter)/real(min(niter/4,200)))**2))
 					xv(iVS,i)=x(ixv(iVS,i))
 				else
 					xv(iVS,i)=xv(iVS,i)*f+x(ixv(iVS,i))*(1d0-f)
+					if(ibest.ne.0) then
+						xv(iVS,i)=xv(iVS,i)*f+xv_iter(ibest,iVS,i)*(1d0-f)
+					endif
 				endif
 			else
 				xv(iVS,i)=xv_bot(iVS)
@@ -1810,7 +1835,31 @@ C===============================================================================
 		endif
 		if(.not.Cloud(ii)%usefsed) rpart(i)=rr
 	enddo
-	if(maxerr.lt.eps.or.iter.gt.niter/2) fscale=1.1*fscale**pscale
+	nscale=nscale+1
+	j=10
+	if(fscale.lt.1.1) j=10+log(log(1.0/1.1)/log((fscale/1.1)))/log(pscale)
+	if(iter.gt.niter-j) then
+		fscale=1.1*(fscale/1.1)**pscale
+		if(fscale.lt.1d0) then
+			nscale=0
+			ibest=0
+			min_maxerr=1d0
+		endif
+	else if(maxerr.lt.10d0*eps) then
+		fscale=1.1*(fscale/1.1)**pscale
+		if(fscale.lt.1d0) then
+			nscale=0
+			ibest=0
+			min_maxerr=1d0
+		endif
+	else if(nscale.gt.niter/25) then
+		fscale=1.1*(fscale/1.1)**(2d0-pscale)
+		if(fscale.lt.1d0) then
+			nscale=0
+			ibest=0
+			min_maxerr=1d0
+		endif
+	endif
 	if(maxerr.lt.eps.and.fscale.gt.1d0) then
 		iconv=iconv+1
 		if(iconv.gt.nconv) exit
@@ -1822,7 +1871,7 @@ c	print*,iter,maxerr,fscale
 20	continue
 	enddo
 c end the loop
-c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter," iterations"
+c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter," iterations"
 
 	v_include=.false.
 	do iCS=1,nCS
@@ -1845,7 +1894,7 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter,
 		xc(1:nCS,1:nnr)=xc(1:nCS,1:nnr)+xc_iter(i,1:nCS,1:nnr)/real(nconv)
 		xv(1:nVS,1:nnr)=xv(1:nVS,1:nnr)+xv_iter(i,1:nVS,1:nnr)/real(nconv)
 	enddo
-	if(computeT) then
+	if(computeT.and..false.) then
 		if(nTiter.gt.3) then
 			f=0.9/(1d0+3d0*exp(-real(nTiter-4)))-0.1
 			xn=xn*(1d0-f)+xn_prev*f
