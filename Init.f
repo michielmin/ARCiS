@@ -704,6 +704,7 @@ c	condensates=(condensates.or.cloudcompute)
 			allocate(Cloud(i)%cryst(nr,40))
 			Cloud(i)%cryst=Cloud(i)%cryst0
 			Cloud(i)%porosity=Cloud(i)%porosity0
+			if(Cloud(i)%usefsed) Cloud(i)%computeJn=.false.
 			if(Cloud(i)%type.eq.'DIFFUSE'.or.Cloud(i)%type.eq.'WATER') then
 				Cloud(i)%opacitytype="MATERIAL"
 				Cloud(i)%nmat=14

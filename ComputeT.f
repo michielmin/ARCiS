@@ -685,7 +685,7 @@ c===============================================================================
 	T0(1:nr)=Tinp(1:nr)
 	T1(1:nr)=T(1:nr)
 	do ir=1,nr
-		if(nTiter.gt.1) call computeav50(Tdist(ir,1:nTiter),nTiter,T1(ir))
+c		if(nTiter.gt.1) call computeav50(Tdist(ir,1:nTiter),nTiter,T1(ir))
 		T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
 	enddo
 

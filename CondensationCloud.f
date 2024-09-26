@@ -1182,11 +1182,11 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 	NN=j
 
 	if(Cloud(ii)%computeJn) then
-		fmin=0.8
-		fmax=0.97
+		fmin=0.6
+		fmax=0.95
 		eps=5d-2
-		fscale=1d-10
-		pscale=0.999
+		fscale=1d-20
+		pscale=0.9
 	else if(computeT.and.nTiter.gt.2) then
 		fmin=0.6
 		fmax=0.95
@@ -1201,24 +1201,13 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 		pscale=0.5
 	endif
 
-	if(computeT.and.nTiter.gt.2) then
-		xn=xn_prev
-		xa=xa_prev
-		xc=xc_prev
-		xv=xv_prev
-		fscale=1d0
-		pscale=0.5
-	endif
-
 	allocate(IWORK(NN))
 	allocate(x(NN))
 	allocate(AB(2*NStot+NStot+1,NN))
 
 	iconv=0
 	Jn_xv=0d0
-	
-	xv=xv*fscale
-	
+		
 c start the loop
 	do iter=1,niter
 	call tellertje(iter,niter)
@@ -1323,7 +1312,7 @@ c	The Kelvin effect for condensation onto a curved surface
 			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)/rhodust(iCS))/(rmono(i)*Rgas*CloudT(i)))
 		enddo
 	enddo
-
+	Jn_xv=Jn_xv*fscale
 	Nc_nuc=Nc_nuc*mp
 	
 
@@ -1439,7 +1428,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			j=j+1
 			ik=KL+KU+1+j-ixv(iVS,i)
 			AB(ik,ixv(iVS,i))=1d0
-			x(j)=xv_bot(iVS)*fscale
+			x(j)=xv_bot(iVS)
 		endif
 	enddo
 	do i=2,nnr-1
@@ -1821,7 +1810,7 @@ C===============================================================================
 		endif
 		if(.not.Cloud(ii)%usefsed) rpart(i)=rr
 	enddo
-	fscale=1.1*fscale**pscale
+	if(maxerr.lt.eps.or.iter.gt.niter/2) fscale=1.1*fscale**pscale
 	if(maxerr.lt.eps.and.fscale.gt.1d0) then
 		iconv=iconv+1
 		if(iconv.gt.nconv) exit
@@ -1829,11 +1818,11 @@ C===============================================================================
 		iconv=0
 	endif
 	if(fscale.gt.1d0) fscale=1d0
-c	print*,iter,maxerr,fscale
+	print*,iter,maxerr,fscale
 20	continue
 	enddo
 c end the loop
-c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter," iterations"
+	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter," iterations"
 
 	v_include=.false.
 	do iCS=1,nCS
@@ -1858,7 +1847,7 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f4.1)'),"% in ",iter,
 	enddo
 	if(computeT) then
 		if(nTiter.gt.3) then
-			f=0.4/(1d0+3d0*exp(-real(nTiter-4)))-0.1
+			f=0.9/(1d0+3d0*exp(-real(nTiter-4)))-0.1
 			xn=xn*(1d0-f)+xn_prev*f
 			xa=xa*(1d0-f)+xa_prev*f
 			xc=xc*(1d0-f)+xc_prev*f
