@@ -457,7 +457,7 @@ c fractal dimension created by coagulating collisions
 				v_cloud(i,jNa)=1
 				v_cloud(i,jHCl)=1
 				rhodust(i)=2.17
-				do_nuc(i)=.false.!Cloud(ii)%ComputeJn
+				do_nuc(i)=Cloud(ii)%ComputeJn
 				sigma_nuc(i)=113.3
 				Nf_nuc(i)=1d0
 				bc(i,0)=7.717022e+04
@@ -473,7 +473,7 @@ c fractal dimension created by coagulating collisions
 				v_cloud(i,jK)=1
 				v_cloud(i,jHCl)=1
 				rhodust(i)=1.99
-				do_nuc(i)=.false.!Cloud(ii)%ComputeJn
+				do_nuc(i)=Cloud(ii)%ComputeJn
 				sigma_nuc(i)=100.3
 				Nf_nuc(i)=1d0
 				bc(i,0)=7.801979e+04
@@ -1127,7 +1127,9 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 				Sat(i,iCS)=Sat0(i,iCS)*fSat(i,iCS)
 				if(Sat(i,iCS).gt.1d0) exit
 			enddo
-			if(i.gt.nnr) c_include(iCS)=.false.
+			if(i.gt.nnr) then
+				c_include(iCS)=.false.
+			endif
 		endif
 	enddo
 	if(include_phothaze) c_include(iCS_phot)=.true.
@@ -1142,6 +1144,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 			enddo
 		endif
 	enddo
+
 	if(j.eq.0) then
 		do i=1,nnr
 			xv(i,1:nVS)=xv_bot(1:nVS)
@@ -1310,6 +1313,8 @@ c start the loop
 				Sc(i,iCS)=0d0
 				Jn_xv(i,iCS)=0d0
 			endif
+			if(.not.Jn_xv(i,iCS).gt.0d0) Jn_xv(i,iCS)=0d0
+			if(.not.Sc(i,iCS).gt.0d0) Sc(i,iCS)=0d0
 		enddo
 		if(include_phothaze) then
 			tot1=(muC(iCS_phot)*mp/(kb*CloudT(i)))*exp(36.7-93646./CloudT(i))
@@ -1317,9 +1322,9 @@ c start the loop
 			Sat(i,iCS_phot)=1d0
 		endif
 c	The Kelvin effect for condensation onto a curved surface
-		do iCS=1,nCS
-			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)/rhodust(iCS))/(rmono(i)*Rgas*CloudT(i)))
-		enddo
+c		do iCS=1,nCS
+c			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)/rhodust(iCS))/(rmono(i)*Rgas*CloudT(i)))
+c		enddo
 	enddo
 
 	Nc_nuc=Nc_nuc*mp
@@ -1699,7 +1704,7 @@ c				if(.not.x(ixv(iVS,i)).lt.xv_bot(iVS)) x(ixv(iVS,i))=xv_bot(iVS)
 			endif
 		enddo
 		do iVS=1,nVS
-			if(v_include(iVS)) then
+			if(v_include(iVS).and.i.gt.1) then
 				xv_iter(iter,iVS,i)=x(ixv(iVS,i))
 			else
 				xv_iter(iter,iVS,i)=xv_bot(iVS)
@@ -1773,7 +1778,7 @@ c		min_maxerr=sqrt(min_maxerr*maxerr)
 			endif
 		enddo
 		do iVS=1,nVS
-			if(v_include(iVS)) then
+			if(v_include(iVS).and.i.gt.1) then
 				if(iter.eq.1) then
 					xv(iVS,i)=x(ixv(iVS,i))
 				else
