@@ -9,9 +9,9 @@
 	real*8,allocatable :: Sn(:),mpart(:),Sn_phot(:)
 	real*8,allocatable :: y(:,:),CloudHp(:),CloudMMW(:)
 	real*8,allocatable :: at_ab(:,:)
-	real*8,allocatable,save :: Sc(:,:),vthv(:),IWORK(:),AB(:,:)
+	real*8,allocatable,save :: Sc(:,:),IWORK(:),AB(:,:)
 	real*8,allocatable :: tcinv(:,:),rho_av(:),Kd(:),Kg(:),Km(:),tcrystinv(:)
-	real*8 dz,g,rr,mutot,npart,tot,lambda,tot1,tot2,tot3,nucryst,Tcryst
+	real*8 dz,g,rr,mutot,npart,tot,lambda,tot1,tot2,tot3,nucryst,Tcryst,vthv
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,kl,ku,jCS
 	real*8 cs,eps,frac_nuc,m_nuc,m_phothaze,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
 	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
@@ -1056,7 +1056,6 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 
 	Sat0=Sat
 
-	allocate(vthv(nnr))
 	allocate(Sc(nnr,nCS))
 
 	allocate(c_include(nCS))
@@ -1219,6 +1218,14 @@ c start the loop
 
 	vsed=0d0
 	layercon=.false.
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,tot1,iVS,iCS,tot2,cs,St,fsed,lmfp,tot,Dp,xv_use,Jn_temp,vthv)
+!$OMP& SHARED(nnr,nCS,nVS,iVL,v_cloud,xv,xc,xn,xa,CloudT,muV,muC,v_include,fSat,Sat,Sat0,v_H2,CloudMMW,
+!$OMP&			vth,Km,Kd,Kg,Cloud,rpart,mpart,vsed,Sc,Jn_xv,sigma_nuc,r0_nuc,Nf_nuc,Nc_nuc,f,CloudP,
+!$OMP&			complexKzz,CloudHp,rho_av,Clouddens,ii,iter,CloudR,Rplanet,sigmamol,CloudG,xv_bot,layercon,
+!$OMP&			c_include,do_con,fstick,include_phothaze,ics_phot,do_nuc)
+!$OMP DO
 	do i=1,nnr
 		do iCS=1,nCS
 			tot1=1d200
@@ -1293,17 +1300,17 @@ c start the loop
 
 		do iCS=1,nCS
 			if(c_include(iCS)) then
-				vthv(i)=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
-				Dp=kb*CloudT(i)*vthv(i)/(3d0*CloudP(i)*1d6*sigmamol)
+				vthv=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
+				Dp=kb*CloudT(i)*vthv/(3d0*CloudP(i)*1d6*sigmamol)
 				if(do_con(iCS)) then
 					Sc(i,iCS)=fstick*Clouddens(i)**2*(muC(iCS)/(muV(iVL(i,iCS))*v_cloud(iCS,iVL(i,iCS))))*
-     &						pi*rpart(i)*min(rpart(i)*vthv(i),4d0*Dp)
+     &						pi*rpart(i)*min(rpart(i)*vthv,4d0*Dp)
 				endif
 				if(do_nuc(iCS)) then
 					xv_use=xv(iVL(i,iCS),i)
 					tot1=Sat(i,iCS)*xv_use
 					tot2=CloudP(i)*CloudMMW(i)/(muV(iVL(i,iCS))*kb*CloudT(i))
-					call ComputeJ(CloudT(i),tot1,tot2,xv_use,vthv(i),sigma_nuc(iCS),r0_nuc(iCS),
+					call ComputeJ(CloudT(i),tot1,tot2,xv_use,vthv,sigma_nuc(iCS),r0_nuc(iCS),
      &							Nf_nuc(iCS),Jn_temp,Nc_nuc(i,iCS))
 					Jn_xv(i,iCS)=Jn_xv(i,iCS)*f+Jn_temp*(1d0-f)
 				else
@@ -1317,8 +1324,10 @@ c start the loop
 			if(.not.Sc(i,iCS).gt.0d0) Sc(i,iCS)=0d0
 		enddo
 		if(include_phothaze) then
+			vthv=sqrt(8d0*kb*CloudT(i)/(pi*muC(iCS_phot)*mp))
+			Dp=kb*CloudT(i)*vthv/(3d0*CloudP(i)*1d6*sigmamol)
 			tot1=(muC(iCS_phot)*mp/(kb*CloudT(i)))*exp(36.7-93646./CloudT(i))
-			Sc(i,iCS_phot)=fstick*min(vthv(i)*rpart(i),4d0*Dp)*pi*rpart(i)*Clouddens(i)*tot1
+			Sc(i,iCS_phot)=fstick*min(vthv*rpart(i),4d0*Dp)*pi*rpart(i)*Clouddens(i)*tot1
 			Sat(i,iCS_phot)=1d0
 		endif
 c	The Kelvin effect for condensation onto a curved surface
@@ -1326,6 +1335,9 @@ c		do iCS=1,nCS
 c			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)/rhodust(iCS))/(rmono(i)*Rgas*CloudT(i)))
 c		enddo
 	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 
 	Nc_nuc=Nc_nuc*mp
 	Jn_xv=Jn_xv*fscale
@@ -1955,7 +1967,6 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 		if(.not.Cloud(ii)%usefsed) rpart(i)=rr
 	enddo
 
-	deallocate(vthv)
 	deallocate(Sc)
 	deallocate(IWORK)
 	deallocate(AB)

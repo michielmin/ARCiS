@@ -1273,4 +1273,23 @@ c        print*,'series failed in expint'
 
 	return
 	end
+
+
+	real*8 function SUMC(A,N)
+	IMPLICIT NONE
+	integer N,i,m,j,jmin
+	real*8 A(N),Aabs(N)
+	logical done(N)
+
+	Aabs(1:N)=abs(A(1:N))
+	call dpquicksort_w(Aabs,A,N)
+
+	SUMC=0d0
+	do i=N,1,-1
+		SUMC=SUMC+A(i)
+	enddo
+	
+	return
+	end
+	
 	

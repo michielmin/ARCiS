@@ -54,13 +54,13 @@
 	real*8 IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact,err,tot1,Pb(nr+1)
 	real*8,allocatable,save :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
 	integer i1,i2,ngF,j
-	real*8 ww,w1,w2,FstarBottom,tauRoss,HUVstar,HUVstar_omp
-	real*8,allocatable,save :: Si_omp(:,:),Ih_omp(:),Ij_omp(:),tauR_omp(:),Hsurf(:,:),Hstar_omp(:)
-	real*8,allocatable,save :: Fstar_LR(:),SurfEmis_LR(:),IntHnuSurf(:,:)
+	real*8 ww,w1,w2,FstarBottom,tauRoss,HUVstar,HUVstar_omp,SUMC
+	real*8,allocatable,save :: Si_omp(:,:),Ih_omp(:),Ij_omp(:),tauR_omp(:),Hsurf(:,:)
+	real*8,allocatable,save :: Fstar_LR(:),SurfEmis_LR(:),IntHnuSurf(:,:),tobesummed(:)
 	integer,allocatable,save :: IP(:)
-	real*8,allocatable,save :: WS(:),nu(:),wnu(:),Hstar_lam(:),Hsurf_lam(:)
+	real*8,allocatable,save :: WS(:),nu(:),wnu(:),Hstar_lam(:,:),Hsurf_lam(:)
 	real*8,allocatable,save :: IhN(:,:,:),IjN(:,:,:),UVstar(:),UVstar_omp(:),HBottom(:)
-!$OMP THREADPRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,IhN,IjN,Hstar_omp,Hstar_lam,Hsurf_lam,HBottom,UVstar_omp)
+!$OMP THREADPRIVATE(Si_omp,tauR_omp,Ih_omp,Ij_omp,IhN,IjN,Hsurf_lam,HBottom,UVstar_omp)
 	logical,save :: first_entry=.true.
 	character*500 file
 	integer icloud
@@ -133,15 +133,16 @@
 		allocate(IntHnuSurf(nlam_LR,nr))
 		allocate(SurfEmis_LR(nlam_LR))
 		allocate(wscat(nr,nlam_LR,ng),wabs(nr,nlam_LR,ng))
+		allocate(tobesummed(nlam_LR))
 		allocate(UVstar(nr))
-		allocate(nu(nnu),wnu(nnu))
+		allocate(Hstar_lam(nlam,nr),nu(nnu),wnu(nnu))
 		call gauleg(0d0,1d0,nu,wnu,nnu)
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(nr,nnu)
 		allocate(Si_omp(nr,0:nr+1),tauR_omp(nr),Ih_omp(nr),Ij_omp(nr))
 		allocate(IhN(nr,0:nr+1,nnu),IjN(nr,0:nr+1,nnu))
-		allocate(Hstar_omp(nr),Hstar_lam(nr),Hsurf_lam(nr),HBottom(nr))
+		allocate(Hsurf_lam(nr),HBottom(nr))
 		allocate(UVstar_omp(nr))
 !$OMP FLUSH
 !$OMP END PARALLEL
@@ -275,15 +276,14 @@ c	Fstar_LR=Fstar_LR*scale
 !$OMP& PRIVATE(ilam,ig,ir,inu,jr,contr,FstarBottom,tot,HUVstar_omp)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,night2day,deepredist,
 !$OMP&			Hstar,Dplanet,Fstar_LR,must,wabs,wscat,IntHnuSurf,betaF,isoFstar,do3D,UVstar,HUVstar,
-!$OMP&			lam_LR,deepredisttype,init3D,distrUV)
-	Hstar_omp=0d0
+!$OMP&			lam_LR,deepredisttype,init3D,distrUV,Hstar_lam)
 	UVstar_omp=0d0
 	HUVstar_omp=0d0
 !$OMP DO
 	do ilam=1,nlam_LR
 		call tellertje(ilam,nlam_LR)
+		Hstar_lam(ilam,1:nr)=0d0
 		do ig=1,ng
-			Hstar_lam(1:nr)=0d0
 			Hsurf_lam(1:nr)=0d0
 			contr=(Fstar_LR(ilam)/(pi*Dplanet**2))
 c Si_omp(0:nr,0) is the direct stellar contribution
@@ -294,7 +294,7 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 					tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
 					Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))*betaF*2d0
 					Ih_omp(1:nr)=-Ij_omp(1:nr)*nu(inu)
-					Hstar_lam(1:nr)=Hstar_lam(1:nr)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
+					Hstar_lam(ilam,1:nr)=Hstar_lam(ilam,1:nr)+wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 					Si_omp(1:nr,0)=Si_omp(1:nr,0)+wnu(inu)*Ij_omp(1:nr)*wscat(1:nr,ilam,ig)/4d0
 					FstarBottom=FstarBottom+wnu(inu)*abs(Ih_omp(1))
 					if((.not.do3D.and..not.init3D).or.distrUV) then
@@ -321,7 +321,7 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 				tauR_omp(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(max(must,1d-5))
 				Ij_omp(1:nr)=contr*exp(-tauR_omp(1:nr))
 				Ih_omp(1:nr)=-betaF*Ij_omp(1:nr)
-				Hstar_lam(1:nr)=Hstar_lam(1:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
+				Hstar_lam(ilam,1:nr)=Hstar_lam(ilam,1:nr)+dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 				FstarBottom=abs(Ih_omp(1))
 				Si_omp(1:nr,0)=Si_omp(1:nr,0)+Ij_omp(1:nr)*wscat(1:nr,ilam,ig)/4d0
 				if(lam_LR(ilam).lt.0.4e-4) then
@@ -330,7 +330,7 @@ c Si_omp(0:nr,0) is the direct stellar contribution
 				endif
 			endif
 			if(deepredist.and.deepredisttype.eq.'deep'.and.betaF.gt.must) then
-				Hstar_lam(1:nr)=Hstar_lam(1:nr)*must/betaF-(betaF-must)*dfreq_LR(ilam)*wgg(ig)*contr
+				Hstar_lam(ilam,1:nr)=Hstar_lam(ilam,1:nr)*must/betaF-(betaF-must)*dfreq_LR(ilam)*wgg(ig)*contr
 			endif
 			
 c Si_omp(0:nr,1:nr) is the direct contribution from the atmosphere
@@ -362,7 +362,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			do inu=1,nnu
 				Ih_omp(1:nr)=IhN(1:nr,0,inu)
 				Ij_omp(1:nr)=IjN(1:nr,0,inu)
-				Hstar_lam(1:nr)=Hstar_lam(1:nr)+4d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
+				Hstar_lam(ilam,1:nr)=Hstar_lam(ilam,1:nr)+4d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(1:nr)
 				if(lam_LR(ilam).lt.0.4e-4) then
 					UVstar_omp(1:nr)=UVstar_omp(1:nr)+4d0*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ij_omp(1:nr)
 					HUVstar_omp=HUVstar_omp+2d0*nu(inu)*wnu(inu)*dfreq_LR(ilam)*wgg(ig)*Ih_omp(nr)
@@ -399,19 +399,20 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			endif
 
 			do ir=1,nr
-c				Hstar_omp(ir)=Hstar_omp(ir)+min(Hstar_lam(ir),0d0)+max(Hsurf_lam(ir),0d0)
-				Hstar_omp(ir)=Hstar_omp(ir)+Hstar_lam(ir)+Hsurf_lam(ir)
+				Hstar_lam(ilam,ir)=Hstar_lam(ilam,ir)+Hsurf_lam(ir)
 			enddo
 		enddo
 	enddo
 !$OMP END DO
 !$OMP CRITICAL
-	Hstar=Hstar+Hstar_omp
 	UVstar=UVstar+UVstar_omp
 	HUVstar=HUVstar+HUVstar_omp
 !$OMP END CRITICAL
 !$OMP FLUSH
 !$OMP END PARALLEL
+	do ir=1,nr
+		Hstar(ir)=SUMC(Hstar_lam(1:nlam_LR,ir),nlam_LR)
+	enddo
 	scaleUV=max(0d0,-(pi*HUVstar/3.4947466112306125E-009))
 	UVstar(1:nr)=UVstar(1:nr)/UVstar(nr)
 	if(nTiter.eq.1) then
@@ -486,11 +487,10 @@ c===============================================================================
 		if(iT.lt.1) iT=1
 		scale=(T(jr)/real(iT))**4
 		do ir=1,nr
-			tot=0d0
 			do ilam=1,nlam_LR
-				tot=tot+scale*BB_LR(ilam,iT)*IntHnu(ilam,ir,jr)
+				tobesummed(ilam)=scale*BB_LR(ilam,iT)*IntHnu(ilam,ir,jr)
 			enddo
-			IntH(ir,jr)=tot
+			IntH(ir,jr)=SUMC(tobesummed,nlam_LR)
 		enddo
 	enddo
 	iT=Tsurface+1
@@ -499,8 +499,9 @@ c===============================================================================
 	scale=(Tsurface/real(iT))**4
 	do ir=1,nr
 		do ilam=1,nlam_LR
-			IntH(ir,1)=IntH(ir,1)+scale*BB_LR(ilam,iT)*IntHnuSurf(ilam,ir)*SurfEmis_LR(ilam)
+			tobesummed(ilam)=scale*BB_LR(ilam,iT)*IntHnuSurf(ilam,ir)*SurfEmis_LR(ilam)
 		enddo
+		IntH(ir,1)=IntH(ir,1)+SUMC(tobesummed,nlam_LR)
 	enddo
 
 	Fl=Hedd
@@ -616,11 +617,10 @@ c===============================================================================
 		if(iT.lt.1) iT=1
 		scale=(T(jr)/real(iT))**4
 		do ir=1,nr
-			tot=0d0
 			do ilam=1,nlam_LR
-				tot=tot+scale*BB_LR(ilam,iT)*IntHnu(ilam,ir,jr)
+				tobesummed(ilam)=scale*BB_LR(ilam,iT)*IntHnu(ilam,ir,jr)
 			enddo
-			IntH(ir,jr)=tot
+			IntH(ir,jr)=SUMC(tobesummed,nlam_LR)
 		enddo
 	enddo
 	iT=Tsurface+1
@@ -629,16 +629,15 @@ c===============================================================================
 	scale=(Tsurface/real(iT))**4
 	do ir=1,nr
 		do ilam=1,nlam_LR
-			IntH(ir,1)=IntH(ir,1)+scale*BB_LR(ilam,iT)*IntHnuSurf(ilam,ir)*SurfEmis_LR(ilam)
+			tobesummed(ilam)=scale*BB_LR(ilam,iT)*IntHnuSurf(ilam,ir)*SurfEmis_LR(ilam)
 		enddo
+		IntH(ir,1)=IntH(ir,1)+SUMC(tobesummed,nlam_LR)
 	enddo
 
 	Fl=Hedd
 	do ir=1,nr
 		if(Convec(ir)) then
-			do jr=1,nr
-				Fl(ir)=Fl(ir)-IntH(ir,jr)
-			enddo
+			Fl(ir)=Fl(ir)-SUMC(IntH(ir,1:nr),nr)
 			Fl(ir)=Fl(ir)*sigma/(2d0*(((pi*kb)**4)/(15d0*hplanck**3*clight**3)))
 			Kzz_convect(ir)=(1d0/3d0)*Hp(ir)*((exp_ad-1d0)*abs(Fl(ir))/(exp_ad*MMW(ir)*dens(ir)))**(1d0/3d0)
 		else
@@ -647,10 +646,6 @@ c===============================================================================
 	enddo
 	endif
 c=========================================================================================
-
-
-
-
 
 	T1=T
 	do ir=2,nr-1
