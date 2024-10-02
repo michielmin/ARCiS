@@ -867,6 +867,10 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/W.dat'
 									Cloud(i)%nax(j)=1
+								case('S')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/FeS.dat'
+									Cloud(i)%nax(j)=1
 								case('Ni')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Ni.dat'
@@ -1651,7 +1655,7 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) gammaUV
 		case("distruv")
 			read(key%value,*) distrUV
-		case("photdestroy","pdestroy")
+		case("photdestroy","photodestroy","pdestroy")
 			call ReadPhotoDestroy(key)
 		case("hydrogenloss")
 			read(key%value,*) Hydrogenloss

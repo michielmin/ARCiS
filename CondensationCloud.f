@@ -617,6 +617,15 @@ c fractal dimension created by coagulating collisions
 				bc(i,3)=6.292585e-04
 				bc(i,4)=-3.003321e-08
 				ifit(i)=0
+			case('S')
+				CSname(i)='S'
+				atoms_cloud(i,11)=1
+				v_cloud(i,jH2S)=1
+				rhodust(i)=2.05d0
+c				do_nuc(i)=Cloud(ii)%ComputeJn
+c				sigma_nuc(i)=
+c				Nf_nuc(i)=1d0
+				ifit(i)=-1
 			case('optEC')
 				CSname(i)='optEC'
 				atoms_cloud(i,1)=4
@@ -968,6 +977,11 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
 						call PvapW(tot1,Sat(1,iCS),liq)
 						Sat(1,iCS)=1d0/Sat(1,iCS)
+					case("S")
+c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
+						call PvapS(tot1,Sat(1,iCS),liq)
+						Sat(1,iCS)=1d0/Sat(1,iCS)
+						v_H2(iCS)=0d0
 					case default
 						Gibbs=compGibbs(tot1,bc(iCS,0:4),ifit(iCS))
 						Sat(1,iCS)=Gibbs-v_H2(iCS)*compGibbs(tot1,bH2(0:4),0)
@@ -986,7 +1000,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 						Sat(1,iCS)=Sat(1,iCS)*(xv_bot(iVS)*CloudMMW(1)/muV(iVS))**v_cloud(iCS,iVS)
 					endif
 				enddo
-				Sat(1,iCS)=(1d0/Sat(1,iCS))**(1d0/(v_H2(iCS)+sum(v_cloud(iCS,1:nVS))))			
+				Sat(1,iCS)=(1d0/Sat(1,iCS))**(1d0/(v_H2(iCS)+sum(v_cloud(iCS,1:nVS))))
 			enddo
 			write(20,form) tot1,Sat(1,1:nCS)
 		enddo
@@ -1021,6 +1035,11 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
 					call PvapW(CloudT(i),Sat(i,iCS),liq)
 					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
+				case("S")
+c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
+					call PvapS(CloudT(i),Sat(i,iCS),liq)
+					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
+					v_H2(iCS)=0d0
 				case default
 					Gibbs=compGibbs(CloudT(i),bc(iCS,0:4),ifit(iCS))
 					Sat(i,iCS)=Gibbs-v_H2(iCS)*compGibbs(CloudT(i),bH2(0:4),0)
@@ -2566,6 +2585,39 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	Pl=c0_l/T+c1_l+c2_l*T+c3_l*T**2+c4_l*T**3
 
 	if(Pi.lt.Pl.and.T.lt.4431d0) then
+		Pvap=Pi
+		liquid=.false.
+	else
+		Pvap=Pl
+		liquid=.true.
+	endif
+	Pvap=1d-6*exp(Pvap)
+		
+	return
+	end
+
+	subroutine PvapS(T,Pvap,liquid)
+	IMPLICIT NONE
+	real*8 T,Pvap,Pl,Pi
+	logical liquid
+	real*8 c0_i,c1_i,c2_i,c3_i,c4_i
+	real*8 c0_l,c1_l,c2_l,c3_l,c4_l
+	parameter(	
+     &	c0_i=-3.32020E+04,
+     &	c1_i=2.90980E+01,
+     &	c2_i=3.44461E-03,
+     &	c3_i=-4.54179E-06,
+     &	c4_i=1.85126E-09,
+     &	c0_l=-3.32601E+04,
+     &	c1_l=3.07134E+01,
+     &	c2_l=-2.01083E-03,
+     &	c3_l=4.47359E-07,
+     &	c4_l=0.00000E+00)
+
+	Pi=c0_i/T+c1_i+c2_i*T+c3_i*T**2+c4_i*T**3
+	Pl=c0_l/T+c1_l+c2_l*T+c3_l*T**2+c4_l*T**3
+
+	if(Pi.lt.Pl) then
 		Pvap=Pi
 		liquid=.false.
 	else

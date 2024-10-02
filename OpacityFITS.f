@@ -287,7 +287,7 @@ C	 create the new empty FITS file
 			call output("Opacity file not available: " // trim(filename))
 			call output("setting opacities to 0")
 			Ktable(imol)%available=.false.
-			return
+			goto 100
 		endif
 	endif
 	opacitymol(imol)=.true.
@@ -481,6 +481,34 @@ C	 create the new empty FITS file
 		  call ftgmsg(errmessage)
 	   end do
 	endif
+
+100	continue
+	if(.true.) then
+		allocate(temp(nlam))
+		filename=trim(opacitydir) // "UV"
+		filename=trim(filename) // "_" // trim(molname(imol))
+		filename=trim(filename) // ".dat"
+		inquire(file=trim(filename),exist=truefalse)
+		if(truefalse) then
+			call regridUV(filename,lam*1d7,temp,nlam)
+			do iT=1,Ktable(imol)%nT
+				do iP=1,Ktable(imol)%nP
+					do ilam=1,nlam
+						if(Ktable(imol)%ktable(ng,ilam,iT,iP,0).eq.0d0) then
+							Ktable(imol)%ktable(1:ng,ilam,iT,iP,-nvel:nvel)=temp(ilam)
+						else
+							exit
+						endif
+					enddo
+					if(iT.eq.1.and.iP.eq.1) then
+						call output('reading UV opacities for lambda < ' // trim(dbl2string(lam(ilam)*1d4,'(es8.2)')) // ' micron')
+					endif
+				enddo
+			enddo
+		endif
+		deallocate(temp)
+	endif
+
 	
 	return
 	end

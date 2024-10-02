@@ -508,6 +508,53 @@ c-----------------------------------------------------------------------
 	end
 
 
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+	
+	subroutine regridUV(input,grid,y,n)
+	IMPLICIT NONE
+	integer i,j,n
+	real*8 grid(n),y(n),x0,y0,x1,y1
+	real*8 lx0,ly0,lx1,ly1,lx,ly
+	character*500 input
+	logical truefalse
+	inquire(file=input,exist=truefalse)
+	if(.not.truefalse) then
+		write(*,200) input(1:len_trim(input))
+200		format('File "',a,'" does not exist')
+		stop
+	endif
+	open(unit=20,file=input,FORM="FORMATTED",ACCESS="STREAM")
+	i=1
+1	read(20,*,end=102,err=1) x0,y0
+103	if(x0.ge.grid(i)) then
+		y(i)=0d0
+		i=i+1
+		goto 103
+	endif
+100	read(20,*,end=102) x1,y1
+	if(y1.le.0d0) y1=y0*1d-50
+101	if(grid(i).le.x1.and.grid(i).gt.x0) then
+		y(i)=10d0**(log10(y1)+(log10(grid(i)/x1))*(log10(y0/y1))/(log10(x0/x1)))
+		i=i+1
+		if(i.gt.n) goto 102
+		goto 101
+	endif
+	x0=x1
+	y0=y1
+	goto 100
+102	continue
+	do j=i,n
+		y(j)=0d0
+	enddo
+	close(unit=20)
+	do i=1,n
+		if(y(i).le.0d0) y(i)=0d0
+	enddo
+	return
+	end
+
+
 	subroutine fillblanks(x,y,n,done,dolog)
 	IMPLICIT NONE
 	integer n,i,n0,n1
@@ -564,8 +611,6 @@ c-----------------------------------------------------------------------
 
 	return
 	end
-	
-		
 
 c-----------------------------------------------------------------------
 c The new readstar subroutine uses a boxcar filtering to read in 
