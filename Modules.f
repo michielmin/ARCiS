@@ -164,7 +164,7 @@ c===============================================================================
 	use OutputModule
 	IMPLICIT NONE
 	real*8 Mplanet,Rplanet,Pplanet,loggPlanet				! mass and radius of the planet at pressure Pplanet
-	real*8 Tstar,Rstar,Mstar,logg,Dplanet,Lplanet
+	real*8 Tstar,Rstar,Mstar,logg,Dplanet,Dplanet0,Lplanet
 	real*8 orbit_P,orbit_e,orbit_omega,orbit_inc
 	real*8,allocatable :: dens(:),T(:),P(:),Ndens(:),Tin(:)	! radius
 	real*8,allocatable :: dust_dens(:,:)					! radius, component
@@ -188,7 +188,7 @@ c===============================================================================
 	integer idum,maxiter,miniter,Nphot0,idum0,iWolk
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib,do_rayleigh,isoFstar
-	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS,modelfail
+	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS,modelfail,projectedD
 	logical,allocatable :: includemol(:),diseqmol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	logical,allocatable :: includemol_raytrace(:),includemol_default(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,twind,epsiter,specres_LR

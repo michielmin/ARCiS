@@ -642,7 +642,7 @@ c allocate the arrays
 	
 	endif
 
-	if(orbit_P.lt.0d0) orbit_P=sqrt(Dplanet**3/Mstar)*365.25*86400d0
+	if(orbit_P.lt.0d0) orbit_P=sqrt(Dplanet0**3/Mstar)*365.25*86400d0
 
 	allocate(tauUV(nr),kappaUV(nr))
 	allocate(Kzz_convect(nr),Kzz_g(nr),Kzz_b(nr))
@@ -1176,7 +1176,9 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 		case("bbstar")
 			read(key%value,*) blackbodystar
 		case("dp","dplanet")
-			read(key%value,*) Dplanet
+			read(key%value,*) Dplanet0
+		case("projecteddp","projecteddplanet")
+			read(key%value,*) projectedD
 		case("retrieval")
 			read(key%value,*) retrieval
 		case("doscaler","scaler")
@@ -1600,8 +1602,8 @@ c			read(key%value,*) nTpoints
 		case("rstart","rcore")
 			call output("Switching to depreciated mode of SimAb!!!")
 			read(key%value,*) planetform_Dmigrate
-			planetform_Dmigrate=planetform_Dmigrate-Dplanet
-			planetform_Rend=Dplanet
+			planetform_Dmigrate=planetform_Dmigrate-Dplanet0
+			planetform_Rend=Dplanet0
 			call output("Using dMigrate    = " // dbl2string(planetform_Dmigrate,"(f6.3)") // "AU")
 			call output("Using RendMigrate = " // dbl2string(planetform_Rend,"(f6.3)") // "AU")
 		case("dmigrate")
@@ -1715,6 +1717,8 @@ c			read(key%value,*) nTpoints
 
 	Rstar=Rstar*Rsun
 	Mstar=Mstar*Msun
+	Dplanet=Dplanet0
+	if(projectedD) Dplanet=Dplanet/sin(theta_phase(1)*pi/180d0)
 	Dplanet=Dplanet*AU
 	
 	lam1=lam1*micron
@@ -1986,7 +1990,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Tstar=5777d0
 	Rstar=1d0
 	Mstar=1d0
-	Dplanet=1d0
+	Dplanet0=1d0
+	projectedD=.false.
 	logg=4.5d0
 	blackbodystar=.false.
 	retrievestar=.false.
@@ -2615,6 +2620,7 @@ c number of cloud/nocloud combinations
 		if(key%orkey2.eq.molname(i)) then
 			if(i.le.nmol) then
 				read(key%value,*) includemol_raytrace(i)
+				print*,'hiding:',molname(i)
 			endif
 			return
 		endif
@@ -3301,10 +3307,10 @@ c not entirely correct...
 				case('Star_Distance_[pc]','star_distance')
 					read(value(i),*) Distance
 				case('Planet_Semi-major_Axis_[m]')
-					read(value(i),*) Dplanet
-					Dplanet=Dplanet*1d2/AU
+					read(value(i),*) Dplanet0
+					Dplanet0=Dplanet0*1d2/AU
 				case('semi_major_axis')
-					read(value(i),*) Dplanet
+					read(value(i),*) Dplanet0
 				case('Planet_Mass_[Me]')
 					read(value(i),*) Mp_prior
 					Mp_prior=Mp_prior*Mearth/MJup
@@ -3345,11 +3351,11 @@ c not entirely correct...
 		call output("Stellar logg:     " // dbl2string(logg,'(f9.4)'))
 		call output("Stellar distance: " // dbl2string(Distance,'(f9.4)') // "pc")
 		call output("Metallicity:      " // dbl2string(metallicity,'(f9.4)'))
-		call output("Planet orbit:     " // dbl2string(Dplanet,'(f7.4)') // "AU")
+		call output("Planet orbit:     " // dbl2string(Dplanet0,'(f7.4)') // "AU")
 		call output("Planet radius:    " // dbl2string(Rplanet,'(f9.4)') // "Rjup")
 		call output("Planet mass:      " // dbl2string(Mplanet,'(f9.4)') // "Mjup")
 		call output("Planet T:         " // dbl2string(TP0,'(f9.4)') // "K")
-		call output("Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K")
+		call output("Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet0*AU))*Tstar,'(f9.4)') // "K")
 		call output("Orbital period:   " // dbl2string(orbit_P/86400d0,'(f9.4)') // "days")
 			
 		open(unit=73,file=trim(outputdir) // "ListParameters",FORM="FORMATTED")
@@ -3359,11 +3365,11 @@ c not entirely correct...
 		write(73,'(a)') "Stellar logg:     " // dbl2string(logg,'(f9.4)')
 		write(73,'(a)') "Stellar distance: " // dbl2string(Distance,'(f9.4)') // "pc"
 		write(73,'(a)') "Metallicity:      " // dbl2string(metallicity,'(f9.4)')
-		write(73,'(a)') "Planet orbit:     " // dbl2string(Dplanet,'(f9.4)') // "AU"
+		write(73,'(a)') "Planet orbit:     " // dbl2string(Dplanet0,'(f9.4)') // "AU"
 		write(73,'(a)') "Planet radius:    " // dbl2string(Rplanet,'(f9.4)') // "Rjup"
 		write(73,'(a)') "Planet mass:      " // dbl2string(Mplanet,'(f9.4)') // "Mjup"
 		write(73,'(a)') "Planet T:         " // dbl2string(TP0,'(f9.4)') // "K"
-		write(73,'(a)') "Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K"
+		write(73,'(a)') "Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet0*AU))*Tstar,'(f9.4)') // "K"
 		write(73,'(a)') "Orbital period:   " // dbl2string(orbit_P/86400d0,'(f9.4)') // "days"
 		close(unit=73)
 
@@ -3400,12 +3406,12 @@ c not entirely correct...
 		call output("Minimum logg:        " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 		call output("Maximum logg:        " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
 				case("Rstart","rstart")
-					RetPar(i)%x0=Dplanet
-					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet)
+					RetPar(i)%x0=Dplanet0
+					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet0)
 		call output("Minimum Rstart:      " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 				case("RendMigrate","rendmigrate","Rendmigrate","rendMigrate")
-					RetPar(i)%x0=Dplanet
-					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet)
+					RetPar(i)%x0=Dplanet0
+					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet0)
 		call output("Minimum RendMigrate: " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 			end select
 		enddo
@@ -3476,7 +3482,7 @@ c not entirely correct...
 	
 	open(unit=72,file=planetparameterfile,FORM="FORMATTED")
 	read(72,*)
-1	read(72,*,end=2) name,Tstar,x,x,Zc,x,x,Mstar,x,x,Rstar,x,x,logg,x,x,x,x,x,orbit_P,orbit_e,x,x,Dplanet,x,x,
+1	read(72,*,end=2) name,Tstar,x,x,Zc,x,x,Mstar,x,x,Rstar,x,x,logg,x,x,x,x,x,orbit_P,orbit_e,x,x,Dplanet0,x,x,
      &					Mp_prior,dM1,dM2,Rplanet,dR1,dR2
 c	if(Zc.eq.'-1') then
 c		metallicity=0d0
@@ -3509,11 +3515,11 @@ c	endif
 		call output("Stellar radius: " // dbl2string(Rstar,'(f9.4)') // "Rsun")
 		call output("Stellar logg:   " // dbl2string(logg,'(f9.4)'))
 		call output("Metallicity:    " // dbl2string(metallicity,'(f9.4)'))
-		call output("Planet orbit:   " // dbl2string(Dplanet,'(f7.4)') // "AU")
+		call output("Planet orbit:   " // dbl2string(Dplanet0,'(f7.4)') // "AU")
 		call output("Planet radius:  " // dbl2string(Rplanet,'(f9.4)') // "Rjup")
 		call output("Planet mass:    " // dbl2string(Mplanet,'(f9.4)') // "Mjup")
 		call output("Mass uncert.:   " // dbl2string(dMp_prior,'(f9.4)') // "Mjup")
-		call output("Blackbody T:    " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K")
+		call output("Blackbody T:    " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet0*AU))*Tstar,'(f9.4)') // "K")
 		call output("Orbital period: " // dbl2string(orbit_P/86400d0,'(f9.4)') // "days")
 
 		open(unit=73,file=trim(outputdir) // "ListParameters",FORM="FORMATTED")
@@ -3523,10 +3529,10 @@ c	endif
 		write(73,'(a)') "Stellar logg:     " // dbl2string(logg,'(f9.4)')
 		write(73,'(a)') "Stellar distance: " // dbl2string(Distance,'(f9.4)') // "pc"
 		write(73,'(a)') "Metallicity:      " // dbl2string(metallicity,'(f9.4)')
-		write(73,'(a)') "Planet orbit:     " // dbl2string(Dplanet,'(f9.4)') // "AU"
+		write(73,'(a)') "Planet orbit:     " // dbl2string(Dplanet0,'(f9.4)') // "AU"
 		write(73,'(a)') "Planet radius:    " // dbl2string(Rplanet,'(f9.4)') // "Rjup"
 		write(73,'(a)') "Planet mass:      " // dbl2string(Mplanet,'(f9.4)') // "Mjup"
-		write(73,'(a)') "Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet*AU))*Tstar,'(f9.4)') // "K"
+		write(73,'(a)') "Blackbody T:      " // dbl2string(sqrt(Rstar*Rsun/(2d0*Dplanet0*AU))*Tstar,'(f9.4)') // "K"
 		write(73,'(a)') "Orbital period:   " // dbl2string(orbit_P/86400d0,'(f9.4)') // "days"
 		close(unit=73)
 
@@ -3554,12 +3560,12 @@ c	endif
 		call output("Minimum logg:        " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 		call output("Maximum logg:        " // dbl2string(RetPar(i)%xmax,'(f7.2)'))
 				case("Rstart","rstart")
-					RetPar(i)%x0=Dplanet
-					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet)
+					RetPar(i)%x0=Dplanet0
+					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet0)
 		call output("Minimum Rstart:      " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 				case("RendMigrate","rendmigrate","Rendmigrate","rendMigrate")
-					RetPar(i)%x0=Dplanet
-					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet)
+					RetPar(i)%x0=Dplanet0
+					RetPar(i)%xmin=max(RetPar(i)%xmin,Dplanet0)
 		call output("Minimum RendMigrate: " // dbl2string(RetPar(i)%xmin,'(f7.2)'))
 			end select
 		enddo
