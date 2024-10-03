@@ -61,7 +61,7 @@
 			if(nTiter.eq.1) then
 				f=1d0
 			else
-				f=0.5d0
+				f=0.75d0
 				if(forceEbalance) f=f+(1d0-f)*exp(-real(maxiter-nTiter)/5d0)
 c				if(WaterWorld) f=f*(1d0-exp(-real(maxiter-nTiter)*3d0/real(maxiter)))
 			endif

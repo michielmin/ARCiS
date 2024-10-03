@@ -210,7 +210,7 @@ c===============================================================================
 	logical existh2h2,existh2he,existh2ch4
 
 
-	nmol=1
+	nmol=5
 	nobs=0
 	ncia=0
 	nclouds=0
