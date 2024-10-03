@@ -1047,10 +1047,11 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 			Sn_phot(i)=Clouddens(i)*CloudP(i)*CloudtauUV(i)
 			if(i.eq.nnr) then
 				tot=tot+abs(CloudR(i-1)-CloudR(i))*Sn_phot(i)
+				tot=tot+abs(sqrt(CloudR(i-1)*CloudR(i))-CloudR(i))*Sn_phot(i)
 			else if(i.eq.1) then
-				tot=tot+abs(CloudR(i+1)-CloudR(i))*Sn_phot(i)
+				tot=tot+abs(sqrt(CloudR(i+1)*CloudR(i))-CloudR(i))*Sn_phot(i)
 			else
-				tot=tot+abs(CloudR(i-1)-CloudR(i+1))*0.5*Sn_phot(i)
+				tot=tot+abs(sqrt(CloudR(i-1)*CloudR(i))-sqrt(CloudR(i+1)*CloudR(i)))*Sn_phot(i)
 			endif
 		endif
 		if(.not.Cloud(ii)%computeJn) then
@@ -1349,6 +1350,13 @@ c		enddo
 
 	Nc_nuc=Nc_nuc*mp
 	Jn_xv=Jn_xv*fscale
+	
+	vsed(nnr)=0d0
+	do ir=nnr-1,1,-1
+		if(abs(vsed(ir)).gt.sqrt(vsed(ir+1)**2+2d0*abs(CloudR(ir+1)-CloudR(ir))*CloudG(ir))) then
+			vsed(ir)=-sqrt(vsed(ir+1)**2+2d0*abs(CloudR(ir+1)-CloudR(ir))*CloudG(ir))
+		endif
+	enddo
 
 C=========================================================================================
 C=========================================================================================
@@ -1447,7 +1455,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			if(do_nuc(iCS)) then
 				if(iCS.eq.iCS_phot) then
 					ik=KL+KU+1+j-ixv(jCH4,i)
-					AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))+Sn_phot(i)
+					AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))+Sn_phot(i)*xv(jCH4,i)
 				else
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
@@ -1495,7 +1503,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			
 			if(include_phothaze) then
 				ik=KL+KU+1+j-ixv(jCH4,i)
-				AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))+Sn_phot(i)/m_phothaze
+				AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))+Sn_phot(i)*xv(jCH4,i)/m_phothaze
 			endif
 			
 			do iCS=1,nCS
@@ -1548,7 +1556,7 @@ c coagulation
 
 			if(include_phothaze) then
 				ik=KL+KU+1+j-ixv(jCH4,i)
-				AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))+Sn_phot(i)/m_phothaze
+				AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))+Sn_phot(i)*xv(jCH4,i)/m_phothaze
 			endif
 			
 			do iCS=1,nCS
@@ -1596,7 +1604,7 @@ c coagulation
 			if(do_nuc(iCS)) then
 				if(iCS.eq.iCS_phot) then
 					ik=KL+KU+1+j-ixv(jCH4,i)
-					AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))+Sn_phot(i)
+					AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))+Sn_phot(i)*xv(jCH4,i)
 				else
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
@@ -1639,7 +1647,7 @@ c coagulation
 						if(do_nuc(iCS)) then
 							if(iCS.eq.iCS_phot) then
 								ik=KL+KU+1+j-ixv(jCH4,i)
-								AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))-Sn_phot(i)
+								AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))-Sn_phot(i)*xv(jCH4,i)
 							else
 								ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 								AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
@@ -1721,8 +1729,9 @@ c		endif
 		enddo
 		do iVS=1,nVS
 			if(v_include(iVS)) then
-				if(.not.x(ixv(iVS,i)).gt.0d0) x(ixv(iVS,i))=0d0
-c				if(.not.x(ixv(iVS,i)).lt.xv_bot(iVS)) x(ixv(iVS,i))=xv_bot(iVS)
+c				if(.not.x(ixv(iVS,i)).gt.0d0) x(ixv(iVS,i))=0d0
+				if(x(ixv(iVS,i)).gt.xv(iVS,i)*1d+1) x(ixv(iVS,i))=xv(iVS,i)*1d+1
+				if(x(ixv(iVS,i)).lt.xv(iVS,i)*1d-1) x(ixv(iVS,i))=xv(iVS,i)*1d-1
 			endif
 		enddo
 	enddo

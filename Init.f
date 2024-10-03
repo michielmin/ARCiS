@@ -2054,9 +2054,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 	disequilibrium=.false.
 	nfixmol=0
 	fixmol_P=1d20
-	Kzz=1d8
-	Kzz_offset=0d0
-	Kzz_max=1d20
+	Kzz=5d8
+	Kzz_offset=1d4
+	Kzz_max=1d12
 	metallicity=0d0
 	condensates=.false.
 	dosimplerainout=.false.

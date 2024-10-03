@@ -1407,7 +1407,7 @@ c-----------------------------------------------------------------------
 	if(SCKzz) then
 c use parametrization from Moses et al. (2022)
 		Te=(TeffP**4+(Rstar/(Dplanet))**2*Tstar**4)**0.25
-		ComputeKzz=(5d8/sqrt(x))*(H/620d5)*(Te/1450d0)**4
+		ComputeKzz=(Kzz/sqrt(x))*(H/620d5)*(Te/1450d0)**4
 c put some limits on the Kzz
 		ComputeKzz=ComputeKzz+Kzz_offset
 		ComputeKzz=1d0/(1d0/ComputeKzz+1d0/Kzz_max)
