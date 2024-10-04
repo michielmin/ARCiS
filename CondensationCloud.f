@@ -1729,9 +1729,8 @@ c		endif
 		enddo
 		do iVS=1,nVS
 			if(v_include(iVS)) then
-c				if(.not.x(ixv(iVS,i)).gt.0d0) x(ixv(iVS,i))=0d0
-				if(x(ixv(iVS,i)).gt.xv(iVS,i)*1d+1) x(ixv(iVS,i))=xv(iVS,i)*1d+1
-				if(x(ixv(iVS,i)).lt.xv(iVS,i)*1d-1) x(ixv(iVS,i))=xv(iVS,i)*1d-1
+				if(x(ixv(iVS,i)).gt.xv(iVS,i)*5.0d0) x(ixv(iVS,i))=xv(iVS,i)*5.0d0
+				if(x(ixv(iVS,i)).lt.xv(iVS,i)*0.2d0) x(ixv(iVS,i))=xv(iVS,i)*0.2d0
 			endif
 		enddo
 	enddo
