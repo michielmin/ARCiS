@@ -1,0 +1,46 @@
+This is BibTeX, Version 0.99d (TeX Live 2020)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: InstallRUG.aux
+The style file: abbrvnat.bst
+Database file #1: refs.bib
+You've used 12 entries,
+            2773 wiz_defined-function locations,
+            688 strings with 7669 characters,
+and the built_in function-call counts, 6218 in all, are:
+= -- 533
+> -- 468
+< -- 5
++ -- 156
+- -- 144
+* -- 588
+:= -- 1006
+add.period$ -- 48
+call.type$ -- 12
+change.case$ -- 84
+chr.to.int$ -- 12
+cite$ -- 24
+duplicate$ -- 247
+empty$ -- 421
+format.name$ -- 166
+if$ -- 1263
+int.to.chr$ -- 1
+int.to.str$ -- 1
+missing$ -- 12
+newline$ -- 80
+num.names$ -- 48
+pop$ -- 132
+preamble$ -- 1
+purify$ -- 72
+quote$ -- 0
+skip$ -- 191
+stack$ -- 0
+substring$ -- 120
+swap$ -- 24
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 132
+warning$ -- 0
+while$ -- 40
+width$ -- 0
+write$ -- 187

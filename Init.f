@@ -1357,6 +1357,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Kzz_contrast
 		case("metallicity")
 			read(key%value,*) metallicity
+		case("dmetallicity","dz")
+			read(key%value,*) dmetallicity
 		case("coratio")
 			read(key%value,*) COratio
 		case("sioratio")
@@ -2050,7 +2052,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	f_surface_water=0.6
 
 	dochemistry=.false.
-	elements_ARCiS= 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V el'
+	elements_ARCiS= 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V F Cr el'
 	disequilibrium=.false.
 	nfixmol=0
 	fixmol_P=1d20
@@ -2058,6 +2060,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	Kzz_offset=1d4
 	Kzz_max=1d12
 	metallicity=0d0
+	dmetallicity=0d0
 	condensates=.false.
 	dosimplerainout=.false.
 	COratio=0.5495407855762011
@@ -3044,6 +3047,13 @@ c number of cloud/nocloud combinations
 		if(lam(i).lt.lam1) lam1=lam(i)
 		if(lam(i).gt.lam2) lam2=lam(i)
 	enddo
+
+	if(lam(nlam).lt.5e-7) then
+		call output("Wavelength range incorrect:")
+		call output("    minimum wavelenght:" // dbl2string(lam(1)*1e4,'(se10.2)') // "micron")
+		call output("    maximum wavelenght:" // dbl2string(lam(nlam)*1e4,'(se10.2)') // "micron")
+		stop
+	endif
 
 	return
 	end

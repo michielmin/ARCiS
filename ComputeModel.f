@@ -42,6 +42,9 @@
 	Tconverged=.false.
 	nTiter=0
 	Tsurface=sqrt(Rstar/(2d0*Dplanet))*Tstar
+
+	if(dochemistry) metallicity=metallicity+log10(Mplanet/Mjup)*dmetallicity
+	
 	if(computeT.and.computeopac) then
 		temp=par_tprofile
 		par_tprofile=.false.

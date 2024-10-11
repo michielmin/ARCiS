@@ -1,0 +1,61 @@
+\documentclass[12pt]{article}
+
+\include{general}
+\usepackage{natbib}
+\bibliographystyle{abbrvnat}
+
+\begin{document}
+
+\title{\includegraphics[width=0.9\hsize]{ARCiS}\\Installation on the computers of the University of Groningen}
+\author{Michiel Min}
+\date{\today}
+\maketitle
+
+\section{Introduction}
+
+
+\subsection{Terms of use}
+
+By using ARCiS you agree to the following:
+\begin{itemize}
+\item If in doubt on any of the results, you consult with me. Email: M.Min@sron.nl
+\item You cite the appropriate papers listed below.
+\end{itemize}
+The most important reason for this is to make sure that ARCiS is used in a correct way and the result are scientifically useful. ARCiS is a complex code which can do a lot of things, this also means things can go wrong. Please refer to \cite{2020A&A...642A..28M} for the first full description of the fundamental properties of the code.
+
+Note that there are several parts of the code from different developers:
+\begin{itemize}
+\item Cloud formation framework: \cite{2019A&A...622A.121O}
+\item Optical properties of cloud particles computed using DHS: \cite{2005A&A...432..909M, 1981ApOpt..20.3657T}
+\item Refractive indices for the cloud species, see references in \cite{2020A&A...642A..28M}
+\item Molecular opacities: \cite{2021A&A...646A..21C} and references therein
+\item Multinest Retrieval tools: \cite{2008MNRAS.384..449F, 2009MNRAS.398.1601F, 2019OJAp....2E..10F}
+\item GGchem when including chemistry: \cite{2018A&A...614A...1W}
+\item Disequilibrium chemistry implementation: \cite{2021A&A...656A..90K}
+\item Diffusion implementation for 3D structures: \cite{2022A&A...665A...2C}
+\item Coupling with planet formation parameters: \cite{2022A&A...667A.147K}
+\end{itemize}
+
+\section{Installing ARCiS at the computers of Kapteyn}
+
+ARCiS is installed on the computers of Kapteyn by the computer group. The version number can be found at the top of the log file when running ARCiS.
+To setup your computer for running ARCiS you need to only link to the location of the Data directory. This can be done as follows:
+
+First go to your home directory:
+\shellcmd{cd}
+Next, make the ARCiS directory:
+\shellcmd{mkdir ARCiS}
+Now link the data directory to the right location:
+\shellcmd{cd ARCiS}
+\vspace{-2cm}\\
+\shellcmd{ln -s /dataserver/users/formingworlds/ARCiSData ./Data}
+
+Now when you want to run ARCiS, all you have to do is:
+\shellcmd{module load ARCiS}
+
+and you are good to go!
+
+\bibliography{refs} % Entries are in the refs.bib file
+
+\end{document}
+

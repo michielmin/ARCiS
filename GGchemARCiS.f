@@ -65,7 +65,7 @@
       dispol_file(4) = trim(homedir) // '/ARCiS/Data/GGchem/dispol_Burcat_ARCiS.dat'
       inquire(file=dispol_file(4),exist=checkfile)
       if(.not.checkfile) dispol_file(4) = trim(homedir) // '/ARCiS/src/dispol_Burcat.dat'
-      elements     = 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V el'
+      elements     = 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V F Cr el'
       elements = elements_ARCiS
       DustChem_file  = trim(homedir) // '/ARCiS/Data/GGchem/DustChem.dat'
 
