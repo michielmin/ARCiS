@@ -923,6 +923,7 @@ c		if(nTiter.gt.1) call computeav50(Tdist(ir,1:nTiter),nTiter,T1(ir))
 		endif
 		Ih(ir,1:nrhs)=Ih(ir,1:nrhs)+yh(1:nrhs)/2d0
 	enddo
+	return
 
 	x1=dtau(nr)
 	do ir=nr-1,2,-1
