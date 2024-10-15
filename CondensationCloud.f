@@ -1073,7 +1073,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 		f=1d-4
 		i=1
 		do iter=1,10000
-			xv(i,1:nVS)=0d0
+			xv(1:nVS,i)=0d0
 			j=0
 			do iCS=1,nCS
 				if(do_con(iCS)) then
@@ -1105,7 +1105,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 					c_include(iCS)=.false.
 					do iVS=1,nVS
 						if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
-							xv(i,iVS)=xv(i,iVS)+tot1*v_cloud(iCS,iVS)*muV(iVS)/(v_cloud(iCS,iVL(i,iCS))*muV(iVL(i,iCS)))
+							xv(iVS,i)=xv(iVS,i)+tot1*v_cloud(iCS,iVS)*muV(iVS)/(v_cloud(iCS,iVL(i,iCS))*muV(iVL(i,iCS)))
 						endif
 					enddo
 				endif
@@ -1114,13 +1114,13 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 			if(j.eq.0) exit
 			maxerr=1d200
 			do iVS=1,nVS
-				if(v_include(iVS).and.xv(i,iVS).gt.0d0) then
-					err=xv_bot(iVS)/xv(i,iVS)
+				if(v_include(iVS).and.xv(iVS,i).gt.0d0) then
+					err=xv_bot(iVS)/xv(iVS,i)
 					if(err.lt.maxerr) maxerr=err
 				endif
 			enddo
 			if(.not.maxerr.lt.1d100) exit
-			xv_bot(1:nVS)=xv_bot(1:nVS)-maxerr*0.1*xv(i,1:nVS)
+			xv_bot(1:nVS)=xv_bot(1:nVS)-maxerr*0.1*xv(1:nVS,i)
 		enddo
 	endif
 	do iCS=1,nCS
@@ -1155,8 +1155,8 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 
 	if(j.eq.0) then
 		do i=1,nnr
-			xv(i,1:nVS)=xv_bot(1:nVS)
-			xc(i,1:nCS)=0d0
+			xv(1:nVS,i)=xv_bot(1:nVS)
+			xc(1:nCS,i)=0d0
 			xn(i)=1d-50/m_nuc
 			xa(i)=1d-50/m_nuc
 		enddo
