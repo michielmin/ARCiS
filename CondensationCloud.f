@@ -1233,7 +1233,7 @@ c start the loop
 !$OMP& SHARED(nnr,nCS,nVS,iVL,v_cloud,xv,xc,xn,xa,CloudT,muV,muC,v_include,fSat,Sat,Sat0,v_H2,CloudMMW,
 !$OMP&			vth,Km,Kd,Kg,Cloud,rpart,mpart,vsed,Sc,Jn_xv,sigma_nuc,r0_nuc,Nf_nuc,Nc_nuc,f,CloudP,
 !$OMP&			complexKzz,CloudHp,rho_av,Clouddens,ii,iter,CloudR,Rplanet,sigmamol,CloudG,xv_bot,layercon,
-!$OMP&			c_include,do_con,fstick,include_phothaze,ics_phot,do_nuc)
+!$OMP&			c_include,do_con,fstick,include_phothaze,ics_phot,do_nuc,rmono,rhodust)
 !$OMP DO
 	do i=1,nnr
 		do iCS=1,nCS
@@ -1306,7 +1306,27 @@ c start the loop
 			if(Sat(i,iCS).gt.1d100) Sat(i,iCS)=1d100
 			if(Sat(i,iCS).gt.1d0) layercon(i)=.true.
 		enddo
+	enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 
+	do iCS=1,nCS
+		x(1:nnr)=Sat(1:nnr,iCS)
+		do ir=2,nnr-1
+			Sat(ir,iCS)=(x(ir-1)+x(ir+1)+x(ir)*2d0)*0.25
+		enddo
+	enddo
+
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,tot1,iVS,iCS,tot2,cs,St,fsed,lmfp,tot,Dp,xv_use,Jn_temp,vthv)
+!$OMP& SHARED(nnr,nCS,nVS,iVL,v_cloud,xv,xc,xn,xa,CloudT,muV,muC,v_include,fSat,Sat,Sat0,v_H2,CloudMMW,
+!$OMP&			vth,Km,Kd,Kg,Cloud,rpart,mpart,vsed,Sc,Jn_xv,sigma_nuc,r0_nuc,Nf_nuc,Nc_nuc,f,CloudP,
+!$OMP&			complexKzz,CloudHp,rho_av,Clouddens,ii,iter,CloudR,Rplanet,sigmamol,CloudG,xv_bot,layercon,
+!$OMP&			c_include,do_con,fstick,include_phothaze,ics_phot,do_nuc,rmono,rhodust)
+!$OMP DO
+	do i=1,nnr
 		do iCS=1,nCS
 			if(c_include(iCS)) then
 				vthv=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
@@ -1340,9 +1360,9 @@ c start the loop
 			Sat(i,iCS_phot)=1d0
 		endif
 c	The Kelvin effect for condensation onto a curved surface
-c		do iCS=1,nCS
-c			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)/rhodust(iCS))/(rmono(i)*Rgas*CloudT(i)))
-c		enddo
+		do iCS=1,nCS
+			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)/rhodust(iCS))/(rmono(i)*Rgas*CloudT(i)))
+		enddo
 	enddo
 !$OMP END DO
 !$OMP FLUSH
