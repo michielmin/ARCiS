@@ -16,7 +16,7 @@
 	real*8 cs,eps,frac_nuc,m_nuc,m_phothaze,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
 	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
 	integer,allocatable :: ixv(:,:),ixc(:,:),iVL(:,:),ixn(:),ixa(:),icryst(:),iamorph(:),ifit(:)
-	real*8 sigmastar,Sigmadot,Pstar,sigmamol,COabun,CO2abun,lmfp,fstick,kappa_cloud,fmin,fmax,rho_nuc,Gibbs
+	real*8 sigmastar,Sigmadot,Pstar,sigmamol,COabun,CO2abun,CH4abun,lmfp,fstick,kappa_cloud,fmin,fmax,rho_nuc,Gibbs
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: xn_iter(:,:),xa_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
@@ -33,7 +33,7 @@
 	real*8,allocatable :: xv_out(:),Jn_xv(:,:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:)
 	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),rmono(:)
 	real*8,allocatable,save :: xv_prev(:,:),xc_prev(:,:),xn_prev(:),xa_prev(:)
-	integer jSiO,jTiO2,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi,jCH4
+	integer jSiO,jTiO2,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi
 
 	logical dochemR(nr)
 
@@ -46,7 +46,7 @@ c fractal dimension created by coagulating collisions
 	itimecloud=itimecloud-itime
 	ctimecloud=ctimecloud+1
 
-	nVS=17
+	nVS=16
 	allocate(v_names(nVS),v_atoms(nVS,N_atoms),v_include(nVS))
 	allocate(bv(nVS,0:4),bH2(0:4))
 	bv=0d0
@@ -176,17 +176,6 @@ c fractal dimension created by coagulating collisions
 	v_names(i)="Ni"
 	v_atoms(i,18)=1
 
-	i=i+1
-	jCH4=i
-	v_names(i)="CH4"
-	v_atoms(i,1)=4
-	v_atoms(i,3)=1
-	bv(i,0)=1.97846E+05
-	bv(i,1)=-8.83168E+00
-	bv(i,2)=5.27931E+00
-	bv(i,3)=2.75677E-03
-	bv(i,4)=-1.39667E-07
-
 	if(i.gt.nVS) then
 		print*,'something is wrong',i,nVS
 		stop
@@ -266,11 +255,14 @@ c fractal dimension created by coagulating collisions
 		enddo
 		COabun=mixrat_r(1,5)*tot1/tot
 		CO2abun=mixrat_r(1,2)*tot1/tot
+		CH4abun=mixrat_r(1,6)*tot1/tot
 	else
 		COabun=min(molfracs_atoms(3),molfracs_atoms(5))
 		CO2abun=0d0
+		CH4abun=0d0
 	endif
-	molfracs_atoms(3)=molfracs_atoms(3)-COabun-CO2abun
+	molfracs_atoms(1)=molfracs_atoms(1)-4d0*CH4abun
+	molfracs_atoms(3)=molfracs_atoms(3)-COabun-CO2abun-CH4abun
 	molfracs_atoms(5)=molfracs_atoms(5)-COabun-2d0*CO2abun
 
 	atoms_cloud=0
@@ -658,7 +650,6 @@ c				Nf_nuc(i)=1d0
 				CSname(i)='optEC'
 				atoms_cloud(i,1)=4
 				atoms_cloud(i,3)=1
-				v_cloud(i,jCH4)=1
 				rhodust(i)=1.8d0
 				do_nuc(i)=.true.
 				do_con(i)=.false.
@@ -1061,7 +1052,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 		endif
 		tcrystinv(i)=nucryst*exp(-Tcryst/CloudT(i))
 	enddo
-	if(include_phothaze) Sn_phot=Sn_phot*scaleUV*Cloud(ii)%Sigmadot_phot/tot
+	if(include_phothaze) Sn_phot=Sn_phot*scaleUV*Cloud(ii)%Sigmadot_phot*CH4abun**2/tot
 
 	Sat0=Sat
 
@@ -1227,34 +1218,36 @@ c start the loop
 
 	vsed=0d0
 	layercon=.false.
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,tot1,iVS,iCS,tot2,cs,St,fsed,lmfp,tot,Dp,xv_use,Jn_temp,vthv)
-!$OMP& SHARED(nnr,nCS,nVS,iVL,v_cloud,xv,xc,xn,xa,CloudT,muV,muC,v_include,fSat,Sat,Sat0,v_H2,CloudMMW,
-!$OMP&			vth,Km,Kd,Kg,Cloud,rpart,mpart,vsed,Sc,Jn_xv,sigma_nuc,r0_nuc,Nf_nuc,Nc_nuc,f,CloudP,
-!$OMP&			complexKzz,CloudHp,rho_av,Clouddens,ii,iter,CloudR,Rplanet,sigmamol,CloudG,xv_bot,layercon,
-!$OMP&			c_include,do_con,fstick,include_phothaze,ics_phot,do_nuc,rmono,rhodust)
-!$OMP DO
 	do i=1,nnr
 		do iCS=1,nCS
-			tot1=1d200
-			iVL(i,iCS)=1
-			do iVS=1,nVS
-				if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
-					tot2=xv(iVS,i)*(sqrt(8d0*kb*CloudT(i)/(pi*muV(iVS)*mp)))/(muV(iVS)*v_cloud(iCS,iVS))
-					if(tot2.lt.tot1) then
-						tot1=tot2
-						iVL(i,iCS)=iVS
+			if(c_include(iCS).and.iCS.ne.iCS_phot) then
+				tot1=1d200
+				iVL(i,iCS)=0
+				do iVS=1,nVS
+					if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
+						tot2=xv(iVS,i)*(sqrt(8d0*kb*CloudT(i)/(pi*muV(iVS)*mp)))/(muV(iVS)*v_cloud(iCS,iVS))
+						if(tot2.lt.tot1.or.iVL(i,iCS).eq.0) then
+							tot1=tot2
+							iVL(i,iCS)=iVS
+						endif
 					endif
-				endif
-			enddo
-			fSat(i,iCS)=CloudP(i)**v_H2(iCS)*(CloudMMW(i)/muV(iVL(i,iCS)))*
+				enddo
+				fSat(i,iCS)=CloudP(i)**v_H2(iCS)*(CloudMMW(i)/muV(iVL(i,iCS)))*
      &				(CloudP(i)*xv(iVL(i,iCS),i)*CloudMMW(i)/muV(iVL(i,iCS)))**(v_cloud(iCS,iVL(i,iCS))-1d0)
-			do iVS=1,nVS
-				if(v_include(iVS).and.iVS.ne.iVL(i,iCS)) then
-					fSat(i,iCS)=fSat(i,iCS)*(CloudP(i)*xv(iVS,i)*CloudMMW(i)/muV(iVS))**v_cloud(iCS,iVS)
-				endif
-			enddo
+				do iVS=1,nVS
+					if(v_include(iVS).and.iVS.ne.iVL(i,iCS)) then
+						fSat(i,iCS)=fSat(i,iCS)*(CloudP(i)*xv(iVS,i)*CloudMMW(i)/muV(iVS))**v_cloud(iCS,iVS)
+					endif
+				enddo
+			else
+				fSat(i,iCS)=1d0
+				do iVS=1,nVS
+					if(v_include(iVS)) then
+						iVL(i,iCS)=iVS
+						exit
+					endif
+				enddo
+			endif
 		enddo
 
 		cs=sqrt(kb*CloudT(i)/(CloudMMW(i)*mp))
@@ -1307,9 +1300,6 @@ c start the loop
 			if(Sat(i,iCS).gt.1d0) layercon(i)=.true.
 		enddo
 	enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
 
 	do iCS=1,nCS
 		x(1:nnr)=Sat(1:nnr,iCS)
@@ -1318,17 +1308,9 @@ c start the loop
 		enddo
 	enddo
 
-!$OMP PARALLEL IF(.true.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,tot1,iVS,iCS,tot2,cs,St,fsed,lmfp,tot,Dp,xv_use,Jn_temp,vthv)
-!$OMP& SHARED(nnr,nCS,nVS,iVL,v_cloud,xv,xc,xn,xa,CloudT,muV,muC,v_include,fSat,Sat,Sat0,v_H2,CloudMMW,
-!$OMP&			vth,Km,Kd,Kg,Cloud,rpart,mpart,vsed,Sc,Jn_xv,sigma_nuc,r0_nuc,Nf_nuc,Nc_nuc,f,CloudP,
-!$OMP&			complexKzz,CloudHp,rho_av,Clouddens,ii,iter,CloudR,Rplanet,sigmamol,CloudG,xv_bot,layercon,
-!$OMP&			c_include,do_con,fstick,include_phothaze,ics_phot,do_nuc,rmono,rhodust)
-!$OMP DO
 	do i=1,nnr
 		do iCS=1,nCS
-			if(c_include(iCS)) then
+			if(c_include(iCS).and.iCS.ne.iCS_phot) then
 				vthv=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
 				Dp=kb*CloudT(i)*vthv/(3d0*CloudP(i)*1d6*sigmamol)
 				if(do_con(iCS)) then
@@ -1352,21 +1334,15 @@ c start the loop
 			if(.not.Jn_xv(i,iCS).gt.0d0) Jn_xv(i,iCS)=0d0
 			if(.not.Sc(i,iCS).gt.0d0) Sc(i,iCS)=0d0
 		enddo
-		if(include_phothaze) then
-			vthv=sqrt(8d0*kb*CloudT(i)/(pi*muC(iCS_phot)*mp))
-			Dp=kb*CloudT(i)*vthv/(3d0*CloudP(i)*1d6*sigmamol)
-			tot1=(muC(iCS_phot)*mp/(kb*CloudT(i)))*exp(36.7-93646./CloudT(i))
-			Sc(i,iCS_phot)=fstick*min(vthv*rpart(i),4d0*Dp)*pi*rpart(i)*Clouddens(i)*tot1
-			Sat(i,iCS_phot)=1d0
-		endif
 c	The Kelvin effect for condensation onto a curved surface
 		do iCS=1,nCS
 			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)/rhodust(iCS))/(rmono(i)*Rgas*CloudT(i)))
 		enddo
+		if(include_phothaze) then
+			Sc(i,iCS_phot)=0d0
+			Sat(i,iCS_phot)=1d0
+		endif
 	enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
 
 	Nc_nuc=Nc_nuc*mp
 	Jn_xv=Jn_xv*fscale
@@ -1474,8 +1450,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 
 			if(do_nuc(iCS)) then
 				if(iCS.eq.iCS_phot) then
-					ik=KL+KU+1+j-ixv(jCH4,i)
-					AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))+Sn_phot(i)*xv(jCH4,i)
+					x(j)=x(j)-Sn_phot(i)
 				else
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
@@ -1522,8 +1497,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			x(j)=-Sn(i)/m_nuc
 			
 			if(include_phothaze) then
-				ik=KL+KU+1+j-ixv(jCH4,i)
-				AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))+Sn_phot(i)*xv(jCH4,i)/m_phothaze
+				x(j)=x(j)-Sn_phot(i)/m_phothaze
 			endif
 			
 			do iCS=1,nCS
@@ -1575,8 +1549,7 @@ c coagulation
 			x(j)=-Sn(i)/m_nuc
 
 			if(include_phothaze) then
-				ik=KL+KU+1+j-ixv(jCH4,i)
-				AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))+Sn_phot(i)*xv(jCH4,i)/m_phothaze
+				x(j)=x(j)-Sn_phot(i)/m_phothaze
 			endif
 			
 			do iCS=1,nCS
@@ -1623,8 +1596,7 @@ c coagulation
 
 			if(do_nuc(iCS)) then
 				if(iCS.eq.iCS_phot) then
-					ik=KL+KU+1+j-ixv(jCH4,i)
-					AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))+Sn_phot(i)*xv(jCH4,i)
+					x(j)=x(j)-Sn_phot(i)
 				else
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
@@ -1664,14 +1636,9 @@ c coagulation
 						ik=KL+KU+1+j-ixc(iCS,i)
 						AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Sc(i,iCS)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))/(Sat(i,iCS)*mpart(i))
 
-						if(do_nuc(iCS)) then
-							if(iCS.eq.iCS_phot) then
-								ik=KL+KU+1+j-ixv(jCH4,i)
-								AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))-Sn_phot(i)*xv(jCH4,i)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))
-							else
-								ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-								AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
-							endif
+						if(do_nuc(iCS).and.iCS.ne.iCS_phot) then
+							ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
+							AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
 						endif
 					endif
 				enddo
@@ -2134,8 +2101,9 @@ c	open(unit=20,file=trim(outputdir) // '/atoms.dat',FORM="FORMATTED",ACCESS="STR
 			if(dochemR(i)) then
 			molfracs_atoms(1:N_atoms)=at_ab(i,1:N_atoms)
 			molfracs_atoms=molfracs_atoms+molfracs_atoms0
-			molfracs_atoms(3)=molfracs_atoms(3)+COabun
-			molfracs_atoms(5)=molfracs_atoms(5)+COabun
+			molfracs_atoms(1)=molfracs_atoms(1)+4d0*CH4abun
+			molfracs_atoms(3)=molfracs_atoms(3)+COabun+CO2abun+CH4abun
+			molfracs_atoms(5)=molfracs_atoms(5)+COabun+2d0*CO2abun
 			do j=1,N_atoms
 				if(.not.molfracs_atoms(j).gt.0d0) then
 					molfracs_atoms(j)=0d0
