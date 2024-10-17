@@ -1667,7 +1667,7 @@ c coagulation
 						if(do_nuc(iCS)) then
 							if(iCS.eq.iCS_phot) then
 								ik=KL+KU+1+j-ixv(jCH4,i)
-								AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))-Sn_phot(i)*xv(jCH4,i)
+								AB(ik,ixv(jCH4,i))=AB(ik,ixv(jCH4,i))-Sn_phot(i)*xv(jCH4,i)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))
 							else
 								ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 								AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
