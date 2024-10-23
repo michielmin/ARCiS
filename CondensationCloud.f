@@ -526,6 +526,15 @@ c fractal dimension created by coagulating collisions
 				sigma_nuc(i)=23.4
 				Nf_nuc(i)=1d0
 				ifit(i)=-1
+			case("NH4SH")
+				CSname(i)='NH4SH'
+				atoms_cloud(i,1)=5
+				atoms_cloud(i,4)=1
+				atoms_cloud(i,6)=1
+				v_cloud(i,jNH3)=1
+				v_cloud(i,jH2S)=1
+				rhodust(i)=1.17
+				ifit(i)=-1
 			case('TiO2')
 				CSname(i)='TiO2'
 				atoms_cloud(i,5)=1
@@ -938,7 +947,7 @@ c	print*,xv_bot(1:7)
 			tot1=real(i)
 			do iCS=1,nCS
 				select case(CSname(iCS))
-					case("H2O")
+					case("H2O","NH4SH") ! use water vapor pressure for NH4SH (Slavicinska et al. 2024)
 						call PvapH2O(tot1,Sat(1,iCS),liq)
 						Sat(1,iCS)=1d0/Sat(1,iCS)
 					case("NH3")
@@ -996,7 +1005,7 @@ c values from Fabian et al. 2000
 	do i=1,nnr
 		do iCS=1,nCS
 			select case(CSname(iCS))
-				case("H2O")
+				case("H2O","NH4SH") ! use water vapor pressure for NH4SH (Slavicinska et al. 2024)
 					call PvapH2O(CloudT(i),Sat(i,iCS),liq)
 					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
 				case("NH3")

@@ -823,7 +823,7 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Na2S.dat'
 									Cloud(i)%nax(j)=1
-								case("NH3","AMONIA")
+								case("NH3","AMONIA","NH4SH") ! for now use NH3 refind for NH4SH
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/NH3.dat'
 									Cloud(i)%nax(j)=1
