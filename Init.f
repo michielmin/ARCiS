@@ -8,7 +8,7 @@ c==============================================================================
 		character*500 key1,key2,value,key
 		character*500 orkey1,orkey2
 		integer nr1,nr2,key2d
-		logical last
+		logical last,hasnr1,hasnr2
 		type(SettingKey),pointer :: next
 	end type SettingKey
 
@@ -90,7 +90,8 @@ c				all arguments are read
 	allocate(key%next)
 	key => key%next
 	key%last=.false.
-	call get_key_value(readline,key%key,key%key1,key%key2,key%orkey1,key%orkey2,key%value,key%nr1,key%nr2,key%key2d)
+	call get_key_value(readline,key%key,key%key1,key%key2,key%orkey1,key%orkey2,key%value,
+     &					key%nr1,key%nr2,key%hasnr1,key%hasnr2,key%key2d)
 
 c read another command, so go back
 	goto 10
@@ -109,12 +110,13 @@ c===============================================================================
 c This subroutine just seperates the key and value component of a string given
 c key=value syntax. Key is transformed to lowercase.
 c=========================================================================================
-	subroutine get_key_value(line_in,key,key1,key2,orkey1,orkey2,value,nr1,nr2,key2d)
+	subroutine get_key_value(line_in,key,key1,key2,orkey1,orkey2,value,nr1,nr2,hasnr1,hasnr2,key2d)
 	use GlobalSetup
 	IMPLICIT NONE
 	character*1000 line_in,line
 	character*500 key,key1,key2,value,orkey1,orkey2
 	integer i,nr1,nr2,ikey1,ikey2,key2d
+	logical hasnr1,hasnr2
 	
 	line=line_in
 	key2d=0
@@ -130,21 +132,23 @@ c===============================================================================
 
 	nr1=1
 	nr2=1
+	hasnr1=.false.
+	hasnr2=.false.
 	if(ikey2.gt.0) then
 		key1=line(1:ikey2-1)
 		key=key1
 		key2=line(ikey2+1:ikey1-1)
 		orkey1=key1
 		orkey2=key2
-		call checknr(key1,nr1)
-		call checknr(key2,nr2)
+		call checknr(key1,nr1,hasnr1)
+		call checknr(key2,nr2,hasnr2)
 	else
 		key1=line(1:ikey1-1)
 		key=key1
 		key2=' '
 		orkey1=key1
 		orkey2=key2
-		call checknr(key1,nr1)
+		call checknr(key1,nr1,hasnr1)
 	endif
 
 	value=line(index(line,'=')+1:len_trim(line))
@@ -167,10 +171,11 @@ c===============================================================================
 	end subroutine get_key_value
 	
 	
-	subroutine checknr(key,nr)
+	subroutine checknr(key,nr,hasnr)
 	IMPLICIT NONE
 	character*500 key
 	integer nr,i,n
+	logical hasnr
 	
 	n=len_trim(key)
 	i=n
@@ -181,8 +186,10 @@ c===============================================================================
 2	continue
 	if(i.eq.n) then
 		nr=1
+		hasnr=.false.
 	else
 		read(key(i+1:n),*,err=3) nr	
+		hasnr=.true.
 	endif
 3	continue
 	key=key(1:i)
@@ -629,7 +636,7 @@ c allocate the arrays
 		do i=1,n_ret
 			line=trim(RetPar(i)%keyword) // "=0d0"
 			call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%orkey1,keyret%orkey2,
-     &						keyret%value,keyret%nr1,keyret%nr2,keyret%key2d)
+     &						keyret%value,keyret%nr1,keyret%nr2,keyret%hasnr1,keyret%hasnr2,keyret%key2d)
 			if(trim(keyret%key1).eq.trim(key%key1).and.trim(keyret%key2).eq.trim(key%key2).and.
      &		   keyret%nr1.eq.key%nr1.and.keyret%nr2.eq.key%nr2.and.keyret%key2d.eq.key%key2d) then
 				read(key%value,*) RetPar(i)%x0
@@ -695,6 +702,11 @@ c	condensates=(condensates.or.cloudcompute)
 		call InitDens()
 		call InitObs()
 		do i=1,nclouds
+			if(Cloud(i)%nmat.lt.1) Cloud(i)%nmat=1
+			if(Cloud(i)%nmat.gt.40) then
+				call output("Too many cloud materials")
+				stop
+			endif
 			call output("==================================================================")
 			call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
 			allocate(Cloud(i)%frac(nr,40))
@@ -2202,7 +2214,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%e1_par=1.5
 		Cloud(i)%e2_par=0.01
 		Cloud(i)%hazetype='SOOT'
-		Cloud(i)%nmat=1
+		Cloud(i)%nmat=0
 		Cloud(i)%material='AUTO'
 		Cloud(i)%lnkfile=' '
 		Cloud(i)%condensate='SILICATE'
@@ -3200,6 +3212,7 @@ c number of cloud/nocloud combinations
 			Cloud(j)%material(i)=trim(key%value)
 		case("condensate")
 			i=key%nr2
+			if(.not.key%hasnr2) i=Cloud(j)%nmat+1
 			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
 			Cloud(j)%condensate(i)=trim(key%value)
 		case("lnkfile")

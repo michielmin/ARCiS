@@ -33,7 +33,7 @@
 	real*8,allocatable :: xv_out(:),Jn_xv(:,:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:)
 	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),rmono(:)
 	real*8,allocatable,save :: xv_prev(:,:),xc_prev(:,:),xn_prev(:),xa_prev(:)
-	integer jSiO,jTiO2,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi
+	integer jSiO,jTiO2,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi,jH2SO4
 
 	logical dochemR(nr)
 
@@ -46,7 +46,7 @@ c fractal dimension created by coagulating collisions
 	itimecloud=itimecloud-itime
 	ctimecloud=ctimecloud+1
 
-	nVS=16
+	nVS=17
 	allocate(v_names(nVS),v_atoms(nVS,N_atoms),v_include(nVS))
 	allocate(bv(nVS,0:4),bH2(0:4))
 	bv=0d0
@@ -175,6 +175,18 @@ c fractal dimension created by coagulating collisions
 	jNi=i
 	v_names(i)="Ni"
 	v_atoms(i,18)=1
+
+	i=i+1
+	jH2SO4=i
+	v_names(i)="H2SO4"
+	v_atoms(i,1)=2
+	v_atoms(i,5)=4
+	v_atoms(i,11)=1
+	bv(i,0)=2.92715E+05
+	bv(i,1)=-6.31402E+00
+	bv(i,2)=-4.94951E+01
+	bv(i,3)=2.47825E-03
+	bv(i,4)=-1.34895E-07
 
 	if(i.gt.nVS) then
 		print*,'something is wrong',i,nVS
@@ -555,8 +567,7 @@ c fractal dimension created by coagulating collisions
 				atoms_cloud(i,1)=2
 				atoms_cloud(i,5)=4
 				atoms_cloud(i,11)=1
-				v_cloud(i,jH2O)=4
-				v_cloud(i,jH2S)=1
+				v_cloud(i,jH2SO4)=1
 				rhodust(i)=1.84d0
 				bc(i,0)=9.70368E+05
 				bc(i,1)=-2.53825E+06
@@ -1345,7 +1356,7 @@ c start the loop
 		enddo
 c	The Kelvin effect for condensation onto a curved surface
 		do iCS=1,nCS
-			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)/rhodust(iCS))/(rmono(i)*Rgas*CloudT(i)))
+			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)*mp/rhodust(iCS))/(rmono(i)*kb*CloudT(i)))
 		enddo
 		if(include_phothaze) then
 			Sc(i,iCS_phot)=0d0

@@ -66,6 +66,7 @@
 	integer icloud
 	logical Convec(0:nr),fixed(nr)
 	real*8,allocatable,save :: Hstar0(:)
+	real*8,save :: maxerr_prev=1d0
 
 	if(deepredist.and.deepredisttype.eq.'fixflux') then
 		if(.not.allocated(Hstar0)) allocate(Hstar0(nr))
@@ -673,6 +674,15 @@ c===============================================================================
 		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.maxErr) maxErr=abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir))
 		if(maxErr.gt.epsiter) converged=.false.
 	enddo
+
+	if(maxErr.gt.maxerr_prev) then
+		f=f/2d0
+	else
+		f=(9d0*f+1d0)/10d0
+	endif
+	if(f.lt.epsiter) f=epsiter
+	maxerr_prev=maxErr
+
 	if(.not.allocated(Tdist)) allocate(Tdist(nr,maxiter))
 	Tdist(1:nr,nTiter)=T(1:nr)
 	call output("Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%")
