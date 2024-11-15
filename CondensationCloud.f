@@ -605,6 +605,7 @@ c fractal dimension created by coagulating collisions
 				rhodust(i)=2.18
 				maxT(i)=5000d0
 				do_nuc(i)=Cloud(ii)%computeJn
+				do_con(i)=.false.
 				sigma_nuc(i)=849.4
 				Nf_nuc(i)=1d0
 				ifit(i)=-1
@@ -1521,7 +1522,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			endif
 			
 			do iCS=1,nCS
-				if(c_include(iCS).and.do_nuc(iCS).and.do_con(iCS)) then
+				if(c_include(iCS).and.do_nuc(iCS).and.iCS.ne.iCS_phot) then
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)
 				endif
@@ -1573,7 +1574,7 @@ c coagulation
 			endif
 			
 			do iCS=1,nCS
-				if(c_include(iCS).and.do_nuc(iCS).and.do_con(iCS)) then
+				if(c_include(iCS).and.do_nuc(iCS).and.iCS.ne.iCS_phot) then
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)
 				endif
