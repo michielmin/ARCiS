@@ -631,7 +631,6 @@ c		call LightCurveRetrieval(rtrace,nrtrace)
 	endif
 
 	if(computecontrib) then
-		filename=trim(outputdir) // "contribution.fits.gz"
 		do irc=1,nr
 			if(irc.eq.1) then
 				dP=log10(P(1)/P(2))
@@ -640,15 +639,75 @@ c		call LightCurveRetrieval(rtrace,nrtrace)
 			else
 				dP=log10(P(irc-1)/P(irc+1))
 			endif
-			flux_contr(irc,1:nlam)=abs(flux(0,1:nlam)-flux_contr(irc,1:nlam))/dP
-			obsA_contr(irc,1:nlam)=abs(obsA(0,1:nlam)-obsA_contr(irc,1:nlam))/dP
+			flux_contr(irc,1:nlam)=(abs(flux(0,1:nlam)-flux_contr(irc,1:nlam))/dP)*1d23/distance**2
+			obsA_contr(irc,1:nlam)=(abs(obsA(0,1:nlam)-obsA_contr(irc,1:nlam))/dP)/(pi*Rstar**2)
 		enddo
-		do ilam=1,nlam
-			tot=sum(flux_contr(1:nr,ilam))
-			flux_contr(1:nr,ilam)=flux_contr(1:nr,ilam)/tot
-			tot=sum(obsA_contr(1:nr,ilam))
-			obsA_contr(1:nr,ilam)=obsA_contr(1:nr,ilam)/tot
-		enddo
+		if(useobsgrid) then
+			do i=1,nobs
+				tot=0d0
+				do ir=1,nr
+					BBr(ir)=0d0
+					do j=1,ObsSpec(i)%ndata
+						select case(ObsSpec(i)%type)
+							case("trans","transmission","transC","transM","transE")
+								BBr(ir)=BBr(ir)+obsA_contr(ir,ObsSpec(i)%ilam(j))/ObsSpec(i)%dy(j)
+							case("emisr","emisR","emisa","emis","emission","phase","phaser","phaseR")
+								BBr(ir)=BBr(ir)+flux_contr(ir,ObsSpec(i)%ilam(j))/ObsSpec(i)%dy(j)
+						end select
+					enddo
+					if(ir.eq.1) then
+						dP=log10(P(1)/P(2))
+					else if(ir.eq.nr) then
+						dP=log10(P(nr-1)/P(nr))
+					else
+						dP=log10(P(ir-1)/P(ir+1))
+					endif
+					tot=tot+BBr(ir)*dP
+				enddo
+				filename=trim(outputdir) // "contribution" // trim(int2string(i,'(i0.3)')) // ".dat"
+				open(unit=93,file=filename,RECL=1000)
+				do ir=1,nr
+					write(93,*) P(ir),BBr(ir)/tot
+				enddo
+				close(unit=93)
+			enddo
+
+			tot=0d0
+			do ir=1,nr
+				BBr(ir)=0d0
+				do i=1,nobs
+					do j=1,ObsSpec(i)%ndata
+						select case(ObsSpec(i)%type)
+							case("trans","transmission","transC","transM","transE")
+								BBr(ir)=BBr(ir)+obsA_contr(ir,ObsSpec(i)%ilam(j))/ObsSpec(i)%dy(j)
+							case("emisr","emisR","emisa","emis","emission","phase","phaser","phaseR")
+								BBr(ir)=BBr(ir)+flux_contr(ir,ObsSpec(i)%ilam(j))/ObsSpec(i)%dy(j)
+						end select
+					enddo
+				enddo
+				if(ir.eq.1) then
+					dP=log10(P(1)/P(2))
+				else if(ir.eq.nr) then
+					dP=log10(P(nr-1)/P(nr))
+				else
+					dP=log10(P(ir-1)/P(ir+1))
+				endif
+				tot=tot+BBr(ir)*dP
+			enddo
+			filename=trim(outputdir) // "contribution_trans.dat"
+			open(unit=93,file=filename,RECL=1000)
+			do ir=1,nr
+				write(93,*) P(ir),BBr(ir)/tot
+			enddo
+			close(unit=93)
+		endif 
+c		do ilam=1,nlam
+c			tot=sum(flux_contr(1:nr,ilam))
+c			flux_contr(1:nr,ilam)=flux_contr(1:nr,ilam)/tot
+c			tot=sum(obsA_contr(1:nr,ilam))
+c			obsA_contr(1:nr,ilam)=obsA_contr(1:nr,ilam)/tot
+c		enddo
+		filename=trim(outputdir) // "contribution.fits.gz"
 		call writeContribution(filename,P,lam,obsA_contr,flux_contr,nr,nlam)
 	endif
 
