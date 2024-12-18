@@ -839,9 +839,17 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/NH3.dat'
 									Cloud(i)%nax(j)=1
-								case('TiO2')
+								case("CH4")
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/CH4.dat'
+									Cloud(i)%nax(j)=1
+								case('TiO2','MgTi2O5')! for now use TiO2 refind for all Ti oxides
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/TiO2_anatase.dat'
+									Cloud(i)%nax(j)=1
+								case('CaTiO3')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/CaTiO3.dat'
 									Cloud(i)%nax(j)=1
 								case('H2SO4')
 									Cloud(i)%material(j)='FILE'

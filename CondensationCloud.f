@@ -33,7 +33,7 @@
 	real*8,allocatable :: xv_out(:),Jn_xv(:,:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:)
 	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),rmono(:)
 	real*8,allocatable,save :: xv_prev(:,:),xc_prev(:,:),xn_prev(:),xa_prev(:)
-	integer jSiO,jTiO2,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi,jH2SO4
+	integer jSiO,jTiO2,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi,jH2SO4,jCa,jCH4
 
 	logical dochemR(nr)
 
@@ -46,7 +46,7 @@ c fractal dimension created by coagulating collisions
 	itimecloud=itimecloud-itime
 	ctimecloud=ctimecloud+1
 
-	nVS=17
+	nVS=19
 	allocate(v_names(nVS),v_atoms(nVS,N_atoms),v_include(nVS))
 	allocate(bv(nVS,0:4),bH2(0:4))
 	bv=0d0
@@ -187,6 +187,22 @@ c fractal dimension created by coagulating collisions
 	bv(i,2)=-4.94951E+01
 	bv(i,3)=2.47825E-03
 	bv(i,4)=-1.34895E-07
+
+	i=i+1
+	jCa=i
+	v_names(i)="Ca"
+	v_atoms(i,14)=1
+
+	i=i+1
+	jCH4=i
+	v_names(i)="CH4"
+	v_atoms(i,3)=1
+	v_atoms(i,1)=4
+	bv(i,0)=1.97846E+05
+	bv(i,1)=-8.83168E+00
+	bv(i,2)=5.27931E+00
+	bv(i,3)=2.75677E-03
+	bv(i,4)=-1.39667E-07
 
 	if(i.gt.nVS) then
 		print*,'something is wrong',i,nVS
@@ -392,6 +408,21 @@ c fractal dimension created by coagulating collisions
 				bc(i,3)=2.564436e-03
 				bc(i,4)=-2.957752e-07
 				ifit(i)=0
+			case('MgTi2O5')
+				CSname(i)='MgTi2O5'
+				atoms_cloud(i,7)=1
+				atoms_cloud(i,15)=2
+				atoms_cloud(i,5)=5
+				v_cloud(i,jMg)=1
+				v_cloud(i,jTiO2)=2
+				v_cloud(i,jH2O)=1
+				rhodust(i)=4.64
+				bc(i,0)=2.12742E+06
+				bc(i,1)=-4.86574E+06
+				bc(i,2)=1.21637E+03
+				bc(i,3)=-2.34246E-02
+				bc(i,4)=8.39658E-07
+				ifit(i)=2
 			case('H2O','WATER')
 				CSname(i)='H2O'
 				atoms_cloud(i,1)=2
@@ -547,6 +578,16 @@ c fractal dimension created by coagulating collisions
 				v_cloud(i,jH2S)=1
 				rhodust(i)=1.17
 				ifit(i)=-1
+			case("CH4")
+				CSname(i)='CH4'
+				atoms_cloud(i,1)=4
+				atoms_cloud(i,3)=1
+				v_cloud(i,jCH4)=1
+				rhodust(i)=0.66
+				do_nuc(i)=Cloud(ii)%ComputeJn
+				sigma_nuc(i)=14.0
+				Nf_nuc(i)=1d0
+				ifit(i)=-1
 			case('TiO2')
 				CSname(i)='TiO2'
 				atoms_cloud(i,5)=1
@@ -587,6 +628,21 @@ c fractal dimension created by coagulating collisions
 				bc(i,2)=5.87107E+01
 				bc(i,3)=8.89360E-05
 				bc(i,4)=-4.20876E-09
+				ifit(i)=1
+			case('CaTiO3')
+				CSname(i)='CaTiO3'
+				atoms_cloud(i,14)=1
+				atoms_cloud(i,15)=1
+				atoms_cloud(i,5)=3
+				v_cloud(i,jCa)=1
+				v_cloud(i,jTiO2)=1
+				v_cloud(i,jH2O)=1
+				rhodust(i)=3.98
+				bc(i,0)=1.19107E+04
+				bc(i,1)=-7.30327E+05
+				bc(i,2)=1.75930E+02
+				bc(i,3)=-2.84630E-03
+				bc(i,4)=1.10392E-07
 				ifit(i)=1
 			case('Cr')
 				CSname(i)='Cr'
@@ -788,7 +844,10 @@ c				Nf_nuc(i)=1d0
 			endif
 		endif
 	enddo
-
+	if(v_include(jCH4)) then
+		xv_bot(jCH4)=xv_bot(jCH4)+CH4abun
+		CH4abun=0d0
+	endif
 	
 	molfracs_atoms0=molfracs_atoms
 	xv_bot=xv_bot*muV/mutot
@@ -983,6 +1042,10 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 						call PvapS(tot1,Sat(1,iCS),liq)
 						Sat(1,iCS)=1d0/Sat(1,iCS)
 						v_H2(iCS)=0d0
+					case("CH4")
+c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
+						call PvapCH4(tot1,Sat(1,iCS),liq)
+						Sat(1,iCS)=1d0/Sat(1,iCS)
 					case default
 						Gibbs=compGibbs(tot1,bc(iCS,0:4),ifit(iCS))
 						Sat(1,iCS)=Gibbs-v_H2(iCS)*compGibbs(tot1,bH2(0:4),0)
@@ -1041,6 +1104,10 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 					call PvapS(CloudT(i),Sat(i,iCS),liq)
 					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
 					v_H2(iCS)=0d0
+				case("CH4")
+c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
+					call PvapCH4(CloudT(i),Sat(i,iCS),liq)
+					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
 				case default
 					Gibbs=compGibbs(CloudT(i),bc(iCS,0:4),ifit(iCS))
 					Sat(i,iCS)=Gibbs-v_H2(iCS)*compGibbs(CloudT(i),bH2(0:4),0)
@@ -2464,6 +2531,19 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	parameter(c0=10.53,c1=-2161.0,c2=-86596.0)
 
 	Pvap=exp(c0+c1/T+c2/T**2)
+	liquid=.true.
+
+	return
+	end
+	
+	subroutine PvapCH4(T,Pvap,liquid)
+	IMPLICIT NONE
+	real*8 T,Pvap,Pl,Pi
+	logical liquid
+	real*8 c0,c1,c2
+	parameter(c0=3.9895,c1=-443.028,c2=-0.490)
+
+	Pvap=10.0**(c0+c1/(T+c2))
 	liquid=.true.
 
 	return
