@@ -10,6 +10,7 @@
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
 	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:),Tplanet(:)
+	real*8,allocatable :: speccloudtau(:,:),speccloudK(:,:,:)
 	real*8 lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,cmin
 	integer i1,i2,ibest
 	character*6000 line
@@ -52,6 +53,8 @@
 	allocate(Kzz_struct(0:nmodels,nr))
 	if(dochemistry.or..true.) allocate(mol_struct(0:nmodels,nr,nmol))
 	allocate(cloudstruct(0:nmodels,nr))
+	allocate(speccloudtau(0:nmodels,nlam))
+	allocate(speccloudK(0:nmodels,max(nclouds,1),nlam))
 	allocate(values(0:nmodels,n_ret))
 	allocate(COratio_der(0:nmodels))
 	allocate(Z_der(0:nmodels))
@@ -77,6 +80,8 @@
 	PTstruct=0d0
 	dPTstruct=0d0
 	cloudstruct=0d0
+	speccloudtau=0d0
+	speccloudK=0d0
 	cmax=0d0
 
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
@@ -405,6 +410,14 @@ c		call cpu_time(stoptime)
 	dPTstruct(i,nr)=log(T(nr)/T(nr-1))/log(P(nr)/P(nr-1))
 	cloudstruct(i,1:nr)=cloud_dens(1:nr,1)
 	cloudstruct(i,1:nr)=cloudstruct(i,1:nr)/dens(1:nr)
+	do j=1,ncc
+		speccloudtau(i,1:nlam)=speccloudtau(i,1:nlam)+cloudtau(j,1:nlam)
+	enddo
+	do j=1,nclouds
+		if(Cloud(j)%onepart) then
+			speccloudK(i,j,1:nlam)=Cloud(j)%Kext(nr/2,1:nlam)
+		endif
+	enddo
 	Tplanet(i)=TeffPoutput
 	if(do3D.and.fulloutput3D) then
 		PTstruct3D(i,0:nphase,1:nr)=PTaverage3D(0:nphase,1:nr)
@@ -519,6 +532,30 @@ c		call cpu_time(stoptime)
 			write(26,*) P(ir),sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 		enddo
 		close(unit=26)
+
+		open(unit=26,file=trim(outputdir) // "cloudtau_limits",FORM="FORMATTED",ACCESS="STREAM")
+		do ilam=1,nlam
+			if(computelam(ilam)) then
+			sorted(1:i)=speccloudtau(1:i,ilam)
+			call sort(sorted,i)
+			write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+			endif
+		enddo
+		close(unit=26)
+
+		do j=1,nclouds
+			if(Cloud(j)%onepart) then
+			open(unit=26,file=trim(outputdir) // "cloudK" // trim(int2string(j,'(i0.3)')) //"_limits",FORM="FORMATTED",ACCESS="STREAM")
+			do ilam=1,nlam
+				if(computelam(ilam)) then
+				sorted(1:i)=speccloudK(1:i,j,ilam)
+				call sort(sorted,i)
+				write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+				endif
+			enddo
+			close(unit=26)
+			endif
+		enddo
 
 		if(do3D.and.fulloutput3D) then
 			open(unit=26,file=trim(outputdir) // "beta3D_eq_limits",FORM="FORMATTED",ACCESS="STREAM")
@@ -667,6 +704,7 @@ c		call cpu_time(stoptime)
 	deallocate(spectrans)
 	deallocate(specemis)
 	deallocate(specemisR)
+	deallocate(speccloudtau)
 	deallocate(PTstruct)
 	deallocate(Kzz_struct)
 	deallocate(like)

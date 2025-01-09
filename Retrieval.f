@@ -643,7 +643,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 		if(var(i).gt.1d0) var(i)=1d0
 		if(var(i).lt.0d0) var(i)=0d0
 	enddo
-
+	
 	maxspec=0
 	do i=1,nobs
 		if(ObsSpec(i)%ndata.gt.maxspec) maxspec=ObsSpec(i)%ndata
@@ -661,6 +661,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	error=0d0
 	call SetOutputMode(.false.)
 	call MapRetrieval(var,error)
+	if(nclouds.gt.0) call NormCloudAbun()
 	call SetOutputMode(.true.)
 
 	call InitDens()
@@ -2503,8 +2504,41 @@ c			endif
 	return
 	end
 
-
+	subroutine NormCloudAbun()
+	use GlobalSetup
+	use ReadKeywords
+	IMPLICIT NONE
+	real*8,allocatable :: tot(:)
+	character*1000 line_in
+	character*500 key,key1,key2,value,orkey1,orkey2
+	integer i,nr1,nr2,key2d
+	logical hasnr1,hasnr2
 	
+	allocate(tot(nclouds))
+	tot=0d0
+
+	do i=1,n_ret
+		line_in=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
+		call get_key_value(line_in,key,key1,key2,orkey1,orkey2,value,nr1,nr2,hasnr1,hasnr2,key2d)
+		if(key1.eq.'cloud') then
+			if(key2.eq.'abun') then
+				tot(nr1)=tot(nr1)+RetPar(i)%value
+			endif
+		endif
+	enddo
+	
+	do i=1,n_ret
+		line_in=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
+		call get_key_value(line_in,key,key1,key2,orkey1,orkey2,value,nr1,nr2,hasnr1,hasnr2,key2d)
+		if(key1.eq.'cloud') then
+			if(key2.eq.'abun') then
+				RetPar(i)%value=RetPar(i)%value/tot(nr1)
+			endif
+		endif
+	enddo
+		
+	return
+	end
 	
 	
 	
