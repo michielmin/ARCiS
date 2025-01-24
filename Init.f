@@ -753,7 +753,7 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/SiO2_amorph.dat'
 									Cloud(i)%nax(j)=1
-								case('MgSiO3')
+								case('MgSiO3','CaSiO3') ! for now use MgSiO3 optical properties also for CaSiO3
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/MgSiO3_amorph_glass.dat'
 									Cloud(i)%nax(j)=1
@@ -823,6 +823,10 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Al2O3.dat'
 									Cloud(i)%nax(j)=1
+								case('MgAl2O4','SPINEL')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/mgal2o4_natural.lnk'
+									Cloud(i)%nax(j)=1
 								case("NaCl")
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/NaCl.dat'
@@ -843,7 +847,7 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/CH4.dat'
 									Cloud(i)%nax(j)=1
-								case('TiO2','MgTi2O5')! for now use TiO2 refind for all Ti oxides
+								case('TiO2','MgTi2O5','Ti4O7')! for now use TiO2 refind for all Ti oxides
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/TiO2_anatase.dat'
 									Cloud(i)%nax(j)=1

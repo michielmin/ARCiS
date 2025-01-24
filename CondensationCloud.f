@@ -603,6 +603,18 @@ c fractal dimension created by coagulating collisions
 				bc(i,3)=3.426975e-03
 				bc(i,4)=-3.572185e-07
 				ifit(i)=0
+			case('Ti4O7')
+				CSname(i)='Ti4O7'
+				atoms_cloud(i,5)=4
+				atoms_cloud(i,15)=7
+				v_cloud(i,jTiO2)=4		! INCONSISTENT!!!
+				rhodust(i)=4.19
+				bc(i,0)=1.85821E+06
+				bc(i,1)=-7.06188E+06
+				bc(i,2)=1.70429E+03
+				bc(i,3)=-4.67044E-02
+				bc(i,4)=4.71514E-06
+				ifit(i)=2
 			case('H2SO4')
 				CSname(i)='H2SO4'
 				atoms_cloud(i,1)=2
@@ -644,6 +656,36 @@ c fractal dimension created by coagulating collisions
 				bc(i,3)=-2.84630E-03
 				bc(i,4)=1.10392E-07
 				ifit(i)=1
+			case('CaSiO3')
+				CSname(i)='CaSiO3'
+				atoms_cloud(i,14)=1
+				atoms_cloud(i,9)=1
+				atoms_cloud(i,5)=3
+				v_cloud(i,jCa)=1
+				v_cloud(i,jSiO)=1
+				v_cloud(i,jH2O)=2
+				rhodust(i)=2.91
+				bc(i,0)=3.60350E+05
+				bc(i,1)=-6.69046E+00
+				bc(i,2)=-4.57724E+01
+				bc(i,3)=7.14526E-03
+				bc(i,4)=-8.10884E-07
+				ifit(i)=0
+			case('MgAl2O4','SPINEL')
+				CSname(i)='MgAl2O4'		!(solid)
+				atoms_cloud(i,5)=4
+				atoms_cloud(i,7)=1
+				atoms_cloud(i,8)=2
+				v_cloud(i,jMg)=1
+				v_cloud(i,jAl)=2
+				v_cloud(i,jH2O)=4
+				rhodust(i)=3.58
+				bc(i,0)=4.90917E+05
+				bc(i,1)=-1.01783E+01
+				bc(i,2)=-6.09577E+01
+				bc(i,3)=1.00839E-02
+				bc(i,4)=-9.21697E-07
+				ifit(i)=0
 			case('Cr')
 				CSname(i)='Cr'
 				atoms_cloud(i,26)=1
@@ -1423,9 +1465,9 @@ c start the loop
 			if(.not.Sc(i,iCS).gt.0d0) Sc(i,iCS)=0d0
 		enddo
 c	The Kelvin effect for condensation onto a curved surface
-		do iCS=1,nCS
-			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)*mp/rhodust(iCS))/(rmono(i)*kb*CloudT(i)))
-		enddo
+c		do iCS=1,nCS
+c			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)*mp/rhodust(iCS))/(rmono(i)*kb*CloudT(i)))
+c		enddo
 		if(include_phothaze) then
 			Sc(i,iCS_phot)=0d0
 			Sat(i,iCS_phot)=1d0
@@ -1558,6 +1600,12 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			j=j+1
 			ik=KL+KU+1+j-ixv(iVS,i)
 			AB(ik,ixv(iVS,i))=1d0
+			do iCS=1,nCS
+				if(c_include(iCS)) then
+					ik=KL+KU+1+j-ixc(iCS,i)
+					AB(ik,ixc(iCS,i))=v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))
+				endif
+			enddo
 			x(j)=xv_bot(iVS)
 		endif
 	enddo
@@ -1805,7 +1853,7 @@ c		endif
 		do iVS=1,nVS
 			if(v_include(iVS)) then
 				if(x(ixv(iVS,i)).gt.xv(iVS,i)*5.0d0) x(ixv(iVS,i))=xv(iVS,i)*5.0d0
-				if(x(ixv(iVS,i)).lt.xv(iVS,i)*0.2d0) x(ixv(iVS,i))=xv(iVS,i)*0.2d0
+				if(.not.x(ixv(iVS,i)).gt.xv(iVS,i)*0.2d0) x(ixv(iVS,i))=xv(iVS,i)*0.2d0
 			endif
 		enddo
 	enddo
@@ -2108,7 +2156,7 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 	if(.not.retrieval) then
 		do i=1,nnr
 			do iCS=1,nCS
-				if(do_nuc(iCS)) then
+				if(do_nuc(iCS).and.c_include(iCS)) then
 					Jn_xv(i,iCS)=Jn_xv(i,iCS)*xv(iVL(i,iCS),i)*Nc_nuc(i,iCS)*muC(iCS)/m_nuc
 					Sn(i)=Sn(i)+Jn_xv(i,iCS)
 				endif
