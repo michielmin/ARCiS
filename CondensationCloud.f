@@ -1465,9 +1465,13 @@ c start the loop
 			if(.not.Sc(i,iCS).gt.0d0) Sc(i,iCS)=0d0
 		enddo
 c	The Kelvin effect for condensation onto a curved surface
-c		do iCS=1,nCS
+		do iCS=1,nCS
+			tot=exp(-2d0*sigma_nuc(iCS)*(muC(iCS)*mp/rhodust(iCS))/(rmono(i)*kb*CloudT(i)))
+			if(.not.tot.lt.1d0) tot=1d0
+			if(.not.tot.gt.1d-6) tot=1d-6
 c			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)*mp/rhodust(iCS))/(rmono(i)*kb*CloudT(i)))
-c		enddo
+			Sat(i,iCS)=Sat(i,iCS)*tot
+		enddo
 		if(include_phothaze) then
 			Sc(i,iCS_phot)=0d0
 			Sat(i,iCS_phot)=1d0
