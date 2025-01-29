@@ -15,7 +15,7 @@ implicit none
 	
       	!whether to do use Nested Importance Sampling
 	logical nest_IS
- 	parameter(nest_IS=.true.)
+! 	parameter(nest_IS=.false.)
 	
       	!whether to do multimodal sampling
 	logical nest_mmodal 

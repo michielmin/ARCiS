@@ -194,7 +194,7 @@ c===============================================================================
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,twind,epsiter,specres_LR
 	real*8 gammaT1,gammaT2,kappaT,betaT,alphaT,metallicity0,vfrag,betaF,kappaUV0,scaleUV,gammaUV,eps_dup
 	logical mixratfile,par_tprofile,adiabatic_tprofile,domakeai,modelsucces,useobsgrid,blackbodystar,grey_isoT
-	logical didcondens_chem,resume_multinest,disequilibrium,const_eff_multinest,outflow,useDLMie
+	logical didcondens_chem,resume_multinest,disequilibrium,const_eff_multinest,outflow,useDLMie,importance_nested_sampling
 	character*500 TPfile,particledir,retrievaltype,planetparameterfile,planetname,element_abun_file,pargridfile,deepredisttype
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest,dmetallicity
 	real*8 Kzz,Kzz_offset,Kzz_max,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,powvxx,night2day,pole2eq,Rp_range,tauLW

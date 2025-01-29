@@ -63,6 +63,7 @@
 	nest_efr=f_multinest
 	nest_tol=tol_multinest
 	nest_ceff=const_eff_multinest
+	nest_IS=importance_nested_sampling
 
 	nest_updInt=nest_update
 

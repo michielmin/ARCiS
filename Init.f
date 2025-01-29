@@ -1459,6 +1459,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) gene_cross
 		case("resume_nest")
 			read(key%value,*) resume_multinest
+		case("ins_nest","is_nest")
+			read(key%value,*) importance_nested_sampling
 		case("consteff")
 			read(key%value,*) const_eff_multinest
 		case("fmultinest","efr")
@@ -2287,6 +2289,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 	gene_cross=.false.
 	randomstart=.false.
 	resume_multinest=.false.
+	importance_nested_sampling=.false.
 	f_multinest=0.3d0
 	tol_multinest=0.5d0
 	nest_update=100
