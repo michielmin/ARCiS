@@ -6,7 +6,7 @@
 
 	type(CloudType) C,Cdust
 	integer MAXMAT
-	parameter(MAXMAT=40)
+	parameter(MAXMAT=60)
 	integer ii,isize
 
 	real cext0,csca0,maxf

@@ -91,7 +91,7 @@ c 90% MgSiO3
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
 			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			do i=1,nr
-				Cloud(ii)%frac(i,1:40)=Cloud(ii)%abun(1:40)
+				Cloud(ii)%frac(i,1:60)=Cloud(ii)%abun(1:60)
 			enddo
 			call SetupPartCloud(ii)
 			CPmin=Cloud(ii)%Pmin
@@ -124,7 +124,7 @@ c 90% MgSiO3
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
 			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			do i=1,nr
-				Cloud(ii)%frac(i,1:40)=Cloud(ii)%abun(1:40)
+				Cloud(ii)%frac(i,1:60)=Cloud(ii)%abun(1:60)
 			enddo
 			call SetupPartCloud(ii)
 			CPmin=Cloud(ii)%Pmin
@@ -151,7 +151,7 @@ c 90% MgSiO3
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
 			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			do i=1,nr
-				Cloud(ii)%frac(i,1:40)=Cloud(ii)%abun(1:40)
+				Cloud(ii)%frac(i,1:60)=Cloud(ii)%abun(1:60)
 			enddo
 			call SetupPartCloud(ii)
 			do i=1,nr
@@ -173,7 +173,7 @@ c 90% MgSiO3
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
 			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			do i=1,nr
-				Cloud(ii)%frac(i,1:40)=Cloud(ii)%abun(1:40)
+				Cloud(ii)%frac(i,1:60)=Cloud(ii)%abun(1:60)
 			enddo
 			call SetupPartCloud(ii)
 		case("GAUSS")
@@ -182,7 +182,7 @@ c 90% MgSiO3
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
 			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			do i=1,nr
-				Cloud(ii)%frac(i,1:40)=Cloud(ii)%abun(1:40)
+				Cloud(ii)%frac(i,1:60)=Cloud(ii)%abun(1:60)
 			enddo
 			call SetupPartCloud(ii)
 			do i=1,nr

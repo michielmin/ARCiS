@@ -387,13 +387,13 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(opacitymol(nmol))
 	allocate(Cloud(max(nclouds,1)))
 	do i=1,nclouds
-		allocate(Cloud(i)%abun(40))
-		allocate(Cloud(i)%nax(40))
-		allocate(Cloud(i)%rho_mat(40))
-		allocate(Cloud(i)%lnkfile(40,3))
-		allocate(Cloud(i)%material(40))
-		allocate(Cloud(i)%condensate(40))
-		allocate(Cloud(i)%xv_bot(40))
+		allocate(Cloud(i)%abun(60))
+		allocate(Cloud(i)%nax(60))
+		allocate(Cloud(i)%rho_mat(60))
+		allocate(Cloud(i)%lnkfile(60,3))
+		allocate(Cloud(i)%material(60))
+		allocate(Cloud(i)%condensate(60))
+		allocate(Cloud(i)%xv_bot(60))
 		allocate(Cloud(i)%porosity(nr))
 	enddo
 	allocate(XeqCloud(nr,max(nclouds,1)))
@@ -703,17 +703,17 @@ c	condensates=(condensates.or.cloudcompute)
 		call InitObs()
 		do i=1,nclouds
 			if(Cloud(i)%nmat.lt.1) Cloud(i)%nmat=1
-			if(Cloud(i)%nmat.gt.40) then
+			if(Cloud(i)%nmat.gt.59) then
 				call output("Too many cloud materials")
 				stop
 			endif
 			call output("==================================================================")
 			call output("Setting up cloud: " // trim(int2string(i,'(i4)')))
-			allocate(Cloud(i)%frac(nr,40))
+			allocate(Cloud(i)%frac(nr,60))
 			do j=1,nr
-				Cloud(i)%frac(j,1:40)=Cloud(i)%abun(1:40)
+				Cloud(i)%frac(j,1:60)=Cloud(i)%abun(1:60)
 			enddo
-			allocate(Cloud(i)%cryst(nr,40))
+			allocate(Cloud(i)%cryst(nr,60))
 			Cloud(i)%cryst=Cloud(i)%cryst0
 			Cloud(i)%porosity=Cloud(i)%porosity0
 			if(Cloud(i)%usefsed) Cloud(i)%computeJn=.false.

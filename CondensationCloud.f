@@ -15,7 +15,7 @@
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,kl,ku,jCS
 	real*8 cs,eps,frac_nuc,m_nuc,m_phothaze,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
 	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
-	integer,allocatable :: ixv(:,:),ixc(:,:),iVL(:,:),ixn(:),ixa(:),icryst(:),iamorph(:),ifit(:)
+	integer,allocatable :: ixv(:,:),ixc(:,:),iVL(:,:),ixn(:),ixa(:),icryst(:),iamorph(:),ifit(:),nTfit(:)
 	real*8 sigmastar,Sigmadot,Pstar,sigmamol,COabun,CO2abun,CH4abun,lmfp,fstick,kappa_cloud,fmin,fmax,rho_nuc,Gibbs
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
@@ -31,7 +31,7 @@
 	integer itime
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
 	real*8,allocatable :: xv_out(:),Jn_xv(:,:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:)
-	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),rmono(:)
+	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),rmono(:),ac(:,:,:),Tfit(:,:)
 	real*8,allocatable,save :: xv_prev(:,:),xc_prev(:,:),xn_prev(:),xa_prev(:)
 	integer jSiO,jTiO2,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi,jH2SO4,jCa,jCH4
 
@@ -258,6 +258,7 @@ c fractal dimension created by coagulating collisions
 	allocate(do_nuc(nCS),Jn_xv(nnr,nCS),sigma_nuc(nCS),r0_nuc(nCS),Nf_nuc(nCS),Nc_nuc(nnr,nCS))
 	allocate(do_con(nCS))
 	allocate(bc(nCS,0:4),ifit(nCS))
+	allocate(ac(nCS,10,7),Tfit(nCS,11),nTfit(nCS))
 	if(.not.allocated(xn_prev)) then
 		allocate(xv_prev(nVS,nnr))
 		allocate(xc_prev(nCS,nnr))
@@ -547,8 +548,8 @@ c fractal dimension created by coagulating collisions
 				ifit(i)=0
 			case("Na2S")
 				CSname(i)='Na2S'
-				atoms_cloud(i,6)=1
-				atoms_cloud(i,11)=2
+				atoms_cloud(i,6)=2
+				atoms_cloud(i,11)=1
 				v_cloud(i,jNa)=2
 				v_cloud(i,jH2S)=1
 				rhodust(i)=1.86
@@ -577,6 +578,7 @@ c fractal dimension created by coagulating collisions
 				v_cloud(i,jNH3)=1
 				v_cloud(i,jH2S)=1
 				rhodust(i)=1.17
+				maxT(i)=747d0
 				ifit(i)=-1
 			case("CH4")
 				CSname(i)='CH4'
@@ -1060,8 +1062,11 @@ c	print*,xv_bot(1:7)
 			tot1=real(i)
 			do iCS=1,nCS
 				select case(CSname(iCS))
-					case("H2O","NH4SH") ! use water vapor pressure for NH4SH (Slavicinska et al. 2024)
+					case("H2O")
 						call PvapH2O(tot1,Sat(1,iCS),liq)
+						Sat(1,iCS)=1d0/Sat(1,iCS)
+					case("NH4SH")
+						call PvapNH4SH(tot1,Sat(1,iCS),liq)
 						Sat(1,iCS)=1d0/Sat(1,iCS)
 					case("NH3")
 c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
@@ -1089,11 +1094,11 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 						call PvapCH4(tot1,Sat(1,iCS),liq)
 						Sat(1,iCS)=1d0/Sat(1,iCS)
 					case default
-						Gibbs=compGibbs(tot1,bc(iCS,0:4),ifit(iCS))
-						Sat(1,iCS)=Gibbs-v_H2(iCS)*compGibbs(tot1,bH2(0:4),0)
+						Gibbs=compGibbs(tot1,ac(iCS,1:10,1:7),bc(iCS,0:4),Tfit(iCS,1:11),nTfit(iCS),ifit(iCS))
+						Sat(1,iCS)=Gibbs-v_H2(iCS)*compGibbs(tot1,ac(iCS,1:10,1:7),bH2(0:4),Tfit(iCS,1:11),nTfit(iCS),0)
 						do iVS=1,nVS
 							if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
-								Gibbs=compGibbs(tot1,bv(iVS,0:4),0)
+								Gibbs=compGibbs(tot1,ac(iCS,1:10,1:7),bv(iVS,0:4),Tfit(iCS,1:11),nTfit(iCS),0)
 								Sat(1,iCS)=Sat(1,iCS)-Gibbs*v_cloud(iCS,iVS)
 							endif
 						enddo
@@ -1122,8 +1127,11 @@ c values from Fabian et al. 2000
 	do i=1,nnr
 		do iCS=1,nCS
 			select case(CSname(iCS))
-				case("H2O","NH4SH") ! use water vapor pressure for NH4SH (Slavicinska et al. 2024)
+				case("H2O")
 					call PvapH2O(CloudT(i),Sat(i,iCS),liq)
+					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
+				case("NH4SH")
+					call PvapNH4SH(CloudT(i),Sat(i,iCS),liq)
 					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
 				case("NH3")
 c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressures. Use adjusted Pvap.
@@ -1151,11 +1159,11 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 					call PvapCH4(CloudT(i),Sat(i,iCS),liq)
 					Sat(i,iCS)=CloudP(i)/Sat(i,iCS)
 				case default
-					Gibbs=compGibbs(CloudT(i),bc(iCS,0:4),ifit(iCS))
-					Sat(i,iCS)=Gibbs-v_H2(iCS)*compGibbs(CloudT(i),bH2(0:4),0)
+					Gibbs=compGibbs(CloudT(i),ac(iCS,1:10,1:7),bc(iCS,0:4),Tfit(iCS,1:11),nTfit(iCS),ifit(iCS))
+					Sat(i,iCS)=Gibbs-v_H2(iCS)*compGibbs(CloudT(i),ac(iCS,1:10,1:7),bH2(0:4),Tfit(iCS,1:11),nTfit(iCS),0)
 					do iVS=1,nVS
 						if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
-							Gibbs=compGibbs(CloudT(i),bv(iVS,0:4),0)
+							Gibbs=compGibbs(CloudT(i),ac(iCS,1:10,1:7),bv(iVS,0:4),Tfit(iCS,1:11),nTfit(iCS),0)
 							Sat(i,iCS)=Sat(i,iCS)-Gibbs*v_cloud(iCS,iVS)
 						endif
 					enddo
@@ -2816,10 +2824,21 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	return
 	end
 
-	real*8 function compGibbs(T,b,ifit)
+	subroutine PvapNH4SH(T,Pvap,liquid)
 	IMPLICIT NONE
-	real*8 b(0:4),T
-	integer ifit
+	real*8 T,Pvap,Pl,Pi
+	logical liquid
+
+	Pvap = 10.0**(7.8974 - 2409.4/T)
+	liquid=.true.
+	
+	return
+	end
+	
+	real*8 function compGibbs(T,a,b,Ta,nT,ifit)
+	IMPLICIT NONE
+	real*8 b(0:4),T,a(10,7),Ta(11)
+	integer ifit,i,nT
 	
 	select case(ifit)
 		case(0)
@@ -2830,6 +2849,18 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 		case(2)
 			compGibbs=b(0)/T + b(1) + b(2)*T + b(3)* T**2 + b(4)*T**3
 			compGibbs=compGibbs/(8.314*T)
+		case(7)
+			do i=1,nT
+				if(T.lt.Ta(i+1)) exit
+			enddo
+			if(i.ge.nT+1) return
+			compGibbs=a(i,1) *(1d0-log(T)) 
+     &					- a(i,2) *T   / 2.d0
+     &					- a(i,3) *T**2/ 6.d0    
+     &					- a(i,4) *T**3/12.d0
+     &					- a(i,5) *T**4/20.d0    
+     &					+ a(i,6) /T  
+     &					- a(i,7)
 		case default
 			print*,'unknown ifit'
 			stop
