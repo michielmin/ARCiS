@@ -1190,7 +1190,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 		endif
 		tcrystinv(i)=nucryst*exp(-Tcryst/CloudT(i))
 	enddo
-	if(include_phothaze) Sn_phot=Sn_phot*scaleUV*Cloud(ii)%Sigmadot_phot*CH4abun**2/tot
+	if(include_phothaze) Sn_phot=Sn_phot*scaleUV*Cloud(ii)%Sigmadot_phot/tot
 
 	Sat0=Sat
 
@@ -1412,9 +1412,11 @@ c start the loop
 			if(iter.eq.1) then
 				tot=0d0
 				do iCS=1,nCS
-					do iVS=1,nVS
-						tot=tot+xv_bot(iVL(i,iCS))*v_cloud(iCS,iVS)*muV(iVS)/muV(iVL(i,iCS))
-					enddo
+					if(c_include(iCS).and.iCS.ne.iCS_phot) then
+						do iVS=1,nVS
+							tot=tot+xv_bot(iVL(i,iCS))*v_cloud(iCS,iVS)*muV(iVS)/muV(iVL(i,iCS))
+						enddo
+					endif
 				enddo
 			else
 				tot=sum(xc(1:nCS,i))
