@@ -3,7 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	integer i,j,k,iobs
-	real*8 var(n_ret),dvar(2,n_ret),random
+	real*8 var(n_ret),dvar(2,n_ret),random,xx,xy
 	character*500 outputdir0,command
 	logical exist,saneplanet,usefile
 	real*8 spectemp(nlam),tot,lnew
@@ -76,6 +76,22 @@
 					call RemapObs(iobs,spec,spectemp)
 					deallocate(spec)
 				enddo
+
+				do iobs=1,nobs
+					if(ObsSpec(iobs)%scaling) then
+						xy=0d0
+						xx=0d0
+						do j=1,ObsSpec(iobs)%ndata
+							xy=xy+ObsSpec(iobs)%model(j)*ObsSpec(iobs)%y(j)/ObsSpec(iobs)%dy(j)**2
+							xx=xx+ObsSpec(iobs)%model(j)*ObsSpec(iobs)%model(j)/ObsSpec(iobs)%dy(j)**2
+						enddo
+						ObsSpec(iobs)%scale=1d0
+						if(xx.gt.0d0) ObsSpec(iobs)%scale=xx/xy
+					else
+						ObsSpec(iobs)%scale=1d0
+					endif
+				enddo
+
 				tot=0d0
 				lnew=0d0
 				do iobs=1,nobs
