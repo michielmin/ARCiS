@@ -107,7 +107,8 @@
      &							 "phaser","phaseR","transM","transE")
 						open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(iobs,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
 						do j=1,ObsSpec(iobs)%ndata
-							write(20,*) ObsSpec(iobs)%lam(j)*1d4,ObsSpec(iobs)%model(j),ObsSpec(iobs)%y(j),
+							write(20,*) ObsSpec(iobs)%lam(j)*1d4,ObsSpec(iobs)%model(j)/ObsSpec(iobs)%scale,
+     &									ObsSpec(iobs)%scale*ObsSpec(iobs)%y(j),
      &									ObsSpec(iobs)%dy(j)
 						enddo
 						close(unit=20)
