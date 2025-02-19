@@ -88,7 +88,7 @@
 						ObsSpec(iobs)%scale=1d0
 						if(xx.gt.0d0) ObsSpec(iobs)%scale=xx/xy
 					else
-						ObsSpec(iobs)%scale=1d0
+						ObsSpec(iobs)%scale=ObsSpec(iobs)%fscale
 					endif
 				enddo
 

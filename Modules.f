@@ -477,7 +477,7 @@ c for exchange when computing secondary atmosphere
 		character*10 type
 		real*8,allocatable :: lam(:),y(:),dy(:),R(:),Rexp(:),model(:)
 		integer,allocatable :: ilam(:)
-		real*8 beta,scale,slope,adderr,dscale
+		real*8 beta,scale,slope,adderr,dscale,fscale
 		integer ndata,i2d,iphase
 		logical spec,scaling
 		integer nlam,nt

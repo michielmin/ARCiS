@@ -763,7 +763,7 @@ c	linear
 			ObsSpec(i)%scale=1d0
 			if(xx.gt.0d0) ObsSpec(i)%scale=xx/xy
 		else
-			ObsSpec(i)%scale=1d0
+			ObsSpec(i)%scale=ObsSpec(i)%fscale
 			do j=1,ObsSpec(i)%ndata
 				k=k+1
 				ymod(k)=allspec(i,j)
@@ -2365,7 +2365,7 @@ C  computed by DGETRF.
 			ObsSpec(i)%scale=1d0
 			if(xx.gt.0d0) ObsSpec(i)%scale=xx/xy
 		else
-			ObsSpec(i)%scale=1d0
+			ObsSpec(i)%scale=ObsSpec(i)%fscale
 			do j=1,ObsSpec(i)%ndata
 				k=k+1
 				ymod(k)=allspec(i,j)

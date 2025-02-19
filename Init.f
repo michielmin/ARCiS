@@ -2300,6 +2300,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 	do i=1,nobs
 		ObsSpec(i)%beta=1d0
 		ObsSpec(i)%scale=1d0
+		ObsSpec(i)%fscale=1d0
 		ObsSpec(i)%scaling=.false.
 		ObsSpec(i)%dscale=-1d0
 		ObsSpec(i)%spec=.true.
@@ -2531,6 +2532,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) ObsSpec(i)%beta
 		case("scaling","scale")
 			read(key%value,*) ObsSpec(i)%scaling
+		case("fscale")
+			read(key%value,*) ObsSpec(i)%fscale
 		case("dscale","sigscale")
 			read(key%value,*) ObsSpec(i)%dscale
 		case("i2d")
