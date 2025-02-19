@@ -187,9 +187,9 @@ c 90% MgSiO3
 			call SetupPartCloud(ii)
 			do i=1,nr
 				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
-				cloud_dens(i,ii)=(grav(i)*Cloud(ii)%tau/
-     &					(Cloud(ii)%Kref*1d6*P(i)*Cloud(ii)%dP*sqrt(2d0*pi)))*
-     &					exp(-0.5d0*(log(P(i)/Cloud(ii)%P)/Cloud(ii)%dP)**2)
+				cloud_dens(i,ii)=(grav(i)*Cloud(ii)%tau*(Cloud(ii)%P**(Cloud(ii)%xi-2d0))/
+     &					(Cloud(ii)%Kref*1d6*(P(i)**(Cloud(ii)%xi-1d0))*Cloud(ii)%dP*sqrt(2d0*pi)))*
+     &					exp(-0.5d0*(log(P(i)/Cloud(ii)%P)/Cloud(ii)%dP)**2-0.5d0*Cloud(ii)%dP*(Cloud(ii)%xi-2d0)**2)
 			enddo
 			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
 			tot=0d0
