@@ -427,13 +427,13 @@ c for exchange when computing secondary atmosphere
 		real*8 P,dP,xi,Pmax,Pmin,Ptau,Phi,coverage
 		real*8,allocatable :: rv(:),M(:)					! dimension nsize
 		real*8,allocatable :: frac(:,:),sigma(:),cryst(:,:),abun(:),xv_bot(:),porosity(:)
-		real*8 rho,fmax,porosity0,reff,veff,rpow,Pref,rnuc,fractalDim
+		real*8 rho,fmax,porosity0,reff,veff,rpow,Pref,rnuc,fractalDim,rnuc_phot
 		logical blend,haze,condensates,rainout,globalKzz,computecryst,coagulation
 		logical onepart,freeflow_nuc,freeflow_con,condenseNaK
 		real*8 mixrat,tau,lref,cryst0,e1_par,e2_par,Kref
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
 		character*500 species,hazetype,file,composition
-		integer nmat,nlam
+		integer nmat,nlam,iabun_norm
 		character*500,allocatable :: lnkfile(:,:),material(:),condensate(:)
 		real*8 Kzz,Sigmadot,xm_bot,Sigmadot_phot
 		real*8 kappa,albedo,kpow,klam

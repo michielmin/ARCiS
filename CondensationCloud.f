@@ -767,8 +767,8 @@ c				do_nuc(i)=Cloud(ii)%ComputeJn
 c				sigma_nuc(i)=
 c				Nf_nuc(i)=1d0
 				ifit(i)=-1
-			case('optEC')
-				CSname(i)='optEC'
+			case('optEC','THOLIN')
+				CSname(i)=trim(Cloud(ii)%condensate(i))
 				atoms_cloud(i,1)=4
 				atoms_cloud(i,3)=1
 				rhodust(i)=1.8d0
@@ -920,7 +920,7 @@ c	print*,xv_bot(1:7)
 
 	m_nuc=4d0*pi*Cloud(ii)%rnuc**3*rho_nuc/3d0
 ! photochemical haze particles are 20 nm with a density of 1.8 g/cm^3
-	m_phothaze=4d0*pi*(20e-7)**3*1.8d0/3d0
+	m_phothaze=4d0*pi*Cloud(ii)%rnuc_phot**3*1.8d0/3d0
 
 	allocate(mpart(nnr))
 	allocate(rho_av(nnr))
@@ -1402,8 +1402,8 @@ c start the loop
 			lmfp=CloudMMW(i)*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
 			rpart(i)=min( -vsed(i)*(Clouddens(i)*vth(i))/(rho_av(i)*CloudG(i)),
      &				 sqrt(-vsed(i)*(Clouddens(i)*vth(i))*(9d0*lmfp)/(4d0*rho_av(i)*CloudG(i))) )
-			if(rpart(i).lt.Cloud(ii)%rnuc) then
-				rpart(i)=Cloud(ii)%rnuc
+			if(rpart(i).lt.min(Cloud(ii)%rnuc,Cloud(ii)%rnuc_phot)) then
+				rpart(i)=min(Cloud(ii)%rnuc,Cloud(ii)%rnuc_phot)
 				vsed(i)=-rpart(i)*rho_av(i)*CloudG(i)/(Clouddens(i)*vth(i))
 				lmfp=CloudMMW(i)*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
 				vsed(i)=vsed(i)*max(1d0,4d0*rpart(i)/(9d0*lmfp))
@@ -2007,8 +2007,8 @@ C===============================================================================
 				rr=(3d0*(mmono)/(4d0*pi*rho_av(i)))**(1d0/3d0)
 				if(.not.rr.ge.1e-8) rr=1e-8
 			else
-				rr=(3d0*(mmono)/(4d0*pi*rho_av(i))+Cloud(ii)%rnuc**3)**(1d0/3d0)
-				if(.not.rr.ge.Cloud(ii)%rnuc) rr=Cloud(ii)%rnuc
+				rr=(3d0*(mmono)/(4d0*pi*rho_av(i))+min(Cloud(ii)%rnuc,Cloud(ii)%rnuc_phot)**3)**(1d0/3d0)
+				if(.not.rr.ge.min(Cloud(ii)%rnuc,Cloud(ii)%rnuc_phot)) rr=min(Cloud(ii)%rnuc,Cloud(ii)%rnuc_phot)
 			endif
 			rmono(i)=rr
 			rr=rmono(i)*nmono**(1d0/Df)
@@ -2016,7 +2016,7 @@ C===============================================================================
 			if(ffill.gt.1d0) ffill=1d0
 			rho_av(i)=rho_av(i)*ffill
 		else
-			rr=Cloud(ii)%rnuc
+			rr=min(Cloud(ii)%rnuc,Cloud(ii)%rnuc_phot)
 			rmono(i)=rr
 		endif
 		if(.not.Cloud(ii)%usefsed) rpart(i)=rr
@@ -2121,8 +2121,8 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 				rr=(3d0*(mmono)/(4d0*pi*rho_av(i)))**(1d0/3d0)
 				if(.not.rr.ge.1e-8) rr=1e-8
 			else
-				rr=(3d0*(mmono)/(4d0*pi*rho_av(i))+Cloud(ii)%rnuc**3)**(1d0/3d0)
-				if(.not.rr.ge.Cloud(ii)%rnuc) rr=Cloud(ii)%rnuc
+				rr=(3d0*(mmono)/(4d0*pi*rho_av(i))+min(Cloud(ii)%rnuc,Cloud(ii)%rnuc_phot)**3)**(1d0/3d0)
+				if(.not.rr.ge.min(Cloud(ii)%rnuc,Cloud(ii)%rnuc_phot)) rr=min(Cloud(ii)%rnuc,Cloud(ii)%rnuc_phot)
 			endif
 			rmono(i)=rr
 			rr=rmono(i)*nmono**(1d0/Df)
@@ -2130,7 +2130,7 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 			if(ffill.gt.1d0) ffill=1d0
 			rho_av(i)=rho_av(i)*ffill
 		else
-			rr=Cloud(ii)%rnuc
+			rr=min(Cloud(ii)%rnuc,Cloud(ii)%rnuc_phot)
 			rmono(i)=rr
 		endif
 		if(.not.Cloud(ii)%usefsed) rpart(i)=rr

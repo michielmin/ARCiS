@@ -1890,6 +1890,7 @@ c	linear
 	distance=distance/parsec
 	do i=1,nclouds
 		Cloud(i)%rnuc=Cloud(i)%rnuc/micron
+		Cloud(i)%rnuc_phot=Cloud(i)%rnuc_phot/micron
 	enddo
 	orbit_inc=orbit_inc*180d0/pi
 
@@ -1951,6 +1952,7 @@ c	linear, square
 	distance=distance/parsec
 	do i=1,nclouds
 		Cloud(i)%rnuc=Cloud(i)%rnuc/micron
+		Cloud(i)%rnuc_phot=Cloud(i)%rnuc_phot/micron
 	enddo
 	orbit_inc=orbit_inc*180d0/pi
 

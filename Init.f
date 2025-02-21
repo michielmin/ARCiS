@@ -901,6 +901,10 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%nax(j)=1
 								case('optEC')
 									Cloud(i)%material(j)='optEC'
+								case('THOLIN')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Titan_tholin.dat'
+									Cloud(i)%nax(j)=1
 								case default
 									call output("Unknown condensate")
 									stop
@@ -1729,7 +1733,7 @@ c			read(key%value,*) nTpoints
 	use Constants
 	IMPLICIT NONE
 	real*8 tot,k,kap,Teq,f
-	integer i
+	integer i,j
 	
 	Rplanet=Rplanet*Rjup
 	Mplanet=Mplanet*Mjup
@@ -1758,6 +1762,14 @@ c			read(key%value,*) nTpoints
 	
 	do i=1,nclouds
 		Cloud(i)%rnuc=Cloud(i)%rnuc*micron
+		Cloud(i)%rnuc_phot=Cloud(i)%rnuc_phot*micron
+		if(Cloud(i)%iabun_norm.gt.0) then
+			tot=0d0
+			do j=1,Cloud(i)%nmat
+				if(j.ne.Cloud(i)%iabun_norm) tot=tot+Cloud(i)%abun(j)
+			enddo
+			Cloud(i)%abun(Cloud(i)%iabun_norm)=1d0-tot
+		endif
 	enddo
 
 	distance=distance*parsec
@@ -2205,13 +2217,15 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%Phi=2d0
 		Cloud(i)%coverage=1d0
 		Cloud(i)%abun=1d0
+		Cloud(i)%iabun_norm=-1
 		Cloud(i)%fmax=0d0
 		Cloud(i)%porosity0=0d0
 		Cloud(i)%reff=1d0
 		Cloud(i)%veff=0.1
 		Cloud(i)%rpow=0d0
 		Cloud(i)%Pref=1d0
-		Cloud(i)%rnuc=0.001
+		Cloud(i)%rnuc=1e-3
+		Cloud(i)%rnuc_phot=1e-3
 		Cloud(i)%xm_bot=0d0
 		Cloud(i)%blend=.true.
 		Cloud(i)%haze=.false.
@@ -3148,6 +3162,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%albedo
 		case("rnuc")
 			read(key%value,*) Cloud(j)%rnuc
+		case("rnuc_phot")
+			read(key%value,*) Cloud(j)%rnuc_phot
 		case("pref")
 			read(key%value,*) Cloud(j)%Pref
 		case("pow_rad")
@@ -3212,6 +3228,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%fsed_beta
 		case("cryst")
 			read(key%value,*) Cloud(j)%cryst0
+		case("iabun_norm")
+			read(key%value,*) Cloud(j)%iabun_norm
 		case("abun")
 			i=key%nr2
 			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
