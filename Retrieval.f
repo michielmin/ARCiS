@@ -2511,13 +2511,15 @@ c			endif
 	use ReadKeywords
 	IMPLICIT NONE
 	real*8,allocatable :: tot(:)
+	integer,allocatable :: nabun_ret(:)
 	character*1000 line_in
 	character*500 key,key1,key2,value,orkey1,orkey2
 	integer i,nr1,nr2,key2d
 	logical hasnr1,hasnr2
 	
-	allocate(tot(nclouds))
+	allocate(tot(nclouds),nabun_ret(nclouds))
 	tot=0d0
+	nabun_ret=0
 
 	do i=1,n_ret
 		line_in=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
@@ -2525,7 +2527,14 @@ c			endif
 		if(key1.eq.'cloud') then
 			if(key2.eq.'abun') then
 				tot(nr1)=tot(nr1)+RetPar(i)%value
+				nabun_ret(nr1)=nabun_ret(nr1)+1
 			endif
+		endif
+	enddo
+	do i=1,nclouds
+		if(nabun_ret(i).eq.1.and.Cloud(i)%nmat.eq.2) then
+			Cloud(i)%abun(Cloud(i)%nmat)=1d0-tot(i)
+			tot(i)=1d0
 		endif
 	enddo
 	

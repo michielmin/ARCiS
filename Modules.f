@@ -433,7 +433,7 @@ c for exchange when computing secondary atmosphere
 		real*8 mixrat,tau,lref,cryst0,e1_par,e2_par,Kref
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
 		character*500 species,hazetype,file,composition
-		integer nmat,nlam,iabun_norm
+		integer nmat,nlam
 		character*500,allocatable :: lnkfile(:,:),material(:),condensate(:)
 		real*8 Kzz,Sigmadot,xm_bot,Sigmadot_phot
 		real*8 kappa,albedo,kpow,klam

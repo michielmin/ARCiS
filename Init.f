@@ -1733,7 +1733,7 @@ c			read(key%value,*) nTpoints
 	use Constants
 	IMPLICIT NONE
 	real*8 tot,k,kap,Teq,f
-	integer i,j
+	integer i
 	
 	Rplanet=Rplanet*Rjup
 	Mplanet=Mplanet*Mjup
@@ -1763,13 +1763,6 @@ c			read(key%value,*) nTpoints
 	do i=1,nclouds
 		Cloud(i)%rnuc=Cloud(i)%rnuc*micron
 		Cloud(i)%rnuc_phot=Cloud(i)%rnuc_phot*micron
-		if(Cloud(i)%iabun_norm.gt.0) then
-			tot=0d0
-			do j=1,Cloud(i)%nmat
-				if(j.ne.Cloud(i)%iabun_norm) tot=tot+Cloud(i)%abun(j)
-			enddo
-			Cloud(i)%abun(Cloud(i)%iabun_norm)=1d0-tot
-		endif
 	enddo
 
 	distance=distance*parsec
@@ -2217,7 +2210,6 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%Phi=2d0
 		Cloud(i)%coverage=1d0
 		Cloud(i)%abun=1d0
-		Cloud(i)%iabun_norm=-1
 		Cloud(i)%fmax=0d0
 		Cloud(i)%porosity0=0d0
 		Cloud(i)%reff=1d0
@@ -3228,8 +3220,6 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%fsed_beta
 		case("cryst")
 			read(key%value,*) Cloud(j)%cryst0
-		case("iabun_norm")
-			read(key%value,*) Cloud(j)%iabun_norm
 		case("abun")
 			i=key%nr2
 			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
