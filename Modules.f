@@ -183,8 +183,8 @@ c===============================================================================
 	integer nT,np,nr,nmol,nlam		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines,ng,ncia,nclouds,nTiter,i3D,i_alb,nest_update
 	character*1000 outputdir
-	character*1000,allocatable :: commandargs(:)
-	integer ncommandargs
+	character*1000,allocatable :: commandargs(:),line_add_ret(:)
+	integer ncommandargs,n_add_ret
 	integer idum,maxiter,miniter,Nphot0,idum0,iWolk
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib,do_rayleigh,isoFstar

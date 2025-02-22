@@ -661,7 +661,6 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	error=0d0
 	call SetOutputMode(.false.)
 	call MapRetrieval(var,error)
-	if(nclouds.gt.0) call NormCloudAbun()
 	call SetOutputMode(.true.)
 
 	call InitDens()
@@ -855,6 +854,9 @@ c	linear
 		write(21,'("retrieval=.false.")')
 		do i=1,n_ret
 			write(21,'(a," = ",es14.7)') trim(RetPar(i)%keyword),RetPar(i)%value
+		enddo
+		do i=1,n_add_ret
+			write(21,'(a)') trim(line_add_ret(i))
 		enddo
 		close(unit=21)	
 
@@ -1913,6 +1915,8 @@ c	linear
 	enddo
 	call RefreshMaterialCloud()
 
+	if(nclouds.gt.0) call NormCloudAbun()
+
 	return
 	end
 	
@@ -1973,6 +1977,8 @@ c	linear, square
 	metallicity0=metallicity
 	enddo
 	call RefreshMaterialCloud()
+
+	if(nclouds.gt.0) call NormCloudAbun()
 
 	return
 	end
@@ -2230,6 +2236,9 @@ c	enddo
 	write(21,'("retrieval=.false.")')
 	do i=1,n_ret
 		write(21,'(a," = ",es14.7)') trim(RetPar(i)%keyword),RetPar(i)%value
+	enddo
+	do i=1,n_add_ret
+		write(21,'(a)') trim(line_add_ret(i))
 	enddo
 	close(unit=21)	
 
@@ -2510,16 +2519,17 @@ c			endif
 	use GlobalSetup
 	use ReadKeywords
 	IMPLICIT NONE
-	real*8,allocatable :: tot(:)
+	real*8,allocatable :: tot(:),frac(:,:)
 	integer,allocatable :: nabun_ret(:)
 	character*1000 line_in
 	character*500 key,key1,key2,value,orkey1,orkey2
 	integer i,nr1,nr2,key2d
 	logical hasnr1,hasnr2
 	
-	allocate(tot(nclouds),nabun_ret(nclouds))
+	allocate(tot(nclouds),nabun_ret(nclouds),frac(nclouds,60))
 	tot=0d0
 	nabun_ret=0
+	n_add_ret=0
 
 	do i=1,n_ret
 		line_in=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
@@ -2527,13 +2537,31 @@ c			endif
 		if(key1.eq.'cloud') then
 			if(key2.eq.'abun') then
 				tot(nr1)=tot(nr1)+RetPar(i)%value
+				frac(nr1,nr2)=RetPar(i)%value
 				nabun_ret(nr1)=nabun_ret(nr1)+1
 			endif
 		endif
 	enddo
 	do i=1,nclouds
 		if(nabun_ret(i).eq.1.and.Cloud(i)%nmat.eq.2) then
-			Cloud(i)%abun(Cloud(i)%nmat)=1d0-tot(i)
+			Cloud(i)%abun(2)=1d0-tot(i)
+			n_add_ret=n_add_ret+1
+			if(i.lt.10) then
+				write(line_add_ret(n_add_ret),'("cloud",i1,":abun02 = ",es14.7)') i,Cloud(i)%abun(2)
+			else
+				write(line_add_ret(n_add_ret),'("cloud",i2,":abun02 = ",es14.7)') i,Cloud(i)%abun(2)
+			endif
+			tot(i)=1d0
+		else if(nabun_ret(i).eq.2.and.Cloud(i)%nmat.eq.3) then
+			Cloud(i)%abun(3)=1d0-frac(i,2)
+			frac(i,1)=frac(i,1)*frac(i,2)
+			frac(i,2)=1d0-frac(i,1)-Cloud(i)%abun(3)
+			n_add_ret=n_add_ret+1
+			if(i.lt.10) then
+				write(line_add_ret(n_add_ret),'("cloud",i1,":abun03 = ",es14.7)') i,Cloud(i)%abun(3)
+			else
+				write(line_add_ret(n_add_ret),'("cloud",i2,":abun03 = ",es14.7)') i,Cloud(i)%abun(3)
+			endif
 			tot(i)=1d0
 		endif
 	enddo
@@ -2543,11 +2571,12 @@ c			endif
 		call get_key_value(line_in,key,key1,key2,orkey1,orkey2,value,nr1,nr2,hasnr1,hasnr2,key2d)
 		if(key1.eq.'cloud') then
 			if(key2.eq.'abun') then
-				RetPar(i)%value=RetPar(i)%value/tot(nr1)
+				RetPar(i)%value=frac(nr1,nr2)/tot(nr1)
 			endif
 		endif
 	enddo
-		
+	deallocate(tot,nabun_ret,frac)
+	
 	return
 	end
 	

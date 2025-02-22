@@ -996,6 +996,8 @@ c select at least the species relevant for disequilibrium chemistry
      &	.or.RetPar(i)%keyword.eq.'LOGG') retrievestar=.true.
 		enddo
 	endif
+	n_add_ret=0
+	allocate(line_add_ret(nclouds+1))
 
 	dobackgroundgas=.false.
 	do i=1,nmol
