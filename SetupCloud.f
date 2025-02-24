@@ -176,7 +176,7 @@ c 90% MgSiO3
 				Cloud(ii)%frac(i,1:60)=Cloud(ii)%abun(1:60)
 			enddo
 			call SetupPartCloud(ii)
-		case("GAUSS")
+		case("GAUSS","HALFGAUSS")
 			Cloud(ii)%nlam=nlam+1
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
 			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
@@ -187,9 +187,15 @@ c 90% MgSiO3
 			call SetupPartCloud(ii)
 			do i=1,nr
 				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
+				if(Cloud(ii)%type.eq."HALFGAUSS".and.P(i).gt.Cloud(ii)%P) then
+				cloud_dens(i,ii)=(grav(i)*Cloud(ii)%tau*(Cloud(ii)%P**(Cloud(ii)%xi-2d0))/
+     &					(Cloud(ii)%Kref*1d6*(P(i)**(Cloud(ii)%xi-1d0))*Cloud(ii)%dP*sqrt(2d0*pi)))*
+     &					exp(-0.5d0*(log(P(i)/Cloud(ii)%P)/Cloud(ii)%dP)**8-0.5d0*Cloud(ii)%dP*(Cloud(ii)%xi-2d0)**2)
+				else
 				cloud_dens(i,ii)=(grav(i)*Cloud(ii)%tau*(Cloud(ii)%P**(Cloud(ii)%xi-2d0))/
      &					(Cloud(ii)%Kref*1d6*(P(i)**(Cloud(ii)%xi-1d0))*Cloud(ii)%dP*sqrt(2d0*pi)))*
      &					exp(-0.5d0*(log(P(i)/Cloud(ii)%P)/Cloud(ii)%dP)**2-0.5d0*Cloud(ii)%dP*(Cloud(ii)%xi-2d0)**2)
+				endif
 			enddo
 			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
 			tot=0d0
