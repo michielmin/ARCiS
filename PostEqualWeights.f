@@ -200,6 +200,9 @@
 	do i=1,n_ret
 		write(21,'(a," = ",es14.7)') trim(RetPar(i)%keyword),RetPar(i)%value
 	enddo
+	do i=1,n_add_ret
+		write(21,'(a)') trim(line_add_ret(i))
+	enddo
 	close(unit=21)	
 
 	done=.false.
