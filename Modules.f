@@ -248,7 +248,7 @@ c for exchange when computing secondary atmosphere
 
 	real*8 Rring,dRring,tauRing
 	real*8,allocatable :: FRing(:)
-	logical doRing
+	logical doRing,doRingCloud
 
 	logical do3D,init3D
 	real*8 par3Dsteepness

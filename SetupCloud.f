@@ -205,12 +205,18 @@ c 90% MgSiO3
 			if(tot.gt.0d0) then
 				cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%tau/tot
 			endif
-c		case("HELONG")
-c			Cloud(ii)%nlam=nlam
-c			call HelongCloud(ii)
-c			Cloud(ii)%sigma=1d-10
-c			Cloud(ii)%onepart=.false.
-c			call SetupPartCloud(ii)
+		case("RING")
+			Cloud(ii)%nlam=nlam+1
+			Cloud(ii)%rv(1:nr)=Cloud(ii)%reff
+			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
+			Cloud(ii)%onepart=.true.
+			do i=1,nr
+				Cloud(ii)%frac(i,1:60)=Cloud(ii)%abun(1:60)
+			enddo
+			call SetupPartCloud(ii)
+			Cloud(ii)%Kref=Cloud(ii)%Kext(1,nlam+1)
+			cloud_dens(1:nr,ii)=0d0
+			doRingCloud=.true.
 		case default
 			call output("Cloud type unknown: " // trim(Cloud(ii)%type))
 			stop
@@ -660,4 +666,27 @@ c-----------------------------------------------------------------------
 	end
 
 
+	subroutine AddRingCloud()
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	integer ii,i
+	logical doR(nclouds)
+	real*8 tau
 
+	doR=.false.
+	do ii=1,nclouds
+		if(Cloud(ii)%type.eq."RING") doR(ii)=.true.
+	enddo
+	
+	do i=1,nlam
+		tau=0d0
+		do ii=1,nclouds
+			if(doR(ii)) tau=tau+Cloud(ii)%tau*Cloud(ii)%Kext(1,i)/Cloud(ii)%Kref
+		enddo
+		obsA(0,i)=obsA(0,i)+pi*((Rring+dRring)**2-Rring**2)*Rplanet**2*(1d0-exp(-tau))
+	enddo
+	
+	return
+	end
+	

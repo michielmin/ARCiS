@@ -13,6 +13,8 @@
 		call ComputeModel1D(recomputeopacities)
 	endif
 
+	if(doRingCloud) call AddRingCloud(i)
+
 	if(doRing) then
 	do i=1,nlam
 		call RingFlux(Rplanet,Rstar,Tstar,TeffPoutput,tauRing,Rring,dRring,Dplanet,distance,lam(i),FRing(i))

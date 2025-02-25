@@ -2264,6 +2264,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 	enddo
 	nspike=0
 	useDLMie=.false.
+	doRingCloud=.false.
 
 	isotope=0
 	f_isotope=0d0
