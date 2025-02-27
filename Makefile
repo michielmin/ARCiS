@@ -197,7 +197,7 @@ $(PYLIB):     version  $(OBJS)
 		$(FC) $(LDFLAGS) -c SupportPy.f90
 		ar cr libARCiS.a $(OBJS) SupportPy.o
 		python -m numpy.f2py -m pyARCiS $(F2PYC) -c MainPy.f90 Version.f -L$(PWD) -lARCiS $(LIBS) $(LGOMP) -I$(PWD)
-		python setup.py install
+		pip install -e $(PWD)
 
 # recompile everything if Modules.f has changed 
 $(OBJS):	Modules.f
