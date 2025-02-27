@@ -55,8 +55,8 @@ endif
 # Platform specific compilation options
 ifeq ($(gfort),true)
   FLAG_ALL      = -O5 -finit-local-zero $(MULTICORE) -I$(HOME)/include -I/usr/local/modules $(LIBS_MN) $(LIBS_MCMC) -fPIC -finit-derived -Wuninitialized
-  FLAG_LINUX    = -ffixed-line-length-none -cpp -malign-double
-  FLAG_MAC      = -m64 -ffixed-line-length-none -cpp -malign-double
+  FLAG_LINUX    = -ffixed-line-length-none -cpp
+  FLAG_MAC      = -m64 -ffixed-line-length-none -cpp
 #  FLAG_MAC      = -march=armv8-a -ffixed-line-length-none -cpp
 else
   FLAG_ALL      = -O3 -g -extend-source -zero -prec-div $(MULTICORE) -assume buffered_io -I/usr/local/modules -fp-model strict -heap-arrays 10 $(LIBS_MN) $(LIBS_MCMC)
@@ -64,16 +64,16 @@ else
   FLAG_MAC      = -xHOST -qopt-prefetch -static-intel -fpp -heap-arrays 10
 endif
 
-LIBS_FITS		= -lcfitsio
+LIBS_FITS		= -L/opt/homebrew/lib/ -lcfitsio
 
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) $(DEBUGGING) $(FLAGS)
-  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) -I$(HOME)/include $(DEBUGGING) $(FLAGS)
-  LIBS     = -L$(HOME)/lib -lm $(LIBS_FITS) $(LIBS_MN)
+  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) $(FLAG_FITS) $(DEBUGGING) $(FLAGS)
+  LIBS     = -I$(HOME)/include -L$(HOME)/lib -lm $(LIBS_FITS) $(LIBS_MN)
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) $(FLAGS)
   LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) $(FLAGS) 
-  LIBS    =  -L/usr/local/lib $(LIBS_FITS) $(LIBS_MN) -lm
+  LIBS    = -I$(HOME)/include -L/usr/local/lib $(LIBS_FITS) $(LIBS_MN) -lm
 endif
 
 
@@ -194,7 +194,9 @@ $(PROGRAM):     version  $(OBJS) $(MAINF)
 		$(LINKER) $(LDFLAGS) $(OBJS) $(MAINF) $(LIBS) Version.f -o $(PROGRAM)
 
 $(PYLIB):     version  $(OBJS)
-		f2py -m pyARCiS $(F2PYC) -c MainPy.f90 Version.f $(OBJS) --opt='$(LDFLAGS)' $(LIBS) $(LGOMP)
+		$(FC) $(LDFLAGS) -c SupportPy.f90
+		ar cr libARCiS.a $(OBJS) SupportPy.o
+		python -m numpy.f2py -m pyARCiS $(F2PYC) -c MainPy.f90 Version.f -L$(PWD) -lARCiS $(LIBS) $(LGOMP) -I$(PWD)
 		python setup.py install
 
 # recompile everything if Modules.f has changed 
