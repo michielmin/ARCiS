@@ -1053,7 +1053,7 @@ c	print*,xv_bot(1:7)
 		tot=0d0
 	endif
 
-	if(.not.retrieval) then
+	if(writefiles) then
 		open(unit=20,file='Tevap.dat',RECL=6000)
 		form='("#",a18,' // trim(int2string(nCS,'(i4)')) // 'a23)'
 		write(20,form) "T[K]",(trim(CSname(i)),i=1,nCS)
@@ -2167,7 +2167,7 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 		call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,iCS),nr)
 	enddo
 
-	if(.not.retrieval) then
+	if(writefiles) then
 		do i=1,nnr
 			do iCS=1,nCS
 				if(do_nuc(iCS).and.c_include(iCS)) then
@@ -2348,7 +2348,7 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 		endif
 	enddo
 	
-	if(.not.retrieval) then
+	if(writefiles) then
 		if(complexKzz) then
 			open(unit=50,file=trim(outputdir) // 'cloudKzz.dat',FORM="FORMATTED",ACCESS="STREAM")
 			form='("#",a12,a13,a13,a13)'

@@ -302,7 +302,7 @@ c-----------------------------------------------------------------------
 					endif
 				enddo
 			endif
-			if(.not.retrieval) then
+			if(writefiles) then
 				open(unit=28,file=trim(outputdir) // 'cloudcomp.dat',RECL=1000)				
 				form='("#",a18,a23,' // trim(int2string(Cloud(ii)%nmat,'(i4)')) // 'a23)'
 				write(28,form) "P[bar]","dens",(trim(Cloud(ii)%condensate(j)) // '[s]',j=1,Cloud(ii)%nmat)

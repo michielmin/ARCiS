@@ -971,7 +971,7 @@ c Use Band matrix algorithm
 	if(maxerr.lt.eps) exit
 	enddo
 	
-	if(.not.retrieval) then
+	if(writefiles) then
 		if(do3D) then
 			open(unit=20,file=trim(outputdir) // '/crystallinity' // trim(int2string(i3D,'(i0.4)')) // '.dat',
      &             FORM="FORMATTED",ACCESS="STREAM")
@@ -1113,7 +1113,7 @@ c SiO2
 		call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%cryst(1:nr,4),nr)
 	endif
 
-	if(.not.retrieval) then
+	if(writefiles) then
 		if(do3D) then
 			open(unit=20,file=trim(outputdir) // '/cloudstructure' // trim(int2string(i3D,'(i0.4)')) // '.dat',
      &             FORM="FORMATTED",ACCESS="STREAM")
@@ -1254,7 +1254,7 @@ c       input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer
 		endif
 	enddo
 	
-	if(.not.retrieval) then
+	if(writefiles) then
 		call ComputeTevap()
 		if(complexKzz) then
 			open(unit=50,file=trim(outputdir) // 'cloudKzz.dat',FORM="FORMATTED",ACCESS="STREAM")

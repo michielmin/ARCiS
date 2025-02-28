@@ -47,8 +47,8 @@
 	call output("==================================================================")
 ! terms of use
 	call output("By using ARCiS you agree to the terms of use.")
-	call output("It basically means you offer us co-author rights on any paper")
-	call output("that uses results computed with ARCiS.")
+	call output("It basically means you consult with any of the authors before")
+	call output("publication if there is any doubt on the outcome of the results.")
 
 	call output("==================================================================")
 	call output("Let's get the show on the road!!")
@@ -327,3 +327,16 @@
 	return
 	end
 
+	subroutine pyVerboseSupport(switch)
+	use GlobalSetup
+	IMPLICIT NONE
+	logical switch
+
+	writefiles=switch
+	call SetOutputMode(.false.)
+
+	return
+	end
+	
+	
+	

@@ -135,7 +135,7 @@ c	recomputeopac=.true.
 
 	if(iterateshift.and.abs(hotspotshift-hotspotshift0).gt.5d-3) call output("Desired hotspot shift could not be obtained!!")
 
-	if(.not.retrieval.and..not.dopostequalweights) then
+	if(writefiles) then
 		open(unit=20,file=trim(outputdir) // "structure3D.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do j=1,nlatt-1
 			write(20,*) beta(1:nlong-1,j)
@@ -201,7 +201,7 @@ c	recomputeopac=.true.
 	enddo
 	beta_c=beta_c/real(2*(nlatt-1))	
 
-	if(.not.retrieval.and..not.domakeai.and..not.dopostequalweights) then
+	if(writefiles) then
 		open(unit=20,file=trim(outputdir) // "parameter3D.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do j=1,nlatt-1
 			do i=1,nlong-1
@@ -409,7 +409,7 @@ c Now call the setup for the readFull3D part
 			enddo
 			local_albedo(i)=local_albedo(n3D)
 		endif
-		if(.not.retrieval.and..not.dopostequalweights) then
+		if(writefiles) then
 			call SetOutputMode(.true.)
 			open(unit=20,file=trim(outputdir) // "mixrat" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
 			write(20,'("#",a9,a13,a13)') "T[K]","P[bar]","Kzz[cm^2/s]"
@@ -466,7 +466,7 @@ c Now call the setup for the readFull3D part
 		enddo
 	enddo	
 
-	if(.not.retrieval.and..not.dopostequalweights) then
+	if(writefiles) then
 		open(unit=20,file=trim(outputdir) // "surfacetemp3D.dat",FORM="FORMATTED",ACCESS="STREAM")
 		do j=1,nlatt-1
 			write(20,*) T3D(ibeta(1:nlong-1,j),0)
@@ -2561,7 +2561,7 @@ c ice fraction according to Ramirez 2023
 			stop
 	end select
 
-	if(.not.retrieval.and..not.dopostequalweights) then
+	if(writefiles) then
 		open(unit=93,file=trim(outputdir) // 'surfemis.dat',FORM="FORMATTED",ACCESS="STREAM")
 		do i=1,nlam
 			write(93,*) lam(i),surface_emis(i)

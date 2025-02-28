@@ -20,6 +20,8 @@
 	character*500 lowkey
 	integer ipmin,ipmax
 	
+	writefiles=.false.
+	
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
 		open(unit=35,file=trim(outputdir) // "/posterior.dat",FORM="FORMATTED",ACCESS="STREAM")
 		i=1
@@ -720,7 +722,9 @@ c		call cpu_time(stoptime)
 	deallocate(done)
 	deallocate(var)
 	if(do3D.and.fulloutput3D) deallocate(PTstruct3D,mixrat3D,phase3D,phase3DR)
-	
+
+	writefiles=.true.
+		
 	return
 	end
 	

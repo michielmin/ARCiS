@@ -313,9 +313,10 @@
 		allocate(demisR(n_ret,nlam))
 		allocate(bestvar(n_ret))
 	endif
-
+	writefiles=.false.
 	if(retrievaltype.eq.'MN'.or.retrievaltype.eq.'MultiNest') then
 		call doMultiNest
+		writefiles=.true.
 		return
 	endif
 	
@@ -365,6 +366,7 @@ c	enddo
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
 		call doMCMCF90(var0,n_ret)
 c		call MCMC(MCMCfunc,var0,n_ret,npop,npop*100,ny)
+		writefiles=.true.
 		return
 	endif
 	
@@ -502,6 +504,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	call WriteRetrieval(imodel,chi2,var,bestvar,error)
 
 	if(writeWolk) close(unit=31)
+	writefiles=.true.
 	
 	return
 	end

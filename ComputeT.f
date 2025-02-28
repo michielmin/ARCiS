@@ -703,7 +703,7 @@ c		if(nTiter.gt.1) call computeav50(Tdist(ir,1:nTiter),nTiter,T1(ir))
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
 	if(do3D.and..not.retrieval.and..not.dopostequalweights) print*,"Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K"
 
-	if(.not.retrieval.and..not.dopostequalweights) then
+	if(writefiles) then
 		open(unit=26,file=trim(outputdir) // 'convection.dat',FORM="FORMATTED",ACCESS="STREAM")
 		do ir=1,nr
 			if(Convec(ir)) then

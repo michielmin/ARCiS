@@ -2271,6 +2271,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 
 	retrieval=.false.
 	doscaleR=.false.
+	writefiles=.true.
 	nscaleR=-1
 	massprior=.false.
 	useobsgrid=.false.

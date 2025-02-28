@@ -794,7 +794,7 @@ c Seed particles
 	x(1:nnr)=xm(1:nnr)
 	call regridarray(logCloudP,x,nnr,logP,Cloud(ii)%frac(1:nr,15),nr)
 
-	if(.not.retrieval) then
+	if(writefiles) then
 		if(do3D) then
 			open(unit=20,file=trim(outputdir) // '/cloudstructure' // trim(int2string(i3D,'(i0.4)')) // '.dat',
      &             FORM="FORMATTED",ACCESS="STREAM")

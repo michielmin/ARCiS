@@ -280,7 +280,7 @@ c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 		endif
 	enddo
 
-	if(.not.retrieval) then
+	if(writefiles) then
 		open(unit=30,file=trim(outputdir) // "opticaldepth.dat",FORM="FORMATTED",ACCESS="STREAM")
 		write(30,'("#",a13,a19)') "lambda [mu]","total average tau"
 		do i=1,nlam

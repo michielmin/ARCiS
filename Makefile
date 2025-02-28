@@ -194,7 +194,7 @@ $(PROGRAM):     version  $(OBJS) $(MAINF)
 		$(LINKER) $(LDFLAGS) $(OBJS) $(MAINF) $(LIBS) Version.f -o $(PROGRAM)
 
 $(PYLIB):     version  $(OBJS)
-		$(FC) $(LDFLAGS) -c SupportPy.f90
+		$(FC) $(LDFLAGS) -c SupportPy.f
 		ar cr libARCiS.a $(OBJS) SupportPy.o
 		python -m numpy.f2py -m pyARCiS $(F2PYC) -c MainPy.f90 Version.f -L$(PWD) -lARCiS $(LIBS) $(LGOMP) -I$(PWD)
 		pip install -e $(PWD)

@@ -248,7 +248,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 
 	endif
 	
-	if(.not.retrieval) then
+	if(writefiles) then
 		filename=trim(outputdir) // "tau1depth" // trim(side)
 		call output("Writing tau1depth to: " // trim(filename))
 		open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")

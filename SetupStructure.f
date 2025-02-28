@@ -25,7 +25,6 @@ c	Use Thorngren & Fortney (2018)
 c	Add a minimum of 85K for compatibility with cold/old gas Giants
 		TeffP=(TeffP**4+85d0**4)**0.25
 		if(.not.retrieval) call output("Internal temperature: " // dbl2string(TeffP,'(f6.1)') // "K")
-		if(.not.retrieval) print*,"Internal temperature: " // dbl2string(TeffP,'(f6.1)') // "K"
 	endif
 	
 	if(.not.do3D) betaF=betaT
@@ -425,7 +424,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		if(Htot.gt.0d0) metallicity=log10(metallicity/Htot)+3.0565202503263760
 	endif
 
-	if(.not.retrieval) then
+	if(writefiles) then
 		open(unit=50,file=trim(outputdir) // 'COprofile.dat',FORM="FORMATTED",ACCESS="STREAM")
 		write(50,'("#",a14,3a10)') "P [bar]","C/O","[O]","[C]"
 		do i=1,nr
@@ -825,7 +824,7 @@ c Setup names and weights of the elements
 	call output("S/O: " // dbl2string(SO,'(f7.3)'))
 	call output("[Z]: " // dbl2string(Z,'(f7.3)'))
 
-	if(.not.retrieval) then
+	if(writefiles) then
 	open(unit=50,file=trim(outputdir) // 'atomic.dat',FORM="FORMATTED",ACCESS="STREAM")
 	write(50,'("SimAB abundances:")')
 	write(50,'(a6,f7.3)') "C/O:",CO

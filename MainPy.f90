@@ -28,7 +28,6 @@
 	py_nret=n_ret
 	py_nobs=nobs
 
-
 	return
 	end
 
@@ -205,4 +204,13 @@
 	return
 	end
 
+	subroutine pyVerbose(switch)
+	IMPLICIT NONE
+	logical switch
+
+	call pyVerboseSupport(switch)
+	
+	return
+	end
+	
 
