@@ -389,9 +389,10 @@ c		enddo
 	if(.not.Cs.gt.0d0) Cs=0d0
 	if(Cs.gt.0d0) then
 		G=G/Cs
-		if(doF11) then
-			F11=F11/Cs
-		endif
+		if(doF11) F11=F11/Cs
+	else
+		G=0d0
+		if(doF11) F11=1d0
 	endif
 
 	return

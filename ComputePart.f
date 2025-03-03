@@ -25,7 +25,7 @@
 	character*3 meth
 	character*500 filename(MAXMAT),grid,tmp,tmp2,partfile,lnkfile
 
-	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie,KR,theta,dummy,amin,amax,rcore,camie,fmie
+	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie,KR,theta,dummy,amin,amax,rcore,camie,fmie,gmie
 	logical truefalse,checkparticlefile,lnkloglog
 	integer abun_in_name,LL,LLmax
 	parameter(abun_in_name=2)
@@ -229,7 +229,7 @@ c		endif
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,csca0,cabs0,cext0,theta,i,l,tot,k,Err,spheres,toolarge,
 !$OMP&         rad,wvno,m,r1,rcore,qext,qsca,qbs,gqsc,rmie,lmie,e1mie,e2mie,
-!$OMP&         csmie,cemie,camie,tot2,j,fcomputed,gsca)
+!$OMP&         csmie,cemie,camie,tot2,j,fcomputed,gsca,gmie)
 !$OMP& SHARED(C,na,nm,ns,frac,minlog,maxlog,f,e1,e2,wf,isize,computelamcloud,Mass,
 !$OMP&        pow,lgrid,rho,nf,r0,nr0,Kabs,Ksca,Kext,nlam,fmie,useDLMie,
 !$OMP&		  DLMie_e1max,DLMie_e2max,G)
@@ -291,10 +291,10 @@ c		endif
 		e1mie=e1(l,ilam)
 		e2mie=e2(l,ilam)
 		if(rmie/lmie.lt.10d0) then
-			call callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,GQSC,Err)
+			call callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,gmie,Err)
 		else
 			lmie=rmie/10d0
-			call callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,GQSC,Err)
+			call callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,gmie,Err)
 		endif
 		if(.not.csmie.gt.0d0) then
 			Err=1
@@ -308,24 +308,28 @@ c		endif
 			e2mie=e2(l,ilam)
 			if(Err.eq.1.or.i.eq.1) then
 				if(rmie/lmie.lt.10d0) then
-					call callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie,GQSC)
+					call callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie,gmie)
 				else
 					lmie=rmie/10d0
-					call callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie,GQSC)
+					call callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie,gmie)
 				endif
 			endif
 		endif
 		cext0=cext0+wf(i)*nr0(l,k)*cemie
 		csca0=csca0+wf(i)*nr0(l,k)*csmie
 	   	cabs0=cabs0+wf(i)*nr0(l,k)*(cemie-csmie)
-	   	gsca=gsca+GQSC*wf(i)*nr0(l,k)*csmie
+	   	gsca=gsca+gmie*wf(i)*nr0(l,k)*csmie
 	enddo
 	endif
 	enddo
 10	continue
 	enddo
 
-	G(ilam)=gsca/csca0
+	if(csca0.gt.0d0) then
+		G(ilam)=gsca/csca0
+	else
+		G(ilam)=0d0
+	endif
 	Kabs(ilam)=1d4*cabs0/Mass
 	Ksca(ilam)=1d4*csca0/Mass
 	Kext(ilam)=1d4*cext0/Mass
@@ -662,9 +666,9 @@ c LLL mixing rule (not preferred)
       END
 
 
-	subroutine callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie,GSCA)
+	subroutine callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie,gmie)
 	IMPLICIT NONE
-	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie
+	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie,gmie
 	real*8 pi
 	parameter(pi=3.14159265358979323846264338328d0)
       INTEGER NANG,Err
@@ -682,13 +686,14 @@ c LLL mixing rule (not preferred)
 	endif
 	csmie=pi*rmie**2*QSCA
 	cemie=pi*rmie**2*QEXT
+	gmie=GSCA
 	
 	return
 	end
 
-	subroutine callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,GSCA,Err)
+	subroutine callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,gmie,Err)
 	IMPLICIT NONE
-	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie,rcore
+	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie,rcore,gmie
 	real*8 pi,theta,test
 	integer Err,i
 	parameter(pi=3.14159265358979323846264338328d0)
@@ -705,7 +710,7 @@ c LLL mixing rule (not preferred)
 	X=2d0*pi*rcore/lmie
 	Y=2d0*pi*rmie/lmie
 	test=abs(cmplx(e1mie,e2mie))
-	if(test.lt.3d0.and.test.gt.0.5d0.and.e2mie.lt.2d0) then
+	if(test.lt.3d0.and.test.gt.0.5d0.and.e2mie.lt.2d0.and..false.) then
 		REFRL1=cmplx(1.001,1e-8)
 		REFRL2=cmplx(e1mie,e2mie)
 		Err=0
@@ -733,6 +738,7 @@ c LLL mixing rule (not preferred)
 
 	csmie=pi*rmie**2*QSCA
 	cemie=pi*rmie**2*QEXT
+	gmie=GSCA
      	
 	return
 	end

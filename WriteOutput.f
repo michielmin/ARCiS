@@ -230,7 +230,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 		write(30,form) "phase [degrees]",specR(1:nj)
 		form='(f14.6,' // int2string(nj,'(i3)') // 'es17.9E3)'
 		do i=1,nphase
-			specR(1:nlam_out)=Fstar(1:nlam_out)*1d23/distance**2
+			specR(1:nlam_out)=0d0!Fstar(1:nlam_out)*1d23/distance**2
 			specR(1:nlam_out)=specR(1:nlam_out)+phase(i,0,1:nlam_out)+flux(0,1:nlam_out)
 			specR(1:nlam_out)=specR(1:nlam_out)/(Fstar(1:nlam_out)*1d23/distance**2)
 			nj=0
