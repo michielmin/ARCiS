@@ -21,7 +21,7 @@
 	real,allocatable :: e1d(:,:),e2d(:,:)
 	integer i,j,k,l,na,nf,ns,nm,ilam,Err,spheres,toolarge
 	complex m,min,mav,alpha
-	real QEXT, QSCA, QBS, GQSC,wvno,scale
+	real QEXT, QSCA, QBS, GQSC,wvno,scale,gsca
 	character*3 meth
 	character*500 filename(MAXMAT),grid,tmp,tmp2,partfile,lnkfile
 
@@ -29,7 +29,7 @@
 	logical truefalse,checkparticlefile,lnkloglog
 	integer abun_in_name,LL,LLmax
 	parameter(abun_in_name=2)
-	real*8 Kabs(nlam+1),Ksca(nlam+1),Kext(nlam+1),lgrid(nlam+1)
+	real*8 Kabs(nlam+1),Ksca(nlam+1),Kext(nlam+1),lgrid(nlam+1),G(nlam+1)
 	logical fcomputed,computelamcloud(nlam)
 	real*8 csmie_fcomp,cemie_fcomp,gasdev
 
@@ -229,10 +229,10 @@ c		endif
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,csca0,cabs0,cext0,theta,i,l,tot,k,Err,spheres,toolarge,
 !$OMP&         rad,wvno,m,r1,rcore,qext,qsca,qbs,gqsc,rmie,lmie,e1mie,e2mie,
-!$OMP&         csmie,cemie,camie,tot2,j,fcomputed)
+!$OMP&         csmie,cemie,camie,tot2,j,fcomputed,gsca)
 !$OMP& SHARED(C,na,nm,ns,frac,minlog,maxlog,f,e1,e2,wf,isize,computelamcloud,Mass,
 !$OMP&        pow,lgrid,rho,nf,r0,nr0,Kabs,Ksca,Kext,nlam,fmie,useDLMie,
-!$OMP&		  DLMie_e1max,DLMie_e2max)
+!$OMP&		  DLMie_e1max,DLMie_e2max,G)
 !$OMP DO
 !$OMP& SCHEDULE(STATIC)
 	do ilam=1,C%nlam
@@ -248,6 +248,7 @@ c		endif
 	csca0=0d0
 	cabs0=0d0
 	cext0=0d0
+	gsca=0d0
 
 	do l=1,nm
 	if(frac(l).eq.0d0) goto 10
@@ -270,6 +271,7 @@ c		endif
 		cext0=cext0+nr0(l,k)*(camie+csmie)
 		csca0=csca0+nr0(l,k)*csmie
 	   	cabs0=cabs0+nr0(l,k)*camie
+	   	gsca=0d0
 	else
 	do i=1,nf
 		rad=r1/(1d0-f(i))**(1d0/3d0)
@@ -289,10 +291,10 @@ c		endif
 		e1mie=e1(l,ilam)
 		e2mie=e2(l,ilam)
 		if(rmie/lmie.lt.10d0) then
-			call callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,Err)
+			call callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,GQSC,Err)
 		else
 			lmie=rmie/10d0
-			call callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,Err)
+			call callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,GQSC,Err)
 		endif
 		if(.not.csmie.gt.0d0) then
 			Err=1
@@ -306,22 +308,24 @@ c		endif
 			e2mie=e2(l,ilam)
 			if(Err.eq.1.or.i.eq.1) then
 				if(rmie/lmie.lt.10d0) then
-					call callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie)
+					call callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie,GQSC)
 				else
 					lmie=rmie/10d0
-					call callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie)
+					call callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie,GQSC)
 				endif
 			endif
 		endif
 		cext0=cext0+wf(i)*nr0(l,k)*cemie
 		csca0=csca0+wf(i)*nr0(l,k)*csmie
 	   	cabs0=cabs0+wf(i)*nr0(l,k)*(cemie-csmie)
+	   	gsca=gsca+GQSC*wf(i)*nr0(l,k)*csmie
 	enddo
 	endif
 	enddo
 10	continue
 	enddo
 
+	G(ilam)=gsca/csca0
 	Kabs(ilam)=1d4*cabs0/Mass
 	Ksca(ilam)=1d4*csca0/Mass
 	Kext(ilam)=1d4*cext0/Mass
@@ -342,6 +346,7 @@ c		endif
 	C%Kabs(isize,1:C%nlam)=Kabs(1:C%nlam)
 	C%Kext(isize,1:C%nlam)=Kext(1:C%nlam)
 	C%Ksca(isize,1:C%nlam)=Ksca(1:C%nlam)
+	C%G(isize,1:C%nlam)=G(1:C%nlam)
 	
 	if(outputopacity) call WriteOpacity(isize,"wolk",1d4/lgrid(1:C%nlam),Kabs(1:C%nlam),C%nlam,1)
 
@@ -657,7 +662,7 @@ c LLL mixing rule (not preferred)
       END
 
 
-	subroutine callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie)
+	subroutine callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie,GSCA)
 	IMPLICIT NONE
 	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie
 	real*8 pi
@@ -681,7 +686,7 @@ c LLL mixing rule (not preferred)
 	return
 	end
 
-	subroutine callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,Err)
+	subroutine callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,GSCA,Err)
 	IMPLICIT NONE
 	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie,rcore
 	real*8 pi,theta,test

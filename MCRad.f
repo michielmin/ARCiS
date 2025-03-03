@@ -5,7 +5,7 @@
 	integer iphase
 	real*8 z,dz,E,Ca(nr),Cs(nr),Ce(nr),tau,Planck,random,v,fluxg,dx,dy,wphase(nphase)
 	real*8 vR1,vR2,b,rr,R1,R2,tau_v,x,y,phase0(nphase),theta,fstop,albedo,ct1,ct2,E0
-	real*8 tot,g(nr),Eabs,EJv(nr),Crw(nr)
+	real*8 tot,g(nr),Eabs,EJv(nr),Crw(nr),F11(180),Gsca
 	real*8 Eemit(nr),Femit(nr),xs,ys,zs,inp,Pb(nr+1)
 	integer iphot,ir,jr,Nphot,ilam,ig,nscat,jrnext,NphotStar,NphotPlanet,irdark,j
 	logical docloud0(nclouds),goingup,hitR,onedge,hitR1,hitR2,dorw(nr)
@@ -42,7 +42,7 @@ c		ct2=1d0-2d0*real(iphase)/real(nphase)
 	Pb(nr+1)=P(nr)
 	do ig=1,ng
 		do ir=1,nr
-			call Crossections(ir,ilam,ig,Ca(ir),Cs(ir),docloud0,0)
+			call Crossections(ir,ilam,ig,Ca(ir),Cs(ir),docloud0,0,F11,g(ir),.true.)
 			Ce(ir)=Ca(ir)+Cs(ir)
 			dorw(ir)=.false.
 			Crw(ir)=Ca(ir)+Cs(ir)*(1d0-g(ir))
@@ -350,26 +350,49 @@ c		enddo
 	end
 	
 	
-	subroutine Crossections(ir,ilam,ig,Ca,Cs,docloud0,ivel)
+	subroutine Crossections(ir,ilam,ig,Ca,Cs,docloud0,ivel,F11,G,doF11)
 	use GlobalSetup
+	use Constants
 	IMPLICIT NONE
-	integer ir,ilam,ig,icloud,isize,ivel
-	real*8 Ca,Cs
-	logical docloud0(nclouds)
+	integer ir,ilam,ig,icloud,isize,ivel,i
+	real*8 Ca,Cs,F11(180),theta,CsAdd,G,gadd
+	logical docloud0(nclouds),doF11
 
 	Ca=Cabs(ir,ilam,ig,ivel)*Ndens(ir)
 	Cs=Csca(ir,ilam)*Ndens(ir)
 	if(.not.Ca.gt.0d0) Ca=0d0
 	if(.not.Cs.gt.0d0) Cs=0d0
+	if(doF11) then
+		do i=1,180
+			theta=real(i)*pi/180d0
+			F11(i)=Cs*3d0*(1d0+cos(theta)**2)/4d0
+		enddo
+	endif
+	G=0d0
 
 	do icloud=1,nclouds
 		if(docloud0(icloud)) then
 			Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
-			Cs=Cs+Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+			CsAdd=Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
+			Cs=Cs+CsAdd
+			gadd=Cloud(icloud)%G(ir,ilam)
+			G=G+CsAdd*gadd
+			if(doF11) then
+				do i=1,180
+					theta=real(i)*pi/180d0
+					F11(i)=F11(i)+CsAdd*(1d0-gadd**2)/((1d0+gadd**2-2d0*gadd*cos(theta))**(2d0/3d0))
+				enddo
+			endif
 		endif
 	enddo
 	if(.not.Ca.gt.0d0) Ca=0d0
 	if(.not.Cs.gt.0d0) Cs=0d0
+	if(Cs.gt.0d0) then
+		G=G/Cs
+		if(doF11) then
+			F11=F11/Cs
+		endif
+	endif
 
 	return
 	end

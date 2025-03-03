@@ -10,7 +10,7 @@
 	logical,allocatable :: docloud0(:,:)
 	real*8,allocatable :: spec(:,:),specR(:),lamR(:),specRexp(:),specErr(:),Fstar_obs(:)
 	real*8 x,specres_obs,expspecres_obs,gasdev,tot,Dmirror,f_phot,noisefloor,molweight(nmol),Tweight,Pweight
-	real*8 lam_out(nlam),spec_out(nlam),Ca,Cs,tau,tautot
+	real*8 lam_out(nlam),spec_out(nlam),Ca,Cs,tau,tautot,F11(180),G
 	integer nlam_out
 	integer ilam,j,nj,nlamR,i_instr,k,ir
 	character*1000 line,instr_add
@@ -270,7 +270,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 				do ir=nr,2,-1
 					tau=0d0
 					do j=1,ng
-						call Crossections(ir,i,j,Ca,Cs,docloud0(1,1:ncc),0)
+						call Crossections(ir,i,j,Ca,Cs,docloud0(1,1:ncc),0,F11,G,.false.)
 						tau=tau+wgg(j)*(P(ir-1)-P(ir))*1d6*(Ca+Cs)/(dens(ir)*grav(ir))
 					enddo
 					if((tau+tautot).gt.1d0) then

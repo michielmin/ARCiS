@@ -250,6 +250,7 @@ c-----------------------------------------------------------------------
 		allocate(Cloud(ii)%Kabs(nr,nlam+1))
 		allocate(Cloud(ii)%Ksca(nr,nlam+1))
 		allocate(Cloud(ii)%Kext(nr,nlam+1))
+		allocate(Cloud(ii)%g(nr,nlam+1))
 	endif
 
 	select case(Cloud(ii)%opacitytype)
@@ -267,6 +268,7 @@ c-----------------------------------------------------------------------
 					enddo
 				enddo
 			enddo
+			Cloud(ii)%g=Cloud(ii)%g0
 		case("PARAMETERISED")
 			call output("Computing parameterised cloud particles")
 			do ilam=1,nlam
@@ -275,6 +277,7 @@ c-----------------------------------------------------------------------
 			Cloud(ii)%Kext(1:nr,nlam+1)=Cloud(ii)%kappa/(1d0+(Cloud(ii)%lref/Cloud(ii)%klam)**Cloud(ii)%kpow)
 			Cloud(ii)%Ksca(1:nr,1:nlam)=Cloud(ii)%Kext(1:nr,1:nlam)*Cloud(ii)%albedo
 			Cloud(ii)%Kabs(1:nr,1:nlam)=Cloud(ii)%Kext(1:nr,1:nlam)*(1d0-Cloud(ii)%albedo)
+			Cloud(ii)%g=Cloud(ii)%g0
 		case("MATERIAL","REFIND")
 			call output("Computing inhomogeneous cloud particles")
 			computelamcloud(1:nlam)=computelam(1:nlam)
@@ -287,6 +290,7 @@ c-----------------------------------------------------------------------
 					Cloud(ii)%Kext(is,1:nlam+1)=Cloud(ii)%Kext(1,1:nlam+1)
 					Cloud(ii)%Kabs(is,1:nlam+1)=Cloud(ii)%Kabs(1,1:nlam+1)
 					Cloud(ii)%Ksca(is,1:nlam+1)=Cloud(ii)%Ksca(1,1:nlam+1)
+					Cloud(ii)%g(is,1:nlam+1)=Cloud(ii)%g(1,1:nlam+1)
 				enddo
 			else
 				do is=nr,1,-1

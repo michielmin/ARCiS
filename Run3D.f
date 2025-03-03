@@ -7,7 +7,7 @@
 	real*8 beta(nlong,nlatt),Planck,phi,la,lo,A,rr
 	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta
 	real*8,allocatable :: Ca(:,:,:,:,:),Cs(:,:,:),BBr(:,:),Si(:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce_cont(:,:,:)
-	integer ir,ilam,ig,isize,iRmax,ndisk,nsub,nrtrace,nptrace,ipc,npc,nmol_count
+	integer ir,ilam,ig,isize,iRmax,ndisk,nsub,nrtrace,nptrace,ipc,npc,nmol_count,iscatt
 	logical recomputeopac
 	logical,allocatable :: hit(:,:)
 	real*8,allocatable :: rtrace(:),wrtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:),cloud3D(:,:)
@@ -15,17 +15,19 @@
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:),tautot(:,:),exp_tau(:,:),obsA_split_omp(:,:),dtauR_nu(:,:,:,:,:)
 	real*8,allocatable :: tauc(:),Afact(:),vv(:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
-	real*8 g,tot,contr,tmp(nmol),Rmin_im,Rmax_im,random,xmin,xmax,Pb(nr+1)
+	real*8 tot,contr,tmp(nmol),Rmin_im,Rmax_im,random,xmin,xmax,Pb(nr+1)
 	integer nx_im,ix,iy,ni,ilatt,ilong,imustar,ivel,miniter0
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1,SiRalb1,tau0
 	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:),alb_omp(:),SiR0(:,:),SiRalb0(:,:),R3DC(:,:),lgrid(:)
+	real*8,allocatable :: SiFS(:,:,:,:,:),SiScFS(:,:,:,:,:),F11(:,:,:,:),g(:,:,:)
 	logical iterateshift,actually1D,do_ibeta(n3D)
 	real*8 vxxmin,vxxmax,betamin_term,tot1,tot2,vrot,dlam_rot,albedo_day,scale,scale_prev
 	logical docloud0(max(nclouds,1)),do_rot
 	
-	allocate(Ca(nlam,ng,nr,n3D,-nvel:nvel),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D))
-	if(computealbedo) allocate(SiSc(nlam,ng,0:nr,nnu0,n3D))
+	allocate(Ca(nlam,ng,nr,n3D,-nvel:nvel),Cs(nlam,nr,n3D),BBr(nlam,0:nr),Si(nlam,ng,0:nr,nnu0,n3D),SiFS(nlam,ng,0:nr,nnu0,n3D))
+	allocate(G(nlam,nr,n3D),F11(nlam,0:nr,180,n3D))
+	if(computealbedo) allocate(SiSc(nlam,ng,0:nr,nnu0,n3D),SiFS(nlam,ng,0:nr,nnu0,n3D))
 	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce_cont(nlam,nr,n3D))
 	allocate(dtauR_nu(nlam,ng,n3D,nr,-nvel:nvel))
 	allocate(R3D(n3D,nr+2))
@@ -36,6 +38,9 @@
 	if(.not.retrieval.and.fulloutput3D) allocate(cloud3D(n3D,0:nr))
 	allocate(mixrat3D(n3D,nr,nmol))
 	nx_im=200
+
+	g=0d0
+	F11=1d0
 
 	if(retrieval.or.dopostequalweights) call SetOutputMode(.false.)
 
@@ -320,11 +325,18 @@ c Now call the setup for the readFull3D part
 					BBr(ilam,ir)=Planck(T(ir),freq0)
 					do ig=1,ng
 						do ivel=-nvel,nvel
-							call Crossections(ir,ilam,ig,Ca(ilam,ig,ir,i,ivel),Cs(ilam,ir,i),docloud0,ivel)
+							call Crossections(ir,ilam,ig,Ca(ilam,ig,ir,i,ivel),Cs(ilam,ir,i),docloud0,ivel,
+     &								F11(ilam,ir,1:180,i),g(ilam,ir,i),(ig.eq.1.and.anisoscattstar))
 						enddo
 					enddo
 				enddo
 			enddo
+			Cs(1:nlam,1:nr,i)=Cs(1:nlam,1:nr,i)*(1d0-g(1:nlam,1:nr,i))
+			if(anisoscattstar) then
+				do j=1,180
+					F11(1:nlam,1:nr,j,i)=F11(1:nlam,1:nr,j,i)/(1d0-g(1:nlam,1:nr,i))
+				enddo
+			endif
 			if(computeT) then
 				T3D(i,0)=Tsurface
 			else
@@ -355,12 +367,14 @@ c Now call the setup for the readFull3D part
 				enddo
 				nmol_count=k
 			enddo
-			if(emisspec) call ComputeScatter(BBr(1:nlam,0:nr),Si(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i,0),Cs(1:nlam,1:nr,i))
+			if(emisspec) call ComputeScatter(BBr(1:nlam,0:nr),Si(1:nlam,1:ng,0:nr,1:nnu0,i),SiFS(1:nlam,1:ng,0:nr,1:nnu0,i),
+     &								Ca(1:nlam,1:ng,1:nr,i,0),Cs(1:nlam,1:nr,i))
 			if(computealbedo) then
 				BBr(1:nlam,0:nr)=0d0
 				Fstar_temp(1:nlam)=Fstar(1:nlam)
 				Fstar=1d0
-				call ComputeScatter(BBr(1:nlam,0:nr),SiSc(1:nlam,1:ng,0:nr,1:nnu0,i),Ca(1:nlam,1:ng,1:nr,i,0),Cs(1:nlam,1:nr,i))
+				call ComputeScatter(BBr(1:nlam,0:nr),SiSc(1:nlam,1:ng,0:nr,1:nnu0,i),SiScFS(1:nlam,1:ng,0:nr,1:nnu0,i),
+     &								Ca(1:nlam,1:ng,1:nr,i,0),Cs(1:nlam,1:nr,i))
 				Fstar(1:nlam)=Fstar_temp(1:nlam)
 			endif
 
@@ -399,13 +413,19 @@ c Now call the setup for the readFull3D part
 			do ir=1,nr
 				Ca(1:nlam,1:ng,ir,i,-nvel:nvel)=Ca(1:nlam,1:ng,ir,n3D,-nvel:nvel)
 				Cs(1:nlam,ir,i)=Cs(1:nlam,ir,n3D)
+				F11(1:nlam,ir,1:180,i)=F11(1:nlam,ir,1:180,n3D)
+				g(1:nlam,ir,i)=g(1:nlam,ir,n3D)
 				Ce_cont(1:nlam,ir,i)=Ce_cont(1:nlam,ir,n3D)
 				Ca_mol(1:nlam,1:ng,1:nmol_count,ir,i)=Ca_mol(1:nlam,1:ng,1:nmol_count,ir,n3D)
 				dtauR_nu(1:nlam,1:ng,i,ir,-nvel:nvel)=dtauR_nu(1:nlam,1:ng,n3D,ir,-nvel:nvel)
 			enddo
 			do ir=0,nr
 				Si(1:nlam,1:ng,ir,1:nnu0,i)=Si(1:nlam,1:ng,ir,1:nnu0,n3D)
-				if(computealbedo) SiSc(1:nlam,1:ng,ir,1:nnu0,i)=SiSc(1:nlam,1:ng,ir,1:nnu0,n3D)
+				SiFS(1:nlam,1:ng,ir,1:nnu0,i)=SiFS(1:nlam,1:ng,ir,1:nnu0,n3D)
+				if(computealbedo) then
+					SiSc(1:nlam,1:ng,ir,1:nnu0,i)=SiSc(1:nlam,1:ng,ir,1:nnu0,n3D)
+					SiScFS(1:nlam,1:ng,ir,1:nnu0,i)=SiScFS(1:nlam,1:ng,ir,1:nnu0,n3D)
+				endif
 			enddo
 			local_albedo(i)=local_albedo(n3D)
 		endif
@@ -537,6 +557,10 @@ c Now call the setup for the readFull3D part
 	if(fulloutput3D) PTaverage3D(ipc,1:nr)=0d0
 	theta=2d0*pi*theta_phase(ipc)/360d0
 	if(theta.gt.2d0*pi) theta=theta-2d0*pi
+	iscatt=theta_phase(ipc)
+	if(iscatt.gt.180) iscatt=360-iscatt
+	if(iscatt.lt.0) iscatt=-iscatt
+	if(iscatt.eq.0) iscatt=1
 	fluxp=0d0
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
@@ -545,7 +569,8 @@ c Now call the setup for the readFull3D part
 !$OMP&			vrot,dlam_rot,ivel)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,lam,do_rot,
 !$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,R3DC,computelam,nvel,
-!$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis)
+!$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis,
+!$OMP&			iscatt,F11,SiFS,SiScFS,anisoscattstar,g)
 	allocate(fact(nlam,ng))
 	allocate(fluxp_omp(nlam))
 	allocate(ftot(nlam),SiR0(nlam,ng))
@@ -661,10 +686,20 @@ c Note we are here using the symmetry between North and South
 							w1=(R3DC(i,i1+1)-rr)/(R3DC(i,i1+1)-R3DC(i,i1))
 							w2=1d0-w1
 							SiR1=w1*Si(ilam,ig,i1,inu,i)+w2*Si(ilam,ig,i1+1,inu,i)
-							if(computealbedo) SiRalb1=w1*SiSc(ilam,ig,i1,inu,i)+w2*SiSc(ilam,ig,i1+1,inu,i)
+							if(anisoscattstar) SiR1=SiR1+F11(ilam,i1,iscatt,i)*w1*SiFS(ilam,ig,i1,inu,i)+
+     &													 F11(ilam,i1+1,iscatt,i)*w2*SiFS(ilam,ig,i1+1,inu,i)
+							if(computealbedo) then
+								SiRalb1=w1*SiSc(ilam,ig,i1,inu,i)+w2*SiSc(ilam,ig,i1+1,inu,i)
+								if(anisoscattstar) SiRalb1=SiRalb1+F11(ilam,i1,iscatt,i)*w1*SiScFS(ilam,ig,i1,inu,i)+
+     &													 F11(ilam,i1+1,iscatt,i)*w2*SiScFS(ilam,ig,i1+1,inu,i)
+							endif
 						else
 							SiR1=Si(ilam,ig,nr,inu,i)
-							if(computealbedo) SiRalb1=SiSc(ilam,ig,nr,inu,i)
+							if(anisoscattstar) SiR1=SiR1+F11(ilam,nr,iscatt,i)*SiFS(ilam,ig,nr,inu,i)
+							if(computealbedo) then
+								SiRalb1=SiSc(ilam,ig,nr,inu,i)
+								if(anisoscattstar) SiRalb1=SiRalb1+F11(ilam,nr,iscatt,i)*SiScFS(ilam,ig,nr,inu,i)
+							endif
 						endif
 						call ComputeI12(tau1,tau0,SiR1,SiR0(ilam,ig),contr)
 						ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
@@ -693,8 +728,12 @@ c Note we are here using the symmetry between North and South
 					if(lamemis(ilam).and.computelam(ilam)) then
 					do ig=1,ng
 						contr=Si(ilam,ig,0,inu,i)
+						if(anisoscattstar) contr=contr+F11(ilam,0,iscatt,i)*SiFS(ilam,ig,0,inu,i)
 						ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig)
-						if(computealbedo) alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*SiSc(ilam,ig,0,inu,i)*fact(ilam,ig)
+						if(computealbedo) then
+							alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*SiSc(ilam,ig,0,inu,i)*fact(ilam,ig)
+							if(anisoscattstar) alb_omp(ilam)=alb_omp(ilam)+F11(ilam,0,iscatt,i)*A*wgg(ig)*SiScFS(ilam,ig,0,inu,i)*fact(ilam,ig)
+						endif
 					enddo
 					endif
 				enddo
@@ -2265,7 +2304,7 @@ c-----------------------------------------------------------------------
 
 
 
-	subroutine ComputeScatter(BBr,Si,Ca,Cs)
+	subroutine ComputeScatter(BBr,Si,SiFS,Ca,Cs)
 	use GlobalSetup
 	use Constants
 	use Struct3D
@@ -2273,7 +2312,7 @@ c-----------------------------------------------------------------------
 	integer inu,nnu,ilam,ir,ig,inu0,iter,niter,info,NRHS
 	parameter(nnu=10,niter=500)
 	real*8 tau,d,tauR_nu(0:nr,nlam,ng),contr,Jstar_nu(nr,nlam,ng),Pb(nr+1)
-	real*8 Si(nlam,ng,0:nr,nnu0),BBr(nlam,0:nr),Ca(nlam,ng,nr),Cs(nlam,nr),Ce(nlam,ng,nr)
+	real*8 Si(nlam,ng,0:nr,nnu0),SiFS(nlam,ng,0:nr,nnu0),BBr(nlam,0:nr),Ca(nlam,ng,nr),Cs(nlam,nr),Ce(nlam,ng,nr)
 	real*8 nu(nnu),wnu(nnu),must,tauRs(nr),Ijs(nr),eps,Planck,tot,wabs(nlam,ng,nr),wscat(nlam,ng,nr)
 	logical err
 	parameter(eps=1d-20)
@@ -2303,6 +2342,7 @@ c-----------------------------------------------------------------------
 		do ig=1,ng
 			Si(1:nlam,ig,1:nr,inu0)=BBr(1:nlam,1:nr)*wabs(1:nlam,ig,1:nr)
 			Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
+			SiFS(1:nlam,ig,0:nr,inu0)=0d0
 		enddo
 	enddo
 	if(.not.scattering) return
@@ -2346,7 +2386,7 @@ c-----------------------------------------------------------------------
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(tauR,Ij,ilam,ig,inu0,inu,contr,must,Ih)
 !$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar,lamemis,
-!$OMP&        nnu0,wscat)
+!$OMP&        nnu0,wscat,anisoscattstar,SiFS)
 	allocate(tauR(nr),Ij(nr),Ih(nr))
 !$OMP DO
 	do ilam=1,nlam
@@ -2357,12 +2397,20 @@ c-----------------------------------------------------------------------
 					must=(real(inu0)-0.5)/real(nnu0-1)
 					contr=(Fstar(ilam)/(pi*Dplanet**2))
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
-					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+contr*exp(-tauR(1:nr))*wscat(ilam,ig,1:nr)/4d0
+					if(anisoscattstar) then
+						SiFS(ilam,ig,1:nr,inu0)=contr*exp(-tauR(1:nr))*wscat(ilam,ig,1:nr)/4d0
+					else
+						Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+contr*exp(-tauR(1:nr))*wscat(ilam,ig,1:nr)/4d0
+					endif
 					contr=contr*exp(-tauR(1))*must
 				else
 					contr=0d0
 				endif
-				Si(ilam,ig,0,inu0)=Si(ilam,ig,0,inu0)+contr*(1d0-surface_emis(ilam))
+				if(anisoscattstar) then
+					SiFS(ilam,ig,0,inu0)=contr*(1d0-surface_emis(ilam))
+				else
+					Si(ilam,ig,0,inu0)=Si(ilam,ig,0,inu0)+contr*(1d0-surface_emis(ilam))
+				endif
 				do inu=1,nnu
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
 					tauR(1:nr)=abs(tauR(1:nr)-tauR(1))
@@ -2370,8 +2418,13 @@ c-----------------------------------------------------------------------
 					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+wnu(inu)*Ij(1:nr)*wscat(ilam,ig,1:nr)
 				enddo
 			enddo
-			call AddScatter(Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ilam,ig),
+			if(anisoscattstar) then
+				call AddSecScatter(SiFS(ilam,ig,1:nr,1:nnu0),Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ilam,ig),
      &	Ca(ilam,ig,1:nr),Cs(ilam,1:nr),Ce(ilam,ig,1:nr),(1d0-surface_emis(ilam)),nr,nu,wnu,nnu,nnu0)
+			else
+				call AddScatter(Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ilam,ig),
+     &	Ca(ilam,ig,1:nr),Cs(ilam,1:nr),Ce(ilam,ig,1:nr),(1d0-surface_emis(ilam)),nr,nu,wnu,nnu,nnu0)
+			endif
 			do inu0=1,nnu0
 				do inu=1,nnu
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
@@ -2387,6 +2440,71 @@ c-----------------------------------------------------------------------
 !$OMP FLUSH
 !$OMP END PARALLEL
 	
+	return
+	end
+
+
+	subroutine AddSecScatter(SiFS,Si_in,tauR_in,Ca,Cs,Ce,SurfAlb,nr,nu,wnu,nnu,NRHS)
+	use Constants
+	IMPLICIT NONE
+	integer inu,nnu,ilam,ir,info,NRHS,nr,i,j,jr
+	real*8 tauR(nr),tauR_in(nr),SiFS(nr,NRHS),Si_in(nr,NRHS)
+	real*8 Si(nr,NRHS),Ca(nr),Cs(nr),Ce(nr)
+	real*8 nu(nnu),wnu(nnu),albedo(1:nr),SurfAlb
+	real*8 Ij(nr),Itot(nr,NRHS),Linv(nr,nr),Lmat(nr,nr),Hsurf(nr)
+	integer IWORKomp(nr)
+
+	do ir=1,nr
+		albedo(ir)=Cs(ir)/Ce(ir)
+		if(.not.albedo(ir).lt.1d0/(1d0+1d-4)) albedo(ir)=1d0/(1d0+1d-4)
+	enddo
+
+	Linv=0d0
+	Hsurf=0d0
+	do inu=1,nnu
+		tauR(1:nr)=tauR_in(1:nr)/abs(nu(inu))
+		call InvertIjExp(tauR,Lmat,nr)
+		do ir=1,nr
+			Linv(ir,1:nr)=Linv(ir,1:nr)+wnu(inu)*Lmat(ir,1:nr)*albedo(ir)
+		enddo
+		Hsurf(1:nr)=Hsurf(1:nr)+2d0*nu(inu)*wnu(inu)*Lmat(1,1:nr)
+	enddo
+	do inu=1,nnu
+		tauR(1:nr)=abs((tauR_in(1:nr)-tauR_in(1))/nu(inu))
+		do ir=1,nr
+			Linv(ir,1:nr)=Linv(ir,1:nr)+wnu(inu)*SurfAlb*Hsurf(1:nr)*albedo(ir)*exp(-tauR(ir))
+		enddo
+	enddo
+
+	do j=1,NRHS
+		Itot(1:nr,j)=matmul(Linv,SiFS(1:nr,j))
+	enddo
+	Si_in=Si_in+Itot
+
+	Linv=-Linv
+	do ir=1,nr
+		Linv(ir,ir)=1d0+Linv(ir,ir)
+	enddo
+	Itot=0d0
+	Itot(1:nr,1:NRHS)=Si_in(1:nr,1:NRHS)
+	info=0
+	call DGESV( nr, NRHS, Linv, nr, IWORKomp, Itot, nr, info)
+	if(info.ne.0) then
+		print*,"problem in scattering",info
+		Si=Si_in
+		return
+	endif
+
+	Si(1:nr,1:NRHS)=Itot(1:nr,1:NRHS)
+	do i=1,NRHS
+	do ir=1,nr
+		if(.not.Si(ir,i).ge.Si_in(ir,i)) then
+			Si(ir,i)=Si_in(ir,i)
+		endif
+	enddo
+	enddo
+	Si_in=Si
+
 	return
 	end
 

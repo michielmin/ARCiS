@@ -187,7 +187,7 @@ c===============================================================================
 	integer ncommandargs,n_add_ret
 	integer idum,maxiter,miniter,Nphot0,idum0,iWolk
 !$OMP THREADPRIVATE(idum)
-	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,computeT,computecontrib,do_rayleigh,isoFstar,writefiles
+	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,anisoscattstar,computeT,computecontrib,do_rayleigh,isoFstar,writefiles
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS,modelfail,projectedD
 	logical,allocatable :: includemol(:),diseqmol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	logical,allocatable :: includemol_raytrace(:),includemol_default(:)
@@ -431,12 +431,12 @@ c for exchange when computing secondary atmosphere
 		logical blend,haze,condensates,rainout,globalKzz,computecryst,coagulation
 		logical onepart,freeflow_nuc,freeflow_con,condenseNaK
 		real*8 mixrat,tau,lref,cryst0,e1_par,e2_par,Kref
-		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:)			! dimension nsize,nlam
+		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:),g(:,:)			! dimension nsize,nlam
 		character*500 species,hazetype,file,composition
 		integer nmat,nlam
 		character*500,allocatable :: lnkfile(:,:),material(:),condensate(:)
 		real*8 Kzz,Sigmadot,xm_bot,Sigmadot_phot
-		real*8 kappa,albedo,kpow,klam
+		real*8 kappa,albedo,kpow,klam,g0
 		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:),KeFile(:,:),KaFile(:,:),KsFile(:,:)
 		integer,allocatable :: nax(:)
 		logical usefsed,computeJn,EqChemBoundary

@@ -49,7 +49,7 @@
 	logical docloud0(max(nclouds,1)),converged,stopscat
 	real*8 tauf(nr),Si(0:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff,TT,maxErr,Fl0(nr),IntH0(nr,nr)
 	integer info,IWORK(10*(nr+1)*(nr+1)),NRHS,ii(3),iscat,nscat
-	real*8 tau1,tau2,ee0,ee1,ee2,tauR(nr),Ij(nr),Ih(nr),scale,dtauR(nr)
+	real*8 tau1,tau2,ee0,ee1,ee2,tauR(nr),Ij(nr),Ih(nr),scale,dtauR(nr),F11(180),Gsca
 	integer nlam_LR
 	real*8 IntH(nr,nr),Fl(nr),Ts(nr),minFl(nr),maxFl(nr),maxfact,err,tot1,Pb(nr+1)
 	real*8,allocatable,save :: lam_LR(:),dfreq_LR(:),freq_LR(:),BB_LR(:,:),IntHnu(:,:,:),dtauR_nu(:,:,:)
@@ -180,7 +180,7 @@
 			Fstar_LR(i)=Fstar(ilam)
 			do ir=1,nr
 				do ig=1,ng
-					call Crossections(ir,ilam,ig,Ca(ir,i,ig),Cs(ir,i,ig),docloud0,0)
+					call Crossections(ir,ilam,ig,Ca(ir,i,ig),Cs(ir,i,ig),docloud0,0,F11,Gsca,.false.)
 					Ca(ir,i,ig)=Ca(ir,i,ig)/dens(ir)
 					Cs(ir,i,ig)=Cs(ir,i,ig)/dens(ir)
 				enddo

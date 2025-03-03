@@ -1343,6 +1343,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) scattering
 		case("scattstar","starscatt")
 			read(key%value,*) scattstar
+		case("anisostar","anisostarscatt","anisoscattstar")
+			read(key%value,*) anisoscattstar
 		case("opacitymode")
 			read(key%value,*) opacitymode
 		case("np")
@@ -2350,6 +2352,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 	
 	scattering=.false.
 	scattstar=.false.
+	anisoscattstar=.false.
 	
 	opacitymode=.false.
 	opacitydir=trim(homedir) // '/ARCiS/Data/Opacities'
@@ -3156,6 +3159,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%kpow
 		case("albedo")
 			read(key%value,*) Cloud(j)%albedo
+		case("g")
+			read(key%value,*) Cloud(j)%g0
 		case("rnuc")
 			read(key%value,*) Cloud(j)%rnuc
 		case("rnuc_phot")
