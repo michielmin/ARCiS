@@ -350,7 +350,7 @@ c		endif
 	C%Kabs(isize,1:C%nlam)=Kabs(1:C%nlam)
 	C%Kext(isize,1:C%nlam)=Kext(1:C%nlam)
 	C%Ksca(isize,1:C%nlam)=Ksca(1:C%nlam)
-	C%G(isize,1:C%nlam)=G(1:C%nlam)
+	C%G(isize,1:C%nlam)=C%g0!G(1:C%nlam)
 	
 	if(outputopacity) call WriteOpacity(isize,"wolk",1d4/lgrid(1:C%nlam),Kabs(1:C%nlam),C%nlam,1)
 
@@ -710,7 +710,7 @@ c LLL mixing rule (not preferred)
 	X=2d0*pi*rcore/lmie
 	Y=2d0*pi*rmie/lmie
 	test=abs(cmplx(e1mie,e2mie))
-	if(test.lt.3d0.and.test.gt.0.5d0.and.e2mie.lt.2d0.and..false.) then
+	if(test.lt.3d0.and.test.gt.0.5d0.and.e2mie.lt.2d0) then
 		REFRL1=cmplx(1.001,1e-8)
 		REFRL2=cmplx(e1mie,e2mie)
 		Err=0
