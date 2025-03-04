@@ -138,7 +138,7 @@
 		allocate(UVstar(nr))
 		allocate(Hstar_lam(nlam,nr),nu(nnu),wnu(nnu))
 		call gauleg(0d0,1d0,nu,wnu,nnu)
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(nr,nnu)
 		allocate(Si_omp(nr,0:nr+1),tauR_omp(nr),Ih_omp(nr),Ij_omp(nr))
@@ -272,7 +272,7 @@ c	Fstar_LR=Fstar_LR*scale
 	UVstar=0d0
 	HUVstar=0d0
 
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,ig,ir,inu,jr,contr,FstarBottom,tot,HUVstar_omp)
 !$OMP& SHARED(nlam_LR,ng,nr,nnu,tauR_nu,nu,wnu,dfreq_LR,wgg,IntHnu,SurfEmis_LR,dtauR_nu,Ca,Ce,Cs,Hsurf,night2day,deepredist,

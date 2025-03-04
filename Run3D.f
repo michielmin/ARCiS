@@ -562,7 +562,7 @@ c Now call the setup for the readFull3D part
 	if(iscatt.lt.0) iscatt=-iscatt
 	if(iscatt.eq.0) iscatt=1
 	fluxp=0d0
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,tau0,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp,SiRalb0,SiRalb1,
@@ -996,7 +996,7 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 	enddo
 	obsA=0d0
 	obsA_split=0d0
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(vv,tau,tauc,Afact,hit,irtrace,A,iptrace,phi,rr,x,y,z,vx,vy,vz,la,lo,i1,i2,i3,
 !$OMP&			edgeNR,v,i1next,i2next,i3next,edgenext,i,imol,ir,ig,obsA_omp,obsA_split_omp)
@@ -2382,7 +2382,7 @@ c-----------------------------------------------------------------------
 	call gauleg(0d0,1d0,nu,wnu,nnu)
 
 
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(tauR,Ij,ilam,ig,inu0,inu,contr,must,Ih)
 !$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar,lamemis,

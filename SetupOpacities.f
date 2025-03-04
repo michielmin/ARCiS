@@ -64,7 +64,7 @@ c	n_nu_line=ng*min(j,4)
 		allocate(kappa_mol(ng,nlam,nmol))
 		allocate(mixrat_tmp(nmol))
 		allocate(nu_line(n_nu_line))
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(n_nu_line,ng,nmol)
 		allocate(kappa(ng))
@@ -179,7 +179,7 @@ c===============
 			endif
 		enddo
 
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,j,imol,ig,jg,ig_c,imol0,w1,nfull,nfast)
 !$OMP& SHARED(nlam,n_nu_line,nmol,mixrat_tmp,ng,ir,kappa_mol,cont_tot,Cabs,Csca,opac_tot,Ndens,R,computelam,

@@ -47,7 +47,7 @@
 	call output("Scattered light contributions")
 
 	call tellertje(1,nlam)
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,fluxg,icc,phase0)
 !$OMP& SHARED(nlam,nclouds,flux,phase,ncc,docloud,cloudfrac,nphase)
@@ -93,14 +93,14 @@
 	nrtrace=(nr-1)*nsub+ndisk
 
 	if(first_entry) then
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 		allocate(CaCont(nr))
 		allocate(obsA_omp(0:ncc,1:nlam))
 		allocate(obsA_LC_omp(nrtrace,nlam))
 !$OMP FLUSH
 !$OMP END PARALLEL
 		if(emisspec.or.computecontrib) then
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 			allocate(fact_contr(nr))
 			allocate(fluxg_contr(nr))
 			allocate(Ag_contr(nr))
@@ -136,7 +136,7 @@
 		enddo
 	enddo
 
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,rr,ir,k,si,xx1,in,xx2,d,ir_next)
 !$OMP& SHARED(nrtrace,rtrace,R,dtrace,irtrace,nirtrace,nr)
@@ -197,7 +197,7 @@
 		allocate(flux_contr(nr,nlam))
 		allocate(obsA_contr(nr,nlam))
 	endif
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(SHARED)
 !$OMP& PRIVATE(ilam,freq0,ig,i,fluxg,fact,A,rr,ir,si,xx1,in,xx2,d,ir_next,tau,exp_tau,tau_a,tautot,Ag,
 !$OMP&         Ca,Cs,icloud,isize,imol,irc,contr,nk)
@@ -326,7 +326,7 @@
 		dohide=.true.
 	endif
 	if(dohide) then
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
 !$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,opacitymol,irtrace,dtrace,Cabs_mol,mixrat_r,
@@ -449,7 +449,7 @@
 
 	do j=1,nr
 		call tellertje(j,nr)
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
 !$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,opacitymol,irtrace,dtrace,Cabs_mol,mixrat_r,
@@ -542,7 +542,7 @@
 	obsA=0d0
 	obsA_LC=0d0
 
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,i,icc,imol,ig,tautot,Ag,A,ir,d,tau,k,ir_next,Ca,icloud,nk)
 !$OMP& SHARED(nlam,ncc,nrtrace,nmol,ng,opacitymol,irtrace,dtrace,Cabs_mol,mixrat_r,

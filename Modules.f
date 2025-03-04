@@ -214,7 +214,7 @@ c===============================================================================
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
 	real*8 molfracs_atoms_outgas(41),MMW0
-	logical secondary_atmosphere,constant_g,forceEbalance,fixMMW,WaterWorld
+	logical secondary_atmosphere,constant_g,forceEbalance,fixMMW,WaterWorld,useomp
 	logical,allocatable :: RTgridpoint(:),computelam(:)
 	character*20 aim3D
 	character*2 standardstarname

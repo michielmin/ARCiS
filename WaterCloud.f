@@ -332,7 +332,7 @@ c H2O: 7
 		endif
 	endif
 
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(nnr,NN)
 	allocate(vthv(nnr))
@@ -762,7 +762,7 @@ c		if(iconv.eq.0) print*,'Cloud formation not converged: ',maxerr
 	enddo
 
 
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 	deallocate(vthv)
 	deallocate(Sc)

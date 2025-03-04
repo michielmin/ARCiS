@@ -605,7 +605,7 @@ c allocate the arrays
 	
 #ifdef USE_OPENMP
 	j=omp_get_max_threads()
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(j,idum0)
 !$OMP DO SCHEDULE(STATIC,j)
@@ -930,7 +930,7 @@ c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
 	allocate(Cext_cont(nr,nlam))
 	allocate(Cabs(nr,nlam,ng,-nvel:nvel))
 	allocate(Csca(nr,nlam))
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(Cabs_mol,Cext_cont,Cabs,Csca,nlam,ng,nr,nmol,nvel)
 !$OMP DO SCHEDULE(STATIC)
@@ -1165,6 +1165,8 @@ c In this case the beta map should be the static one. Make sure this is set prop
 	if(key%key2d.eq.i2d.or.key%key2d.eq.0) then
 
 	select case(key%key1)
+		case("useomp","openmp")
+			read(key%value,*) useomp
 		case("compute")
 			call output("keyword 'compute' no longer supported")
 		case("nr")
@@ -2009,6 +2011,8 @@ c	if(par_tprofile) call ComputeParamT(T)
 	pargridfile=" "
 	idum0=42
 	randomseed=.true.
+
+	useomp=.true.
 
 	iWolk=0
 	
@@ -2977,7 +2981,7 @@ c number of cloud/nocloud combinations
 	allocate(dfreq(nlam))
 	allocate(dlam(nlam))
 	allocate(RTgridpoint(nlam),computelam(nlam))
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(computelam,RTgridpoint,lam,nlam)
 !$OMP DO SCHEDULE(STATIC)

@@ -10,6 +10,7 @@
 	
 	subroutine InitDLMie()
 	use AImod
+	use GlobalSetup,only : useomp
 	IMPLICIT NONE
 	integer i,j,n1,n2,k,l
 	character*1000 file,datadir
@@ -26,7 +27,7 @@
 	nlay=6
 	nn=130
 	allocate(w(nn,nn,nlay+1),b(nn,nlay+1))
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(nn,nlay)
 	allocate(a(nn,nlay))

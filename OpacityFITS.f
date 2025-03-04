@@ -379,7 +379,7 @@ C	 create the new empty FITS file
 		if((abs(ii2(ilam)-ii1(ilam))+1).gt.dimax) dimax=abs(ii2(ilam)-ii1(ilam))+1
 	enddo
 
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,i1,i2,i,ngF,ig,temp,j,tot,tot2,wtemp,ww,w1,iT,iP,l1,l2,work1,work2,work3)
 !$OMP& SHARED(nlam,Ktable,lam,lamF,imol,ng,gg,wgg,Ktemp,dlam,RTgridpoint,blam,ii1,ii2,dimax,velocity,ivel)

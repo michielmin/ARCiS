@@ -91,7 +91,7 @@
 				e1d(j,1:C%nlam)=C%e1(j,minval((/i,C%nax(j)/)),1:C%nlam)
 				e2d(j,1:C%nlam)=C%e2(j,minval((/i,C%nax(j)/)),1:C%nlam)
 			enddo
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(j,e1blend,e2blend)
 !$OMP& SHARED(C,i,e1,e2,frac,e1d,e2d)
@@ -225,7 +225,7 @@ c		endif
 	rho_av=Mass/Vol
 
 	fmie=maxf
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(ilam,csca0,cabs0,cext0,theta,i,l,tot,k,Err,spheres,toolarge,
 !$OMP&         rad,wvno,m,r1,rcore,qext,qsca,qbs,gqsc,rmie,lmie,e1mie,e2mie,

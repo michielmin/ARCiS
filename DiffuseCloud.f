@@ -500,7 +500,7 @@ c	atoms_cloud(i,3)=1
 	docondense(6)=Cloud(ii)%condenseNaK
 	if(Cloud(ii)%hazetype.eq.'optEC') Sn=Sn*scaleUV*Sigmadot/tot
 
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& SHARED(nnr,NN)
 	allocate(vthv(nnr))
@@ -650,7 +650,7 @@ c		call DGESV( nnr, NRHS, An, nnr, IWORK, x, nnr, info )
 
 	if(Cloud(ii)%condensates) then
 
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(cs,iCS,i,j,dz,NRHS,INFO,kl,ku,dztot)
 !$OMP& SHARED(nCS,nnr,CloudT,Clouddens,CloudP,mu,fstick,CloudR,densv,Kd,Kg,xn,empty,docondense,
@@ -989,7 +989,7 @@ c Use Band matrix algorithm
 
 	endif
 
-!$OMP PARALLEL IF(.true.)
+!$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 	deallocate(vthv)
 	deallocate(Sc)
