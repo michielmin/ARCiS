@@ -1479,3 +1479,31 @@ C
 60    CONTINUE
       RETURN
       END	
+
+
+	real*8 function computeslope(y,n)
+	IMPLICIT NONE
+	integer i,n
+	real*8 y(n),sxy,sx2,x,xa,ya
+	xa=0d0
+	ya=0d0
+	do i=1,n
+		x=real(i)
+		xa=xa+x
+		ya=ya+y(i)
+	enddo
+	xa=xa/real(n)
+	ya=ya/real(n)
+	sxy=0d0
+	sx2=0d0	
+	do i=1,n
+		x=real(i)
+		sxy=sxy+(x-xa)*(y(i)-ya)
+		sx2=sx2+(x-xa)**2
+	enddo
+	
+	computeslope=(sxy/sx2)/ya
+
+	return
+	end
+	

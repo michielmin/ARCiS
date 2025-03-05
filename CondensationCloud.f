@@ -21,16 +21,16 @@
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: xn_iter(:,:),xa_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
 	integer iCS,ir,nrdo,iconv,nconv,iVS,nVS,NStot,ik
-	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed,Jn_temp,fscale,pscale,min_maxerr
-	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:),CloudG(:)
-	character*10,allocatable :: v_names(:),v_names_out(:)
+	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed,Jn_temp,fscale,pscale,min_maxerr,computeslope,slope
+	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:),CloudG(:),errorarr(:)
+	character*10,allocatable :: v_names(:),v_names_out(:),Jn_names_out(:)
 	logical,allocatable :: v_include(:),c_include(:),do_nuc(:),do_con(:),layercon(:)
 	integer INCFD,IERR,iCS_phot,nscale,ibest
 	logical SKIP,liq,include_phothaze
 	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr),compGibbs,ffrag,mmono,ffill,nmono,Df,rgyr,xv_use,T_CO,P_CO
 	integer itime
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
-	real*8,allocatable :: xv_out(:),Jn_xv(:,:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:)
+	real*8,allocatable :: xv_out(:),Jn_xv(:,:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:),Jn_out(:)
 	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),rmono(:),ac(:,:,:),Tfit(:,:)
 	real*8,allocatable,save :: xv_prev(:,:),xc_prev(:,:),xn_prev(:),xa_prev(:)
 	integer jSiO,jTiO2,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi,jH2SO4,jCa,jCH4
@@ -774,7 +774,7 @@ c				Nf_nuc(i)=1d0
 				rhodust(i)=1.8d0
 				do_nuc(i)=.true.
 				do_con(i)=.false.
-				include_phothaze=.true.
+				include_phothaze=(scaleUV.gt.0d0.and.Cloud(ii)%Sigmadot_phot.gt.0d0)
 				iCS_phot=i
 			case default
 				call output("Unknown condensate: " // trim(Cloud(ii)%condensate(i)))
@@ -1320,7 +1320,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 	enddo
 	NN=j
 
-	if(Cloud(ii)%computeJn) then
+	if(Cloud(ii)%computeJn.and.include_phothaze) then
 		fmin=0.6
 		fmax=0.99
 		eps=1d-2
@@ -1328,28 +1328,30 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 		pscale=0.95
 	else if(computeT.and.nTiter.gt.2) then
 		fmin=0.6
-		fmax=0.95
+		fmax=0.8
 		eps=1d-2
 		fscale=1d0
-		pscale=0.5
+		pscale=0.95
 	else
 		fmin=0.6
 		fmax=0.6
 		eps=1d-3
 		fscale=1d0
-		pscale=0.5
+		pscale=0.95
 	endif
 	min_maxerr=1d0
 
 	allocate(IWORK(NN))
 	allocate(x(NN))
 	allocate(AB(2*NStot+NStot+1,NN))
+	allocate(errorarr(niter))
 
 	iconv=0
 	Jn_xv=0d0
 	nscale=0
 	ibest=0
-		
+	f=fmax
+
 c start the loop
 	do iter=1,niter
 	call tellertje(iter,niter)
@@ -1593,7 +1595,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			endif
 
 			if(do_nuc(iCS)) then
-				if(iCS.eq.iCS_phot) then
+				if(iCS.eq.iCS_phot.and.include_phothaze) then
 					x(j)=x(j)-Sn_phot(i)
 				else
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
@@ -1745,7 +1747,7 @@ c coagulation
 			endif
 
 			if(do_nuc(iCS)) then
-				if(iCS.eq.iCS_phot) then
+				if(iCS.eq.iCS_phot.and.include_phothaze) then
 					x(j)=x(j)-Sn_phot(i)
 				else
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
@@ -2046,7 +2048,10 @@ C===============================================================================
 			min_maxerr=1d0
 		endif
 	endif
-	if(maxerr.lt.eps.and.fscale.gt.1d0) then
+	errorarr(iter)=maxerr
+	slope=-1d0
+	if(iter.gt.500) slope=computeslope(errorarr(iter-499:iter),500)
+	if((maxerr.lt.eps.or.abs(slope).lt.1d-6).and.fscale.gt.1d0) then
 		iconv=iconv+1
 		if(iconv.gt.nconv) exit
 	else
@@ -2171,8 +2176,8 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 		do i=1,nnr
 			do iCS=1,nCS
 				if(do_nuc(iCS).and.c_include(iCS)) then
-					Jn_xv(i,iCS)=Jn_xv(i,iCS)*xv(iVL(i,iCS),i)*Nc_nuc(i,iCS)*muC(iCS)/m_nuc
-					Sn(i)=Sn(i)+Jn_xv(i,iCS)
+					Jn_xv(i,iCS)=Jn_xv(i,iCS)*xv(iVL(i,iCS),i)
+					Sn(i)=Sn(i)+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)/m_nuc
 				endif
 			enddo
 		enddo
@@ -2182,7 +2187,7 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 		else
 			open(unit=20,file=trim(outputdir) // '/cloudstructure.dat',FORM="FORMATTED",ACCESS="STREAM")
 		endif
-		allocate(v_names_out(nVS),xv_out(nVS))
+		allocate(v_names_out(nVS),xv_out(nVS),Jn_names_out(nCS),Jn_out(nCS))
 		j=0
 		do iVS=1,nVS
 			if(v_include(iVS)) then
@@ -2190,10 +2195,17 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 				v_names_out(j)=v_names(iVS)
 			endif
 		enddo
-		form='("#",a18,a19,a19,' // trim(int2string(nCS+j+1,'(i4)')) // 'a23,a19,a19,a19,a19)'
+		k=0
+		do iCS=1,nCS
+			if(do_nuc(iCS).and.c_include(iCS)) then
+				k=k+1
+				Jn_names_out(k)=CSname(iCS)
+			endif
+		enddo
+		form='("#",a18,a19,a19,' // trim(int2string(nCS+j+k+4,'(i4)')) // 'a23)'
 		write(20,form) "P[bar]","dens[g/cm^3]","xn",(trim(CSname(i))//"[s]",i=1,nCS),
-     &				(trim(v_names_out(i))//"[v]",i=1,j),"r[cm]","T[K]","Jstar","fsed"
-		form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+j,'(i4)')) // 'es23.7E3,es19.7E3,es19.7E3,es19.7E3,es19.7E3)'
+     &				(trim(v_names_out(i))//"[v]",i=1,j),"r[cm]","T[K]","Jstar",(trim(Jn_names_out(i))//"[1/(s.cm^3)]",i=1,k),"fsed"
+		form='(es19.7E3,es19.7E3,es19.7E3,' // trim(int2string(nCS+j+k+4,'(i4)')) // 'es23.7E3)'
 		do i=1,nnr
 			j=0
 			do iVS=1,nVS
@@ -2202,8 +2214,15 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 					xv_out(j)=xv(iVS,i)
 				endif
 			enddo
+			k=0
+			do iCS=1,nCS
+				if(do_nuc(iCS).and.c_include(iCS)) then
+					k=k+1
+					Jn_out(k)=Jn_xv(i,iCS)
+				endif
+			enddo
 			write(20,form) CloudP(i),Clouddens(i),xn(i)*m_nuc,xc(1:nCS,i),xv_out(1:j),rpart(i),
-     &							CloudT(i),Sn(i),-vsed(i)*CloudHp(i)/Kd(i)
+     &							CloudT(i),Sn(i),Jn_out(1:k),-vsed(i)*CloudHp(i)/Kd(i)
 		enddo
 		close(unit=20)
 	endif
