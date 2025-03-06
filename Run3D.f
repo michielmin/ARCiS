@@ -326,7 +326,7 @@ c Now call the setup for the readFull3D part
 					do ig=1,ng
 						do ivel=-nvel,nvel
 							call Crossections(ir,ilam,ig,Ca(ilam,ig,ir,i,ivel),Cs(ilam,ir,i),docloud0,ivel,
-     &								F11(ilam,ir,1:180,i),g(ilam,ir,i),(ig.eq.1.and.anisoscattstar))
+     &								F11(ilam,ir,1:180,i),g(ilam,ir,i),anisoscattstar)
 						enddo
 					enddo
 				enddo

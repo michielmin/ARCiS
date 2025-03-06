@@ -251,6 +251,7 @@ c-----------------------------------------------------------------------
 		allocate(Cloud(ii)%Ksca(nr,nlam+1))
 		allocate(Cloud(ii)%Kext(nr,nlam+1))
 		allocate(Cloud(ii)%g(nr,nlam+1))
+		allocate(Cloud(ii)%F11(nr,nlam+1,180))
 	endif
 
 	select case(Cloud(ii)%opacitytype)
@@ -278,6 +279,10 @@ c-----------------------------------------------------------------------
 			Cloud(ii)%Ksca(1:nr,1:nlam)=Cloud(ii)%Kext(1:nr,1:nlam)*Cloud(ii)%albedo
 			Cloud(ii)%Kabs(1:nr,1:nlam)=Cloud(ii)%Kext(1:nr,1:nlam)*(1d0-Cloud(ii)%albedo)
 			Cloud(ii)%g=Cloud(ii)%g0
+			do j=1,180
+				Cloud(ii)%F11(1:nr,1:nlam+1,j)=(1d0-Cloud(ii)%g**2)/
+     &				((1d0+Cloud(ii)%g**2-2d0*Cloud(ii)%g*cos(pi*(real(j)-0.5)/180d0))**(2d0/3d0))
+			enddo
 		case("MATERIAL","REFIND")
 			call output("Computing inhomogeneous cloud particles")
 			computelamcloud(1:nlam)=computelam(1:nlam)

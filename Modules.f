@@ -431,7 +431,8 @@ c for exchange when computing secondary atmosphere
 		logical blend,haze,condensates,rainout,globalKzz,computecryst,coagulation
 		logical onepart,freeflow_nuc,freeflow_con,condenseNaK
 		real*8 mixrat,tau,lref,cryst0,e1_par,e2_par,Kref
-		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:),g(:,:)			! dimension nsize,nlam
+		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:),g(:,:)		! dimension nsize,nlam
+		real*8,allocatable :: F11(:,:,:) ! dimension nsize,nlam,nangle
 		character*500 species,hazetype,file,composition
 		integer nmat,nlam
 		character*500,allocatable :: lnkfile(:,:),material(:),condensate(:)

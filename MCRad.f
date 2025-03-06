@@ -355,7 +355,7 @@ c		enddo
 	use Constants
 	IMPLICIT NONE
 	integer ir,ilam,ig,icloud,isize,ivel,i
-	real*8 Ca,Cs,F11(180),theta,CsAdd,G,gadd
+	real*8 Ca,Cs,F11(180),theta,CsAdd,G
 	logical docloud0(nclouds),doF11
 
 	Ca=Cabs(ir,ilam,ig,ivel)*Ndens(ir)
@@ -368,31 +368,34 @@ c		enddo
 			F11(i)=Cs*3d0*(1d0+cos(theta)**2)/4d0
 		enddo
 	endif
-	G=0d0
 
+	G=0d0
 	do icloud=1,nclouds
 		if(docloud0(icloud)) then
 			Ca=Ca+Cloud(icloud)%Kabs(ir,ilam)*cloud_dens(ir,icloud)
 			CsAdd=Cloud(icloud)%Ksca(ir,ilam)*cloud_dens(ir,icloud)
 			Cs=Cs+CsAdd
-			gadd=Cloud(icloud)%G(ir,ilam)
-			G=G+CsAdd*gadd
 			if(doF11) then
+				G=G+CsAdd*Cloud(icloud)%G(ir,ilam)
 				do i=1,180
-					theta=real(i)*pi/180d0
-					F11(i)=F11(i)+CsAdd*(1d0-gadd**2)/((1d0+gadd**2-2d0*gadd*cos(theta))**(2d0/3d0))
+					F11(i)=F11(i)+CsAdd*Cloud(icloud)%F11(ir,ilam,i)
 				enddo
 			endif
 		endif
 	enddo
 	if(.not.Ca.gt.0d0) Ca=0d0
 	if(.not.Cs.gt.0d0) Cs=0d0
-	if(Cs.gt.0d0) then
-		G=G/Cs
-		if(doF11) F11=F11/Cs
+	if(doF11) then
+		if(Cs.gt.0d0) then
+			G=G/Cs
+			F11=F11/Cs
+		else
+			G=0d0
+			F11=1d0
+		endif
 	else
 		G=0d0
-		if(doF11) F11=1d0
+		F11=1d0
 	endif
 
 	return
