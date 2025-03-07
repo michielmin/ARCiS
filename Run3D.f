@@ -349,7 +349,7 @@ c Now call the setup for the readFull3D part
 			do ir=1,nr
 				k=0
 				do ilam=1,nlam
-					Ce_cont(ilam,ir,i)=0d0
+					Ce_cont(ilam,ir,i)=Cs(ilam,ir,i)
 					do ig=1,ng
 						Ce_cont(ilam,ir,i)=Ce_cont(ilam,ir,i)+wgg(ig)*Ca(ilam,ig,ir,i,0)
 					enddo
