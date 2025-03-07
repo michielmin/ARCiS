@@ -331,12 +331,6 @@ c Now call the setup for the readFull3D part
 					enddo
 				enddo
 			enddo
-			Cs(1:nlam,1:nr,i)=Cs(1:nlam,1:nr,i)*(1d0-g(1:nlam,1:nr,i))
-			if(anisoscattstar) then
-				do j=1,180
-					F11(1:nlam,1:nr,j,i)=F11(1:nlam,1:nr,j,i)/(1d0-g(1:nlam,1:nr,i))
-				enddo
-			endif
 			if(computeT) then
 				T3D(i,0)=Tsurface
 			else
@@ -367,6 +361,12 @@ c Now call the setup for the readFull3D part
 				enddo
 				nmol_count=k
 			enddo
+			Cs(1:nlam,1:nr,i)=Cs(1:nlam,1:nr,i)*(1d0-g(1:nlam,1:nr,i))
+			if(anisoscattstar) then
+				do j=1,180
+					F11(1:nlam,1:nr,j,i)=F11(1:nlam,1:nr,j,i)/(1d0-g(1:nlam,1:nr,i))
+				enddo
+			endif
 			if(emisspec) call ComputeScatter(BBr(1:nlam,0:nr),Si(1:nlam,1:ng,0:nr,1:nnu0,i),SiFS(1:nlam,1:ng,0:nr,1:nnu0,i),
      &								Ca(1:nlam,1:ng,1:nr,i,0),Cs(1:nlam,1:nr,i))
 			if(computealbedo) then
