@@ -1269,7 +1269,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 			endif
 		endif
 	enddo
-	if(include_phothaze) c_include(iCS_phot)=.true.
+	if(iCS_phot.ne.0) c_include(iCS_phot)=include_phothaze
 
 	v_include=.false.
 	j=0
