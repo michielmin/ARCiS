@@ -767,6 +767,64 @@ c				do_nuc(i)=Cloud(ii)%ComputeJn
 c				sigma_nuc(i)=
 c				Nf_nuc(i)=1d0
 				ifit(i)=-1
+			case('NaNO3')
+				CSname(i)='NaNO3'
+				atoms_cloud(i,6)=1
+				atoms_cloud(i,4)=1
+				atoms_cloud(i,5)=3
+				v_cloud(i,jNa)=1
+				v_cloud(i,jNH3)=1
+				v_cloud(i,jH2O)=3
+				rhodust(i)=3.0
+
+				nTfit(i)=5
+				Tfit(i,1)=200.000
+				Tfit(i,2)=500.000
+				Tfit(i,3)=549.000  
+				Tfit(i,4)=579.600
+				Tfit(i,5)=1000.00
+				Tfit(i,6)=6000.00
+				ac(i,1,1)=3.55710603E+01 
+				ac(i,1,2)=-5.61738570E-01
+				ac(i,1,3)=2.79508958E-03
+				ac(i,1,4)=-5.76144729E-06
+				ac(i,1,5)=4.35715088E-09
+				ac(i,1,6)=-2.16914979E+05
+				ac(i,1,7)=-1.98167017E+02
+
+				ac(i,2,1)=1.23025510E+01        
+				ac(i,2,2)=-1.65489272E-01
+				ac(i,2,3)=2.96621030E-04
+				ac(i,2,4)=1.83842013E-08
+				ac(i,2,5)=-6.33798041E-12
+				ac(i,2,6)=-2.13747092E+05
+				ac(i,2,7)=-1.12025230E+02
+
+				ac(i,3,1)=2.33323245E+00        
+				ac(i,3,2)=9.83795702E-03
+				ac(i,3,3)=-1.99291936E-05
+				ac(i,3,4)=1.83842013E-08
+				ac(i,3,5)=-6.33798041E-12
+				ac(i,3,6)=-2.17236072E+05
+				ac(i,3,7)=-9.76881584E+01
+
+				ac(i,4,1)=2.45350405E+00        
+				ac(i,4,2)=9.83795702E-03
+				ac(i,4,3)=-1.99291936E-05
+				ac(i,4,4)=1.83842013E-08
+				ac(i,4,5)=-6.33798041E-12
+				ac(i,4,6)=-2.15495693E+05
+				ac(i,4,7)=-9.53303712E+01
+
+				ac(i,5,1)=4.51286280E+00        
+				ac(i,5,2)=-3.08408901E-04
+				ac(i,5,3)=2.80672144E-07
+				ac(i,5,4)=-8.17728789E-11
+				ac(i,5,5)=5.13511975E-15
+				ac(i,5,6)=-2.15870620E+05
+				ac(i,5,7)=-1.04944939E+02
+
+				ifit(i)=7
 			case('optEC','THOLIN')
 				CSname(i)=trim(Cloud(ii)%condensate(i))
 				atoms_cloud(i,1)=4
@@ -1168,6 +1226,9 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 						endif
 					enddo
 					Sat(i,iCS)=exp(-Sat(i,iCS))*CloudP(i)
+					if(ifit(iCS).eq.7.and.(CloudT(i).gt.Tfit(iCS,nTfit(iCS)+1).or.CloudT(i).lt.Tfit(iCS,1))) then
+						Sat(i,iCS)=1d-100
+					endif
 			end select
 			if(CloudT(i).gt.maxT(iCS)) Sat(i,iCS)=0d0
 		enddo

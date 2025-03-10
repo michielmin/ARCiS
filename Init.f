@@ -827,6 +827,10 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/mgal2o4_natural.lnk'
 									Cloud(i)%nax(j)=1
+								case("NaNO3")
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/NaNO3.dat'
+									Cloud(i)%nax(j)=1
 								case("NaCl")
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/NaCl.dat'
@@ -1229,6 +1233,7 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) outputopacity
 		case("phase")
 			read(key%value,*) theta_phase(key%nr1)
+			if(theta_phase(key%nr1).lt.0d0) theta_phase(key%nr1)=360+theta_phase(key%nr1)
 		case("nphase")
 			print*,'WARNING: no longer supported keyword nphase'
 		case("cia")

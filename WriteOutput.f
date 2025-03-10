@@ -172,7 +172,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 
 	if(emisspec) then
 
-	if(nphase.le.310) then
+c	if(nphase.le.310) then
 		filename=trim(outputdir) // "phase" // trim(side)
 		call output("Writing spectrum to: " // trim(filename))
 		open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
@@ -206,13 +206,13 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 			enddo
 			close(unit=30)
 		endif
-	endif
+c	endif
 
 	nj=0
 	do i=1,nlam_out
 		if(lamemis(i).and.computelam(i)) nj=nj+1
 	enddo
-	if(nj.lt.350.and.nj.gt.0) then
+c	if(nj.lt.350.and.nj.gt.0) then
 		allocate(specR(nlam))
 		filename=trim(outputdir) // "phasecurve" // trim(side)
 		call output("Writing phasecurve to: " // trim(filename))
@@ -244,7 +244,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 		enddo
 		close(unit=30)
 		deallocate(specR)
-	endif
+c	endif
 
 	endif
 	
