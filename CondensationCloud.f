@@ -21,11 +21,11 @@
 	character*500 cloudspecies(max(nclouds,1)),form
 	real*8,allocatable :: xn_iter(:,:),xa_iter(:,:),xc_iter(:,:,:),xv_iter(:,:,:)
 	integer iCS,ir,nrdo,iconv,nconv,iVS,nVS,NStot,ik
-	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed,Jn_temp,fscale,pscale,min_maxerr,computeslope,slope
+	real*8 logP(nr),logx(nr),dlogx(nr),St,fsed,Jn_temp,min_maxerr,computeslope,slope
 	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:),CloudG(:),errorarr(:)
 	character*10,allocatable :: v_names(:),v_names_out(:),Jn_names_out(:)
 	logical,allocatable :: v_include(:),c_include(:),do_nuc(:),do_con(:),layercon(:)
-	integer INCFD,IERR,iCS_phot,nscale,ibest
+	integer INCFD,IERR,iCS_phot,nscale
 	logical SKIP,liq,include_phothaze
 	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr),compGibbs,ffrag,mmono,ffill,nmono,Df,rgyr,xv_use,T_CO,P_CO
 	integer itime
@@ -735,6 +735,7 @@ c fractal dimension created by coagulating collisions
 				rhodust(i)=7.14d0
 				do_nuc(i)=Cloud(ii)%ComputeJn
 				sigma_nuc(i)=750 ! value estimated from Ferri et al. (2024)
+				Nf_nuc(i)=1d0
 				bc(i,0)=1.56414E+04     
 				bc(i,1)=-1.32671E+00
 				bc(i,2)=-7.87964E+00
@@ -748,7 +749,7 @@ c fractal dimension created by coagulating collisions
 				rhodust(i)=19.25d0
 				do_nuc(i)=Cloud(ii)%ComputeJn
 				sigma_nuc(i)=3340
-				Nf_nuc(i)=10d0
+				Nf_nuc(i)=1d0
 				ifit(i)=-1
 			case('Ni')
 				CSname(i)='Ni'
@@ -1342,25 +1343,9 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 	enddo
 	NN=j
 
-	if(Cloud(ii)%computeJn.and.include_phothaze) then
-		fmin=0.6
-		fmax=0.99
-		eps=1d-2
-		fscale=1d-15
-		pscale=0.95
-	else if(computeT.and.nTiter.gt.2) then
-		fmin=0.6
-		fmax=0.8
-		eps=1d-2
-		fscale=1d0
-		pscale=0.95
-	else
-		fmin=0.6
-		fmax=0.6
-		eps=1d-3
-		fscale=1d0
-		pscale=0.95
-	endif
+	fmin=0.75
+	fmax=0.95
+	eps=1d-2
 	min_maxerr=1d0
 
 	allocate(IWORK(NN))
@@ -1371,7 +1356,6 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 	iconv=0
 	Jn_xv=0d0
 	nscale=0
-	ibest=0
 	f=fmax
 
 c start the loop
@@ -1486,9 +1470,11 @@ c start the loop
 					else
 						xv_use=xv(iVL(i,iCS),i)
 						tot1=Sat(i,iCS)*xv_use
-						tot2=CloudP(i)*CloudMMW(i)/(muV(iVL(i,iCS))*kb*CloudT(i))
+c						tot2=CloudP(i)*CloudMMW(i)/(muV(iVL(i,iCS))*kb*CloudT(i))
+						tot2=Clouddens(i)/(muV(iVL(i,iCS))*mp)
 						call ComputeJ(CloudT(i),tot1,tot2,xv_use,vthv,sigma_nuc(iCS),r0_nuc(iCS),
      &							Nf_nuc(iCS),Jn_temp,Nc_nuc(i,iCS))
+						Jn_temp=Jn_temp/Clouddens(i)
 						Jn_xv(i,iCS)=Jn_xv(i,iCS)*f+Jn_temp*(1d0-f)
 					endif
 				else
@@ -1512,7 +1498,6 @@ c			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)*mp/rhodust(iCS))/(rm
 	enddo
 
 	Nc_nuc=Nc_nuc*mp
-	Jn_xv=Jn_xv*fscale
 	
 	vsed(nnr)=0d0
 	do ir=nnr-1,1,-1
@@ -1647,6 +1632,7 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 				if(c_include(iCS).and.do_nuc(iCS)) then
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)
+c					x(j)=x(j)-Jn_xv(i,iCS)*xv(iVL(i,iCS),i)
 				endif
 			enddo
 c coagulation
@@ -1695,6 +1681,7 @@ c coagulation
 				if(c_include(iCS).and.do_nuc(iCS)) then
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)
+c					x(j)=x(j)-Jn_xv(i,iCS)*xv(iVL(i,iCS),i)
 				endif
 			enddo
 		endif
@@ -1735,7 +1722,8 @@ c coagulation
 
 			if(do_nuc(iCS)) then
 				ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)*mp
+				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
+c				x(j)=x(j)-Jn_xv(i,iCS)*xv(iVL(i,iCS),i)*Nc_nuc(i,iCS)*muC(iCS)
 			endif
 
 			ik=KL+KU+1+j-ixc(iCS,i)
@@ -1773,7 +1761,8 @@ c coagulation
 
 						if(do_nuc(iCS)) then
 							ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-							AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)*mp
+							AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
+c							x(j)=x(j)+Jn_xv(i,iCS)*xv(iVL(i,iCS),i)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
 						endif
 					endif
 				enddo
@@ -1910,11 +1899,9 @@ c	f=1.1-0.4/(1.0+3.0*exp(-(real(iter)/real(min(niter/4,200)))**2))
 	enddo
 	if(maxerr.lt.min_maxerr.and.nscale.gt.3) then
 		min_maxerr=maxerr
-		ibest=iter
-c	else if(maxerr.gt.min_maxerr) then
-c		min_maxerr=sqrt(min_maxerr*maxerr)
 	endif
-	f=fmax-(fmax-fmin)*min_maxerr**6
+	f=fmax-(fmax-fmin)*min_maxerr
+	f=f+(1d0-f)*(real(iter)/real(niter))**4
 	do i=1,nnr
 		if(.not.Cloud(ii)%usefsed) then
 			if(iter.eq.1) then
@@ -1923,10 +1910,6 @@ c		min_maxerr=sqrt(min_maxerr*maxerr)
 			else
 				xn(i)=xn(i)*f+x(ixn(i))*(1d0-f)
 				xa(i)=xa(i)*f+x(ixa(i))*(1d0-f)
-				if(ibest.ne.0) then
-					xn(i)=xn(i)*f+xn_iter(ibest,i)*(1d0-f)
-					xa(i)=xa(i)*f+xa_iter(ibest,i)*(1d0-f)
-				endif
 			endif
 		endif
 		do iCS=1,nCS
@@ -1935,9 +1918,6 @@ c		min_maxerr=sqrt(min_maxerr*maxerr)
 					xc(iCS,i)=x(ixc(iCS,i))
 				else
 					xc(iCS,i)=xc(iCS,i)*f+x(ixc(iCS,i))*(1d0-f)
-					if(ibest.ne.0) then
-						xc(iCS,i)=xc(iCS,i)*f+xc_iter(ibest,iCS,i)*(1d0-f)
-					endif
 				endif
 			else
 				xc(iCS,i)=0d0
@@ -1949,9 +1929,6 @@ c		min_maxerr=sqrt(min_maxerr*maxerr)
 					xv(iVS,i)=x(ixv(iVS,i))
 				else
 					xv(iVS,i)=xv(iVS,i)*f+x(ixv(iVS,i))*(1d0-f)
-					if(ibest.ne.0) then
-						xv(iVS,i)=xv(iVS,i)*f+xv_iter(ibest,iVS,i)*(1d0-f)
-					endif
 				endif
 			else
 				xv(iVS,i)=xv_bot(iVS)
@@ -2008,40 +1985,15 @@ C===============================================================================
 	enddo
 	nscale=nscale+1
 	j=10
-	if(fscale.lt.1.1) j=10+log(log(1.0/1.1)/log((fscale/1.1)))/log(pscale)
-	if(iter.gt.niter-j) then
-		fscale=1.1*(fscale/1.1)**pscale
-		if(fscale.lt.1d0) then
-			nscale=0
-			ibest=0
-			min_maxerr=1d0
-		endif
-	else if(maxerr.lt.10d0*eps) then
-		fscale=1.1*(fscale/1.1)**pscale
-		if(fscale.lt.1d0) then
-			nscale=0
-			ibest=0
-			min_maxerr=1d0
-		endif
-	else if(nscale.gt.niter/25) then
-		fscale=1.1*(fscale/1.1)**(2d0-pscale)
-		if(fscale.lt.1d0) then
-			nscale=0
-			ibest=0
-			min_maxerr=1d0
-		endif
-	endif
 	errorarr(iter)=maxerr
 	slope=-1d0
-	if(iter.gt.500) slope=computeslope(errorarr(iter-499:iter),500)
-	if((maxerr.lt.eps.or.abs(slope).lt.1d-6).and.fscale.gt.1d0) then
+	if(maxerr.lt.eps) then
 		iconv=iconv+1
 		if(iconv.gt.nconv) exit
 	else
 		iconv=0
 	endif
-	if(fscale.gt.1d0) fscale=1d0
-c	print*,iter,maxerr,fscale
+c	print*,iter,maxerr,f
 20	continue
 	enddo
 c end the loop
@@ -2164,6 +2116,7 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 					else
 						Jn_xv(i,iCS)=Jn_xv(i,iCS)*xv(iVL(i,iCS),i)
 					endif
+					Jn_xv(i,iCS)=Jn_xv(i,iCS)*Clouddens(i)!CloudP(i)*CloudMMW(i)/(muV(iVL(i,iCS))*kb*CloudT(i))
 					Sn(i)=Sn(i)+Jn_xv(i,iCS)
 				endif
 			enddo
