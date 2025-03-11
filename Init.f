@@ -554,6 +554,7 @@ c==============================================================================
 	type(SettingKey),pointer :: key,first
 	type(SettingKey) keyret
 	integer i,j,omp_get_max_threads,omp_get_thread_num
+	logical doit
 	real*8 tot,tot2,theta,Planck
 	real*8,allocatable :: var(:),dvar(:)
 	character*1000 line
@@ -1011,11 +1012,11 @@ c select at least the species relevant for disequilibrium chemistry
 		outputdirGGchem=outputdir
 		allocate(usemolGGchem(nmol))
 		usemolGGchem(1:nmol)=includemol(1:nmol)
-		if(secondary_atmosphere) then
-			call init_GGchem(molname,nmol,.true.)
-		else
-			call init_GGchem(molname,nmol,condensates)
-		endif
+		doit=condensates.or.secondary_atmosphere
+		do i=1,nclouds
+			if(Cloud(i)%type.eq.'CONDENSATION'.and.Cloud(i)%rainout) doit=.true.
+		enddo
+		call init_GGchem(molname,nmol,doit)
 		dobackgroundgas=.false.
 	endif
 

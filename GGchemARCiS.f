@@ -75,7 +75,7 @@
       abund_pick   = 3
       model_dim    = 1
       model_struc  = 0
-      verbose      = 0
+      verbose      = -1
       Mpl          = MEarth
       Rpl          = REarth
       gamma        = 7.0/5.0
@@ -393,7 +393,7 @@ c      write(*,'("C/O =",0pF6.3)') eps(C)/eps(O)
 	p=Pin*bar
 	nHges = p*mu/(bk*Tg)/muH
 
-	verbose=0
+	verbose=-1
 	merk=.false.
 
       eldust = 0.Q0

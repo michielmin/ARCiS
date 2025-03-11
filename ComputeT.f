@@ -680,7 +680,7 @@ c===============================================================================
 		if(maxErr.gt.epsiter) converged=.false.
 	enddo
 
-	if(maxErr.gt.maxerr_prev.or.maxErr.gt.0.25) then
+	if(maxErr.gt.maxerr_prev) then
 		f=f/2d0
 	else
 		f=(9d0*f+1d0)/10d0

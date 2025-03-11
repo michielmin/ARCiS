@@ -94,11 +94,11 @@
         !print*,i,EXP(dbase(i)%ln),EXP(dbase(i)%lT)
       enddo 
  100  close(11)
-      print*,"... having read ",NDAT," datasets." 
+      !print*,"... having read ",NDAT," datasets." 
       NLAST = NDAT
       return
  200  close(11)
-      print*,"... no / unsuitable database."
+      !print*,"... no / unsuitable database."
       end
 
 **********************************************************************
@@ -119,7 +119,7 @@
       !if (qbest<1.d-8) then
       !  return 
       !else
-      print*,"==> qbest=",qbest
+      !print*,"==> qbest=",qbest
       if (qbest<1.d-3) then
         i = ibest
         if (verbose>=0) then
@@ -156,7 +156,7 @@
       NMODI = i
       if (NDAT>NLAST+10) then
         call SAVE_DBASE
-        print*,"... saved ",NDAT," datasets."
+        !print*,"... saved ",NDAT," datasets."
       endif  
       end
 
@@ -586,8 +586,8 @@
         enddo  
         !print*,"check ",elnam(elworst),errmax
         if (errmax>1.Q-8) then
-          print*,"*** element conservation violation in database.f"
-          print*,elnam(elworst),errmax
+          !print*,"*** element conservation violation in database.f"
+          !print*,elnam(elworst),errmax
           return
         endif  
         !--- for remove_condensates models: force new entry --- 

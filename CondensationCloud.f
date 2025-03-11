@@ -14,7 +14,7 @@
 	real*8 dz,g,rr,mutot,npart,tot,lambda,tot1,tot2,tot3,nucryst,Tcryst,vthv
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,kl,ku,jCS
 	real*8 cs,eps,frac_nuc,m_nuc,m_phothaze,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
-	real*8 Pv,molfracs_atoms0(N_atoms),NKn,Kzz_r(nr),vBM,scale
+	real*8 Pv,molfracs_atoms0(N_atoms),abun_dust(N_atoms),NKn,Kzz_r(nr),vBM,scale
 	integer,allocatable :: ixv(:,:),ixc(:,:),iVL(:,:),ixn(:),ixa(:),icryst(:),iamorph(:),ifit(:),nTfit(:)
 	real*8 sigmastar,Sigmadot,Pstar,sigmamol,COabun,CO2abun,CH4abun,lmfp,fstick,kappa_cloud,fmin,fmax,rho_nuc,Gibbs
 	logical ini,Tconverged
@@ -269,6 +269,12 @@ c fractal dimension created by coagulating collisions
 	ifit=0
 
 	call SetAbun
+
+	if(Cloud(ii)%rainout.and.dochemistry) then
+		call SplitGasDust(Tsurface,P(1),molfracs_atoms,molfracs_atoms0,abun_dust)
+		tot=sum(molfracs_atoms0(1:N_atoms))
+		molfracs_atoms=molfracs_atoms0/tot
+	endif
 
 	if(Cloud(ii)%EqChemBoundary) then
 		T_CO=sqrt(Rstar/(Dplanet))*Tstar
@@ -829,11 +835,18 @@ c				Nf_nuc(i)=1d0
 				CSname(i)=trim(Cloud(ii)%condensate(i))
 				atoms_cloud(i,1)=4
 				atoms_cloud(i,3)=1
+				v_cloud(i,jCH4)=1
 				rhodust(i)=1.8d0
 				do_nuc(i)=.true.
 				do_con(i)=.false.
-				include_phothaze=(scaleUV.gt.0d0.and.Cloud(ii)%Sigmadot_phot.gt.0d0)
+				include_phothaze=.true.
 				iCS_phot=i
+				bc(i,0)=8.563846e+04
+				bc(i,1)=-2.345056e+00
+				bc(i,2)=-3.634772e+00
+				bc(i,3)=1.828533e-03
+				bc(i,4)=-1.986659e-07 
+				ifit(i)=0
 			case default
 				call output("Unknown condensate: " // trim(Cloud(ii)%condensate(i)))
 				print*,'unknown condensate: ', trim(Cloud(ii)%condensate(i))
@@ -1259,60 +1272,7 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 
 	allocate(c_include(nCS))
 	c_include=.true.
-	if(Cloud(ii)%rainout) then
-		f=1d-4
-		i=1
-		do iter=1,10000
-			xv(1:nVS,i)=0d0
-			j=0
-			do iCS=1,nCS
-				if(do_con(iCS)) then
-				tot1=1d200
-				iVL(i,iCS)=1
-				do iVS=1,nVS
-					if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
-						tot2=xv(iVS,i)*(sqrt(8d0*kb*CloudT(i)/(pi*muV(iVS)*mp)))/(muV(iVS)*v_cloud(iCS,iVS))
-						if(tot2.lt.tot1) then
-							tot1=tot2
-							iVL(i,iCS)=iVS
-						endif
-						if(tot2.lt.tot1) then
-							tot1=tot2
-							iVL(i,iCS)=iVS
-						endif
-					endif
-				enddo
-				fSat(i,iCS)=CloudP(i)**(v_H2(iCS)-1d0)
-				do iVS=1,nVS
-					if(v_include(iVS).and.v_cloud(iCS,iVS).ne.0d0) then
-						fSat(i,iCS)=fSat(i,iCS)*(CloudP(i)*xv_bot(iVS)*CloudMMW(i)/muV(iVS))**v_cloud(iCS,iVS)
-					endif
-				enddo
-				tot1=Sat(i,iCS)*fSat(i,iCS)/Cloud(ii)%Srainout
-				if(tot1.gt.1d0) then
-					j=j+1
-					tot1=xv_bot(iVL(i,iCS))*(1d0-1d0/tot1)
-					c_include(iCS)=.false.
-					do iVS=1,nVS
-						if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
-							xv(iVS,i)=xv(iVS,i)+tot1*v_cloud(iCS,iVS)*muV(iVS)/(v_cloud(iCS,iVL(i,iCS))*muV(iVL(i,iCS)))
-						endif
-					enddo
-				endif
-				endif
-			enddo
-			if(j.eq.0) exit
-			maxerr=1d200
-			do iVS=1,nVS
-				if(v_include(iVS).and.xv(iVS,i).gt.0d0) then
-					err=xv_bot(iVS)/xv(iVS,i)
-					if(err.lt.maxerr) maxerr=err
-				endif
-			enddo
-			if(.not.maxerr.lt.1d100) exit
-			xv_bot(1:nVS)=xv_bot(1:nVS)-maxerr*0.1*xv(1:nVS,i)
-		enddo
-	endif
+
 	do iCS=1,nCS
 		if(c_include(iCS).and.do_con(iCS)) then
 			do i=1,nnr
@@ -1336,24 +1296,25 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 	j=0
 	do iCS=1,nCS
 		if(c_include(iCS)) then
-			j=j+1
+			if(do_con(iCS).or.(Cloud(ii)%computeJn.and..not.Cloud(ii)%usefsed).or.iCS.eq.iCS_phot) j=j+1
 			do iVS=1,nVS
 				if(v_cloud(iCS,iVS).ne.0d0) v_include(iVS)=.true.
 			enddo
 		endif
 	enddo
-
+	v_include(jCH4)=(v_include(jCH4).or.include_phothaze)
 	if(j.eq.0) then
 		do i=1,nnr
 			xv(1:nVS,i)=xv_bot(1:nVS)
 			xc(1:nCS,i)=0d0
 			xn(i)=1d-50/m_nuc
 			xa(i)=1d-50/m_nuc
+			rpart(i)=Cloud(ii)%rnuc
+			rmono(i)=rpart(i)
+			v_include=.true.
 		enddo
 		NN=nnr
-		allocate(IWORK(NN))
 		allocate(x(NN))
-		allocate(AB(2*NStot+NStot+1,NN))
 		goto 100
 	endif
 
@@ -1421,7 +1382,7 @@ c start the loop
 	layercon=.false.
 	do i=1,nnr
 		do iCS=1,nCS
-			if(c_include(iCS).and.iCS.ne.iCS_phot) then
+			if(c_include(iCS)) then
 				tot1=1d200
 				iVL(i,iCS)=0
 				do iVS=1,nVS
@@ -1513,20 +1474,23 @@ c start the loop
 
 	do i=1,nnr
 		do iCS=1,nCS
-			if(c_include(iCS).and.iCS.ne.iCS_phot) then
+			if(c_include(iCS)) then
 				vthv=sqrt(8d0*kb*CloudT(i)/(pi*muV(iVL(i,iCS))*mp))
 				Dp=kb*CloudT(i)*vthv/(3d0*CloudP(i)*1d6*sigmamol)
-				if(do_con(iCS)) then
-					Sc(i,iCS)=fstick*Clouddens(i)**2*(muC(iCS)/(muV(iVL(i,iCS))*v_cloud(iCS,iVL(i,iCS))))*
+				Sc(i,iCS)=fstick*Clouddens(i)**2*(muC(iCS)/(muV(iVL(i,iCS))*v_cloud(iCS,iVL(i,iCS))))*
      &						pi*rpart(i)*min(rpart(i)*vthv,4d0*Dp)
-				endif
 				if(do_nuc(iCS)) then
-					xv_use=xv(iVL(i,iCS),i)
-					tot1=Sat(i,iCS)*xv_use
-					tot2=CloudP(i)*CloudMMW(i)/(muV(iVL(i,iCS))*kb*CloudT(i))
-					call ComputeJ(CloudT(i),tot1,tot2,xv_use,vthv,sigma_nuc(iCS),r0_nuc(iCS),
+					if(iCS.eq.iCS_phot) then
+						Jn_xv(i,iCS)=Sn_phot(i)*xv(iVL(i,iCS),i)/m_phothaze
+						Nc_nuc(i,iCS)=m_phothaze/(muV(jCH4)*mp)
+					else
+						xv_use=xv(iVL(i,iCS),i)
+						tot1=Sat(i,iCS)*xv_use
+						tot2=CloudP(i)*CloudMMW(i)/(muV(iVL(i,iCS))*kb*CloudT(i))
+						call ComputeJ(CloudT(i),tot1,tot2,xv_use,vthv,sigma_nuc(iCS),r0_nuc(iCS),
      &							Nf_nuc(iCS),Jn_temp,Nc_nuc(i,iCS))
-					Jn_xv(i,iCS)=Jn_xv(i,iCS)*f+Jn_temp*(1d0-f)
+						Jn_xv(i,iCS)=Jn_xv(i,iCS)*f+Jn_temp*(1d0-f)
+					endif
 				else
 					Jn_xv(i,iCS)=0d0
 				endif
@@ -1545,10 +1509,6 @@ c	The Kelvin effect for condensation onto a curved surface
 c			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)*mp/rhodust(iCS))/(rmono(i)*kb*CloudT(i)))
 			Sat(i,iCS)=Sat(i,iCS)*tot
 		enddo
-		if(include_phothaze) then
-			Sc(i,iCS_phot)=0d0
-			Sat(i,iCS_phot)=1d0
-		endif
 	enddo
 
 	Nc_nuc=Nc_nuc*mp
@@ -1627,7 +1587,7 @@ C===============================================================================
 	do iCS=1,nCS
 		if(c_include(iCS)) then
 		j=j+1
-		if(Cloud(ii)%freeflow_con.and..not.Cloud(ii)%rainout) then
+		if(Cloud(ii)%freeflow_con) then!.and..not.Cloud(ii)%rainout) then
 c assume continuous flux at the bottom (dF/dz=Sc=0)
 			x(j)=0d0
 
@@ -1640,32 +1600,6 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			ik=KL+KU+1+j-ixc(iCS,i)
 			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Clouddens(i)*vsed(i)/dztot
 			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+(0.5d0*(Kd(i+1)*Clouddens(i+1)+Kd(i)*Clouddens(i))/dz)/dztot
-
-			if(iamorph(iCS).ne.0) then
-				if(c_include(iamorph(iCS))) then
-					ik=KL+KU+1+j-ixc(iamorph(iCS),i)
-					AB(ik,ixc(iamorph(iCS),i))=AB(ik,ixc(iamorph(iCS),i))+Clouddens(i)*tcrystinv(i)
-				endif
-			else if(do_con(iCS)) then
-				ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Sc(i,iCS)*xn(i)
-			endif
-			if(icryst(iCS).ne.0) then
-				ik=KL+KU+1+j-ixc(iCS,i)
-				AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Clouddens(i)*tcrystinv(i)
-			endif
-
-			if(do_nuc(iCS)) then
-				if(iCS.eq.iCS_phot.and.include_phothaze) then
-					x(j)=x(j)-Sn_phot(i)
-				else
-					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
-				endif
-			endif
-
-			ik=KL+KU+1+j-ixc(iCS,i)
-			AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))-Sc(i,iCS)/(Sat(i,iCS)*mpart(i))
 		else
 			ik=KL+KU+1+j-ixc(iCS,i)
 			AB(ik,ixc(iCS,i))=1d0
@@ -1709,12 +1643,8 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 	
 			x(j)=-Sn(i)/m_nuc
 			
-			if(include_phothaze) then
-				x(j)=x(j)-Sn_phot(i)/m_phothaze
-			endif
-			
 			do iCS=1,nCS
-				if(c_include(iCS).and.do_nuc(iCS).and.iCS.ne.iCS_phot) then
+				if(c_include(iCS).and.do_nuc(iCS)) then
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)
 				endif
@@ -1761,12 +1691,8 @@ c coagulation
 	
 			x(j)=-Sn(i)/m_nuc
 
-			if(include_phothaze) then
-				x(j)=x(j)-Sn_phot(i)/m_phothaze
-			endif
-			
 			do iCS=1,nCS
-				if(c_include(iCS).and.do_nuc(iCS).and.iCS.ne.iCS_phot) then
+				if(c_include(iCS).and.do_nuc(iCS)) then
 					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
 					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)
 				endif
@@ -1808,12 +1734,8 @@ c coagulation
 			endif
 
 			if(do_nuc(iCS)) then
-				if(iCS.eq.iCS_phot.and.include_phothaze) then
-					x(j)=x(j)-Sn_phot(i)
-				else
-					ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-					AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)
-				endif
+				ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
+				AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)*mp
 			endif
 
 			ik=KL+KU+1+j-ixc(iCS,i)
@@ -1849,9 +1771,9 @@ c coagulation
 						ik=KL+KU+1+j-ixc(iCS,i)
 						AB(ik,ixc(iCS,i))=AB(ik,ixc(iCS,i))+Sc(i,iCS)*v_cloud(iCS,iVS)*(muV(iVS)/muC(iCS))/(Sat(i,iCS)*mpart(i))
 
-						if(do_nuc(iCS).and.iCS.ne.iCS_phot) then
+						if(do_nuc(iCS)) then
 							ik=KL+KU+1+j-ixv(iVL(i,iCS),i)
-							AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)
+							AB(ik,ixv(iVL(i,iCS),i))=AB(ik,ixv(iVL(i,iCS),i))-Jn_xv(i,iCS)*Nc_nuc(i,iCS)*v_cloud(iCS,iVS)*muV(iVS)*mp
 						endif
 					endif
 				enddo
@@ -2160,7 +2082,6 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 		xv_prev=xv
 	endif
 	
-100	continue
 	do i=nnr,1,-1
 		if(xa(i).lt.xn(i)) xa(i)=xn(i)
 		if(xn(i).gt.0d0) then
@@ -2202,9 +2123,10 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 		if(.not.Cloud(ii)%usefsed) rpart(i)=rr
 	enddo
 
-	deallocate(Sc)
 	deallocate(IWORK)
 	deallocate(AB)
+100	continue
+	deallocate(Sc)
 
 	allocate(dx(nnr))
 	logP(1:nr)=-log(P(1:nr))
@@ -2237,8 +2159,12 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 		do i=1,nnr
 			do iCS=1,nCS
 				if(do_nuc(iCS).and.c_include(iCS)) then
-					Jn_xv(i,iCS)=Jn_xv(i,iCS)*xv(iVL(i,iCS),i)
-					Sn(i)=Sn(i)+Jn_xv(i,iCS)*Nc_nuc(i,iCS)*muC(iCS)/m_nuc
+					if(iCS.eq.iCS_phot) then
+						Jn_xv(i,iCS)=Sn_phot(i)*xv(jCH4,i)/m_phothaze
+					else
+						Jn_xv(i,iCS)=Jn_xv(i,iCS)*xv(iVL(i,iCS),i)
+					endif
+					Sn(i)=Sn(i)+Jn_xv(i,iCS)
 				endif
 			enddo
 		enddo

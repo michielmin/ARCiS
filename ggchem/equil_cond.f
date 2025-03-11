@@ -304,7 +304,7 @@
           print'(3x,A2,2(1pE15.6))',elnam(i),eps(i),eps(i)/eps0(i)
         enddo
       endif  
-      if (worst>1.Q-8) print*, "*** worst>1.Q-8 in equil_cond"
+      !if (worst>1.Q-8) print*, "*** worst>1.Q-8 in equil_cond"
 
       !----------------------------------------------------------
       ! ***  compute maximum possible dust abundances dscale  ***
@@ -431,7 +431,7 @@
             if (imaxon>0) then
               active(imaxon) = .true.
               if (verbose>=0) then
-                print*,"switch on ",trim(dust_nam(imaxon))
+                !print*,"switch on ",trim(dust_nam(imaxon))
               endif  
             endif  
           endif  
@@ -530,7 +530,7 @@
                     ioff = dk
                   endif  
                 enddo
-                if (ioff==0) print*, "*** ioff=0 should not occur"
+                !if (ioff==0) print*, "*** ioff=0 should not occur"
                 amount = ddust(ioff)
                 ok = .true.
                 do i=1,Nlin
@@ -602,13 +602,13 @@
      >          switchedOFF(i),pot(i),rem
             endif  
           enddo
-          do i=1,NDUST
-            if (active(i).and.(.not.act_old(i))) then
-              print*,"... switching on "//trim(dust_nam(i)) 
-            else if (.not.active(i).and.act_old(i)) then
-              print*,"... switching off "//trim(dust_nam(i)) 
-            endif
-          enddo   
+          !do i=1,NDUST
+           ! if (active(i).and.(.not.act_old(i))) then
+            !  print*,"... switching on "//trim(dust_nam(i)) 
+            !else if (.not.active(i).and.act_old(i)) then
+            !  print*,"... switching off "//trim(dust_nam(i)) 
+            !endif
+          !enddo   
         endif
         act_old = active
         if (Nact==0.and.qual<1.Q-30) exit   ! no solid supersaturated 
@@ -669,7 +669,7 @@
             e_num(el) = e_num(el)+1
           enddo  
         enddo  
-        if (Nind-1<Nact) print*, "*** Nind<Nact in equil_cond."
+        !if (Nind-1<Nact) print*, "*** Nind<Nact in equil_cond."
         Nall = Nind-1
         Nind = Nact                         ! truncate at number of condensates
         if (verbose>1) print'(99(A3))',(elnam(Iindex(j)),j=1,Nall)
@@ -723,9 +723,9 @@
                   txt2 = trim(txt2)//" "//tnum
                 endif  
               enddo
-              print*,trim(txt)
-              print*," "//trim(txt1)
-              print*,trim(txt2)
+!              print*,trim(txt)
+!              print*," "//trim(txt1)
+!              print*,trim(txt2)
             endif  
             found = .false. 
             do i=1,Nact
@@ -799,7 +799,7 @@
               e_act(Iindex(j)) = .false.
             endif
             if (.not.found) then
-              print*,"*** no alternative element selection found."
+              !print*,"*** no alternative element selection found."
               return 
             endif   
             goto 200 
@@ -1056,7 +1056,7 @@
      >                 dust_nam(var(1:Nvar1)), 
      >                 elnam(var(Nvar1+1:Nvar1+Nvar2))
             if (Nunsolved/=Nvar1+Nvar2) then
-              print*,"... is impossible"
+              !print*,"... is impossible"
               dtry = dtry+1
               dtry_break = .true.
               if (dtry<Nind) exit
@@ -1091,7 +1091,7 @@
               call QGEFA ( DF, NELEM, Nunsolved, ipvt, info )
               call QGEDI ( DF, NELEM, Nunsolved, ipvt, det, work, 1 )
               if (info.ne.0) then
-                print*,"*** singular matrix in QGEFA: info=",info
+                !print*,"*** singular matrix in QGEFA: info=",info
                 dtry = dtry+1
                 dtry_break = .true.
                 if (dtry<Nind) exit
@@ -1133,7 +1133,7 @@
             endif
             if (dtry>0.and.dtry_break) exit
           endif    
-          if (itry==100) print*, "*** itry==100"
+          !if (itry==100) print*, "*** itry==100"
         enddo
         if (.not.solved) then
           if (dtry==1) goto 200   ! may work by relaxing the depletion-criterium
@@ -1167,7 +1167,7 @@
             e_act(Iindex(j)) = .false.
             goto 210
           endif
-          write(*,*) "*** couldn't resolve the conversion matrix."
+          !write(*,*) "*** couldn't resolve the conversion matrix."
           return
         endif   
         do i=1,Nind
@@ -1257,8 +1257,8 @@
             dk = Dindex(dbest)
             is_esolved(ebest) = .true.
             is_dsolved(dbest) = .true.
-            print*,elnam(el)//" (->"//trim(dust_nam(dk))//
-     >             ") has converged."
+ !           print*,elnam(el)//" (->"//trim(dust_nam(dk))//
+ !    >             ") has converged."
           endif  
         endif  
         !-----------------------------------------------
@@ -1391,7 +1391,7 @@
         dx = FF
         if (verbose>1) print*,"QGESL info=",info
         if (info.ne.0) then
-          print*,"*** singular matrix in QGEFA NR-step: info=",info
+          !print*,"*** singular matrix in QGEFA NR-step: info=",info
           if (method_failed==0) then
             method_failed = method_failed+1
             method = 2
@@ -1400,7 +1400,7 @@
               if (active(i)) Nact=Nact+1
             enddo
             changed = .true.
-            print*,"trying eqcond_method 2 ..."
+            !print*,"trying eqcond_method 2 ..."
             goto 50
           endif  
           return
@@ -1636,7 +1636,7 @@
             base(imax,:) = tmp2(:) 
           endif
           if (DF(ii,ii)==0.Q0) then
-            print*,"*** WARNING: triangulation impossible in equil_cond"
+            !print*,"*** WARNING: triangulation impossible in equil_cond"
             cycle  
           endif  
           do k=ii+1,Nsolve
@@ -1798,7 +1798,7 @@
         dx = FF
         if (verbose>1) print*,"QGESL info=",info
         if (info.ne.0) then
-          print*,"*** singular matrix in QGEFA NR-step: info=",info
+          !print*,"*** singular matrix in QGEFA NR-step: info=",info
           if (method_failed==0) then
             method_failed = method_failed+1
             method = 1
@@ -1807,7 +1807,7 @@
               if (active(i)) Nact=Nact+1
             enddo
             changed = .true.
-            print*,"trying eqcond_method 1 ..."
+            !print*,"trying eqcond_method 1 ..."
             goto 50
           endif  
           return
@@ -1827,12 +1827,12 @@
           !print'(I3,2(1pE18.10),1pE9.2)',ii,Fsav(ii),test, 
      >    !                                  Fsav(ii)/test-1.Q0
           if (IS_NAN(REAL(dx(ii)))) then
-            print*,NELEM,Nsolve
+            !print*,NELEM,Nsolve
             do i=1,Nsolve
               print'(99(1pE13.6))',DFsav(i,1:Nsolve),Fsav(i)
             enddo  
             print'(99(1pE13.6))',dx(1:Nsolve)
-        	print*, "*** dx=NaN"
+        	!print*, "*** dx=NaN"
             return
           endif  
         enddo  
@@ -1972,8 +1972,8 @@
         !call SUPER(nHtot,T,xstep,eps,Sat0,NewFastLevel<1)
         !qual = SQUAL(Sat0,active)
         Smax = maxval(Sat0)
-        print'("it =",I4,"  qual =",1pE11.4,"  Smax-1 =",1pE11.2E4)',
-     >          it,qual,Smax-1.Q0
+  !      print'("it =",I4,"  qual =",1pE11.4,"  Smax-1 =",1pE11.2E4)',
+  !   >          it,qual,Smax-1.Q0
         if ((Smax<1.Q0+Sfinish).and.(qual<Qfinish)) exit
         if (verbose>0) read(*,'(a1)') char1
         if (verbose>0.and.char1=='1') method=1;changed=.true.
@@ -1989,8 +1989,8 @@
      >          0pF7.3," CPU sec.")') it,time1-time0
         endif  
       else
-        write(*,'("*** EQUIL_COND failed after ",I3," iter,  time =",
-     >            0pF9.4," CPU sec.")') it,time1-time0 
+!        write(*,'("*** EQUIL_COND failed after ",I3," iter,  time =",
+!     >            0pF9.4," CPU sec.")') it,time1-time0 
         return
       endif
 
@@ -1999,18 +1999,18 @@
       !-------------------------
       do i=1,NDUST
         if (ddust(i)>0.Q0.and.Sat(i)<0.9999) then
-          print*,"*** error: ddust>0 but S<1"
-          print*,dust_nam(i),REAL(ddust(i)),REAL(Sat(i))
+          !print*,"*** error: ddust>0 but S<1"
+          !print*,dust_nam(i),REAL(ddust(i)),REAL(Sat(i))
           return
         endif
         if (Sat(i)>1.00001) then
-          print*,"*** error: S>1"
-          print*,dust_nam(i),REAL(ddust(i)),REAL(Sat(i))
+          !print*,"*** error: S>1"
+          !print*,dust_nam(i),REAL(ddust(i)),REAL(Sat(i))
           return
         endif
         if (ddust(i)<-10*small*dscale(i)) then
-          print*,"*** error: ddust<0"
-          print*,dust_nam(i),REAL(ddust(i)),REAL(Sat(i))
+          !print*,"*** error: ddust<0"
+          !print*,dust_nam(i),REAL(ddust(i)),REAL(Sat(i))
           return
         endif  
       enddo  
@@ -2028,8 +2028,8 @@
       do i=1,NEPS
         el = elnr(i)
         if (ABS(1.Q0-check(el)/eps00(el))>1.Q-8) then
-          print*,"*** element conservation error 1"
-          print*,elnam(el),check(el),eps0(el),eps00(el)
+          !print*,"*** element conservation error 1"
+          !print*,elnam(el),check(el),eps0(el),eps00(el)
           return
         endif  
       enddo
@@ -2086,7 +2086,7 @@
         if (i==iel) cycle
         el = elnum(i)
         if (eps1(el).le.0.Q0) then
-          write(*,*) "*** negative el.abund. SUPER",elnam(el),eps1(el)
+          !write(*,*) "*** negative el.abund. SUPER",elnam(el),eps1(el)
           return
         endif  
       enddo
@@ -2136,7 +2136,7 @@
       integer :: j,el
       
       del = ddust(i)
-      print*," ==>  vaporize "//trim(dust_nam(i)),REAL(del)
+      !print*," ==>  vaporize "//trim(dust_nam(i)),REAL(del)
       ddust(i) = 0.Q0
       do j=1,dust_nel(i)
         el = dust_el(i,j)
@@ -2158,8 +2158,8 @@
       logical,intent(inout) :: ok
       integer :: j,el
       
-      print*," ==>  transform "//trim(dust_nam(i1))//" -> "
-     &       //trim(dust_nam(i2)),REAL(fac*del/dscale(i1))
+  !    print*," ==>  transform "//trim(dust_nam(i1))//" -> "
+  !   &       //trim(dust_nam(i2)),REAL(fac*del/dscale(i1))
       ddust(i1) = ddust(i1)-del
       ddust(i2) = ddust(i2)+fac*del
       do j=1,dust_nel(i1)
