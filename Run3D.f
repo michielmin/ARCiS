@@ -2529,7 +2529,7 @@ c-----------------------------------------------------------------------
 		if(computelam(i)) then
 		rmie=1d0
 		lmie=rmie/100d0
-		call callBHMIE(rmie,lmie,e1(i),e2(i),csmie,cemie)
+		call callBHMIE(rmie,lmie,e1(i),e2(i),csmie,cemie,g)
 		w=csmie/cemie
 		if(.not.w.lt.(1d0-1d-4)) w=1d0-1d-4
 		if(.not.w.gt.0d0) w=0d0
