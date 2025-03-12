@@ -228,7 +228,7 @@ c	if(nj.lt.350.and.nj.gt.0) then
 			endif
 		enddo
 		write(30,form) "phase [degrees]",specR(1:nj)
-		form='(f14.6,' // int2string(nj,'(i3)') // 'es17.9E3)'
+		form='(f14.6,' // int2string(nj,'(i5)') // 'es17.9E3)'
 		do i=1,nphase
 			specR(1:nlam_out)=0d0!Fstar(1:nlam_out)*1d23/distance**2
 			specR(1:nlam_out)=specR(1:nlam_out)+phase(i,0,1:nlam_out)+flux(0,1:nlam_out)

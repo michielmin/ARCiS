@@ -280,8 +280,11 @@ c-----------------------------------------------------------------------
 			Cloud(ii)%Kabs(1:nr,1:nlam)=Cloud(ii)%Kext(1:nr,1:nlam)*(1d0-Cloud(ii)%albedo)
 			Cloud(ii)%g=Cloud(ii)%g0
 			do j=1,180
+c Henyey greenstein phase function
 				Cloud(ii)%F11(1:nr,1:nlam+1,j)=(1d0-Cloud(ii)%g**2)/
      &				((1d0+Cloud(ii)%g**2-2d0*Cloud(ii)%g*cos(pi*(real(j)-0.5)/180d0))**(2d0/3d0))
+c Rayleigh scattering phase function
+c				Cloud(ii)%F11(1:nr,1:nlam+1,j)=3d0*(1d0+cos(pi*(real(j)-0.5)/180d0)**2)/4d0
 			enddo
 		case("MATERIAL","REFIND")
 			call output("Computing inhomogeneous cloud particles")

@@ -25,15 +25,15 @@
 	real*8,allocatable :: logCloudP(:),CloudtauUV(:),CloudkappaUV(:),CloudG(:),errorarr(:)
 	character*10,allocatable :: v_names(:),v_names_out(:),Jn_names_out(:)
 	logical,allocatable :: v_include(:),c_include(:),do_nuc(:),do_con(:),layercon(:)
-	integer INCFD,IERR,iCS_phot,nscale
+	integer INCFD,IERR,iCS_phot
 	logical SKIP,liq,include_phothaze
-	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr),compGibbs,ffrag,mmono,ffill,nmono,Df,rgyr,xv_use,T_CO,P_CO
+	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr),compGibbs,ffrag,mmono,ffill,nmono,Df,rgyr,xv_use,T_CO,P_CO,maxVchange
 	integer itime
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
 	real*8,allocatable :: xv_out(:),Jn_xv(:,:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:),Jn_out(:)
 	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),rmono(:),ac(:,:,:),Tfit(:,:)
 	real*8,allocatable,save :: xv_prev(:,:),xc_prev(:,:),xn_prev(:),xa_prev(:)
-	integer jSiO,jTiO2,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi,jH2SO4,jCa,jCH4
+	integer jSiO,jTiO,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi,jH2SO4,jCa,jCH4
 
 	logical dochemR(nr)
 
@@ -72,15 +72,15 @@ c fractal dimension created by coagulating collisions
 	bv(i,4)=-1.67404E-08
 
 	i=i+1
-	jTiO2=i
-	v_names(i)="TiO2"
-	v_atoms(i,5)=2
+	jTiO=i
+	v_names(i)="TiO"
+	v_atoms(i,5)=1
 	v_atoms(i,15)=1
-	bv(i,0)=1.53310E+05
-	bv(i,1)=-1.71501E+00
-	bv(i,2)=-1.83346E+01
-	bv(i,3)=4.42822E-04
-	bv(i,4)=-4.38786E-08
+	bv(i,0)=8.02469E+04
+	bv(i,1)=-8.46602E-01
+	bv(i,2)=-7.67141E+00
+	bv(i,3)=1.51196E-04
+	bv(i,4)=-2.20473E-08
 	
 	i=i+1
 	jMg=i
@@ -421,8 +421,8 @@ c fractal dimension created by coagulating collisions
 				atoms_cloud(i,15)=2
 				atoms_cloud(i,5)=5
 				v_cloud(i,jMg)=1
-				v_cloud(i,jTiO2)=2
-				v_cloud(i,jH2O)=1
+				v_cloud(i,jTiO)=2
+				v_cloud(i,jH2O)=3
 				rhodust(i)=4.64
 				bc(i,0)=2.12742E+06
 				bc(i,1)=-4.86574E+06
@@ -600,7 +600,8 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='TiO2'
 				atoms_cloud(i,5)=1
 				atoms_cloud(i,15)=2
-				v_cloud(i,jTiO2)=1
+				v_cloud(i,jTiO)=1
+				v_cloud(i,jH2O)=1
 				rhodust(i)=4.23
 				do_nuc(i)=Cloud(ii)%ComputeJn
 				sigma_nuc(i)=480.6
@@ -615,7 +616,8 @@ c fractal dimension created by coagulating collisions
 				CSname(i)='Ti4O7'
 				atoms_cloud(i,5)=4
 				atoms_cloud(i,15)=7
-				v_cloud(i,jTiO2)=4		! INCONSISTENT!!!
+				v_cloud(i,jTiO)=4
+				v_cloud(i,jH2O)=3
 				rhodust(i)=4.19
 				bc(i,0)=1.85821E+06
 				bc(i,1)=-7.06188E+06
@@ -655,8 +657,8 @@ c fractal dimension created by coagulating collisions
 				atoms_cloud(i,15)=1
 				atoms_cloud(i,5)=3
 				v_cloud(i,jCa)=1
-				v_cloud(i,jTiO2)=1
-				v_cloud(i,jH2O)=1
+				v_cloud(i,jTiO)=1
+				v_cloud(i,jH2O)=2
 				rhodust(i)=3.98
 				bc(i,0)=1.19107E+04
 				bc(i,1)=-7.30327E+05
@@ -1343,10 +1345,12 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 	enddo
 	NN=j
 
-	fmin=0.75
-	fmax=0.95
 	eps=1d-2
+	fmin=0.6
+	fmax=0.95
+	if(Cloud(ii)%computeJn) fmax=1d0-eps
 	min_maxerr=1d0
+	maxVchange=5d0
 
 	allocate(IWORK(NN))
 	allocate(x(NN))
@@ -1355,7 +1359,6 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 
 	iconv=0
 	Jn_xv=0d0
-	nscale=0
 	f=fmax
 
 c start the loop
@@ -1404,7 +1407,7 @@ c start the loop
 		else
 			Kd(i)=Km(i)
 		endif
-		if(Cloud(ii)%usefsed.or.iter.eq.1) then
+		if(Cloud(ii)%usefsed) then
 			fsed=Cloud(ii)%fsed_alpha*exp((CloudR(i)-Rplanet)/(6d0*Cloud(ii)%fsed_beta*CloudHp(i)))+1d-2
 			vsed(i)=-fsed*Kd(i)/CloudHp(i)
 			lmfp=CloudMMW(i)*mp/(sqrt(2d0)*Clouddens(i)*sigmamol)
@@ -1488,13 +1491,14 @@ c						tot2=CloudP(i)*CloudMMW(i)/(muV(iVL(i,iCS))*kb*CloudT(i))
 			if(.not.Sc(i,iCS).gt.0d0) Sc(i,iCS)=0d0
 		enddo
 c	The Kelvin effect for condensation onto a curved surface
-		do iCS=1,nCS
-			tot=exp(-2d0*sigma_nuc(iCS)*(muC(iCS)*mp/rhodust(iCS))/(rmono(i)*kb*CloudT(i)))
-			if(.not.tot.lt.1d0) tot=1d0
-			if(.not.tot.gt.1d-6) tot=1d-6
-c			Sat(i,iCS)=Sat(i,iCS)*exp(-2d0*sigma_nuc(iCS)*(muC(iCS)*mp/rhodust(iCS))/(rmono(i)*kb*CloudT(i)))
-			Sat(i,iCS)=Sat(i,iCS)*tot
-		enddo
+		if(.false.) then
+			do iCS=1,nCS
+				tot=exp(-2d0*sigma_nuc(iCS)*(muC(iCS)*mp/rhodust(iCS))/(rmono(i)*kb*CloudT(i)))
+				if(.not.tot.lt.1d0) tot=1d0
+				if(.not.tot.gt.1d-6) tot=1d-6
+				Sat(i,iCS)=Sat(i,iCS)*tot
+			enddo
+		endif
 	enddo
 
 	Nc_nuc=Nc_nuc*mp
@@ -1832,16 +1836,20 @@ c		endif
 		if(.not.Cloud(ii)%usefsed) then
 			if(.not.x(ixn(i)).gt.1d-50/m_nuc) x(ixn(i))=1d-50/m_nuc
 			if(.not.x(ixa(i)).gt.1d-50/m_nuc) x(ixa(i))=1d-50/m_nuc
+			if(x(ixn(i)).gt.1d0/m_nuc) x(ixn(i))=1d0/m_nuc
+			if(x(ixa(i)).gt.1d0/m_nuc) x(ixa(i))=1d0/m_nuc
 		endif
 		do iCS=1,nCS
 			if(c_include(iCS)) then
 				if(.not.x(ixc(iCS,i)).gt.0d0) x(ixc(iCS,i))=0d0
+				if(x(ixc(iCS,i)).gt.1d0) x(ixc(iCS,i))=1d0
 			endif
 		enddo
 		do iVS=1,nVS
 			if(v_include(iVS)) then
-				if(x(ixv(iVS,i)).gt.xv(iVS,i)*5.0d0) x(ixv(iVS,i))=xv(iVS,i)*5.0d0
-				if(.not.x(ixv(iVS,i)).gt.xv(iVS,i)*0.2d0) x(ixv(iVS,i))=xv(iVS,i)*0.2d0
+				if(x(ixv(iVS,i)).gt.xv(iVS,i)*maxVchange) x(ixv(iVS,i))=xv(iVS,i)*maxVchange
+				if(.not.x(ixv(iVS,i)).gt.xv(iVS,i)/maxVchange) x(ixv(iVS,i))=xv(iVS,i)/maxVchange
+				if(x(ixv(iVS,i)).gt.xv_bot(iVS)) x(ixv(iVS,i))=xv_bot(iVS)
 			endif
 		enddo
 	enddo
@@ -1897,11 +1905,11 @@ c	f=1.1-0.4/(1.0+3.0*exp(-(real(iter)/real(min(niter/4,200)))**2))
 			enddo
 		endif
 	enddo
-	if(maxerr.lt.min_maxerr.and.nscale.gt.3) then
+	if(maxerr.lt.min_maxerr) then
 		min_maxerr=maxerr
 	endif
-	f=fmax-(fmax-fmin)*min_maxerr
-	f=f+(1d0-f)*(real(iter)/real(niter))**4
+	f=fmax-(fmax-fmin)*maxerr**0.125
+	f=f+(fmax-f)*(real(iter)/real(niter))**2
 	do i=1,nnr
 		if(.not.Cloud(ii)%usefsed) then
 			if(iter.eq.1) then
@@ -1983,8 +1991,6 @@ C===============================================================================
 		endif
 		if(.not.Cloud(ii)%usefsed) rpart(i)=rr
 	enddo
-	nscale=nscale+1
-	j=10
 	errorarr(iter)=maxerr
 	slope=-1d0
 	if(maxerr.lt.eps) then
