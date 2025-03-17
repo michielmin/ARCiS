@@ -1013,9 +1013,6 @@ c select at least the species relevant for disequilibrium chemistry
 		allocate(usemolGGchem(nmol))
 		usemolGGchem(1:nmol)=includemol(1:nmol)
 		doit=condensates.or.secondary_atmosphere
-		do i=1,nclouds
-			if(Cloud(i)%type.eq.'CONDENSATION'.and.Cloud(i)%rainout) doit=.true.
-		enddo
 		call init_GGchem(molname,nmol,doit)
 		dobackgroundgas=.false.
 	endif

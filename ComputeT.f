@@ -680,12 +680,12 @@ c===============================================================================
 		if(maxErr.gt.epsiter) converged=.false.
 	enddo
 
-	if(maxErr.gt.maxerr_prev) then
+	if(maxErr.gt.(maxerr_prev*1.2)) then
 		f=f/2d0
 	else
-		f=(9d0*f+1d0)/10d0
+		f=min(0.4,f*1.5)
 	endif
-	if(f.lt.epsiter) f=epsiter
+	if(f.lt.1d-2) f=1d-2
 	maxerr_prev=maxErr
 
 	if(.not.allocated(Tdist)) allocate(Tdist(nr,maxiter))
