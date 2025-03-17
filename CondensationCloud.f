@@ -270,12 +270,6 @@ c fractal dimension created by coagulating collisions
 
 	call SetAbun
 
-	if(Cloud(ii)%rainout.and.dochemistry) then
-		call SplitGasDust(Tsurface,P(1),molfracs_atoms,molfracs_atoms0,abun_dust)
-		tot=sum(molfracs_atoms0(1:N_atoms))
-		molfracs_atoms=molfracs_atoms0/tot
-	endif
-
 	if(Cloud(ii)%EqChemBoundary) then
 		T_CO=sqrt(Rstar/(Dplanet))*Tstar
 		T_CO=(T_CO**4+TeffP**4)**0.25
@@ -1275,6 +1269,61 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 
 	allocate(c_include(nCS))
 	c_include=.true.
+
+	if(Cloud(ii)%rainout) then
+		f=1d-4
+		i=1
+		do iter=1,10000
+			xv(1:nVS,i)=0d0
+			j=0
+			do iCS=1,nCS
+				if(do_con(iCS)) then
+				tot1=1d200
+				iVL(i,iCS)=1
+				do iVS=1,nVS
+					if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
+						tot2=xv(iVS,i)*(sqrt(8d0*kb*CloudT(i)/(pi*muV(iVS)*mp)))/(muV(iVS)*v_cloud(iCS,iVS))
+						if(tot2.lt.tot1) then
+							tot1=tot2
+							iVL(i,iCS)=iVS
+						endif
+						if(tot2.lt.tot1) then
+							tot1=tot2
+							iVL(i,iCS)=iVS
+						endif
+					endif
+				enddo
+				fSat(i,iCS)=CloudP(i)**(v_H2(iCS)-1d0)
+				do iVS=1,nVS
+					if(v_include(iVS).and.v_cloud(iCS,iVS).ne.0d0) then
+						fSat(i,iCS)=fSat(i,iCS)*(CloudP(i)*xv_bot(iVS)*CloudMMW(i)/muV(iVS))**v_cloud(iCS,iVS)
+					endif
+				enddo
+				tot1=Sat(i,iCS)*fSat(i,iCS)/Cloud(ii)%Srainout
+				if(tot1.gt.1d0) then
+					j=j+1
+					tot1=xv_bot(iVL(i,iCS))*(1d0-1d0/tot1)
+					c_include(iCS)=.false.
+					do iVS=1,nVS
+						if(v_cloud(iCS,iVS).gt.0d0.and.v_include(iVS)) then
+							xv(iVS,i)=xv(iVS,i)+tot1*v_cloud(iCS,iVS)*muV(iVS)/(v_cloud(iCS,iVL(i,iCS))*muV(iVL(i,iCS)))
+						endif
+					enddo
+				endif
+				endif
+			enddo
+			if(j.eq.0) exit
+			maxerr=1d200
+			do iVS=1,nVS
+				if(v_include(iVS).and.xv(iVS,i).gt.0d0) then
+					err=xv_bot(iVS)/xv(iVS,i)
+					if(err.lt.maxerr) maxerr=err
+				endif
+			enddo
+			if(.not.maxerr.lt.1d100) exit
+			xv_bot(1:nVS)=xv_bot(1:nVS)-maxerr*0.1*xv(1:nVS,i)
+		enddo
+	endif
 
 	do iCS=1,nCS
 		if(c_include(iCS).and.do_con(iCS)) then
