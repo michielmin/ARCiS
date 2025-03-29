@@ -535,7 +535,7 @@ c Now call the setup for the readFull3D part
 		mixrat_average3D=0d0
 	endif
 	ndisk=20
-	natm=20
+	natm=10
 
 	nptrace=(nlatt-1)*2
 	if(actually1D.and.nphase.eq.1.and.theta_phase(1).eq.180d0) nptrace=1
