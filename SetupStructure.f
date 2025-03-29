@@ -1457,7 +1457,7 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 		liquid=.true.
 	else
 		call PvapH2O(Tsurface,Pmax,liquid)
-		Pmax=f_surface_water*Pmax
+		Pmax=f_water*Pmax
 		if(Pmax.gt.PH2Omax) Pmax=PH2Omax
 	endif
 	if(Pmax.le.1d-20) Pmax=1d-20

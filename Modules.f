@@ -202,9 +202,11 @@ c===============================================================================
 	logical gamma_equal,dopostequalweights,inverseCOratio,setsurfpressure,fixnight2day,tidallock,distrUV
 	logical transspec,emisspec,dosimplerainout,computeLC,doscaleR,complexKzz,convectKzz,SCKzz,writeWolk,dotranshide,ComputeTeff
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
-	real*8,allocatable :: lam(:),freq(:),dfreq(:),dlam(:),blam(:,:),surface_emis(:),surface_emis_ice(:)
-	real*8,allocatable :: surface_emis_snow(:),surface_emis_grass(:),surface_emis_water(:),surface_emis_sand(:)
-	real*8 f_surface_water
+	real*8,allocatable :: lam(:),freq(:),dfreq(:),dlam(:),blam(:,:),surface_emis(:),surface_props(:,:)
+	real*8 f_ice,f_grass,f_snow,f_water,f_surface(5)
+	real*8 bdrf_args(4,5)
+	integer bdrf_type(5),n_surface
+	character*500 bdrf_file(5)
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:),planet_albedo(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	real*8 planetform_fdust,planetform_fplan,planetform_Mstart,planetform_SolidC,vrot0

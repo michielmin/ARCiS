@@ -509,6 +509,19 @@ C	 create the new empty FITS file
 		deallocate(temp)
 	endif
 
+c	if(molname(imol).eq."H2O") then
+c		allocate(temp(nlam))
+c		filename="case03_h2o_xsec_sorted.dat"
+c		call regrid(filename,lam*1d4,temp,nlam)
+c		do iT=1,Ktable(imol)%nT
+c			do iP=1,Ktable(imol)%nP
+c				do ilam=1,nlam
+c					Ktable(imol)%ktable(1:ng,ilam,iT,iP,-nvel:nvel)=temp(ilam)
+c				enddo
+c			enddo
+c		enddo
+c		deallocate(temp)
+c	endif	
 	
 	return
 	end

@@ -7,26 +7,29 @@
 	real*8 beta(nlong,nlatt),Planck,phi,la,lo,A,rr
 	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta
 	real*8,allocatable :: Ca(:,:,:,:,:,:),Cs(:,:,:,:),BBr(:,:),Si(:,:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce_cont(:,:,:,:)
-	integer ir,ilam,ig,isize,iRmax,ndisk,nsub,nrtrace,nptrace,ipc,npc,nmol_count,iscatt,icc
+	integer ir,ilam,ig,isize,iRmax,ndisk,natm,nsub,nrtrace,nptrace,ipc,npc,nmol_count,iscatt,icc
 	logical recomputeopac
 	logical,allocatable :: hit(:,:)
-	real*8,allocatable :: rtrace(:),wrtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:),cloud3D(:,:)
-	real*8 x,y,z,vx,vy,vz,v,w1,w2
+	real*8,allocatable :: rtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:),cloud3D(:,:)
+	real*8 x,y,z,vx,vy,vz,v,w1,w2,ComputeBDREFscatt
+	external ComputeBDREFscatt
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:,:),tautot(:,:),exp_tau(:,:),obsA_split_omp(:,:),dtauR_nu(:,:,:,:,:,:)
 	real*8,allocatable :: tauc(:,:),Afact(:,:),vv(:,:),obsA_omp(:),mixrat3D(:,:,:),T3D(:,:),fluxp_omp(:)
 	real*8 tot,contr,tmp(nmol),Rmin_im,Rmax_im,random,xmin,xmax,Pb(nr+1)
-	integer nx_im,ix,iy,ni,ilatt,ilong,imustar,ivel,miniter0
+	integer nx_im,ix,iy,ni,ilatt,ilong,imustar,ivel,miniter0,isurf
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1,SiRalb1,tau0
 	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:,:),alb_omp(:),SiR0(:,:,:),SiRalb0(:,:,:),R3DC(:,:),lgrid(:)
-	real*8,allocatable :: SiFS(:,:,:,:,:,:),SiScFS(:,:,:,:,:,:),F11(:,:,:,:,:),g(:,:,:,:)
+	real*8,allocatable :: SiFS(:,:,:,:,:,:),SiScFS(:,:,:,:,:,:),F11(:,:,:,:,:),g(:,:,:,:),BBsurf(:,:)
 	logical iterateshift,actually1D,do_ibeta(n3D)
-	real*8 vxxmin,vxxmax,betamin_term,tot1,tot2,vrot,dlam_rot,albedo_day,scale,scale_prev
+	real*8 vxxmin,vxxmax,betamin_term,tot1,tot2,vrot,dlam_rot,albedo_day,scale,scale_prev,vxr,vyr,vzr
+	real*8 mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2,HapkeEmis
+	external HapkeEmis
 	logical do_rot
 	real*8 starttime,stoptime
 	
-	allocate(Ca(nlam,ng,nr,n3D,-nvel:nvel,ncc),Cs(nlam,nr,n3D,ncc),BBr(nlam,0:nr))
+	allocate(Ca(nlam,ng,nr,n3D,-nvel:nvel,ncc),Cs(nlam,nr,n3D,ncc),BBr(nlam,0:nr),BBsurf(nlam,n3D))
 	allocate(Si(nlam,ng,0:nr,nnu0,n3D,ncc),SiFS(nlam,ng,0:nr,nnu0,n3D,ncc))
 	allocate(G(nlam,nr,n3D,ncc),F11(nlam,0:nr,180,n3D,ncc))
 	if(computealbedo) allocate(SiSc(nlam,ng,0:nr,nnu0,n3D,ncc),SiFS(nlam,ng,0:nr,nnu0,n3D,ncc))
@@ -319,7 +322,7 @@ c Now call the setup for the readFull3D part
 						do ivel=-nvel,nvel
 							do icc=1,ncc
 								call Crossections(ir,ilam,ig,Ca(ilam,ig,ir,i,ivel,icc),Cs(ilam,ir,i,icc),
-     &			docloud(icc,1:nclouds),ivel,F11(ilam,ir,1:180,i,ncc),g(ilam,ir,i,ncc),anisoscattstar)
+     &			docloud(icc,1:nclouds),ivel,F11(ilam,ir,1:180,i,icc),g(ilam,ir,i,icc),anisoscattstar)
 							enddo
 						enddo
 					enddo
@@ -365,6 +368,7 @@ c Now call the setup for the readFull3D part
 				if(emisspec) call ComputeScatter(BBr(1:nlam,0:nr),Si(1:nlam,1:ng,0:nr,1:nnu0,i,icc),
      &				SiFS(1:nlam,1:ng,0:nr,1:nnu0,i,icc),Ca(1:nlam,1:ng,1:nr,i,0,icc),Cs(1:nlam,1:nr,i,icc))
 			enddo
+			BBsurf(1:nlam,i)=BBr(1:nlam,0)
 			if(computealbedo) then
 				BBr(1:nlam,0:nr)=0d0
 				Fstar_temp(1:nlam)=Fstar(1:nlam)
@@ -427,6 +431,7 @@ c Now call the setup for the readFull3D part
 					SiScFS(1:nlam,1:ng,ir,1:nnu0,i,1:ncc)=SiScFS(1:nlam,1:ng,ir,1:nnu0,n3D,1:ncc)
 				endif
 			enddo
+			BBsurf(1:nlam,i)=BBsurf(1:nlam,n3D)
 			local_albedo(i)=local_albedo(n3D)
 		endif
 		if(writefiles) then
@@ -530,9 +535,8 @@ c Now call the setup for the readFull3D part
 		mixrat_average3D=0d0
 	endif
 	ndisk=20
-	nsub=0
+	natm=20
 
-	nrtrace=(nr-1)*nsub+ndisk
 	nptrace=(nlatt-1)*2
 	if(actually1D.and.nphase.eq.1.and.theta_phase(1).eq.180d0) nptrace=1
 	if(vrot0.ne.0d0) then
@@ -543,14 +547,24 @@ c Now call the setup for the readFull3D part
 	endif
 	
 	if(makeimage) then
-		nrtrace=nrtrace*4
+		ndisk=ndisk*4
 		nptrace=(nlatt-1)*8
+	endif
+	nrtrace=natm+ndisk
+	if(makeimage) then
 		allocate(rphi_image(nlam,nrtrace,nptrace))
 		allocate(xy_image(nx_im,nx_im,nlam))
 	endif
-	allocate(rtrace(nrtrace),wrtrace(nrtrace))
 
-	call gauleg(0d0,Rmax,rtrace,wrtrace,nrtrace)
+	allocate(rtrace(nrtrace))
+
+	do irtrace=1,ndisk
+		rtrace(irtrace)=R(1)*real(irtrace-1)/real(ndisk-1)
+	enddo
+	do irtrace=ndisk+1,nrtrace
+		rtrace(irtrace)=R(1)+(Rmax-R(1))*(real(irtrace-ndisk)-0.5d0)/(real(nrtrace-ndisk))
+	enddo
+	call sort(rtrace,nrtrace)
 
 	call cpu_time(starttime)
 
@@ -562,19 +576,33 @@ c Now call the setup for the readFull3D part
 	theta=2d0*pi*theta_phase(ipc)/360d0
 	if(theta.gt.2d0*pi) theta=theta-2d0*pi
 	iscatt=theta_phase(ipc)
-	if(iscatt.gt.180) iscatt=360-iscatt
 	if(iscatt.lt.0) iscatt=-iscatt
-	if(iscatt.eq.0) iscatt=1
+	if(iscatt.gt.180) iscatt=360-iscatt
+	if(iscatt.lt.1) iscatt=1
+	if(iscatt.gt.180) iscatt=180
 	fluxp=0d0
+	vx=-1d0
+	vy=0d0
+	vz=0d0
+	call rotateY3D(vx,vy,vz,pi/2d0-orbit_inc)
+	rr=sqrt(vx**2+vy**2+vz**2)
+	vx=vx/rr
+	vy=vy/rr
+	vz=vz/rr
+	call rotateZ3D(vx,vy,vz,theta)
+	rr=sqrt(vx**2+vy**2+vz**2)
+	vx=vx/rr
+	vy=vy/rr
+	vz=vz/rr
 !$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vx,vy,vz,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,tau0,
+!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vxr,vyr,vzr,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,tau0,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp,SiRalb0,SiRalb1,
-!$OMP&			vrot,dlam_rot,ivel,icc)
-!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,lam,do_rot,
+!$OMP&			vrot,dlam_rot,ivel,icc,isurf,mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2)
+!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,lam,do_rot,
 !$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,R3DC,computelam,nvel,
-!$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis,
-!$OMP&			iscatt,F11,SiFS,SiScFS,anisoscattstar,g,ncc,cloudfrac)
+!$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis,BBsurf,
+!$OMP&			iscatt,F11,SiFS,SiScFS,anisoscattstar,g,ncc,cloudfrac,vx,vy,vz,bdrf_type,bdrf_args,f_surface,surface_props,n_surface)
 	allocate(fact(nlam,ng,ncc))
 	allocate(fluxp_omp(nlam))
 	allocate(ftot(nlam),SiR0(nlam,ng,ncc))
@@ -582,8 +610,8 @@ c Now call the setup for the readFull3D part
 	fluxp_omp=0d0
 	if(computealbedo) alb_omp=0d0
 !$OMP DO SCHEDULE(DYNAMIC,1)
-	do irtrace=1,nrtrace
-		A=2d0*pi*rtrace(irtrace)*wrtrace(irtrace)/real(nptrace)
+	do irtrace=1,nrtrace-1
+		A=pi*(rtrace(irtrace+1)**2-rtrace(irtrace)**2)/real(nptrace)
 		do iptrace=1,nptrace
 			ftot=0d0
 			fact=1d0
@@ -598,17 +626,18 @@ c Note we are here using the symmetry between North and South
 				phi=2d0*pi*(real(iptrace)-0.5)/real(nptrace)
 			endif
 			rr=rtrace(irtrace)
+			rr=0.5d0*(rtrace(irtrace)+rtrace(irtrace+1))
 			y=rr*cos(phi)
 			z=rr*sin(phi)
 			x=sqrt(Rmax**2-y**2-z**2)
 			if(do_rot) then
 				vrot=vrot0*y/Rmax
-				vx=vrot0*y/Rmax
-				vy=vrot0*x/Rmax
-				vz=0d0
-				rr=sqrt(vx**2+vy**2+vz**2)
-				call rotateY3D(vx,vy,vz,pi/2d0-orbit_inc)
-				vrot=vx*rr/sqrt(vx**2+vy**2+vz**2)
+				vxr=vrot0*y/Rmax
+				vyr=vrot0*x/Rmax
+				vzr=0d0
+				rr=sqrt(vxr**2+vyr**2+vzr**2)
+				call rotateY3D(vxr,vyr,vzr,pi/2d0-orbit_inc)
+				vrot=vxr*rr/sqrt(vxr**2+vyr**2+vzr**2)
 				ivel=real(nvel)*vrot/vrot0
 				ivel=(vrot/vrot0)*(real(nvel)+0.5)+0.5*sign(1d0,vrot/vrot0)
 				if(ivel.lt.-nvel) ivel=-nvel
@@ -616,9 +645,6 @@ c Note we are here using the symmetry between North and South
 			else
 				ivel=0
 			endif
-			vx=-1d0
-			vy=0d0
-			vz=0d0
 			call rotateY3D(x,y,z,pi/2d0-orbit_inc)
 			rr=sqrt(x**2+y**2+z**2)
 			x=x*Rmax/rr
@@ -629,16 +655,6 @@ c Note we are here using the symmetry between North and South
 			x=x*Rmax/rr
 			y=y*Rmax/rr
 			z=z*Rmax/rr
-			call rotateY3D(vx,vy,vz,pi/2d0-orbit_inc)
-			rr=sqrt(vx**2+vy**2+vz**2)
-			vx=vx/rr
-			vy=vy/rr
-			vz=vz/rr
-			call rotateZ3D(vx,vy,vz,theta)
-			rr=sqrt(vx**2+vy**2+vz**2)
-			vx=vx/rr
-			vy=vy/rr
-			vz=vz/rr
 			la=acos(z/sqrt(x**2+y**2+z**2))
 			lo=acos(x/sqrt(x**2+y**2))
 			if(y.gt.0d0) lo=2d0*pi-lo
@@ -730,12 +746,47 @@ c Note we are here using the symmetry between North and South
 					if(inu.lt.1) inu=1
 					if(.not.inu.lt.nnu0-1) inu=nnu0-1
 				endif
+				rr=sqrt(x*x+y*y+z*z)
+				mu=-x/rr
+				if(mu.gt.0d0.and.anisoscattstar) then
+					mup=-(x*vx+y*vy+z*vz)/rr
+					x1=-1d0-mu*x/rr
+					y1=-mu*y/rr
+					z1=-mu*z/rr
+					r1=sqrt(x1*x1+y1*y1+z1*z1)
+					x2=-vx-mup*x/rr
+					y2=-vy-mup*y/rr
+					z2=-vz-mup*z/rr
+					r2=sqrt(x2*x2+y2*y2+z2*z2)
+					dphi=max(min((x1*x2+y1*y2+z1*z2)/(r1*r2),1d0),-1d0)
+					dphi=acos(-dphi)
+				endif
 				do ilam=1,nlam
 					if(lamemis(ilam).and.computelam(ilam)) then
 					do ig=1,ng
 						do icc=1,ncc
-							contr=Si(ilam,ig,0,inu,i,icc)
-							if(anisoscattstar) contr=contr+F11(ilam,0,iscatt,i,icc)*SiFS(ilam,ig,0,inu,i,icc)
+							if(anisoscattstar.and.mu.gt.0d0) then
+								contr=0d0
+								do isurf=1,n_surface
+									if(f_surface(isurf).gt.0d0) then
+										contr=contr+f_surface(isurf)*
+     &		ComputeBDREFscatt(mu,mup,dphi,bdrf_type(isurf),bdrf_args(1:4,isurf),surface_props(ilam,isurf))
+									endif
+								enddo
+								contr=contr*SiFS(ilam,ig,0,inu,i,icc)
+								contr=contr+Si(ilam,ig,0,inu,i,icc)*(1d0-surface_emis(ilam))
+								do isurf=1,n_surface
+									if(f_surface(isurf).gt.0d0) then
+										if(bdrf_type(isurf).eq.1) then
+											contr=contr+f_surface(isurf)*BBsurf(ilam,i)*HapkeEmis(surface_props(ilam,isurf),mup)
+										else
+											contr=contr+f_surface(isurf)*BBsurf(ilam,i)*surface_emis(ilam)
+										endif
+									endif
+								enddo
+							else
+								contr=Si(ilam,ig,0,inu,i,icc)*(1d0-surface_emis(ilam))+BBsurf(ilam,i)*surface_emis(ilam)
+							endif
 							ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig,icc)*cloudfrac(icc)
 							if(computealbedo) then
 								alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*SiSc(ilam,ig,0,inu,i,icc)*fact(ilam,ig,icc)
@@ -824,9 +875,9 @@ c	print*,Tstar*(Rstar/Dplanet)**0.5
 		call output("Creating image: " // trim(file))
 		Rmin_im=0d0
 		xy_image=0d0
-		do irtrace=1,nrtrace
+		do irtrace=1,nrtrace-1
 			call tellertje(irtrace,nrtrace)
-			A=2d0*pi*rtrace(irtrace)*wrtrace(irtrace)
+			A=pi*(rtrace(irtrace+1)**2-rtrace(irtrace)**2)
 			Rmax_im=sqrt((A+pi*Rmin_im**2)/pi)
 			do iptrace=1,nptrace
 				ni=125d0*real(nx_im*nx_im)/real(nrtrace*nptrace)
@@ -951,7 +1002,7 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 		deallocate(rphi_image)
 		deallocate(xy_image)
 	endif
-	deallocate(rtrace,wrtrace)
+	deallocate(rtrace)
 	deallocate(fluxp)
 	endif
 
@@ -984,8 +1035,9 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 
 	ndisk=4
 	nsub=3
+	natm=nsub*(nr-1)
 
-	nrtrace=(nr-1)*nsub+ndisk
+	nrtrace=natm+ndisk
 	if(2*(nlatt/2).eq.nlatt) then
 		nptrace=(nlatt-1)*2
 	else
@@ -2359,7 +2411,8 @@ c-----------------------------------------------------------------------
 	do inu0=1,nnu0
 		do ig=1,ng
 			Si(1:nlam,ig,1:nr,inu0)=BBr(1:nlam,1:nr)*wabs(1:nlam,ig,1:nr)
-			Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
+			Si(1:nlam,ig,0,inu0)=0d0
+c			Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
 			SiFS(1:nlam,ig,0:nr,inu0)=0d0
 		enddo
 	enddo
@@ -2425,9 +2478,9 @@ c-----------------------------------------------------------------------
 					contr=0d0
 				endif
 				if(anisoscattstar) then
-					SiFS(ilam,ig,0,inu0)=contr*(1d0-surface_emis(ilam))
+					SiFS(ilam,ig,0,inu0)=contr!*(1d0-surface_emis(ilam))
 				else
-					Si(ilam,ig,0,inu0)=Si(ilam,ig,0,inu0)+contr*(1d0-surface_emis(ilam))
+					Si(ilam,ig,0,inu0)=Si(ilam,ig,0,inu0)+contr!*(1d0-surface_emis(ilam))
 				endif
 				do inu=1,nnu
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
@@ -2447,7 +2500,7 @@ c-----------------------------------------------------------------------
 				do inu=1,nnu
 					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
 					call SolveIjExp(tauR,Si(ilam,ig,1:nr,inu0),Ij,Ih,nr)
-					Si(ilam,ig,0,inu0)=Si(ilam,ig,0,inu0)-nu(inu)*Ih(1)*wnu(inu)*(1d0-surface_emis(ilam))
+					Si(ilam,ig,0,inu0)=Si(ilam,ig,0,inu0)-nu(inu)*Ih(1)*wnu(inu)!*(1d0-surface_emis(ilam))
 				enddo
 			enddo
 		enddo
@@ -2594,11 +2647,11 @@ c		emis(i)=1d0+log(2d0*g+1d0)*(g-1)/(2d0*g)
 	subroutine ComputeSurface()
 	use GlobalSetup
 	IMPLICIT NONE
-	real*8 SurfEmis(nlam),e1(nlam),e2(nlam),tot,f_ice,f_grass,f_snow,f_sand,f_water
-	external Enstatite_X,Enstatite_Y,Enstatite_Z
+	real*8 SurfEmis(nlam),e1(nlam),e2(nlam),tot,ComputeBDREFemis
+	external Enstatite_X,Enstatite_Y,Enstatite_Z,ComputeBDREFemis
 	external Forsterite_X,Forsterite_Y,Forsterite_Z
 	external Labradorite_X,Labradorite_Y,Labradorite_Z,SiO2,FeO
-	integer i
+	integer i,ilam
 
 c=========================================
 c compute emissivity of the surface
@@ -2633,18 +2686,30 @@ c=========================================
 			call RegridDataLNK(SiO2,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam,computelam(1:nlam))
 			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
+			f_surface(1)=1d0
+			n_surface=1
+			surface_props(1:nlam,1)=surface_emis(1:nlam)
+			bdrf_type(1)=0
 		case("QUARTZ","quartz","SiO2")
 			surface_emis=0d0
 			tot=1d0
 			call RegridDataLNK(SiO2,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam,computelam(1:nlam))
 			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
+			f_surface(1)=1d0
+			n_surface=1
+			surface_props(1:nlam,1)=surface_emis(1:nlam)
+			bdrf_type(1)=0
 		case("FeO")
 			surface_emis=0d0
 			tot=1d0
 			call RegridDataLNK(FeO,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam,computelam(1:nlam))
 			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)
+			f_surface(1)=1d0
+			n_surface=1
+			surface_props(1:nlam,1)=surface_emis(1:nlam)
+			bdrf_type(1)=0
 		case("labradorite","LABRADORITE")
 			surface_emis=0d0
 			tot=1.0d0
@@ -2657,41 +2722,77 @@ c=========================================
 			call RegridDataLNK(Labradorite_Z,lam(1:nlam)*1d4,e1(1:nlam),e2(1:nlam),nlam,.true.)
 			call computeHapke(SurfEmis(1:nlam),e1(1:nlam),e2(1:nlam),nlam,computelam(1:nlam))
 			surface_emis(1:nlam)=surface_emis(1:nlam)+tot*SurfEmis(1:nlam)/3d0
+			f_surface(1)=1d0
+			n_surface=1
+			surface_props(1:nlam,1)=surface_emis(1:nlam)
+			bdrf_type(1)=0
 		case("BLACK","black")
 			surface_emis(1:nlam)=1.0
+			f_surface(1)=1d0
+			n_surface=1
+			surface_props(1:nlam,1)=surface_emis(1:nlam)
+			bdrf_type(1)=0
 		case("GREY","grey")
 			surface_emis(1:nlam)=1d0-surfacealbedo
+			f_surface(1)=1d0
+			n_surface=1
+			surface_props(1:nlam,1)=surface_emis(1:nlam)
+			bdrf_type(1)=0
 		case("WHITE","white")
 			surface_emis(1:nlam)=1d-4
+			f_surface(1)=1d0
+			n_surface=1
+			surface_props(1:nlam,1)=surface_emis(1:nlam)
+			bdrf_type(1)=0
 		case("Earth","EARTH","earth")
-c ice fraction according to Ramirez 2023
-			if(Tsurface.lt.239d0) then
-				f_ice=1d0
-			else if(Tsurface.lt.273.15) then
-				f_ice=1d0-exp((Tsurface-273.15)/12.5)
-			else
-				f_ice=0d0
-			endif
-			if(Tsurface.gt.308.15) then
-				f_sand=1d0
-			else if(Tsurface.gt.273.15) then
-				f_sand=((Tsurface-273.15)/(308.15-273.15))**4
-			else
-				f_sand=0d0
-			endif
-			f_grass=(1d0-f_ice)*(1d0-f_surface_water)*(1d0-f_sand)
-			f_sand=(1d0-f_ice)*(1d0-f_surface_water)*f_sand
-			f_water=(1d0-f_ice)*f_surface_water
-			f_snow=f_ice*(1d0-f_surface_water/2d0)
-			f_ice=f_ice*f_surface_water/2d0
-			surface_emis=f_grass*surface_emis_grass+f_sand*surface_emis_sand+
-     &					 f_water*surface_emis_water+f_snow*surface_emis_snow+f_ice*surface_emis_ice
-			print*,'grass: ',f_grass
-			print*,'sand:  ',f_sand
-			print*,'water: ',f_water
-			print*,'snow:  ',f_snow
-			print*,'ice:   ',f_ice
+			f_surface(1)=f_water*f_ice								! ice
+			f_surface(2)=(1d0-f_water)*f_snow						! snow
+			f_surface(3)=(1d0-f_water)*(1d0-f_snow)*f_grass			! grass
+			f_surface(4)=(1d0-f_water)*(1d0-f_snow)*(1d0-f_grass)	! sand
+			f_surface(5)=f_water*(1d0-f_ice)						! water
+			surface_emis=0d0
+			do i=1,n_surface
+				do ilam=1,nlam
+					surface_emis(ilam)=surface_emis(ilam)+
+     &		f_surface(i)*ComputeBDREFemis(bdrf_type(i),bdrf_args(1:4,i),surface_props(ilam,i))
+				enddo
+			enddo
+		case("WATER","water")
+			f_surface=0d0
+			f_surface(5)=1d0
+			do ilam=1,nlam
+				surface_emis(ilam)=ComputeBDREFemis(bdrf_type(5),bdrf_args(1:4,5),surface_props(ilam,5))
+			enddo
+		case("ICE","ice")
+			f_surface=0d0
+			f_surface(1)=1d0
+			do ilam=1,nlam
+				surface_emis(ilam)=ComputeBDREFemis(bdrf_type(1),bdrf_args(1:4,1),surface_props(ilam,1))
+			enddo
+		case("SNOW","snow")
+			f_surface=0d0
+			f_surface(2)=1d0
+			do ilam=1,nlam
+				surface_emis(ilam)=ComputeBDREFemis(bdrf_type(2),bdrf_args(1:4,2),surface_props(ilam,2))
+			enddo
+		case("GRASS","grass")
+			f_surface=0d0
+			f_surface(3)=1d0
+			do ilam=1,nlam
+				surface_emis(ilam)=ComputeBDREFemis(bdrf_type(3),bdrf_args(1:4,3),surface_props(ilam,3))
+			enddo
+		case("SAND","sand")
+			f_surface=0d0
+			f_surface(4)=1d0
+			do ilam=1,nlam
+				surface_emis(ilam)=ComputeBDREFemis(bdrf_type(4),bdrf_args(1:4,4),surface_props(ilam,4))
+			enddo
 		case("FILE","file")
+			f_surface=0d0
+			f_surface(1)=1d0
+			do ilam=1,nlam
+				surface_emis(ilam)=ComputeBDREFemis(bdrf_type(1),bdrf_args(1:4,1),surface_props(ilam,1))
+			enddo
 		case default
 			call output("Surface type not known!")
 			stop
@@ -2700,7 +2801,7 @@ c ice fraction according to Ramirez 2023
 	if(writefiles) then
 		open(unit=93,file=trim(outputdir) // 'surfemis.dat',FORM="FORMATTED",ACCESS="STREAM")
 		do i=1,nlam
-			write(93,*) lam(i),surface_emis(i)
+			write(93,*) lam(i)*1d4,surface_emis(i)
 		enddo
 		close(unit=93)
 	endif

@@ -862,7 +862,7 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%nax(j)=1
 								case('H2SO4')
 									Cloud(i)%material(j)='FILE'
-									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/H2SO4_75_Palmer_1975.lnk'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/H2SO4.lnk'
 									Cloud(i)%nax(j)=1
 								case('ZnS')
 									Cloud(i)%material(j)='FILE'
@@ -1066,32 +1066,42 @@ c select at least the species relevant for disequilibrium chemistry
 
 	allocate(surface_emis(nlam))
 	surface_emis=1d0
+	allocate(surface_props(nlam,5))
+	bdrf_type=0
+	n_surface=1
 	select case(surfacetype)
 		case("FILE","file")
-			call regridSimple(surfacefile,lam*1d4,surface_emis,nlam)
-			surface_emis=1d0-surface_emis/100d0
-		case("Earth","EARTH","earth")
-			allocate(surface_emis_ice(nlam))
-			allocate(surface_emis_snow(nlam))
-			allocate(surface_emis_grass(nlam))
-			allocate(surface_emis_sand(nlam))
-			allocate(surface_emis_water(nlam))
+			call regridSimple(surfacefile,lam*1d4,surface_props(1:nlam,1),nlam)
+			surface_props(1:nlam,1)=1d0-surface_props(1:nlam,1)/100d0
+		case("Earth","EARTH","earth","WATER","water","SAND","sand","ICE","ice","GRASS","grass","SNOW","snow")
+			n_surface=5
 			call getenv('HOME',homedir)
 			file=trim(homedir) // '/ARCiS/Data/Surface/Ice.dat'
-			call regridSimple(file,lam*1d4,surface_emis_ice,nlam)
-			surface_emis_ice=1d0-surface_emis_ice/100d0
+			call regridSimple(file,lam*1d4,surface_props(1:nlam,1),nlam)
 			file=trim(homedir) // '/ARCiS/Data/Surface/Snow.dat'
-			call regridSimple(file,lam*1d4,surface_emis_snow,nlam)
-			surface_emis_snow=1d0-surface_emis_snow/100d0
+			call regridSimple(file,lam*1d4,surface_props(1:nlam,2),nlam)
 			file=trim(homedir) // '/ARCiS/Data/Surface/Grass.dat'
-			call regridSimple(file,lam*1d4,surface_emis_grass,nlam)
-			surface_emis_grass=1d0-surface_emis_grass/100d0
+			call regridSimple(file,lam*1d4,surface_props(1:nlam,3),nlam)
 			file=trim(homedir) // '/ARCiS/Data/Surface/brown-darkbrown-sand.dat'
-			call regridSimple(file,lam*1d4,surface_emis_sand,nlam)
-			surface_emis_sand=1d0-surface_emis_sand/100d0
-			file=trim(homedir) // '/ARCiS/Data/Surface/Water.dat'
-			call regridSimple(file,lam*1d4,surface_emis_water,nlam)
-			surface_emis_water=1d0-surface_emis_water/100d0
+			call regridSimple(file,lam*1d4,surface_props(1:nlam,4),nlam)
+			surface_props(1:nlam,1:4)=1d0-surface_props(1:nlam,1:4)/100d0
+			if(anisoscattstar) then
+				file=trim(homedir) // '/ARCiS/Data/refind/H2O_l.dat'
+				call regridSimple(file,lam*1d4,surface_props(1:nlam,5),nlam)
+				bdrf_type(1:4)=1
+				bdrf_type(5)=2
+				bdrf_args(1,1:4)=1.0
+				bdrf_args(2,1:4)=0.06
+c				bdrf_args(3,1:4)=0.6 ! albedo (wavelength dependent)
+				bdrf_args(1,5)=10.0		!windspeed
+c				bdrf_args(2,5)=1.33		! refractive index (wavelength dependent)
+				bdrf_args(3,5)=1		! do shadowing
+			else
+				file=trim(homedir) // '/ARCiS/Data/Surface/Water.dat'
+				call regridSimple(file,lam*1d4,surface_props(1:nlam,5),nlam)
+				surface_props(1:nlam,5)=1d0-surface_props(1:nlam,5)/100d0
+				bdrf_type(1:5)=0
+			endif
 	end select
 	
 	if(makemovie) makeimage=.true.
@@ -1348,7 +1358,7 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) scattering
 		case("scattstar","starscatt")
 			read(key%value,*) scattstar
-		case("anisostar","anisostarscatt","anisoscattstar")
+		case("anisoscatt","anisostar","anisostarscatt","anisoscattstar")
 			read(key%value,*) anisoscattstar
 		case("opacitymode")
 			read(key%value,*) opacitymode
@@ -1669,7 +1679,13 @@ c			read(key%value,*) nTpoints
 		case("surfacealbedo")
 			read(key%value,*) surfacealbedo
 		case("fwater","focean")
-			read(key%value,*) f_surface_water
+			read(key%value,*) f_water
+		case("fice")
+			read(key%value,*) f_ice
+		case("fgrass")
+			read(key%value,*) f_grass
+		case("fsnow")
+			read(key%value,*) f_snow
 		case("ncpah","nc_pah")
 			read(key%value,*) nC_PAH
 		case("pah")
@@ -2091,7 +2107,10 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	surfacetype='BLACK'
 	surfacealbedo=0.5d0
-	f_surface_water=0.6
+	f_water=0.7
+	f_ice=0.05
+	f_snow=0.2
+	f_grass=0.5
 
 	dochemistry=.false.
 	elements_ARCiS= 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V F Cr el'
