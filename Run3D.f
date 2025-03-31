@@ -26,8 +26,11 @@
 	real*8 vxxmin,vxxmax,betamin_term,tot1,tot2,vrot,dlam_rot,albedo_day,scale,scale_prev,vxr,vyr,vzr
 	real*8 mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2,HapkeEmis
 	external HapkeEmis
-	logical do_rot
+	logical do_rot,conv
 	real*8 starttime,stoptime
+	real*8,allocatable :: fluxiter(:)
+	logical,allocatable :: lamconv(:)
+	integer nptrace0
 	
 	allocate(Ca(nlam,ng,nr,n3D,-nvel:nvel,ncc),Cs(nlam,nr,n3D,ncc),BBr(nlam,0:nr),BBsurf(nlam,n3D))
 	allocate(Si(nlam,ng,0:nr,nnu0,n3D,ncc),SiFS(nlam,ng,0:nr,nnu0,n3D,ncc))
@@ -537,7 +540,7 @@ c Now call the setup for the readFull3D part
 	ndisk=20
 	natm=10
 
-	nptrace=(nlatt-1)*2
+	nptrace=max((nlatt-1)/2,6)
 	if(actually1D.and.nphase.eq.1.and.theta_phase(1).eq.180d0) nptrace=1
 	if(vrot0.ne.0d0) then
 		do_rot=.true.
@@ -569,9 +572,17 @@ c Now call the setup for the readFull3D part
 	call cpu_time(starttime)
 
 	allocate(fluxp(nlam))
+	allocate(fluxiter(nlam),lamconv(nlam))
 	npc=nphase
+	nptrace0=nptrace
 	call tellertje_perc(0,npc)
 	do ipc=1,npc
+	k=0
+	nptrace=nptrace0
+	if(actually1D.and.(theta_phase(ipc).eq.180d0.or..not.scattering).and..not.makeimage) nptrace=1
+	fluxiter=0d0
+	lamconv=.false.
+70	continue
 	if(fulloutput3D) PTaverage3D(ipc,1:nr)=0d0
 	theta=2d0*pi*theta_phase(ipc)/360d0
 	if(theta.gt.2d0*pi) theta=theta-2d0*pi
@@ -602,7 +613,8 @@ c Now call the setup for the readFull3D part
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,lam,do_rot,
 !$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,R3DC,computelam,nvel,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis,BBsurf,
-!$OMP&			iscatt,F11,SiFS,SiScFS,anisoscattstar,g,ncc,cloudfrac,vx,vy,vz,bdrf_type,bdrf_args,f_surface,surface_props,n_surface)
+!$OMP&			iscatt,F11,SiFS,SiScFS,anisoscattstar,g,ncc,cloudfrac,vx,vy,vz,bdrf_type,bdrf_args,f_surface,surface_props,n_surface,
+!$OMP&			lamconv)
 	allocate(fact(nlam,ng,ncc))
 	allocate(fluxp_omp(nlam))
 	allocate(ftot(nlam),SiR0(nlam,ng,ncc))
@@ -696,7 +708,7 @@ c Note we are here using the symmetry between North and South
 					if(.not.inu.lt.nnu0-1) inu=nnu0-1
 				endif
 				do ilam=1,nlam
-					if(lamemis(ilam).and.computelam(ilam)) then
+					if(lamemis(ilam).and.computelam(ilam).and..not.lamconv(ilam)) then
 					do ig=1,ng
 						do icc=1,ncc
 							tau0=0d0
@@ -762,7 +774,7 @@ c Note we are here using the symmetry between North and South
 					dphi=acos(-dphi)
 				endif
 				do ilam=1,nlam
-					if(lamemis(ilam).and.computelam(ilam)) then
+					if(lamemis(ilam).and.computelam(ilam).and..not.lamconv(ilam)) then
 					do ig=1,ng
 						do icc=1,ncc
 							if(anisoscattstar.and.mu.gt.0d0) then
@@ -839,12 +851,42 @@ c Note we are here using the symmetry between North and South
 	deallocate(SiR0)
 !$OMP FLUSH
 !$OMP END PARALLEL
+
+	if(.not.makeimage.and..not.(actually1D.and.(theta_phase(ipc).eq.180d0.or..not.scattering))) then
+		if(k.eq.0) then
+			conv=.false.
+			fluxiter=fluxp
+		else
+			conv=.true.
+			do ilam=1,nlam
+				if(.not.lamconv(ilam)) then
+					lamconv(ilam)=.true.
+					if(abs(fluxp(ilam)-fluxiter(ilam))/(fluxp(ilam)+fluxiter(ilam)).gt.1d-3) then
+						lamconv(ilam)=.false.
+					endif
+					if(abs(fluxp(ilam)-fluxiter(ilam))/(fluxp(ilam)+fluxiter(ilam)).gt.1d-2) then
+						conv=.false.
+					endif
+					fluxiter(ilam)=(fluxp(ilam)+fluxiter(ilam))/2d0
+				endif
+			enddo
+		endif
+		k=k+1
+		if(k.ge.4) conv=.true.
+		if(.not.conv) then
+c			print*,k,nptrace
+			nptrace=nptrace*1.5+2
+			goto 70
+		else
+			fluxp=fluxiter
+		endif
+	endif
 	fluxp=fluxp*1d23/distance**2
 	phase(ipc,0,1:nlam)=fluxp(1:nlam)
 	flux(0,1:nlam)=0d0
 
 	call cpu_time(stoptime)
-	print*,stoptime-starttime
+c	print*,stoptime-starttime
 
 	call tellertje_perc(ipc,npc)
 	if(fulloutput3D) then

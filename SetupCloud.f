@@ -111,13 +111,27 @@ c 90% MgSiO3
 			do i=1,nr
 				Cloud(ii)%Kref=Cloud(ii)%Kext(i,nlam+1)
 				if(P(i).gt.CPmin.and.P(i).lt.CPmax) then
-					cloud_dens(i,ii)=(grav(i)*Cloud(ii)%xi*Cloud(ii)%tau*P(i)**(Cloud(ii)%xi-1d0))/
+					if(abs(Cloud(ii)%xi).gt.1d-8) then
+						cloud_dens(i,ii)=(grav(i)*Cloud(ii)%xi*Cloud(ii)%tau*P(i)**(Cloud(ii)%xi-1d0))/
      &					(Cloud(ii)%Kref*1d6*(CPtau**Cloud(ii)%xi-CPmin**Cloud(ii)%xi))
+					else
+						cloud_dens(i,ii)=(grav(i)*Cloud(ii)%tau*P(i)**(Cloud(ii)%xi-1d0))/
+     &					(Cloud(ii)%Kref*1d6*log(CPtau/CPmin))
+					endif
 				else
 					cloud_dens(i,ii)=0d0
 				endif
 			enddo
 			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
+			if(Cloud(ii)%Ptau.ge.Cloud(ii)%Pmax) then
+				tot=0d0
+				do i=1,nr
+					tot=tot+cloud_dens(i,ii)*Cloud(ii)%Kext(i,nlam+1)*(R(i+1)-R(i))
+				enddo
+				if(tot.gt.0d0) then
+					cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%tau/tot
+				endif
+			endif
 		case("SLAB")
 			Cloud(ii)%nlam=nlam+1
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
@@ -270,6 +284,40 @@ c-----------------------------------------------------------------------
 				enddo
 			enddo
 			Cloud(ii)%g=Cloud(ii)%g0
+			do j=1,180
+c Henyey greenstein phase function
+				Cloud(ii)%F11(1:nr,1:nlam+1,j)=(1d0-Cloud(ii)%g**2)/
+     &				((1d0+Cloud(ii)%g**2-2d0*Cloud(ii)%g*cos(pi*(real(j)-0.5)/180d0))**(2d0/3d0))
+			enddo
+		case("FILE")
+			call output("Using precomputed cloud particles")
+			Cloud(ii)%Kext=0d0
+			Cloud(ii)%Kabs=0d0
+			Cloud(ii)%Ksca=0d0
+			do j=1,Cloud(ii)%nmat
+				do ilam=1,nlam+1
+					do is=1,nr
+						Cloud(ii)%Kext(is,ilam)=Cloud(ii)%Kext(is,ilam)+Cloud(ii)%frac(is,j)*Cloud(ii)%KeFile(j,ilam)
+						Cloud(ii)%Kabs(is,ilam)=Cloud(ii)%Kabs(is,ilam)+Cloud(ii)%frac(is,j)*Cloud(ii)%KaFile(j,ilam)
+						Cloud(ii)%Ksca(is,ilam)=Cloud(ii)%Ksca(is,ilam)+Cloud(ii)%frac(is,j)*Cloud(ii)%KsFile(j,ilam)
+						Cloud(ii)%g(is,ilam)=Cloud(ii)%gFile(j,ilam)+Cloud(ii)%gFile(j,ilam)*Cloud(ii)%Ksca(is,ilam)
+					enddo
+				enddo
+			enddo
+			do ilam=1,nlam+1
+				do is=1,nr
+					if(Cloud(ii)%Ksca(is,ilam).gt.0d0) then
+						Cloud(ii)%g(is,ilam)=Cloud(ii)%g(is,ilam)/Cloud(ii)%Ksca(is,ilam)
+					else
+						Cloud(ii)%g(is,ilam)=0d0
+					endif
+				enddo
+			enddo
+			do j=1,180
+c Henyey greenstein phase function
+				Cloud(ii)%F11(1:nr,1:nlam+1,j)=(1d0-Cloud(ii)%g**2)/
+     &				((1d0+Cloud(ii)%g**2-2d0*Cloud(ii)%g*cos(pi*(real(j)-0.5)/180d0))**(2d0/3d0))
+			enddo
 		case("PARAMETERISED")
 			call output("Computing parameterised cloud particles")
 			do ilam=1,nlam
@@ -299,6 +347,7 @@ c				Cloud(ii)%F11(1:nr,1:nlam+1,j)=3d0*(1d0+cos(pi*(real(j)-0.5)/180d0)**2)/4d0
 					Cloud(ii)%Kabs(is,1:nlam+1)=Cloud(ii)%Kabs(1,1:nlam+1)
 					Cloud(ii)%Ksca(is,1:nlam+1)=Cloud(ii)%Ksca(1,1:nlam+1)
 					Cloud(ii)%g(is,1:nlam+1)=Cloud(ii)%g(1,1:nlam+1)
+					Cloud(ii)%F11(is,1:nlam+1,1:180)=Cloud(ii)%F11(1,1:nlam+1,1:180)
 				enddo
 			else
 				do is=nr,1,-1
@@ -539,13 +588,20 @@ c-----------------------------------------------------------------------
 				enddo
 			enddo
 		endif
-		else if(Cloud(ii)%opacitytype.eq."OPACITY") then
+		else if(Cloud(ii)%opacitytype.eq."OPACITY".or.Cloud(ii)%opacitytype.eq."FILE") then
+			if(Cloud(ii)%opacitytype.eq."OPACITY") then
+				j=0
+			else
+				j=1
+			endif
 			allocate(Cloud(ii)%KeFile(Cloud(ii)%nmat,ngrid))
 			allocate(Cloud(ii)%KaFile(Cloud(ii)%nmat,ngrid))
 			allocate(Cloud(ii)%KsFile(Cloud(ii)%nmat,ngrid))
+			allocate(Cloud(ii)%gFile(Cloud(ii)%nmat,ngrid))
 			do i=1,Cloud(ii)%nmat
 				call regridOpacity(Cloud(ii)%material(i),lgrid,
-     &	Cloud(ii)%KeFile(i,1:ngrid),Cloud(ii)%KaFile(i,1:ngrid),Cloud(ii)%KsFile(i,1:ngrid),ngrid)
+     &	Cloud(ii)%KeFile(i,1:ngrid),Cloud(ii)%KaFile(i,1:ngrid),Cloud(ii)%KsFile(i,1:ngrid),
+     &  Cloud(ii)%gFile(i,1:ngrid),ngrid,j)
 				kap=Cloud(ii)%KeFile(i,iref)
 				Cloud(ii)%KeFile(i,iref:nlam)=Cloud(ii)%KeFile(i,iref+1:nlam+1)
 				Cloud(ii)%KeFile(i,nlam+1)=kap
@@ -555,6 +611,9 @@ c-----------------------------------------------------------------------
 				kap=Cloud(ii)%KsFile(i,iref)
 				Cloud(ii)%KsFile(i,iref:nlam)=Cloud(ii)%KsFile(i,iref+1:nlam+1)
 				Cloud(ii)%KsFile(i,nlam+1)=kap
+				kap=Cloud(ii)%gFile(i,iref)
+				Cloud(ii)%gFile(i,iref:nlam)=Cloud(ii)%gFile(i,iref+1:nlam+1)
+				Cloud(ii)%gFile(i,nlam+1)=kap
 			enddo
 		endif
 	enddo
@@ -631,10 +690,11 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 	
-	subroutine regridOpacity(input,grid,Ke,Ka,Ks,n)
+	subroutine regridOpacity(input,grid,Ke,Ka,Ks,g,n,filetype)
 	IMPLICIT NONE
-	integer i,j,n
+	integer i,j,n,filetype
 	real*8 grid(n),Ke(n),Ka(n),Ks(n),x0,Ke0,Ka0,Ks0,x1,Ke1,Ka1,Ks1
+	real*8 g(n),g0,g1
 	character*500 input
 	logical truefalse
 	inquire(file=input,exist=truefalse)
@@ -645,19 +705,37 @@ c-----------------------------------------------------------------------
 	endif
 	open(unit=20,file=input,FORM="FORMATTED",ACCESS="STREAM")
 	i=1
-1	read(20,*,end=102,err=1) x0,Ke0,Ka0,Ks0
+1	if(filetype.eq.0) then
+		read(20,*,end=102,err=1) x0,Ke0,Ka0,Ks0
+		g0=0d0
+	else
+		read(20,*,end=102,err=1) x0,Ke0,Ks0,g0
+		Ke0=Ke0*10d0
+		Ks0=Ke0*Ks0
+		Ka0=Ke0-Ks0
+	endif
 103	if(x0.ge.grid(i)) then
 		Ke(i)=Ke0
 		Ka(i)=Ka0
 		Ks(i)=Ks0
+		g(i)=g0
 		i=i+1
 		goto 103
 	endif
-100	read(20,*,end=102) x1,Ke1,Ka1,Ks1
+100	if(filetype.eq.0) then
+		read(20,*,end=102,err=100) x1,Ke1,Ka1,Ks1
+		g1=0d0
+	else
+		read(20,*,end=102,err=100) x1,Ke1,Ks1,g1
+		Ke1=Ke1*10d0
+		Ks1=Ke1*Ks1
+		Ka1=Ke1-Ks1
+	endif
 101	if(grid(i).le.x1.and.grid(i).ge.x0) then
 		Ke(i)=Ke1+(grid(i)-x1)*(Ke0-Ke1)/(x0-x1)
 		Ka(i)=Ka1+(grid(i)-x1)*(Ka0-Ka1)/(x0-x1)
 		Ks(i)=Ks1+(grid(i)-x1)*(Ks0-Ks1)/(x0-x1)
+		g(i)=g1+(grid(i)-x1)*(g0-g1)/(x0-x1)
 		i=i+1
 		if(i.gt.n) goto 102
 		goto 101
@@ -666,12 +744,14 @@ c-----------------------------------------------------------------------
 	Ke0=Ke1
 	Ka0=Ka1
 	Ks0=Ks1
+	g0=g1
 	goto 100
 102	continue
 	do j=i,n
 		Ka(j)=Ka(i-1)*(grid(i-1)/grid(j))**2
 		Ks(j)=Ks(i-1)*(grid(i-1)/grid(j))**4
 		Ke(j)=Ka(j)+Ks(j)
+		g(j)=g(i-1)
 	enddo
 	close(unit=20)
 	return

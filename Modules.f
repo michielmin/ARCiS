@@ -440,7 +440,7 @@ c for exchange when computing secondary atmosphere
 		character*500,allocatable :: lnkfile(:,:),material(:),condensate(:)
 		real*8 Kzz,Sigmadot,xm_bot,Sigmadot_phot
 		real*8 kappa,albedo,kpow,klam,g0
-		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:),KeFile(:,:),KaFile(:,:),KsFile(:,:)
+		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:),KeFile(:,:),KaFile(:,:),KsFile(:,:),gFile(:,:)
 		integer,allocatable :: nax(:)
 		logical usefsed,computeJn,EqChemBoundary
 		real*8 fsed_alpha,fsed_beta,Srainout,fstick
