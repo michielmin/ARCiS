@@ -610,7 +610,7 @@ c Now call the setup for the readFull3D part
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vxr,vyr,vzr,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,tau0,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp,SiRalb0,SiRalb1,
 !$OMP&			vrot,dlam_rot,ivel,icc,isurf,mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2)
-!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,lam,do_rot,
+!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,vrot_max,lam,do_rot,
 !$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,R3DC,computelam,nvel,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis,BBsurf,
 !$OMP&			iscatt,F11,SiFS,SiScFS,anisoscattstar,g,ncc,cloudfrac,vx,vy,vz,bdrf_type,bdrf_args,f_surface,surface_props,n_surface,
@@ -650,8 +650,7 @@ c Note we are here using the symmetry between North and South
 				rr=sqrt(vxr**2+vyr**2+vzr**2)
 				call rotateY3D(vxr,vyr,vzr,pi/2d0-orbit_inc)
 				vrot=vxr*rr/sqrt(vxr**2+vyr**2+vzr**2)
-				ivel=real(nvel)*vrot/vrot0
-				ivel=(vrot/vrot0)*(real(nvel)+0.5)+0.5*sign(1d0,vrot/vrot0)
+				ivel=(vrot/vrot_max)*(real(nvel)+0.5)+0.5*sign(1d0,vrot/vrot_max)
 				if(ivel.lt.-nvel) ivel=-nvel
 				if(ivel.gt.nvel) ivel=nvel
 			else

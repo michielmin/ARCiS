@@ -4,7 +4,7 @@
 	IMPLICIT NONE
 	integer i
 	character*500 filename
-	character*6000 form
+	character*12000 form
 	real*8,allocatable :: theta(:)
 	real*8 Fp1,Fp2,ApAs,wr(nr)
 	logical,allocatable :: docloud0(:,:)
@@ -172,7 +172,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 
 	if(emisspec) then
 
-c	if(nphase.le.310) then
+	if(nphase.le.630) then
 		filename=trim(outputdir) // "phase" // trim(side)
 		call output("Writing spectrum to: " // trim(filename))
 		open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
@@ -206,13 +206,13 @@ c	if(nphase.le.310) then
 			enddo
 			close(unit=30)
 		endif
-c	endif
+	endif
 
 	nj=0
 	do i=1,nlam_out
 		if(lamemis(i).and.computelam(i)) nj=nj+1
 	enddo
-c	if(nj.lt.350.and.nj.gt.0) then
+	if(nj.lt.705.and.nj.gt.0) then
 		allocate(specR(nlam))
 		filename=trim(outputdir) // "phasecurve" // trim(side)
 		call output("Writing phasecurve to: " // trim(filename))
@@ -244,7 +244,7 @@ c	if(nj.lt.350.and.nj.gt.0) then
 		enddo
 		close(unit=30)
 		deallocate(specR)
-c	endif
+	endif
 
 	endif
 	

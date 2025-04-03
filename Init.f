@@ -925,9 +925,10 @@ c	condensates=(condensates.or.cloudcompute)
 	metallicity0=metallicity
 
 	allocate(velocity(-nvel:nvel))
-	if(vrot0.ne.0d0) then
+	if(abs(vrot_max).lt.abs(vrot0)) vrot_max=abs(vrot0)
+	if(vrot_max.ne.0d0) then
 		do i=-nvel,nvel
-			velocity(i)=vrot0*real(i)/(real(nvel)+0.5d0)
+			velocity(i)=vrot_max*real(i)/(real(nvel)+0.5d0)
 		enddo
 	endif
 c	allocate(Cabs_mol(nr,ng,nmol,nlam)) ! efficient, though unlogical storage
@@ -1646,6 +1647,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) computeLC
 		case("vrot")
 			read(key%value,*) vrot0
+		case("vrot_max","vrotmax")
+			read(key%value,*) vrot_max
 		case("nvrot")
 			read(key%value,*) nvel
 		case("planetform")
@@ -2139,6 +2142,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	vfrag=1d200	!cm/s
 	
 	vrot0=0d0
+	vrot_max=0d0
 	nvel=0
 	twind=-1d0
 	
