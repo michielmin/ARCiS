@@ -858,10 +858,15 @@ c	linear
 		do i=1,n_ret
 			write(21,'(a," = ",es14.7)') trim(RetPar(i)%keyword),RetPar(i)%value
 		enddo
+		if(free_tprofile.and..not.freePT_fitP) then
+			do i=1,nTpoints
+				write(21,'("Ppoint",i0.3," = ",es14.7)') i,Ppoint(i)
+			enddo
+		endif
 		do i=1,n_add_ret
 			write(21,'(a)') trim(line_add_ret(i))
 		enddo
-		close(unit=21)	
+		close(unit=21)
 
 		bestlike=lnew
 		bestvar=var
@@ -2240,6 +2245,11 @@ c	enddo
 	do i=1,n_ret
 		write(21,'(a," = ",es14.7)') trim(RetPar(i)%keyword),RetPar(i)%value
 	enddo
+	if(free_tprofile.and..not.freePT_fitP) then
+		do i=1,nTpoints
+			write(21,'("Ppoint",i0.3," = ",es14.7)') i,Ppoint(i)
+		enddo
+	endif
 	do i=1,n_add_ret
 		write(21,'(a)') trim(line_add_ret(i))
 	enddo
