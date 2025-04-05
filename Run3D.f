@@ -131,7 +131,7 @@
 	enddo
 
 	actually1D=.true.
-	if(((vxx.ne.0d0.or.night2day.ne.1d0.or.pole2eq.ne.1d0).and.betamax.ne.betamin).or.(n3D.eq.2.and.n_Par3D.ne.0)) 
+	if(((vxx.ne.0d0.or.night2day.ne.1d0.or.pole2eq.ne.1d0).and.betamax.ne.betamin).or.(n3D.eq.2.and.n_Par3D.ne.0).or.readFull3D) 
      &		actually1D=.false.
 
 	call output("hotspot shift: " // dbl2string(hotspotshift,'(f6.2)') // " degrees")
@@ -173,7 +173,7 @@
 	do i=1,nlong-1
 		do j=1,nlatt-1
 			if(readFull3D) then
-				ibeta(i,j)=(i-1)*(nlatt-1)+j
+				call GetIndxReadFull3D(ibeta(i,j),i,j)
 			else
 				if(betamax.eq.betamin.or.(night2day.eq.1d0.and.vxx.eq.0d0.and.pole2eq.eq.1d0.and.n3D.ne.2)) then
 					ibeta(i,j)=1
@@ -285,11 +285,7 @@
 		if(.not.betaT.ge.0d0.or..not.betaT.le.1d0) betaT=betaF
 
 c Now call the setup for the readFull3D part
-		if(readFull3D) then
-			ilong=i/(nlatt-1)+1
-			ilatt=i-(ilong-1)*(nlatt-1)
-			call DoReadFull3D(i,ilong,ilatt)
-		endif
+		if(readFull3D) call SetTPfileReadFull3D(i)
 
 		if((.not.actually1D.and.do_ibeta(i)).or.i.eq.n3D) then
 			call InitDens()
@@ -1308,6 +1304,7 @@ c Note we use the symmetry of the North and South here!
 	distance=distance/parsec
 	do i=1,nclouds
 		Cloud(i)%rnuc=Cloud(i)%rnuc/micron
+		Cloud(i)%rnuc_phot=Cloud(i)%rnuc_phot/micron
 	enddo
 	orbit_inc=orbit_inc*180d0/pi
 

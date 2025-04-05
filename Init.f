@@ -1109,10 +1109,8 @@ c				bdrf_args(2,5)=1.33		! refractive index (wavelength dependent)
 
 c If reading in a full 3D model (from e.g. a GCM model) the number of 3D models needs to be equal to nlatt*nlong
 	if(readFull3D) then
-		n3D=(nlong-1)*(nlatt-1)
+		call InitReadFull3D(Full3Ddir)
 		call output("Full 3D mode: Number of 1D models:  " // int2string(n3D,'(i4)'))
-		call output("              Number of longitudes: " // int2string(nlong,'(i4)'))
-		call output("              Number of latitudes:  " // int2string(nlatt,'(i4)'))
 c In this case the beta map should be the static one. Make sure this is set properly.
 		night2day=0d0
 		pole2eq=1d0
@@ -1123,6 +1121,7 @@ c In this case the beta map should be the static one. Make sure this is set prop
 		Kyy=1d0
 		powvxx=0d0
 		hotspotshift0=-1d5
+		par_tprofile=.false.
 	endif
 	
 	if(deepredist.and..not.do3D) deepredist=.false.
@@ -1618,6 +1617,9 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) Tsurface0
 		case("readfull3d")
 			read(key%value,*) readFull3D
+		case("full3ddir","dirfull3d")
+			read(key%value,*) Full3Ddir
+			if(Full3Ddir.ne.' ') readFull3D=.true.
 		case("computealbedo","planetalbedo")
 			read(key%value,*) computealbedo
 		case("iwolk")

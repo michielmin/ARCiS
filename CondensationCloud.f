@@ -851,6 +851,7 @@ c				Nf_nuc(i)=1d0
 		end select
 	enddo
 	
+	if(.not.include_phothaze) Cloud(ii)%rnuc_phot=Cloud(ii)%rnuc
 	v_include=.false.
 	do iCS=1,nCS
 		tot1=0d0

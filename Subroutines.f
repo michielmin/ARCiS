@@ -498,11 +498,12 @@ c-----------------------------------------------------------------------
 	goto 100
 102	continue
 	do j=i,n
-		y(j)=y0*x0/grid(j)
+c		y(j)=y0*x0/grid(j)
+		y(j)=exp(log(y0)+log(grid(j)/x0)*2d0/7d0)
 	enddo
 	close(unit=20)
 	do i=1,n
-		if(y(i).le.0d0) y(i)=y0*1d-60
+		if(.not.y(i).ge.0d0) y(i)=y0*1d-60
 	enddo
 	return
 	end
