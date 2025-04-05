@@ -5,7 +5,7 @@
 	IMPLICIT NONE
 	integer i,j,icloud,k,irtrace,iptrace,inu,imol
 	real*8 beta(nlong,nlatt),Planck,phi,la,lo,A,rr
-	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta
+	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta,Rmin
 	real*8,allocatable :: Ca(:,:,:,:,:,:),Cs(:,:,:,:),BBr(:,:),Si(:,:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce_cont(:,:,:,:)
 	integer ir,ilam,ig,isize,iRmax,ndisk,natm,nsub,nrtrace,nptrace,ipc,npc,nmol_count,iscatt,icc
 	logical recomputeopac
@@ -187,6 +187,7 @@
 		enddo
 	enddo
 	Rmax=0d0
+	Rmin=Rplanet
 	iRmax=1
 
 
@@ -307,6 +308,7 @@ c Now call the setup for the readFull3D part
 				Rmax=R(nr+1)
 				iRmax=i
 			endif
+			if(R(1).lt.Rmin) Rmin=R(1)
 			do ir=1,nr+1
 				R3D(i,ir)=R(ir)
 			enddo
@@ -534,9 +536,9 @@ c Now call the setup for the readFull3D part
 		mixrat_average3D=0d0
 	endif
 	ndisk=20
-	natm=10
+	natm=nr!10
 
-	nptrace=max((nlatt-1)/2,6)
+	nptrace=max((nlatt-1)/5,6)
 	if(actually1D.and.nphase.eq.1.and.theta_phase(1).eq.180d0) nptrace=1
 	if(vrot0.ne.0d0) then
 		do_rot=.true.
@@ -558,10 +560,10 @@ c Now call the setup for the readFull3D part
 	allocate(rtrace(nrtrace))
 
 	do irtrace=1,ndisk
-		rtrace(irtrace)=R(1)*real(irtrace-1)/real(ndisk-1)
+		rtrace(irtrace)=Rmin*real(irtrace-1)/real(ndisk-1)
 	enddo
 	do irtrace=ndisk+1,nrtrace
-		rtrace(irtrace)=R(1)+(Rmax-R(1))*(real(irtrace-ndisk)-0.5d0)/(real(nrtrace-ndisk))
+		rtrace(irtrace)=Rmin+(Rmax-Rmin)*(real(irtrace-ndisk)-0.5d0)/(real(nrtrace-ndisk))
 	enddo
 	call sort(rtrace,nrtrace)
 
