@@ -302,17 +302,15 @@ c		endif
 			spheres=1
 			goto 20
 		endif
-c		if(r1*wvno.gt.1000d0) then
-c			toolarge=1
-c			goto 20
-c		endif
+		if(r1*wvno.gt.1000d0.and.anisoscattstar) then
+			toolarge=1
+			goto 20
+		endif
 		rcore=rad*f(i)**(1d0/3d0)
 		rmie=rad
 		lmie=lgrid(ilam)
 		e1mie=e1(l,ilam)
 		e2mie=e2(l,ilam)
-		if(rmie/lmie.gt.10d0) lmie=rmie/10d0
-		wvno=2d0*3.1415926536/lmie
 
 		if(anisoscattstar) then
 			rcore4=rcore
@@ -326,6 +324,8 @@ c		endif
 				Mief11(na-j+1)=(M2(j,2)+M1(j,2))/csmie/wvno**2*2d0*pi
 			enddo
 		else
+			if(rmie/lmie.gt.10d0) lmie=rmie/10d0
+			wvno=2d0*3.1415926536/lmie
 			call callBHCOAT(rmie,rcore,lmie,e1mie,e2mie,csmie,cemie,gmie,Err)
 		endif
 		if(.not.csmie.gt.0d0) then
@@ -339,11 +339,11 @@ c		endif
 			e1mie=e1(l,ilam)
 			e2mie=e2(l,ilam)
 			if(Err.eq.1.or.i.eq.1) then
-				if(rmie/lmie.gt.10d0) lmie=rmie/10d0
 				if(anisoscattstar) then
 					call MeerhoffMie(rmie,lmie,e1mie,e2mie,csmie,cemie
      &								,Mief11,na)
 				else
+					if(rmie/lmie.gt.10d0) lmie=rmie/10d0
 					call callBHMIE(rmie,lmie,e1mie,e2mie,csmie,cemie,gmie)
 				endif
 			endif

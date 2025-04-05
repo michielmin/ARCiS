@@ -1487,6 +1487,7 @@ c start the loop
 			else
 				xn(i)=xn(i)*f+(tot/mpart(i))*(1d0-f)
 			endif
+			if(.not.xn(i).gt.0d0) xn(i)=0d0
 			xa(i)=xn(i)
 		else
 			vsed(i)=-rpart(i)*rho_av(i)*CloudG(i)/(Clouddens(i)*vth(i))
@@ -1908,6 +1909,9 @@ c		endif
 		if(.not.Cloud(ii)%usefsed) then
 			xn_iter(iter,i)=x(ixn(i))
 			xa_iter(iter,i)=x(ixa(i))
+		else
+			xn_iter(iter,i)=xn(i)
+			xa_iter(iter,i)=xa(i)
 		endif
 		do iCS=1,nCS
 			if(c_include(iCS)) then
@@ -2039,7 +2043,11 @@ C===============================================================================
 			rr=min(Cloud(ii)%rnuc,Cloud(ii)%rnuc_phot)
 			rmono(i)=rr
 		endif
-		if(.not.Cloud(ii)%usefsed) rpart(i)=rr
+		if(.not.Cloud(ii)%usefsed) then
+			rpart(i)=rr
+		else
+			rmono(i)=rpart(i)
+		endif
 	enddo
 	errorarr(iter)=maxerr
 	slope=-1d0
@@ -2128,7 +2136,11 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 			rr=min(Cloud(ii)%rnuc,Cloud(ii)%rnuc_phot)
 			rmono(i)=rr
 		endif
-		if(.not.Cloud(ii)%usefsed) rpart(i)=rr
+		if(.not.Cloud(ii)%usefsed) then
+			rpart(i)=rr
+		else
+			rmono(i)=rpart(i)
+		endif
 	enddo
 
 	deallocate(IWORK)
