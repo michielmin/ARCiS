@@ -313,6 +313,8 @@ c		endif
 		e2mie=e2(l,ilam)
 
 		if(anisoscattstar) then
+			if(rmie/lmie.gt.1000d0) lmie=rmie/1000d0
+			wvno=2d0*3.1415926536/lmie
 			rcore4=rcore
 			call DMiLay(rcore4, rad, WVNO, m, min, MU,
      &                   NA/2, QEXT, QSCA, QBS, GQSC, 
@@ -340,6 +342,7 @@ c		endif
 			e2mie=e2(l,ilam)
 			if(Err.eq.1.or.i.eq.1) then
 				if(anisoscattstar) then
+					if(rmie/lmie.gt.1000d0) lmie=rmie/1000d0
 					call MeerhoffMie(rmie,lmie,e1mie,e2mie,csmie,cemie
      &								,Mief11,na)
 				else
