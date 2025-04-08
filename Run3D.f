@@ -21,7 +21,7 @@
 	character*500 file
 	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1,tau0
 	real*8,allocatable :: maxdet(:,:),SiR0(:,:,:),R3DC(:,:),lgrid(:)
-	real*8,allocatable :: SiFS(:,:,:,:,:,:),F11(:,:,:,:,:),g(:,:,:,:),BBsurf(:,:)
+	real*8,allocatable :: SiFS(:,:,:,:,:,:),F11(:,:,:,:,:),g(:,:,:,:),BBsurf(:,:),F11_theta(:,:,:,:)
 	logical iterateshift,actually1D,do_ibeta(n3D)
 	real*8 vxxmin,vxxmax,betamin_term,tot1,tot2,vrot,dlam_rot,albedo_day,scale,scale_prev,vxr,vyr,vzr
 	real*8 mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2,HapkeEmis
@@ -34,7 +34,7 @@
 	
 	allocate(Ca(nlam,ng,nr,n3D,-nvel:nvel,ncc),Cs(nlam,nr,n3D,ncc),BBr(nlam,0:nr),BBsurf(nlam,n3D))
 	allocate(Si(nlam,ng,0:nr,nnu0,n3D,ncc),SiFS(nlam,ng,0:nr,nnu0,n3D,ncc))
-	allocate(G(nlam,nr,n3D,ncc),F11(nlam,0:nr,180,n3D,ncc))
+	allocate(G(nlam,nr,n3D,ncc),F11(180,nlam,0:nr,n3D,ncc),F11_theta(nlam,0:nr,n3D,ncc))
 	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce_cont(nlam,nr,n3D,ncc))
 	allocate(dtauR_nu(nlam,ng,n3D,nr,-nvel:nvel,ncc))
 	allocate(R3D(n3D,nr+2))
@@ -48,6 +48,7 @@
 
 	g=0d0
 	F11=1d0
+	F11_theta=1d0
 
 	if(retrieval.or.dopostequalweights) call SetOutputMode(.false.)
 
@@ -322,7 +323,7 @@ c Now call the setup for the readFull3D part
 						do ivel=-nvel,nvel
 							do icc=1,ncc
 								call Crossections(ir,ilam,ig,Ca(ilam,ig,ir,i,ivel,icc),Cs(ilam,ir,i,icc),
-     &			docloud(icc,1:nclouds),ivel,F11(ilam,ir,1:180,i,icc),g(ilam,ir,i,icc),anisoscattstar)
+     &			docloud(icc,1:nclouds),ivel,F11(1:180,ilam,ir,i,icc),g(ilam,ir,i,icc),anisoscattstar)
 							enddo
 						enddo
 					enddo
@@ -362,7 +363,7 @@ c Now call the setup for the readFull3D part
 				Cs(1:nlam,1:nr,i,icc)=Cs(1:nlam,1:nr,i,icc)*(1d0-g(1:nlam,1:nr,i,icc))
 				if(anisoscattstar) then
 					do j=1,180
-						F11(1:nlam,1:nr,j,i,icc)=F11(1:nlam,1:nr,j,i,icc)/(1d0-g(1:nlam,1:nr,i,icc))
+						F11(j,1:nlam,1:nr,i,icc)=F11(j,1:nlam,1:nr,i,icc)/(1d0-g(1:nlam,1:nr,i,icc))
 					enddo
 				endif
 				if(emisspec) call ComputeScatter(BBr(1:nlam,0:nr),Si(1:nlam,1:ng,0:nr,1:nnu0,i,icc),
@@ -407,7 +408,7 @@ c Now call the setup for the readFull3D part
 			do ir=1,nr
 				Ca(1:nlam,1:ng,ir,i,-nvel:nvel,1:ncc)=Ca(1:nlam,1:ng,ir,n3D,-nvel:nvel,1:ncc)
 				Cs(1:nlam,ir,i,1:ncc)=Cs(1:nlam,ir,n3D,1:ncc)
-				F11(1:nlam,ir,1:180,i,1:ncc)=F11(1:nlam,ir,1:180,n3D,1:ncc)
+				F11(1:180,1:nlam,ir,i,1:ncc)=F11(1:180,1:nlam,ir,n3D,1:ncc)
 				g(1:nlam,ir,i,1:ncc)=g(1:nlam,ir,n3D,1:ncc)
 				Ce_cont(1:nlam,ir,i,1:ncc)=Ce_cont(1:nlam,ir,n3D,1:ncc)
 				Ca_mol(1:nlam,1:ng,1:nmol_count,ir,i)=Ca_mol(1:nlam,1:ng,1:nmol_count,ir,n3D)
@@ -607,6 +608,11 @@ c Now call the setup for the readFull3D part
 		enddo
 		tot=sum(wscatt(1:180))
 		wscatt=wscatt/tot
+		F11_theta=0d0
+		do iscatt=iscatt1,iscatt2
+			F11_theta(1:nlam,0:nr,1:n3D,1:ncc)=F11_theta(1:nlam,0:nr,1:n3D,1:ncc)+
+     &					wscatt(iscatt)*F11(iscatt,1:nlam,0:nr,1:n3D,1:ncc)
+		enddo
 	endif
 
 	vx=-1d0
@@ -635,7 +641,7 @@ c Now call the setup for the readFull3D part
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,vrot_max,lam,do_rot,
 !$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,orbit_inc,maxtau,R3DC,computelam,nvel,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis,BBsurf,
-!$OMP&			F11,SiFS,anisoscattstar,g,ncc,cloudfrac,vx,vy,vz,bdrf_type,bdrf_args,f_surface,surface_props,n_surface,
+!$OMP&			F11_theta,SiFS,anisoscattstar,g,ncc,cloudfrac,vx,vy,vz,bdrf_type,bdrf_args,f_surface,surface_props,n_surface,
 !$OMP&			lamconv,wscatt,iscatt1,iscatt2)
 	allocate(fact(nlam,ng,ncc))
 	allocate(fluxp_omp(nlam))
@@ -737,19 +743,11 @@ c Note we are here using the symmetry between North and South
 								w1=(R3DC(i,i1+1)-rr)/(R3DC(i,i1+1)-R3DC(i,i1))
 								w2=1d0-w1
 								SiR1=w1*Si(ilam,ig,i1,inu,i,icc)+w2*Si(ilam,ig,i1+1,inu,i,icc)
-								if(anisoscattstar) then
-									do iscatt=iscatt1,iscatt2
-										SiR1=SiR1+wscatt(iscatt)*(F11(ilam,i1,iscatt,i,icc)*w1*SiFS(ilam,ig,i1,inu,i,icc)+
-     &													 F11(ilam,i1+1,iscatt,i,icc)*w2*SiFS(ilam,ig,i1+1,inu,i,icc))
-    								enddo
-    							endif
+								if(anisoscattstar) SiR1=SiR1+F11_theta(ilam,i1,i,icc)*w1*SiFS(ilam,ig,i1,inu,i,icc)+
+     &													 F11_theta(ilam,i1+1,i,icc)*w2*SiFS(ilam,ig,i1+1,inu,i,icc)
 							else
 								SiR1=Si(ilam,ig,nr,inu,i,icc)
-								if(anisoscattstar) then
-									do iscatt=iscatt1,iscatt2
-										SiR1=SiR1+wscatt(iscatt)*F11(ilam,nr,iscatt,i,icc)*SiFS(ilam,ig,nr,inu,i,icc)
-									enddo
-								endif
+								if(anisoscattstar) SiR1=SiR1+F11_theta(ilam,nr,i,icc)*SiFS(ilam,ig,nr,inu,i,icc)
 							endif
 							call ComputeI12(tau1,tau0,SiR1,SiR0(ilam,ig,icc),contr)
 							ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig,icc)*cloudfrac(icc)
