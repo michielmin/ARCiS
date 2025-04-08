@@ -584,11 +584,6 @@ c Now call the setup for the readFull3D part
 	if(fulloutput3D) PTaverage3D(ipc,1:nr)=0d0
 	theta=2d0*pi*theta_phase(ipc)/360d0
 	if(theta.gt.2d0*pi) theta=theta-2d0*pi
-	iscatt=theta_phase(ipc)
-	if(iscatt.lt.0) iscatt=-iscatt
-	if(iscatt.gt.180) iscatt=360-iscatt
-	if(iscatt.lt.1) iscatt=1
-	if(iscatt.gt.180) iscatt=180
 	fluxp=0d0
 	vx=-1d0
 	vy=0d0
@@ -603,6 +598,11 @@ c Now call the setup for the readFull3D part
 	vx=vx/rr
 	vy=vy/rr
 	vz=vz/rr
+	iscatt=180d0*acos(-vx)/pi+0.5d0
+	if(iscatt.lt.0) iscatt=-iscatt
+	if(iscatt.gt.180) iscatt=360-iscatt
+	if(iscatt.lt.1) iscatt=1
+	if(iscatt.gt.180) iscatt=180
 !$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vxr,vyr,vzr,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,tau0,
