@@ -7,11 +7,11 @@
 	real*8 beta(nlong,nlatt),Planck,phi,la,lo,A,rr
 	real*8 b1,b2,betamin,betamax,freq0,Rmax,theta,Rmin
 	real*8,allocatable :: Ca(:,:,:,:,:,:),Cs(:,:,:,:),BBr(:,:),Si(:,:,:,:,:,:),Ca_mol(:,:,:,:,:),Ce_cont(:,:,:,:)
-	integer ir,ilam,ig,isize,iRmax,ndisk,natm,nsub,nrtrace,nptrace,ipc,npc,nmol_count,iscatt,icc
+	integer ir,ilam,ig,isize,iRmax,ndisk,natm,nsub,nrtrace,nptrace,ipc,npc,nmol_count,iscatt,icc,iscatt1,iscatt2
 	logical recomputeopac
 	logical,allocatable :: hit(:,:)
 	real*8,allocatable :: rtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:),cloud3D(:,:)
-	real*8 x,y,z,vx,vy,vz,v,w1,w2,ComputeBDREFscatt
+	real*8 x,y,z,vx,vy,vz,v,w1,w2,ComputeBDREFscatt,wscatt(180)
 	external ComputeBDREFscatt
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
 	real*8,allocatable :: fluxp(:),tau(:,:),fact(:,:,:),tautot(:,:),exp_tau(:,:),obsA_split_omp(:,:),dtauR_nu(:,:,:,:,:,:)
@@ -19,9 +19,9 @@
 	real*8 tot,contr,tmp(nmol),Rmin_im,Rmax_im,random,xmin,xmax,Pb(nr+1)
 	integer nx_im,ix,iy,ni,ilatt,ilong,imustar,ivel,miniter0,isurf
 	character*500 file
-	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1,SiRalb1,tau0
-	real*8,allocatable :: maxdet(:,:),SiSc(:,:,:,:,:,:),alb_omp(:),SiR0(:,:,:),SiRalb0(:,:,:),R3DC(:,:),lgrid(:)
-	real*8,allocatable :: SiFS(:,:,:,:,:,:),SiScFS(:,:,:,:,:,:),F11(:,:,:,:,:),g(:,:,:,:),BBsurf(:,:)
+	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1,tau0
+	real*8,allocatable :: maxdet(:,:),SiR0(:,:,:),R3DC(:,:),lgrid(:)
+	real*8,allocatable :: SiFS(:,:,:,:,:,:),F11(:,:,:,:,:),g(:,:,:,:),BBsurf(:,:)
 	logical iterateshift,actually1D,do_ibeta(n3D)
 	real*8 vxxmin,vxxmax,betamin_term,tot1,tot2,vrot,dlam_rot,albedo_day,scale,scale_prev,vxr,vyr,vzr
 	real*8 mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2,HapkeEmis
@@ -35,7 +35,6 @@
 	allocate(Ca(nlam,ng,nr,n3D,-nvel:nvel,ncc),Cs(nlam,nr,n3D,ncc),BBr(nlam,0:nr),BBsurf(nlam,n3D))
 	allocate(Si(nlam,ng,0:nr,nnu0,n3D,ncc),SiFS(nlam,ng,0:nr,nnu0,n3D,ncc))
 	allocate(G(nlam,nr,n3D,ncc),F11(nlam,0:nr,180,n3D,ncc))
-	if(computealbedo) allocate(SiSc(nlam,ng,0:nr,nnu0,n3D,ncc),SiFS(nlam,ng,0:nr,nnu0,n3D,ncc))
 	allocate(Ca_mol(nlam,ng,nmol,nr,n3D),Ce_cont(nlam,nr,n3D,ncc))
 	allocate(dtauR_nu(nlam,ng,n3D,nr,-nvel:nvel,ncc))
 	allocate(R3D(n3D,nr+2))
@@ -370,16 +369,6 @@ c Now call the setup for the readFull3D part
      &				SiFS(1:nlam,1:ng,0:nr,1:nnu0,i,icc),Ca(1:nlam,1:ng,1:nr,i,0,icc),Cs(1:nlam,1:nr,i,icc))
 			enddo
 			BBsurf(1:nlam,i)=BBr(1:nlam,0)
-			if(computealbedo) then
-				BBr(1:nlam,0:nr)=0d0
-				Fstar_temp(1:nlam)=Fstar(1:nlam)
-				Fstar=1d0
-				do icc=1,ncc
-					call ComputeScatter(BBr(1:nlam,0:nr),SiSc(1:nlam,1:ng,0:nr,1:nnu0,i,icc),SiScFS(1:nlam,1:ng,0:nr,1:nnu0,i,icc),
-     &								Ca(1:nlam,1:ng,1:nr,i,0,icc),Cs(1:nlam,1:nr,i,icc))
-				enddo
-				Fstar(1:nlam)=Fstar_temp(1:nlam)
-			endif
 
 			Pb(1)=P(1)
 			do ir=2,nr
@@ -427,10 +416,6 @@ c Now call the setup for the readFull3D part
 			do ir=0,nr
 				Si(1:nlam,1:ng,ir,1:nnu0,i,1:ncc)=Si(1:nlam,1:ng,ir,1:nnu0,n3D,1:ncc)
 				SiFS(1:nlam,1:ng,ir,1:nnu0,i,1:ncc)=SiFS(1:nlam,1:ng,ir,1:nnu0,n3D,1:ncc)
-				if(computealbedo) then
-					SiSc(1:nlam,1:ng,ir,1:nnu0,i,1:ncc)=SiSc(1:nlam,1:ng,ir,1:nnu0,n3D,1:ncc)
-					SiScFS(1:nlam,1:ng,ir,1:nnu0,i,1:ncc)=SiScFS(1:nlam,1:ng,ir,1:nnu0,n3D,1:ncc)
-				endif
 			enddo
 			BBsurf(1:nlam,i)=BBsurf(1:nlam,n3D)
 			local_albedo(i)=local_albedo(n3D)
@@ -585,6 +570,45 @@ c Now call the setup for the readFull3D part
 	theta=2d0*pi*theta_phase(ipc)/360d0
 	if(theta.gt.2d0*pi) theta=theta-2d0*pi
 	fluxp=0d0
+	
+	if(anisoscattstar) then
+		wscatt=0d0
+		iscatt1=180
+		iscatt2=1
+		do irtrace=1,10
+			do iptrace=1,10
+				phi=2d0*pi*(real(iptrace)-0.5)/real(10)
+				vx=-Dplanet
+				vy=Rstar*cos(phi)*(real(irtrace)-0.5)/real(10)
+				vz=Rstar*sin(phi)*(real(irtrace)-0.5)/real(10)
+				rr=sqrt(vx**2+vy**2+vz**2)
+				vx=vx/rr
+				vy=vy/rr
+				vz=vz/rr
+				call rotateY3D(vx,vy,vz,pi/2d0-orbit_inc)
+				rr=sqrt(vx**2+vy**2+vz**2)
+				vx=vx/rr
+				vy=vy/rr
+				vz=vz/rr
+				call rotateZ3D(vx,vy,vz,theta)
+				rr=sqrt(vx**2+vy**2+vz**2)
+				vx=vx/rr
+				vy=vy/rr
+				vz=vz/rr
+				iscatt=180d0*acos(-vx)/pi+0.5d0
+				if(iscatt.lt.0) iscatt=-iscatt
+				if(iscatt.gt.180) iscatt=360-iscatt
+				if(iscatt.lt.1) iscatt=1
+				if(iscatt.gt.180) iscatt=180
+				if(iscatt.lt.iscatt1) iscatt1=iscatt
+				if(iscatt.gt.iscatt2) iscatt2=iscatt
+				wscatt(iscatt)=wscatt(iscatt)+(real(irtrace)-0.5)/real(10)
+			enddo
+		enddo
+		tot=sum(wscatt(1:180))
+		wscatt=wscatt/tot
+	endif
+
 	vx=-1d0
 	vy=0d0
 	vz=0d0
@@ -606,19 +630,17 @@ c Now call the setup for the readFull3D part
 !$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vxr,vyr,vzr,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,tau0,
-!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,alb_omp,SiRalb0,SiRalb1,
-!$OMP&			vrot,dlam_rot,ivel,icc,isurf,mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2)
+!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,
+!$OMP&			vrot,dlam_rot,ivel,icc,isurf,mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2,iscatt)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,vrot_max,lam,do_rot,
-!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,planet_albedo,SiSc,computealbedo,orbit_inc,maxtau,R3DC,computelam,nvel,
+!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,orbit_inc,maxtau,R3DC,computelam,nvel,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis,BBsurf,
-!$OMP&			iscatt,F11,SiFS,SiScFS,anisoscattstar,g,ncc,cloudfrac,vx,vy,vz,bdrf_type,bdrf_args,f_surface,surface_props,n_surface,
-!$OMP&			lamconv)
+!$OMP&			F11,SiFS,anisoscattstar,g,ncc,cloudfrac,vx,vy,vz,bdrf_type,bdrf_args,f_surface,surface_props,n_surface,
+!$OMP&			lamconv,wscatt,iscatt1,iscatt2)
 	allocate(fact(nlam,ng,ncc))
 	allocate(fluxp_omp(nlam))
 	allocate(ftot(nlam),SiR0(nlam,ng,ncc))
-	if(computealbedo) allocate(alb_omp(nlam),SiRalb0(nlam,ng,ncc))
 	fluxp_omp=0d0
-	if(computealbedo) alb_omp=0d0
 !$OMP DO SCHEDULE(DYNAMIC,1)
 	do irtrace=1,nrtrace-1
 		A=pi*(rtrace(irtrace+1)**2-rtrace(irtrace)**2)/real(nptrace)
@@ -691,7 +713,6 @@ c Note we are here using the symmetry between North and South
 			j=0
 			tau0=0d0
 			SiR0=0d0
-			if(computealbedo) SiRalb0=0d0
 1			continue
 			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nr,nlong,nlatt)
 			if(i1.le.nr) then
@@ -716,28 +737,22 @@ c Note we are here using the symmetry between North and South
 								w1=(R3DC(i,i1+1)-rr)/(R3DC(i,i1+1)-R3DC(i,i1))
 								w2=1d0-w1
 								SiR1=w1*Si(ilam,ig,i1,inu,i,icc)+w2*Si(ilam,ig,i1+1,inu,i,icc)
-								if(anisoscattstar) SiR1=SiR1+F11(ilam,i1,iscatt,i,icc)*w1*SiFS(ilam,ig,i1,inu,i,icc)+
-     &													 F11(ilam,i1+1,iscatt,i,icc)*w2*SiFS(ilam,ig,i1+1,inu,i,icc)
-								if(computealbedo) then
-									SiRalb1=w1*SiSc(ilam,ig,i1,inu,i,icc)+w2*SiSc(ilam,ig,i1+1,inu,i,icc)
-									if(anisoscattstar) SiRalb1=SiRalb1+F11(ilam,i1,iscatt,i,icc)*w1*SiScFS(ilam,ig,i1,inu,i,icc)+
-     &													 F11(ilam,i1+1,iscatt,i,icc)*w2*SiScFS(ilam,ig,i1+1,inu,i,icc)
-								endif
+								if(anisoscattstar) then
+									do iscatt=iscatt1,iscatt2
+										SiR1=SiR1+wscatt(iscatt)*(F11(ilam,i1,iscatt,i,icc)*w1*SiFS(ilam,ig,i1,inu,i,icc)+
+     &													 F11(ilam,i1+1,iscatt,i,icc)*w2*SiFS(ilam,ig,i1+1,inu,i,icc))
+    								enddo
+    							endif
 							else
 								SiR1=Si(ilam,ig,nr,inu,i,icc)
-								if(anisoscattstar) SiR1=SiR1+F11(ilam,nr,iscatt,i,icc)*SiFS(ilam,ig,nr,inu,i,icc)
-								if(computealbedo) then
-									SiRalb1=SiSc(ilam,ig,nr,inu,i,icc)
-									if(anisoscattstar) SiRalb1=SiRalb1+F11(ilam,nr,iscatt,i,icc)*SiScFS(ilam,ig,nr,inu,i,icc)
+								if(anisoscattstar) then
+									do iscatt=iscatt1,iscatt2
+										SiR1=SiR1+wscatt(iscatt)*F11(ilam,nr,iscatt,i,icc)*SiFS(ilam,ig,nr,inu,i,icc)
+									enddo
 								endif
 							endif
 							call ComputeI12(tau1,tau0,SiR1,SiR0(ilam,ig,icc),contr)
 							ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig,icc)*cloudfrac(icc)
-							if(computealbedo) then
-								call ComputeI12(tau1,tau0,SiRalb1,SiRalb0(ilam,ig,icc),contr)
-								alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*contr*fact(ilam,ig,icc)*cloudfrac(icc)
-								SiRalb0(ilam,ig,icc)=SiRalb1
-							endif
 							fact(ilam,ig,icc)=fact(ilam,ig,icc)*exp_tau1
 							SiR0(ilam,ig,icc)=SiR1
 						enddo
@@ -797,11 +812,6 @@ c Note we are here using the symmetry between North and South
 								contr=Si(ilam,ig,0,inu,i,icc)*(1d0-surface_emis(ilam))+BBsurf(ilam,i)*surface_emis(ilam)
 							endif
 							ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig,icc)*cloudfrac(icc)
-							if(computealbedo) then
-								alb_omp(ilam)=alb_omp(ilam)+A*wgg(ig)*SiSc(ilam,ig,0,inu,i,icc)*fact(ilam,ig,icc)
-								if(anisoscattstar) alb_omp(ilam)=alb_omp(ilam)+
-     &		F11(ilam,0,iscatt,i,icc)*A*wgg(ig)*SiScFS(ilam,ig,0,inu,i,icc)*fact(ilam,ig,icc)*cloudfrac(icc)
-							endif
 						enddo
 					enddo
 					endif
@@ -837,10 +847,6 @@ c Note we are here using the symmetry between North and South
 !$OMP END DO
 !$OMP CRITICAL
 	fluxp(1:nlam)=fluxp(1:nlam)+fluxp_omp(1:nlam)
-	if(computealbedo) then
-		planet_albedo(ipc,1:nlam)=planet_albedo(ipc,1:nlam)+alb_omp(1:nlam)
-		deallocate(alb_omp,SiRalb0)
-	endif
 	deallocate(fluxp_omp)
 !$OMP END CRITICAL
 	deallocate(fact)
@@ -1232,7 +1238,6 @@ c Note we use the symmetry of the North and South here!
 	endif
 	
 	deallocate(Ca,Cs,BBr,Si)
-	if(computealbedo) deallocate(SiSc)
 	deallocate(Ca_mol,Ce_cont)
 	deallocate(R3D)
 	deallocate(R3D2)

@@ -190,22 +190,6 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 		enddo
 		close(unit=30)
 
-		if(computealbedo) then
-			filename=trim(outputdir) // "albedo" // trim(side)
-			call output("Writing albedo to: " // trim(filename))
-			open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
-			form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
-     &				 '("      albedo(",f5.1,")"),"         fstar [Jy]")'
-			write(30,form) "lambda [mu]",theta(1:nphase)
-			form='(f14.6,' // int2string(nphase*2+1,'(i3)') // 'es19.7E3)'
-			do i=1,nlam_out
-				if(lamemis(i).and.computelam(i)) then
-				write(30,form) lam_out(i),planet_albedo(1:nphase,i),Fstar(i)*1d23/distance**2,
-     &				planet_albedo(1:nphase,i)*(Dplanet/Rplanet)**2
-				endif
-			enddo
-			close(unit=30)
-		endif
 	endif
 
 	nj=0

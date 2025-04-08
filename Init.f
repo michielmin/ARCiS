@@ -1620,8 +1620,6 @@ c			read(key%value,*) nTpoints
 		case("full3ddir","dirfull3d")
 			read(key%value,*) Full3Ddir
 			if(Full3Ddir.ne.' ') readFull3D=.true.
-		case("computealbedo","planetalbedo")
-			read(key%value,*) computealbedo
 		case("iwolk")
 			read(key%value,*) iWolk
 		case("emisspec")
@@ -2205,7 +2203,6 @@ c  GGchem was still implemented slightly wrong.
 	deepredisttype='fixbeta'
 
 	readFull3D=.false.
-	computealbedo=.false.
 
 	Kzz_deep=1d2
 	Kzz_1bar=-1d0
@@ -2479,7 +2476,6 @@ c number of cloud/nocloud combinations
 	allocate(tau1depth(ncc,nlam))
 	allocate(cloudtau(ncc,nlam))
 	allocate(phase(nphase,0:ncc,nlam))
-	if(computealbedo) allocate(planet_albedo(nphase,nlam))
 
 	return
 	end

@@ -207,7 +207,7 @@ c===============================================================================
 	real*8 bdrf_args(4,5)
 	integer bdrf_type(5),n_surface
 	character*500 bdrf_file(5)
-	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:),planet_albedo(:,:)
+	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function
 	real*8 planetform_fdust,planetform_fplan,planetform_Mstart,planetform_SolidC,vrot0,vrot_max
 	real*8,allocatable :: velocity(:),Kzz_convect(:),Kzz_g(:),Kzz_b(:)
@@ -237,7 +237,7 @@ c for exchange when computing secondary atmosphere
 	integer,allocatable :: niso(:),instr_nobs(:)
 	real*8,allocatable :: MMW(:),tauUV(:),kappaUV(:),Tprev3D(:)
 	real*8,allocatable :: PTaverage3D(:,:),mixrat_average3D(:,:,:)
-	logical fulloutput3D,deepredist,readFull3D,computealbedo
+	logical fulloutput3D,deepredist,readFull3D
 	integer nBB
 	parameter(nBB=10000)
 	character*500 formationcommand
