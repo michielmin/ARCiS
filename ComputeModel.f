@@ -40,7 +40,7 @@
 	computeopac=recomputeopacities
 	if(doRing) computelam=.true.
 
-	call cpu_time(starttime)
+c	call cpu_time(starttime)
 	Tconverged=.false.
 	nTiter=0
 	Tsurface=sqrt(Rstar/(2d0*Dplanet))*Tstar
@@ -143,8 +143,8 @@ c			call SetoutputMode(.false.)
 		call output("Teff: " // dbl2string(TeffPoutput,'(f10.2)') // "K" )
 	endif
 
-	call cpu_time(stoptime)
-	call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+c	call cpu_time(stoptime)
+c	call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 
 c	call output("Chemistry cpu time: " // trim(dbl2string(timechem,'(f10.4)')) // " s")
 c	call output("Chemistry walltime: " // trim(dbl2string(dble(itimechem)/dble(rate),'(f10.4)')) // " s")
