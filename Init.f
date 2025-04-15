@@ -1572,6 +1572,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) nalbedo_iter
 		case("betapow")
 			read(key%value,*) betapow
+		case("nrtatm")
+			read(key%value,*) nRTatm
 		case("makeai")
 			read(key%value,*) domakeai
 		case("parametergridfile")
@@ -2231,6 +2233,8 @@ c  GGchem was still implemented slightly wrong.
 	i3D=1
 	aim3D='CONTRAST'
 	nalbedo_iter=1
+	
+	nRTatm=-1
 	
 	deepredist=.false.
 	deepredisttype='fixbeta'

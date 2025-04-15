@@ -205,7 +205,7 @@ c===============================================================================
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),dlam(:),blam(:,:),surface_emis(:),surface_props(:,:)
 	real*8 f_ice,f_grass,f_snow,f_water,f_surface(5)
 	real*8 bdrf_args(4,5)
-	integer bdrf_type(5),n_surface
+	integer bdrf_type(5),n_surface,nRTatm
 	character*500 bdrf_file(5)
 	real*8,allocatable :: gg(:),wgg(:),obsA_contr(:,:),flux_contr(:,:),obsA_LC(:,:)
 	real*8,allocatable :: ZZ(:,:,:),TZ(:)	! partition function

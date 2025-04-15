@@ -524,7 +524,11 @@ c Now call the setup for the readFull3D part
 		mixrat_average3D=0d0
 	endif
 	ndisk=20
-	natm=nr!10
+	if(nRTatm.lt.0) then
+		natm=nr
+	else
+		natm=nRTatm
+	endif
 
 	nptrace=max((nlatt-1)/8,5)
 	if(2*(nptrace/2).eq.nptrace) nptrace=nptrace+1
