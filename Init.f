@@ -1916,9 +1916,42 @@ c k is proportional to Rplanet and grav
 		nr=i-1
 	else
 		if(Pmin.gt.Pmax/Psurf.or.nrsurf.le.1) then
-			do i=1,nr
+			j=1
+			do i=1,nclouds
+				if(Cloud(i)%type.eq."LAYER".or.Cloud(i)%type.eq."SLAB".or.Cloud(i)%type.eq."HOMOGENEOUS") then
+					pp=Cloud(i)%Pmin/1.01
+					if(pp.gt.Pmin.and.pp.lt.Pmax.and.j.lt.nr) then
+						P0(j)=pp
+						j=j+1
+					endif
+					pp=Cloud(i)%Pmin*1.01
+					if(pp.gt.Pmin.and.pp.lt.Pmax.and.j.lt.nr) then
+						P0(j)=pp
+						j=j+1
+					endif
+					if(Cloud(i)%type.ne."HOMOGENEOUS") then
+						pp=Cloud(i)%Pmax/1.01
+						if(pp.gt.Pmin.and.pp.lt.Pmax.and.j.lt.nr) then
+							P0(j)=pp
+							j=j+1
+						endif
+						pp=Cloud(i)%Pmax*1.01
+						if(pp.gt.Pmin.and.pp.lt.Pmax.and.j.lt.nr) then
+							P0(j)=pp
+							j=j+1
+						endif
+						pp=sqrt(Cloud(i)%Pmax*Cloud(i)%Pmin)
+						if(pp.gt.Pmin.and.pp.lt.Pmax.and.j.lt.nr) then
+							P0(j)=pp
+							j=j+1
+						endif
+					endif
+				endif
+			enddo
+			do i=j,nr
 				P0(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nr-1))
 			enddo
+			call sort(P0,nr)
 		else
 			nrsurf_tot=nrsurf+nr*(log(Psurf)/log(Pmax/Pmin))
 			if(nrsurf_tot.gt.nr-5) nrsurf_tot=nr-5

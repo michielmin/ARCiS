@@ -353,7 +353,7 @@ c Si_omp(0:nr,nr+1) is the direct contribution from the surface
 			enddo
 			Si_omp(1:nr,nr+1)=Si_omp(1:nr,nr+1)*wscat(1:nr,ilam,ig,icc)
 
-			call AddScatter(Si_omp(1:nr,0:nr+1),tauR_nu(1:nr,ilam,ig,icc),
+			call AddScatter_lin(Si_omp(1:nr,0:nr+1),tauR_nu(1:nr,ilam,ig,icc),
      &					Ca(1:nr,ilam,ig,icc),Cs(1:nr,ilam,ig,icc),Ce(1:nr,ilam,ig,icc),(1d0-SurfEmis_LR(ilam)),nr,nu,wnu,nnu,nr+2)
 
 			do inu=1,nnu
@@ -784,7 +784,7 @@ c		if(nTiter.gt.1) call computeav50(Tdist(ir,1:nTiter),nTiter,T1(ir))
 
 	subroutine ComputeI12(tau1,tau2,S1,S2,I12)
 	IMPLICIT NONE
-	real*8 tau1,tau2,S1,S2,I12,dtau,exptau
+	real*8 tau1,tau2,S1,S2,I12,dtau
 	
 	dtau=abs(tau1-tau2)
 
@@ -1396,7 +1396,7 @@ c
 
 
 
-	subroutine AddScatter(Si_in,tauR_in,Ca,Cs,Ce,SurfAlb,nr,nu,wnu,nnu,NRHS)
+	subroutine AddScatter_lin(Si_in,tauR_in,Ca,Cs,Ce,SurfAlb,nr,nu,wnu,nnu,NRHS)
 	use Constants
 	IMPLICIT NONE
 	integer inu,nnu,ilam,ir,info,NRHS,nr,i,j,jr
@@ -1432,10 +1432,7 @@ c
 		Itot=Si_in
 		i=0
 1		continue
-		Si=0d0
-		do j=1,NRHS
-			Si(1:nr,j)=matmul(Linv,Itot(1:nr,j))
-		enddo
+		Si(1:nr,1:NRHS)=matmul(Linv,Itot(1:nr,1:NRHS))
 		Si_in=Si_in+Si
 		Itot=Si
 		i=i+1
@@ -1466,6 +1463,103 @@ c
 	enddo
 	enddo
 	Si_in=Si
+
+	return
+	end
+
+
+
+	subroutine AddScatter(Si_in,tauR_in,Ca,Cs,Ce,SurfAlb,nr,nu,wnu,nnu,NRHS)
+	use Constants
+	IMPLICIT NONE
+	integer nextra
+	parameter(nextra=50)
+	integer inu,nnu,ilam,ir,info,NRHS,nr,i,j,jr,nre
+	real*8 tauR(nr+nextra),tauR_in(nr),Si_in(nr,NRHS),tauR_e(nr+nextra)
+	real*8 Ca(nr),Cs(nr),Ce(nr),Si_e(nr+nextra,NRHS)
+	real*8 nu(nnu),wnu(nnu),albedo(nr+nextra),SurfAlb,temp(nr)
+	real*8 Linv(nr+nextra,nr+nextra),Lmat(nr+nextra,nr+nextra),Hsurf(nr+nextra)
+	integer IWORKomp(nr+nextra),ii(nr+nextra)
+	logical doit
+
+	Si_e=0d0
+	ii=0
+	do ir=1,nr
+		albedo(ir)=Cs(ir)/Ce(ir)
+		if(.not.albedo(ir).lt.1d0/(1d0+1d-4)) albedo(ir)=1d0/(1d0+1d-4)
+		Si_e(ir,1:NRHS)=Si_in(ir,1:NRHS)
+		ii(ir)=ir
+	enddo
+
+	tauR_e(1:nr)=tauR_in(1:nr)
+
+	doit=.true.
+	nre=nr
+	tauR(1:nre)=tauR_e(1:nre)
+	do while(doit)
+		doit=.false.
+		do ir=nre,2,-1
+			if(tauR_e(ir-1).gt.1d-2.and.tauR_e(ir-1).lt.5d0) then
+				if(tauR_e(ir-1)-tauR_e(ir).gt.tauR_e(ir)*1.25.and.nre.lt.nr+nextra) then
+					ii(ir+1:nre+1)=ii(ir:nre)
+					ii(ir)=0
+					tauR(ir+1:nre+1)=tauR(ir:nre)
+					tauR(ir)=(tauR(ir-1)+tauR(ir+1))/2d0
+					albedo(ir+1:nre+1)=albedo(ir:nre)
+					albedo(ir)=(albedo(ir-1)+albedo(ir+1))/2d0
+					do i=1,NRHS
+						Si_e(ir+1:nre+1,i)=Si_e(ir:nre,i)
+						if(Si_e(ir+1,i).le.0d0.or.Si_e(ir-1,i).le.0d0) then
+							Si_e(ir,i)=(Si_e(ir-1,i)+Si_e(ir+1,i))/2d0
+						else
+							Si_e(ir,i)=sqrt(Si_e(ir-1,i)*Si_e(ir+1,i))
+						endif
+					enddo
+					doit=.true.
+					nre=nre+1
+				endif
+			endif
+		enddo
+		tauR_e(1:nre)=tauR(1:nre)
+	enddo
+
+	Linv=0d0
+	Hsurf=0d0
+	do inu=1,nnu
+		tauR(1:nre)=tauR_e(1:nre)/abs(nu(inu))
+		call InvertIjExp(tauR,Lmat(1:nre,1:nre),nre)
+		do ir=1,nre
+			Linv(ir,1:nre)=Linv(ir,1:nre)+wnu(inu)*Lmat(ir,1:nre)*albedo(ir)
+		enddo
+		Hsurf(1:nre)=Hsurf(1:nre)+2d0*nu(inu)*wnu(inu)*Lmat(1,1:nre)
+	enddo
+	do inu=1,nnu
+		tauR(1:nre)=abs((tauR_e(1:nre)-tauR_e(1))/nu(inu))
+		do ir=1,nre
+			Linv(ir,1:nre)=Linv(ir,1:nre)+wnu(inu)*SurfAlb*Hsurf(1:nre)*albedo(ir)*exp(-tauR(ir))
+		enddo
+	enddo
+
+	Linv=-Linv
+	do ir=1,nre
+		Linv(ir,ir)=1d0+Linv(ir,ir)
+	enddo
+	info=0
+	call DGESV( nre, NRHS, Linv, nr+nextra, IWORKomp, Si_e, nr+nextra, info)
+	if(info.ne.0) then
+		print*,"problem in scattering",info
+		return
+	endif
+
+	do i=1,NRHS
+		do ir=1,nre
+			if(ii(ir).gt.0) then
+				if(Si_e(ir,i).ge.Si_in(ii(ir),i)) then
+					Si_in(ii(ir),i)=Si_e(ir,i)
+				endif
+			endif
+		enddo
+	enddo
 
 	return
 	end

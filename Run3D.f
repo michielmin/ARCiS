@@ -26,7 +26,7 @@
 	real*8 vxxmin,vxxmax,betamin_term,tot1,tot2,vrot,dlam_rot,albedo_day,scale,scale_prev,vxr,vyr,vzr
 	real*8 mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2,HapkeEmis,phishift
 	external HapkeEmis
-	logical do_rot,conv
+	logical do_rot,conv,usew1w2
 	real*8 starttime,stoptime
 	real*8,allocatable :: fluxiter(:)
 	logical,allocatable :: lamconv(:),lamthick(:,:,:)
@@ -639,7 +639,7 @@ c Now call the setup for the readFull3D part
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vxr,vyr,vzr,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,tau0,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,
-!$OMP&			vrot,dlam_rot,ivel,icc,isurf,mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2,iscatt,lamthick)
+!$OMP&			vrot,dlam_rot,ivel,icc,isurf,mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2,iscatt,lamthick,usew1w2)
 !$OMP& SHARED(theta,fluxp,nrtrace,rtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,vrot_max,lam,do_rot,
 !$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,orbit_inc,maxtau,R3DC,computelam,nvel,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis,BBsurf,
@@ -654,7 +654,12 @@ c Now call the setup for the readFull3D part
 		A=pi*(rtrace(irtrace+1)**2-rtrace(irtrace)**2)/real(nptrace)
 		do iptrace=1,nptrace
 			ftot=0d0
-			fact=1d0
+			do ilam=1,nlam
+				do ig=1,ng
+					fact(ilam,ig,1:ncc)=cloudfrac(1:ncc)*A*wgg(ig)
+				enddo
+			enddo
+c			fact=1d0
 			lamthick=.false.
 c Note we are here using the symmetry between North and South
 			if(nptrace.eq.1) then
@@ -734,6 +739,14 @@ c Note we are here using the symmetry between North and South
 					if(inu.lt.1) inu=1
 					if(.not.inu.lt.nnu0-1) inu=nnu0-1
 				endif
+				rr=sqrt((x+v*vx)**2+(y+v*vy)**2+(z+v*vz)**2)
+				if(i1.lt.nr) then
+					w1=(R3DC(i,i1+1)-rr)/(R3DC(i,i1+1)-R3DC(i,i1))
+					w2=1d0-w1
+					usew1w2=.true.
+				else
+					usew1w2=.false.
+				endif
 				do ilam=1,nlam
 					if(lamemis(ilam).and.computelam(ilam).and..not.lamconv(ilam)) then
 					do ig=1,ng
@@ -742,10 +755,7 @@ c Note we are here using the symmetry between North and South
 							tau0=0d0
 							tau1=v*dtauR_nu(ilam,ig,i,i1,ivel,icc)
 							exp_tau1=exp(-tau1)
-							rr=sqrt((x+v*vx)**2+(y+v*vy)**2+(z+v*vz)**2)
-							if(i1.lt.nr) then
-								w1=(R3DC(i,i1+1)-rr)/(R3DC(i,i1+1)-R3DC(i,i1))
-								w2=1d0-w1
+							if(usew1w2) then
 								SiR1=w1*Si(ilam,ig,i1,inu,i,icc)+w2*Si(ilam,ig,i1+1,inu,i,icc)
 								if(anisoscattstar) SiR1=SiR1+F11_theta(ilam,i1,i,icc)*w1*SiFS(ilam,ig,i1,inu,i,icc)+
      &													 F11_theta(ilam,i1+1,i,icc)*w2*SiFS(ilam,ig,i1+1,inu,i,icc)
@@ -754,7 +764,7 @@ c Note we are here using the symmetry between North and South
 								if(anisoscattstar) SiR1=SiR1+F11_theta(ilam,nr,i,icc)*SiFS(ilam,ig,nr,inu,i,icc)
 							endif
 							call ComputeI12(tau1,tau0,SiR1,SiR0(ilam,ig,icc),contr)
-							ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig,icc)*cloudfrac(icc)
+							ftot(ilam)=ftot(ilam)+contr*fact(ilam,ig,icc)
 							fact(ilam,ig,icc)=fact(ilam,ig,icc)*exp_tau1
 							if(fact(ilam,ig,icc).lt.1d-10) lamthick(ilam,ig,icc)=.true.
 							SiR0(ilam,ig,icc)=SiR1
@@ -816,7 +826,7 @@ c Note we are here using the symmetry between North and South
 							else
 								contr=Si(ilam,ig,0,inu,i,icc)*(1d0-surface_emis(ilam))+BBsurf(ilam,i)*surface_emis(ilam)
 							endif
-							ftot(ilam)=ftot(ilam)+A*wgg(ig)*contr*fact(ilam,ig,icc)*cloudfrac(icc)
+							ftot(ilam)=ftot(ilam)+contr*fact(ilam,ig,icc)
 							endif
 						enddo
 					enddo
@@ -2574,8 +2584,7 @@ c			Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
 	return
 	end
 
-
-	subroutine AddSecScatter(SiFS,Si_in,tauR_in,Ca,Cs,Ce,SurfAlb,nr,nu,wnu,nnu,NRHS)
+	subroutine AddSecScatter_lin(SiFS,Si_in,tauR_in,Ca,Cs,Ce,SurfAlb,nr,nu,wnu,nnu,NRHS)
 	use Constants
 	IMPLICIT NONE
 	integer inu,nnu,ilam,ir,info,NRHS,nr,i,j,jr
@@ -2607,10 +2616,20 @@ c			Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
 		enddo
 	enddo
 
-	do j=1,NRHS
-		Itot(1:nr,j)=matmul(Linv,SiFS(1:nr,j))
-	enddo
+	Itot(1:nr,1:NRHS)=matmul(Linv,SiFS(1:nr,1:NRHS))
 	Si_in=Si_in+Itot
+
+	if(.false.) then
+		Itot=Si_in
+		i=0
+1		continue
+		Si(1:nr,1:NRHS)=matmul(Linv,Itot(1:nr,1:NRHS))
+		Si_in=Si_in+Si
+		Itot=Si
+		i=i+1
+		if(maxval(Si/Si_in).gt.1d-3) goto 1
+		return
+	endif
 
 	Linv=-Linv
 	do ir=1,nr
@@ -2635,6 +2654,110 @@ c			Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
 	enddo
 	enddo
 	Si_in=Si
+
+	return
+	end
+
+	subroutine AddSecScatter(SiFS,Si_in,tauR_in,Ca,Cs,Ce,SurfAlb,nr,nu,wnu,nnu,NRHS)
+	use Constants
+	IMPLICIT NONE
+	integer nextra,nre
+	parameter(nextra=50)
+	integer inu,nnu,ilam,ir,info,NRHS,nr,i,j,jr
+	real*8 tauR(nr+nextra),tauR_in(nr),SiFS(nr,NRHS),Si_in(nr,NRHS),tauR_e(nr+nextra)
+	real*8 Si_e(nr+nextra,NRHS),SiFS_e(nr+nextra,NRHS),Ca(nr),Cs(nr),Ce(nr)
+	real*8 nu(nnu),wnu(nnu),albedo(nr+nextra),SurfAlb
+	real*8 Linv(nr+nextra,nr+nextra),Lmat(nr+nextra,nr+nextra),Hsurf(nr+nextra)
+	integer IWORKomp(nr+nextra),ii(nr+nextra)
+	logical doit
+
+	Si_e=0d0
+	ii=0
+	do ir=1,nr
+		albedo(ir)=Cs(ir)/Ce(ir)
+		if(.not.albedo(ir).lt.1d0/(1d0+1d-4)) albedo(ir)=1d0/(1d0+1d-4)
+		Si_e(ir,1:NRHS)=Si_in(ir,1:NRHS)
+		SiFS_e(ir,1:NRHS)=SiFS(ir,1:NRHS)
+		ii(ir)=ir
+	enddo
+
+	tauR_e(1:nr)=tauR_in(1:nr)
+
+	doit=.true.
+	nre=nr
+	tauR(1:nre)=tauR_e(1:nre)
+	do while(doit)
+		doit=.false.
+		do ir=nre,2,-1
+			if(tauR_e(ir-1).gt.1d-2.and.tauR_e(ir-1).lt.5d0) then
+				if(tauR_e(ir-1)-tauR_e(ir).gt.tauR_e(ir)*1.25.and.nre.lt.nr+nextra) then
+					ii(ir+1:nre+1)=ii(ir:nre)
+					ii(ir)=0
+					tauR(ir+1:nre+1)=tauR(ir:nre)
+					tauR(ir)=(tauR(ir-1)+tauR(ir+1))/2d0
+					albedo(ir+1:nre+1)=albedo(ir:nre)
+					albedo(ir)=(albedo(ir-1)+albedo(ir+1))/2d0
+					do i=1,NRHS
+						Si_e(ir+1:nre+1,i)=Si_e(ir:nre,i)
+						if(Si_e(ir+1,i).le.0d0.or.Si_e(ir-1,i).le.0d0) then
+							Si_e(ir,i)=(Si_e(ir-1,i)+Si_e(ir+1,i))/2d0
+						else
+							Si_e(ir,i)=sqrt(Si_e(ir-1,i)*Si_e(ir+1,i))
+						endif
+						SiFS_e(ir+1:nre+1,i)=SiFS_e(ir:nre,i)
+						if(SiFS_e(ir+1,i).le.0d0.or.SiFS_e(ir-1,i).le.0d0) then
+							SiFS_e(ir,i)=(SiFS_e(ir-1,i)+SiFS_e(ir+1,i))/2d0
+						else
+							SiFS_e(ir,i)=sqrt(SiFS_e(ir-1,i)*SiFS_e(ir+1,i))
+						endif
+					enddo
+					doit=.true.
+					nre=nre+1
+				endif
+			endif
+		enddo
+		tauR_e(1:nre)=tauR(1:nre)
+	enddo
+
+	Linv=0d0
+	Hsurf=0d0
+	do inu=1,nnu
+		tauR(1:nre)=tauR_e(1:nre)/abs(nu(inu))
+		call InvertIjExp(tauR,Lmat(1:nre,1:nre),nre)
+		do ir=1,nre
+			Linv(ir,1:nre)=Linv(ir,1:nre)+wnu(inu)*Lmat(ir,1:nre)*albedo(ir)
+		enddo
+		Hsurf(1:nre)=Hsurf(1:nre)+2d0*nu(inu)*wnu(inu)*Lmat(1,1:nre)
+	enddo
+	do inu=1,nnu
+		tauR(1:nre)=abs((tauR_e(1:nre)-tauR_e(1))/nu(inu))
+		do ir=1,nre
+			Linv(ir,1:nre)=Linv(ir,1:nre)+wnu(inu)*SurfAlb*Hsurf(1:nre)*albedo(ir)*exp(-tauR(ir))
+		enddo
+	enddo
+
+	Si_e(1:nre,1:NRHS)=Si_e(1:nre,1:NRHS)+matmul(Linv(1:nre,1:nre),SiFS_e(1:nre,1:NRHS))
+
+	Linv=-Linv
+	do ir=1,nre
+		Linv(ir,ir)=1d0+Linv(ir,ir)
+	enddo
+	info=0
+	call DGESV( nre, NRHS, Linv, nr+nextra, IWORKomp, Si_e, nr+nextra, info)
+	if(info.ne.0) then
+		print*,"problem in scattering",info
+		return
+	endif
+
+	do i=1,NRHS
+		do ir=1,nre
+			if(ii(ir).gt.0) then
+				if(Si_e(ir,i).ge.Si_in(ii(ir),i)) then
+					Si_in(ii(ir),i)=Si_e(ir,i)
+				endif
+			endif
+		enddo
+	enddo
 
 	return
 	end
