@@ -357,12 +357,58 @@ C	 create the new empty FITS file
 		enddo
 	enddo
 
-	allocate(lamF(Ktable(imol)%nlam+1))
+	!------------------------------------------------------------------------
+	! HDU 1: temperature
+	!------------------------------------------------------------------------
+	!  move to next hdu
+	call ftmrhd(unit,1,hdutype,status)	
 
-	do ilam=1,Ktable(imol)%nlam+1
-		lamF(ilam)=10d0**(log10(Ktable(imol)%lam1)+
-     &			log10(Ktable(imol)%lam2/Ktable(imol)%lam1)*real(ilam-1)/real(Ktable(imol)%nlam))
+	! Check dimensions
+	call ftgknj(unit,'NAXIS',1,1,naxes,nfound,status)
+
+	npixels=naxes(1)
+
+	! read_image
+
+	if(.not.allocated(Ktable(imol)%T)) allocate(Ktable(imol)%T(Ktable(imol)%nT))
+	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktable(imol)%T,anynull,status)
+
+	!------------------------------------------------------------------------
+	! HDU 2: pressure
+	!------------------------------------------------------------------------
+	!  move to next hdu
+	call ftmrhd(unit,1,hdutype,status)	
+
+	! Check dimensions
+	call ftgknj(unit,'NAXIS',1,1,naxes,nfound,status)
+
+	npixels=naxes(1)
+
+	! read_image
+
+	if(.not.allocated(Ktable(imol)%P)) allocate(Ktable(imol)%P(Ktable(imol)%nP))
+	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktable(imol)%P,anynull,status)
+  
+	!------------------------------------------------------------------------
+	! HDU 3: wavelength
+	!------------------------------------------------------------------------
+	!  move to next hdu
+	call ftmrhd(unit,1,hdutype,status)	
+
+	! Check dimensions
+	call ftgknj(unit,'NAXIS',1,1,naxes,nfound,status)
+
+	npixels=naxes(1)
+	! read_image
+
+	allocate(lamF(Ktable(imol)%nlam+1))
+	call ftgpvd(unit,group,firstpix,npixels,nullval,lamF(1:Ktable(imol)%nlam),anynull,status)
+
+	lamF(Ktable(imol)%nlam+1)=lamF(Ktable(imol)%nlam)**2/sqrt(lamF(Ktable(imol)%nlam)*lamF(Ktable(imol)%nlam-1))
+	do ilam=Ktable(imol)%nlam,2,-1
+		lamF(ilam)=sqrt(lamF(ilam)*lamF(ilam-1))
 	enddo
+	lamF(1)=lamF(1)**2/sqrt(lamF(1)*lamF(2))
 
 	do ivel=-nvel,nvel
 	
@@ -432,37 +478,6 @@ C	 create the new empty FITS file
 
 	deallocate(Ktemp,lamF)
 
-	!------------------------------------------------------------------------
-	! HDU 1: temperature
-	!------------------------------------------------------------------------
-	!  move to next hdu
-	call ftmrhd(unit,1,hdutype,status)	
-
-	! Check dimensions
-	call ftgknj(unit,'NAXIS',1,1,naxes,nfound,status)
-
-	npixels=naxes(1)
-
-	! read_image
-
-	if(.not.allocated(Ktable(imol)%T)) allocate(Ktable(imol)%T(Ktable(imol)%nT))
-	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktable(imol)%T,anynull,status)
-
-	!------------------------------------------------------------------------
-	! HDU 2: pressure
-	!------------------------------------------------------------------------
-	!  move to next hdu
-	call ftmrhd(unit,1,hdutype,status)	
-
-	! Check dimensions
-	call ftgknj(unit,'NAXIS',1,1,naxes,nfound,status)
-
-	npixels=naxes(1)
-
-	! read_image
-
-	if(.not.allocated(Ktable(imol)%P)) allocate(Ktable(imol)%P(Ktable(imol)%nP))
-	call ftgpvd(unit,group,firstpix,npixels,nullval,Ktable(imol)%P,anynull,status)
    				 
 	!  Close the file and free the unit number.
 	call ftclos(unit, status)
@@ -509,9 +524,9 @@ C	 create the new empty FITS file
 		deallocate(temp)
 	endif
 
-c	if(molname(imol).eq."H2O") then
+c	if(molname(imol).eq."O2") then
 c		allocate(temp(nlam))
-c		filename="case03_h2o_xsec_sorted.dat"
+c		filename="O2_PSG_HITRAN2020_1e5Pa_300K_air_Villanueva.txt"
 c		call regrid(filename,lam*1d4,temp,nlam)
 c		do iT=1,Ktable(imol)%nT
 c			do iP=1,Ktable(imol)%nP
