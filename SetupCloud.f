@@ -13,6 +13,12 @@
 		allocate(Cloud(ii)%sigma(nr))
 	endif
 	
+	if(Cloud(ii)%x_slider.ge.1d0.and.Cloud(ii)%x_slider.lt.60d0) then
+		i=Cloud(ii)%x_slider
+		Cloud(ii)%abun(1:60)=0d0
+		Cloud(ii)%abun(i)=1d0-(Cloud(ii)%x_slider-real(i))
+		Cloud(ii)%abun(i+1)=1d0-Cloud(ii)%abun(i)
+	endif
 	select case(Cloud(ii)%type)
 		case("DIFFUSE")
 			Cloud(ii)%nlam=nlam

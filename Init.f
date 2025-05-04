@@ -2329,6 +2329,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 		Cloud(i)%fsed_alpha=1d0
 		Cloud(i)%fsed_beta=1d20
 		Cloud(i)%xv_bot=1d-5
+		Cloud(i)%x_slider=0d0
 	enddo
 	nspike=0
 	useDLMie=.false.
@@ -3294,6 +3295,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) Cloud(j)%fsed_beta
 		case("cryst")
 			read(key%value,*) Cloud(j)%cryst0
+		case("x_slider")
+			read(key%value,*) Cloud(j)%x_slider
 		case("abun")
 			i=key%nr2
 			if(i.gt.Cloud(j)%nmat) Cloud(j)%nmat=i
