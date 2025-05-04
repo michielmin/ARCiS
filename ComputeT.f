@@ -42,7 +42,7 @@
 	real*8,allocatable,save :: Jnu(:,:,:),Hnu(:,:,:),Knu(:,:,:)
 	integer ir,ilam,ig,i,iT,niter,inu,nnu,jr,iTmin,iTmax
 	logical docloud0(max(nclouds,1)),converged,stopscat
-	real*8 tauf(nr),Si(0:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff,TT,maxErr,Fl0(nr),IntH0(nr,nr)
+	real*8 tauf(nr),Si(0:nr),B1,B2,x1,x2,dx1,dx2,ax,bx,ff,TT,maxErr,Fl0(nr),IntH0(nr,nr),error(nr)
 	integer info,IWORK(10*(nr+1)*(nr+1)),NRHS,ii(3),iscat,nscat
 	real*8 tau1,tau2,ee0,ee1,ee2,tauR(nr),Ij(nr),Ih(nr),scale,dtauR(nr),F11(180),Gsca
 	integer nlam_LR,icc
@@ -60,7 +60,7 @@
 	character*500 file
 	integer icloud
 	logical Convec(0:nr),fixed(nr)
-	real*8,allocatable,save :: Hstar0(:)
+	real*8,allocatable,save :: Hstar0(:),deltaT(:,:),prevT(:,:),AT(:,:),al(:,:)
 	real*8,save :: maxerr_prev=1d0
 
 	if(deepredist.and.deepredisttype.eq.'fixflux') then
@@ -71,9 +71,10 @@
 
 	if(first_entry) then
 		allocate(IP(nr*4+2))
-		IP(1)=(2*(nr)+nr*3+(nr*2+2)*(nr+7))
+		IP(1)=(2*(nr+1)+nr*3+(nr*2+2)*(nr*2+7))
 		IP(2)=nr*4+2
 		allocate(WS(IP(1)))
+		allocate(deltaT(nr,maxiter),prevT(nr,maxiter),AT(nr,maxiter),al(0:maxiter,1))
 	else
 		IP(1)=(2*(nr)+nr*3+(nr*2+2)*(nr+7))
 		IP(2)=nr*4+2
@@ -682,27 +683,43 @@ c===============================================================================
 
 	maxErr=0d0
 	do ir=1,nr-1
-		if(abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir)).gt.maxErr) maxErr=abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir))
-		if(maxErr.gt.epsiter) converged=.false.
+		error(ir)=abs(T(ir)-Tinp(ir))/(T(ir)+Tinp(ir))
+		if(error(ir).gt.maxErr) maxErr=error(ir)
 	enddo
-
-	if(maxErr.gt.maxerr_prev) then
-		f=max(5d-2,f/2d0)
-	else
-		f=min(0.4,f*1.5)
-	endif
-	maxerr_prev=maxErr
+	call sort(error,nr)
+	converged=.false.
+	j=9*nr/10
+	if(maxErr.lt.epsiter*3d0.and.error(j).lt.epsiter) converged=.true.
 
 	if(.not.allocated(Tdist)) allocate(Tdist(nr,maxiter))
 	Tdist(1:nr,nTiter)=T(1:nr)
 	call output("Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%")
-	if(do3D.and..not.retrieval.and..not.dopostequalweights) print*,"Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%"
+	if(converged.and.maxErr.gt.epsiter) call output("      90% of values below: " // dbl2string(error(j)*100d0,'(f5.1)') // "%")
+	if(do3D.and..not.retrieval.and..not.dopostequalweights) then
+		print*,"Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%"
+		if(converged.and.maxErr.gt.epsiter) print*,"      90% of values below: " // dbl2string(error(j)*100d0,'(f5.1)') // "%"
+	endif
 	T0(1:nr)=Tinp(1:nr)
 	T1(1:nr)=T(1:nr)
-	do ir=1,nr
-c		if(nTiter.gt.1) call computeav50(Tdist(ir,1:nTiter),nTiter,T1(ir))
-		T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
-	enddo
+
+	deltaT(1:nr,nTiter)=T(1:nr)-Tinp(1:nr)
+	prevT(1:nr,nTiter)=T(1:nr)
+	
+	if(nTiter.gt.2) then
+		j=min(min(nTiter-1,nr-2),200)
+		call FindNext(deltaT,prevT,T,nr,nTiter,j,IP,WS)
+	else
+		do ir=1,nr
+			T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
+		enddo
+		if(maxErr.gt.maxerr_prev) then
+			f=min(max(f*(maxerr_prev/maxErr),epsiter),0.4)
+		else
+			f=min(max(f*(maxerr_prev/maxErr)**0.15,epsiter),0.4)
+		endif
+	endif
+
+	maxerr_prev=maxErr
 
 	Tsurface=T(1)
 	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
@@ -1389,6 +1406,61 @@ c
 
 	call dlsei(W, MDW, ME, MA, MG, N, PRGOPT, x, RNORME,
      +   RNORML, MODE, WS, IP)
+
+	return
+	end
+	
+
+
+	subroutine FindNext(A,P,x,M,N,Nmax,IP,WS)
+	IMPLICIT NONE
+	integer N,NN,i,M,Nmax
+	real*8 A(M,N),x(M),W(M+Nmax+1,Nmax+1),y(M),P(M,N),ymin
+
+	integer ME,MA,MG,MODE,MDW
+	real*8 PRGOPT(10),RNORME,RNORML
+	integer IP(*)
+	real*8 WS(*)
+
+	ymin=0d0
+
+	ME=1
+	MA=M
+	MG=Nmax
+	MDW=M+Nmax+1
+
+	PRGOPT(1)=1!4
+	PRGOPT(2)=1
+	PRGOPT(3)=1
+	PRGOPT(4)=7
+	PRGOPT(5)=10
+	PRGOPT(6)=1
+	PRGOPT(7)=1
+
+	W(1,1:Nmax+1)=1d0
+	do i=1,M
+		W(1+i,1:Nmax)=A(i,N-Nmax+1:N)!/P(i,N)
+		W(1+i,Nmax+1)=0d0
+	enddo
+
+	W(M+2:M+1+Nmax,1:Nmax+1)=0d0
+	do i=1,Nmax
+		W(M+1+i,i)=1d0
+	enddo
+	W(M+2:M+1+Nmax,Nmax+1)=ymin
+
+	call dlsei(W, MDW, ME, MA, MG, Nmax, PRGOPT, y, RNORME,
+     +   RNORML, MODE, WS, IP)
+
+	do i=1,Nmax
+		if(y(i).lt.ymin) y(i)=ymin
+	enddo
+	y=y/sum(y(1:Nmax))
+c	print*,y(1:Nmax)
+	x=0d0
+	do i=1,Nmax
+		x(1:M)=x(1:M)+y(i)*P(1:M,N-Nmax+i)
+	enddo
 
 	return
 	end

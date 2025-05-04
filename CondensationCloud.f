@@ -2044,7 +2044,7 @@ C===============================================================================
 			rmono(i)=rr
 		endif
 		if(.not.Cloud(ii)%usefsed) then
-			rpart(i)=rr
+			rpart(i)=sqrt(rr*rpart(i))
 		else
 			rmono(i)=rpart(i)
 		endif

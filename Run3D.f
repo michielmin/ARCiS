@@ -1275,7 +1275,7 @@ c Note we use the symmetry of the North and South here!
 	if(retrieval.or.dopostequalweights) call SetOutputMode(.true.)
 
 	call cpu_time(stoptime)
-	call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
+	if(.not.retrieval) call output("Model runtime:       " // trim(dbl2string((stoptime-starttime),'(f10.2)')) // " s")
 	
 	return
 	end
