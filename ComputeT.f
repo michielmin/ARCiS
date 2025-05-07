@@ -699,29 +699,33 @@ c===============================================================================
 		print*,"Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f6.2)') // "%"
 		if(converged.and.maxErr.gt.epsiter) print*,"      90% of values below: " // dbl2string(error(j)*100d0,'(f6.2)') // "%"
 	endif
-	T0(1:nr)=Tinp(1:nr)
-	T1(1:nr)=T(1:nr)
 
-	deltaT(1:nr,nTiter)=T(1:nr)-Tinp(1:nr)
-	prevT(1:nr,nTiter)=T(1:nr)
+	deltaT(1:nr,nTiter)=T(1:nr)**4-Tinp(1:nr)**4
+	prevT(1:nr,nTiter)=T(1:nr)**4
 	
-	if(nTiter.gt.2) then
-		j=min(min(nTiter-1,nr-2),40)
+	if(nTiter.ge.2.and.nTiter.lt.10) then
+		if(nTiter.eq.2) then
+			j=2
+		else
+			j=min(min(nTiter-1,nr-2),6)
+		endif
 		call FindNext(deltaT,prevT,T,nr,nTiter,j,IP,WS)
+		T=T**0.25
 		do ir=1,nr
-			if(nTiter.gt.10) T(ir)=(T(ir)+Tinp(ir))/2d0
 			if(T(ir).gt.Tinp(ir)*(1d0+maxErr)**1.5) T(ir)=Tinp(ir)*(1d0+maxErr)**1.5
 			if(T(ir).lt.Tinp(ir)*(1d0-maxErr)**1.5) T(ir)=Tinp(ir)*(1d0-maxErr)**1.5
 		enddo
 	else
+		T0(1:nr)=Tinp(1:nr)
+		T1(1:nr)=T(1:nr)
 		do ir=1,nr
 			T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
 		enddo
-		if(maxErr.gt.maxerr_prev) then
-			f=min(max(f*(maxerr_prev/maxErr),epsiter),0.4)
-		else
-			f=min(max(f*(maxerr_prev/maxErr)**0.15,epsiter),0.4)
-		endif
+	endif
+	if(maxErr.gt.maxerr_prev) then
+		f=min(max(f*(maxerr_prev/maxErr),epsiter),0.4)
+	else
+		f=min(max(f*(maxerr_prev/maxErr)**0.15,epsiter),0.4)
 	endif
 
 	maxerr_prev=maxErr
