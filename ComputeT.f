@@ -706,7 +706,7 @@ c===============================================================================
 	prevT(1:nr,nTiter)=T(1:nr)
 	
 	if(nTiter.ge.2) then
-		j=max(2,min(min(nTiter-1,nr-2),200))
+		j=max(2,min(min(nTiter-1,nr-2),20))
 		call FindNext(deltaT,prevT,T,nr,nTiter,j,IP,WS)
 		do ir=1,nr
 			if(T(ir).gt.Tinp(ir)*(1d0+maxErr)**1.5) T(ir)=Tinp(ir)*(1d0+maxErr)**1.5
@@ -1443,7 +1443,7 @@ c
 
 	W(1,1:Nmax+1)=1d0
 	do i=1,M
-		W(1+i,1:Nmax)=A(i,N-Nmax+1:N)!/P(i,N)
+		W(1+i,1:Nmax)=A(i,N-Nmax+1:N)/P(i,N)
 		W(1+i,Nmax+1)=0d0
 	enddo
 
