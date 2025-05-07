@@ -2457,7 +2457,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 	maxTprofile=1d6
 	
 	maxiter=6
-	miniter=5
+	miniter=3
 	epsiter=3d-2
 
 	maxchemtime=1d200

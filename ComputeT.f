@@ -693,11 +693,11 @@ c===============================================================================
 
 	if(.not.allocated(Tdist)) allocate(Tdist(nr,maxiter))
 	Tdist(1:nr,nTiter)=T(1:nr)
-	call output("Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%")
-	if(converged.and.maxErr.gt.epsiter) call output("      90% of values below: " // dbl2string(error(j)*100d0,'(f5.1)') // "%")
+	call output("Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f6.2)') // "%")
+	if(converged.and.maxErr.gt.epsiter) call output("      90% of values below: " // dbl2string(error(j)*100d0,'(f6.2)') // "%")
 	if(do3D.and..not.retrieval.and..not.dopostequalweights) then
-		print*,"Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f5.1)') // "%"
-		if(converged.and.maxErr.gt.epsiter) print*,"      90% of values below: " // dbl2string(error(j)*100d0,'(f5.1)') // "%"
+		print*,"Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f6.2)') // "%"
+		if(converged.and.maxErr.gt.epsiter) print*,"      90% of values below: " // dbl2string(error(j)*100d0,'(f6.2)') // "%"
 	endif
 	T0(1:nr)=Tinp(1:nr)
 	T1(1:nr)=T(1:nr)
@@ -705,9 +705,15 @@ c===============================================================================
 	deltaT(1:nr,nTiter)=T(1:nr)-Tinp(1:nr)
 	prevT(1:nr,nTiter)=T(1:nr)
 	
-	if(nTiter.gt.2) then
-		j=min(min(nTiter-1,nr-2),200)
+	if(nTiter.ge.2) then
+		j=max(2,min(min(nTiter-1,nr-2),200))
 		call FindNext(deltaT,prevT,T,nr,nTiter,j,IP,WS)
+		if(nTiter.gt.2) then
+			do ir=1,nr
+				if(T(ir).gt.Tinp(ir)*(1d0+maxErr)**1.5) T(ir)=Tinp(ir)*(1d0+maxErr)**1.5
+				if(T(ir).lt.Tinp(ir)*(1d0-maxErr)**1.5) T(ir)=Tinp(ir)*(1d0-maxErr)**1.5
+			enddo
+		endif
 	else
 		do ir=1,nr
 			T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
@@ -1422,7 +1428,7 @@ c
 	integer IP(*)
 	real*8 WS(*)
 
-	ymin=0d0
+	ymin=-1d0
 
 	ME=1
 	MA=M
