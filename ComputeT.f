@@ -705,10 +705,11 @@ c===============================================================================
 	deltaT(1:nr,nTiter)=T(1:nr)-Tinp(1:nr)
 	prevT(1:nr,nTiter)=T(1:nr)
 	
-	if(nTiter.ge.2) then
-		j=max(2,min(min(nTiter-1,nr-2),20))
+	if(nTiter.gt.2) then
+		j=min(min(nTiter-1,nr-2),40)
 		call FindNext(deltaT,prevT,T,nr,nTiter,j,IP,WS)
 		do ir=1,nr
+			if(nTiter.gt.10) T(ir)=(T(ir)+Tinp(ir))/2d0
 			if(T(ir).gt.Tinp(ir)*(1d0+maxErr)**1.5) T(ir)=Tinp(ir)*(1d0+maxErr)**1.5
 			if(T(ir).lt.Tinp(ir)*(1d0-maxErr)**1.5) T(ir)=Tinp(ir)*(1d0-maxErr)**1.5
 		enddo
@@ -1426,7 +1427,7 @@ c
 	integer IP(*)
 	real*8 WS(*)
 
-	ymin=-1d0
+	ymin=0d0
 
 	ME=1
 	MA=M
