@@ -708,12 +708,10 @@ c===============================================================================
 	if(nTiter.ge.2) then
 		j=max(2,min(min(nTiter-1,nr-2),200))
 		call FindNext(deltaT,prevT,T,nr,nTiter,j,IP,WS)
-		if(nTiter.gt.2) then
-			do ir=1,nr
-				if(T(ir).gt.Tinp(ir)*(1d0+maxErr)**1.5) T(ir)=Tinp(ir)*(1d0+maxErr)**1.5
-				if(T(ir).lt.Tinp(ir)*(1d0-maxErr)**1.5) T(ir)=Tinp(ir)*(1d0-maxErr)**1.5
-			enddo
-		endif
+		do ir=1,nr
+			if(T(ir).gt.Tinp(ir)*(1d0+maxErr)**1.5) T(ir)=Tinp(ir)*(1d0+maxErr)**1.5
+			if(T(ir).lt.Tinp(ir)*(1d0-maxErr)**1.5) T(ir)=Tinp(ir)*(1d0-maxErr)**1.5
+		enddo
 	else
 		do ir=1,nr
 			T(ir)=f*T1(ir)+(1d0-f)*T0(ir)
