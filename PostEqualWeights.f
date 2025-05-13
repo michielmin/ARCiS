@@ -116,7 +116,7 @@
 	endif
 	ipmin=0
 	ipmax=0
-	variablePgrid=WaterWorld
+	variablePgrid=(WaterWorld.or.setsurfpressure)
 	do i=1,n_ret
 		lowkey=RetPar(i)%keyword
 		do j=1,len_trim(lowkey)
