@@ -867,8 +867,8 @@ c Note we are here using the symmetry between North and South
 !$OMP END DO
 !$OMP CRITICAL
 	fluxp(1:nlam)=fluxp(1:nlam)+fluxp_omp(1:nlam)
-	deallocate(fluxp_omp)
 !$OMP END CRITICAL
+	deallocate(fluxp_omp)
 	deallocate(fact)
 	deallocate(ftot)
 	deallocate(SiR0)
@@ -900,14 +900,13 @@ c Note we are here using the symmetry between North and South
 		k=k+1
 		if(k.ge.4) conv=.true.
 		if(.not.conv) then
-c			print*,k,nptrace,nptot
 			if(phishift.gt.0.4) then
 				phishift=0.25d0
 			else
 				phishift=0.5d0
-				nptrace=nptrace*1.25+1
-				if(2*(nptrace/2).eq.nptrace) nptrace=nptrace+1
 			endif
+			nptrace=nptrace*1.25+1
+			if(2*(nptrace/2).eq.nptrace) nptrace=nptrace+1
 			goto 70
 		else
 c			print*,k,nptrace,nptot
