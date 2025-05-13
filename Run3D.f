@@ -872,6 +872,7 @@ c Note we are here using the symmetry between North and South
 	deallocate(fact)
 	deallocate(ftot)
 	deallocate(SiR0)
+	deallocate(lamthick)
 !$OMP FLUSH
 !$OMP END PARALLEL
 

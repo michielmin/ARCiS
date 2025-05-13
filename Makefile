@@ -65,7 +65,7 @@ else
 endif
 
 ifeq ($(prof),true)
-  FLAG_PROF      = -g
+  FLAG_PROF      = -O2 -g
 else
   FLAG_PROF      = 
 endif
