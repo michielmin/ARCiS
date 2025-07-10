@@ -215,7 +215,7 @@ c===============================================================================
 	logical planetform,massprior,retrievestar,simAb_converge,log_emis,randomstart,logTprofile,taurexprofile
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
-	real*8 molfracs_atoms_outgas(41),MMW0
+	real*8 molfracs_atoms_outgas(41),MMW0,fH2O	! fH2O is the total mass fraction in Water compared to the mass of the planet
 	logical secondary_atmosphere,constant_g,forceEbalance,fixMMW,WaterWorld,useomp
 	logical,allocatable :: RTgridpoint(:),computelam(:)
 	character*20 aim3D
@@ -258,7 +258,7 @@ c for exchange when computing secondary atmosphere
 	real*8 global_like,global_chi2
 
 	integer nmol_data
-	parameter(nmol_data=121)
+	parameter(nmol_data=126)
 	real*8 Mmol(nmol_data)
 	character*10 molname(nmol_data)
 	parameter(molname = (/'H2O   ','CO2   ','O3    ','N2O   ','CO    ','CH4   ',
@@ -276,8 +276,8 @@ c for exchange when computing secondary atmosphere
      &  'OH+   ','P2H2_c','P2H2_t','PN    ','PO    ','PS    ','ScH   ','SH    ',
      &  'SiH   ','SiH4  ','TiH   ','H2Oem ','Na+   ','K+    ','H-    ','CH2   ',
      &  'H3O+  ','SiO2  ','S2    ','SO    ','15NH3 ','SiH2  ','NaH   ','Mg    ',
-     &  'Fe    ','Al    ','H2SO4 '/))
-	parameter(Mmol = (/     17.8851,  43.6918,  47.6511,  43.6947,  27.8081,  15.9272,  
+     &  'Fe    ','Al    ','H2SO4 ','Ca    ','Ti    ','Si    ','S     ','P     '/))
+	parameter(Mmol = (/     17.8851,  43.6918,  47.6511,  43.6947,  27.8081,  15.9272,
      &	31.7674,  29.7889,  63.5840,  45.6607,  16.9072,  62.5442,  16.8841,  19.8619,  
      &	36.1973,  80.3271,   1.0070,  51.0760,  59.6379,  29.8088,  52.0765,  27.8112,  
      &	26.8304,  50.1116,  33.7598,  25.8499,  29.8518,  33.7516,  65.5261, 144.9081,  
@@ -292,7 +292,7 @@ c for exchange when computing secondary atmosphere
      &  17.0070,  63.9600,  63.9600,  44.9800,  46.9700,  31.9800,  45.9600,  33.0729,
      &  29.0934,  32.1173,  48.8700,  17.8851,  22.9900,  39.0980,   1.0079,  14.0266,
      &  19.0232,  60.0800,  64.1300,  48.0644,  16.9072,  30.1014,  23.9977,  24.3050,
-     &  55.8450,  26.9815,  98.0790/))
+     &  55.8450,  26.9815,  98.0790,  40.0784,  47.8671,  27.9769,  32.0660,  30.9738/))
 	integer Catoms(nmol_data),Oatoms(nmol_data),Natoms(nmol_data),Hatoms(nmol_data),tot_atoms(nmol_data)
 	parameter(Natoms = (/0,0,0,1,0,0,
      &				 0,1,0,1,1,1,0,0,
@@ -309,7 +309,7 @@ c for exchange when computing secondary atmosphere
      &				 0,0,0,1,0,0,0,0,
      &				 0,0,0,0,0,0,0,0,
      &				 0,0,0,0,1,0,0,0,
-     &				 0,0,0  /))
+     &				 0,0,0,0,0,0,0,0  /))
 	parameter(Catoms = (/0,1,0,0,1,1,
      &				 0,0,0,0,0,0,0,0,
      &				 0,0,0,0,1,1,0,0,
@@ -325,7 +325,7 @@ c for exchange when computing secondary atmosphere
      &				 0,0,0,0,0,0,0,0,
      &				 0,0,0,0,0,0,0,1,
      &				 0,0,0,0,0,0,0,0,
-     &				 0,0,0 /))
+     &				 0,0,0,0,0,0,0,0 /))
 	parameter(Oatoms = (/1,2,3,1,1,0,
      &				 2,1,2,2,0,3,1,0,
      &				 0,0,0,1,1,1,1,0,
@@ -341,7 +341,7 @@ c for exchange when computing secondary atmosphere
      &				 1,0,0,0,1,0,0,0,
      &				 0,0,0,1,0,0,0,0,
      &				 1,2,0,1,0,0,0,0,
-     &				 0,0,4  /))
+     &				 0,0,4,0,0,0,0,0  /))
 	parameter(Hatoms = (/2,0,0,0,0,4,
      &				 0,0,0,0,3,1,1,1,
      &				 1,1,1,0,0,2,1,0,
@@ -357,7 +357,7 @@ c for exchange when computing secondary atmosphere
      &				 1,2,2,0,0,0,1,1,
      &				 1,4,1,2,0,0,1,2,
      &				 3,0,0,0,3,2,1,0,
-     &				 0,0,2 /))
+     &				 0,0,2,0,0,0,0,0 /))
 	parameter(tot_atoms = (/3,3,3,3,2,5,
      &				 2,2,3,3,4,5,2,2,
      &				 2,2,1,2,3,4,3,2,
@@ -373,7 +373,7 @@ c for exchange when computing secondary atmosphere
      &				 2,4,4,2,2,2,2,2,
      &				 2,5,2,3,1,1,1,3,
      &				 4,3,2,2,4,3,2,1,
-     &				 1,1,7 /))
+     &				 1,1,7,1,1,1,1,1 /))
 	real*8,allocatable :: a_therm(:),a_press(:)
 	integer n_voigt,n_instr
 	logical opacitymode,Mp_from_logg,trend_compute,backgroundgas(nmol_data),dobackgroundgas
@@ -499,7 +499,7 @@ c for exchange when computing secondary atmosphere
 	IMPLICIT NONE
 	integer nr_cloud
 	real*8,allocatable :: CloudP(:),CloudT(:),CloudR(:),Clouddens(:),CSnmol(:),SatRat(:)
-	real*8,allocatable :: xv(:,:),xn(:),xc(:,:),xm(:),rpart(:),xa(:)
+	real*8,allocatable :: xv(:,:),xn(:),xc(:,:),xm(:),rpart(:),xa(:),xs(:)
 	real*8,allocatable :: ATP(:),BTP(:),rhodust(:),atoms_cloud(:,:),maxT(:),mu(:),xv_bot(:)
 	character*25,allocatable :: CSname(:)
 	integer nCS,nnr

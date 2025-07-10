@@ -1428,6 +1428,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) secondary_atmosphere
 		case("waterworld")
 			read(key%value,*) WaterWorld
+		case("fh2o")
+			read(key%value,*) fH2O
 		case("simplerainout")
 			read(key%value,*) dosimplerainout
 		case("mixp")
@@ -2200,6 +2202,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	secondary_atmosphere=.false.
 	WaterWorld=.false.
+	fH2O=2d-4
 	Poutgas=0d0
 	Toutgas=0d0
 
@@ -2736,7 +2739,12 @@ c number of cloud/nocloud combinations
 		if(key%orkey2.eq.molname(i)) then
 			if(i.le.nmol) then
 				read(key%value,*) includemol_raytrace(i)
-				print*,'hiding:',molname(i)
+				if(includemol_raytrace(i)) then
+					print*,'not hiding:',molname(i)
+				else
+					print*,'hiding:',molname(i)
+				endif
+c				includemol(i)=.true.
 			endif
 			return
 		endif

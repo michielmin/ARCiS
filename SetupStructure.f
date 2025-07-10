@@ -1438,7 +1438,7 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	real*8 c0,c1,c2,c3,c4,Pm,fH2O,PH2Omax,mutot,mixrat_tot,Pold(nr+1),Told(nr),fact
+	real*8 c0,c1,c2,c3,c4,Pm,PH2Omax,mutot,mixrat_tot,Pold(nr+1),Told(nr),fact
 	integer i
 	logical liquid
 
@@ -1448,11 +1448,11 @@ c		ComputeKzz=1d0/(1d0/Kmax+1d0/(Kmin+Kzz_1bar/x**Kp))
 	c3=2.42470d-09
 	c4=1.80900d-06
 
-	fH2O=2d-4
 	PH2Omax=fH2O*Ggrav*Mplanet**2/(4d0*pi*Rplanet**4*1d6)
 
 	if(Tsurface.gt.647.096) then
 		call output("Warning! Waterworld ocean reaches critical temperature!")
+		print*,"Warning! Waterworld ocean reaches critical temperature!"
 		Pmax=PH2Omax
 		liquid=.true.
 	else
@@ -1491,7 +1491,10 @@ c		fact=fact**2
 	Pplanet=Pmax
 
 	call output("Surface pressure: " // dbl2string(Pmax,'(es8.2)'))
-	if(.not.liquid) call output("Ice world!")
+	if(.not.liquid) then
+		call output("Ice world!")
+		print*,"Ice world!"
+	endif
 
 	Pold=P
 	Told=T

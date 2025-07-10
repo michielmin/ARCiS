@@ -309,7 +309,7 @@
 		if(.not.RTgridpoint(i)) then
 			j=j+1
 			l(j)=lam(i)
-			star(j)=Fstar(i)
+			star(j)=Fstar(i)*1d23/distance**2
 		endif
 	enddo
 

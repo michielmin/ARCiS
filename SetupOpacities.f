@@ -113,11 +113,13 @@ c	n_nu_line=ng*min(j,4)
 
 c===============
 c UV cross sections of CO2 from Venot et al.
-		call CO2_UV_cross(lam,cont_tot,nlam,min(T(ir),800d0))
-		cont_tot=cont_tot*mixrat_r(ir,2)
-		do i=1,nlam
-			if(lam(i).gt.0.3d-4) cont_tot(i)=0d0
-		enddo
+		if(includemol(2)) then
+			call CO2_UV_cross(lam,cont_tot,nlam,min(T(ir),800d0))
+			cont_tot=cont_tot*mixrat_r(ir,2)
+			do i=1,nlam
+				if(lam(i).gt.0.3d-4) cont_tot(i)=0d0
+			enddo
+		endif
 c===============
 
 		mixrat_tmp(1:nmol)=mixrat_r(ir,1:nmol)

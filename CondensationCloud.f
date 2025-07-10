@@ -15,7 +15,7 @@
 	integer info,i,j,iter,NN,NRHS,niter,ii,k,kl,ku,jCS
 	real*8 cs,eps,frac_nuc,m_nuc,m_phothaze,tcoaginv,Dp,vmol,f,mm,err,maxerr,dztot
 	real*8 Pv,molfracs_atoms0(N_atoms),abun_dust(N_atoms),NKn,Kzz_r(nr),vBM,scale
-	integer,allocatable :: ixv(:,:),ixc(:,:),iVL(:,:),ixn(:),ixa(:),icryst(:),iamorph(:),ifit(:),nTfit(:)
+	integer,allocatable :: ixv(:,:),ixc(:,:),iVL(:,:),ixn(:),ixa(:),ixs(:),icryst(:),iamorph(:),ifit(:),nTfit(:)
 	real*8 sigmastar,Sigmadot,Pstar,sigmamol,COabun,CO2abun,CH4abun,lmfp,fstick,kappa_cloud,fmin,fmax,rho_nuc,Gibbs
 	logical ini,Tconverged
 	character*500 cloudspecies(max(nclouds,1)),form
@@ -26,13 +26,12 @@
 	character*10,allocatable :: v_names(:),v_names_out(:),Jn_names_out(:)
 	logical,allocatable :: v_include(:),c_include(:),do_nuc(:),do_con(:),layercon(:)
 	integer INCFD,IERR,iCS_phot
-	logical SKIP,liq,include_phothaze
+	logical SKIP,liq,include_phothaze,use_seeds
 	real*8 time,kp,Otot(nr),Ctot(nr),Ntot(nr),compGibbs,ffrag,mmono,ffill,nmono,Df,rgyr,xv_use,T_CO,P_CO,maxVchange
 	integer itime
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
 	real*8,allocatable :: xv_out(:),Jn_xv(:,:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:),Jn_out(:)
-	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),rmono(:),ac(:,:,:),Tfit(:,:)
-	real*8,allocatable,save :: xv_prev(:,:),xc_prev(:,:),xn_prev(:),xa_prev(:)
+	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),rmono(:),ac(:,:,:),Tfit(:,:),tinv_seed(:)
 	integer jSiO,jTiO,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi,jH2SO4,jCa,jCH4
 
 	logical dochemR(nr)
@@ -231,6 +230,9 @@ c fractal dimension created by coagulating collisions
 	endif
 	if(Cloud(ii)%computeJn) niter=niter*2
 	
+	use_seeds=.false.
+	if(Cloud(ii)%xm_bot.gt.0d0) use_seeds=.true.
+
 	if(.not.allocated(CloudP)) then
 		allocate(CloudP(nnr))
 		allocate(CloudT(nnr))
@@ -259,11 +261,6 @@ c fractal dimension created by coagulating collisions
 	allocate(do_con(nCS))
 	allocate(bc(nCS,0:4),ifit(nCS))
 	allocate(ac(nCS,10,7),Tfit(nCS,11),nTfit(nCS))
-	if(.not.allocated(xn_prev)) then
-		allocate(xv_prev(nVS,nnr))
-		allocate(xc_prev(nCS,nnr))
-		allocate(xn_prev(nnr),xa_prev(nnr))
-	endif
 
 	bc=0d0
 	ifit=0
@@ -1006,6 +1003,8 @@ c	print*,xv_bot(1:7)
 	allocate(ixc(nCS,nnr))
 	allocate(ixn(nnr))
 	allocate(ixa(nnr))
+	allocate(ixs(nnr))
+	allocate(tinv_seed(nnr))
 	allocate(layercon(nnr))
 
 	rho_av=sum(rhodust)/real(nCS)
@@ -1091,17 +1090,6 @@ c	print*,xv_bot(1:7)
 	Jn_xv=0d0
 	Nc_nuc=0d0
 
-	if(computeT) then
-		if(nTiter.le.1) then
-			xc_prev=0d0
-			xn_prev=0d0
-			xa_prev=0d0
-			do i=1,nnr
-				xv_prev(1:nVS,i)=xv_bot(1:nVS)
-			enddo
-		endif
-	endif
-	
 	if(include_phothaze) then
 		allocate(CloudtauUV(nnr),CloudkappaUV(nnr))
 		do ir=1,nr
@@ -1378,6 +1366,10 @@ c	Gibbs energy as derived from Eq from GGChem paper does not work at high pressu
 			ixn(i)=j
 			j=j+1
 			ixa(i)=j
+			if(use_seeds) then
+				j=j+1
+				ixs(i)=j
+			endif
 		endif
 		do iCS=1,nCS
 			if(c_include(iCS)) then
@@ -1550,6 +1542,17 @@ c	The Kelvin effect for condensation onto a curved surface
 				Sat(i,iCS)=Sat(i,iCS)*tot
 			enddo
 		endif
+		tinv_seed(i)=0d0
+		do iCS=1,nCS
+			tot=exp(-2d0*sigma_nuc(iCS)*(muC(iCS)*mp/rhodust(iCS))/(Cloud(ii)%rnuc*kb*CloudT(i)))
+			if(.not.tot.lt.1d0) tot=1d0
+			xv_use=xv(iVL(i,iCS),i)*tot
+			tot1=Sat(i,iCS)*xv_use
+			if(c_include(iCS).and.tot1.gt.1d0) then
+				tinv_seed(i)=tinv_seed(i)+fstick*Clouddens(i)*(muC(iCS)/(muV(iVL(i,iCS))*v_cloud(iCS,iVL(i,iCS))))*
+     &						pi*Cloud(ii)%rnuc**2*vthv*(1d0-1d0/tot1)/m_nuc
+			endif
+		enddo
 	enddo
 
 	Nc_nuc=Nc_nuc*mp
@@ -1617,10 +1620,16 @@ C===============================================================================
 		else
 			ik=KL+KU+1+j-ixn(i)
 			AB(ik,ixn(i))=1d0
-			x(j)=Cloud(ii)%xm_bot
+			x(j)=0d0
 			j=j+1
 			ik=KL+KU+1+j-ixa(i)
 			AB(ik,ixa(i))=1d0
+			x(j)=0d0
+		endif
+		if(use_seeds) then
+			j=j+1
+			ik=KL+KU+1+j-ixs(i)
+			AB(ik,ixs(i))=1d0
 			x(j)=Cloud(ii)%xm_bot
 		endif
 	endif
@@ -1681,6 +1690,11 @@ c assume continuous flux at the bottom (dF/dz=Sc=0)
 			ik=KL+KU+1+j-ixn(i)
 			AB(ik,ixn(i))=AB(ik,ixn(i))+sqrt(Kd(i-1)*Clouddens(i-1)*Kd(i)*Clouddens(i))/dz/dztot
 	
+			if(use_seeds) then
+				ik=KL+KU+1+j-ixs(i)
+				AB(ik,ixs(i))=AB(ik,ixs(i))+Clouddens(i)*tinv_seed(i)
+			endif
+
 			x(j)=-Sn(i)/m_nuc
 			
 			do iCS=1,nCS
@@ -1729,6 +1743,11 @@ c coagulation
 	
 			ik=KL+KU+1+j-ixa(i)
 			AB(ik,ixa(i))=AB(ik,ixa(i))+sqrt(Kd(i-1)*Clouddens(i-1)*Kd(i)*Clouddens(i))/dz/dztot
+
+			if(use_seeds) then
+				ik=KL+KU+1+j-ixs(i)
+				AB(ik,ixs(i))=AB(ik,ixs(i))+Clouddens(i)*tinv_seed(i)
+			endif
 	
 			x(j)=-Sn(i)/m_nuc
 
@@ -1739,6 +1758,30 @@ c coagulation
 c					x(j)=x(j)-Jn_xv(i,iCS)*xv(iVL(i,iCS),i)
 				endif
 			enddo
+
+			if(use_seeds) then
+				j=j+1
+		
+				dztot=sqrt(CloudR(i+1)*CloudR(i))-sqrt(CloudR(i-1)*CloudR(i))
+				dz=(CloudR(i)-CloudR(i+1))
+				ik=KL+KU+1+j-ixs(i+1)
+				AB(ik,ixs(i+1))=AB(ik,ixs(i+1))-sqrt(Kd(i+1)*Clouddens(i+1)*Kd(i)*Clouddens(i))/dz/dztot
+		
+				ik=KL+KU+1+j-ixs(i)
+				AB(ik,ixs(i))=AB(ik,ixs(i))+sqrt(Kd(i+1)*Clouddens(i+1)*Kd(i)*Clouddens(i))/dz/dztot
+		
+				dz=(CloudR(i-1)-CloudR(i))
+				ik=KL+KU+1+j-ixs(i-1)
+				AB(ik,ixs(i-1))=AB(ik,ixs(i-1))-sqrt(Kd(i-1)*Clouddens(i-1)*Kd(i)*Clouddens(i))/dz/dztot
+		
+				ik=KL+KU+1+j-ixs(i)
+				AB(ik,ixs(i))=AB(ik,ixs(i))+sqrt(Kd(i-1)*Clouddens(i-1)*Kd(i)*Clouddens(i))/dz/dztot
+
+				ik=KL+KU+1+j-ixs(i)
+				AB(ik,ixs(i))=AB(ik,ixs(i))-Clouddens(i)*tinv_seed(i)
+
+				x(j)=0d0
+			endif
 		endif
 		do iCS=1,nCS
 			if(c_include(iCS)) then
@@ -2084,19 +2127,6 @@ c	print*,'Accuracy better than ',dbl2string(maxerr*100d0,'(f6.3)'),"% in ",iter,
 		xc(1:nCS,1:nnr)=xc(1:nCS,1:nnr)+xc_iter(i,1:nCS,1:nnr)/real(nconv)
 		xv(1:nVS,1:nnr)=xv(1:nVS,1:nnr)+xv_iter(i,1:nVS,1:nnr)/real(nconv)
 	enddo
-	if(computeT.and..false.) then
-		if(nTiter.gt.3) then
-			f=0.9/(1d0+3d0*exp(-real(nTiter-4)))-0.1
-			xn=xn*(1d0-f)+xn_prev*f
-			xa=xa*(1d0-f)+xa_prev*f
-			xc=xc*(1d0-f)+xc_prev*f
-			xv=xv*(1d0-f)+xv_prev*f
-		endif
-		xn_prev=xn
-		xa_prev=xa
-		xc_prev=xc
-		xv_prev=xv
-	endif
 	
 	do i=nnr,1,-1
 		if(xa(i).lt.xn(i)) xa(i)=xn(i)
