@@ -63,28 +63,10 @@ c	call cpu_time(starttime)
 			if(modelfail) return
 			call SetupOpacities()
 			if(modelfail) return
-C		if(nTiter.eq.1) then
-C			f=1d0
-C		else if(nTiter.lt.6) then
-C			f=0.75d0
-C		else
-C			f=0.25+0.5*exp(-(real(nTiter-6)/3d0)**2)
-C		endif
 			if(f.gt.1d0) f=1d0
 			call DoComputeT(Tconverged,f)
 			if(modelfail) return
 			if(Tconverged.and.nTiter.ge.miniter) exit
-c			call SetoutputMode(.true.)
-c			call output("Chemistry cpu time: " // trim(dbl2string(timechem,'(f10.4)')) // " s")
-c			call output("Chemistry walltime: " // trim(dbl2string(dble(itimechem)/dble(rate),'(f10.4)')) // " s")
-c			call output("Number of chemistry calls: " // trim(int2string(ctimechem,'(i5)')))
-c			call output("Cloud cpu time:    " // trim(dbl2string(timecloud,'(f10.4)')) // " s")
-c			call output("Cloud walltime:    " // trim(dbl2string(dble(itimecloud)/dble(rate),'(f10.4)')) // " s")
-c			call output("Number of cloud calls:     " // trim(int2string(ctimecloud,'(i5)')))
-c			call output("PTstruct cpu time: " // trim(dbl2string(timetemp,'(f10.4)')) // " s")
-c			call output("PTstruct walltime: " // trim(dbl2string(dble(itimetemp)/dble(rate),'(f10.4)')) // " s")
-c			call output("Number of PTstruct calls:  " // trim(int2string(ctimetemp,'(i5)')))
-c			call SetoutputMode(.false.)
 		enddo
 		nvel=nvel_temp
 		if(.not.init3D) then

@@ -361,7 +361,7 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 
 	if(compute_mixrat) then
 		do i=1,nclouds
-			call SetupCloud(i)
+			if(nTiter.le.Cloud(i)%fixcloud.or.Cloud(i)%fixcloud.le.0) call SetupCloud(i)
 		enddo
 		docloud=.false.
 		do icc=2,ncc

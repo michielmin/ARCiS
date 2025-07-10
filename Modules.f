@@ -436,7 +436,10 @@ c for exchange when computing secondary atmosphere
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:),g(:,:)		! dimension nsize,nlam
 		real*8,allocatable :: F11(:,:,:) ! dimension nsize,nlam,nangle
 		character*500 species,hazetype,file,composition
-		integer nmat,nlam
+		integer nmat,nlam,fixcloud
+c			the parameter fixcloud fixes the cloud after 'fixcloud' PT iterations. 
+c			Setting it to 1 means the cloud is not iterated with the PT structure.
+c			Setting it to 0 means the cloud is always recomputed every iteration.
 		character*500,allocatable :: lnkfile(:,:),material(:),condensate(:)
 		real*8 Kzz,Sigmadot,xm_bot,Sigmadot_phot
 		real*8 kappa,albedo,kpow,klam,g0

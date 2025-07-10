@@ -2333,6 +2333,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 		Cloud(i)%fsed_beta=1d20
 		Cloud(i)%xv_bot=1d-5
 		Cloud(i)%x_slider=0d0
+		Cloud(i)%fixcloud=0
 	enddo
 	nspike=0
 	useDLMie=.false.
@@ -3198,6 +3199,8 @@ c				includemol(i)=.true.
 			Cloud(j)%type=trim(key%value)
 		case("opacitytype")
 			Cloud(j)%opacitytype=trim(key%value)
+		case("fixcloud")
+			read(key%value,*) Cloud(j)%fixcloud
 		case("file")
 			Cloud(j)%file=trim(key%value)
 			call checkfile(Cloud(j)%file)
