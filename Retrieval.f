@@ -364,8 +364,7 @@ c	enddo
 	allocate(dvarq(n_ret))
 
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
-		call doMCMCF90(var0,n_ret)
-c		call MCMC(MCMCfunc,var0,n_ret,npop,npop*100,ny)
+		call MCMC(outputdir,MCMCfunc,var0,ny,n_ret,npop,npost,epsinit_MCMC)
 		writefiles=.true.
 		return
 	endif
@@ -2438,64 +2437,6 @@ C  computed by DGETRF.
 	end
 	
 
-
-	subroutine MCMC(func,var0,nvar,nburn,nstep,ny)
-	IMPLICIT NONE
-	integer nvar,nburn,nstep,j,i,idum,iv,ny,ii,idstep
-	real*8 var0(nvar),var(nvar,nstep),func,stepsize,varp(nvar),random
-	real*8 l1,l2,f,r,dx(nvar),ll(nstep),accepted(nstep+nburn),accr,fs
-	real*8 dstep(nvar),dav(nvar),gasdev
-	external func
-
-	idum=-42
-	stepsize=0.1d0
-	dav=0.1d0
-	l1=1d-20
-	varp=var0
-	j=0
-	fs=0.9
-	idstep=0
-	do i=1,nburn+nstep
-		l2=func(varp,ny)
-		f=exp(l2-l1)
-		r=random(idum)
-		if(f.gt.r.or.i.eq.1) then
-			accepted(i)=1.0
-c			if(i.gt.nburn) then
-				j=j+1
-				var(1:nvar,j)=varp(1:nvar)
-				ll(j)=l2
-c			endif
-			var0(1:nvar)=varp(1:nvar)
-			l1=l2
-			if(i.gt.nburn) then
-				do iv=1,nvar
-					dav(iv)=(dav(iv)*real(idstep)+min(0.25,dstep(iv)))/real(idstep+1)
-				enddo
-				idstep=idstep+1
-			endif
-		else
-			accepted(i)=0.0
-		endif
-		if(i.eq.nburn) j=0
-		do iv=1,nvar
-			dstep(iv)=gasdev(idum)*dav(iv)*stepsize
-			varp(iv)=var0(iv)+dstep(iv)
-			if(varp(iv).gt.1d0) varp(iv)=2d0-varp(iv)
-			if(varp(iv).lt.0d0) varp(iv)=-varp(iv)
-		enddo
-	enddo
-
-	print*,j
-	open(unit=20,file='output.dat',RECL=6000)
-	do i=1,j
-		write(20,*) ll(i),var(1:nvar,i)
-	enddo
-	close(unit=20)
-	
-	return
-	end
-
 	subroutine randomdirectionN(dx,N,idum)
 	IMPLICIT NONE
 	integer N,i,idum
@@ -2514,15 +2455,21 @@ c			endif
 	end
 	
 
-	real*8 function MCMCfunc(var,ny)
+	real*8 function MCMCfunc(var,ny,var_mapped)
 	use GlobalSetup
 	use Constants
 	use RetrievalMod
 	IMPLICIT NONE
 	integer ny,i
-	real*8 ymod(ny),var(n_ret),lnew,scale
+	real*8 ymod(ny),var(n_ret),lnew,scale,var_mapped(n_ret)
 
 	call mrqcomputeY(var,ymod,n_ret,ny,lnew,scale)
+
+	do i=1,n_ret
+		var_mapped(i)=RetPar(i)%value
+		if(RetPar(i)%logscale) var_mapped(i)=log10(var_mapped(i))
+	enddo
+
 	MCMCfunc=lnew
 	
 	return

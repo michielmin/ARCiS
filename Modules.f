@@ -492,7 +492,8 @@ c			Setting it to 0 means the cloud is always recomputed every iteration.
 	end type ObservedSpec
 	type(ObservedSpec),allocatable :: ObsSpec(:)
 
-	integer npop,ngen,nobs
+	integer npop,ngen,nobs,npost
+	real*8 epsinit_MCMC
 	logical gene_cross
 	
 	end module GlobalSetup

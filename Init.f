@@ -1476,10 +1476,14 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			call ReadInstrument(key)
 		case("chimax","chi2max")
 			read(key%value,*) chimax
-		case("npop")
+		case("npop","nburn")
 			read(key%value,*) npop
 		case("ngen")
 			read(key%value,*) ngen
+		case("npost")
+			read(key%value,*) npost
+		case("epsinit","epsinit_mcmc")
+			read(key%value,*) epsinit_MCMC
 		case("gene_cross")
 			read(key%value,*) gene_cross
 		case("resume_nest")
@@ -2369,6 +2373,8 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 	par3Dsteepness=1d-4
 	npop=30
 	ngen=0
+	npost=1000
+	epsinit_MCMC=0.1d0
 	gene_cross=.false.
 	randomstart=.false.
 	resume_multinest=.false.
