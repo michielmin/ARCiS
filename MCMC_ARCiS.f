@@ -11,7 +11,7 @@ c      parameter (NBURN=300)
 
       double precision x(NDIM), xnew(NDIM), mean(NDIM), z(NDIM)
       double precision cov(NDIM,NDIM), chol(NDIM,NDIM), x0(NDIM)
-      double precision logp, logp_new, alpha, u, likelihood
+      double precision logp, logp_new, alpha, u, likelihood, lambda
       double precision samples(NDIM, N_UNIQUE+NBURN), x_mapped(NDIM)
       double precision samples_mapped(NDIM, N_UNIQUE+NBURN), cov0(NDIM,NDIM)
       integer weights(N_UNIQUE+NBURN)
@@ -28,6 +28,7 @@ c      parameter (NBURN=300)
       step = 1
       nacc = 1
       weights = 0
+      lambda = 1.0
 
       do j = 1, NDIM
          x(j) = x0(j)
@@ -57,10 +58,12 @@ c      parameter (NBURN=300)
 
          if (nacc > 2 .and. nacc <= NBURN) then
             call compute_mean(samples, weights, mean, NDIM, nacc)
-			cov0=cov
             call compute_cov(samples, weights, mean, cov, NDIM, nacc, EPS)
-			cov=(cov0+cov/2d0)/2d0
+			lambda=min(10d0,lambda*((real(nacc)/real(step))/0.25d0))
          endif
+		if(nacc < 2 .and. step > 10) then
+			lambda=lambda/2d0
+		endif
 
          call cholesky(cov, chol, NDIM)
          call random_normal_vec(z, NDIM)
@@ -68,7 +71,7 @@ c      parameter (NBURN=300)
          do j = 1, NDIM
             xnew(j) = x(j)
             do k = 1, NDIM
-               xnew(j) = xnew(j) + sqrt(SD) * chol(j,k) * z(k)
+               xnew(j) = xnew(j) + lambda * sqrt(SD) * chol(j,k) * z(k)
             enddo
 			if(nacc.gt.NBURN) then
 				if(xnew(j).gt.1d0.or.xnew(j).lt.0d0) then
@@ -117,6 +120,7 @@ c      parameter (NBURN=300)
 			else
 				write(*,'(a,f6.1,a)') "time remaining: " ,remaining, " seconds"
 			endif
+			write(*,'(a,f6.1,a)') "acceptance: ",100d0*real(nacc)/real(step),"%"
          else
             weights(nacc) = weights(nacc) + 1
          endif
