@@ -7,7 +7,7 @@ c      parameter (N_UNIQUE=10000)
 c      parameter (NBURN=300)
 
       double precision SD, EPS, epsinit
-      parameter (EPS=1.0D-4)
+      parameter (EPS=1.0D-6)
 
       double precision x(NDIM), xnew(NDIM), mean(NDIM), z(NDIM)
       double precision cov(NDIM,NDIM), chol(NDIM,NDIM), x0(NDIM)
