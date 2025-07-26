@@ -1,4 +1,4 @@
-      subroutine MCMC(path,likelihood,x0,ny,NDIM,NBURN,N_UNIQUE,epsinit)
+      subroutine MCMC(likelihood,x0,ny,NDIM,NBURN,N_UNIQUE,epsinit)
       implicit none
 
       integer NDIM, N_UNIQUE, NBURN, ny
@@ -17,7 +17,6 @@ c      parameter (NBURN=300)
       integer weights(N_UNIQUE+NBURN)
       integer i, j, k, accept, step, nacc
       external likelihood
-      character*1000 path
 	integer*4 counts, count_rate, count_max
 	real*8 starttime,stoptime,remaining
 	
@@ -49,7 +48,7 @@ c      parameter (NBURN=300)
          samples_mapped(j,1) = x_mapped(j)
       enddo
       weights(1) = 1
-      open(10, file=trim(path) // '/posteriorMCMC.dat', status='unknown')
+	call write_pew_output(samples_mapped(1:NDIM,1:NBURN),weights(1:NBURN),NDIM,1,0)
 	call SYSTEM_CLOCK(counts, count_rate, count_max)
 	starttime = DBLE(counts)/DBLE(count_rate)
 
@@ -89,8 +88,7 @@ c      parameter (NBURN=300)
 
          if (u < alpha) then
 			if(nacc.ge.NBURN) then
-		         write(10,*) (samples_mapped(j,nacc), j=1,NDIM), weights(nacc)
-				call flush(10)
+		      call write_pew_output(samples_mapped(1:NDIM,nacc),weights(nacc),NDIM,1,1)
 		    endif
             do j = 1, NDIM
                x(j) = xnew(j)
@@ -135,13 +133,52 @@ c      parameter (NBURN=300)
       print *, 'Final unique samples:', N_UNIQUE
       print *, 'Total steps taken:  ', step
       print *, 'Acceptance rate:    ', dble(accept)/dble(step)
+      call write_pew_output(samples_mapped(1:NDIM,NBURN+1:N_UNIQUE+NBURN),weights(NBURN+1:N_UNIQUE+NBURN),
+     &		NDIM,N_UNIQUE,2)
 
-      open(10, file=trim(path) // '/posteriorMCMC.dat', status='unknown')
-      do i = NBURN+1, N_UNIQUE+NBURN
-         write(10,*) (samples_mapped(j,i), j=1,NDIM), weights(i)
-      enddo
-      close(10)
+c      call write_pew_output(samples_mapped(1:NDIM,NBURN+1:N_UNIQUE+NBURN),weights(NBURN+1:N_UNIQUE+NBURN),
+c     &		NDIM,N_UNIQUE,0)
+c      call write_pew_output(samples_mapped(1:NDIM,NBURN+1:N_UNIQUE+NBURN),weights(NBURN+1:N_UNIQUE+NBURN),
+c     &		NDIM,N_UNIQUE,1)
+c      call write_pew_output(samples_mapped(1:NDIM,NBURN+1:N_UNIQUE+NBURN),weights(NBURN+1:N_UNIQUE+NBURN),
+c     &		NDIM,N_UNIQUE,2)
+      
       end
+
+	subroutine write_pew_output(samples,weights,ndim,nsamples,init)
+	use GlobalSetup
+	IMPLICIT NONE
+	integer init,i,j,ndim,nsamples
+	integer weights(nsamples)
+	real*8 samples(ndim,nsamples)
+	character*2000 line
+	
+	if(init.eq.0) then
+		open(unit=83,file=trim(outputdir) // "posteriorMCMC.dat",FORM="FORMATTED",ACCESS="STREAM")
+		line="# "
+		do i=1,ndim
+			if(i.eq.1) then
+				write(line(3:12),'(a10)') RetPar(i)%keyword
+			else
+				write(line(i*12-11:i*12+1),'(" ",a11)') RetPar(i)%keyword
+			endif
+		enddo
+		write(83,'(a)') trim(line)
+		flush(83)
+	else if(init.eq.1) then
+		do i=1,nsamples
+			do j=1,weights(i)
+				write(line,'("(",i0.4,"es12.4)")') ndim
+				write(83,line) samples(1:ndim,i)
+			enddo
+		enddo
+		flush(83)
+	else
+		close(unit=83)
+	endif
+	return
+	end
+
             
       subroutine compute_mean(samples, weights, mean, ndim, nsamp)
       implicit none

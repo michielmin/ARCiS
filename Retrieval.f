@@ -364,7 +364,7 @@ c	enddo
 	allocate(dvarq(n_ret))
 
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
-		call MCMC(outputdir,MCMCfunc,var0,ny,n_ret,npop,npost,epsinit_MCMC)
+		call MCMC(MCMCfunc,var0,ny,n_ret,npop,npost,epsinit_MCMC)
 		writefiles=.true.
 		return
 	endif
