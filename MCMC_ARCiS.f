@@ -7,7 +7,7 @@ c      parameter (N_UNIQUE=10000)
 c      parameter (NBURN=300)
 
       double precision SD, EPS, epsinit
-      parameter (EPS=1.0D-10)
+      parameter (EPS=1.0D-4)
 
       double precision x(NDIM), xnew(NDIM), mean(NDIM), z(NDIM)
       double precision cov(NDIM,NDIM), chol(NDIM,NDIM), x0(NDIM)
@@ -56,14 +56,15 @@ c      parameter (NBURN=300)
 10    continue
          step = step + 1
 
-         if (nacc > 2 .and. nacc <= NBURN) then
+         if (nacc > 4 .and. nacc <= NBURN) then
             call compute_mean(samples, weights, mean, NDIM, nacc)
             call compute_cov(samples, weights, mean, cov, NDIM, nacc, EPS)
-			lambda=min(10d0,lambda*((real(nacc)/real(step))/0.25d0))
+		else if(nacc <= 4) then
+			cov=cov/2d0
          endif
-		if(nacc < 2 .and. step > 10) then
-			lambda=lambda/2d0
-		endif
+         if (nacc > 4) then
+			lambda=lambda*exp(((real(nacc)/real(step))-0.234d0)/(real(step)**0.6))
+         endif
 
          call cholesky(cov, chol, NDIM)
          call random_normal_vec(z, NDIM)
@@ -71,7 +72,7 @@ c      parameter (NBURN=300)
          do j = 1, NDIM
             xnew(j) = x(j)
             do k = 1, NDIM
-               xnew(j) = xnew(j) + lambda * sqrt(SD) * chol(j,k) * z(k)
+               xnew(j) = xnew(j) + lambda**2 * sqrt(SD) * chol(j,k) * z(k)
             enddo
 			if(nacc.gt.NBURN) then
 				if(xnew(j).gt.1d0.or.xnew(j).lt.0d0) then
@@ -106,6 +107,8 @@ c      parameter (NBURN=300)
 
 			if(nacc.lt.NBURN) then
 				write(*,'(a,f6.1,a)') "Burn-in at: ",100d0*real(nacc)/real(NBURN),"%"
+			else
+				write(*,'(a,f6.1,a)') "Sampling at: ",100d0*real(nacc-NBURN)/real(N_UNIQUE),"%"
 			endif
 			call SYSTEM_CLOCK(counts, count_rate, count_max)
 			stoptime = DBLE(counts)/DBLE(count_rate)
@@ -172,7 +175,7 @@ c      parameter (NBURN=300)
          do j = 1, ndim
             cov(i,j) = 0.0D0
          enddo
-      enddo
+      enddo      
       do k = 1, nsamp
          do i = 1, ndim
             dx(i) = samples(i,k) - mean(i)
@@ -186,7 +189,7 @@ c      parameter (NBURN=300)
       do i = 1, ndim
          do j = 1, ndim
             cov(i,j) = cov(i,j) / dble(tot - 1)
-            if (i .eq. j) cov(i,j) = cov(i,j) + eps
+            if (i .eq. j) cov(i,j) = max(1d-8,cov(i,j)*(1d0 + eps))
          enddo
       enddo
       return
