@@ -62,6 +62,7 @@
 	logical Convec(0:nr),fixed(nr)
 	real*8,allocatable,save :: Hstar0(:),deltaT(:,:),prevT(:,:),AT(:,:),al(:,:)
 	real*8,save :: maxerr_prev=1d0
+	real*8 Esurface,Esurface_max,Esurface_min
 
 	if(deepredist.and.deepredisttype.eq.'fixflux') then
 		if(.not.allocated(Hstar0)) allocate(Hstar0(nr))
@@ -469,11 +470,18 @@ c	print*,'EUV: ',tot
 	iter=1
 	iter2=1
 	Tsurface=T(1)
+	
+	if(Tsurface0.gt.0d0) then
+		Esurface_max=6d0*(((pi*kb*Tsurface0)**4)/(15d0*hplanck**3*clight**3))
+		Esurface_min=-6d0*(((pi*kb*Tsurface0)**4)/(15d0*hplanck**3*clight**3))
+		Esurface=(Esurface_min+Esurface_max)/2d0
+	endif
 
 c=========================================================================================
 c=== start of loop =======================================================================
 c=========================================================================================
-	do while(iter.le.niter.and.iter2.le.niter*5)
+	do while((iter.le.niter.and.iter2.le.niter*5).or.(Esurface_max-Esurface_min).gt.abs(Esurface*1d-4))
+
 	iter=iter+1
 
 	Ts(1:nr)=T(1:nr)
@@ -481,7 +489,7 @@ c===============================================================================
 	Hedd=0d0
 	E0=2d0*(((pi*kb*TeffP)**4)/(15d0*hplanck**3*clight**3))
 	do ir=1,nr
-		Hedd(ir)=Hedd(ir)+E0-Hstar(ir)
+		Hedd(ir)=Hedd(ir)+E0-Hstar(ir)+Esurface
 	enddo
 
 	do ir=1,nr
@@ -569,6 +577,15 @@ c		if(err.gt.maxErr.and..not.Convec(ir)) then
 		goto 1
 	endif
 
+	if(Tsurface0.gt.0d0) then
+		if(T(1)*Fl(1)**0.25.gt.Tsurface0) then
+			Esurface_max=Esurface
+		else
+			Esurface_min=Esurface
+		endif
+		Esurface=(Esurface_min+Esurface_max)/2d0
+	endif
+
 	do ir=1,nr
 		Fl(ir)=min(max(0.5d0,Fl(ir)),2d0)
 	enddo
@@ -600,7 +617,7 @@ c	endif
 	enddo
 	Tsurface=T(1)
 
-	if(maxErr.lt.(epsiter/5d0).and.iter.gt.5) exit
+	if(maxErr.lt.(epsiter/5d0).and.iter.gt.5.and.(Esurface_max-Esurface_min).lt.abs(Esurface*1d-4)) exit
 	enddo
 c=========================================================================================
 c=== end of loop =========================================================================
