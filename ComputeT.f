@@ -467,8 +467,6 @@ c	print*,'EUV: ',tot
 		enddo
 	endif
 
-	iter=1
-	iter2=1
 	Tsurface=T(1)
 	
 	if(Tsurface0.gt.0d0) then
@@ -477,10 +475,13 @@ c	print*,'EUV: ',tot
 		Esurface=(Esurface_min+Esurface_max)/2d0
 	endif
 
+	do while((Esurface_max-Esurface_min).gt.abs(Esurface*1d-4))
+	iter=1
+	iter2=1
 c=========================================================================================
 c=== start of loop =======================================================================
 c=========================================================================================
-	do while((iter.le.niter.and.iter2.le.niter*5).or.(Esurface_max-Esurface_min).gt.abs(Esurface*1d-4))
+	do while(iter.le.niter.and.iter2.le.niter*5)
 
 	iter=iter+1
 
@@ -577,15 +578,6 @@ c		if(err.gt.maxErr.and..not.Convec(ir)) then
 		goto 1
 	endif
 
-	if(Tsurface0.gt.0d0) then
-		if(T(1)*Fl(1)**0.25.gt.Tsurface0) then
-			Esurface_max=Esurface
-		else
-			Esurface_min=Esurface
-		endif
-		Esurface=(Esurface_min+Esurface_max)/2d0
-	endif
-
 	do ir=1,nr
 		Fl(ir)=min(max(0.5d0,Fl(ir)),2d0)
 	enddo
@@ -617,11 +609,21 @@ c	endif
 	enddo
 	Tsurface=T(1)
 
-	if(maxErr.lt.(epsiter/5d0).and.iter.gt.5.and.(Esurface_max-Esurface_min).lt.abs(Esurface*1d-4)) exit
+	if(maxErr.lt.(epsiter/5d0).and.iter.gt.5) exit
 	enddo
 c=========================================================================================
 c=== end of loop =========================================================================
 c=========================================================================================
+	if(Tsurface0.gt.0d0) then
+		if(Tsurface.gt.Tsurface0) then
+			Esurface_max=Esurface
+		else
+			Esurface_min=Esurface
+		endif
+		Esurface=(Esurface_min+Esurface_max)/2d0
+	endif
+
+	enddo
 
 c=========================================================================================
 c=== computation of convective flux ======================================================
