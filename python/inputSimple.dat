@@ -1,0 +1,37 @@
+H2=0.85
+He=0.15
+H2O=1d-4
+CO2=1d-4
+
+Pp=10d0
+
+Rp=1d0			! radius scales roughly as sqrt(M) ~ M^(1/3)
+Mp=1d0			! between 0.01 and 13 jupiter masses
+Dplanet=0.05	! between 0.02 and 0.2 AU for a hot/warm Jupiter
+
+distance=19.3
+
+pmin=1d-7
+pmax=1d+3
+
+nr=25
+
+lmin=0.25d0
+lmax=8.0d0
+
+specres=100
+
+cia=.true.
+
+scattering=.false.
+scattstar=.false.
+
+par_tprofile=.true.
+
+gammaT =  4.8279612E-01
+betaT =  7.5663718E-01			! between 0 and 1
+kappa =  1.3965331E-01			! between 1d-4 and 1d-1 cm^2/g
+TeffP =  1.6729263E+01			! between 0 and 500 K
+
+computeT=.false.
+

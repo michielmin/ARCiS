@@ -19,6 +19,11 @@
 		Cloud(ii)%abun(i)=1d0-(Cloud(ii)%x_slider-real(i))
 		Cloud(ii)%abun(i+1)=1d0-Cloud(ii)%abun(i)
 	endif
+	if(Cloud(ii)%coverage.gt.1d0) then
+		print*,Cloud(ii)%coverage
+		print*,'WEIRD!!!'
+		read*
+	endif
 	select case(Cloud(ii)%type)
 		case("DIFFUSE")
 			Cloud(ii)%nlam=nlam
