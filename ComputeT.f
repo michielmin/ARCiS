@@ -473,6 +473,10 @@ c	print*,'EUV: ',tot
 		Esurface_max=6d0*(((pi*kb*Tsurface0)**4)/(15d0*hplanck**3*clight**3))
 		Esurface_min=-6d0*(((pi*kb*Tsurface0)**4)/(15d0*hplanck**3*clight**3))
 		Esurface=(Esurface_min+Esurface_max)/2d0
+	else
+		Esurface_max=1d0
+		Esurface_min=-1d0
+		Esurface=0d0
 	endif
 
 	do while((Esurface_max-Esurface_min).gt.abs(Esurface*1d-4))
@@ -621,6 +625,10 @@ c===============================================================================
 			Esurface_min=Esurface
 		endif
 		Esurface=(Esurface_min+Esurface_max)/2d0
+	else
+		Esurface_max=0d0
+		Esurface_min=0d0
+		Esurface=1d0
 	endif
 
 	enddo
