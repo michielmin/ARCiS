@@ -23,10 +23,11 @@
 	writefiles=.false.
 	
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
-		open(unit=35,file=trim(outputdir) // "/posterior.dat",FORM="FORMATTED",ACCESS="STREAM")
+		open(unit=35,file=trim(outputdir) // "/posteriorMCMC.dat",FORM="FORMATTED",ACCESS="STREAM")
+		read(35,*)
 		i=1
-11		read(35,*,end=12) error(1:n_ret),j
-		i=i+j
+11		read(35,*,end=12) error(1:n_ret)
+		i=i+1
 		goto 11
 12		close(unit=35)
 		nmodels=i-1
@@ -87,17 +88,11 @@
 	cmax=0d0
 
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
-		open(unit=35,file=trim(outputdir) // "/posterior.dat",FORM="FORMATTED",ACCESS="STREAM")
-		i=1
-		do while(i.lt.nmodels)
-			read(35,*) var(i,1:n_ret),k
-			if(k.gt.1) then
-				do j=i+1,i+k-1
-					var(j,1:n_ret)=var(i,1:n_ret)
-				enddo
-			endif
-			i=i+k
-			like(i:i+k-1)=1d0
+		open(unit=35,file=trim(outputdir) // "/posteriorMCMC.dat",FORM="FORMATTED",ACCESS="STREAM")
+		read(35,*)
+		do i=1,nmodels
+			read(35,*) var(i,1:n_ret)
+			like(i)=1d0
 		enddo
 	else
 		inquire(file=trim(outputdir) // "/post_equal_weights.dat",exist=multinestpost)
