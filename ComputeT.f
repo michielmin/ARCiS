@@ -31,7 +31,7 @@
 	use CloudModule
 	use Struct3D
 	IMPLICIT NONE
-	integer iphase,iter,iter2
+	integer iphase,iter,iter2,iter3
 	real*8 tau_V,tau_T,Planck,f
 	real*8 g,dlnT,dlnP,d,tau,tautot,fact,contr,tau_a,exp_tau
 	real*8,allocatable,save :: Ce(:,:,:,:),Ca(:,:,:,:),Cs(:,:,:,:),tauR_nu(:,:,:,:)
@@ -466,8 +466,6 @@ c	print*,'EUV: ',tot
 			Hstar(ir)=min(Hstar(ir)+Hstar0(ir)*(betaF-betaT),0d0)
 		enddo
 	endif
-
-	Tsurface=T(1)
 	
 	if(Tsurface0.gt.0d0) then
 		Esurface_max=6d0*(((pi*kb*Tsurface0)**4)/(15d0*hplanck**3*clight**3))
@@ -479,9 +477,14 @@ c	print*,'EUV: ',tot
 		Esurface=0d0
 	endif
 
-	do while((Esurface_max-Esurface_min).gt.abs(Esurface*1d-4))
+	iter3=0
+	do !while((Esurface_max-Esurface_min).gt.abs(Esurface*1d-5))
 	iter=1
 	iter2=1
+	iter3=iter3+1
+	T=Tinp
+	Tsurface=T(1)
+
 c=========================================================================================
 c=== start of loop =======================================================================
 c=========================================================================================
@@ -613,7 +616,6 @@ c	endif
 	enddo
 	Tsurface=T(1)
 
-	if(maxErr.lt.(epsiter/5d0).and.iter.gt.5) exit
 	enddo
 c=========================================================================================
 c=== end of loop =========================================================================
@@ -630,6 +632,8 @@ c===============================================================================
 		Esurface_min=0d0
 		Esurface=1d0
 	endif
+
+	if(iter3.gt.100.or.abs(Tsurface-Tsurface0).lt.0.5d0.or.Tsurface0.lt.0d0) exit
 
 	enddo
 
