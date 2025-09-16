@@ -331,10 +331,23 @@ c Henyey greenstein phase function
 			enddo
 		case("PARAMETERISED")
 			call output("Computing parameterised cloud particles")
+c general slope equation
 			do ilam=1,nlam
 				Cloud(ii)%Kext(1:nr,ilam)=Cloud(ii)%kappa/(1d0+(lam(ilam)*1d4/Cloud(ii)%klam)**Cloud(ii)%kpow)
 			enddo
 			Cloud(ii)%Kext(1:nr,nlam+1)=Cloud(ii)%kappa/(1d0+(Cloud(ii)%lref/Cloud(ii)%klam)**Cloud(ii)%kpow)
+c add Gaussian feature
+cccc add a Lorenzian profile
+			do ilam=1,nlam
+				Cloud(ii)%Kext(1:nr,ilam)=Cloud(ii)%Kext(1:nr,ilam)+Cloud(ii)%kappa_Gauss*
+     &					exp(-(lam(ilam)*1d4-Cloud(ii)%lam_Gauss)**2/(2d0*Cloud(ii)%dlam_Gauss**2))
+c				Cloud(ii)%Kext(1:nr,ilam)=Cloud(ii)%Kext(1:nr,ilam)+Cloud(ii)%kappa_Gauss/
+c     &					(1d0+(2d0*(lam(ilam)*1d4-Cloud(ii)%lam_Gauss)/Cloud(ii)%dlam_Gauss)**2)
+			enddo
+			Cloud(ii)%Kext(1:nr,nlam+1)=Cloud(ii)%Kext(1:nr,nlam+1)+Cloud(ii)%kappa_Gauss*
+     &					exp(-(Cloud(ii)%lref-Cloud(ii)%lam_Gauss)**2/(2d0*Cloud(ii)%dlam_Gauss**2))
+c			Cloud(ii)%Kext(1:nr,nlam+1)=Cloud(ii)%Kext(1:nr,nlam+1)+Cloud(ii)%kappa_Gauss*
+c     &					(1d0+(2d0*(Cloud(ii)%lref-Cloud(ii)%lam_Gauss)/Cloud(ii)%dlam_Gauss)**2)
 			Cloud(ii)%Ksca(1:nr,1:nlam)=Cloud(ii)%Kext(1:nr,1:nlam)*Cloud(ii)%albedo
 			Cloud(ii)%Kabs(1:nr,1:nlam)=Cloud(ii)%Kext(1:nr,1:nlam)*(1d0-Cloud(ii)%albedo)
 			Cloud(ii)%g=Cloud(ii)%g0

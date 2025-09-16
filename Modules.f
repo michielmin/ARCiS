@@ -443,6 +443,7 @@ c			Setting it to 0 means the cloud is always recomputed every iteration.
 		character*500,allocatable :: lnkfile(:,:),material(:),condensate(:)
 		real*8 Kzz,Sigmadot,xm_bot,Sigmadot_phot
 		real*8 kappa,albedo,kpow,klam,g0
+		real*8 kappa_Gauss,lam_Gauss,dlam_Gauss
 		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:),KeFile(:,:),KaFile(:,:),KsFile(:,:),gFile(:,:)
 		integer,allocatable :: nax(:)
 		logical usefsed,computeJn,EqChemBoundary

@@ -642,6 +642,19 @@ c fractal dimension created by coagulating collisions
 				bc(i,3)=8.89360E-05
 				bc(i,4)=-4.20876E-09
 				ifit(i)=1
+			case('CaO')
+				CSname(i)='CaO'
+				atoms_cloud(i,14)=1
+				atoms_cloud(i,5)=1
+				v_cloud(i,jCa)=1
+				v_cloud(i,jH2O)=1
+				rhodust(i)=3.35
+				bc(i,0)=1.273800e+05
+				bc(i,1)=-1.455968e+00
+				bc(i,2)=-2.479564e+01
+				bc(i,3)=2.333874e-03
+				bc(i,4)=-2.664018e-07
+				ifit(i)=0
 			case('CaTiO3')
 				CSname(i)='CaTiO3'
 				atoms_cloud(i,14)=1

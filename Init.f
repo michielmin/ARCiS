@@ -758,6 +758,12 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/MgSiO3_amorph_glass.dat'
 									Cloud(i)%nax(j)=1
+								case('CaO') ! optical properties of CaCO3 (Calcite)
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/CalEpz300.txt'
+									Cloud(i)%lnkfile(j,2)=trim(homedir) // '/ARCiS/Data/refind/CalEsz300.txt'
+									Cloud(i)%lnkfile(j,3)=trim(homedir) // '/ARCiS/Data/refind/CalEsz300.txt'
+									Cloud(i)%nax(j)=3
 								case('ENSTATITE')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/enst_x.lnk'
@@ -2322,6 +2328,9 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%albedo=0.99d0
 		Cloud(i)%kpow=4d0
 		Cloud(i)%klam=1d0
+		Cloud(i)%kappa_Gauss=0d0
+		Cloud(i)%lam_Gauss=7.0
+		Cloud(i)%dlam_Gauss=0.2
 		Cloud(i)%rho_mat=3.0
 		Cloud(i)%fstick=1d0
 		Cloud(i)%fractalDim=3d0
@@ -3244,6 +3253,12 @@ c				includemol(i)=.true.
 			read(key%value,*) Cloud(j)%albedo
 		case("g")
 			read(key%value,*) Cloud(j)%g0
+		case("kappa_gauss")
+			read(key%value,*) Cloud(j)%kappa_Gauss
+		case("lam_gauss")
+			read(key%value,*) Cloud(j)%lam_Gauss
+		case("dlam_gauss")
+			read(key%value,*) Cloud(j)%dlam_Gauss
 		case("rnuc")
 			read(key%value,*) Cloud(j)%rnuc
 		case("rnuc_phot")
