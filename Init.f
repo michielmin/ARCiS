@@ -2408,6 +2408,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 		ObsSpec(i)%i2d=0
 		ObsSpec(i)%iphase=1
 		ObsSpec(i)%slope=0d0
+		ObsSpec(i)%offset=0d0
 		ObsSpec(i)%adderr=0d0
 		ObsSpec(i)%Cov_L=1d-6
 		ObsSpec(i)%Cov_a=0d0
@@ -2646,6 +2647,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) ObsSpec(i)%iphase
 		case("slope")
 			read(key%value,*) ObsSpec(i)%slope
+		case("offset")
+			read(key%value,*) ObsSpec(i)%offset
 		case("adderr")
 			read(key%value,*) ObsSpec(i)%adderr
 		case("c_l","cov_l")

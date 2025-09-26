@@ -714,7 +714,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 				k=k+1
 				ymod(k)=allspec(i,j)
 				if(.not.ObsSpec(i)%scaling) then
-					xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
+					xy=xy+ymod(k)*(ObsSpec(i)%y(j)+ObsSpec(i)%offset)/dy(k)**2
 					xx=xx+ymod(k)*ymod(k)/dy(k)**2
 				endif
 			enddo
@@ -756,7 +756,7 @@ c	linear
 			do j=1,ObsSpec(i)%ndata
 				k=k+1
 				ymod(k)=allspec(i,j)
-				xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
+				xy=xy+ymod(k)*(ObsSpec(i)%y(j)+ObsSpec(i)%offset)/dy(k)**2
 				xx=xx+ymod(k)*ymod(k)/dy(k)**2
 			enddo
 			if(ObsSpec(i)%dscale.gt.0d0) then
@@ -781,7 +781,7 @@ c	linear
 		do j=1,ObsSpec(i)%ndata
 			k=k+1
 			ymod(k)=allspec(i,j)
-			global_chi2=global_chi2+((ymod(k)/ObsSpec(i)%scale-ObsSpec(i)%y(j))/(dy(k)))**2
+			global_chi2=global_chi2+((ymod(k)/ObsSpec(i)%scale-ObsSpec(i)%y(j)-ObsSpec(i)%offset)/(dy(k)))**2
 			tot=tot-log(sqrt(2d0*pi)*dy(k))
 			ObsSpec(i)%model(j)=allspec(i,j)
 		enddo
@@ -803,7 +803,8 @@ c	linear
 				case('tprofile','logtp','prior','priors','lightcurve')
 					do j=1,ObsSpec(i)%ndata
 						k=k+1
-						lnew=lnew-(((ymod(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/(ObsSpec(i)%scale*dy(k)))**2)/2d0
+						lnew=lnew-(((ymod(k)-ObsSpec(i)%scale*(ObsSpec(i)%y(j)+ObsSpec(i)%offset))
+     &							/(ObsSpec(i)%scale*dy(k)))**2)/2d0
 						tot=tot-log(sqrt(2d0*pi)*dy(k))
 					enddo
 					if(ObsSpec(i)%scaling.and.ObsSpec(i)%dscale.gt.0d0) then
@@ -823,7 +824,7 @@ c	linear
 							d=(ObsSpec(i)%lam(j)-ObsSpec(i)%lam(ii))*1d4
 							Cov(j,ii)=Cov(j,ii)+ObsSpec(i)%Cov_a**2*exp(-0.5*(d/ObsSpec(i)%Cov_L)**2)
 						enddo
-						spec(j)=ObsSpec(i)%y(j)-allspec(i,j)/ObsSpec(i)%scale
+						spec(j)=ObsSpec(i)%y(j)+ObsSpec(i)%offset-allspec(i,j)/ObsSpec(i)%scale
 					enddo
 					specinv(1:ObsSpec(i)%ndata,1)=spec(1:ObsSpec(i)%ndata)
 					call dpotrf('L', ObsSpec(i)%ndata, Cov, ObsSpec(i)%ndata, info)
@@ -884,12 +885,13 @@ c	linear
 				case("trans","transmission","emisr","emisR","emisa","emis","emission","transC","phase","phaser","phaseR","transM","transE")
 					open(unit=20,file=trim(outputdir) // "obs" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
 					do j=1,ObsSpec(i)%ndata
-						write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j)/ObsSpec(i)%scale,ObsSpec(i)%scale*ObsSpec(i)%y(j),ObsSpec(i)%dy(j)
+						write(20,*) ObsSpec(i)%lam(j)*1d4,ObsSpec(i)%model(j)/ObsSpec(i)%scale-ObsSpec(i)%offset,
+     &						ObsSpec(i)%scale*(ObsSpec(i)%y(j)+ObsSpec(i)%offset),ObsSpec(i)%dy(j)
 					enddo
 					close(unit=20)
 					open(unit=20,file=trim(outputdir) // "fullobs" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
 					do j=1,nlam
-						write(20,*) lam(j)*1d4,specsave(i,j)/ObsSpec(i)%scale
+						write(20,*) lam(j)*1d4,specsave(i,j)/ObsSpec(i)%scale-ObsSpec(i)%offset
 					enddo
 					close(unit=20)
 				case("lightcurve")
