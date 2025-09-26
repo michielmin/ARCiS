@@ -1458,6 +1458,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) model_err_abs(key%nr1)
 		case("model_err_rel")
 			read(key%value,*) model_err_rel(key%nr1)
+		case("fullcovmat","corrnoise")
+			read(key%value,*) fullcovmat
 		case("par3d")
 			call ReadPar3D(key)
 		case("useobsgrid")
@@ -2394,6 +2396,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 	const_eff_multinest=.false.
 	retrievaltype='MN'
 	writeWolk=.true.
+	fullcovmat=.false.
 
 	do i=1,nobs
 		ObsSpec(i)%beta=1d0
@@ -2406,6 +2409,8 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 		ObsSpec(i)%iphase=1
 		ObsSpec(i)%slope=0d0
 		ObsSpec(i)%adderr=0d0
+		ObsSpec(i)%Cov_L=1d-6
+		ObsSpec(i)%Cov_a=0d0
 		ObsSpec(i)%filter=' '
 	enddo
 	
@@ -2643,6 +2648,10 @@ c number of cloud/nocloud combinations
 			read(key%value,*) ObsSpec(i)%slope
 		case("adderr")
 			read(key%value,*) ObsSpec(i)%adderr
+		case("c_l","cov_l")
+			read(key%value,*) ObsSpec(i)%Cov_L
+		case("c_a","cov_a")
+			read(key%value,*) ObsSpec(i)%Cov_a
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

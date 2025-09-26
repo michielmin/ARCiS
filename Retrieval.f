@@ -275,7 +275,6 @@
 	real*8 chi2obs(nobs),var(n_ret),chi2,gasdev,maxd,error(2,n_ret),var_best(n_ret)
 	real*8 x1,x2,minT(nr),maxT(nr),ran1,tot,lambda,chi2_1,chi2_2,dchi2(n_ret),chi2prev
 	integer ny,i,j,iter,itermax,iy,k
-	
 	real*8 maxsig,WLU(n_ret,n_ret),ErrVec(n_ret,n_ret),dvar_prev(n_ret)
 	real*8 backup_xmin(n_ret),backup_xmax(n_ret),alphaW(3*n_ret,3*n_ret),Cov(3*n_ret,3*n_ret)
 	real*8 beta(n_ret),da(n_ret)
@@ -630,6 +629,9 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	logical recomputeopac,truefalse,doscaleR2
 	real*8 xx,xy,scale,dy(ny),tot
 	character*100 command
+	integer info,NRHS
+	real*8 d
+	real*8,allocatable :: Cov(:,:),specinv(:,:)
 
 	doscaleR2=doscaleR
 	recomputeopac=.true.
@@ -779,7 +781,7 @@ c	linear
 		do j=1,ObsSpec(i)%ndata
 			k=k+1
 			ymod(k)=allspec(i,j)
-			global_chi2=global_chi2+((ymod(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/(ObsSpec(i)%scale*dy(k)))**2
+			global_chi2=global_chi2+((ymod(k)/ObsSpec(i)%scale-ObsSpec(i)%y(j))/(dy(k)))**2
 			tot=tot-log(sqrt(2d0*pi)*dy(k))
 			ObsSpec(i)%model(j)=allspec(i,j)
 		enddo
@@ -788,18 +790,72 @@ c	linear
 			tot=tot-log(sqrt(2d0*pi)*ObsSpec(i)%dscale)
 		endif
 	enddo
-	if(planetform.and..not.simAb_converge) then
-		global_chi2=global_chi2+((Mplanet-MSimAb)/(Mplanet*1d-3))**2
-	endif
-	if(massprior) then
-		global_chi2=global_chi2+((Mplanet/Mjup-Mp_prior)/dMp_prior)**2
-		tot=tot-log(sqrt(2d0*pi)*dMp_prior)
-		k=k+1
-	endif
 	if(modelfail) global_chi2=global_chi2*1d50
-	if(IsNaN(global_chi2)) global_chi2=1d50
 	lnew=-global_chi2/2d0+tot
 	global_chi2=global_chi2/real(max(1,k-n_ret))
+	
+	if(fullcovmat) then
+		lnew=0d0
+		tot=0d0
+		k=0
+		do i=1,nobs
+			select case(ObsSpec(i)%type)
+				case('tprofile','logtp','prior','priors','lightcurve')
+					do j=1,ObsSpec(i)%ndata
+						k=k+1
+						lnew=lnew-(((ymod(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/(ObsSpec(i)%scale*dy(k)))**2)/2d0
+						tot=tot-log(sqrt(2d0*pi)*dy(k))
+					enddo
+					if(ObsSpec(i)%scaling.and.ObsSpec(i)%dscale.gt.0d0) then
+						lnew=lnew-(((ObsSpec(i)%scale-1d0)/ObsSpec(i)%dscale)**2)/2d0
+						tot=tot-log(sqrt(2d0*pi)*ObsSpec(i)%dscale)
+					endif
+				case default
+					allocate(spec(ObsSpec(i)%ndata))
+					allocate(Cov(ObsSpec(i)%ndata,ObsSpec(i)%ndata))
+					allocate(specinv(ObsSpec(i)%ndata,1))
+					NRHS=1
+					Cov(1:ObsSpec(i)%ndata,1:ObsSpec(i)%ndata)=0d0
+					do j=1,ObsSpec(i)%ndata
+						k=k+1
+						Cov(j,j)=(dy(k))**2
+						do ii=1,ObsSpec(i)%ndata
+							d=(ObsSpec(i)%lam(j)-ObsSpec(i)%lam(ii))*1d4
+							Cov(j,ii)=Cov(j,ii)+ObsSpec(i)%Cov_a**2*exp(-0.5*(d/ObsSpec(i)%Cov_L)**2)
+						enddo
+						spec(j)=ObsSpec(i)%y(j)-allspec(i,j)/ObsSpec(i)%scale
+					enddo
+					specinv(1:ObsSpec(i)%ndata,1)=spec(1:ObsSpec(i)%ndata)
+					call dpotrf('L', ObsSpec(i)%ndata, Cov, ObsSpec(i)%ndata, info)
+      ! Compute log(det(A)) = 2 * sum(log(L_ii))
+					do j=1,ObsSpec(i)%ndata
+						tot = tot + log(Cov(j,j))
+					enddo
+					tot=tot+(real(ObsSpec(i)%ndata)*log(2d0*pi))/2d0
+      ! Solve A*x = b using the factorization
+					call dpotrs('L', ObsSpec(i)%ndata, NRHS, Cov, ObsSpec(i)%ndata, specinv, ObsSpec(i)%ndata, info)
+					do j=1,ObsSpec(i)%ndata
+						lnew=lnew-spec(j)*specinv(j,1)
+					enddo
+					deallocate(Cov,spec,specinv)
+			end select
+			if(ObsSpec(i)%scaling.and.ObsSpec(i)%dscale.gt.0d0) then
+				lnew=lnew-((ObsSpec(i)%scale-1d0)/ObsSpec(i)%dscale)**2
+				tot=tot+log(sqrt(2d0*pi)*ObsSpec(i)%dscale)
+			endif
+		enddo
+		lnew=lnew/2d0-tot
+	endif
+
+	if(planetform.and..not.simAb_converge) then
+		lnew=lnew-((Mplanet-MSimAb)/(Mplanet*1d-3))**2
+	endif
+	if(massprior) then
+		lnew=lnew-(((Mplanet/Mjup-Mp_prior)/dMp_prior)**2)/2d0
+		tot=tot-log(sqrt(2d0*pi)*dMp_prior)
+	endif
+	if(IsNaN(global_chi2)) global_chi2=1d50
+
 	if(free_tprofile.and.wiggle_err.gt.0d0) then
 		tot=-(real(nr-2)/2d0)*log(2d0*pi*wiggle_err)
 		do i=2,nr-1
@@ -808,7 +864,7 @@ c	linear
 		lnew=lnew+tot
 	endif
 	global_like=lnew
-
+	
 	if(writeWolk) write(31,*) imodel,global_chi2,var(1:nvars),COratio,metallicity
 	if((.not.useobsgrid.or.dochemistry.or.do3D.or.computeT).and.writeWolk) call flush(31)
 
@@ -2324,119 +2380,6 @@ C  computed by DGETRF.
 	end
 
 	
-
-	subroutine ComputeLike(lnew)
-	use GlobalSetup
-	use Constants
-	use RetrievalMod
-	use Struct3D
-	IMPLICIT NONE
-	integer nvars,i,j,nlamtot,ny,k,maxspec,im,ilam,status,system,ii
-	real*8 ymod(nlam*nobs),lnew,spectemp(nlam*nobs),specsave(nobs,nlam*nobs)
-	real*8,allocatable :: spec(:),allspec(:,:)
-	logical recomputeopac,truefalse,doscaleR2
-	real*8 xx,xy,scale,dy(nlam*nobs),tot
-	character*100 command
-	
-	maxspec=0
-	do i=1,nobs
-		if(ObsSpec(i)%ndata.gt.maxspec) maxspec=ObsSpec(i)%ndata
-	enddo
-	allocate(allspec(nobs,maxspec))
-	do i=1,nobs
-		allocate(spec(ObsSpec(i)%ndata))
-		call RemapObs(i,spec,spectemp)
-		if(ObsSpec(i)%i2d.eq.i2d) then
-			allspec(i,1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
-			specsave(i,1:nlam)=spectemp(1:nlam)
-		endif
-		deallocate(spec)
-	enddo
-
-	k=0
-	do i=1,nobs
-		do j=1,ObsSpec(i)%ndata
-			k=k+1
-			dy(k)=sqrt(ObsSpec(i)%dy(j)**2+ObsSpec(i)%adderr**2)
-			do ii=1,nmodel_err-1
-				if(ObsSpec(i)%lam(j).lt.model_err_lam(ii)) exit
-			enddo
-			select case(ObsSpec(i)%type)
-				case("emisa","emis","emission","phase")
-					dy(k)=sqrt(dy(k)**2+model_err_abs(ii)**2)
-				case("trans","transmission","emisr","emisR","transC","phaser","phaseR","transM","transE")
-					dy(k)=sqrt(dy(k)**2+model_err_rel(ii)**2)
-			end select
-		enddo
-	enddo
-
-	k=0
-	do i=1,nobs
-		if(ObsSpec(i)%scaling) then
-			xy=0d0
-			xx=0d0
-			do j=1,ObsSpec(i)%ndata
-				k=k+1
-				ymod(k)=allspec(i,j)
-				xy=xy+ymod(k)*ObsSpec(i)%y(j)/dy(k)**2
-				xx=xx+ymod(k)*ymod(k)/dy(k)**2
-			enddo
-			if(ObsSpec(i)%dscale.gt.0d0) then
-				xx=xx+1d0/ObsSpec(i)%dscale**2
-				xy=xy+1d0/ObsSpec(i)%dscale**2
-			endif
-			ObsSpec(i)%scale=1d0
-			if(xx.gt.0d0) ObsSpec(i)%scale=xx/xy
-		else
-			ObsSpec(i)%scale=ObsSpec(i)%fscale
-			do j=1,ObsSpec(i)%ndata
-				k=k+1
-				ymod(k)=allspec(i,j)
-			enddo
-		endif
-	enddo
-
-	global_chi2=0d0
-	tot=0d0
-	k=0
-	do i=1,nobs
-		do j=1,ObsSpec(i)%ndata
-			k=k+1
-			ymod(k)=allspec(i,j)
-			global_chi2=global_chi2+((ymod(k)-ObsSpec(i)%scale*ObsSpec(i)%y(j))/(ObsSpec(i)%scale*dy(k)))**2
-			tot=tot-log(sqrt(2d0*pi)*dy(k))
-			ObsSpec(i)%model(j)=allspec(i,j)
-		enddo
-		if(ObsSpec(i)%scaling.and.ObsSpec(i)%dscale.gt.0d0) then
-			global_chi2=global_chi2+((ObsSpec(i)%scale-1d0)/ObsSpec(i)%dscale)**2
-			tot=tot-log(sqrt(2d0*pi)*ObsSpec(i)%dscale)
-		endif
-	enddo
-	if(planetform.and..not.simAb_converge) then
-		global_chi2=global_chi2+((Mplanet-MSimAb)/(Mplanet*1d-3))**2
-	endif
-	if(massprior) then
-		global_chi2=global_chi2+((Mplanet/Mjup-Mp_prior)/dMp_prior)**2
-		tot=tot-log(sqrt(2d0*pi)*dMp_prior)
-		k=k+1
-	endif
-	lnew=-global_chi2/2d0+tot
-	global_chi2=global_chi2/real(max(1,k-n_ret))
-	if(free_tprofile.and.wiggle_err.gt.0d0) then
-		tot=-(real(nr-2)/2d0)*log(2d0*pi*wiggle_err)
-		do i=2,nr-1
-			tot=tot-log(T(i+1)*T(i-1)/T(i)**2)**2/(0.5d0*wiggle_err*log(P(i+1)/P(i-1))**2)
-		enddo
-		lnew=lnew+tot
-	endif
-	global_like=lnew
-	
-	deallocate(allspec)
-	
-	return
-	end
-	
-
 	subroutine randomdirectionN(dx,N,idum)
 	IMPLICIT NONE
 	integer N,i,idum

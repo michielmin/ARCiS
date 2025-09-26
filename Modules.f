@@ -216,7 +216,7 @@ c===============================================================================
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
 	real*8 molfracs_atoms_outgas(41),MMW0,fH2O	! fH2O is the total mass fraction in Water compared to the mass of the planet
-	logical secondary_atmosphere,constant_g,forceEbalance,fixMMW,WaterWorld,useomp
+	logical secondary_atmosphere,constant_g,forceEbalance,fixMMW,WaterWorld,useomp,fullcovmat
 	logical,allocatable :: RTgridpoint(:),computelam(:)
 	character*20 aim3D
 	character*2 standardstarname
@@ -490,6 +490,7 @@ c			Setting it to 0 means the cloud is always recomputed every iteration.
 		integer nlam,nt
 		real*8,allocatable :: LC(:,:),dLC(:,:),t(:),dt(:)
 		real*8,allocatable :: f(:,:)
+		real*8 Cov_a,Cov_L
 	end type ObservedSpec
 	type(ObservedSpec),allocatable :: ObsSpec(:)
 
