@@ -797,6 +797,7 @@ c	linear
 	if(fullcovmat) then
 		lnew=0d0
 		tot=0d0
+		global_chi2=0d0
 		k=0
 		do i=1,nobs
 			select case(ObsSpec(i)%type)
@@ -826,8 +827,8 @@ c	linear
 						enddo
 						spec(j)=ObsSpec(i)%y(j)+ObsSpec(i)%offset-allspec(i,j)/ObsSpec(i)%scale
 					enddo
-					specinv(1:ObsSpec(i)%ndata,1)=spec(1:ObsSpec(i)%ndata)
 					call dpotrf('L', ObsSpec(i)%ndata, Cov, ObsSpec(i)%ndata, info)
+					specinv(1:ObsSpec(i)%ndata,1)=spec(1:ObsSpec(i)%ndata)
       ! Compute log(det(A)) = 2 * sum(log(L_ii))
 					do j=1,ObsSpec(i)%ndata
 						tot = tot + log(Cov(j,j))
@@ -838,6 +839,13 @@ c	linear
 					do j=1,ObsSpec(i)%ndata
 						lnew=lnew-spec(j)*specinv(j,1)
 					enddo
+					specinv(1:ObsSpec(i)%ndata,1)=spec(1:ObsSpec(i)%ndata)
+! Solve L * w = spec  (forward substitution)
+					call dtrsv('L','N','N', ObsSpec(i)%ndata, Cov, ObsSpec(i)%ndata, specinv, NRHS)
+! Now sumsq = sum_j w_j^2; expect ~ n - p_eff
+					do j=1,ObsSpec(i)%ndata
+						global_chi2 = global_chi2 + specinv(j,1)*specinv(j,1)
+					enddo
 					deallocate(Cov,spec,specinv)
 			end select
 			if(ObsSpec(i)%scaling.and.ObsSpec(i)%dscale.gt.0d0) then
@@ -846,6 +854,7 @@ c	linear
 			endif
 		enddo
 		lnew=lnew/2d0-tot
+		global_chi2=global_chi2/real(max(1,k-n_ret))
 	endif
 
 	if(planetform.and..not.simAb_converge) then
