@@ -229,6 +229,7 @@ c===============================================================================
 	nIRpoints=0
 	nPhotoReacts=0
 	nmodel_err=1
+	Cov_n_loc=0
 	j=0
 	mixratfile=.false.
 	Pmin=1d-6
@@ -337,6 +338,10 @@ c				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nmodel_err) nmodel_err=key%nr1
+			case("cov_l_loc","cov_a_loc","cov_lam_loc")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr2.eq.0) key%nr2=1
+				if(key%nr1.gt.Cov_n_loc) Cov_n_loc=key%nr1
 			case("photoreac","photoreactant","photoprod","photoproduct","photoeff")
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr1.gt.nPhotoReacts) nPhotoReacts=key%nr1
@@ -420,6 +425,7 @@ c select at least the species relevant for disequilibrium chemistry
 		allocate(PhotoReacts(i)%product(nmol_data))
 		allocate(PhotoReacts(i)%abun(nr,nmol_data))
 	enddo
+	allocate(Cov_a_loc(max(Cov_n_loc,1)),Cov_L_loc(max(Cov_n_loc,1)),Cov_lam_loc(max(Cov_n_loc,1)))
 
 	do i=1,nTpoints
 		Ppoint(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nTpoints-1))
@@ -1748,6 +1754,12 @@ c			read(key%value,*) nTpoints
 				read(key%value,*) ObsSpec(i)%adderr
 				print*,i,ObsSpec(i)%adderr
 			enddo
+		case("cov_a_loc")
+			read(key%value,*) Cov_a_loc(key%nr1)
+		case("cov_l_loc")
+			read(key%value,*) Cov_L_loc(key%nr1)
+		case("cov_lam_loc")
+			read(key%value,*) Cov_lam_loc(key%nr1)
 		case("h2+he")
 			read(key%value,*) mixrat(45)
 			includemol(45)=.true.
@@ -2509,6 +2521,10 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 		PhotoReacts(i)%atomic=.false.
 	enddo
 	PphotMol=1d-30
+
+	Cov_a_loc=0d0
+	Cov_L_loc=1d0
+	Cov_lam_loc=0d0
 
 	return
 	end

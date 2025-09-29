@@ -256,6 +256,9 @@ c for exchange when computing secondary atmosphere
 	real*8 par3Dsteepness
 	
 	real*8 global_like,global_chi2
+	
+	real*8,allocatable :: Cov_L_loc(:),Cov_a_loc(:),Cov_lam_loc(:)
+	integer Cov_n_loc
 
 	integer nmol_data
 	parameter(nmol_data=126)

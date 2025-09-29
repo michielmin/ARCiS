@@ -818,9 +818,18 @@ c	linear
 					allocate(specinv(ObsSpec(i)%ndata,1))
 					NRHS=1
 					Cov(1:ObsSpec(i)%ndata,1:ObsSpec(i)%ndata)=0d0
+					if(Cov_n_loc .gt. 0) then
+						do ii = 1, Cov_n_loc
+							do j = 1, ObsSpec(i)%ndata
+								d = (ObsSpec(i)%lam(j)*1d4 - Cov_lam_loc(ii)) / Cov_L_loc(ii)
+								spec(j) = Cov_a_loc(ii)*exp(-0.5d0*d**2)
+							enddo
+							call dger(ObsSpec(i)%ndata, ObsSpec(i)%ndata, 1d0, spec, 1, spec, 1, Cov, ObsSpec(i)%ndata)
+						enddo
+					endif
 					do j=1,ObsSpec(i)%ndata
 						k=k+1
-						Cov(j,j)=(dy(k))**2
+						Cov(j,j)=Cov(j,j)+(dy(k))**2
 						do ii=1,ObsSpec(i)%ndata
 							d=(ObsSpec(i)%lam(j)-ObsSpec(i)%lam(ii))*1d4
 							Cov(j,ii)=Cov(j,ii)+ObsSpec(i)%Cov_a**2*exp(-0.5*(d/ObsSpec(i)%Cov_L)**2)
