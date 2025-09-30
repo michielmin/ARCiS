@@ -346,38 +346,35 @@ c		call cpu_time(stoptime)
 					endif
 					specobs(i,iobs,1:ObsSpec(iobs)%ndata)=specobs(i,iobs,1:ObsSpec(iobs)%ndata)/ObsSpec(iobs)%scale
 
-
-					if(fullcovmat) then
-						allocate(Cov(ObsSpec(iobs)%ndata,ObsSpec(iobs)%ndata))
-						Cov(1:ObsSpec(iobs)%ndata,1:ObsSpec(iobs)%ndata)=0d0
-						if(Cov_n_loc .gt. 0) then
-							do j = 1, Cov_n_loc
-								do ilam = 1, ObsSpec(iobs)%ndata
-									xx = (ObsSpec(iobs)%lam(ilam)*1d4 - Cov_lam_loc(j)) / Cov_L_loc(j)
-									spectemp(ilam) = Cov_a_loc(j)*exp(-0.5d0*xx**2)
-								enddo
-								call dger(ObsSpec(iobs)%ndata, ObsSpec(iobs)%ndata, 1d0, spectemp, 1, spectemp, 1, Cov, ObsSpec(iobs)%ndata)
+					allocate(Cov(ObsSpec(iobs)%ndata,ObsSpec(iobs)%ndata))
+					Cov(1:ObsSpec(iobs)%ndata,1:ObsSpec(iobs)%ndata)=0d0
+					if(Cov_n_loc .gt. 0) then
+						do j = 1, Cov_n_loc
+							do ilam = 1, ObsSpec(iobs)%ndata
+								xx = (ObsSpec(iobs)%lam(ilam)*1d4 - Cov_lam_loc(j)) / Cov_L_loc(j)
+								spectemp(ilam) = Cov_a_loc(j)*exp(-0.5d0*xx**2)
 							enddo
-						endif
-						do j=1,ObsSpec(iobs)%ndata
-							Cov(j,j)=Cov(j,j)+(ObsSpec(iobs)%dy(j))**2
-							do ilam=1,ObsSpec(iobs)%ndata
-								xx=(ObsSpec(iobs)%lam(j)-ObsSpec(iobs)%lam(ilam))*1d4
-								Cov(j,ilam)=Cov(j,ilam)+ObsSpec(iobs)%Cov_a**2*exp(-0.5*(xx/ObsSpec(iobs)%Cov_L)**2)
-							enddo
+							call dger(ObsSpec(iobs)%ndata, ObsSpec(iobs)%ndata, 1d0, spectemp, 1, spectemp, 1, Cov, ObsSpec(iobs)%ndata)
 						enddo
-						call dpotrf('L', ObsSpec(iobs)%ndata, Cov, ObsSpec(iobs)%ndata, info)
+					endif
+					do j=1,ObsSpec(iobs)%ndata
+						Cov(j,j)=Cov(j,j)+(ObsSpec(iobs)%dy(j))**2
+						do ilam=1,ObsSpec(iobs)%ndata
+							xx=(ObsSpec(iobs)%lam(j)-ObsSpec(iobs)%lam(ilam))*1d4
+							Cov(j,ilam)=Cov(j,ilam)+ObsSpec(iobs)%Cov_a**2*exp(-0.5*(xx/ObsSpec(iobs)%Cov_L)**2)
+						enddo
+					enddo
+					call dpotrf('L', ObsSpec(iobs)%ndata, Cov, ObsSpec(iobs)%ndata, info)
       ! Fill spectemp with independent N(0,1) samples
-						do ilam = 1, ObsSpec(iobs)%ndata
-							spectemp(ilam) = gasdev(idum)
-						enddo
+					do ilam = 1, ObsSpec(iobs)%ndata
+						spectemp(ilam) = gasdev(idum)
+					enddo
       ! Multiply by Cholesky factor (L from DPOTRF in Cov)
-						call dtrmv('L','N','N', ObsSpec(iobs)%ndata, Cov, ObsSpec(iobs)%ndata, spectemp, 1)
+					call dtrmv('L','N','N', ObsSpec(iobs)%ndata, Cov, ObsSpec(iobs)%ndata, spectemp, 1)
       ! Add to the deterministic model
-						specobs(i,iobs,1:ObsSpec(iobs)%ndata)=specobs(i,iobs,1:ObsSpec(iobs)%ndata)
+					specobs(i,iobs,1:ObsSpec(iobs)%ndata)=specobs(i,iobs,1:ObsSpec(iobs)%ndata)
      &								+spectemp(1:ObsSpec(iobs)%ndata)
-      					deallocate(Cov)
-      				endif
+					deallocate(Cov)
 			end select
 		enddo
 	endif
