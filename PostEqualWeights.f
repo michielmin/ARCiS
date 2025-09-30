@@ -10,13 +10,13 @@
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
 	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:),Tplanet(:)
-	real*8,allocatable :: speccloudtau(:,:),speccloudK(:,:,:)
-	real*8 lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,cmin
-	integer i1,i2,ibest
+	real*8,allocatable :: speccloudtau(:,:),speccloudK(:,:,:),specobs(:,:,:),Cov(:,:)
+	real*8 lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,cmin,spectemp(nlam),gasdev
+	integer i1,i2,ibest,info
 	character*6000 line
 	integer*4 counts, count_rate, count_max
 	logical variablePgrid,multinestpost
-	real*8 Pgrid(nr),Pg1(nr),Pg2(nr),yy(nr),Pmin0,Pmax0
+	real*8 Pgrid(nr),Pg1(nr),Pg2(nr),yy(nr),Pmin0,Pmax0,xx,xy
 	character*500 lowkey
 	integer ipmin,ipmax
 	
@@ -76,6 +76,7 @@
 		allocate(phase3DR(0:nmodels,1:nphase,nlam))
 		allocate(var3D(0:nmodels,1:nlong,0:n_Par3D))
 	endif
+	if(useobsgrid) allocate(specobs(0:nmodels,nobs,nlam))
 
 	spectrans=0d0
 	specemis=0d0
@@ -323,6 +324,64 @@ c		call cpu_time(stoptime)
 		endif
 	endif
 
+	if(useobsgrid) then
+		do iobs=1,nobs
+			select case(ObsSpec(iobs)%type)
+				case("trans","transmission","transC","transM","transE","emisr","emisR","emisa","emis","emission")
+					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
+					ObsSpec(iobs)%scale=1d0
+					if(ObsSpec(iobs)%scaling) then
+						xy=0d0
+						xx=0d0
+						do ilam=1,ObsSpec(iobs)%ndata
+							xy=xy+specobs(i,iobs,ilam)*(ObsSpec(iobs)%y(ilam)+ObsSpec(iobs)%offset)/ObsSpec(iobs)%dy(ilam)**2
+							xx=xx+specobs(i,iobs,ilam)*specobs(i,iobs,ilam)/ObsSpec(iobs)%dy(ilam)**2
+						enddo
+						if(ObsSpec(iobs)%dscale.gt.0d0) then
+							xx=xx+1d0/ObsSpec(iobs)%dscale**2
+							xy=xy+1d0/ObsSpec(iobs)%dscale**2
+						endif
+						ObsSpec(iobs)%scale=1d0
+						if(xx.gt.0d0) ObsSpec(iobs)%scale=xx/xy
+					endif
+					specobs(i,iobs,1:ObsSpec(iobs)%ndata)=specobs(i,iobs,1:ObsSpec(iobs)%ndata)/ObsSpec(iobs)%scale
+
+
+					if(fullcovmat) then
+						allocate(Cov(ObsSpec(iobs)%ndata,ObsSpec(iobs)%ndata))
+						Cov(1:ObsSpec(iobs)%ndata,1:ObsSpec(iobs)%ndata)=0d0
+						if(Cov_n_loc .gt. 0) then
+							do j = 1, Cov_n_loc
+								do ilam = 1, ObsSpec(iobs)%ndata
+									xx = (ObsSpec(iobs)%lam(ilam)*1d4 - Cov_lam_loc(j)) / Cov_L_loc(j)
+									spectemp(ilam) = Cov_a_loc(j)*exp(-0.5d0*xx**2)
+								enddo
+								call dger(ObsSpec(iobs)%ndata, ObsSpec(iobs)%ndata, 1d0, spectemp, 1, spectemp, 1, Cov, ObsSpec(iobs)%ndata)
+							enddo
+						endif
+						do j=1,ObsSpec(iobs)%ndata
+							Cov(j,j)=Cov(j,j)+(ObsSpec(iobs)%dy(j))**2
+							do ilam=1,ObsSpec(iobs)%ndata
+								xx=(ObsSpec(iobs)%lam(j)-ObsSpec(iobs)%lam(ilam))*1d4
+								Cov(j,ilam)=Cov(j,ilam)+ObsSpec(iobs)%Cov_a**2*exp(-0.5*(xx/ObsSpec(iobs)%Cov_L)**2)
+							enddo
+						enddo
+						call dpotrf('L', ObsSpec(iobs)%ndata, Cov, ObsSpec(iobs)%ndata, info)
+      ! Fill spectemp with independent N(0,1) samples
+						do ilam = 1, ObsSpec(iobs)%ndata
+							spectemp(ilam) = gasdev(idum)
+						enddo
+      ! Multiply by Cholesky factor (L from DPOTRF in Cov)
+						call dtrmv('L','N','N', ObsSpec(iobs)%ndata, Cov, ObsSpec(iobs)%ndata, spectemp, 1)
+      ! Add to the deterministic model
+						specobs(i,iobs,1:ObsSpec(iobs)%ndata)=specobs(i,iobs,1:ObsSpec(iobs)%ndata)
+     &								+spectemp(1:ObsSpec(iobs)%ndata)
+      					deallocate(Cov)
+      				endif
+			end select
+		enddo
+	endif
+
 	if(imodel.gt.0) then
 	if(like(imodel).gt.lm1.or.i.eq.1) then
 		ctrans=maxval(spectrans(i,1:nlam))-minval(spectrans(i,1:nlam))
@@ -492,8 +551,20 @@ c		call cpu_time(stoptime)
 		enddo
 		close(unit=26)
 		close(unit=27)
-		close(unit=28)		
-
+		close(unit=28)
+		
+		if(useobsgrid) then
+			do iobs=1,nobs
+				open(unit=26,file=trim(outputdir) // "obs" // trim(int2string(iobs,'(i0.3)')) // "_limits",
+     &						FORM="FORMATTED",ACCESS="STREAM")
+				do ilam=1,ObsSpec(iobs)%ndata
+					sorted(1:i)=specobs(1:i,iobs,ilam)
+					call sort(sorted,i)
+					write(26,*) ObsSpec(iobs)%lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+				enddo
+			enddo
+		endif
+		
 		open(unit=26,file=trim(outputdir) // "PT_limits",FORM="FORMATTED",ACCESS="STREAM")
 		do ir=1,nr
 			sorted(1:i)=PTstruct(1:i,ir)
