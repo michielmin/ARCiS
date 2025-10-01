@@ -2408,7 +2408,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 	const_eff_multinest=.false.
 	retrievaltype='MN'
 	writeWolk=.true.
-	fullcovmat=.false.
+	fullcovmat=.true.
 
 	do i=1,nobs
 		ObsSpec(i)%beta=1d0
