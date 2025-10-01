@@ -836,6 +836,7 @@ c	linear
 						enddo
 						spec(j)=ObsSpec(i)%y(j)+ObsSpec(i)%offset-allspec(i,j)/ObsSpec(i)%scale
 					enddo
+					Cov=Cov+ObsSpec(i)%Cov_offset**2
 					call dpotrf('L', ObsSpec(i)%ndata, Cov, ObsSpec(i)%ndata, info)
 					specinv(1:ObsSpec(i)%ndata,1)=spec(1:ObsSpec(i)%ndata)
       ! Compute log(det(A)) = 2 * sum(log(L_ii))

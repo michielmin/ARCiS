@@ -2424,6 +2424,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 		ObsSpec(i)%adderr=0d0
 		ObsSpec(i)%Cov_L=1d-6
 		ObsSpec(i)%Cov_a=0d0
+		ObsSpec(i)%Cov_offset=0d0
 		ObsSpec(i)%filter=' '
 	enddo
 	
@@ -2671,6 +2672,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) ObsSpec(i)%Cov_L
 		case("c_a","cov_a")
 			read(key%value,*) ObsSpec(i)%Cov_a
+		case("c_b","cov_b","cov_offset","c_offset")
+			read(key%value,*) ObsSpec(i)%Cov_offset
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select

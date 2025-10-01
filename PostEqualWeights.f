@@ -12,7 +12,7 @@
 	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:),Tplanet(:)
 	real*8,allocatable :: speccloudtau(:,:),speccloudK(:,:,:),specobs(:,:,:),Cov(:,:)
 	real*8 lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,cmin,spectemp(nlam),gasdev
-	integer i1,i2,ibest,info
+	integer i1,i2,ibest,info,NRHS
 	character*6000 line
 	integer*4 counts, count_rate, count_max
 	logical variablePgrid,multinestpost
@@ -364,16 +364,16 @@ c		call cpu_time(stoptime)
 							Cov(j,ilam)=Cov(j,ilam)+ObsSpec(iobs)%Cov_a**2*exp(-0.5*(xx/ObsSpec(iobs)%Cov_L)**2)
 						enddo
 					enddo
+					Cov=Cov+ObsSpec(iobs)%Cov_offset**2
 					call dpotrf('L', ObsSpec(iobs)%ndata, Cov, ObsSpec(iobs)%ndata, info)
-      ! Fill spectemp with independent N(0,1) samples
 					do ilam = 1, ObsSpec(iobs)%ndata
-						spectemp(ilam) = gasdev(idum)
+						spectemp(ilam) = ObsSpec(iobs)%y(ilam) - specobs(i,iobs,ilam)
 					enddo
-      ! Multiply by Cholesky factor (L from DPOTRF in Cov)
-					call dtrmv('L','N','N', ObsSpec(iobs)%ndata, Cov, ObsSpec(iobs)%ndata, spectemp, 1)
-      ! Add to the deterministic model
-					specobs(i,iobs,1:ObsSpec(iobs)%ndata)=specobs(i,iobs,1:ObsSpec(iobs)%ndata)
-     &								+spectemp(1:ObsSpec(iobs)%ndata)
+					NRHS = 1
+					call dpotrs('L', ObsSpec(iobs)%ndata, NRHS, Cov, ObsSpec(iobs)%ndata, spectemp, ObsSpec(iobs)%ndata, info)
+					do ilam = 1, ObsSpec(iobs)%ndata
+						specobs(i,iobs,ilam) = ObsSpec(iobs)%y(ilam) - spectemp(ilam)*(ObsSpec(iobs)%dy(ilam))**2
+					enddo
 					deallocate(Cov)
 			end select
 		enddo
