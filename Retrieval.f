@@ -827,6 +827,15 @@ c	linear
 							call dger(ObsSpec(i)%ndata, ObsSpec(i)%ndata, 1d0, spec, 1, spec, 1, Cov, ObsSpec(i)%ndata)
 						enddo
 					endif
+					if(ObsSpec(i)%Cov_n_loc .gt. 0) then
+						do ii = 1, ObsSpec(i)%Cov_n_loc
+							do j = 1, ObsSpec(i)%ndata
+								d = (ObsSpec(i)%lam(j)*1d4 - ObsSpec(i)%Cov_lam_loc(ii)) / ObsSpec(i)%Cov_L_loc(ii)
+								spec(j) = ObsSpec(i)%Cov_a_loc(ii)*exp(-0.5d0*d**2)
+							enddo
+							call dger(ObsSpec(i)%ndata, ObsSpec(i)%ndata, 1d0, spec, 1, spec, 1, Cov, ObsSpec(i)%ndata)
+						enddo
+					endif
 					do j=1,ObsSpec(i)%ndata
 						k=k+1
 						Cov(j,j)=Cov(j,j)+(dy(k))**2

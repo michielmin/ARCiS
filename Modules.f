@@ -494,6 +494,8 @@ c			Setting it to 0 means the cloud is always recomputed every iteration.
 		real*8,allocatable :: LC(:,:),dLC(:,:),t(:),dt(:)
 		real*8,allocatable :: f(:,:)
 		real*8 Cov_a,Cov_L,Cov_offset
+		real*8,allocatable :: Cov_L_loc(:),Cov_a_loc(:),Cov_lam_loc(:)
+		integer Cov_n_loc
 	end type ObservedSpec
 	type(ObservedSpec),allocatable :: ObsSpec(:)
 

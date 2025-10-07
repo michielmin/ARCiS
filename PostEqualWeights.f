@@ -357,6 +357,15 @@ c		call cpu_time(stoptime)
 							call dger(ObsSpec(iobs)%ndata, ObsSpec(iobs)%ndata, 1d0, spectemp, 1, spectemp, 1, Cov, ObsSpec(iobs)%ndata)
 						enddo
 					endif
+					if(ObsSpec(iobs)%Cov_n_loc .gt. 0) then
+						do j = 1, ObsSpec(iobs)%Cov_n_loc
+							do ilam = 1, ObsSpec(iobs)%ndata
+								xx = (ObsSpec(iobs)%lam(ilam)*1d4 - ObsSpec(iobs)%Cov_lam_loc(j)) / ObsSpec(iobs)%Cov_L_loc(j)
+								spectemp(ilam) = ObsSpec(iobs)%Cov_a_loc(j)*exp(-0.5d0*xx**2)
+							enddo
+							call dger(ObsSpec(iobs)%ndata, ObsSpec(iobs)%ndata, 1d0, spectemp, 1, spectemp, 1, Cov, ObsSpec(iobs)%ndata)
+						enddo
+					endif
 					do j=1,ObsSpec(iobs)%ndata
 						Cov(j,j)=Cov(j,j)+(ObsSpec(iobs)%dy(j))**2
 						do ilam=1,ObsSpec(iobs)%ndata
@@ -514,7 +523,7 @@ c		call cpu_time(stoptime)
 		write(line,'("(",i0.4,"es12.4)")') n_ret+4
 		write(83,line) var(imodel,1:n_ret),COratio_der(i),Z_der(i),Tplanet(i),MMW_der(i)
 	endif
-	if(i.gt.2.and.(100*(i/100).eq.i.or.i.eq.donmodels.or.i.le.10)) then
+	if(i.gt.0.and.(100*(i/100).eq.i.or.i.eq.donmodels.or.i.le.10)) then
 		im1=real(i)/2d0-real(i)*0.682689492137086/2d0+0.5d0
 		im2=real(i)/2d0-real(i)*0.954499736103642/2d0+0.5d0
 		im3=real(i)/2d0-real(i)*0.997300203936740/2d0+0.5d0

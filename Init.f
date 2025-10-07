@@ -260,9 +260,14 @@ c===============================================================================
 		select case(key%key1)
 			case("ntpoints","nfreet")
 				read(key%value,*) nTpoints
+			case("obs")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr2.eq.0) key%nr2=1
+				if(key%nr1.gt.nobs) nobs=key%nr1
 		end select
 		key=>key%next
 	enddo
+	allocate(ObsSpec(max(nobs,1)))
 
 	key => firstkey
 	do while(.not.key%last)
@@ -273,6 +278,10 @@ c===============================================================================
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.nobs) nobs=key%nr1
+				select case(key%key2)
+					case("cov_l_loc","cov_a_loc","cov_lam_loc")
+						if(key%nr2.gt.ObsSpec(key%nr1)%Cov_n_loc) ObsSpec(key%nr1)%Cov_n_loc=key%nr2
+				end select
 			case("phase")
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
@@ -409,7 +418,6 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(tau_IRpoint(max(nIRpoints,1)),dT_IRpoint(max(nIRpoints,1)))
 	allocate(dTpoint(max(nTpoints,1)))
 	allocate(Ppoint(max(nTpoints,1)))
-	allocate(ObsSpec(max(nobs,1)))
 	allocate(Tin(nr))
 	allocate(instrument(max(n_instr,1)))
 	allocate(instr_ntrans(max(n_instr,1)))
@@ -426,7 +434,12 @@ c select at least the species relevant for disequilibrium chemistry
 		allocate(PhotoReacts(i)%abun(nr,nmol_data))
 	enddo
 	allocate(Cov_a_loc(max(Cov_n_loc,1)),Cov_L_loc(max(Cov_n_loc,1)),Cov_lam_loc(max(Cov_n_loc,1)))
-
+	do i=1,nobs
+		allocate(ObsSpec(i)%Cov_a_loc(max(ObsSpec(i)%Cov_n_loc,1)))
+		allocate(ObsSpec(i)%Cov_L_loc(max(ObsSpec(i)%Cov_n_loc,1)))
+		allocate(ObsSpec(i)%Cov_lam_loc(max(ObsSpec(i)%Cov_n_loc,1)))
+	enddo
+	
 	do i=1,nTpoints
 		Ppoint(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nTpoints-1))
 	enddo
@@ -2674,6 +2687,12 @@ c number of cloud/nocloud combinations
 			read(key%value,*) ObsSpec(i)%Cov_a
 		case("c_b","cov_b","cov_offset","c_offset")
 			read(key%value,*) ObsSpec(i)%Cov_offset
+		case("cov_a_loc")
+			read(key%value,*) ObsSpec(i)%Cov_a_loc(key%nr2)
+		case("cov_l_loc")
+			read(key%value,*) ObsSpec(i)%Cov_L_loc(key%nr2)
+		case("cov_lam_loc")
+			read(key%value,*) ObsSpec(i)%Cov_lam_loc(key%nr2)
 		case default
 			call output("Keyword not recognised: " // trim(key%key2))
 	end select
