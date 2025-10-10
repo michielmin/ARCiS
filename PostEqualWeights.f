@@ -10,7 +10,7 @@
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
 	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:),Tplanet(:)
-	real*8,allocatable :: speccloudtau(:,:),speccloudK(:,:,:),specobs(:,:,:),Cov(:,:)
+	real*8,allocatable :: speccloudtau(:,:),speccloudK(:,:,:),specobs(:,:,:),Cov(:,:),sysobs(:,:,:)
 	real*8 lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,cmin,spectemp(nlam),gasdev
 	integer i1,i2,ibest,info,NRHS
 	character*6000 line
@@ -76,7 +76,7 @@
 		allocate(phase3DR(0:nmodels,1:nphase,nlam))
 		allocate(var3D(0:nmodels,1:nlong,0:n_Par3D))
 	endif
-	if(useobsgrid) allocate(specobs(0:nmodels,nobs,nlam))
+	if(useobsgrid) allocate(specobs(0:nmodels,nobs,nlam),sysobs(0:nmodels,nobs,nlam))
 
 	spectrans=0d0
 	specemis=0d0
@@ -381,6 +381,7 @@ c		call cpu_time(stoptime)
 					NRHS = 1
 					call dpotrs('L', ObsSpec(iobs)%ndata, NRHS, Cov, ObsSpec(iobs)%ndata, spectemp, ObsSpec(iobs)%ndata, info)
 					do ilam = 1, ObsSpec(iobs)%ndata
+						sysobs(i,iobs,ilam) = ObsSpec(iobs)%y(ilam) - spectemp(ilam)*(ObsSpec(iobs)%dy(ilam))**2 - specobs(i,iobs,ilam)
 						specobs(i,iobs,ilam) = ObsSpec(iobs)%y(ilam) - spectemp(ilam)*(ObsSpec(iobs)%dy(ilam))**2
 					enddo
 					deallocate(Cov)
@@ -563,11 +564,18 @@ c		call cpu_time(stoptime)
 			do iobs=1,nobs
 				open(unit=26,file=trim(outputdir) // "obs" // trim(int2string(iobs,'(i0.3)')) // "_limits",
      &						FORM="FORMATTED",ACCESS="STREAM")
+				open(unit=27,file=trim(outputdir) // "obs_sys" // trim(int2string(iobs,'(i0.3)')) // "_limits",
+     &						FORM="FORMATTED",ACCESS="STREAM")
 				do ilam=1,ObsSpec(iobs)%ndata
 					sorted(1:i)=specobs(1:i,iobs,ilam)
 					call sort(sorted,i)
 					write(26,*) ObsSpec(iobs)%lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+					sorted(1:i)=sysobs(1:i,iobs,ilam)
+					call sort(sorted,i)
+					write(27,*) ObsSpec(iobs)%lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 				enddo
+				close(unit=26)
+				close(unit=27)
 			enddo
 		endif
 		
