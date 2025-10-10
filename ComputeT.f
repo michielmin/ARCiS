@@ -623,6 +623,7 @@ c===============================================================================
 	if(Tsurface0.gt.0d0) then
 		if(Tsurface.gt.Tsurface0) then
 			Esurface_max=Esurface
+			if(iter3.eq.1) Esurface_min=-6d0*(((pi*kb*Tsurface)**4)/(15d0*hplanck**3*clight**3))
 		else
 			Esurface_min=Esurface
 		endif
