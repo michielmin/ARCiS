@@ -449,7 +449,7 @@ c			Setting it to 0 means the cloud is always recomputed every iteration.
 		real*8 kappa_Gauss,lam_Gauss,dlam_Gauss
 		real*8,allocatable :: e1(:,:,:),e2(:,:,:),rho_mat(:),KeFile(:,:),KaFile(:,:),KsFile(:,:),gFile(:,:)
 		integer,allocatable :: nax(:)
-		logical usefsed,computeJn,EqChemBoundary
+		logical usefsed,computeJn,EqChemBoundary,globalGasMixing
 		real*8 fsed_alpha,fsed_beta,Srainout,fstick,x_slider
 	end type CloudType
 

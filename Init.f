@@ -2366,6 +2366,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%freeflow_nuc=.true.
 		Cloud(i)%freeflow_con=.true.
 		Cloud(i)%computeJn=.false.
+		Cloud(i)%globalGasMixing=.false.
 		Cloud(i)%condenseNaK=.true.
 c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abstract
 		Cloud(i)%usefsed=.false.
@@ -3337,6 +3338,8 @@ c				includemol(i)=.true.
 			read(key%value,*) Cloud(j)%freeflow_con
 		case("computejn")
 			read(key%value,*) Cloud(j)%computeJn
+		case("globalgasmix")
+			read(key%value,*) Cloud(j)%globalGasMixing
 		case("mixrat")
 			read(key%value,*) Cloud(j)%mixrat
 		case("kzz")

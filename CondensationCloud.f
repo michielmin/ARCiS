@@ -1087,6 +1087,7 @@ c	print*,xv_bot(1:7)
 		Kd=Km
 		Kg=Kd
 	endif
+	if(Cloud(ii)%globalGasMixing) Kg=Kg/Cloud(ii)%coverage
 
 	rpart=Cloud(ii)%rnuc
 	rmono=Cloud(ii)%rnuc
