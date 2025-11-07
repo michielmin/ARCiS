@@ -557,12 +557,19 @@ c	call PosSolve(IntH,Fl,minFl,maxFl,nr,IP,WS)
 	do ir=1,nr
 		Fl(ir)=min(max(1d-5,Fl(ir)),1d5)
 	enddo
+
+	Ts=T*Fl**0.25
+
+	T1=Ts
+	do ir=2,nr-1
+		Ts(ir)=(T1(ir-1)*T1(ir+1)*T1(ir)**2)**0.25
+	enddo
 				
 	maxErr=0d0
 	j=1
 	do ir=1,nr-2
 		dlnP=log(P(ir+1)/P(ir))
-		dlnT=log(T(ir+1)/T(ir))+0.25*log(Fl(ir+1)/Fl(ir))
+		dlnT=log(Ts(ir+1)/Ts(ir))
 		err=(dlnT/dlnP)/nabla_ad(ir)
 		if(abs(err).gt.abs(maxErr).and..not.Convec(ir)) then
 c		if(err.gt.maxErr.and..not.Convec(ir)) then
@@ -675,6 +682,7 @@ c===============================================================================
 	Fl=Hedd
 	do ir=1,nr
 		if(Convec(ir)) then
+			exp_ad=1d0/(1d0-nabla_ad(ir))
 			Fl(ir)=Fl(ir)-SUMC(IntH(ir,1:nr),nr)
 			Fl(ir)=Fl(ir)*sigma/(2d0*(((pi*kb)**4)/(15d0*hplanck**3*clight**3)))
 			Kzz_convect(ir)=(1d0/3d0)*Hp(ir)*((exp_ad-1d0)*abs(Fl(ir))/(exp_ad*MMW(ir)*dens(ir)))**(1d0/3d0)

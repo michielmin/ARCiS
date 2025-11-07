@@ -2,6 +2,7 @@
 	use GlobalSetup
 	use Constants
 	use AtomsModule
+	use CloudModule
 	IMPLICIT NONE
 	real*8 dp,dz,dlogp,RgasBar,Mtot,Pb(nr+1),tot,tot2,met_r,dens1bar,minZ,Tc,Rscale
 	real*8 Otot,Ctot,Htot,vescape,vtherm,RHill,MMW_form,P0,R0,Kzz_g_in(nr),Kzz_b_in(nr)
@@ -10,6 +11,7 @@
 	logical ini,compute_mixrat
 	character*500 cloudspecies(max(nclouds,1))
 	real*8 ComputeKzz,molfracs_atoms0(N_atoms)
+	real*8,allocatable :: Otot_r(:),Ctot_r(:),Ntot_r(:)
 	logical dochemR(nr)
 	
 	Kzz_g_in=Kzz_g
@@ -286,9 +288,12 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
 			endif
 			if(dochemR(i)) then
 			Tc=max(min(T(i),20000d0),100d0)
+			do ii=1,nclouds
+				if(nTiter.gt.Cloud(ii)%fixcloud.and.Cloud(ii)%fixcloud.gt.0) molfracs_atoms(1:N_atoms)=molfracs_atoms_cloud(1:N_atoms,i)
+			enddo
 			if(P(i).ge.mixP.or.i.eq.1) then
 				call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &			XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,dosimplerainout)
+     &			XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,dosimplerainout,useEOS)
     		else
     			mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
     			XeqCloud(i,1:nclouds)=XeqCloud(i-1,1:nclouds)
@@ -313,6 +318,8 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
 
 		if(fixMMW) MMW=MMW0
 		if(disequilibrium) then
+			allocate(Otot_r(nr),Ctot_r(nr),Ntot_r(nr))
+			call AddDiseqAtoms(Otot_r,Ctot_r,Ntot_r)
 c call disequilibrium code
 c input: 	R(1:nr+1) : These are the radial boundaries of the layers (bottom to top)
 c			P(1:nr),T(1:nr) : These are the pressure and temperature inside the layers
@@ -322,6 +329,8 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		   call output("==================================================================")
 		   call output("Computing disequilibrium chemistry")
 		   call diseq_calc(nr,R(1:nr+1),P(1:nr),T(1:nr),nmol,molname(1:nmol),mixrat_r(1:nr, 1:nmol),COratio,Kzz_g(1:nr))		   
+			call CorrectDiseqAtoms(Otot_r,Ctot_r,Ntot_r)
+			deallocate(Otot_r,Ctot_r,Ntot_r)
 		endif
 		if(nfixmol.gt.0) then
 			do i=1,nfixmol
@@ -698,7 +707,7 @@ c	endif
 	ini=.true.
 	do i=1,nr
 		call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,dosimplerainout)
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,dosimplerainout,useEOS)
 	enddo
 
 	return
@@ -932,14 +941,14 @@ c	close(unit=50)
 
 
 	subroutine call_chemistry(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,
-     &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol,rainout)
+     &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol,rainout,useEOS)
 	use AtomsModule
 	use TimingModule
 	IMPLICIT NONE
 	integer nmol
 	real*8 Tin,Pin,mol_abun(nmol),nabla_ad
 	character*10 mol_names(nmol)
-	logical includemol(nmol),didcondens,ini,condensates,rainout
+	logical includemol(nmol),didcondens,ini,condensates,rainout,useEOS
 	integer Ncloud,i,imol,methGGchem
 	real*8 Xcloud(max(Ncloud,1)),MMW,Tg
 	character*500 cloudspecies(max(Ncloud,1)),namecloud
@@ -961,6 +970,10 @@ c	close(unit=50)
 	ctimechem=ctimechem+1
 
 	Tg=min(max(Tin,100d0),30000d0)
+
+	if(useEOS) then
+		call GetNablaEOS(Pin,Tg,molfracs_atoms(1)/(molfracs_atoms(1)+molfracs_atoms(2)),nabla_ad)
+	endif
 
 	mol_abun=0d0
 	Xcloud=0d0

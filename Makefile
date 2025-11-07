@@ -170,7 +170,8 @@ OBJS	= Modules.o \
 		ConvertColors.o \
 		Formation.o \
 		ComputePAH.o \
-		BDREF.o
+		BDREF.o \
+		EOS.o
 
 # program name and install location
 PROGRAM       = ARCiS

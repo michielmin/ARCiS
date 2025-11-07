@@ -244,7 +244,7 @@ c for exchange when computing secondary atmosphere
 
 	real*8,allocatable :: tau_Vpoint(:),tau_IRpoint(:),dT_Vpoint(:),dT_IRpoint(:)
 	real*8,allocatable :: Ppoint(:),dTpoint(:)
-	logical pos_dT_lowest,pos_dT,freePT_fitT,freePT_fitP
+	logical pos_dT_lowest,pos_dT,freePT_fitT,freePT_fitP,useEOS
 	real*8 PrefTpoint,wiggle_err
 	integer nVpoints,nIRpoints,nTpoints
 
@@ -515,7 +515,7 @@ c			Setting it to 0 means the cloud is always recomputed every iteration.
 	character*25,allocatable :: CSname(:)
 	integer nCS,nnr
 	logical,allocatable :: ice(:)
-	real*8,allocatable :: Tevap(:,:),Tdist(:,:)
+	real*8,allocatable :: Tevap(:,:),Tdist(:,:),molfracs_atoms_cloud(:,:)
 
 	end module
 

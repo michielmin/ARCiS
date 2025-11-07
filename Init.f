@@ -1042,6 +1042,11 @@ c select at least the species relevant for disequilibrium chemistry
 		call init_GGchem(molname,nmol,doit)
 		dobackgroundgas=.false.
 	endif
+	if(useEOS) then
+		call getenv('HOME',homedir)
+		file=trim(homedir) // "/ARCiS/Data/DirEOS2021/"
+		call InitEOS(file)
+	endif
 
 	if(pos_dT_lowest) then
 		do i=1,n_ret
@@ -1397,6 +1402,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) computeT
 		case("exp_ad")
 			read(key%value,*) exp_ad
+		case("useeos","use_eos")
+			read(key%value,*) useEOS
 		case("isofstar")
 			read(key%value,*) isoFstar
 		case("forceebalance")
@@ -2443,6 +2450,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 	enddo
 	
 	computeT=.false.
+	useEOS=.false.
 	isoFstar=.false.
 	TeffP=600d0
 	outputopacity=.false.
