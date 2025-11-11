@@ -374,24 +374,45 @@ c input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. Now 
 		do i=1,nclouds
 			if(nTiter.le.Cloud(i)%fixcloud.or.Cloud(i)%fixcloud.le.0) call SetupCloud(i)
 		enddo
-		docloud=.false.
-		do icc=2,ncc
-			docloud(icc,1:nclouds)=docloud(icc-1,1:nclouds)
-			i=0
-10			i=i+1
-			docloud(icc,i)=.not.docloud(icc,i)
-			if(.not.docloud(icc,i)) goto 10
-		enddo
-		do icc=1,ncc
-			cloudfrac(icc)=1d0
-			do i=1,nclouds
-				if(docloud(icc,i)) then
-					cloudfrac(icc)=cloudfrac(icc)*Cloud(i)%coverage
-				else
-					cloudfrac(icc)=cloudfrac(icc)*(1d0-Cloud(i)%coverage)
-				endif
+		if(cloudoverlap) then
+			docloud=.false.
+			do icc=2,ncc
+				docloud(icc,1:nclouds)=docloud(icc-1,1:nclouds)
+				i=0
+10				i=i+1
+				docloud(icc,i)=.not.docloud(icc,i)
+				if(.not.docloud(icc,i)) goto 10
 			enddo
-		enddo
+			do icc=1,ncc
+				cloudfrac(icc)=1d0
+				do i=1,nclouds
+					if(docloud(icc,i)) then
+						cloudfrac(icc)=cloudfrac(icc)*Cloud(i)%coverage
+					else
+						cloudfrac(icc)=cloudfrac(icc)*(1d0-Cloud(i)%coverage)
+					endif
+				enddo
+			enddo
+		else
+			docloud=.false.
+			do icc=2,ncc
+				docloud(icc,icc-1)=.true.
+				cloudfrac(icc)=Cloud(icc-1)%coverage
+			enddo
+			cloudfrac(1)=1d0-sum(cloudfrac(2:ncc))
+			if(cloudfrac(1).lt.0d0) then
+				print*,"#####################################"
+				print*," CLOUD FRACTIONS ADD UP TO > 1"
+				print*," Normalizing to fully clouded planet"
+				cloudfrac(2:ncc)=cloudfrac(2:ncc)/sum(cloudfrac(2:ncc))
+				cloudfrac(1)=0d0
+				print*," Cloud coverage used:"
+				do i=1,nclouds
+					print*,"  cloud layer ",trim(int2string(i,'(i3)')),": ",trim(dbl2string(cloudfrac(i+1),'(f4.2)'))
+				enddo
+				print*,"#####################################"
+			endif
+		endif
 
 		if(ncc.eq.1) then
 			docloud=.true.

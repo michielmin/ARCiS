@@ -1372,6 +1372,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) distance
 		case("cloud")
 			call ReadCloud(key)
+		case("cloudoverlap")
+			read(key%value,*) cloudoverlap
 		case("kzz_offset")
 			read(key%value,*) Kzz_offset
 		case("kzz_max")
@@ -2314,6 +2316,7 @@ c  GGchem was still implemented slightly wrong.
 
 	nrstepchem=1
 	nr_cloud=10
+	cloudoverlap=.true.
 
 	do i=1,nclouds
 		Cloud(i)%opacitytype='AUTO'
@@ -2561,15 +2564,28 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 
 c number of cloud/nocloud combinations
 	ncc=1
-	do i=1,nclouds
-		if(Cloud(i)%coverage.ne.1d0) ncc=2**nclouds
-	enddo
-	do i=1,n_ret
-		j=len_trim(RetPar(i)%keyword)
-		if(j.gt.7) then
-			if(RetPar(i)%keyword(j-7:j).eq.'coverage') ncc=2**nclouds
-		endif
-	enddo
+	if(cloudoverlap) then
+		do i=1,nclouds
+			if(Cloud(i)%coverage.ne.1d0) ncc=2**nclouds
+		enddo
+		do i=1,n_ret
+			j=len_trim(RetPar(i)%keyword)
+			if(j.gt.7) then
+				if(RetPar(i)%keyword(j-7:j).eq.'coverage') ncc=2**nclouds
+			endif
+		enddo
+	else
+		do i=1,nclouds
+			if(Cloud(i)%coverage.ne.1d0) ncc=nclouds+1
+		enddo
+		do i=1,n_ret
+			j=len_trim(RetPar(i)%keyword)
+			if(j.gt.7) then
+				if(RetPar(i)%keyword(j-7:j).eq.'coverage') ncc=nclouds+1
+			endif
+		enddo
+	endif
+		
 	allocate(docloud(ncc,nclouds))
 	allocate(cloudfrac(ncc))
 	allocate(flux(0:ncc,nlam))

@@ -216,7 +216,7 @@ c===============================================================================
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
 	real*8 molfracs_atoms_outgas(41),MMW0,fH2O	! fH2O is the total mass fraction in Water compared to the mass of the planet
-	logical secondary_atmosphere,constant_g,forceEbalance,fixMMW,WaterWorld,useomp,fullcovmat
+	logical secondary_atmosphere,constant_g,forceEbalance,fixMMW,WaterWorld,useomp,fullcovmat,cloudoverlap
 	logical,allocatable :: RTgridpoint(:),computelam(:)
 	character*20 aim3D
 	character*2 standardstarname
