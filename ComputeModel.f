@@ -55,6 +55,12 @@ c	call cpu_time(starttime)
 		nvel_temp=nvel
 		nvel=0
 		do nTiter=1,maxiter
+			computelam=RTgridpoint
+			do i=1,nclouds
+				if(Cloud(i)%fixcloud.eq.nTiter) then
+					computelam=.true.
+				endif
+			enddo
 			call output("Temperature computation (" // trim(int2string(nTiter,'(i3)')) // " of " 
      &					// trim(int2string(maxiter,'(i3)')) // ")")
 
