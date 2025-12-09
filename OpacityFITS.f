@@ -227,10 +227,11 @@ C	 create the new empty FITS file
 	logical anynull,truefalse,xs
 	integer naxes(4),dimax,ivel
 	character*500 filename
+	character*10 molname_used
 	integer ig,ilam,iT,iP,imol,i,j,i1,i2,ngF,ii1(nlam),ii2(nlam)
 	integer*4 hdutype
 
-	if(.not.allocated(Ktable)) allocate(Ktable(nmol))
+	if(.not.allocated(Ktable)) allocate(Ktable(nmol+n_ff))
 
 	! Get an unused Logical Unit Number to use to open the FITS file.
 	status=0
@@ -239,22 +240,28 @@ C	 create the new empty FITS file
 	readwrite=0
 	status=0
 	blocksize=0
-	if(useXS) then
-		filename=trim(opacitydir) // "xs"
-		xs=.true.
+	if(imol.le.nmol) then
+		if(useXS) then
+			filename=trim(opacitydir) // "xs"
+			xs=.true.
+		else
+			filename=trim(opacitydir) // "opacity"
+			xs=.false.
+		endif
+		molname_used=molname(imol)
 	else
-		filename=trim(opacitydir) // "opacity"
-		xs=.false.
+		filename=trim(opacitydir) // "freefree"
+		molname_used=molname(molnr_ff(imol-nmol))
 	endif
-	filename=trim(filename) // "_" // trim(molname(imol))
+	filename=trim(filename) // "_" // trim(molname_used)
 	filename=trim(filename) // ".fits"
 	inquire(file=trim(filename),exist=truefalse)
-	if(useXS.and..not.truefalse) then
+	if(useXS.and..not.truefalse.and.imol.le.nmol) then
 		readwrite=0
 		status=0
 		blocksize=0
 		filename=trim(opacitydir) // "xs"
-		filename=trim(filename) // "_" // trim(molname(imol))
+		filename=trim(filename) // "_" // trim(molname_used)
 		filename=trim(filename) // ".fits.gz"
 		inquire(file=trim(filename),exist=truefalse)
 		if(.not.truefalse) then
@@ -262,7 +269,7 @@ C	 create the new empty FITS file
 			call output("Cross sections not available: " // trim(filename))
 			call output("Switching to low res k-tables")
 			filename=trim(opacitydir) // "opacity"
-			filename=trim(filename) // "_" // trim(molname(imol))
+			filename=trim(filename) // "_" // trim(molname_used)
 			filename=trim(filename) // ".fits"
 			inquire(file=trim(filename),exist=truefalse)
 		endif
@@ -275,8 +282,12 @@ C	 create the new empty FITS file
 		readwrite=0
 		status=0
 		blocksize=0
-		filename=trim(opacitydir) // "opacity"
-		filename=trim(filename) // "_" // trim(molname(imol))
+		if(imol.le.nmol) then
+			filename=trim(opacitydir) // "opacity"
+		else
+			filename=trim(opacitydir) // "freefree"
+		endif
+		filename=trim(filename) // "_" // trim(molname_used)
 		filename=trim(filename) // ".fits.gz"
 		inquire(file=trim(filename),exist=truefalse)
 		if(truefalse) then
@@ -307,10 +318,14 @@ C	 create the new empty FITS file
 	call ftgkyj(unit,'nlam',Ktable(imol)%nlam,comment,status)
 	call ftgkyj(unit,'ng',Ktable(imol)%ng,comment,status)
 
-	if(xs) then
-		call output("Reading in cross sections for " // trim(molname(imol)))
+	if(imol.le.nmol) then
+		if(xs) then
+			call output("Reading in cross sections for " // trim(molname_used))
+		else
+			call output("Reading in correlated k-tables for " // trim(molname_used))
+		endif
 	else
-		call output("Reading in correlated k-tables for " // trim(molname(imol)))
+		call output("Reading in free-free cross sections for " // trim(molname_used))
 	endif
 	call output("   wavelength range: " // trim(dbl2string(Ktable(imol)%lam1*1d4,'(es8.2)')) // " - " 
      &		// trim(dbl2string(Ktable(imol)%lam2*1d4,'(es8.2)')) // " micron")
@@ -501,7 +516,7 @@ C	 create the new empty FITS file
 	if(.true.) then
 		allocate(temp(nlam))
 		filename=trim(opacitydir) // "UV"
-		filename=trim(filename) // "_" // trim(molname(imol))
+		filename=trim(filename) // "_" // trim(molname_used)
 		filename=trim(filename) // ".dat"
 		inquire(file=trim(filename),exist=truefalse)
 		if(truefalse) then
@@ -524,7 +539,7 @@ C	 create the new empty FITS file
 		deallocate(temp)
 	endif
 
-c	if(molname(imol).eq."O2") then
+c	if(molname_used.eq."O2") then
 c		allocate(temp(nlam))
 c		filename="O2_PSG_HITRAN2020_1e5Pa_300K_air_Villanueva.txt"
 c		call regrid(filename,lam*1d4,temp,nlam)

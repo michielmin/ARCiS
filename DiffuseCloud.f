@@ -1198,7 +1198,7 @@ c	open(unit=20,file=trim(outputdir) // '/atoms.dat',FORM="FORMATTED",ACCESS="STR
 		if(nPhotoReacts.gt.0) call doPhotoChemAtom(i)
 		if((P(i).ge.mixP.or.i.eq.1).and.dochemistry) then
 			call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,.false.,useEOS)
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,.false.,useEOS,x_el(i))
    		else
    			mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
    			XeqCloud(i,1:nclouds)=XeqCloud(i-1,1:nclouds)

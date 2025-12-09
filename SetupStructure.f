@@ -293,7 +293,7 @@ c		call output("Computing chemistry using easy_chem by Paul Molliere")
 			enddo
 			if(P(i).ge.mixP.or.i.eq.1) then
 				call call_chemistry(Tc,P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &			XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,dosimplerainout,useEOS)
+     &			XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,dosimplerainout,useEOS,x_el(i))
     		else
     			mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
     			XeqCloud(i,1:nclouds)=XeqCloud(i-1,1:nclouds)
@@ -728,7 +728,7 @@ c	endif
 	ini=.true.
 	do i=1,nr
 		call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,condensates,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,dosimplerainout,useEOS)
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,dosimplerainout,useEOS,x_el(i))
 	enddo
 
 	return
@@ -779,13 +779,13 @@ c	endif
 	use AtomsModule
 	IMPLICIT NONE
 	real*8 mutemp,mol_abun(nmol),abun_total(N_atoms),abun_gas(N_atoms),abun_dust(N_atoms)
-	real*8 Pres,Temp
+	real*8 Pres,Temp,xtemp
 	integer methGGchem
 	
 	methGGchem=0
 
 	call call_GGchem(Temp,Pres,names_atoms,abun_total,N_atoms,molname(1:nmol),
-     &			mol_abun,nmol,mutemp,.true.,abun_gas,methGGchem)
+     &			mol_abun,nmol,mutemp,.true.,abun_gas,methGGchem,xtemp)
 	abun_dust=abun_total-abun_gas	
 
 	return
@@ -962,12 +962,12 @@ c	close(unit=50)
 
 
 	subroutine call_chemistry(Tin,Pin,mol_abun,mol_names,nmol,ini,condensates,
-     &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol,rainout,useEOS)
+     &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol,rainout,useEOS,x_el)
 	use AtomsModule
 	use TimingModule
 	IMPLICIT NONE
 	integer nmol
-	real*8 Tin,Pin,mol_abun(nmol),nabla_ad
+	real*8 Tin,Pin,mol_abun(nmol),nabla_ad,x_el
 	character*10 mol_names(nmol)
 	logical includemol(nmol),didcondens,ini,condensates,rainout,useEOS
 	integer Ncloud,i,imol,methGGchem
@@ -998,7 +998,7 @@ c	close(unit=50)
 
 	mol_abun=0d0
 	Xcloud=0d0
-	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates,gas_atoms,methGGchem)
+	call call_GGchem(Tg,Pin,names_atoms,molfracs_atoms,N_atoms,mol_names,mol_abun,nmol,MMW,condensates,gas_atoms,methGGchem,x_el)
 c	call call_easy_chem(Tg,Pin,mol_abun,mol_names,nmol,ini,condensates,
 c     &		cloudspecies,Xcloud,Ncloud,nabla_ad,MMW,didcondens,includemol)
 

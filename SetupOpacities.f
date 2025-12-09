@@ -61,7 +61,7 @@ c	n_nu_line=ng*min(j,4)
 		allocate(cont_tot(nlam))
 		allocate(kaver(nlam))
 		allocate(opac_tot(nlam,ng))
-		allocate(kappa_mol(ng,nlam,nmol))
+		allocate(kappa_mol(ng,nlam,nmol+n_ff))
 		allocate(mixrat_tmp(nmol))
 		allocate(nu_line(n_nu_line))
 !$OMP PARALLEL IF(useomp)
@@ -160,6 +160,13 @@ c===============
 		if(do_rayleigh) then
 			do i=1,nlam
 				if(computelam(i)) call RayleighScattering(Csca(ir,i),ir,i)
+			enddo
+		endif
+
+		if(use_ff) then
+			do i=1,n_ff
+				call ReadOpacityFITS(kappa_mol,nmol+i,ir,0)
+				cont_tot=cont_tot+kappa_mol(1,1:nlam,nmol+i)*mixrat_r(ir,molnr_ff(i))*x_el(ir)/MMW(ir)
 			enddo
 		endif
 
@@ -396,11 +403,11 @@ c					Cs=Cs+28.499d-47*mixrat_r(ir,j)*ll2**(4.1343/4.0)
 	character*80 comment,errmessage
 	character*30 errtext
 	integer ig,ilam,iT,iP,imol,i,j,ir,ngF,i1,i2,ivel
-	real*8 kappa_mol(ng,nlam,nmol),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random,w1,ww
+	real*8 kappa_mol(ng,nlam,nmol+n_ff),wP1,wP2,wT1,wT2,x1,x2,tot,tot2,random,w1,ww
 	type(databaseKtable),pointer :: Ktab
 
 	Ktab => Ktable(imol)
-	if(.not.Ktab%available.or..not.includemol(imol)) then
+	if(imol.le.nmol.and.(.not.Ktab%available.or..not.includemol(imol))) then
 		kappa_mol(1:ng,1:nlam,imol)=0d0
 		return
 	endif

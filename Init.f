@@ -389,16 +389,18 @@ c select at least the species relevant for disequilibrium chemistry
 			enddo
 		enddo
 	endif
+
+	if(use_ff) nmol=max(nmol,maxval(molnr_ff(1:n_ff)))
 	
 	if(do_cia) nmol=max(nmol,48)
 
 	allocate(mixrat(nmol))
 	allocate(Pswitch_mol(nmol),abun_switch_mol(nmol))
-	allocate(includemol(nmol))
+	allocate(includemol(nmol+n_ff))
 	allocate(includemol_raytrace(nmol))
 	allocate(includemol_default(nmol))
 	allocate(diseqmol(nmol))
-	allocate(opacitymol(nmol))
+	allocate(opacitymol(nmol+n_ff))
 	allocate(Cloud(max(nclouds,1)))
 	do i=1,nclouds
 		allocate(Cloud(i)%abun(60))
@@ -715,6 +717,7 @@ c	condensates=(condensates.or.cloudcompute)
 		allocate(MMW(nr))
 		allocate(didcondens(nr))
 		allocate(mixrat_r(nr,nmol))
+		allocate(x_el(nr))
 		allocate(mixrat_old_r(nr,nmol))
 		allocate(mixrat_optEC_r(nr))
 		allocate(cloud_dens(nr,max(nclouds,1)))
@@ -1002,6 +1005,11 @@ c select at least the species relevant for disequilibrium chemistry
 		opacitymol(i)=.false.
 		if(includemol(i)) call InitReadOpacityFITS(i)
 	enddo
+	if(use_ff) then
+		do i=1,n_ff
+			call InitReadOpacityFITS(nmol+i)
+		enddo
+	endif
 
 	call ReadDataCIA()
 
@@ -1044,7 +1052,7 @@ c select at least the species relevant for disequilibrium chemistry
 	endif
 	if(useEOS) then
 		call getenv('HOME',homedir)
-		file=trim(homedir) // "/ARCiS/Data/DirEOS2021/"
+		file=trim(homedir) // "/ARCiS/Data/EOS/"
 		call InitEOS(file)
 	endif
 
@@ -1406,6 +1414,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) exp_ad
 		case("useeos","use_eos")
 			read(key%value,*) useEOS
+		case("useff","use_ff")
+			read(key%value,*) use_ff
 		case("isofstar")
 			read(key%value,*) isoFstar
 		case("forceebalance")

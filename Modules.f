@@ -177,6 +177,7 @@ c===============================================================================
 	real*8,allocatable :: tau1depth(:,:),cloudtau(:,:)		! ncc,wavelength
 	real*8,allocatable :: Cabs_mol(:,:,:,:),Cext_cont(:,:)
 	real*8,allocatable :: Pswitch_mol(:),abun_switch_mol(:)
+	real*8,allocatable :: x_el(:)
 	integer nangle_Jscat,nvel
 	parameter(nangle_Jscat=60)
 	real*8,allocatable :: Jscat(:,:)						! radius, angle
@@ -260,6 +261,11 @@ c for exchange when computing secondary atmosphere
 	real*8,allocatable :: Cov_L_loc(:),Cov_a_loc(:),Cov_lam_loc(:)
 	integer Cov_n_loc
 
+	integer n_ff
+	parameter(n_ff=1)
+	integer molnr_ff(n_ff)
+	parameter(molnr_ff = (/ 45 /))
+	logical use_ff
 	integer nmol_data
 	parameter(nmol_data=126)
 	real*8 Mmol(nmol_data)

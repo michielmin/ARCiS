@@ -13,8 +13,8 @@
 	integer i,j
 	real*8 T,P,dum,S,dSdP,dSdT
 	
-	fileH=trim(dir) // "TABLE_H_TP_v1"
-	fileHe=trim(dir) // "TABLE_HE_TP_v1"
+	fileH=trim(dir) // "TABLE_H_CMS_vLS.dat"
+	fileHe=trim(dir) // "TABLE_He_CMS_vLS.dat"
 	
 	open(unit=20,file=fileH,RECL=6000)
 	open(unit=21,file=fileHe,RECL=6000)

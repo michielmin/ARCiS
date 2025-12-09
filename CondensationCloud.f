@@ -273,7 +273,7 @@ c fractal dimension created by coagulating collisions
 		T_CO=(T_CO**4+TeffP**4)**0.25
 		P_CO=1d0
 		call call_chemistry(T_CO,P_CO,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
-     &				XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),MMW(1),didcondens(1),includemol,.false.,useEOS)
+     &				XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),MMW(1),didcondens(1),includemol,.false.,useEOS,x_el(1))
 		tot=0d0
 		tot1=0d0
 		do i=1,nmol
@@ -2342,7 +2342,7 @@ c	open(unit=20,file=trim(outputdir) // '/atoms.dat',FORM="FORMATTED",ACCESS="STR
 			molfracs_atoms_cloud(1:N_atoms,i)=molfracs_atoms(1:N_atoms)
 			if((P(i).ge.mixP.or.i.eq.1).and.dochemistry) then
 				call call_chemistry(T(i),P(i),mixrat_r(i,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
-     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,.false.,useEOS)
+     &				XeqCloud(i,1:nclouds),nclouds,nabla_ad(i),MMW(i),didcondens(i),includemol,.false.,useEOS,x_el(i))
 			else
 				mixrat_r(i,1:nmol)=mixrat_r(i-1,1:nmol)
 				XeqCloud(i,1:nclouds)=XeqCloud(i-1,1:nclouds)

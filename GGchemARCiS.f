@@ -332,7 +332,7 @@
 
 ***********************************************************************
 	subroutine call_GGchem(Tin,Pin,atom_names_in,atom_abuns_in,n_atom_in,mol_names_in,mol_abuns_in,n_mol_in,
-     >							MMW,condensates,atom_abuns_out,imethod)
+     >							MMW,condensates,atom_abuns_out,imethod,x_el)
 ***********************************************************************
       use PARAMETERS,ONLY: elements,abund_pick,model_dim,model_pconst,
      >                     model_struc,model_eqcond,Npoints,useDatabase,
@@ -349,9 +349,10 @@
      >                    dust_nel,dust_el,dust_nu,dust_nam,dust_mass,
      >                    dust_Vol,mass,mel
       use ARCiS_GGCHEM
+      use STRUCTURE,ONLY: pelec
       implicit none
 	integer :: n_atom_in,n_mol_in,verbose,i,j,imethod
-	real*8 :: Tin,Pin,atom_abuns_in(n_atom_in),mol_abuns_in(n_mol_in),MMW,atom_abuns_out(n_atom_in)
+	real*8 :: Tin,Pin,atom_abuns_in(n_atom_in),mol_abuns_in(n_mol_in),MMW,atom_abuns_out(n_atom_in),x_el
 	character*40 :: atom_names_in(n_atom_in)
 	character*10 :: mol_names_in(n_mol_in),uppername,elnam_UPPER
 
@@ -448,11 +449,12 @@ c          print '("p-it=",i3,"  mu=",2(1pE20.12))',it,mu/amu,dmu/mu
 		enddo
 	endif
 
-	tot=sum(nmol(1:NMOLE))+sum(nat(1:NELEM))
+	tot=sum(nmol(1:NMOLE))+sum(nat(1:NELEM))+nel
 
 	if(.not.tot.gt.0d0) then
 		mol_abuns_in=0d0
 		MMW=1d0
+		x_el=0d0
 	else
 		mol_abuns_in=0d0
 		do j=1,n_mol_in
@@ -474,8 +476,9 @@ c          print '("p-it=",i3,"  mu=",2(1pE20.12))',it,mu/amu,dmu/mu
 			MMW=MMW+nat(i)*mass(i)/tot
 		enddo
 		MMW=MMW/amu
+		x_el=nel/tot
 	endif
-	
+
 	imethod=2
 	
       end
