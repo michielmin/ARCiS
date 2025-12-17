@@ -268,6 +268,9 @@ c===============================================================================
 		key=>key%next
 	enddo
 	allocate(ObsSpec(max(nobs,1)))
+	do i=1,nobs
+		ObsSpec(i)%Cov_n_loc=0
+	enddo
 
 	key => firstkey
 	do while(.not.key%last)
