@@ -1141,6 +1141,25 @@ c				bdrf_args(2,5)=1.33		! refractive index (wavelength dependent)
 				surface_props(1:nlam,5)=1d0-surface_props(1:nlam,5)/100d0
 				bdrf_type(1:5)=0
 			endif
+		case("PARLAND","parland")
+			n_surface=2
+			call getenv('HOME',homedir)
+			if(anisoscattstar) then
+				file=trim(homedir) // '/ARCiS/Data/refind/H2O_l.dat'
+				call regridSimple(file,lam*1d4,surface_props(1:nlam,1),nlam)
+				bdrf_type(1)=2
+				bdrf_args(1,1)=10.0		!windspeed
+c				bdrf_args(2,1)=1.33		! refractive index (wavelength dependent)
+				bdrf_args(3,1)=1		! do shadowing
+				bdrf_type(2)=1
+				bdrf_args(1,2)=1.0
+				bdrf_args(2,2)=0.06
+			else
+				file=trim(homedir) // '/ARCiS/Data/Surface/Water.dat'
+				call regridSimple(file,lam*1d4,surface_props(1:nlam,1),nlam)
+				surface_props(1:nlam,1)=1d0-surface_props(1:nlam,1)/100d0
+				bdrf_type(1:2)=0
+			endif
 	end select
 	
 	if(makemovie) makeimage=.true.
@@ -1735,6 +1754,24 @@ c			read(key%value,*) nTpoints
 			call checkfile(surfacefile)
 		case("surfacealbedo")
 			read(key%value,*) surfacealbedo
+		case("surf_lam")
+			if(key%nr1.eq.1) then
+				read(key%value,*) surf_lam1
+			else if(key%nr1.eq.2) then
+				read(key%value,*) surf_lam2
+			else
+				print*,'error in surf_lam keyword',key%nr1
+			endif
+		case("surf_alb")
+			if(key%nr1.eq.1) then
+				read(key%value,*) surf_alb1
+			else if(key%nr1.eq.2) then
+				read(key%value,*) surf_alb2
+			else if(key%nr1.eq.3) then
+				read(key%value,*) surf_alb3
+			else
+				print*,'error in surf_alb keyword',key%nr1
+			endif
 		case("fwater","focean")
 			read(key%value,*) f_water
 		case("fice")
@@ -2203,6 +2240,11 @@ c	if(par_tprofile) call ComputeParamT(T)
 	
 	surfacetype='BLACK'
 	surfacealbedo=0.5d0
+	surf_lam1=0.7
+	surf_lam2=1.4
+	surf_alb1=0.15
+	surf_alb2=0.50
+	surf_alb3=0.25
 	f_water=0.7
 	f_ice=0.05
 	f_snow=0.2

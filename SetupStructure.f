@@ -624,11 +624,11 @@ c	endif
 	endif
 	
 	open(unit=50,file=trim(outputdir) // 'densityprofile' // trim(side) // '.dat',FORM="FORMATTED",ACCESS="STREAM")
-	write(50,'("#",a14,a15,a15,a13,a10,a11,a10,a10)') "radius [cm]","height [cm]","dens [g/cm^3]","N [1/cm^3]","T [K]",
-     & 	"P [bar]","g [cm/s^2]","MMW"
+	write(50,'("#",a14,a15,a15,a13,a10,a11,a10,a10,a10)') "radius [cm]","height [cm]","dens [g/cm^3]","N [1/cm^3]","T [K]",
+     & 	"P [bar]","g [cm/s^2]","MMW","nabla"
 	do i=1,nr
-		write(50,'(es15.7E3,es15.4E3,es15.4E3,es13.4E3,f10.3,es11.3E3,f10.3,f10.3)') sqrt(R(i)*R(i+1)),sqrt(R(i)*R(i+1))-Rplanet
-     &			,dens(i),Ndens(i),T(i),P(i),grav(i),MMW(i)
+		write(50,'(es15.7E3,es15.4E3,es15.4E3,es13.4E3,f10.3,es11.3E3,f10.3,f10.3,f10.3)') sqrt(R(i)*R(i+1)),sqrt(R(i)*R(i+1))-Rplanet
+     &			,dens(i),Ndens(i),T(i),P(i),grav(i),MMW(i),nabla_ad(i)
 	enddo
 	close(unit=50)
 

@@ -2980,6 +2980,41 @@ c=========================================
 			do ilam=1,nlam
 				surface_emis(ilam)=ComputeBDREFemis(bdrf_type(1),bdrf_args(1:4,1),surface_props(ilam,1))
 			enddo
+		case("PARAMETERISED","parameterised")
+			do ilam=1,nlam
+				if(lam(ilam).lt.surf_lam1/1d4) then
+					surface_emis(ilam)=1d0-surf_alb1
+				else if(lam(ilam).lt.surf_lam2/1d4) then
+					surface_emis(ilam)=1d0-surf_alb2
+				else
+					surface_emis(ilam)=1d0-surf_alb3
+				endif
+			enddo
+			f_surface(1)=1d0
+			n_surface=1
+			surface_props(1:nlam,1)=surface_emis(1:nlam)
+			bdrf_type(1)=0
+		case("PARLAND","parland")
+			f_surface(1)=f_water									! water
+			f_surface(2)=(1d0-f_water)								! land
+			n_surface=2
+			do ilam=1,nlam
+				if(lam(ilam).lt.surf_lam1/1d4) then
+					surface_emis(ilam)=1d0-surf_alb1
+				else if(lam(ilam).lt.surf_lam2/1d4) then
+					surface_emis(ilam)=1d0-surf_alb2
+				else
+					surface_emis(ilam)=1d0-surf_alb3
+				endif
+			enddo
+			surface_props(1:nlam,2)=surface_emis(1:nlam)
+			surface_emis=0d0
+			do i=1,n_surface
+				do ilam=1,nlam
+					surface_emis(ilam)=surface_emis(ilam)+
+     &		f_surface(i)*ComputeBDREFemis(bdrf_type(i),bdrf_args(1:4,i),surface_props(ilam,i))
+				enddo
+			enddo
 		case default
 			call output("Surface type not known!")
 			stop
