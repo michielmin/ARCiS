@@ -63,6 +63,7 @@
 	real*8,allocatable,save :: Hstar0(:),deltaT(:,:),prevT(:,:),AT(:,:),al(:,:)
 	real*8,save :: maxerr_prev=1d0
 	real*8 Esurface,Esurface_max,Esurface_min
+	real*8 Pcl,Tcl
 
 	if(deepredist.and.deepredisttype.eq.'fixflux') then
 		if(.not.allocated(Hstar0)) allocate(Hstar0(nr))
@@ -771,17 +772,26 @@ c===============================================================================
 
 	if(writefiles) then
 		open(unit=26,file=trim(outputdir) // 'convection.dat',FORM="FORMATTED",ACCESS="STREAM")
-		do ir=1,nr
+		do ir=nr,1,-1
 			if(Convec(ir)) then
-				write(26,*) T(ir),P(ir)
+				Pcl=P(ir)
+				Tcl=T(ir)
+				exit
+			endif
+		enddo
+		do ir=1,nr
+			dlnP=log(Pcl/P(ir))
+			dlnT=log(Tcl)
+			if(Convec(ir)) then
+				write(26,*) T(ir),P(ir),exp(dlnT-nabla_ad(ir)*dlnP)
 			else if(ir.ne.1) then
 				if(Convec(ir-1)) then
-					write(26,*) T(ir),P(ir)
+					write(26,*) T(ir),P(ir),exp(dlnT-nabla_ad(ir)*dlnP)
 				else
-					write(26,*)
+					write(26,*) 'NaN',P(ir),exp(dlnT-nabla_ad(ir)*dlnP)
 				endif
 			else
-				write(26,*)
+				write(26,*) 'NaN',P(ir),exp(dlnT-nabla_ad(ir)*dlnP)
 			endif
 		enddo
 		close(unit=26)
