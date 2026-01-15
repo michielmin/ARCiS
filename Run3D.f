@@ -3020,6 +3020,11 @@ c=========================================
 			stop
 	end select
 
+	do ilam=1,nlam
+		if(surface_emis(ilam).lt.1d-5) surface_emis(ilam)=1d-5
+		if(surface_emis(ilam).gt.(1d0-1d-5)) surface_emis(ilam)=1d0-1d-5
+	enddo
+
 	if(writefiles) then
 		open(unit=93,file=trim(outputdir) // 'surfemis.dat',FORM="FORMATTED",ACCESS="STREAM")
 		do i=1,nlam

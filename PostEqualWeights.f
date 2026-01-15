@@ -10,7 +10,7 @@
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
 	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:),Tplanet(:)
-	real*8,allocatable :: speccloudtau(:,:),speccloudK(:,:,:),specobs(:,:,:),Cov(:,:),sysobs(:,:,:)
+	real*8,allocatable :: speccloudtau(:,:),speccloudK(:,:,:),specobs(:,:,:),Cov(:,:),sysobs(:,:,:),surf_albedo(:,:)
 	real*8 lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,cmin,spectemp(nlam),gasdev
 	integer i1,i2,ibest,info,NRHS
 	character*6000 line
@@ -22,7 +22,7 @@
 	
 	writefiles=.false.
 	
-	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
+	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC'.or.retrievaltype.eq.'FULL') then
 		open(unit=35,file=trim(outputdir) // "/posteriorMCMC.dat",FORM="FORMATTED",ACCESS="STREAM")
 		read(35,*)
 		i=1
@@ -58,6 +58,7 @@
 	allocate(cloudstruct(0:nmodels,nr))
 	allocate(speccloudtau(0:nmodels,nlam))
 	allocate(speccloudK(0:nmodels,max(nclouds,1),nlam))
+	allocate(surf_albedo(0:nmodels,nlam))
 	allocate(values(0:nmodels,n_ret))
 	allocate(COratio_der(0:nmodels))
 	allocate(Z_der(0:nmodels))
@@ -86,9 +87,10 @@
 	cloudstruct=0d0
 	speccloudtau=0d0
 	speccloudK=0d0
+	surf_albedo=0d0
 	cmax=0d0
 
-	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
+	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC'.or.retrievaltype.eq.'FULL') then
 		open(unit=35,file=trim(outputdir) // "/posteriorMCMC.dat",FORM="FORMATTED",ACCESS="STREAM")
 		read(35,*)
 		do i=1,nmodels
@@ -484,6 +486,7 @@ c		call cpu_time(stoptime)
 	do j=1,ncc
 		speccloudtau(i,1:nlam)=speccloudtau(i,1:nlam)+cloudtau(j,1:nlam)
 	enddo
+	surf_albedo(i,1:nlam)=1d0-surface_emis(1:nlam)
 	do j=1,nclouds
 		if(Cloud(j)%onepart) then
 			speccloudK(i,j,1:nlam)=Cloud(j)%Kext(nr/2,1:nlam)
@@ -627,6 +630,16 @@ c		call cpu_time(stoptime)
 		do ilam=1,nlam
 			if(computelam(ilam)) then
 			sorted(1:i)=speccloudtau(1:i,ilam)
+			call sort(sorted,i)
+			write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+			endif
+		enddo
+		close(unit=26)
+
+		open(unit=26,file=trim(outputdir) // "surfacealbedo_limits",FORM="FORMATTED",ACCESS="STREAM")
+		do ilam=1,nlam
+			if(computelam(ilam)) then
+			sorted(1:i)=surf_albedo(1:i,ilam)
 			call sort(sorted,i)
 			write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 			endif
@@ -795,6 +808,7 @@ c		call cpu_time(stoptime)
 	deallocate(specemis)
 	deallocate(specemisR)
 	deallocate(speccloudtau)
+	deallocate(surf_albedo)
 	deallocate(PTstruct)
 	deallocate(Kzz_struct)
 	deallocate(like)

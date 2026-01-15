@@ -1878,6 +1878,11 @@ c			read(key%value,*) nTpoints
 		gammaT2=gammaT1
 		gamma_equal=.true.
 	endif
+	if(surf_lam1.gt.surf_lam2) then
+		tot=surf_lam2
+		surf_lam2=surf_lam1
+		surf_lam1=tot
+	endif
 
 	Rstar=Rstar*Rsun
 	Mstar=Mstar*Msun

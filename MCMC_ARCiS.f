@@ -9,16 +9,19 @@ c      parameter (NBURN=300)
       double precision SD, EPS, epsinit
       parameter (EPS=1.0D-6)
 
-      double precision x(NDIM), xnew(NDIM), mean(NDIM), z(NDIM)
+      double precision x(NDIM), xnew(NDIM), mean(NDIM), z(NDIM), xbest(NDIM)
       double precision cov(NDIM,NDIM), chol(NDIM,NDIM), x0(NDIM)
-      double precision logp, logp_new, alpha, u, likelihood, lambda
-      double precision samples(NDIM, N_UNIQUE+NBURN), x_mapped(NDIM)
+      double precision logp, logp_new, alpha, u, likelihood, lambda, logp_best
+      double precision target_acc,start_acc,end_acc,p_acc,curr_acc,eta_curr,eta_end
+      double precision samples(NDIM, N_UNIQUE+NBURN), x_mapped(NDIM),eta_start
+      double precision beta_curr,beta_start
       double precision samples_mapped(NDIM, N_UNIQUE+NBURN), cov0(NDIM,NDIM)
       integer weights(N_UNIQUE+NBURN)
       integer i, j, k, accept, step, nacc
       external likelihood
 	integer*4 counts, count_rate, count_max
 	real*8 starttime,stoptime,remaining
+	logical burnstart
 	
       SD=(2.38D0**2)/real(NDIM)
       call random_seed_f77()
@@ -28,6 +31,18 @@ c      parameter (NBURN=300)
       nacc = 1
       weights = 0
       lambda = 1.0
+
+	end_acc=0.234
+	start_acc=0.1
+	p_acc=2.0
+	eta_start=(1d0-0.01**(10d0*start_acc/real(NBURN))) !0.01
+	eta_end=(1d0-0.01**(2d0*end_acc/real(NBURN))) !0.001
+	eta_curr=eta_start
+	
+	beta_start=0.1
+	beta_curr=beta_start
+	
+	curr_acc=end_acc
 
       do j = 1, NDIM
          x(j) = x0(j)
@@ -43,6 +58,8 @@ c      parameter (NBURN=300)
       cov=cov*epsinit**2
 
       logp = (likelihood(x, ny, x_mapped))
+    	xbest=xnew
+        logp_best=logp_new
       do j = 1, NDIM
          samples(j,1) = x(j)
          samples_mapped(j,1) = x_mapped(j)
@@ -51,22 +68,39 @@ c      parameter (NBURN=300)
 	call write_pew_output(samples_mapped(1:NDIM,1:NBURN),weights(1:NBURN),NDIM,1,0)
 	call SYSTEM_CLOCK(counts, count_rate, count_max)
 	starttime = DBLE(counts)/DBLE(count_rate)
+	burnstart=.true.
 
 10    continue
          step = step + 1
 
-         if (nacc > 4 .and. nacc <= NBURN) then
-            call compute_mean(samples, weights, mean, NDIM, nacc)
-            call compute_cov(samples, weights, mean, cov, NDIM, nacc, EPS)
+c         if (nacc > 4 .and. nacc <= NBURN) then
+         if (nacc > NBURN/2 .and. nacc <= NBURN) then
+            call compute_mean(samples(1:NDIM,NBURN/2:nacc), weights(NBURN/2:nacc), mean, NDIM, nacc+1-NBURN/2)
+            call compute_cov(samples(1:NDIM,NBURN/2:nacc), weights(NBURN/2:nacc), mean, cov, NDIM, nacc+1-NBURN/2, EPS)
 		else if(nacc <= 4) then
 			cov=cov/2d0
          endif
-         if (nacc > 4) then
-			lambda=lambda*exp(((real(nacc)/real(step))-0.234d0)/(real(step)**0.6))
+		if(nacc.lt.NBURN/2) then
+			target_acc=start_acc+(end_acc-start_acc)*(real(nacc)*2d0/real(NBURN/2)-1d0)**p_acc
+		else
+			target_acc=end_acc
+		endif
+         if (nacc <= NBURN) then
+			lambda=lambda*exp(((curr_acc)-target_acc)/(real(step)**0.6))
          endif
 
          call cholesky(cov, chol, NDIM)
          call random_normal_vec(z, NDIM)
+		if(burnstart.and.nacc.ge.NBURN) then
+			x=xbest
+			logp=logp_best
+			write(*,*) '===================================='
+			write(*,*) 'Burn-in fase done, starting sampling'
+			write(*,*) '     starting from best model so far'
+			write(*,*) '===================================='
+			burnstart=.false.
+			curr_acc=end_acc
+		endif
 
          do j = 1, NDIM
             xnew(j) = x(j)
@@ -81,12 +115,29 @@ c      parameter (NBURN=300)
 			endif
          enddo
 		if(nacc.le.NBURN) call fold_MCMC(xnew,NDIM)
-
          logp_new = (likelihood(xnew, ny, x_mapped))
-         call random_number(u)
-         alpha = min(1.0D0, dexp(logp_new - logp))
 
+		if(nacc.le.NBURN) then
+			eta_curr=10d0**(log10(eta_start)+log10(eta_end/eta_start)*real(nacc)/real(NBURN))
+		else
+			eta_curr=eta_end
+		endif
+		if(nacc.le.NBURN/2) then
+			beta_curr=10d0**(log10(beta_start)+log10(1d0/beta_start)*real(nacc)/real(NBURN/2))
+		else
+			beta_curr=1d0
+		endif
+
+         if(logp_new.gt.logp_best) then
+         	xbest=xnew
+         	logp_best=logp_new
+         endif
+         call random_number(u)
+         alpha = min(1.0D0, dexp((logp_new - logp)*beta_curr))
+
+		curr_acc=curr_acc*(1d0-eta_curr)
          if (u < alpha) then
+			curr_acc=curr_acc+eta_curr
 			if(nacc.ge.NBURN) then
 		      call write_pew_output(samples_mapped(1:NDIM,nacc),weights(nacc),NDIM,1,1)
 		    endif
@@ -111,7 +162,20 @@ c      parameter (NBURN=300)
 			call SYSTEM_CLOCK(counts, count_rate, count_max)
 			stoptime = DBLE(counts)/DBLE(count_rate)
 
-			remaining=(stoptime-starttime)*real(N_UNIQUE+NBURN-nacc)/real(nacc)
+			if(nacc.ge.NBURN) then
+				remaining=real(N_UNIQUE-(nacc-NBURN))/end_acc
+			else if(nacc.ge.NBURN/2) then
+				remaining=real(N_UNIQUE)/end_acc
+				remaining=remaining+real(NBURN-nacc)/end_acc
+			else
+				remaining=real(NBURN/2)*(-atan(-sqrt((end_acc-start_acc)/end_acc))
+     &		+atan(sqrt((end_acc-start_acc)/end_acc)*real(2*nacc-NBURN/2)/real(NBURN/2)))/(2d0*sqrt(start_acc*(end_acc-start_acc)))
+				remaining=(real(step)/remaining)*real(NBURN/2)*(atan(sqrt((end_acc-start_acc)/end_acc))
+     &		-atan(sqrt((end_acc-start_acc)/end_acc)*real(2*nacc-NBURN/2)/real(NBURN/2)))/(2d0*sqrt(start_acc*(end_acc-start_acc)))
+				remaining=remaining+real(N_UNIQUE)/end_acc
+				remaining=remaining+real(NBURN/2)/end_acc
+    		endif
+			remaining=(stoptime-starttime)*remaining/real(step)
 			if(remaining.gt.3600d0*24d0) then
 				write(*,'(a,f6.1,a)') "time remaining: " ,remaining/3600d0/24d0, " days"
 			else if(remaining.gt.3600d0) then
@@ -121,7 +185,7 @@ c      parameter (NBURN=300)
 			else
 				write(*,'(a,f6.1,a)') "time remaining: " ,remaining, " seconds"
 			endif
-			write(*,'(a,f6.1,a)') "acceptance: ",100d0*real(nacc)/real(step),"%"
+			write(*,'(a,f6.1,a)') "acceptance: ",100d0*curr_acc,"%"
          else
             weights(nacc) = weights(nacc) + 1
          endif

@@ -498,8 +498,13 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 		call output("chi2 sigma-:  " // trim(dbl2string(chi2_boot_sig1,'(f10.3)')))
 		call output("chi2 sigma+:  " // trim(dbl2string(chi2_boot_sig2,'(f10.3)')))
 	endif
-	call WritePTlimits(var,Cov(1:n_ret,1:n_ret),ErrVec,error,bestchi2,.true.)
-	call WriteRetrieval(imodel,chi2,var,bestvar,error)
+	if(retrievaltype.eq.'FULL') then
+		call MCMC(MCMCfunc,var,ny,n_ret,npop,npost,epsinit_MCMC)
+		writefiles=.true.
+	else
+		call WritePTlimits(var,Cov(1:n_ret,1:n_ret),ErrVec,error,bestchi2,.true.)
+		call WriteRetrieval(imodel,chi2,var,bestvar,error)
+	endif
 
 	if(writeWolk) close(unit=31)
 	writefiles=.true.
