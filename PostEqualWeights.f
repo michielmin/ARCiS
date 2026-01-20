@@ -261,12 +261,6 @@ c		call cpu_time(stoptime)
 		endif
 	endif
 
-	if(n2d.eq.0) then
-		i2d=0
-	else
-		i2d=1
-	endif
-
 3	continue
 	error=0d0
 	call SetOutputMode(.false.)
@@ -290,41 +284,9 @@ c		call cpu_time(stoptime)
 	call ComputeModel(.true.)
 	call SetOutputMode(.true.)
 	
-	if(i2d.ne.0.and.nobs.ne.0) then
-		do iobs=1,nobs
-			if(ObsSpec(iobs)%i2d.eq.i2d) then
-				select case(ObsSpec(iobs)%type)
-					case("trans","transmission","transC")
-						spectrans(i,1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
-					case("transM")
-						if(do3D) then
-							spectrans(i,1:nlam)=2d0*obsA(1:nlam,1)/(pi*Rstar**2)
-						else
-							spectrans(i,1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
-						endif
-					case("transE")
-						if(do3D) then
-							spectrans(i,1:nlam)=2d0*obsA(1:nlam,2)/(pi*Rstar**2)
-						else
-							spectrans(i,1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
-						endif
-					case("emisr","emisR","emisa","emis","emission")
-						specemisR(i,1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
-						specemis(i,1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
-				end select
-			endif
-		enddo
-	else
-		if(i2d.eq.0) then
-			spectrans(i,1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
-		else if(i2d.le.2) then
-			spectrans(i,1:nlam)=spectrans(i,1:nlam)+obsA(0,1:nlam)/(pi*Rstar**2)/2d0
-		endif
-		if(i2d.eq.0.or.i2d.eq.3) then
-			specemisR(i,1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
-			specemis(i,1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
-		endif
-	endif
+	spectrans(i,1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
+	specemisR(i,1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
+	specemis(i,1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
 
 	if(useobsgrid) then
 		do iobs=1,nobs
@@ -420,9 +382,6 @@ c		call cpu_time(stoptime)
 		endif
 	endif	
 	endif
-
-	i2d=i2d+1
-	if(i2d.le.n2d) goto 3
 
 	if(variablePgrid) then
 		Pg1(1:nr)=-log(P(1:nr))

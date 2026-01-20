@@ -16,11 +16,7 @@
 	character*1000 line,instr_add
 	character*10 side
 	
-	if(i2d.eq.0) then
-		side=" "
-	else
-		write(side,'("_",i0.2)') i2d
-	endif
+	side=" "
 
 	lam_out(1:nlam)=lam(1:nlam)/micron
 	nlam_out=nlam

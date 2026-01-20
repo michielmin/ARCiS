@@ -635,8 +635,10 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	real*8 xx,xy,scale,dy(ny),tot
 	character*100 command
 	integer info,NRHS
-	real*8 d
+	real*8 d,f_ii
 	real*8,allocatable :: Cov(:,:),specinv(:,:)
+	real*8,allocatable :: spec_albedo(:,:,:),fitted_albedo(:,:),Kalb(:,:)
+	real*8 fit_albedo0
 
 	doscaleR2=doscaleR
 	recomputeopac=.true.
@@ -658,19 +660,29 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 		if(ObsSpec(i)%ndata.gt.maxspec) maxspec=ObsSpec(i)%ndata
 	enddo
 	allocate(allspec(nobs,maxspec))
+	if(fit_albedo) allocate(spec_albedo(2,nobs,maxspec),fitted_albedo(nobs,maxspec))
 
 	allspec=0d0
-	if(n2d.eq.0) then
-		i2d=0
-	else
-		i2d=1
-	endif
+	specsave=0d0
 
+	ii=1
+	fit_albedo0=surfacealbedo
 1	continue
 	error=0d0
 	call SetOutputMode(.false.)
 	call MapRetrieval(var,error)
 	call SetOutputMode(.true.)
+	if(fit_albedo) then
+		if(ii.eq.1) then
+			surfacealbedo=1d-4
+			f_ii=1d0-fit_albedo0
+		else
+			surfacealbedo=1d0-1d-4
+			f_ii=fit_albedo0
+		endif
+	else
+		f_ii=1d0
+	endif
 
 	call InitDens()
 	if(retrievestar) then
@@ -685,15 +697,17 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	do i=1,nobs
 		allocate(spec(ObsSpec(i)%ndata))
 		call RemapObs(i,spec,spectemp)
-		if(ObsSpec(i)%i2d.eq.i2d) then
-			allspec(i,1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
-			specsave(i,1:nlam)=spectemp(1:nlam)
-		endif
+		allspec(i,1:ObsSpec(i)%ndata)=allspec(i,1:ObsSpec(i)%ndata)+f_ii*spec(1:ObsSpec(i)%ndata)
+		specsave(i,1:nlam)=specsave(i,1:nlam)+f_ii*spectemp(1:nlam)
+		if(fit_albedo) spec_albedo(ii,i,1:ObsSpec(i)%ndata)=spec(1:ObsSpec(i)%ndata)
 		deallocate(spec)
 	enddo
-	i2d=i2d+1
-	if(i2d.le.n2d) goto 1
-
+	
+	if(fit_albedo.and.ii.eq.1) then
+		ii=ii+1
+		goto 1
+	endif
+	surfacealbedo=fit_albedo0
 	k=0
 	do i=1,nobs
 		do j=1,ObsSpec(i)%ndata
@@ -710,6 +724,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 			end select
 		enddo
 	enddo
+	
 	if(doscaleR2) then
 		xy=0d0
 		xx=0d0
@@ -821,6 +836,7 @@ c	linear
 					allocate(spec(ObsSpec(i)%ndata))
 					allocate(Cov(ObsSpec(i)%ndata,ObsSpec(i)%ndata))
 					allocate(specinv(ObsSpec(i)%ndata,1))
+					if(fit_albedo) allocate(Kalb(ObsSpec(i)%ndata,ObsSpec(i)%ndata))
 					NRHS=1
 					Cov(1:ObsSpec(i)%ndata,1:ObsSpec(i)%ndata)=0d0
 					if(Cov_n_loc .gt. 0) then
@@ -851,6 +867,20 @@ c	linear
 						spec(j)=ObsSpec(i)%y(j)+ObsSpec(i)%offset-allspec(i,j)/ObsSpec(i)%scale
 					enddo
 					Cov=Cov+ObsSpec(i)%Cov_offset**2
+
+					if(fit_albedo.and.
+     &	(ObsSpec(i)%type.eq.'emis'.or.ObsSpec(i)%type.eq.'emisR'.or.
+     &	 ObsSpec(i)%type.eq.'phase'.or.ObsSpec(i)%type.eq.'phaseR')) then
+						do j=1,ObsSpec(i)%ndata
+							do ii=1,ObsSpec(i)%ndata
+								d=(log(ObsSpec(i)%lam(j))-log(ObsSpec(i)%lam(ii)))
+								Kalb(j,ii)=fit_albedo_sigma**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+								Cov(j,ii)=Cov(j,ii)+
+     &	(spec_albedo(2,i,j)-spec_albedo(1,i,j))*(spec_albedo(2,i,ii)-spec_albedo(1,i,ii))*Kalb(j,ii)
+							enddo
+						enddo
+					endif
+
 					call dpotrf('L', ObsSpec(i)%ndata, Cov, ObsSpec(i)%ndata, info)
 					specinv(1:ObsSpec(i)%ndata,1)=spec(1:ObsSpec(i)%ndata)
       ! Compute log(det(A)) = 2 * sum(log(L_ii))
@@ -863,6 +893,15 @@ c	linear
 					do j=1,ObsSpec(i)%ndata
 						lnew=lnew-spec(j)*specinv(j,1)
 					enddo
+					if(fit_albedo) then
+						fitted_albedo=surfacealbedo
+						do j=1,ObsSpec(i)%ndata
+							do ii=1,ObsSpec(i)%ndata
+								fitted_albedo(i,j)=fitted_albedo(i,j)+Kalb(j,ii)*(spec_albedo(2,i,ii)-spec_albedo(1,i,ii))*specinv(ii,1)
+							enddo
+							ObsSpec(i)%model(j)=spec_albedo(1,i,j)+(spec_albedo(2,i,j)-spec_albedo(1,i,j))*fitted_albedo(i,j)
+						enddo
+					endif
 					specinv(1:ObsSpec(i)%ndata,1)=spec(1:ObsSpec(i)%ndata)
 ! Solve L * w = spec  (forward substitution)
 					call dtrsv('L','N','N', ObsSpec(i)%ndata, Cov, ObsSpec(i)%ndata, specinv, NRHS)
@@ -871,6 +910,7 @@ c	linear
 						global_chi2 = global_chi2 + specinv(j,1)*specinv(j,1)
 					enddo
 					deallocate(Cov,spec,specinv)
+					if(fit_albedo) deallocate(Kalb)
 			end select
 			if(ObsSpec(i)%scaling.and.ObsSpec(i)%dscale.gt.0d0) then
 				lnew=lnew-((ObsSpec(i)%scale-1d0)/ObsSpec(i)%dscale)**2
@@ -909,7 +949,6 @@ c	linear
 			status=system(command)
 		endif
 
-		i2d=0
 		call WriteStructure()
 		call WriteOutput()
 
@@ -939,6 +978,13 @@ c	linear
 					enddo
 					close(unit=20)
 			end select
+			if(fit_albedo) then
+				open(unit=20,file=trim(outputdir) // "albedo" // trim(int2string(i,'(i0.3)')),FORM="FORMATTED",ACCESS="STREAM")
+				do j=1,ObsSpec(i)%ndata
+					write(20,*) ObsSpec(i)%lam(j)*1d4,fitted_albedo(i,j)
+				enddo
+				close(unit=20)
+			endif
 		enddo
 
 		status=system("cp " // trim(outputdir) // "input.dat " // trim(outputdir) // "bestfit.dat")
@@ -1427,12 +1473,8 @@ c			vec(i)=gasdev(idum)
 	inquire(file=trim(outputdir)//".txt",exist=exist)
 	if(.not.exist) return
 
-	if(i2d.eq.0) then
-		side=" "
-	else
-		write(side,'("_",i0.2)') i2d
-	endif
-	
+	side=" "
+
 	ioflag=.true.
 	
 	open(unit=40,file=trim(outputdir)//".txt",FORM="FORMATTED",ACCESS="STREAM")
@@ -2005,7 +2047,7 @@ c	linear
 	do i=1,n_ret
 		readline=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
 		call get_key_value(readline,key%key,key%key1,key%key2,key%orkey1,key%orkey2,key%value,
-     &					key%nr1,key%nr2,key%hasnr1,key%hasnr2,key%key2d)
+     &					key%nr1,key%nr2,key%hasnr1,key%hasnr2)
 		call ReadAndSetKey(key)
 	enddo
 	call ConvertUnits()
@@ -2068,7 +2110,7 @@ c	linear, square
 	do i=1,n_ret
 		readline=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
 		call get_key_value(readline,key%key,key%key1,key%key2,key%orkey1,key%orkey2,key%value,
-     &					key%nr1,key%nr2,key%hasnr1,key%hasnr2,key%key2d)
+     &					key%nr1,key%nr2,key%hasnr1,key%hasnr2)
 		call ReadAndSetKey(key)
 	enddo
 	call ConvertUnits()
@@ -2461,7 +2503,7 @@ C  computed by DGETRF.
 	integer,allocatable :: nabun_ret(:)
 	character*1000 line_in
 	character*500 key,key1,key2,value,orkey1,orkey2
-	integer i,nr1,nr2,key2d
+	integer i,nr1,nr2
 	logical hasnr1,hasnr2
 	
 	allocate(tot(nclouds),nabun_ret(nclouds),frac(nclouds,60))
@@ -2471,7 +2513,7 @@ C  computed by DGETRF.
 
 	do i=1,n_ret
 		line_in=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
-		call get_key_value(line_in,key,key1,key2,orkey1,orkey2,value,nr1,nr2,hasnr1,hasnr2,key2d)
+		call get_key_value(line_in,key,key1,key2,orkey1,orkey2,value,nr1,nr2,hasnr1,hasnr2)
 		if(key1.eq.'cloud') then
 			if(key2.eq.'abun') then
 				tot(nr1)=tot(nr1)+RetPar(i)%value
@@ -2506,7 +2548,7 @@ C  computed by DGETRF.
 	
 	do i=1,n_ret
 		line_in=trim(RetPar(i)%keyword) // "=" // trim(dbl2string(RetPar(i)%value,'(es14.7)'))
-		call get_key_value(line_in,key,key1,key2,orkey1,orkey2,value,nr1,nr2,hasnr1,hasnr2,key2d)
+		call get_key_value(line_in,key,key1,key2,orkey1,orkey2,value,nr1,nr2,hasnr1,hasnr2)
 		if(key1.eq.'cloud') then
 			if(key2.eq.'abun') then
 				RetPar(i)%value=frac(nr1,nr2)/tot(nr1)

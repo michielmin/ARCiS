@@ -1348,7 +1348,7 @@ c Note we use the symmetry of the North and South here!
 	do i=1,n_Par3D
 		readline=trim(Par3D(i)%keyword) // "=" // trim(dbl2string(Par3D(i)%x,'(es14.7)'))
 		call get_key_value(readline,key%key,key%key1,key%key2,key%orkey1,key%orkey2,key%value,
-     &					key%nr1,key%nr2,key%hasnr1,key%hasnr2,key%key2d)
+     &					key%nr1,key%nr2,key%hasnr1,key%hasnr2)
 		call ReadAndSetKey(key)
 	enddo
 	call ConvertUnits()

@@ -25,19 +25,6 @@
 	integer i1,i2
 
 	return
-
-	if(n2d.eq.0) then
-		i1=0
-		i2=0
-	else
-		i1=1
-		i2=n2d
-	endif
-	do i2d=i1,i2
-		call WritePTlimitsMN
-	enddo
-
-	return
 	end
 	
 	

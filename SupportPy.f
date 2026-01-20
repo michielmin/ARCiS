@@ -144,7 +144,7 @@
 
 	metallicity=metallicity0
 	
-	call get_key_value(readline,key%key,key%key1,key%key2,key%orkey1,key%orkey2,key%value,key%nr1,key%nr2,hasnr1,hasnr2,key%key2d)
+	call get_key_value(readline,key%key,key%key1,key%key2,key%orkey1,key%orkey2,key%value,key%nr1,key%nr2,hasnr1,hasnr2)
 	call ReadAndSetKey(key)
 
 	call ConvertUnits()

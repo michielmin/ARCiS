@@ -7,7 +7,7 @@ c==============================================================================
 	type SettingKey
 		character*500 key1,key2,value,key
 		character*500 orkey1,orkey2
-		integer nr1,nr2,key2d
+		integer nr1,nr2
 		logical last,hasnr1,hasnr2
 		type(SettingKey),pointer :: next
 	end type SettingKey
@@ -91,7 +91,7 @@ c				all arguments are read
 	key => key%next
 	key%last=.false.
 	call get_key_value(readline,key%key,key%key1,key%key2,key%orkey1,key%orkey2,key%value,
-     &					key%nr1,key%nr2,key%hasnr1,key%hasnr2,key%key2d)
+     &					key%nr1,key%nr2,key%hasnr1,key%hasnr2)
 
 c read another command, so go back
 	goto 10
@@ -110,21 +110,15 @@ c===============================================================================
 c This subroutine just seperates the key and value component of a string given
 c key=value syntax. Key is transformed to lowercase.
 c=========================================================================================
-	subroutine get_key_value(line_in,key,key1,key2,orkey1,orkey2,value,nr1,nr2,hasnr1,hasnr2,key2d)
+	subroutine get_key_value(line_in,key,key1,key2,orkey1,orkey2,value,nr1,nr2,hasnr1,hasnr2)
 	use GlobalSetup
 	IMPLICIT NONE
 	character*1000 line_in,line
 	character*500 key,key1,key2,value,orkey1,orkey2
-	integer i,nr1,nr2,ikey1,ikey2,key2d
+	integer i,nr1,nr2,ikey1,ikey2
 	logical hasnr1,hasnr2
 	
 	line=line_in
-	key2d=0
-	if(line(1:2).eq.'2d'.and.line(4:4).eq.':') then
-		read(line(3:3),*) key2d
-		if(key2d.gt.n2d) n2d=key2d
-		write(line,'(a)') line_in(5:1000)
-	endif
 	
 	ikey1=index(line,'=')
 	ikey2=index(line,':')
@@ -238,8 +232,6 @@ c===============================================================================
 	freePT_fitP=.true.
 	Rp_range=20d0
 
-	i2d=0
-
 	nr=20
 	nrsurf=0
 	key => firstkey
@@ -275,8 +267,6 @@ c===============================================================================
 	key => firstkey
 	do while(.not.key%last)
 		select case(key%key1)
-			case("i2d")
-				read(key%value,*) i2d
 			case("obs")
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
@@ -594,8 +584,6 @@ c==============================================================================
 	allocate(key)
 	first => key
 
-	n2d=0
-
 	call GetKeywords(key)
 c Count the number of zones, particles, and stars
 c allocate the arrays
@@ -661,9 +649,9 @@ c allocate the arrays
 		do i=1,n_ret
 			line=trim(RetPar(i)%keyword) // "=0d0"
 			call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%orkey1,keyret%orkey2,
-     &						keyret%value,keyret%nr1,keyret%nr2,keyret%hasnr1,keyret%hasnr2,keyret%key2d)
+     &						keyret%value,keyret%nr1,keyret%nr2,keyret%hasnr1,keyret%hasnr2)
 			if(trim(keyret%key1).eq.trim(key%key1).and.trim(keyret%key2).eq.trim(key%key2).and.
-     &		   keyret%nr1.eq.key%nr1.and.keyret%nr2.eq.key%nr2.and.keyret%key2d.eq.key%key2d) then
+     &		   keyret%nr1.eq.key%nr1.and.keyret%nr2.eq.key%nr2) then
 				read(key%value,*) RetPar(i)%x0
 			endif
 		enddo
@@ -1234,8 +1222,6 @@ c In this case the beta map should be the static one. Make sure this is set prop
 	type(SettingKey) key
 	integer i
 
-	if(key%key2d.eq.i2d.or.key%key2d.eq.0) then
-
 	select case(key%key1)
 		case("useomp","openmp")
 			read(key%value,*) useomp
@@ -1389,9 +1375,6 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) alphaT
 		case("beta","betat")
 			read(key%value,*) betaT
-		case("tmix","twind")
-			read(key%value,*) twind
-			if(twind.gt.0d0) n2d=max(2,n2d)
 		case("partprofile","par_tprofile")
 			read(key%value,*) par_tprofile
 		case("grey_isot")
@@ -1676,11 +1659,6 @@ c			read(key%value,*) nTpoints
 			standardstarname=key%value 
 		case("trend_compute","dotrend")
 			read(key%value,*) trend_compute
-		case("i2d")
-			read(key%value,*) i2d
-		case("n2d")
-			read(key%value,*) i
-			n2d=max(i,n2d)
 		case("do3d","run3d")
 			read(key%value,*) do3D
 		case("output3d")
@@ -1783,6 +1761,12 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) f_grass
 		case("fsnow")
 			read(key%value,*) f_snow
+		case("fit_albedo")
+			read(key%value,*) fit_albedo
+		case("fit_albedo_sigma")
+			read(key%value,*) fit_albedo_sigma
+		case("fit_albedo_l")
+			read(key%value,*) fit_albedo_l
 		case("ncpah","nc_pah")
 			read(key%value,*) nC_PAH
 		case("pah")
@@ -1850,8 +1834,6 @@ c			read(key%value,*) nTpoints
 			stop
 1			continue
 	end select
-
-	endif
 	
 	return
 	end
@@ -2257,6 +2239,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 	f_ice=0.05
 	f_snow=0.2
 	f_grass=0.5
+	fit_albedo_sigma=0.25d0
+	fit_albedo_l=0.08d0
+	fit_albedo=.false.
 
 	dochemistry=.false.
 	elements_ARCiS= 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V F Cr el'
@@ -2501,7 +2486,6 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 		ObsSpec(i)%scaling=.false.
 		ObsSpec(i)%dscale=-1d0
 		ObsSpec(i)%spec=.true.
-		ObsSpec(i)%i2d=0
 		ObsSpec(i)%iphase=1
 		ObsSpec(i)%slope=0d0
 		ObsSpec(i)%offset=0d0
@@ -2755,9 +2739,6 @@ c number of cloud/nocloud combinations
 			read(key%value,*) ObsSpec(i)%fscale
 		case("dscale","sigscale")
 			read(key%value,*) ObsSpec(i)%dscale
-		case("i2d")
-			read(key%value,*) ObsSpec(i)%i2d
-			if(ObsSpec(i)%i2d.gt.n2d) n2d=ObsSpec(i)%i2d
 		case("iphase")
 			read(key%value,*) ObsSpec(i)%iphase
 		case("slope")

@@ -617,11 +617,7 @@ c	endif
 	character*10 namemix(nmol)
 	character*10 side
 	
-	if(i2d.eq.0) then
-		side=" "
-	else
-		write(side,'("_",i0.2)') i2d
-	endif
+	side=" "
 	
 	open(unit=50,file=trim(outputdir) // 'densityprofile' // trim(side) // '.dat',FORM="FORMATTED",ACCESS="STREAM")
 	write(50,'("#",a14,a15,a15,a13,a10,a11,a10,a10,a10)') "radius [cm]","height [cm]","dens [g/cm^3]","N [1/cm^3]","T [K]",

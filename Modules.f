@@ -232,6 +232,8 @@ c for exchange when computing secondary atmosphere
 	real*8,allocatable :: mixrat_optEC_r(:)
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb,surf_lam1,surf_lam2,surf_alb1,surf_alb2,surf_alb3
+	real*8 fit_albedo_sigma,fit_albedo_l
+	logical fit_albedo
 	character*20 surfacetype
 	character*500 surfacefile,Full3Ddir
 	integer nTZ,nspike,nai,nboot,npew,nscaleR
@@ -414,7 +416,7 @@ c for exchange when computing secondary atmosphere
 
 	real*8,allocatable :: flux(:,:),obsA(:,:),phase(:,:,:),obsLightCurve(:,:)
 	real*8,allocatable :: timeLightCurve(:),theta_phase(:),obsA_split(:,:)
-	integer ncc,nphase,n2d,i2d,nLightCurve
+	integer ncc,nphase,nLightCurve
 	logical makeimage,makemovie
 	logical,allocatable :: docloud(:,:)
 	real*8,allocatable :: cloudfrac(:),XCloud(:,:),XeqCloud(:,:),XeqCloud_old(:,:)
@@ -501,7 +503,7 @@ c			Setting it to 0 means the cloud is always recomputed every iteration.
 		real*8,allocatable :: lam(:),y(:),dy(:),R(:),Rexp(:),model(:)
 		integer,allocatable :: ilam(:)
 		real*8 beta,scale,slope,adderr,dscale,fscale,offset
-		integer ndata,i2d,iphase
+		integer ndata,iphase
 		logical spec,scaling
 		integer nlam,nt
 		real*8,allocatable :: LC(:,:),dLC(:,:),t(:),dt(:)
