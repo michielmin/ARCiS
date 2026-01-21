@@ -670,7 +670,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	error=0d0
 	call SetOutputMode(.false.)
 	call MapRetrieval(var,error)
-	fit_albedo0=surfacealbedo
+	if(ii.eq.1) fit_albedo0=surfacealbedo
 	call SetOutputMode(.true.)
 	if(fit_albedo) then
 		if(ii.eq.1) then

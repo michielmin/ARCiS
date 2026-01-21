@@ -275,7 +275,7 @@ c		call cpu_time(stoptime)
 	error=0d0
 	call SetOutputMode(.false.)
 	if(i.ne.0) call MapRetrievalMN(var(imodel,1:n_ret),error)
-	fit_albedo0=surfacealbedo
+	if(ii.eq.1) fit_albedo0=surfacealbedo
 	if(fit_albedo) then
 		if(ii.eq.1) then
 			surfacealbedo=1d-4
