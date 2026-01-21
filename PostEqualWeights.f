@@ -11,14 +11,16 @@
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
 	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:),Tplanet(:)
 	real*8,allocatable :: speccloudtau(:,:),speccloudK(:,:,:),specobs(:,:,:),Cov(:,:),sysobs(:,:,:),surf_albedo(:,:)
-	real*8 lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,cmin,spectemp(nlam),gasdev
+	real*8 lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,cmin,spectemp(nlam),gasdev,specobstemp(nlam)
 	integer i1,i2,ibest,info,NRHS
 	character*6000 line
 	integer*4 counts, count_rate, count_max
 	logical variablePgrid,multinestpost
 	real*8 Pgrid(nr),Pg1(nr),Pg2(nr),yy(nr),Pmin0,Pmax0,xx,xy
 	character*500 lowkey
-	integer ipmin,ipmax
+	integer ipmin,ipmax,ii
+	real*8 fit_albedo0,spec_albedo(2,nobs,nlam),f_ii,d
+	real*8,allocatable :: fitted_albedo(:,:,:),Kalb(:,:),aver_albedo(:,:)
 	
 	writefiles=.false.
 	
@@ -77,7 +79,8 @@
 		allocate(phase3DR(0:nmodels,1:nphase,nlam))
 		allocate(var3D(0:nmodels,1:nlong,0:n_Par3D))
 	endif
-	if(useobsgrid) allocate(specobs(0:nmodels,nobs,nlam),sysobs(0:nmodels,nobs,nlam))
+	if(useobsgrid) allocate(specobs(0:nmodels,nobs,nlam),sysobs(0:nmodels,nobs,nlam),
+     &						fitted_albedo(0:nmodels,nobs,nlam),aver_albedo(0:nmodels,nobs))
 
 	spectrans=0d0
 	specemis=0d0
@@ -261,10 +264,29 @@ c		call cpu_time(stoptime)
 		endif
 	endif
 
+	ii=1
+	spectrans(i,1:nlam)=0d0
+	specemisR(i,1:nlam)=0d0
+	specemis(i,1:nlam)=0d0
+	do iobs=1,nobs
+		specobs(i,iobs,1:ObsSpec(iobs)%ndata)=0d0
+	enddo
 3	continue
 	error=0d0
 	call SetOutputMode(.false.)
 	if(i.ne.0) call MapRetrievalMN(var(imodel,1:n_ret),error)
+	fit_albedo0=surfacealbedo
+	if(fit_albedo) then
+		if(ii.eq.1) then
+			surfacealbedo=1d-4
+			f_ii=1d0-fit_albedo0
+		else
+			surfacealbedo=1d0-1d-4
+			f_ii=fit_albedo0
+		endif
+	else
+		f_ii=1d0
+	endif
 	do j=1,n_ret
 		values(i,j)=RetPar(j)%value
 	enddo
@@ -285,14 +307,27 @@ c		call cpu_time(stoptime)
 	call SetOutputMode(.true.)
 	
 	spectrans(i,1:nlam)=obsA(0,1:nlam)/(pi*Rstar**2)
-	specemisR(i,1:nlam)=(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
-	specemis(i,1:nlam)=phase(1,0,1:nlam)+flux(0,1:nlam)
+	specemisR(i,1:nlam)=specemisR(i,1:nlam)+f_ii*(phase(1,0,1:nlam)+flux(0,1:nlam))/(Fstar(1:nlam)*1d23/distance**2)
+	specemis(i,1:nlam)=specemis(i,1:nlam)+f_ii*(phase(1,0,1:nlam)+flux(0,1:nlam))
+
+	do iobs=1,nobs
+		call RemapObs(iobs,specobstemp(1:ObsSpec(iobs)%ndata),spectemp)
+		if(fit_albedo) then
+			spec_albedo(ii,iobs,1:ObsSpec(iobs)%ndata)=specobstemp(1:ObsSpec(iobs)%ndata)
+		endif
+		specobs(i,iobs,1:ObsSpec(iobs)%ndata)=specobs(i,iobs,1:ObsSpec(iobs)%ndata)+f_ii*specobstemp(1:ObsSpec(iobs)%ndata)
+	enddo
+	if(fit_albedo.and.ii.eq.1) then
+		ii=ii+1
+		goto 3
+	endif
+	surfacealbedo=fit_albedo0
 
 	if(useobsgrid) then
 		do iobs=1,nobs
 			select case(ObsSpec(iobs)%type)
 				case("trans","transmission","transC","transM","transE","emisr","emisR","emisa","emis","emission")
-					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
+c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 					ObsSpec(iobs)%scale=1d0
 					if(ObsSpec(iobs)%scaling) then
 						xy=0d0
@@ -311,6 +346,7 @@ c		call cpu_time(stoptime)
 					specobs(i,iobs,1:ObsSpec(iobs)%ndata)=specobs(i,iobs,1:ObsSpec(iobs)%ndata)/ObsSpec(iobs)%scale
 
 					allocate(Cov(ObsSpec(iobs)%ndata,ObsSpec(iobs)%ndata))
+					allocate(Kalb(ObsSpec(iobs)%ndata,ObsSpec(iobs)%ndata))
 					Cov(1:ObsSpec(iobs)%ndata,1:ObsSpec(iobs)%ndata)=0d0
 					if(Cov_n_loc .gt. 0) then
 						do j = 1, Cov_n_loc
@@ -338,6 +374,23 @@ c		call cpu_time(stoptime)
 						enddo
 					enddo
 					Cov=Cov+ObsSpec(iobs)%Cov_offset**2
+					if(fit_albedo.and.
+     &	(ObsSpec(iobs)%type.eq.'emis'.or.ObsSpec(iobs)%type.eq.'emisR'.or.
+     &	 ObsSpec(iobs)%type.eq.'phase'.or.ObsSpec(iobs)%type.eq.'phaseR')) then
+						do j=1,ObsSpec(iobs)%ndata
+							do ilam=1,ObsSpec(iobs)%ndata
+								d=(log(ObsSpec(iobs)%lam(j))-log(ObsSpec(iobs)%lam(ilam)))
+								Kalb(j,ilam)=fit_albedo_sigma**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+							enddo
+						enddo
+						call RemoveOffset(Kalb,ObsSpec(iobs)%ndata)
+						do j=1,ObsSpec(iobs)%ndata
+							do ilam=1,ObsSpec(iobs)%ndata
+								Cov(j,ilam)=Cov(j,ilam)+
+     &	(spec_albedo(2,iobs,j)-spec_albedo(1,iobs,j))*(spec_albedo(2,iobs,ilam)-spec_albedo(1,iobs,ilam))*Kalb(j,ilam)
+							enddo
+						enddo
+					endif
 					call dpotrf('L', ObsSpec(iobs)%ndata, Cov, ObsSpec(iobs)%ndata, info)
 					do ilam = 1, ObsSpec(iobs)%ndata
 						spectemp(ilam) = ObsSpec(iobs)%y(ilam) - specobs(i,iobs,ilam)
@@ -348,7 +401,16 @@ c		call cpu_time(stoptime)
 						sysobs(i,iobs,ilam) = ObsSpec(iobs)%y(ilam) - spectemp(ilam)*(ObsSpec(iobs)%dy(ilam))**2 - specobs(i,iobs,ilam)
 						specobs(i,iobs,ilam) = ObsSpec(iobs)%y(ilam) - spectemp(ilam)*(ObsSpec(iobs)%dy(ilam))**2
 					enddo
-					deallocate(Cov)
+					if(fit_albedo) then
+						fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata)=surfacealbedo
+						do j=1,ObsSpec(iobs)%ndata
+							do ilam=1,ObsSpec(iobs)%ndata
+								fitted_albedo(i,iobs,j)=fitted_albedo(i,iobs,j)+Kalb(j,ilam)*(spec_albedo(2,iobs,ilam)-spec_albedo(1,iobs,ilam))*spectemp(ilam)
+							enddo
+						enddo
+						aver_albedo(i,iobs)=surfacealbedo
+					endif
+					deallocate(Cov,Kalb)
 			end select
 		enddo
 	endif
@@ -528,6 +590,12 @@ c		call cpu_time(stoptime)
      &						FORM="FORMATTED",ACCESS="STREAM")
 				open(unit=27,file=trim(outputdir) // "obs_sys" // trim(int2string(iobs,'(i0.3)')) // "_limits",
      &						FORM="FORMATTED",ACCESS="STREAM")
+				if(fit_albedo) then
+					open(unit=28,file=trim(outputdir) // "albedo" // trim(int2string(iobs,'(i0.3)')) // "_limits",
+     &						FORM="FORMATTED",ACCESS="STREAM")
+					open(unit=29,file=trim(outputdir) // "albedo_var" // trim(int2string(iobs,'(i0.3)')) // "_limits",
+     &						FORM="FORMATTED",ACCESS="STREAM")
+     			endif
 				do ilam=1,ObsSpec(iobs)%ndata
 					sorted(1:i)=specobs(1:i,iobs,ilam)
 					call sort(sorted,i)
@@ -535,9 +603,21 @@ c		call cpu_time(stoptime)
 					sorted(1:i)=sysobs(1:i,iobs,ilam)
 					call sort(sorted,i)
 					write(27,*) ObsSpec(iobs)%lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+					if(fit_albedo) then
+						sorted(1:i)=fitted_albedo(1:i,iobs,ilam)
+						call sort(sorted,i)
+						write(28,*) ObsSpec(iobs)%lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+						sorted(1:i)=fitted_albedo(1:i,iobs,ilam)-aver_albedo(1:i,iobs)
+						call sort(sorted,i)
+						write(29,*) ObsSpec(iobs)%lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+					endif
 				enddo
 				close(unit=26)
 				close(unit=27)
+				if(fit_albedo) then
+					close(unit=28)
+					close(unit=29)
+				endif
 			enddo
 		endif
 		

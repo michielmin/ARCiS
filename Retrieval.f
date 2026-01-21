@@ -666,11 +666,11 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	specsave=0d0
 
 	ii=1
-	fit_albedo0=surfacealbedo
 1	continue
 	error=0d0
 	call SetOutputMode(.false.)
 	call MapRetrieval(var,error)
+	fit_albedo0=surfacealbedo
 	call SetOutputMode(.true.)
 	if(fit_albedo) then
 		if(ii.eq.1) then
@@ -875,6 +875,11 @@ c	linear
 							do ii=1,ObsSpec(i)%ndata
 								d=(log(ObsSpec(i)%lam(j))-log(ObsSpec(i)%lam(ii)))
 								Kalb(j,ii)=fit_albedo_sigma**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+							enddo
+						enddo
+						call RemoveOffset(Kalb,ObsSpec(i)%ndata)
+						do j=1,ObsSpec(i)%ndata
+							do ii=1,ObsSpec(i)%ndata
 								Cov(j,ii)=Cov(j,ii)+
      &	(spec_albedo(2,i,j)-spec_albedo(1,i,j))*(spec_albedo(2,i,ii)-spec_albedo(1,i,ii))*Kalb(j,ii)
 							enddo
