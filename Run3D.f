@@ -3015,6 +3015,18 @@ c=========================================
      &		f_surface(i)*ComputeBDREFemis(bdrf_type(i),bdrf_args(1:4,i),surface_props(ilam,i))
 				enddo
 			enddo
+		case("GREYLAND","greyland")
+			f_surface(1)=f_water									! water
+			f_surface(2)=(1d0-f_water)								! land
+			n_surface=2
+			surface_props(1:nlam,2)=1d0-surfacealbedo
+			surface_emis=0d0
+			do i=1,n_surface
+				do ilam=1,nlam
+					surface_emis(ilam)=surface_emis(ilam)+
+     &		f_surface(i)*ComputeBDREFemis(bdrf_type(i),bdrf_args(1:4,i),surface_props(ilam,i))
+				enddo
+			enddo
 		case default
 			call output("Surface type not known!")
 			stop

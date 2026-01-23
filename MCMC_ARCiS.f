@@ -33,7 +33,7 @@ c      parameter (NBURN=300)
       lambda = 1.0
 
 	end_acc=0.234
-	start_acc=0.1
+	start_acc=0.233
 	p_acc=2.0
 	eta_start=(1d0-0.01**(10d0*start_acc/real(NBURN))) !0.01
 	eta_end=(1d0-0.01**(2d0*end_acc/real(NBURN))) !0.001

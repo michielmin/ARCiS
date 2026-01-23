@@ -1132,7 +1132,7 @@ c				bdrf_args(2,5)=1.33		! refractive index (wavelength dependent)
 				surface_props(1:nlam,5)=1d0-surface_props(1:nlam,5)/100d0
 				bdrf_type(1:5)=0
 			endif
-		case("PARLAND","parland")
+		case("PARLAND","parland","GREYLAND","greyland")
 			n_surface=2
 			call getenv('HOME',homedir)
 			if(anisoscattstar) then
@@ -1142,9 +1142,7 @@ c				bdrf_args(2,5)=1.33		! refractive index (wavelength dependent)
 				bdrf_args(1,1)=10.0		!windspeed
 c				bdrf_args(2,1)=1.33		! refractive index (wavelength dependent)
 				bdrf_args(3,1)=1		! do shadowing
-				bdrf_type(2)=1
-				bdrf_args(1,2)=1.0
-				bdrf_args(2,2)=0.06
+				bdrf_type(2)=0
 			else
 				file=trim(homedir) // '/ARCiS/Data/Surface/Water.dat'
 				call regridSimple(file,lam*1d4,surface_props(1:nlam,1),nlam)

@@ -380,13 +380,14 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 						do j=1,ObsSpec(iobs)%ndata
 							do ilam=1,ObsSpec(iobs)%ndata
 								d=(log(ObsSpec(iobs)%lam(j))-log(ObsSpec(iobs)%lam(ilam)))
-								Kalb(j,ilam)=fit_albedo_sigma**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+! the factor 4 in the fit_albedo_sigma accounts for the mapping onto the logit function for the albedo
+								Kalb(j,ilam)=(fit_albedo_sigma*4d0)**2*exp(-0.5d0*(d/fit_albedo_l)**2)
 							enddo
 						enddo
 						call RemoveOffset(Kalb,ObsSpec(iobs)%ndata)
 						do j=1,ObsSpec(iobs)%ndata
 							do ilam=1,ObsSpec(iobs)%ndata
-								Cov(j,ilam)=Cov(j,ilam)+
+								Cov(j,ilam)=Cov(j,ilam)+(surfacealbedo**2*(1d0-surfacealbedo)**2)*
      &	(spec_albedo(2,iobs,j)-spec_albedo(1,iobs,j))*(spec_albedo(2,iobs,ilam)-spec_albedo(1,iobs,ilam))*Kalb(j,ilam)
 							enddo
 						enddo
@@ -402,11 +403,13 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 						specobs(i,iobs,ilam) = ObsSpec(iobs)%y(ilam) - spectemp(ilam)*(ObsSpec(iobs)%dy(ilam))**2
 					enddo
 					if(fit_albedo) then
-						fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata)=surfacealbedo
+						fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata)=-log(1d0/surfacealbedo-1d0)
 						do j=1,ObsSpec(iobs)%ndata
 							do ilam=1,ObsSpec(iobs)%ndata
-								fitted_albedo(i,iobs,j)=fitted_albedo(i,iobs,j)+Kalb(j,ilam)*(spec_albedo(2,iobs,ilam)-spec_albedo(1,iobs,ilam))*spectemp(ilam)
+								fitted_albedo(i,iobs,j)=fitted_albedo(i,iobs,j)+Kalb(j,ilam)*(surfacealbedo*(1d0-surfacealbedo))*
+     &								(spec_albedo(2,iobs,ilam)-spec_albedo(1,iobs,ilam))*spectemp(ilam)
 							enddo
+							fitted_albedo(i,iobs,j)=1d0/(1d0+exp(-fitted_albedo(i,iobs,j)))
 						enddo
 						aver_albedo(i,iobs)=surfacealbedo
 					endif

@@ -874,13 +874,13 @@ c	linear
 						do j=1,ObsSpec(i)%ndata
 							do ii=1,ObsSpec(i)%ndata
 								d=(log(ObsSpec(i)%lam(j))-log(ObsSpec(i)%lam(ii)))
-								Kalb(j,ii)=fit_albedo_sigma**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+								Kalb(j,ii)=(fit_albedo_sigma*4d0)**2*exp(-0.5d0*(d/fit_albedo_l)**2)
 							enddo
 						enddo
 						call RemoveOffset(Kalb,ObsSpec(i)%ndata)
 						do j=1,ObsSpec(i)%ndata
 							do ii=1,ObsSpec(i)%ndata
-								Cov(j,ii)=Cov(j,ii)+
+								Cov(j,ii)=Cov(j,ii)+(surfacealbedo**2*(1d0-surfacealbedo)**2)*
      &	(spec_albedo(2,i,j)-spec_albedo(1,i,j))*(spec_albedo(2,i,ii)-spec_albedo(1,i,ii))*Kalb(j,ii)
 							enddo
 						enddo
@@ -899,11 +899,13 @@ c	linear
 						lnew=lnew-spec(j)*specinv(j,1)
 					enddo
 					if(fit_albedo) then
-						fitted_albedo=surfacealbedo
+						fitted_albedo=-log(1d0/surfacealbedo-1d0)
 						do j=1,ObsSpec(i)%ndata
 							do ii=1,ObsSpec(i)%ndata
-								fitted_albedo(i,j)=fitted_albedo(i,j)+Kalb(j,ii)*(spec_albedo(2,i,ii)-spec_albedo(1,i,ii))*specinv(ii,1)
+								fitted_albedo(i,j)=fitted_albedo(i,j)+(surfacealbedo*(1d0-surfacealbedo))*
+     &								Kalb(j,ii)*(spec_albedo(2,i,ii)-spec_albedo(1,i,ii))*specinv(ii,1)
 							enddo
+							fitted_albedo(i,j)=1d0/(1d0+exp(-fitted_albedo(i,j)))
 							ObsSpec(i)%model(j)=spec_albedo(1,i,j)+(spec_albedo(2,i,j)-spec_albedo(1,i,j))*fitted_albedo(i,j)
 						enddo
 					endif
