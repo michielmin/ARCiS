@@ -409,6 +409,10 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 								fitted_albedo(i,iobs,j)=fitted_albedo(i,iobs,j)+Kalb(j,ilam)*(surfacealbedo*(1d0-surfacealbedo))*
      &								(spec_albedo(2,iobs,ilam)-spec_albedo(1,iobs,ilam))*spectemp(ilam)
 							enddo
+						enddo
+						call AddPostDraw(ObsSpec(iobs)%ndata,spec_albedo(1:2,iobs,1:ObsSpec(iobs)%ndata),surfacealbedo,Kalb,Cov,
+     &							fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata),idum)
+						do j=1,ObsSpec(iobs)%ndata
 							fitted_albedo(i,iobs,j)=1d0/(1d0+exp(-fitted_albedo(i,iobs,j)))
 						enddo
 						aver_albedo(i,iobs)=surfacealbedo
@@ -866,6 +870,110 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 
 	writefiles=.true.
 		
+	return
+	end
+
+
+	subroutine AddPostDraw(n,M,a_aver,K,C,a_med,idum)
+	IMPLICIT NONE
+	integer n,idum
+	real*8 M(2,n),a_aver,K(n,n),C(n,n),a_med(n)
+	
+	integer i, j, info, nrhs
+	real*8 alpha, beta, jitter, dj
+	real*8 deff(n), B(n,n), X(n,n), Y(n,n), V(n,n), Kpost(n,n), Lc(n,n), Lp(n,n)
+	real*8 z(n), delta(n), gasdev
+
+	alpha = 1d0
+	beta  = 0d0
+
+  ! ---- D_eff vector in *data* space: deff(i) = A0*(1-A0) * (M1-M0)
+  ! Here A0 is the average albedo a_aver (constant linearization point).
+	do i=1,n
+		deff(i) = (a_aver*(1d0-a_aver)) * (M(2,i) - M(1,i))
+	enddo
+
+  ! ---- B = diag(deff) * K   (scale rows of K)
+	do i=1,n
+		do j=1,n
+			B(i,j) = deff(i) * K(i,j)
+		enddo
+	enddo
+
+  ! ---- Solve X = C^{-1} * B using Cholesky of C (copy C -> Lc, factorize)
+	Lc = C
+	call dpotrf('L', n, Lc, n, info)
+	if (info.ne.0) return
+
+	nrhs = n
+	X = B
+	call dpotrs('L', n, nrhs, Lc, n, X, n, info)
+	if (info /= 0) then
+		return
+	endif
+
+  ! ---- Y = diag(deff) * X   (scale rows)
+	do i=1,n
+		do j=1,n
+			Y(i,j) = deff(i) * X(i,j)
+		enddo
+	enddo
+
+  ! ---- V = K * Y = K * diag(deff) * C^{-1} * diag(deff) * K
+	call dgemm('N','N', n, n, n, alpha, K, n, Y, n, beta, V, n)
+
+  ! ---- Kpost = K - V
+	do i=1,n
+		do j=1,n
+			Kpost(i,j) = K(i,j) - V(i,j)
+		enddo
+	enddo
+
+  ! ---- enforce symmetry (numerical)
+	do i=1,n
+		do j=i+1,n
+			dj = 0.5d0*(Kpost(i,j) + Kpost(j,i))
+			Kpost(i,j) = dj
+			Kpost(j,i) = dj
+		enddo
+	enddo
+
+  ! ---- Kpost may be PSD (especially if you projected out a mode); add tiny jitter for Cholesky
+	jitter = 1d-12
+	do i=1,n
+		Kpost(i,i) = Kpost(i,i) + jitter
+	enddo
+
+	Lp = Kpost
+	call dpotrf('L', n, Lp, n, info)
+	if(info.ne.0) then ! If Cholesky fails, try a bit more jitter (robust fallback)
+		jitter = 1d-9
+		Lp = Kpost
+		do i=1,n
+			Lp(i,i) = Lp(i,i) + jitter
+		enddo
+		call dpotrf('L', n, Lp, n, info)
+		if (info.ne.0) return
+	endif
+
+  ! ---- draw z ~ N(0,I)
+	do i=1,n
+		z=gasdev(idum)
+	enddo
+
+  ! ---- delta = Lp * z (Lp is lower-triangular from dpotrf)
+	do i=1,n
+		delta(i) = 0d0
+		do j=1,i
+			delta(i) = delta(i) + Lp(i,j) * z(j)
+		enddo
+	enddo
+
+  ! ---- a_draw = a_med + delta   (a_med was posterior mean on input)
+	do i=1,n
+		a_med(i) = a_med(i) + delta(i)
+	enddo
+
 	return
 	end
 	
