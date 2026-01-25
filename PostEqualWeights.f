@@ -384,7 +384,7 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 								Kalb(j,ilam)=(fit_albedo_sigma*4d0)**2*exp(-0.5d0*(d/fit_albedo_l)**2)
 							enddo
 						enddo
-						call RemoveOffset(Kalb,ObsSpec(iobs)%ndata)
+						call RemoveOffset(Kalb,ObsSpec(iobs)%ndata,ObsSpec(iobs)%R(1:ObsSpec(iobs)%ndata))
 						do j=1,ObsSpec(iobs)%ndata
 							do ilam=1,ObsSpec(iobs)%ndata
 								Cov(j,ilam)=Cov(j,ilam)+(surfacealbedo**2*(1d0-surfacealbedo)**2)*

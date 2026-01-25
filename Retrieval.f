@@ -877,7 +877,7 @@ c	linear
 								Kalb(j,ii)=(fit_albedo_sigma*4d0)**2*exp(-0.5d0*(d/fit_albedo_l)**2)
 							enddo
 						enddo
-						call RemoveOffset(Kalb,ObsSpec(i)%ndata)
+						call RemoveOffset(Kalb,ObsSpec(i)%ndata,ObsSpec(i)%R(1:ObsSpec(i)%ndata))
 						do j=1,ObsSpec(i)%ndata
 							do ii=1,ObsSpec(i)%ndata
 								Cov(j,ii)=Cov(j,ii)+(surfacealbedo**2*(1d0-surfacealbedo)**2)*

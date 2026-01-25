@@ -39,7 +39,7 @@ c      parameter (NBURN=300)
 	eta_end=(1d0-0.01**(2d0*end_acc/real(NBURN))) !0.001
 	eta_curr=eta_start
 	
-	beta_start=0.1
+	beta_start=1.0
 	beta_curr=beta_start
 	
 	curr_acc=end_acc

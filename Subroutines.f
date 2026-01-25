@@ -1581,18 +1581,27 @@ C
 	return
 	end
 
-	subroutine RemoveOffset(A,n)
+	subroutine RemoveOffset(A,n,R)
 	IMPLICITNONE
-	integer n,i
-	real*8 A(n,n),P(n,n),C(n,n),alpha,beta
+	integer n,i,j
+	real*8 A(n,n),P(n,n),C(n,n),alpha,beta,R(n),tot
 
+	tot=0d0
+	do i=1,n
+		tot=tot+1d0/R(i)
+	enddo
 	alpha=1d0
 	beta=0d0
-	P=-1d0/real(n)
+	P=0d0
 	do i=1,n
-		P(i,i)=P(i,i)+1d0
+		P(i,i)=1d0
 	enddo
-	call DGEMM ('N', 'N', n, n, n, alpha, A, n, P, n, beta, C, n)
+	do j=1,n
+		do i=1,n
+			P(i,j)=P(i,j)-1d0/(tot*R(j))
+		enddo
+	enddo
+	call DGEMM ('N', 'T', n, n, n, alpha, A, n, P, n, beta, C, n)
 	call DGEMM ('N', 'N', n, n, n, alpha, P, n, C, n, beta, A, n)
 
 	return
