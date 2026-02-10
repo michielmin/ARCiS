@@ -322,6 +322,7 @@ c		call cpu_time(stoptime)
 		goto 3
 	endif
 	surfacealbedo=fit_albedo0
+	call ComputeSurface()
 
 	if(useobsgrid) then
 		do iobs=1,nobs
@@ -414,7 +415,12 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
      &							fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata),idum)
 						do j=1,ObsSpec(iobs)%ndata
 							fitted_albedo(i,iobs,j)=1d0/(1d0+exp(-fitted_albedo(i,iobs,j)))
+							if(surfacetype.eq.'GREYLAND'.or.surfacetype.eq.'greyland') then
+								fitted_albedo(i,iobs,j)=(1d0-surface_emis(ObsSpec(iobs)%ilam(j)))
+     &								+(1d0-f_water)*(fitted_albedo(i,iobs,j)-surfacealbedo)
+							endif
 						enddo
+						fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata)=(Rplanet/Rearth)**2*fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata)
 						aver_albedo(i,iobs)=surfacealbedo
 					endif
 					deallocate(Cov,Kalb)

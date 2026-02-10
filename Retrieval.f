@@ -291,12 +291,12 @@
 	real*8 XeqCloud_best(nr,max(nclouds,1)),mixrat_best_r(nr,nmol)
 
 	external amoebafunk,lmcompute,MCMCfunc
-	real*8 pamoeba(n_ret+1,n_ret),yamoeba(n_ret+1),ftol,amoebafunk,MCMCfunc
+	real*8 pamoeba(n_ret+1,n_ret),yamoeba(n_ret+1),ftol,amoebafunk,MCMCfunc,logZ,dlogZ
 
 	integer iboot
 	real*8,allocatable :: chi2_boot(:),count(:)
 	real*8 chi2_boot_av,chi2_boot_sig1,chi2_boot_sig2
-	
+		
 	if(.not.allocated(obsA0)) then
 		allocate(obsA0(nlam))
 		allocate(obsA1(nlam))
@@ -363,7 +363,12 @@ c	enddo
 	allocate(dvarq(n_ret))
 
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC') then
-		call MCMC(MCMCfunc,var0,ny,n_ret,npop,npost,epsinit_MCMC)
+		call MCMC(MCMCfunc,var0,ny,n_ret,npop,npost,epsinit_MCMC,logZ,dlogZ,doMCMClogZ)
+		if(doMCMClogZ) then
+			open(unit=25,file=trim(outputdir) // "MCMCstats",FORM="FORMATTED",ACCESS="STREAM")
+			write(25,'(a,f10.2,a,f5.2,a)') 'Final estimate logZ: ',logZ,' (+/-',dlogZ,')'
+			write(25,'(a,f10.2)') 'Best fit reduced chi2: ',bestchi2
+		endif
 		writefiles=.true.
 		return
 	endif
@@ -499,7 +504,12 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 		call output("chi2 sigma+:  " // trim(dbl2string(chi2_boot_sig2,'(f10.3)')))
 	endif
 	if(retrievaltype.eq.'FULL') then
-		call MCMC(MCMCfunc,var,ny,n_ret,npop,npost,epsinit_MCMC)
+		call MCMC(MCMCfunc,var,ny,n_ret,npop,npost,epsinit_MCMC,logZ,dlogZ,doMCMClogZ)
+		if(doMCMClogZ) then
+			open(unit=25,file=trim(outputdir) // "MCMCstats",FORM="FORMATTED",ACCESS="STREAM")
+			write(25,'(a,f10.2,a,f5.2,a)') 'Final estimate logZ: ',logZ,' (+/-',dlogZ,')'
+			write(25,'(a,f10.2)') 'Best fit reduced chi2: ',bestchi2
+		endif
 		writefiles=.true.
 	else
 		call WritePTlimits(var,Cov(1:n_ret,1:n_ret),ErrVec,error,bestchi2,.true.)

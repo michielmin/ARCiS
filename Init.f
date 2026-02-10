@@ -1273,6 +1273,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) projectedD
 		case("retrieval")
 			read(key%value,*) retrieval
+		case("mcmclogz","domcmclogz","computelogz")
+			read(key%value,*) doMCMClogZ
 		case("doscaler","scaler")
 			read(key%value,*) doscaleR
 		case("nscaler")
@@ -2437,6 +2439,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 	f_isotope=0d0
 
 	retrieval=.false.
+	doMCMClogZ=.false.
 	doscaleR=.false.
 	writefiles=.true.
 	nscaleR=-1

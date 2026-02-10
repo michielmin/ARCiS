@@ -1,142 +1,236 @@
-      subroutine MCMC(likelihood,x0,ny,NDIM,NBURN,N_UNIQUE,epsinit)
-      implicit none
+	subroutine MCMC(likelihood,x0,ny,NDIM,NBURN,N_UNIQUE,epsinit,logZ,dlogZ,doMCMClogZ)
+	implicit none
+	integer NDIM, N_UNIQUE, NBURN, ny, n_beta
+	integer nburn_use,n_unique_use,i,ntot,ndone,nadd
+	real*8 beta_min, dlogZ0
+	parameter(n_beta=20)
+	parameter(beta_min=1d-4)
+	parameter(dlogZ0=0.5)
+	real*8 epsinit,beta(n_beta),logL_aver(n_beta),w(n_beta),dlogL(n_beta),lbest
+	real*8 x0(NDIM), likelihood, logZ, dlogZ,xbest(NDIM),lambda_start,scale
+	logical doMCMClogZ
+	external likelihood
 
-      integer NDIM, N_UNIQUE, NBURN, ny
-c      parameter (NDIM=3)
-c      parameter (N_UNIQUE=10000)
-c      parameter (NBURN=300)
+	lambda_start=1d0
+	lbest=likelihood(x0, ny, xbest)
+	xbest=x0
+	if(doMCMClogZ) then
+		call sampleBeta(beta,w,n_beta,beta_min)
+		logZ=0d0
+		dlogZ=0d0
+		ntot=NBURN*2+(n_beta-2)*(max(500,NBURN/2))+N_UNIQUE*2+(n_beta-2)*(max(100,N_UNIQUE/10)+max(250,N_UNIQUE/4))/2
+		write(*,'(a,i10)') "expected number of models needed: ",ntot*5
+		ndone=0
+		scale=0d0
+		
+		do i=1,n_beta
+			if(i.eq.1.or.i.eq.n_beta) then
+				nburn_use=NBURN
+				n_unique_use=N_UNIQUE
+			else
+				nburn_use=max(500,NBURN/2)
+				if(i.gt.n_beta/2) then
+					n_unique_use=max(100,N_UNIQUE/10)
+				else
+					n_unique_use=max(250,N_UNIQUE/4)
+				endif
+			endif
+			ndone=ndone+n_unique_use+nburn_use
+			nadd=(ntot-ndone)
+			x0=xbest
+			write(*,'(a)') '======================================'
+			write(*,'(a,f6.4,a,i2,a,i2,a)') 'Now sampling with beta: ',beta(i),' (',i,'/',n_beta,')'
+			write(*,'(a)') '======================================'
+			call MCMC_run(likelihood,x0,ny,NDIM,nburn_use,n_unique_use,epsinit,lambda_start,beta(i),logL_aver(i),dlogL(i),xbest,lbest,nadd)
+			if(w(i)**2*dlogL(i)/real(n_beta).gt.dlogZ0**2) then
+				n_unique_use=n_unique_use*(w(i)**2*dlogL(i)/real(n_beta))/(dlogZ0**2)
+				call MCMC_run(likelihood,x0,ny,NDIM,nburn_use,n_unique_use,epsinit,lambda_start,beta(i),logL_aver(i),dlogL(i),xbest,lbest,nadd)
+			endif
+			logZ=logZ+w(i)*logL_aver(i)
+			dlogZ=dlogZ+w(i)**2*dlogL(i)
+			scale=scale+w(i)
+			write(*,'(a,f10.2)') 'Current estimate logZ: ',logZ/scale
+		enddo
+		dlogZ=sqrt(dlogZ)
+		write(*,'(a)') '======================================'
+		write(*,'(a,f10.2,a,f5.2,a)') 'Final estimate logZ: ',logZ,' (+/-',dlogZ,')'
+	else
+		logZ=0d0
+		beta(1)=1d0
+		nadd=0
+		call MCMC_run(likelihood,x0,ny,NDIM,NBURN,N_UNIQUE,epsinit,lambda_start,beta(1),logL_aver(1),dlogL(1),xbest,lbest,nadd)
+	endif
+	
+	return
+	end
 
-      double precision SD, EPS, epsinit
-      parameter (EPS=1.0D-6)
+	subroutine sampleBeta(beta,w,n,beta_min)
+	IMPLICIT NONE
+	integer n,i
+	real*8 beta(n),w(n),beta_min
+    
+	do i=1,n
+		beta(i)=beta_min*(1d0/beta_min)**(real(i-1)/(real(n-1)))
+	enddo
+	w(1)=beta_min+0.5d0*(beta(2)-beta(1))
+	do i=2,n-1
+		w(i)=0.5d0*(beta(i+1)-beta(i-1))
+	enddo
+	w(n)=0.5d0*(beta(n)-beta(n-1))
+		
+	return
+	end
+	    
 
-      double precision x(NDIM), xnew(NDIM), mean(NDIM), z(NDIM), xbest(NDIM)
-      double precision cov(NDIM,NDIM), chol(NDIM,NDIM), x0(NDIM)
-      double precision logp, logp_new, alpha, u, likelihood, lambda, logp_best
-      double precision target_acc,start_acc,end_acc,p_acc,curr_acc,eta_curr,eta_end
-      double precision samples(NDIM, N_UNIQUE+NBURN), x_mapped(NDIM),eta_start
-      double precision beta_curr,beta_start
-      double precision samples_mapped(NDIM, N_UNIQUE+NBURN), cov0(NDIM,NDIM)
-      integer weights(N_UNIQUE+NBURN)
-      integer i, j, k, accept, step, nacc
-      external likelihood
+	subroutine MCMC_run(likelihood,x0,ny,NDIM,NBURN,N_UNIQUE,epsinit,lambda_start,beta,logL_aver,dlogL,xbest,logp_best,nadd)
+	implicit none
+
+	integer NDIM, N_UNIQUE, NBURN, ny, nadd
+	real*8 SD, EPS, epsinit
+	parameter (EPS=1.0D-6)
+
+	real*8 x(NDIM), xnew(NDIM), mean(NDIM), z(NDIM), xbest(NDIM)
+	real*8 cov(NDIM,NDIM), chol(NDIM,NDIM), x0(NDIM), logL(N_UNIQUE+NBURN)
+	real*8 logL_aver,gamma(N_UNIQUE+NBURN),tau_int,dlogL,lambda_start
+	real*8 logp, logp_new, alpha, u, likelihood, lambda, logp_best
+	real*8 acc_aim,curr_acc,eta_curr,eta_end
+	real*8 samples(NDIM, N_UNIQUE+NBURN), x_mapped(NDIM),eta_start
+	real*8 beta,tot
+	real*8 samples_mapped(NDIM, N_UNIQUE+NBURN), cov0(NDIM,NDIM)
+	integer weights(N_UNIQUE+NBURN)
+	integer i, j, k, accept, step, nacc
+	external likelihood
 	integer*4 counts, count_rate, count_max
 	real*8 starttime,stoptime,remaining
 	logical burnstart
 	
-      SD=(2.38D0**2)/real(NDIM)
-      call random_seed_f77()
+	SD=(2.38D0**2)/real(NDIM)
+	call random_seed_f77()
+	
+	accept = 0
+	step = 1
+	nacc = 1
+	weights = 0
+	lambda = lambda_start
 
-      accept = 0
-      step = 1
-      nacc = 1
-      weights = 0
-      lambda = 1.0
-
-	end_acc=0.234
-	start_acc=0.233
-	p_acc=2.0
-	eta_start=(1d0-0.01**(10d0*start_acc/real(NBURN))) !0.01
-	eta_end=(1d0-0.01**(2d0*end_acc/real(NBURN))) !0.001
+	acc_aim=0.234
+	eta_start=(1d0-0.01**(10d0*acc_aim/real(NBURN))) !0.01
+	eta_end=(1d0-0.01**(2d0*acc_aim/real(NBURN))) !0.001
 	eta_curr=eta_start
 	
-	beta_start=1.0
-	beta_curr=beta_start
-	
-	curr_acc=end_acc
+	curr_acc=acc_aim
 
-      do j = 1, NDIM
-         x(j) = x0(j)
-         mean(j) = x(j)
-         do k = 1, NDIM
-            if (j .eq. k) then
-               cov(j,k) = 1.0D0
-            else
-               cov(j,k) = 0.0D0
-            endif
-         enddo
-      enddo
-      cov=cov*epsinit**2
+	do j = 1, NDIM
+		x(j) = x0(j)
+		mean(j) = x(j)
+		do k = 1, NDIM
+			if (j .eq. k) then
+				cov(j,k) = 1.0D0
+			else
+				cov(j,k) = 0.0D0
+			endif
+		enddo
+	enddo
+	cov=cov*epsinit**2
 
-      logp = (likelihood(x, ny, x_mapped))
-    	xbest=xnew
-        logp_best=logp_new
-      do j = 1, NDIM
-         samples(j,1) = x(j)
-         samples_mapped(j,1) = x_mapped(j)
-      enddo
-      weights(1) = 1
+	logp = (likelihood(x, ny, x_mapped))
+	do j = 1, NDIM
+		samples(j,1) = x(j)
+		samples_mapped(j,1) = x_mapped(j)
+	enddo
+	weights(1) = 1
 	call write_pew_output(samples_mapped(1:NDIM,1:NBURN),weights(1:NBURN),NDIM,1,0)
 	call SYSTEM_CLOCK(counts, count_rate, count_max)
 	starttime = DBLE(counts)/DBLE(count_rate)
 	burnstart=.true.
 
-10    continue
-         step = step + 1
-
-c         if (nacc > 4 .and. nacc <= NBURN) then
-         if (nacc > NBURN/2 .and. nacc <= NBURN) then
-            call compute_mean(samples(1:NDIM,NBURN/2:nacc), weights(NBURN/2:nacc), mean, NDIM, nacc+1-NBURN/2)
-            call compute_cov(samples(1:NDIM,NBURN/2:nacc), weights(NBURN/2:nacc), mean, cov, NDIM, nacc+1-NBURN/2, EPS)
+10	continue
+		step = step + 1
+		if (nacc > NBURN/2 .and. nacc <= NBURN) then
+			call compute_mean(samples(1:NDIM,NBURN/2:nacc), weights(NBURN/2:nacc), mean, NDIM, nacc+1-NBURN/2)
+			call compute_cov(samples(1:NDIM,NBURN/2:nacc), weights(NBURN/2:nacc), mean, cov, NDIM, nacc+1-NBURN/2, EPS)
 		else if(nacc <= 4) then
 			cov=cov/2d0
-         endif
-		if(nacc.lt.NBURN/2) then
-			target_acc=start_acc+(end_acc-start_acc)*(real(nacc)*2d0/real(NBURN/2)-1d0)**p_acc
-		else
-			target_acc=end_acc
 		endif
-         if (nacc <= NBURN) then
-			lambda=lambda*exp(((curr_acc)-target_acc)/(real(step)**0.6))
-         endif
+		if (nacc <= NBURN) then
+			lambda=lambda*exp(((curr_acc)-acc_aim)/(real(step)**0.6))
+		endif
 
-         call cholesky(cov, chol, NDIM)
-         call random_normal_vec(z, NDIM)
+		call cholesky(cov, chol, NDIM)
+		call random_normal_vec(z, NDIM)
 		if(burnstart.and.nacc.ge.NBURN) then
-			x=xbest
-			logp=logp_best
-			write(*,*) '===================================='
-			write(*,*) 'Burn-in fase done, starting sampling'
-			write(*,*) '     starting from best model so far'
-			write(*,*) '===================================='
+			if(beta.gt.0.999d0.and..false.) then
+				x=xbest
+				logp=logp_best
+				write(*,*) '===================================='
+				write(*,*) 'Burn-in fase done, starting sampling'
+				write(*,*) '     starting from best model so far'
+				write(*,*) '===================================='
+			endif
 			burnstart=.false.
-			curr_acc=end_acc
+			curr_acc=acc_aim
 		endif
 
-         do j = 1, NDIM
-            xnew(j) = x(j)
-            do k = 1, NDIM
-               xnew(j) = xnew(j) + lambda**2 * sqrt(SD) * chol(j,k) * z(k)
-            enddo
-			if(nacc.gt.NBURN) then
+		do j = 1, NDIM
+			xnew(j) = x(j)
+			do k = 1, NDIM
+				xnew(j) = xnew(j) + lambda**2 * sqrt(SD) * chol(j,k) * z(k)
+			enddo
+c			if(nacc.gt.NBURN) then
 				if(xnew(j).gt.1d0.or.xnew(j).lt.0d0) then
+					curr_acc=curr_acc*(1d0-eta_curr)
 					weights(nacc)=weights(nacc) + 1
 					goto 10
 				endif
-			endif
-         enddo
-		if(nacc.le.NBURN) call fold_MCMC(xnew,NDIM)
-         logp_new = (likelihood(xnew, ny, x_mapped))
+c			endif
+		enddo
+c		if(nacc.le.NBURN) call fold_MCMC(xnew,NDIM)
+		logp_new = (likelihood(xnew, ny, x_mapped))
 
 		if(nacc.le.NBURN) then
 			eta_curr=10d0**(log10(eta_start)+log10(eta_end/eta_start)*real(nacc)/real(NBURN))
 		else
 			eta_curr=eta_end
 		endif
-		if(nacc.le.NBURN/2) then
-			beta_curr=10d0**(log10(beta_start)+log10(1d0/beta_start)*real(nacc)/real(NBURN/2))
-		else
-			beta_curr=1d0
+
+		if(logp_new.gt.logp_best) then
+			xbest=xnew
+			logp_best=logp_new
+		endif
+		call random_number(u)
+		alpha = min(1.0D0, dexp((logp_new - logp)*beta))
+
+		if(nacc.ge.NBURN+10) then
+			logL_aver=0d0
+			tot=0d0
+			do i=NBURN,nacc
+				tot=tot+weights(i)
+				logL_aver=logL_aver+logL(i)*weights(i)
+			enddo
+			logL_aver=logL_aver/tot
+			dlogL=0d0
+			do i=NBURN,nacc
+				dlogL=dlogL+weights(i)*(logL(i)-logL_aver)**2
+			enddo
+			dlogL=dlogL/tot
+			do k=1,nacc-NBURN+1
+				j=k+NBURN-1
+				gamma(j)=0d0
+				do i=NBURN,nacc-k
+					gamma(j)=gamma(j)+weights(i)*(logL(i)-logL_aver)*(logL(i+k)-logL_aver)
+				enddo
+				gamma(j)=gamma(j)/tot
+			enddo
+			tau_int=1d0
+			do i=NBURN,nacc
+				tau_int=tau_int+2d0*weights(i)*gamma(i)/dlogL
+			enddo
+			tau_int=max(1d0,tau_int)
+			dlogL=dlogL*tau_int/tot
 		endif
 
-         if(logp_new.gt.logp_best) then
-         	xbest=xnew
-         	logp_best=logp_new
-         endif
-         call random_number(u)
-         alpha = min(1.0D0, dexp((logp_new - logp)*beta_curr))
-
 		curr_acc=curr_acc*(1d0-eta_curr)
-         if (u < alpha) then
+		if (u < alpha) then
 			curr_acc=curr_acc+eta_curr
 			if(nacc.ge.NBURN) then
 		      call write_pew_output(samples_mapped(1:NDIM,nacc),weights(nacc),NDIM,1,1)
@@ -148,14 +242,16 @@ c         if (nacc > 4 .and. nacc <= NBURN) then
             accept = accept + 1
             nacc = nacc + 1
             if (nacc > N_UNIQUE+NBURN) goto 99
+			logL(nacc)=logp
             do j = 1, NDIM
                samples(j,nacc) = x(j)
                samples_mapped(j,nacc) = x_mapped(j)
             enddo
             weights(nacc) = 1
 
+			if(100*(nacc/100).eq.nacc) then
 			if(nacc.lt.NBURN) then
-				write(*,'(a,f6.1,a)') "Burn-in at: ",100d0*real(nacc)/real(NBURN),"%"
+				write(*,'(a,f6.1,a)') "Burn-in at:  ",100d0*real(nacc)/real(NBURN),"%"
 			else
 				write(*,'(a,f6.1,a)') "Sampling at: ",100d0*real(nacc-NBURN)/real(N_UNIQUE),"%"
 			endif
@@ -163,18 +259,19 @@ c         if (nacc > 4 .and. nacc <= NBURN) then
 			stoptime = DBLE(counts)/DBLE(count_rate)
 
 			if(nacc.ge.NBURN) then
-				remaining=real(N_UNIQUE-(nacc-NBURN))/end_acc
-			else if(nacc.ge.NBURN/2) then
-				remaining=real(N_UNIQUE)/end_acc
-				remaining=remaining+real(NBURN-nacc)/end_acc
-			else
-				remaining=real(NBURN/2)*(-atan(-sqrt((end_acc-start_acc)/end_acc))
-     &		+atan(sqrt((end_acc-start_acc)/end_acc)*real(2*nacc-NBURN/2)/real(NBURN/2)))/(2d0*sqrt(start_acc*(end_acc-start_acc)))
-				remaining=(real(step)/remaining)*real(NBURN/2)*(atan(sqrt((end_acc-start_acc)/end_acc))
-     &		-atan(sqrt((end_acc-start_acc)/end_acc)*real(2*nacc-NBURN/2)/real(NBURN/2)))/(2d0*sqrt(start_acc*(end_acc-start_acc)))
-				remaining=remaining+real(N_UNIQUE)/end_acc
-				remaining=remaining+real(NBURN/2)/end_acc
+				remaining=real(N_UNIQUE-(nacc-NBURN))/acc_aim
+			else !if(nacc.ge.NBURN/2) then
+				remaining=real(N_UNIQUE)/acc_aim
+				remaining=remaining+real(NBURN-nacc)/acc_aim
+c			else
+c				remaining=real(NBURN/2)*(-atan(-sqrt((end_acc-start_acc)/end_acc))
+c     &		+atan(sqrt((end_acc-start_acc)/end_acc)*real(2*nacc-NBURN/2)/real(NBURN/2)))/(2d0*sqrt(start_acc*(end_acc-start_acc)))
+c				remaining=(real(step)/remaining)*real(NBURN/2)*(atan(sqrt((end_acc-start_acc)/end_acc))
+c     &		-atan(sqrt((end_acc-start_acc)/end_acc)*real(2*nacc-NBURN/2)/real(NBURN/2)))/(2d0*sqrt(start_acc*(end_acc-start_acc)))
+c				remaining=remaining+real(N_UNIQUE)/end_acc
+c				remaining=remaining+real(NBURN/2)/end_acc
     		endif
+    		remaining=remaining+real(nadd)/acc_aim
 			remaining=(stoptime-starttime)*remaining/real(step)
 			if(remaining.gt.3600d0*24d0) then
 				write(*,'(a,f6.1,a)') "time remaining: " ,remaining/3600d0/24d0, " days"
@@ -186,18 +283,19 @@ c         if (nacc > 4 .and. nacc <= NBURN) then
 				write(*,'(a,f6.1,a)') "time remaining: " ,remaining, " seconds"
 			endif
 			write(*,'(a,f6.1,a)') "acceptance: ",100d0*curr_acc,"%"
-         else
-            weights(nacc) = weights(nacc) + 1
-         endif
+			endif
+		else
+			weights(nacc) = weights(nacc) + 1
+		endif
 
-         goto 10
+	goto 10
 
-99    continue
-      close(10)
-      print *, 'Final unique samples:', N_UNIQUE
-      print *, 'Total steps taken:  ', step
-      print *, 'Acceptance rate:    ', dble(accept)/dble(step)
-      call write_pew_output(samples_mapped(1:NDIM,NBURN+1:N_UNIQUE+NBURN),weights(NBURN+1:N_UNIQUE+NBURN),
+99	continue
+	close(10)
+	print *, 'Final unique samples:', N_UNIQUE
+	print *, 'Total steps taken:  ', step
+	print *, 'Acceptance rate:    ', dble(accept)/dble(step)
+	call write_pew_output(samples_mapped(1:NDIM,NBURN+1:N_UNIQUE+NBURN),weights(NBURN+1:N_UNIQUE+NBURN),
      &		NDIM,N_UNIQUE,2)
 
 c      call write_pew_output(samples_mapped(1:NDIM,NBURN+1:N_UNIQUE+NBURN),weights(NBURN+1:N_UNIQUE+NBURN),
@@ -206,8 +304,11 @@ c      call write_pew_output(samples_mapped(1:NDIM,NBURN+1:N_UNIQUE+NBURN),weigh
 c     &		NDIM,N_UNIQUE,1)
 c      call write_pew_output(samples_mapped(1:NDIM,NBURN+1:N_UNIQUE+NBURN),weights(NBURN+1:N_UNIQUE+NBURN),
 c     &		NDIM,N_UNIQUE,2)
+
+	x0=x
       
-      end
+	return
+	end
 
 	subroutine write_pew_output(samples,weights,ndim,nsamples,init)
 	use GlobalSetup
@@ -247,7 +348,7 @@ c     &		NDIM,N_UNIQUE,2)
       subroutine compute_mean(samples, weights, mean, ndim, nsamp)
       implicit none
       integer ndim, nsamp, i, j, tot, weights(nsamp)
-      double precision samples(ndim,nsamp), mean(ndim)
+      real*8 samples(ndim,nsamp), mean(ndim)
 	tot=0
 	do j=1,nsamp
 		tot=tot+weights(j)
@@ -265,8 +366,8 @@ c     &		NDIM,N_UNIQUE,2)
       subroutine compute_cov(samples, weights, mean, cov, ndim, nsamp, eps)
       implicit none
       integer ndim, nsamp, i, j, k, tot, weights(nsamp)
-      double precision samples(ndim,nsamp), mean(ndim)
-      double precision cov(ndim,ndim), eps, dx(ndim)
+      real*8 samples(ndim,nsamp), mean(ndim)
+      real*8 cov(ndim,ndim), eps, dx(ndim)
 	tot=0
 	do j=1,nsamp
 		tot=tot+weights(j)
@@ -299,10 +400,10 @@ c     &		NDIM,N_UNIQUE,2)
       subroutine cholesky_lapack(A, L, n)
       implicit none
       integer n, info
-      double precision A(n,n), L(n,n)
+      real*8 A(n,n), L(n,n)
 
 C     Local copy of A because DPOTRF works in-place
-      double precision Acopy(n,n)
+      real*8 Acopy(n,n)
       integer i, j
 
 C     Copy A into Acopy
@@ -337,7 +438,7 @@ C     Extract lower triangle into L, set upper triangle to zero
       subroutine cholesky(A, L, n)
       implicit none
       integer n, i, j, k
-      double precision A(n,n), L(n,n), sum
+      real*8 A(n,n), L(n,n), sum
       do i = 1, n
          do j = 1, n
             L(i,j) = 0.0D0
@@ -370,7 +471,7 @@ C     Extract lower triangle into L, set upper triangle to zero
       subroutine random_normal_vec(z, ndim)
       implicit none
       integer ndim, i
-      double precision z(ndim), u1, u2
+      real*8 z(ndim), u1, u2
       do i = 1, ndim, 2
          call random_number(u1)
          call random_number(u2)
@@ -384,7 +485,7 @@ C     Extract lower triangle into L, set upper triangle to zero
 
       subroutine random_seed_f77()
       implicit none
-      double precision dummy
+      real*8 dummy
       call random_number(dummy)
       return
       end
@@ -392,7 +493,7 @@ C     Extract lower triangle into L, set upper triangle to zero
       subroutine identity_matrix(A, n)
       implicit none
       integer n, i, j
-      double precision A(n,n)
+      real*8 A(n,n)
       do i = 1, n
          do j = 1, n
             if (i .eq. j) then

@@ -200,7 +200,7 @@ c===============================================================================
 	real*8 metallicity,COratio,PQ,mixP,PRplanet,maxchemtime,TiScale,f_multinest,tol_multinest,dmetallicity
 	real*8 Kzz,Kzz_offset,Kzz_max,SiOratio,NOratio,fDay,betapow,Kxx,Kyy,vxx,powvxx,night2day,pole2eq,Rp_range,tauLW
 	real*8 Kzz_deep,Kzz_1bar,Kzz_P,Kzz_contrast,SOratio,Tsurface,hotspotshift0,exp_ad,Tsurface0
-	logical gamma_equal,dopostequalweights,inverseCOratio,setsurfpressure,fixnight2day,tidallock,distrUV
+	logical gamma_equal,dopostequalweights,inverseCOratio,setsurfpressure,fixnight2day,tidallock,distrUV,doMCMClogZ
 	logical transspec,emisspec,dosimplerainout,computeLC,doscaleR,complexKzz,convectKzz,SCKzz,writeWolk,dotranshide,ComputeTeff
 	real*8 cutoff_abs,cutoff_lor,eps_lines,maxtau,factRW,Tform,Pform,f_dry,f_wet,scale_fe
 	real*8,allocatable :: lam(:),freq(:),dfreq(:),dlam(:),blam(:,:),surface_emis(:),surface_props(:,:)
