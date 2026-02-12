@@ -2644,6 +2644,28 @@ c number of cloud/nocloud combinations
 	end
 	
 	
+	subroutine DetectGrid()
+	use GlobalSetup
+	IMPLICIT NONE
+	integer :: l,slots
+	character(len=256) :: nslots,queue
+	nslots=''
+	call get_environment_variable("QUEUE", queue, l)      
+	if (l .gt. 0) then
+		call get_environment_variable("NSLOTS", nslots, l)
+		if (l .gt. 0) then
+			read(nslots, '(I2)') slots
+			call output("==================================================================")
+			call output("  Detected grid environment: " // trim(queue))
+			call output("  Limiting number of cores to: " // trim(nslots))
+			call omp_set_num_threads(slots) 
+		endif
+	endif
+
+	return
+	end
+	
+	
 	
 	subroutine ReadRetrieval(key)
 	use GlobalSetup

@@ -23,6 +23,8 @@ c terms of use
 	call output("It basically means you consult with any of the authors before")
 	call output("publication if there is any doubt on the outcome of the results.")
 
+	call DetectGrid()
+
 	call output("==================================================================")
 	call output("Let's get the show on the road!!")
 	call output("ARCiS version "//trim(VersionGIT()))
