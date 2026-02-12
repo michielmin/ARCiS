@@ -1,4 +1,5 @@
 	subroutine MCMC(likelihood,x0,ny,NDIM,NBURN,N_UNIQUE,epsinit,logZ,dlogZ,doMCMClogZ)
+	use OutputModule
 	implicit none
 	integer NDIM, N_UNIQUE, NBURN, ny, n_beta
 	integer nburn_use,n_unique_use,i,ntot,ndone,nadd
@@ -19,7 +20,7 @@
 		logZ=0d0
 		dlogZ=0d0
 		ntot=NBURN*2+(n_beta-2)*(max(500,NBURN/2))+N_UNIQUE*2+(n_beta-2)*(max(100,N_UNIQUE/10)+max(250,N_UNIQUE/4))/2
-		write(*,'(a,i10)') "expected number of models needed: ",ntot*5
+		call output("expected number of models needed: " // trim(int2string(ntot*5,'(i10)')))
 		ndone=0
 		scale=0d0
 		
@@ -38,9 +39,10 @@
 			ndone=ndone+n_unique_use+nburn_use
 			nadd=(ntot-ndone)
 			x0=xbest
-			write(*,'(a)') '======================================'
-			write(*,'(a,f6.4,a,i2,a,i2,a)') 'Now sampling with beta: ',beta(i),' (',i,'/',n_beta,')'
-			write(*,'(a)') '======================================'
+			call output('======================================')
+			call output('Now sampling with beta: ' // trim(dbl2string(beta(i),'(f6.4)')) // 
+     &				' (' // trim(int2string(i,'(i2)')) // '/' // trim(int2string(n_beta,'(i2)')) // ')')
+			call output('======================================')
 			call MCMC_run(likelihood,x0,ny,NDIM,nburn_use,n_unique_use,epsinit,lambda_start,beta(i),logL_aver(i),dlogL(i),xbest,lbest,nadd)
 			if(w(i)**2*dlogL(i)/real(n_beta).gt.dlogZ0**2) then
 				n_unique_use=n_unique_use*(w(i)**2*dlogL(i)/real(n_beta))/(dlogZ0**2)
@@ -49,11 +51,11 @@
 			logZ=logZ+w(i)*logL_aver(i)
 			dlogZ=dlogZ+w(i)**2*dlogL(i)
 			scale=scale+w(i)
-			write(*,'(a,f10.2)') 'Current estimate logZ: ',logZ/scale
+			call output('Current estimate logZ: ' // trim(dbl2string(logZ/scale,'(f10.2)')))
 		enddo
 		dlogZ=sqrt(dlogZ)
-		write(*,'(a)') '======================================'
-		write(*,'(a,f10.2,a,f5.2,a)') 'Final estimate logZ: ',logZ,' (+/-',dlogZ,')'
+		call output('======================================')
+		call output('Final estimate logZ: ' // trim(dbl2string(logZ/scale,'(f10.2)')) // ' (+/-' // trim(dbl2string(dlogZ,'(5.2)')) // ')')
 	else
 		logZ=0d0
 		beta(1)=1d0
@@ -83,6 +85,7 @@
 	    
 
 	subroutine MCMC_run(likelihood,x0,ny,NDIM,NBURN,N_UNIQUE,epsinit,lambda_start,beta,logL_aver,dlogL,xbest,logp_best,nadd)
+	use OutputModule
 	implicit none
 
 	integer NDIM, N_UNIQUE, NBURN, ny, nadd
@@ -162,10 +165,10 @@
 			if(beta.gt.0.999d0.and..false.) then
 				x=xbest
 				logp=logp_best
-				write(*,*) '===================================='
-				write(*,*) 'Burn-in fase done, starting sampling'
-				write(*,*) '     starting from best model so far'
-				write(*,*) '===================================='
+				call output('======================================')
+				call output(' Burn-in fase done, starting sampling')
+				call output('    starting from best model so far')
+				call output('======================================')
 			endif
 			burnstart=.false.
 			curr_acc=acc_aim
@@ -251,9 +254,9 @@ c		if(nacc.le.NBURN) call fold_MCMC(xnew,NDIM)
 
 			if(100*(nacc/100).eq.nacc) then
 			if(nacc.lt.NBURN) then
-				write(*,'(a,f6.1,a)') "Burn-in at:  ",100d0*real(nacc)/real(NBURN),"%"
+				call output("Burn-in at:  " // trim(dbl2string(100d0*real(nacc)/real(NBURN),'(f6.1)')) // "%")
 			else
-				write(*,'(a,f6.1,a)') "Sampling at: ",100d0*real(nacc-NBURN)/real(N_UNIQUE),"%"
+				call output("Sampling at: " // trim(dbl2string(100d0*real(nacc-NBURN)/real(N_UNIQUE),'(f6.1)')) // "%")
 			endif
 			call SYSTEM_CLOCK(counts, count_rate, count_max)
 			stoptime = DBLE(counts)/DBLE(count_rate)
@@ -274,15 +277,16 @@ c				remaining=remaining+real(NBURN/2)/end_acc
     		remaining=remaining+real(nadd)/acc_aim
 			remaining=(stoptime-starttime)*remaining/real(step)
 			if(remaining.gt.3600d0*24d0) then
-				write(*,'(a,f6.1,a)') "time remaining: " ,remaining/3600d0/24d0, " days"
+				call output("time remaining: " // trim(dbl2string(remaining/3600d0/24d0,'(f6.1)')) // " days")
 			else if(remaining.gt.3600d0) then
-				write(*,'(a,f6.1,a)') "time remaining: " ,remaining/3600d0, " hours"
+				call output("time remaining: " // trim(dbl2string(remaining/3600d0,'(f6.1)')) // " hours")
 			else if(remaining.gt.60d0) then
-				write(*,'(a,f6.1,a)') "time remaining: " ,remaining/60d0, " minutes"
+				call output("time remaining: " // trim(dbl2string(remaining/60d0,'(f6.1)')) // " minutes")
 			else
-				write(*,'(a,f6.1,a)') "time remaining: " ,remaining, " seconds"
+				call output("time remaining: " // trim(dbl2string(remaining,'(f6.1)')) // " seconds")
 			endif
 			write(*,'(a,f6.1,a)') "acceptance: ",100d0*curr_acc,"%"
+			call output("acceptance: " // trim(dbl2string(100d0*curr_acc,'(f6.1)')) // "%")
 			endif
 		else
 			weights(nacc) = weights(nacc) + 1
@@ -292,9 +296,9 @@ c				remaining=remaining+real(NBURN/2)/end_acc
 
 99	continue
 	close(10)
-	print *, 'Final unique samples:', N_UNIQUE
-	print *, 'Total steps taken:  ', step
-	print *, 'Acceptance rate:    ', dble(accept)/dble(step)
+	call output('Final unique samples:' // trim(int2string(N_UNIQUE,'(i10)')))
+	call output('Total steps taken:   ' // trim(int2string(step,'(i10)')))
+	call output('Acceptance rate:     ' // dbl2string(dble(accept)/dble(step),'f6.4'))
 	call write_pew_output(samples_mapped(1:NDIM,NBURN+1:N_UNIQUE+NBURN),weights(NBURN+1:N_UNIQUE+NBURN),
      &		NDIM,N_UNIQUE,2)
 

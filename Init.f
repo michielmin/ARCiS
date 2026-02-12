@@ -2645,7 +2645,6 @@ c number of cloud/nocloud combinations
 	
 	
 	subroutine DetectGrid()
-	use GlobalSetup
 	IMPLICIT NONE
 	integer :: l,slots
 	character(len=256) :: nslots,queue

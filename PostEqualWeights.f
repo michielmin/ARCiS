@@ -10,7 +10,7 @@
 	logical,allocatable :: done(:)
 	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:)
 	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:),Tplanet(:)
-	real*8,allocatable :: speccloudtau(:,:),speccloudK(:,:,:),specobs(:,:,:),Cov(:,:),sysobs(:,:,:),surf_albedo(:,:)
+	real*8,allocatable :: speccloudtau(:,:),speccloudK(:,:,:),specobs(:,:,:),Cov(:,:),sysobs(:,:,:),surf_albedo(:,:),refl_surf(:,:)
 	real*8 lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,cmin,spectemp(nlam),gasdev,specobstemp(nlam)
 	integer i1,i2,ibest,info,NRHS
 	character*6000 line
@@ -20,7 +20,7 @@
 	character*500 lowkey
 	integer ipmin,ipmax,ii
 	real*8 fit_albedo0,spec_albedo(2,nobs,nlam),f_ii,d
-	real*8,allocatable :: fitted_albedo(:,:,:),Kalb(:,:),aver_albedo(:,:)
+	real*8,allocatable :: fitted_albedo(:,:,:),Kalb(:,:),aver_albedo(:,:),refl_surface(:,:,:)
 	
 	writefiles=.false.
 	
@@ -60,7 +60,7 @@
 	allocate(cloudstruct(0:nmodels,nr))
 	allocate(speccloudtau(0:nmodels,nlam))
 	allocate(speccloudK(0:nmodels,max(nclouds,1),nlam))
-	allocate(surf_albedo(0:nmodels,nlam))
+	allocate(surf_albedo(0:nmodels,nlam),refl_surf(0:nmodels,nlam))
 	allocate(values(0:nmodels,n_ret))
 	allocate(COratio_der(0:nmodels))
 	allocate(Z_der(0:nmodels))
@@ -80,7 +80,8 @@
 		allocate(var3D(0:nmodels,1:nlong,0:n_Par3D))
 	endif
 	if(useobsgrid) allocate(specobs(0:nmodels,nobs,nlam),sysobs(0:nmodels,nobs,nlam),
-     &						fitted_albedo(0:nmodels,nobs,nlam),aver_albedo(0:nmodels,nobs))
+     &						fitted_albedo(0:nmodels,nobs,nlam),aver_albedo(0:nmodels,nobs),
+     &						refl_surface(0:nmodels,nobs,nlam))
 
 	spectrans=0d0
 	specemis=0d0
@@ -91,6 +92,7 @@
 	speccloudtau=0d0
 	speccloudK=0d0
 	surf_albedo=0d0
+	refl_surf=0d0
 	cmax=0d0
 
 	if(retrievaltype.eq.'MC'.or.retrievaltype.eq.'MCMC'.or.retrievaltype.eq.'FULL') then
@@ -420,7 +422,7 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
      &								+(1d0-f_water)*(fitted_albedo(i,iobs,j)-surfacealbedo)
 							endif
 						enddo
-						fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata)=(Rplanet/Rearth)**2*fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata)
+						refl_surface(i,iobs,1:ObsSpec(iobs)%ndata)=(Rplanet/Rearth)**2*fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata)
 						aver_albedo(i,iobs)=surfacealbedo
 					endif
 					deallocate(Cov,Kalb)
@@ -520,7 +522,20 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 	do j=1,ncc
 		speccloudtau(i,1:nlam)=speccloudtau(i,1:nlam)+cloudtau(j,1:nlam)
 	enddo
-	surf_albedo(i,1:nlam)=1d0-surface_emis(1:nlam)
+	if(fit_albedo) then
+		do iobs=1,nobs
+			if(ObsSpec(iobs)%type.eq.'emis'.or.ObsSpec(iobs)%type.eq.'emisR'.or.
+     &	 ObsSpec(iobs)%type.eq.'phase'.or.ObsSpec(iobs)%type.eq.'phaseR') then
+				do j=1,ObsSpec(iobs)%ndata
+					surf_albedo(i,ObsSpec(iobs)%ilam(j))=fitted_albedo(i,iobs,j)
+					refl_surf(i,ObsSpec(iobs)%ilam(j))=refl_surface(i,iobs,j)
+				enddo
+			endif
+		enddo
+	else
+		surf_albedo(i,1:nlam)=1d0-surface_emis(1:nlam)
+		refl_surf(i,1:nlam)=(Rplanet/Rearth)**2*surf_albedo(i,1:nlam)
+	endif
 	do j=1,nclouds
 		if(Cloud(j)%onepart) then
 			speccloudK(i,j,1:nlam)=Cloud(j)%Kext(nr/2,1:nlam)
@@ -608,6 +623,8 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
      &						FORM="FORMATTED",ACCESS="STREAM")
 					open(unit=29,file=trim(outputdir) // "albedo_var" // trim(int2string(iobs,'(i0.3)')) // "_limits",
      &						FORM="FORMATTED",ACCESS="STREAM")
+					open(unit=30,file=trim(outputdir) // "reflsurf" // trim(int2string(iobs,'(i0.3)')) // "_limits",
+     &						FORM="FORMATTED",ACCESS="STREAM")
      			endif
 				do ilam=1,ObsSpec(iobs)%ndata
 					sorted(1:i)=specobs(1:i,iobs,ilam)
@@ -623,6 +640,9 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 						sorted(1:i)=fitted_albedo(1:i,iobs,ilam)-aver_albedo(1:i,iobs)
 						call sort(sorted,i)
 						write(29,*) ObsSpec(iobs)%lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+						sorted(1:i)=refl_surface(1:i,iobs,ilam)
+						call sort(sorted,i)
+						write(30,*) ObsSpec(iobs)%lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 					endif
 				enddo
 				close(unit=26)
@@ -630,6 +650,7 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 				if(fit_albedo) then
 					close(unit=28)
 					close(unit=29)
+					close(unit=30)
 				endif
 			enddo
 		endif
@@ -692,6 +713,15 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 		do ilam=1,nlam
 			if(computelam(ilam)) then
 			sorted(1:i)=surf_albedo(1:i,ilam)
+			call sort(sorted,i)
+			write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+			endif
+		enddo
+		close(unit=26)
+		open(unit=26,file=trim(outputdir) // "reflsurface_limits",FORM="FORMATTED",ACCESS="STREAM")
+		do ilam=1,nlam
+			if(computelam(ilam)) then
+			sorted(1:i)=refl_surf(1:i,ilam)
 			call sort(sorted,i)
 			write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 			endif
