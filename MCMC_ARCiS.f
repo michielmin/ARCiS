@@ -298,7 +298,7 @@ c				remaining=remaining+real(NBURN/2)/end_acc
 	close(10)
 	call output('Final unique samples:' // trim(int2string(N_UNIQUE,'(i10)')))
 	call output('Total steps taken:   ' // trim(int2string(step,'(i10)')))
-	call output('Acceptance rate:     ' // dbl2string(dble(accept)/dble(step),'f6.4'))
+	call output('Acceptance rate:     ' // dbl2string(dble(accept)/dble(step),'(f6.4)'))
 	call write_pew_output(samples_mapped(1:NDIM,NBURN+1:N_UNIQUE+NBURN),weights(NBURN+1:N_UNIQUE+NBURN),
      &		NDIM,N_UNIQUE,2)
 
