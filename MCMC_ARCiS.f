@@ -55,7 +55,7 @@
 		enddo
 		dlogZ=sqrt(dlogZ)
 		call output('======================================')
-		call output('Final estimate logZ: ' // trim(dbl2string(logZ/scale,'(f10.2)')) // ' (+/-' // trim(dbl2string(dlogZ,'(5.2)')) // ')')
+		call output('Final estimate logZ: ' // trim(dbl2string(logZ/scale,'(f10.2)')) // ' (+/-' // trim(dbl2string(dlogZ,'(f5.2)')) // ')')
 	else
 		logZ=0d0
 		beta(1)=1d0
