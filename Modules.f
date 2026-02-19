@@ -188,7 +188,8 @@ c===============================================================================
 	integer ncommandargs,n_add_ret
 	integer idum,maxiter,miniter,Nphot0,idum0,iWolk
 !$OMP THREADPRIVATE(idum)
-	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,anisoscattstar,computeT,computecontrib,do_rayleigh,isoFstar,writefiles
+	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,anisoscattstar,lambertsurface,computeT,computecontrib
+	logical do_rayleigh,isoFstar,writefiles
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS,modelfail,projectedD
 	logical,allocatable :: includemol(:),diseqmol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	logical,allocatable :: includemol_raytrace(:),includemol_default(:)
@@ -454,7 +455,7 @@ c for exchange when computing secondary atmosphere
 		real*8,allocatable :: Kabs(:,:),Ksca(:,:),Kext(:,:),g(:,:)		! dimension nsize,nlam
 		real*8,allocatable :: F11(:,:,:) ! dimension nsize,nlam,nangle
 		character*500 species,hazetype,file,composition
-		integer nmat,nlam,fixcloud
+		integer nmat,nlam,fixcloud,nsize
 c			the parameter fixcloud fixes the cloud after 'fixcloud' PT iterations. 
 c			Setting it to 1 means the cloud is not iterated with the PT structure.
 c			Setting it to 0 means the cloud is always recomputed every iteration.

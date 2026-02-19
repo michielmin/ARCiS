@@ -1796,7 +1796,7 @@ c			vec(i)=gasdev(idum)
 	integer i,j,k,ilam,nuse
 	real*8 spec(*),x,specsave(*)
 	real*8 lamobs(nlam),lamuse(nlam),specuse(nlam)
-	real*8 eta,Tirr,tau,expint,starspec(nlam),starspecregrid(nlam)
+	real*8 eta,Tirr,tau,expint,starspec(nlam),starspecregrid(max(nlam,ObsSpec(i)%ndata))
 
 	do j=1,nlam
 		lamobs(j)=lam(j)

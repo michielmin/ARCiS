@@ -10,7 +10,7 @@
 	integer ir,ilam,ig,isize,iRmax,ndisk,natm,nsub,nrtrace,nptrace,ipc,npc,nmol_count,iscatt,icc,iscatt1,iscatt2
 	logical recomputeopac
 	logical,allocatable :: hit(:,:)
-	real*8,allocatable :: rtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:),cloud3D(:,:)
+	real*8,allocatable :: rtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:),cloud3D(:,:),wrtrace(:),mutrace(:)
 	real*8 x,y,z,vx,vy,vz,v,w1,w2,ComputeBDREFscatt,wscatt(180)
 	external ComputeBDREFscatt
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
@@ -19,7 +19,7 @@
 	real*8 tot,contr,tmp(nmol),Rmin_im,Rmax_im,random,xmin,xmax,Pb(nr+1)
 	integer nx_im,ix,iy,ni,ilatt,ilong,imustar,ivel,miniter0,isurf
 	character*500 file
-	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1,tau0
+	real*8 tau1,fact1,exp_tau1,maximage,beta_c,NormSig,Fstar_temp(nlam),SiR1
 	real*8,allocatable :: maxdet(:,:),SiR0(:,:,:),R3DC(:,:),lgrid(:)
 	real*8,allocatable :: SiFS(:,:,:,:,:,:),F11(:,:,:,:,:),g(:,:,:,:),BBsurf(:,:),F11_theta(:,:,:,:)
 	logical iterateshift,actually1D,do_ibeta(n3D)
@@ -31,6 +31,8 @@
 	real*8,allocatable :: fluxiter(:)
 	logical,allocatable :: lamconv(:),lamthick(:,:,:)
 	integer nptrace0,nptot
+	logical,allocatable :: done_RT(:,:,:)
+	real*8,allocatable :: done_F(:,:,:,:)
 
 	call cpu_time(starttime)
 	
@@ -530,7 +532,7 @@ c Now call the setup for the readFull3D part
 		natm=nRTatm
 	endif
 
-	nptrace=max((nlatt-1)/8,5)
+	nptrace=max((nlatt-1)/8,11)
 	if(2*(nptrace/2).eq.nptrace) nptrace=nptrace+1
 	if(actually1D.and.nphase.eq.1.and.theta_phase(1).eq.180d0) nptrace=1
 	if(vrot0.ne.0d0) then
@@ -550,15 +552,48 @@ c Now call the setup for the readFull3D part
 		allocate(xy_image(nx_im,nx_im,nlam))
 	endif
 
-	allocate(rtrace(nrtrace))
+	allocate(rtrace(nrtrace),wrtrace(nrtrace),mutrace(nrtrace))
 
-	do irtrace=1,ndisk
-		rtrace(irtrace)=Rmin*real(irtrace-1)/real(ndisk-1)
-	enddo
-	do irtrace=ndisk+1,nrtrace
-		rtrace(irtrace)=Rmin+(Rmax-Rmin)*(real(irtrace-ndisk)-0.5d0)/(real(nrtrace-ndisk))
-	enddo
-	call sort(rtrace,nrtrace)
+	if(makeimage) then
+		do irtrace=1,ndisk
+			rtrace(irtrace)=Rmin*real(irtrace-1)/real(ndisk-1)
+		enddo
+		do irtrace=ndisk+1,nrtrace
+			rtrace(irtrace)=Rmin+(Rmax-Rmin)*(real(irtrace-ndisk)-0.5d0)/(real(nrtrace-ndisk))
+		enddo
+		call sort(rtrace,nrtrace)
+		do irtrace=1,nrtrace-1
+			wrtrace(irtrace)=(rtrace(irtrace+1)**2-rtrace(irtrace)**2)
+			rtrace(irtrace)=0.5d0*(rtrace(irtrace)+rtrace(irtrace+1))
+		enddo
+		nrtrace=nrtrace-1
+	else
+		call gauleg(0d0,1d0,mutrace,wrtrace,ndisk)
+		do i=1,ndisk
+			rtrace(i)=Rmin*sqrt(1d0-mutrace(i)**2)
+			wrtrace(i)=2d0*Rmin**2*mutrace(i)*wrtrace(i)
+		enddo
+		if(natm.gt.0) then
+			do i=1,natm
+				j=ndisk+i
+				rtrace(j)=Rmin+(Rmax-Rmin)*(real(i)-0.5d0)/(real(natm))
+			enddo
+			if(natm.eq.1) then
+				wrtrace(ndisk+1)=(Rmax**2-Rmin**2)
+			else
+				wrtrace(ndisk+1)=(0.5d0*(rtrace(ndisk+1)+rtrace(ndisk+2)))**2-Rmin**2
+				wrtrace(ndisk+natm)=Rmax**2-(0.5d0*(rtrace(ndisk+atm-1)+rtrace(ndisk+atm)))**2
+				if(natm.gt.2) then
+					j=ndisk
+					do i=2,natm-1
+						j=ndisk+i
+						wrtrace(j)=(0.5d0*(rtrace(j)+rtrace(j+1)))**2-(0.5d0*(rtrace(j)+rtrace(j-1)))**2
+					enddo
+				endif
+			endif
+		endif
+	endif
+	deallocate(mutrace)
 
 	allocate(fluxp(nlam))
 	allocate(fluxiter(nlam),lamconv(nlam))
@@ -572,6 +607,9 @@ c Now call the setup for the readFull3D part
 	if(actually1D.and.(theta_phase(ipc).eq.180d0.or..not.scattering).and..not.makeimage) nptrace=1
 	fluxiter=0d0
 	lamconv=.false.
+	allocate(done_RT(n3D,nnu0,nrtrace),done_F(nlam,n3D,nnu0,nrtrace))
+	done_RT=.false.
+	done_F=0d0
 70	continue
 	if(fulloutput3D) PTaverage3D(ipc,1:nr)=0d0
 	theta=2d0*pi*theta_phase(ipc)/360d0
@@ -641,21 +679,21 @@ c Now call the setup for the readFull3D part
 	if(iscatt.gt.180) iscatt=180
 !$OMP PARALLEL IF(useomp)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vxr,vyr,vzr,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,tau0,
+!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vxr,vyr,vzr,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,
 !$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,
 !$OMP&			vrot,dlam_rot,ivel,icc,isurf,mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2,iscatt,lamthick,usew1w2)
-!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,vrot_max,lam,do_rot,
-!$OMP&			rphi_image,makeimage,nnu0,nlong,nlatt,R3D,orbit_inc,maxtau,R3DC,computelam,nvel,
+!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,vrot_max,
+!$OMP&			lam,do_rot,rphi_image,makeimage,nnu0,nlong,nlatt,R3D,orbit_inc,maxtau,R3DC,computelam,nvel,
 !$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis,BBsurf,
-!$OMP&			F11_theta,SiFS,anisoscattstar,g,ncc,cloudfrac,vx,vy,vz,bdrf_type,bdrf_args,f_surface,surface_props,n_surface,
-!$OMP&			lamconv,wscatt,iscatt1,iscatt2,phishift,theta_phase,scattering,actually1D)
+!$OMP&			F11_theta,SiFS,anisoscattstar,lambertsurface,g,ncc,cloudfrac,vx,vy,vz,bdrf_type,bdrf_args,f_surface,natm,
+!$OMP&			surface_props,n_surface,lamconv,wscatt,iscatt1,iscatt2,phishift,theta_phase,scattering,actually1D,done_RT,done_F)
 	allocate(fact(nlam,ng,ncc),lamthick(nlam,ng,ncc))
 	allocate(fluxp_omp(nlam))
 	allocate(ftot(nlam),SiR0(nlam,ng,ncc))
 	fluxp_omp=0d0
 !$OMP DO SCHEDULE(DYNAMIC,1)
-	do irtrace=1,nrtrace-1
-		A=pi*(rtrace(irtrace+1)**2-rtrace(irtrace)**2)/real(nptrace)
+	do irtrace=1,nrtrace
+		A=pi*wrtrace(irtrace)/real(nptrace)
 		do iptrace=1,nptrace
 			ftot=0d0
 			do ilam=1,nlam
@@ -676,7 +714,6 @@ c Note we are here using the symmetry between North and South
 				phi=2d0*pi*(real(iptrace)-phishift)/real(nptrace)
 			endif
 			rr=rtrace(irtrace)
-			rr=0.5d0*(rtrace(irtrace)+rtrace(irtrace+1))
 			y=rr*cos(phi)
 			z=rr*sin(phi)
 			x=sqrt(Rmax**2-y**2-z**2)
@@ -728,8 +765,11 @@ c Note we are here using the symmetry between North and South
 				PTaverage3D(ipc,1:nr)=PTaverage3D(ipc,1:nr)+T3D(i,1:nr)*A
 				mixrat_average3D(ipc,1:nr,1:nmol)=mixrat_average3D(ipc,1:nr,1:nmol)+mixrat3D(i,1:nr,1:nmol)*A
 			endif
+			if(done_RT(i,inu,irtrace)) then
+				ftot(1:nlam)=done_F(1:nlam,i,inu,irtrace)*A
+				goto 2
+			endif
 			j=0
-			tau0=0d0
 			SiR0=0d0
 1			continue
 			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nr,nlong,nlatt)
@@ -756,9 +796,12 @@ c Note we are here using the symmetry between North and South
 					do ig=1,ng
 						do icc=1,ncc
 							if(.not.lamthick(ilam,ig,icc)) then
-							tau0=0d0
 							tau1=v*dtauR_nu(ilam,ig,i,i1,ivel,icc)
-							exp_tau1=exp(-tau1)
+							if(tau1.lt.1d-3) then
+								exp_tau1=1d0 - tau1 + 0.5d0*tau1*tau1
+							else
+								exp_tau1=exp(-tau1)
+							endif
 							if(usew1w2) then
 								SiR1=w1*Si(ilam,ig,i1,inu,i,icc)+w2*Si(ilam,ig,i1+1,inu,i,icc)
 								if(anisoscattstar) SiR1=SiR1+F11_theta(ilam,i1,i,icc)*w1*SiFS(ilam,ig,i1,inu,i,icc)+
@@ -767,7 +810,7 @@ c Note we are here using the symmetry between North and South
 								SiR1=Si(ilam,ig,nr,inu,i,icc)
 								if(anisoscattstar) SiR1=SiR1+F11_theta(ilam,nr,i,icc)*SiFS(ilam,ig,nr,inu,i,icc)
 							endif
-							call ComputeI12(tau1,tau0,SiR1,SiR0(ilam,ig,icc),contr)
+							call ComputeI12(tau1,exp_tau1,SiR1,SiR0(ilam,ig,icc),contr)
 							ftot(ilam)=ftot(ilam)+contr*fact(ilam,ig,icc)
 							fact(ilam,ig,icc)=fact(ilam,ig,icc)*exp_tau1
 							if(fact(ilam,ig,icc).lt.1d-10) lamthick(ilam,ig,icc)=.true.
@@ -790,7 +833,7 @@ c Note we are here using the symmetry between North and South
 				endif
 				rr=sqrt(x*x+y*y+z*z)
 				mu=-x/rr
-				if(mu.gt.0d0.and.anisoscattstar) then
+				if(mu.gt.0d0.and.anisoscattstar.and..not.lambertsurface) then
 					mup=-(x*vx+y*vy+z*vz)/rr
 					x1=-1d0-mu*x/rr
 					y1=-mu*y/rr
@@ -808,7 +851,7 @@ c Note we are here using the symmetry between North and South
 					do ig=1,ng
 						do icc=1,ncc
 							if(.not.lamthick(ilam,ig,icc)) then
-							if(anisoscattstar.and.mu.gt.0d0) then
+							if(anisoscattstar.and.mu.gt.0d0.and..not.lambertsurface) then
 								contr=0d0
 								do isurf=1,n_surface
 									if(f_surface(isurf).gt.0d0) then
@@ -861,6 +904,12 @@ c Note we are here using the symmetry between North and South
 			if(j.lt.nr*2*max(nlatt,nlong)) goto 1
 2			continue
 			fluxp_omp(1:nlam)=fluxp_omp(1:nlam)+ftot(1:nlam)
+			if(.not.done_RT(i,inu,irtrace).and.natm.eq.0) then
+!$OMP CRITICAL
+				done_RT(i,inu,irtrace)=.true.				
+				done_F(1:nlam,i,inu,irtrace)=ftot(1:nlam)/A
+!$OMP END CRITICAL
+			endif
 			if(makeimage) rphi_image(1:nlam,irtrace,iptrace)=ftot(1:nlam)
 		enddo
 	enddo
@@ -876,6 +925,7 @@ c Note we are here using the symmetry between North and South
 !$OMP FLUSH
 !$OMP END PARALLEL
 
+	if(.true.) then
 	if(.not.makeimage.and..not.(actually1D.and.(theta_phase(ipc).eq.180d0.or..not.scattering))) then
 		if(k.eq.0) then
 			conv=.false.
@@ -907,15 +957,19 @@ c Note we are here using the symmetry between North and South
 			endif
 			nptrace=nptrace*1.25+1
 			if(2*(nptrace/2).eq.nptrace) nptrace=nptrace+1
+			lamconv=.false.
 			goto 70
 		else
 c			print*,k,nptrace,nptot
 			fluxp=fluxiter
 		endif
 	endif
+	endif
 	fluxp=fluxp*1d23/distance**2
 	phase(ipc,0,1:nlam)=fluxp(1:nlam)
 	flux(0,1:nlam)=0d0
+
+	deallocate(done_RT,done_F)
 
 	call tellertje_perc(ipc,npc)
 	if(fulloutput3D) then
@@ -946,9 +1000,9 @@ c	print*,Tstar*(Rstar/Dplanet)**0.5
 		call output("Creating image: " // trim(file))
 		Rmin_im=0d0
 		xy_image=0d0
-		do irtrace=1,nrtrace-1
+		do irtrace=1,nrtrace
 			call tellertje(irtrace,nrtrace)
-			A=pi*(rtrace(irtrace+1)**2-rtrace(irtrace)**2)
+			A=pi*wrtrace(irtrace)
 			Rmax_im=sqrt((A+pi*Rmin_im**2)/pi)
 			do iptrace=1,nptrace
 				ni=125d0*real(nx_im*nx_im)/real(nrtrace*nptrace)
@@ -1074,6 +1128,7 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 		deallocate(xy_image)
 	endif
 	deallocate(rtrace)
+	deallocate(wrtrace)
 	deallocate(fluxp)
 	endif
 
@@ -2531,7 +2586,7 @@ c			Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(tauR,Ij,ilam,ig,inu0,inu,contr,must,Ih)
 !$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar,lamemis,
-!$OMP&        nnu0,wscat,anisoscattstar,SiFS)
+!$OMP&        nnu0,wscat,anisoscattstar,SiFS,lambertsurface)
 	allocate(tauR(nr),Ij(nr),Ih(nr))
 !$OMP DO
 	do ilam=1,nlam

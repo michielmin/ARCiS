@@ -355,7 +355,7 @@ c		enddo
 	use Constants
 	IMPLICIT NONE
 	integer ir,ilam,ig,icloud,isize,ivel,i
-	real*8 Ca,Cs,F11(180),theta,CsAdd,G
+	real*8 Ca,Cs,F11(180),CsAdd,G
 	logical docloud0(nclouds),doF11
 
 	Ca=Cabs(ir,ilam,ig,ivel)*Ndens(ir)
@@ -364,8 +364,7 @@ c		enddo
 	if(.not.Cs.gt.0d0) Cs=0d0
 	if(doF11) then
 		do i=1,180
-			theta=real(i)*pi/180d0
-			F11(i)=Cs*3d0*(1d0+cos(theta)**2)/4d0
+			F11(i)=Cs*3d0*(1d0+costheta(i)**2)/4d0
 		enddo
 	endif
 

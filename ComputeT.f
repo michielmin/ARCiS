@@ -853,18 +853,16 @@ c===============================================================================
 	end
 	
 
-	subroutine ComputeI12(tau1,tau2,S1,S2,I12)
+	subroutine ComputeI12(dtau,expdtau,S1,S2,I12)
 	IMPLICIT NONE
-	real*8 tau1,tau2,S1,S2,I12,dtau
-	
-	dtau=abs(tau1-tau2)
+	real*8 S1,S2,I12,dtau,expdtau
 
 	if(dtau.lt.1d-4) then
 		I12=0.5*(S1+S2)*dtau
 	else if(dtau.gt.1d4) then
 		I12=S2+(S1-S2)/dtau
 	else
-		I12=(-(S1*dtau-S2+S1)*exp(-dtau)+S2*dtau-S2+S1)/dtau
+		I12=(-(S1*dtau-S2+S1)*expdtau+S2*dtau-S2+S1)/dtau
 	endif
 
 	return

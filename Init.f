@@ -1115,7 +1115,7 @@ c select at least the species relevant for disequilibrium chemistry
 			file=trim(homedir) // '/ARCiS/Data/Surface/brown-darkbrown-sand.dat'
 			call regridSimple(file,lam*1d4,surface_props(1:nlam,4),nlam)
 			surface_props(1:nlam,1:4)=1d0-surface_props(1:nlam,1:4)/100d0
-			if(anisoscattstar) then
+			if(anisoscattstar.and..not.lambertsurface) then
 				file=trim(homedir) // '/ARCiS/Data/refind/H2O_l.dat'
 				call regridSimple(file,lam*1d4,surface_props(1:nlam,5),nlam)
 				bdrf_type(1:4)=1
@@ -1135,7 +1135,7 @@ c				bdrf_args(2,5)=1.33		! refractive index (wavelength dependent)
 		case("PARLAND","parland","GREYLAND","greyland")
 			n_surface=2
 			call getenv('HOME',homedir)
-			if(anisoscattstar) then
+			if(anisoscattstar.and..not.lambertsurface) then
 				file=trim(homedir) // '/ARCiS/Data/refind/H2O_l.dat'
 				call regridSimple(file,lam*1d4,surface_props(1:nlam,1),nlam)
 				bdrf_type(1)=2
@@ -1405,6 +1405,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) scattstar
 		case("anisoscatt","anisostar","anisostarscatt","anisoscattstar")
 			read(key%value,*) anisoscattstar
+		case("lambert","lambertsurf","lambertsurface")
+			read(key%value,*) lambertsurface
 		case("opacitymode")
 			read(key%value,*) opacitymode
 		case("np")
@@ -2379,6 +2381,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%porosity0=0d0
 		Cloud(i)%reff=1d0
 		Cloud(i)%veff=0.1
+		Cloud(i)%nsize=1
 		Cloud(i)%rpow=0d0
 		Cloud(i)%Pref=1d0
 		Cloud(i)%rnuc=1e-3
@@ -2528,6 +2531,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 	scattering=.false.
 	scattstar=.false.
 	anisoscattstar=.false.
+	lambertsurface=.true.
 	
 	opacitymode=.false.
 	opacitydir=trim(homedir) // '/ARCiS/Data/Opacities'
@@ -3443,6 +3447,8 @@ c				includemol(i)=.true.
 			read(key%value,*) Cloud(j)%reff
 		case("veff")
 			read(key%value,*) Cloud(j)%veff
+		case("ns","nsize")
+			read(key%value,*) Cloud(j)%nsize
 		case("kappa")
 			read(key%value,*) Cloud(j)%kappa
 		case("fstick")

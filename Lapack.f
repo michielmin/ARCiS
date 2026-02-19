@@ -18838,3 +18838,253 @@ C------------- LAST LINE OF DCHFEV FOLLOWS -----------------------------
 *     End of DTRSV
 *
       END
+
+
+C===============================================================
+C  GAUSS-HERMITE QUADRATURE (PHYSICISTS')
+C
+C  Returns abscissae X(I) and weights W(I) for:
+C     ∫_{-∞}^{∞} exp(-x^2) f(x) dx  ≈  Σ_{i=1..N} W(i) f(X(i))
+C
+C  Uses Golub–Welsch: eigenproblem of the Hermite Jacobi matrix,
+C  solved via LAPACK DSTEV (symmetric tridiagonal eigensolver).
+C
+C  You must link LAPACK/BLAS, e.g. with gfortran:
+C     gfortran yourfile.f -llapack -lblas
+C===============================================================
+
+      SUBROUTINE GHERMITE(N, X, W)
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      INTEGER N, INFO
+      DOUBLE PRECISION X(N), W(N), WORK(3*N), Z(N,N)
+      DOUBLE PRECISION E(1)
+      INTEGER I
+      DOUBLE PRECISION PI
+
+C     N must be >= 1
+      IF (N .LT. 1) THEN
+         INFO = -1
+         RETURN
+      ENDIF
+
+C     PI = 4*atan(1)
+      PI = 4D0*DATAN(1D0)
+
+C     Build the symmetric tridiagonal Jacobi matrix:
+C       diag = 0
+C       offdiag(i) = sqrt(i/2), i=1..N-1
+C     Store diag in X (will be overwritten by eigenvalues).
+      DO 10 I = 1, N
+         X(I) = 0D0
+ 10   CONTINUE
+
+C     We need an array for offdiagonal E(1..N-1).
+C     For Fortran 77 you typically pass a sufficiently large WORK
+C     and carve out space. Here we use WORK(1..N-1) as E.
+C     WORK must be at least (N-1) + max(1,2N-2) = 3N-3 doubles.
+C
+C     Layout:
+C       E   = WORK(1           .. N-1)
+C       WK  = WORK((N-1)+1     .. (N-1)+(2N-2))  size 2N-2
+C     Z is provided by caller (LDZ x N).
+
+      IF (N .GT. 1) THEN
+         DO 20 I = 1, N-1
+            WORK(I) = DSQRT(DBLE(I)/2D0)
+ 20      CONTINUE
+      ENDIF
+
+C     Initialize Z to identity (DSTEV with JOBZ='V' returns eigenvectors)
+      DO 40 I = 1, N
+         DO 30 J = 1, N
+            Z(J,I) = 0D0
+ 30      CONTINUE
+         Z(I,I) = 1D0
+ 40   CONTINUE
+
+C     Call LAPACK DSTEV:
+C       JOBZ = 'V' (compute eigenvectors)
+C       X    = diag on input, eigenvalues on output
+C       E    = offdiag on input, destroyed on output
+C       Z    = eigenvectors (columns)
+C       WORK = workspace length max(1,2N-2)
+C
+C     E array is WORK(1..N-1)
+C     WORKSPACE starts at WORK(N)
+      CALL DSTEV('V', N, X, WORK(1), Z, N, WORK(N), INFO)
+      IF (INFO .NE. 0) RETURN
+
+C     Weights: W(i) = sqrt(pi) * (v1_i)^2, where v1_i is first
+C     component of normalized eigenvector for node X(i).
+      DO 50 I = 1, N
+         W(I) = DSQRT(PI) * (Z(1,I)*Z(1,I))
+ 50   CONTINUE
+
+      RETURN
+      END
+
+      SUBROUTINE DSTEV( JOBZ, N, D, E, Z, LDZ, WORK, INFO )
+*
+*  -- LAPACK driver routine (version 3.2) --
+*  -- LAPACK is a software package provided by Univ. of Tennessee,    --
+*  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
+*     November 2006
+*
+*     .. Scalar Arguments ..
+      CHARACTER          JOBZ
+      INTEGER            INFO, LDZ, N
+*     ..
+*     .. Array Arguments ..
+      DOUBLE PRECISION   D( * ), E( * ), WORK( * ), Z( LDZ, * )
+*     ..
+*
+*  Purpose
+*  =======
+*
+*  DSTEV computes all eigenvalues and, optionally, eigenvectors of a
+*  real symmetric tridiagonal matrix A.
+*
+*  Arguments
+*  =========
+*
+*  JOBZ    (input) CHARACTER*1
+*          = 'N':  Compute eigenvalues only;
+*          = 'V':  Compute eigenvalues and eigenvectors.
+*
+*  N       (input) INTEGER
+*          The order of the matrix.  N >= 0.
+*
+*  D       (input/output) DOUBLE PRECISION array, dimension (N)
+*          On entry, the n diagonal elements of the tridiagonal matrix
+*          A.
+*          On exit, if INFO = 0, the eigenvalues in ascending order.
+*
+*  E       (input/output) DOUBLE PRECISION array, dimension (N-1)
+*          On entry, the (n-1) subdiagonal elements of the tridiagonal
+*          matrix A, stored in elements 1 to N-1 of E.
+*          On exit, the contents of E are destroyed.
+*
+*  Z       (output) DOUBLE PRECISION array, dimension (LDZ, N)
+*          If JOBZ = 'V', then if INFO = 0, Z contains the orthonormal
+*          eigenvectors of the matrix A, with the i-th column of Z
+*          holding the eigenvector associated with D(i).
+*          If JOBZ = 'N', then Z is not referenced.
+*
+*  LDZ     (input) INTEGER
+*          The leading dimension of the array Z.  LDZ >= 1, and if
+*          JOBZ = 'V', LDZ >= max(1,N).
+*
+*  WORK    (workspace) DOUBLE PRECISION array, dimension (max(1,2*N-2))
+*          If JOBZ = 'N', WORK is not referenced.
+*
+*  INFO    (output) INTEGER
+*          = 0:  successful exit
+*          < 0:  if INFO = -i, the i-th argument had an illegal value
+*          > 0:  if INFO = i, the algorithm failed to converge; i
+*                off-diagonal elements of E did not converge to zero.
+*
+*  =====================================================================
+*
+*     .. Parameters ..
+      DOUBLE PRECISION   ZERO, ONE
+      PARAMETER          ( ZERO = 0.0D0, ONE = 1.0D0 )
+*     ..
+*     .. Local Scalars ..
+      LOGICAL            WANTZ
+      INTEGER            IMAX, ISCALE
+      DOUBLE PRECISION   BIGNUM, EPS, RMAX, RMIN, SAFMIN, SIGMA, SMLNUM,
+     $                   TNRM
+*     ..
+*     .. External Functions ..
+      LOGICAL            LSAME
+      DOUBLE PRECISION   DLAMCH, DLANST
+      EXTERNAL           LSAME, DLAMCH, DLANST
+*     ..
+*     .. External Subroutines ..
+      EXTERNAL           DSCAL, DSTEQR, DSTERF, XERBLA
+*     ..
+*     .. Intrinsic Functions ..
+      INTRINSIC          SQRT
+*     ..
+*     .. Executable Statements ..
+*
+*     Test the input parameters.
+*
+      WANTZ = LSAME( JOBZ, 'V' )
+*
+      INFO = 0
+      IF( .NOT.( WANTZ .OR. LSAME( JOBZ, 'N' ) ) ) THEN
+         INFO = -1
+      ELSE IF( N.LT.0 ) THEN
+         INFO = -2
+      ELSE IF( LDZ.LT.1 .OR. ( WANTZ .AND. LDZ.LT.N ) ) THEN
+         INFO = -6
+      END IF
+*
+      IF( INFO.NE.0 ) THEN
+         CALL XERBLA( 'DSTEV ', -INFO )
+         RETURN
+      END IF
+*
+*     Quick return if possible
+*
+      IF( N.EQ.0 )
+     $   RETURN
+*
+      IF( N.EQ.1 ) THEN
+         IF( WANTZ )
+     $      Z( 1, 1 ) = ONE
+         RETURN
+      END IF
+*
+*     Get machine constants.
+*
+      SAFMIN = DLAMCH( 'Safe minimum' )
+      EPS = DLAMCH( 'Precision' )
+      SMLNUM = SAFMIN / EPS
+      BIGNUM = ONE / SMLNUM
+      RMIN = SQRT( SMLNUM )
+      RMAX = SQRT( BIGNUM )
+*
+*     Scale matrix to allowable range, if necessary.
+*
+      ISCALE = 0
+      TNRM = DLANST( 'M', N, D, E )
+      IF( TNRM.GT.ZERO .AND. TNRM.LT.RMIN ) THEN
+         ISCALE = 1
+         SIGMA = RMIN / TNRM
+      ELSE IF( TNRM.GT.RMAX ) THEN
+         ISCALE = 1
+         SIGMA = RMAX / TNRM
+      END IF
+      IF( ISCALE.EQ.1 ) THEN
+         CALL DSCAL( N, SIGMA, D, 1 )
+         CALL DSCAL( N-1, SIGMA, E( 1 ), 1 )
+      END IF
+*
+*     For eigenvalues only, call DSTERF.  For eigenvalues and
+*     eigenvectors, call DSTEQR.
+*
+      IF( .NOT.WANTZ ) THEN
+         CALL DSTERF( N, D, E, INFO )
+      ELSE
+         CALL DSTEQR( 'I', N, D, E, Z, LDZ, WORK, INFO )
+      END IF
+*
+*     If matrix was scaled, then rescale eigenvalues appropriately.
+*
+      IF( ISCALE.EQ.1 ) THEN
+         IF( INFO.EQ.0 ) THEN
+            IMAX = N
+         ELSE
+            IMAX = INFO - 1
+         END IF
+         CALL DSCAL( IMAX, ONE / SIGMA, D, 1 )
+      END IF
+*
+      RETURN
+*
+*     End of DSTEV
+*
+      END
+    

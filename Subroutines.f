@@ -1606,3 +1606,66 @@ C
 
 	return
 	end
+
+
+	subroutine GaussHermite(n,x,w,xmax)
+	IMPLICIT NONE
+	integer n,nn,i,j,k,nmin,nmax
+	real*8 x(n),w(n),xmax
+	real*8,allocatable :: xx(:),ww(:)
+	
+	nmin=n
+
+	nn=n
+	j=0
+	do while(j.lt.n)
+		nn=nn*2
+		allocate(xx(nn),ww(nn))
+		call GHERMITE(nn,xx,ww)
+		j=0
+		do i=1,nn
+			if(abs(xx(i)).lt.xmax) then
+				j=j+1
+			endif
+		enddo
+		deallocate(xx,ww)
+	enddo
+	nmax=nn
+	allocate(xx(nmax),ww(nmax))
+
+1	continue
+	nn=(nmin+nmax)/2
+	if(nn.eq.nmax) then
+		nmax=nmax*2
+		nn=(nmin+nmax)/2
+	endif
+	call GHERMITE(nn,xx,ww)
+
+	j=0
+	do i=1,nn
+		if(abs(xx(i)).lt.xmax) then
+			j=j+1
+		endif
+	enddo
+	if(j.gt.n) then
+		nmax=nn
+		goto 1
+	else if(j.lt.n) then
+		nmin=nn
+		goto 1
+	else
+		j=0
+		do i=1,nn
+			if(abs(xx(i)).lt.xmax) then
+				j=j+1
+				x(j)=xx(i)
+				w(j)=ww(i)
+			endif
+		enddo
+		deallocate(xx,ww)
+		return
+	endif
+	
+	return
+	end
+	

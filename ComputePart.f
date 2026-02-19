@@ -10,14 +10,14 @@
 	integer ii,isize
 
 	real cext0,csca0,maxf
-	real minlog,maxlog,pow,cabs0,totA
+	real cabs0,totA
 	real e1av,e2av,rad,r1,r2,tot,lmax,lmin,Mass,tot2,Ntot
 	real lambda,Vol,rho_av
 	real,allocatable :: r0(:),nr0(:,:),f(:),wf(:),rho(:)
 	real,allocatable :: e1(:,:),e2(:,:)
 	complex*16,allocatable :: m12(:)
-	real*8 e1blend,e2blend
-	real*8,allocatable :: frac(:)
+	real*8 e1blend,e2blend,amin,amax
+	real*8,allocatable :: frac(:),dbl_r0(:),dbl_nr0(:)
 	real,allocatable :: e1d(:,:),e2d(:,:)
 	integer i,j,k,l,na,nf,ns,nm,ilam,Err,spheres,toolarge
 	complex m,min,mav,alpha
@@ -25,7 +25,7 @@
 	character*3 meth
 	character*500 filename(MAXMAT),grid,tmp,tmp2,partfile,lnkfile
 
-	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie,KR,theta,dummy,amin,amax,camie,fmie,gmie,rcore
+	real*8 rmie,lmie,e1mie,e2mie,csmie,cemie,KR,theta,dummy,camie,fmie,gmie,rcore
 	logical truefalse,checkparticlefile,lnkloglog
 	integer abun_in_name,LL,LLmax
 	parameter(abun_in_name=2)
@@ -48,10 +48,9 @@
 	allocate(rho(MAXMAT))
 	allocate(f11(C%nlam,na))
 
-	amin=C%rv(isize)
-	amax=C%rv(isize)
+	ns=C%nsize
 	if((Cloud(ii)%type.eq."DIFFUSE".or.Cloud(ii)%type.eq."WATER").and.cloud_dens(isize,ii).lt.1d-40) then
-		C%M(isize)=(3d0*4d0*pi*(amin*1d-4)**3)/3d0
+		C%M(isize)=(3d0*4d0*pi*(C%rv(isize)*1d-4)**3)/3d0
 		C%rho=3d0
 		do ilam=1,C%nlam
 			C%Kabs(isize,ilam)=1d0
@@ -61,9 +60,6 @@
 		goto 301
 	endif
 
-	minlog=log10(amin)
-	maxlog=log10(amax)
-	pow=-3.5
 	maxf=C%fmax
 	
 	lgrid(1:nlam)=lam(1:nlam)*1d4
@@ -158,56 +154,37 @@
 		wf(1)=1d0
 	endif
 
-	ns=1
-	allocate(r0(ns),nr0(nm,ns))
+	allocate(r0(ns),nr0(nm,ns),dbl_r0(ns),dbl_nr0(ns))
 	do l=1,nm
-c		if(.false.) then
-c			j=0
-c			if(C%sigma(isize).le.1d-3.or.ns.eq.1) then
-c				ns=1
-c				r0(1)=C%rv(isize)
-c				nr0(l,1)=1d0
-c				tot=r0(1)**3
-c			else
-c101			tot=0d0
-c			do k=1,ns
-c				r0(k)=10d0**(minlog+(maxlog-minlog)*real(k-1)/real(ns-1))
-c				nr0(l,k)=exp(-((r0(k)-C%rv(isize))/C%sigma(isize))**2)/(C%sigma(isize))
-c				nr0(l,k)=nr0(l,k)*r0(k)
-c				tot=tot+nr0(l,k)*r0(k)**3
-c			enddo
-c			if(.not.tot.gt.0d0) then
-c				ns=1
-c				r0(1)=C%rv(isize)
-c				if(r0(1).lt.amin) r0(1)=amin
-c				if(r0(1).gt.amax) r0(1)=amax
-c				nr0(l,1)=1d0
-c				tot=r0(1)**3
-c			endif
-c			endif
-c			do k=1,ns
-c				nr0(l,k)=frac(l)*nr0(l,k)/tot
-c			enddo
-c		else if(ns.eq.1) then
-			r0(1)=10d0**((minlog+maxlog)/2d0)
+		if(ns.gt.1.and.log(C%sigma(isize)).gt.1d-4) then
+			tot=0d0
+			call GaussHermite(ns,dbl_r0,dbl_nr0,3d0)! GHERMITE(ns,dbl_r0,dbl_nr0)
+			k=0
+			do j=1,ns
+				if(dbl_r0(j).gt.-3d0.and.dbl_r0(j).lt.3d0) then
+					k=k+1
+					r0(k)=exp(dbl_r0(j)*log(C%sigma(isize))+log(C%rv(isize)))
+					nr0(l,k)=dbl_nr0(j)
+					tot=tot+nr0(l,k)*r0(k)**3
+				endif
+			enddo
+			ns=k
+			if(.not.tot.gt.0d0) then
+				ns=1
+				r0(1)=C%rv(isize)
+				nr0(l,1)=1d0
+				tot=r0(1)**3
+			endif
+			do k=1,ns
+				nr0(l,k)=frac(l)*nr0(l,k)/tot
+			enddo
+		else
+			r0(1)=C%rv(isize)
 			nr0(l,1)=frac(l)
 			C%rv(isize)=r0(1)
-c		else
-c			tot=0d0
-c			C%rv(isize)=0d0
-c			do k=1,ns
-c				r0(k)=10d0**(minlog
-c     &				+(maxlog-minlog)*real(k-1)/real(ns-1))
-c				nr0(l,k)=r0(k)**(pow+1d0)
-c				tot=tot+nr0(l,k)*r0(k)**3
-c			enddo
-c			do k=1,ns
-c				nr0(l,k)=frac(l)*nr0(l,k)/tot
-c				C%rv(isize)=C%rv(isize)+nr0(l,k)*r0(k)**2
-c			enddo
-c			C%rv(isize)=sqrt(C%rv(isize))
-c		endif
+		endif
 	enddo
+	deallocate(dbl_r0,dbl_nr0)
 
 	Mass=0d0
 	Vol=0d0
@@ -240,9 +217,9 @@ c		endif
 !$OMP& PRIVATE(ilam,csca0,cabs0,cext0,theta,i,l,tot,k,Err,spheres,toolarge,
 !$OMP&         rad,wvno,m,r1,rcore,qext,qsca,qbs,gqsc,rmie,lmie,e1mie,e2mie,
 !$OMP&         csmie,cemie,camie,tot2,j,gsca,gmie,MieF11,mu,M1,M2,S21,D21,rcore4)
-!$OMP& SHARED(C,na,nm,ns,frac,minlog,maxlog,f,e1,e2,wf,isize,computelamcloud,Mass,
-!$OMP&        pow,lgrid,rho,nf,r0,nr0,Kabs,Ksca,Kext,nlam,fmie,useDLMie,
-!$OMP&		  DLMie_e1max,DLMie_e2max,G,f11,min,anisoscattstar)
+!$OMP& SHARED(C,na,nm,ns,frac,f,e1,e2,wf,isize,computelamcloud,Mass,
+!$OMP&        lgrid,rho,nf,r0,nr0,Kabs,Ksca,Kext,nlam,fmie,useDLMie,
+!$OMP&		  DLMie_e1max,DLMie_e2max,G,f11,min,anisoscattstar,costheta)
 	allocate(Mief11(na))
 	allocate(mu(na))
 	allocate(M1(na,2))
@@ -267,8 +244,7 @@ c		endif
 	gsca=0d0
 
 	do i=1,na/2
-		theta=(real(i)-0.5)/real(na/2)*3.1415926536/2d0
-		mu(i)=cos(theta)
+		mu(i)=costheta(i)
 	enddo
 
 	do l=1,nm
@@ -399,8 +375,8 @@ c		endif
 				tot2=0d0
 				tot=0d0
 				do j=1,180
-					tot=tot+C%F11(isize,ilam,j)*sin(pi*(real(j)-0.5)/real(na))*cos(pi*(real(j)-0.5)/real(na))
-					tot2=tot2+C%F11(isize,ilam,j)*sin(pi*(real(j)-0.5)/real(na))
+					tot=tot+C%F11(isize,ilam,j)*sintheta(j)*costheta(j)
+					tot2=tot2+C%F11(isize,ilam,j)*sintheta(j)
 				enddo
 				C%G(isize,ilam)=tot/tot2
 			else
