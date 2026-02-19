@@ -2739,7 +2739,7 @@ c-----------------------------------------------------------------------
 	integer inu,nnu,ilam,ir,info,NRHS,nr,i,j,jr
 	real*8 tauR(nr+nextra),tauR_in(nr),SiFS(nr,NRHS),Si_in(nr,NRHS),tauR_e(nr+nextra)
 	real*8 Si_e(nr+nextra,NRHS),SiFS_e(nr+nextra,NRHS),Ca(nr),Cs(nr),Ce(nr)
-	real*8 nu(nnu),wnu(nnu),albedo(nr+nextra),SurfAlb
+	real*8 nu(nnu),wnu(nnu),albedo(nr+nextra),SurfAlb,E(nr+nextra),tmp
 	real*8 Linv(nr+nextra,nr+nextra),Lmat(nr+nextra,nr+nextra),Hsurf(nr+nextra)
 	integer IWORKomp(nr+nextra),ii(nr+nextra)
 	logical doit
@@ -2797,19 +2797,25 @@ c-----------------------------------------------------------------------
 	do inu=1,nnu
 		tauR(1:nre)=tauR_e(1:nre)/abs(nu(inu))
 		call InvertIjExp(tauR,Lmat(1:nre,1:nre),nre)
-		do ir=1,nre
-			Linv(ir,1:nre)=Linv(ir,1:nre)+wnu(inu)*Lmat(ir,1:nre)*albedo(ir)
-		enddo
+		Linv(1:nre,1:nre)=Linv(1:nre,1:nre)+wnu(inu)*Lmat(1:nre,1:nre)
 		Hsurf(1:nre)=Hsurf(1:nre)+2d0*nu(inu)*wnu(inu)*Lmat(1,1:nre)
 	enddo
-	do inu=1,nnu
-		tauR(1:nre)=abs((tauR_e(1:nre)-tauR_e(1))/nu(inu))
-		do ir=1,nre
-			Linv(ir,1:nre)=Linv(ir,1:nre)+wnu(inu)*SurfAlb*Hsurf(1:nre)*albedo(ir)*exp(-tauR(ir))
-		enddo
+	do ir=1,nre
+		call DSCAL(nre, albedo(ir), Linv(ir,1), nr+nextra)
 	enddo
 
-	Si_e(1:nre,1:NRHS)=Si_e(1:nre,1:NRHS)+matmul(Linv(1:nre,1:nre),SiFS_e(1:nre,1:NRHS))
+	E(:) = 0
+	do inu=1,nnu
+		do ir=1,nre
+			tmp = abs((tauR_e(ir)-tauR_e(1))/nu(inu))
+			E(ir) = E(ir) + wnu(inu)*exp(-tmp)
+		enddo
+	enddo
+	E(:) = SurfAlb * albedo(:) * E(:)
+	call DGER(nre, nre, 1d0, E, 1, Hsurf, 1, Linv, nr+nextra)
+
+! Si_e(1:nre,1:NRHS) += Linv(1:nre,1:nre) * SiFS_e(1:nre,1:NRHS)
+	call DGEMM('N','N', nre, NRHS, nre, 1d0, Linv, nr+nextra, SiFS_e, nr+nextra, 1d0, Si_e, nr+nextra)
 
 	Linv=-Linv
 	do ir=1,nre
