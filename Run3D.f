@@ -2620,7 +2620,7 @@ c-----------------------------------------------------------------------
 				else
 					contr=0d0
 				endif
-				if(anisoscattstar) then
+				if(anisoscattstar.and..not.lambertsurface) then
 					SiFS(ilam,ig,0,inu0)=contr!*(1d0-surface_emis(ilam))
 				else
 					Si(ilam,ig,0,inu0)=Si(ilam,ig,0,inu0)+contr!*(1d0-surface_emis(ilam))
