@@ -1030,7 +1030,7 @@ c===============================================================================
 
 
 
-	subroutine SolveIjExp(tau,Si,Ij,Ih,nr)
+	subroutine SolveIjExp_old(tau,Si,Ij,Ih,nr)
 	IMPLICIT NONE
 	integer ir,nr,jr
 	real*8 Ij(nr),Si(nr),tau(nr),Ip(nr),Im(nr),Ih(nr)
@@ -1084,6 +1084,61 @@ c===============================================================================
 
 	Ij=(Ip+Im)/2d0
 	Ih=(Ip-Im)/2d0
+
+	return
+	end
+	
+	subroutine SolveIjExp(tau,Si,Ij,Ih,nr)
+	implicit none
+	integer, intent(in) :: nr
+	real*8, intent(in)  :: tau(nr), Si(nr)
+	real*8, intent(out) :: Ij(nr), Ih(nr)
+	real*8 :: Ip(nr), Im(nr)
+	real*8 :: dtau(nr), exptau(nr), a(nr), b(nr)
+	real*8 :: x, invx, ex, c
+	real*8 :: s0, s1, y
+	integer :: ir
+
+	dtau(nr) = tau(nr)
+	do ir = nr-1, 1, -1
+		dtau(ir) = abs(tau(ir+1) - tau(ir))
+	end do
+
+	do ir = 1, nr
+		x = dtau(ir)
+		if (x.lt.1d-4) then
+			exptau(ir) = 1d0 - x + 0.5d0*x*x
+			a(ir) = 0.5d0*x
+			b(ir) = 0.5d0*x
+		else if (x.gt.1d4) then
+			exptau(ir) = 0d0
+			invx = 1d0/x
+			a(ir) = invx
+			b(ir) = 1d0 - invx
+		else
+			ex = exp(-x)
+			exptau(ir) = ex
+			invx = 1d0/x
+			c = (1d0 - ex)*invx
+			a(ir) = c - ex
+			b(ir) = 1d0 - c
+		end if
+	end do
+
+	Im(nr) = a(nr)*0d0 + b(nr)*Si(nr)
+	do ir = nr-1, 1, -1
+		y = a(ir)*Si(ir+1) + b(ir)*Si(ir)
+		Im(ir) = Im(ir+1)*exptau(ir) + y
+	end do
+
+	Ip(1) = 0d0
+	do ir = 1, nr-1
+		y = a(ir)*Si(ir) + b(ir)*Si(ir+1)
+		Ip(ir+1) = Ip(ir)*exptau(ir) + y
+	end do
+
+	Ij = 0.5d0*(Ip + Im)
+	Ih = 0.5d0*(Ip - Im)
 
 	return
 	end
