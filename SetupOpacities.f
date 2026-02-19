@@ -195,7 +195,7 @@ c===============
 !$OMP&        ig_comp,retrieval,domakeai,gg,wgg,ng_comp,opacitymol,emisspec,computeT,doRing,lamemis,useobsgrid,
 !$OMP&        RTgridpoint,includemol,do_rayleigh,mixrat_PAH,mixrat_optEC0,mixrat_optEC,mixrat_optEC_r,nmap,imap,
 !$OMP&        do_optEC,Cabs_optEC,Csca_optEC,ivel)
-!$OMP DO SCHEDULE(DYNAMIC)
+!$OMP DO SCHEDULE(DYNAMIC,1)
 		do i=1,nlam
 			if(computelam(i).and.(emisspec.or.computeT.or.doRing).and.(.not.useobsgrid.or.lamemis(i).or.RTgridpoint(i))) then
 			kappa_tot(0)=cont_tot(i)

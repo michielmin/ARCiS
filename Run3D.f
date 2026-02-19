@@ -28,11 +28,15 @@
 	external HapkeEmis
 	logical do_rot,conv,usew1w2
 	real*8 starttime,stoptime
-	real*8,allocatable :: fluxiter(:)
-	logical,allocatable :: lamconv(:),lamthick(:,:,:)
-	integer nptrace0,nptot
-	logical,allocatable :: done_RT(:,:,:)
-	real*8,allocatable :: done_F(:,:,:,:)
+	logical,allocatable :: lamthick(:,:,:)
+	integer nptrace0,nptot,npath,ipath
+	integer,allocatable :: done_ipath(:,:,:)
+
+	type RTPath
+		real*8 x,y,z,vx,vy,vz,A
+		integer ivel,i2,i3,inu,irtrace,iptrace
+	end type RTPath
+	type(RTPath),allocatable :: Path(:)
 
 	call cpu_time(starttime)
 	
@@ -532,7 +536,7 @@ c Now call the setup for the readFull3D part
 		natm=nRTatm
 	endif
 
-	nptrace=max((nlatt-1)/8,11)
+	nptrace=max((nlatt-1)/8,15)
 	if(2*(nptrace/2).eq.nptrace) nptrace=nptrace+1
 	if(actually1D.and.nphase.eq.1.and.theta_phase(1).eq.180d0) nptrace=1
 	if(vrot0.ne.0d0) then
@@ -596,7 +600,6 @@ c Now call the setup for the readFull3D part
 	deallocate(mutrace)
 
 	allocate(fluxp(nlam))
-	allocate(fluxiter(nlam),lamconv(nlam))
 	npc=nphase
 	nptrace0=nptrace
 	call tellertje_perc(0,npc)
@@ -605,12 +608,6 @@ c Now call the setup for the readFull3D part
 	nptrace=nptrace0
 	phishift=0.5d0
 	if(actually1D.and.(theta_phase(ipc).eq.180d0.or..not.scattering).and..not.makeimage) nptrace=1
-	fluxiter=0d0
-	lamconv=.false.
-	allocate(done_RT(n3D,nnu0,nrtrace),done_F(nlam,n3D,nnu0,nrtrace))
-	done_RT=.false.
-	done_F=0d0
-70	continue
 	if(fulloutput3D) PTaverage3D(ipc,1:nr)=0d0
 	theta=2d0*pi*theta_phase(ipc)/360d0
 	if(theta.gt.2d0*pi) theta=theta-2d0*pi
@@ -677,32 +674,19 @@ c Now call the setup for the readFull3D part
 	if(iscatt.gt.180) iscatt=360-iscatt
 	if(iscatt.lt.1) iscatt=1
 	if(iscatt.gt.180) iscatt=180
-!$OMP PARALLEL IF(useomp)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vxr,vyr,vzr,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,
-!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,
-!$OMP&			vrot,dlam_rot,ivel,icc,isurf,mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2,iscatt,lamthick,usew1w2)
-!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,vrot_max,
-!$OMP&			lam,do_rot,rphi_image,makeimage,nnu0,nlong,nlatt,R3D,orbit_inc,maxtau,R3DC,computelam,nvel,
-!$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis,BBsurf,
-!$OMP&			F11_theta,SiFS,anisoscattstar,lambertsurface,g,ncc,cloudfrac,vx,vy,vz,bdrf_type,bdrf_args,f_surface,natm,
-!$OMP&			surface_props,n_surface,lamconv,wscatt,iscatt1,iscatt2,phishift,theta_phase,scattering,actually1D,done_RT,done_F)
-	allocate(fact(nlam,ng,ncc),lamthick(nlam,ng,ncc))
-	allocate(fluxp_omp(nlam))
-	allocate(ftot(nlam),SiR0(nlam,ng,ncc))
-	fluxp_omp=0d0
-!$OMP DO SCHEDULE(DYNAMIC,1)
+
+	allocate(Path(nrtrace*nptrace))
+	npath=0
+	allocate(done_ipath(n3D,nnu0,nrtrace))
+	done_ipath=0
 	do irtrace=1,nrtrace
 		A=pi*wrtrace(irtrace)/real(nptrace)
+		if(phishift.gt.0.4) then
+			phishift=0.25
+		else
+			phishift=0.5
+		endif
 		do iptrace=1,nptrace
-			ftot=0d0
-			do ilam=1,nlam
-				do ig=1,ng
-					fact(ilam,ig,1:ncc)=cloudfrac(1:ncc)*A*wgg(ig)
-				enddo
-			enddo
-c			fact=1d0
-			lamthick=.false.
 c Note we are here using the symmetry between North and South
 			if(nptrace.eq.1) then
 				if(2*(nlatt/2).eq.nlatt) then
@@ -750,8 +734,86 @@ c Note we are here using the symmetry between North and South
 			do i3=1,nlatt-1
 				if(la.ge.latt(i3).and.la.lt.latt(i3+1)) exit
 			enddo
-			i1=nr+1
-			edgeNR=2
+			la=(-x/sqrt(x**2+y**2+z**2))
+			if(la.lt.0d0) then
+				inu=nnu0
+			else
+				inu=(real(nnu0-2)*la+0.5d0)+1
+				if(inu.lt.1) inu=1
+				if(.not.inu.lt.nnu0-1) inu=nnu0-1
+			endif
+			i=ibeta(i2,i3)
+			if(done_ipath(i,inu,irtrace).ne.0.and.lambertsurface.and.nRTatm.eq.0) then
+				Path(done_ipath(i,inu,irtrace))%A=Path(done_ipath(i,inu,irtrace))%A+A
+			else
+				npath=npath+1
+				Path(npath)%x=x
+				Path(npath)%y=y
+				Path(npath)%z=z
+				Path(npath)%vx=vx
+				Path(npath)%vy=vy
+				Path(npath)%vz=vz
+				Path(npath)%A=A
+				Path(npath)%ivel=ivel
+				Path(npath)%i2=i2
+				Path(npath)%i3=i3
+				Path(npath)%inu=inu
+				Path(npath)%irtrace=irtrace
+				Path(npath)%iptrace=iptrace
+				done_ipath(i,inu,irtrace)=npath
+			endif
+		enddo
+	enddo
+	deallocate(done_ipath)
+
+!$OMP PARALLEL IF(useomp)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(irtrace,iptrace,A,phi,rr,y,z,x,vxr,vyr,vzr,la,lo,i1,i2,i3,edgeNR,j,i,inu,fluxp_omp,w1,w2,SiR0,SiR1,
+!$OMP&			i1next,i2next,i3next,edgenext,freq0,tot,v,ig,ilam,tau1,fact,exp_tau1,contr,ftot,ipath,
+!$OMP&			vrot,dlam_rot,ivel,icc,isurf,mu,mup,dphi,x1,y1,z1,r1,x2,y2,z2,r2,iscatt,lamthick,usew1w2)
+!$OMP& SHARED(theta,fluxp,nrtrace,rtrace,wrtrace,nptrace,Rmax,nr,freq,ibeta,fulloutput3D,Rplanet,computeT,dtauR_nu,vrot0,vrot_max,
+!$OMP&			lam,do_rot,rphi_image,makeimage,nnu0,nlong,nlatt,R3D,orbit_inc,maxtau,R3DC,computelam,nvel,
+!$OMP&			Ca,Cs,wgg,Si,R3D2,latt,long,T,ng,nlam,ipc,PTaverage3D,mixrat_average3D,T3D,mixrat3D,nmol,surface_emis,lamemis,BBsurf,
+!$OMP&			F11_theta,SiFS,anisoscattstar,lambertsurface,g,ncc,cloudfrac,vx,vy,vz,bdrf_type,bdrf_args,f_surface,natm,Path,npath,
+!$OMP&			surface_props,n_surface,wscatt,iscatt1,iscatt2,phishift,theta_phase,scattering,actually1D)
+	allocate(fact(nlam,ng,ncc),lamthick(nlam,ng,ncc))
+	allocate(fluxp_omp(nlam))
+	allocate(ftot(nlam),SiR0(nlam,ng,ncc))
+	fluxp_omp=0d0
+!$OMP DO SCHEDULE(DYNAMIC,1)
+	do ipath=1,npath
+		A=Path(ipath)%A
+		ftot=0d0
+		do ilam=1,nlam
+			do ig=1,ng
+				fact(ilam,ig,1:ncc)=cloudfrac(1:ncc)*A*wgg(ig)
+			enddo
+		enddo
+		lamthick=.false.
+		i1=nr+1
+		edgeNR=2
+		x=Path(ipath)%x
+		y=Path(ipath)%y
+		z=Path(ipath)%z
+		vx=Path(ipath)%vx
+		vy=Path(ipath)%vy
+		vz=Path(ipath)%vz
+		ivel=Path(ipath)%ivel
+		i2=Path(ipath)%i2
+		i3=Path(ipath)%i3
+		inu=Path(ipath)%inu
+		irtrace=Path(ipath)%irtrace
+		iptrace=Path(ipath)%iptrace
+		i=ibeta(i2,i3)
+		if(fulloutput3D) then
+			PTaverage3D(ipc,1:nr)=PTaverage3D(ipc,1:nr)+T3D(i,1:nr)*A
+			mixrat_average3D(ipc,1:nr,1:nmol)=mixrat_average3D(ipc,1:nr,1:nmol)+mixrat3D(i,1:nr,1:nmol)*A
+		endif
+		j=0
+		SiR0=0d0
+1		continue
+		call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nr,nlong,nlatt)
+		if(i1.le.nr) then
 			i=ibeta(i2,i3)
 			la=(-x/sqrt(x**2+y**2+z**2))
 			if(la.lt.0d0) then
@@ -761,157 +823,128 @@ c Note we are here using the symmetry between North and South
 				if(inu.lt.1) inu=1
 				if(.not.inu.lt.nnu0-1) inu=nnu0-1
 			endif
-			if(fulloutput3D) then
-				PTaverage3D(ipc,1:nr)=PTaverage3D(ipc,1:nr)+T3D(i,1:nr)*A
-				mixrat_average3D(ipc,1:nr,1:nmol)=mixrat_average3D(ipc,1:nr,1:nmol)+mixrat3D(i,1:nr,1:nmol)*A
-			endif
-			if(done_RT(i,inu,irtrace)) then
-				ftot(1:nlam)=done_F(1:nlam,i,inu,irtrace)*A
-				goto 2
-			endif
-			j=0
-			SiR0=0d0
-1			continue
-			call TravelSph(x,y,z,vx,vy,vz,edgeNR,i1,i2,i3,v,i1next,i2next,i3next,edgenext,nr,nlong,nlatt)
-			if(i1.le.nr) then
-				i=ibeta(i2,i3)
-				la=(-x/sqrt(x**2+y**2+z**2))
-				if(la.lt.0d0) then
-					inu=nnu0
-				else
-					inu=(real(nnu0-2)*la+0.5d0)+1
-					if(inu.lt.1) inu=1
-					if(.not.inu.lt.nnu0-1) inu=nnu0-1
-				endif
-				rr=sqrt((x+v*vx)**2+(y+v*vy)**2+(z+v*vz)**2)
-				if(i1.lt.nr) then
-					w1=(R3DC(i,i1+1)-rr)/(R3DC(i,i1+1)-R3DC(i,i1))
-					w2=1d0-w1
-					usew1w2=.true.
-				else
-					usew1w2=.false.
-				endif
-				do ilam=1,nlam
-					if(lamemis(ilam).and.computelam(ilam).and..not.lamconv(ilam)) then
-					do ig=1,ng
-						do icc=1,ncc
-							if(.not.lamthick(ilam,ig,icc)) then
-							tau1=v*dtauR_nu(ilam,ig,i,i1,ivel,icc)
-							if(tau1.lt.1d-3) then
-								exp_tau1=1d0 - tau1 + 0.5d0*tau1*tau1
-							else
-								exp_tau1=exp(-tau1)
-							endif
-							if(usew1w2) then
-								SiR1=w1*Si(ilam,ig,i1,inu,i,icc)+w2*Si(ilam,ig,i1+1,inu,i,icc)
-								if(anisoscattstar) SiR1=SiR1+F11_theta(ilam,i1,i,icc)*w1*SiFS(ilam,ig,i1,inu,i,icc)+
-     &													 F11_theta(ilam,i1+1,i,icc)*w2*SiFS(ilam,ig,i1+1,inu,i,icc)
-							else
-								SiR1=Si(ilam,ig,nr,inu,i,icc)
-								if(anisoscattstar) SiR1=SiR1+F11_theta(ilam,nr,i,icc)*SiFS(ilam,ig,nr,inu,i,icc)
-							endif
-							call ComputeI12(tau1,exp_tau1,SiR1,SiR0(ilam,ig,icc),contr)
-							ftot(ilam)=ftot(ilam)+contr*fact(ilam,ig,icc)
-							fact(ilam,ig,icc)=fact(ilam,ig,icc)*exp_tau1
-							if(fact(ilam,ig,icc).lt.1d-10) lamthick(ilam,ig,icc)=.true.
-							SiR0(ilam,ig,icc)=SiR1
-							endif
-						enddo
-					enddo
-					endif
-				enddo
-			endif
-			if(i1next.le.0) then
-				i=ibeta(i2,i3)
-				la=(-x/sqrt(x**2+y**2+z**2))
-				if(la.lt.0d0) then
-					inu=nnu0
-				else
-					inu=(real(nnu0-2)*la+0.5d0)+1
-					if(inu.lt.1) inu=1
-					if(.not.inu.lt.nnu0-1) inu=nnu0-1
-				endif
-				rr=sqrt(x*x+y*y+z*z)
-				mu=-x/rr
-				if(mu.gt.0d0.and.anisoscattstar.and..not.lambertsurface) then
-					mup=-(x*vx+y*vy+z*vz)/rr
-					x1=-1d0-mu*x/rr
-					y1=-mu*y/rr
-					z1=-mu*z/rr
-					r1=sqrt(x1*x1+y1*y1+z1*z1)
-					x2=-vx-mup*x/rr
-					y2=-vy-mup*y/rr
-					z2=-vz-mup*z/rr
-					r2=sqrt(x2*x2+y2*y2+z2*z2)
-					dphi=max(min((x1*x2+y1*y2+z1*z2)/(r1*r2),1d0),-1d0)
-					dphi=acos(-dphi)
-				endif
-				do ilam=1,nlam
-					if(lamemis(ilam).and.computelam(ilam).and..not.lamconv(ilam)) then
-					do ig=1,ng
-						do icc=1,ncc
-							if(.not.lamthick(ilam,ig,icc)) then
-							if(anisoscattstar.and.mu.gt.0d0.and..not.lambertsurface) then
-								contr=0d0
-								do isurf=1,n_surface
-									if(f_surface(isurf).gt.0d0) then
-										contr=contr+f_surface(isurf)*
-     &		ComputeBDREFscatt(mu,mup,dphi,bdrf_type(isurf),bdrf_args(1:4,isurf),surface_props(ilam,isurf))
-									endif
-								enddo
-								contr=contr*SiFS(ilam,ig,0,inu,i,icc)
-								contr=contr+Si(ilam,ig,0,inu,i,icc)*(1d0-surface_emis(ilam))
-								do isurf=1,n_surface
-									if(f_surface(isurf).gt.0d0) then
-										if(bdrf_type(isurf).eq.1) then
-											contr=contr+f_surface(isurf)*BBsurf(ilam,i)*HapkeEmis(surface_props(ilam,isurf),mup)
-										else
-											contr=contr+f_surface(isurf)*BBsurf(ilam,i)*surface_emis(ilam)
-										endif
-									endif
-								enddo
-							else
-								contr=Si(ilam,ig,0,inu,i,icc)*(1d0-surface_emis(ilam))+BBsurf(ilam,i)*surface_emis(ilam)
-							endif
-							ftot(ilam)=ftot(ilam)+contr*fact(ilam,ig,icc)
-							endif
-						enddo
-					enddo
-					endif
-				enddo
-				goto 2
-			endif
-			if(i1next.ge.nr+2) goto 2
-			x=x+v*vx
-			y=y+v*vy
-			z=z+v*vz
-			if(i2next.gt.nlong-1.or.i3next.gt.nlatt-1.or.i2next.lt.1.or.i3next.lt.1) goto 2
-			if(ibeta(i2,i3).ne.ibeta(i2next,i3next)) then
-				rr=x**2+y**2+z**2
-				i=ibeta(i2next,i3next)
-				if((.not.rr.ge.R3D2(i,1)).or.(.not.rr.le.R3D2(i,nr+2))) goto 2
-				do i1=1,nr+1
-					if(rr.gt.R3D2(i,i1).and.rr.le.R3D2(i,i1+1)) exit
-				enddo
-				if(i1.ge.nr+2) goto 2
+			rr=sqrt((x+v*vx)**2+(y+v*vy)**2+(z+v*vz)**2)
+			if(i1.lt.nr) then
+				w1=(R3DC(i,i1+1)-rr)/(R3DC(i,i1+1)-R3DC(i,i1))
+				w2=1d0-w1
+				usew1w2=.true.
 			else
-				i1=i1next
+				usew1w2=.false.
 			endif
-			i2=i2next
-			i3=i3next
-			edgeNR=edgenext
-			j=j+1
-			if(j.lt.nr*2*max(nlatt,nlong)) goto 1
-2			continue
-			fluxp_omp(1:nlam)=fluxp_omp(1:nlam)+ftot(1:nlam)
-			if(.not.done_RT(i,inu,irtrace).and.natm.eq.0) then
-!$OMP CRITICAL
-				done_RT(i,inu,irtrace)=.true.				
-				done_F(1:nlam,i,inu,irtrace)=ftot(1:nlam)/A
-!$OMP END CRITICAL
+			do ilam=1,nlam
+				if(lamemis(ilam).and.computelam(ilam)) then
+				do ig=1,ng
+					do icc=1,ncc
+						if(.not.lamthick(ilam,ig,icc)) then
+						tau1=v*dtauR_nu(ilam,ig,i,i1,ivel,icc)
+						if(tau1.lt.1d-3) then
+							exp_tau1=1d0 - tau1 + 0.5d0*tau1*tau1
+						else
+							exp_tau1=exp(-tau1)
+						endif
+						if(usew1w2) then
+							SiR1=w1*Si(ilam,ig,i1,inu,i,icc)+w2*Si(ilam,ig,i1+1,inu,i,icc)
+							if(anisoscattstar) SiR1=SiR1+F11_theta(ilam,i1,i,icc)*w1*SiFS(ilam,ig,i1,inu,i,icc)+
+     &												 F11_theta(ilam,i1+1,i,icc)*w2*SiFS(ilam,ig,i1+1,inu,i,icc)
+						else
+							SiR1=Si(ilam,ig,nr,inu,i,icc)
+							if(anisoscattstar) SiR1=SiR1+F11_theta(ilam,nr,i,icc)*SiFS(ilam,ig,nr,inu,i,icc)
+						endif
+						call ComputeI12(tau1,exp_tau1,SiR1,SiR0(ilam,ig,icc),contr)
+						ftot(ilam)=ftot(ilam)+contr*fact(ilam,ig,icc)
+						fact(ilam,ig,icc)=fact(ilam,ig,icc)*exp_tau1
+						if(fact(ilam,ig,icc).lt.1d-10) lamthick(ilam,ig,icc)=.true.
+						SiR0(ilam,ig,icc)=SiR1
+						endif
+					enddo
+				enddo
+				endif
+			enddo
+		endif
+		if(i1next.le.0) then
+			i=ibeta(i2,i3)
+			la=(-x/sqrt(x**2+y**2+z**2))
+			if(la.lt.0d0) then
+				inu=nnu0
+			else
+				inu=(real(nnu0-2)*la+0.5d0)+1
+				if(inu.lt.1) inu=1
+				if(.not.inu.lt.nnu0-1) inu=nnu0-1
 			endif
-			if(makeimage) rphi_image(1:nlam,irtrace,iptrace)=ftot(1:nlam)
-		enddo
+			rr=sqrt(x*x+y*y+z*z)
+			mu=-x/rr
+			if(mu.gt.0d0.and.anisoscattstar.and..not.lambertsurface) then
+				mup=-(x*vx+y*vy+z*vz)/rr
+				x1=-1d0-mu*x/rr
+				y1=-mu*y/rr
+				z1=-mu*z/rr
+				r1=sqrt(x1*x1+y1*y1+z1*z1)
+				x2=-vx-mup*x/rr
+				y2=-vy-mup*y/rr
+				z2=-vz-mup*z/rr
+				r2=sqrt(x2*x2+y2*y2+z2*z2)
+				dphi=max(min((x1*x2+y1*y2+z1*z2)/(r1*r2),1d0),-1d0)
+				dphi=acos(-dphi)
+			endif
+			do ilam=1,nlam
+				if(lamemis(ilam).and.computelam(ilam)) then
+				do ig=1,ng
+					do icc=1,ncc
+						if(.not.lamthick(ilam,ig,icc)) then
+						if(anisoscattstar.and.mu.gt.0d0.and..not.lambertsurface) then
+							contr=0d0
+							do isurf=1,n_surface
+								if(f_surface(isurf).gt.0d0) then
+									contr=contr+f_surface(isurf)*
+     &		ComputeBDREFscatt(mu,mup,dphi,bdrf_type(isurf),bdrf_args(1:4,isurf),surface_props(ilam,isurf))
+								endif
+							enddo
+							contr=contr*SiFS(ilam,ig,0,inu,i,icc)
+							contr=contr+Si(ilam,ig,0,inu,i,icc)*(1d0-surface_emis(ilam))
+							do isurf=1,n_surface
+								if(f_surface(isurf).gt.0d0) then
+									if(bdrf_type(isurf).eq.1) then
+										contr=contr+f_surface(isurf)*BBsurf(ilam,i)*HapkeEmis(surface_props(ilam,isurf),mup)
+									else
+										contr=contr+f_surface(isurf)*BBsurf(ilam,i)*surface_emis(ilam)
+									endif
+								endif
+							enddo
+						else
+							contr=Si(ilam,ig,0,inu,i,icc)*(1d0-surface_emis(ilam))+BBsurf(ilam,i)*surface_emis(ilam)
+						endif
+						ftot(ilam)=ftot(ilam)+contr*fact(ilam,ig,icc)
+						endif
+					enddo
+				enddo
+				endif
+			enddo
+			goto 2
+		endif
+		if(i1next.ge.nr+2) goto 2
+		x=x+v*vx
+		y=y+v*vy
+		z=z+v*vz
+		if(i2next.gt.nlong-1.or.i3next.gt.nlatt-1.or.i2next.lt.1.or.i3next.lt.1) goto 2
+		if(ibeta(i2,i3).ne.ibeta(i2next,i3next)) then
+			rr=x**2+y**2+z**2
+			i=ibeta(i2next,i3next)
+			if((.not.rr.ge.R3D2(i,1)).or.(.not.rr.le.R3D2(i,nr+2))) goto 2
+			do i1=1,nr+1
+				if(rr.gt.R3D2(i,i1).and.rr.le.R3D2(i,i1+1)) exit
+			enddo
+			if(i1.ge.nr+2) goto 2
+		else
+			i1=i1next
+		endif
+		i2=i2next
+		i3=i3next
+		edgeNR=edgenext
+		j=j+1
+		if(j.lt.nr*2*max(nlatt,nlong)) goto 1
+2		continue
+		fluxp_omp(1:nlam)=fluxp_omp(1:nlam)+ftot(1:nlam)
+		if(makeimage) rphi_image(1:nlam,irtrace,iptrace)=ftot(1:nlam)
 	enddo
 !$OMP END DO
 !$OMP CRITICAL
@@ -924,52 +957,11 @@ c Note we are here using the symmetry between North and South
 	deallocate(lamthick)
 !$OMP FLUSH
 !$OMP END PARALLEL
+	deallocate(Path)
 
-	if(.true.) then
-	if(.not.makeimage.and..not.(actually1D.and.(theta_phase(ipc).eq.180d0.or..not.scattering))) then
-		if(k.eq.0) then
-			conv=.false.
-			fluxiter=fluxp
-			nptot=nptrace
-		else
-			conv=.true.
-			do ilam=1,nlam
-				if(.not.lamconv(ilam)) then
-					lamconv(ilam)=.true.
-					if(abs(fluxp(ilam)-fluxiter(ilam))/(fluxp(ilam)+fluxiter(ilam)).gt.1d-3) then
-						lamconv(ilam)=.false.
-					endif
-					if(abs(fluxp(ilam)-fluxiter(ilam))/(fluxp(ilam)+fluxiter(ilam)).gt.1d-2) then
-						conv=.false.
-					endif
-					fluxiter(ilam)=(fluxp(ilam)*real(nptrace)+fluxiter(ilam)*real(nptot))/real(nptot+nptrace)
-				endif
-			enddo
-			nptot=nptot+nptrace
-		endif
-		k=k+1
-		if(k.ge.4) conv=.true.
-		if(.not.conv) then
-			if(phishift.gt.0.4) then
-				phishift=0.25d0
-			else
-				phishift=0.5d0
-			endif
-			nptrace=nptrace*1.25+1
-			if(2*(nptrace/2).eq.nptrace) nptrace=nptrace+1
-			lamconv=.false.
-			goto 70
-		else
-c			print*,k,nptrace,nptot
-			fluxp=fluxiter
-		endif
-	endif
-	endif
 	fluxp=fluxp*1d23/distance**2
 	phase(ipc,0,1:nlam)=fluxp(1:nlam)
 	flux(0,1:nlam)=0d0
-
-	deallocate(done_RT,done_F)
 
 	call tellertje_perc(ipc,npc)
 	if(fulloutput3D) then
@@ -2510,16 +2502,63 @@ c-----------------------------------------------------------------------
 	IMPLICIT NONE
 	integer inu,nnu,ilam,ir,ig,inu0,iter,niter,info,NRHS
 	parameter(nnu=10,niter=500)
-	real*8 tau,d,tauR_nu(0:nr,nlam,ng),contr,Jstar_nu(nr,nlam,ng),Pb(nr+1)
+	real*8 tau,d,contr,Jstar_nu(nr,nlam,ng),Pb(nr+1)
 	real*8 Si(nlam,ng,0:nr,nnu0),SiFS(nlam,ng,0:nr,nnu0),BBr(nlam,0:nr),Ca(nlam,ng,nr),Cs(nlam,nr),Ce(nlam,ng,nr)
 	real*8 nu(nnu),wnu(nnu),must,tauRs(nr),Ijs(nr),eps,Planck,tot,wabs(nlam,ng,nr),wscat(nlam,ng,nr)
 	logical err
 	parameter(eps=1d-20)
-	real*8,allocatable :: tauR(:),Ij(:),Ih(:)
+	real*8,allocatable :: tauR(:),Ij(:),Ih(:),tauR_nu(:,:)
+
+	if(.not.scattering) then
+		do ir=1,nr
+			do ig=1,ng
+				do ilam=1,nlam
+					Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
+					wabs(ilam,ig,ir)=Ca(ilam,ig,ir)/Ce(ilam,ig,ir)
+					if(.not.wabs(ilam,ig,ir).gt.1d-4) then
+						wabs(ilam,ig,ir)=1d-4
+						Ca(ilam,ig,ir)=Cs(ilam,ir)/(1d0/wabs(ilam,ig,ir)-1d0)
+						Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
+					endif
+					wscat(ilam,ig,ir)=Cs(ilam,ir)/Ce(ilam,ig,ir)
+					if(.not.wscat(ilam,ig,ir).gt.0d0) then
+						wscat(ilam,ig,ir)=0d0
+						Cs(ilam,ir)=0d0
+						Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
+					endif
+				enddo
+			enddo
+		enddo
+
+		do inu0=1,nnu0
+			do ig=1,ng
+				Si(1:nlam,ig,1:nr,inu0)=BBr(1:nlam,1:nr)*wabs(1:nlam,ig,1:nr)
+				Si(1:nlam,ig,0,inu0)=0d0
+				SiFS(1:nlam,ig,0:nr,inu0)=0d0
+			enddo
+		enddo
+		return
+	endif
 	
-	do ir=1,nr
-		do ig=1,ng
-			do ilam=1,nlam
+
+	call gauleg(0d0,1d0,nu,wnu,nnu)
+	Pb(1)=P(1)
+	do ir=2,nr
+		Pb(ir)=sqrt(P(ir-1)*P(ir))
+	enddo
+	Pb(nr+1)=0d0
+
+!$OMP PARALLEL IF(useomp)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(tauR,Ij,ilam,ig,inu0,inu,contr,must,Ih,tauR_nu,d,tau)
+!$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,BBr,scattstar,lamemis,
+!$OMP&        nnu0,wscat,anisoscattstar,SiFS,lambertsurface,wabs,P,Pb,grav,dens)
+	allocate(tauR(nr),Ij(nr),Ih(nr),tauR_nu(0:nr,ng))
+!$OMP DO SCHEDULE(DYNAMIC,1)
+	do ilam=1,nlam
+		if(lamemis(ilam)) then
+		do ir=1,nr
+			do ig=1,ng
 				Ce(ilam,ig,ir)=Ca(ilam,ig,ir)+Cs(ilam,ir)
 				wabs(ilam,ig,ir)=Ca(ilam,ig,ir)/Ce(ilam,ig,ir)
 				if(.not.wabs(ilam,ig,ir).gt.1d-4) then
@@ -2535,25 +2574,14 @@ c-----------------------------------------------------------------------
 				endif
 			enddo
 		enddo
-	enddo
-
-	do inu0=1,nnu0
-		do ig=1,ng
-			Si(1:nlam,ig,1:nr,inu0)=BBr(1:nlam,1:nr)*wabs(1:nlam,ig,1:nr)
-			Si(1:nlam,ig,0,inu0)=0d0
-c			Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
-			SiFS(1:nlam,ig,0:nr,inu0)=0d0
+		do inu0=1,nnu0
+			do ig=1,ng
+				Si(ilam,ig,1:nr,inu0)=BBr(ilam,1:nr)*wabs(ilam,ig,1:nr)
+				Si(ilam,ig,0,inu0)=0d0
+				SiFS(ilam,ig,0:nr,inu0)=0d0
+			enddo
 		enddo
-	enddo
-	if(.not.scattering) return
-
-	Pb(1)=P(1)
-	do ir=2,nr
-		Pb(ir)=sqrt(P(ir-1)*P(ir))
-	enddo
-	Pb(nr+1)=0d0
-	tauR_nu=0d0
-	do ilam=1,nlam
+		tauR_nu=0d0
 		do ig=1,ng
 			do ir=nr,1,-1
 				if(ir.eq.nr) then
@@ -2571,32 +2599,18 @@ c			Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
 				tau=tau+1d-10
 				tau=1d0/(1d0/tau+1d-10)
 				if(ir.eq.nr) then
-					tauR_nu(ir,ilam,ig)=tau
+					tauR_nu(ir,ig)=tau
 				else
-					tauR_nu(ir,ilam,ig)=tauR_nu(ir+1,ilam,ig)+tau
+					tauR_nu(ir,ig)=tauR_nu(ir+1,ig)+tau
 				endif
 			enddo
 		enddo
-	enddo
-
-	call gauleg(0d0,1d0,nu,wnu,nnu)
-
-
-!$OMP PARALLEL IF(useomp)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(tauR,Ij,ilam,ig,inu0,inu,contr,must,Ih)
-!$OMP& SHARED(nr,ng,nlam,Fstar,Dplanet,Si,Ca,Ce,Cs,nu,wnu,surface_emis,tauR_nu,BBr,scattstar,lamemis,
-!$OMP&        nnu0,wscat,anisoscattstar,SiFS,lambertsurface)
-	allocate(tauR(nr),Ij(nr),Ih(nr))
-!$OMP DO
-	do ilam=1,nlam
-		if(lamemis(ilam)) then
 		do ig=1,ng
 			do inu0=1,nnu0
 				if(inu0.ne.nnu0.and.scattstar) then
 					must=(real(inu0)-0.5)/real(nnu0-1)
 					contr=(Fstar(ilam)/(pi*Dplanet**2))
-					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(must)
+					tauR(1:nr)=tauR_nu(1:nr,ig)/abs(must)
 					if(anisoscattstar) then
 						SiFS(ilam,ig,1:nr,inu0)=contr*exp(-tauR(1:nr))*wscat(ilam,ig,1:nr)/4d0
 					else
@@ -2612,22 +2626,22 @@ c			Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
 					Si(ilam,ig,0,inu0)=Si(ilam,ig,0,inu0)+contr!*(1d0-surface_emis(ilam))
 				endif
 				do inu=1,nnu
-					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
+					tauR(1:nr)=tauR_nu(1:nr,ig)/abs(nu(inu))
 					tauR(1:nr)=abs(tauR(1:nr)-tauR(1))
 					Ij(1:nr)=(BBr(ilam,0)*surface_emis(ilam)+contr*(1d0-surface_emis(ilam)))*exp(-tauR(1:nr))
 					Si(ilam,ig,1:nr,inu0)=Si(ilam,ig,1:nr,inu0)+wnu(inu)*Ij(1:nr)*wscat(ilam,ig,1:nr)
 				enddo
 			enddo
 			if(anisoscattstar) then
-				call AddSecScatter(SiFS(ilam,ig,1:nr,1:nnu0),Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ilam,ig),
+				call AddSecScatter(SiFS(ilam,ig,1:nr,1:nnu0),Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ig),
      &	Ca(ilam,ig,1:nr),Cs(ilam,1:nr),Ce(ilam,ig,1:nr),(1d0-surface_emis(ilam)),nr,nu,wnu,nnu,nnu0)
 			else
-				call AddScatter(Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ilam,ig),
+				call AddScatter(Si(ilam,ig,1:nr,1:nnu0),tauR_nu(1:nr,ig),
      &	Ca(ilam,ig,1:nr),Cs(ilam,1:nr),Ce(ilam,ig,1:nr),(1d0-surface_emis(ilam)),nr,nu,wnu,nnu,nnu0)
 			endif
 			do inu0=1,nnu0
 				do inu=1,nnu
-					tauR(1:nr)=tauR_nu(1:nr,ilam,ig)/abs(nu(inu))
+					tauR(1:nr)=tauR_nu(1:nr,ig)/abs(nu(inu))
 					call SolveIjExp(tauR,Si(ilam,ig,1:nr,inu0),Ij,Ih,nr)
 					Si(ilam,ig,0,inu0)=Si(ilam,ig,0,inu0)-nu(inu)*Ih(1)*wnu(inu)!*(1d0-surface_emis(ilam))
 				enddo
@@ -2636,7 +2650,7 @@ c			Si(1:nlam,ig,0,inu0)=BBr(1:nlam,0)*surface_emis(1:nlam)
 		endif
 	enddo
 !$OMP END DO
-	deallocate(tauR,Ij,Ih)
+	deallocate(tauR,Ij,Ih,tauR_nu)
 !$OMP FLUSH
 !$OMP END PARALLEL
 	
