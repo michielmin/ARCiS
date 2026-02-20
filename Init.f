@@ -2647,27 +2647,40 @@ c number of cloud/nocloud combinations
 	return
 	end
 	
-	
 	subroutine DetectGrid()
-	IMPLICIT NONE
-	integer :: l,slots
-	character(len=256) :: nslots,queue
-	nslots=''
-	call get_environment_variable("QUEUE", queue, l)      
-	if (l .gt. 0) then
-		call get_environment_variable("NSLOTS", nslots, l)
-		if (l .gt. 0) then
-			read(nslots, '(I2)') slots
+	use omp_lib
+	implicit none
+
+	integer :: l, stat, ios
+	integer :: slots
+	character(len=256) :: nslots, queue
+
+	nslots = ''
+	queue  = ''
+	slots  = 0
+
+	call get_environment_variable("QUEUE",  queue,  length=l, status=stat)
+	if (stat /= 0) queue = ''   ! not set / other issue
+
+	call get_environment_variable("NSLOTS", nslots, length=l, status=stat)
+	if (stat == 0 .and. l > 0) then
+		read(nslots, *, iostat=ios) slots
+		if (ios == 0 .and. slots > 0) then
 			call output("==================================================================")
-			call output("  Detected grid environment: " // trim(queue))
+			if (len_trim(queue) > 0) then
+				call output("  Detected grid environment: " // trim(queue))
+			else
+				call output("  Detected grid environment (NSLOTS set, queue unknown)")
+			end if
 			call output("  Limiting number of cores to: " // trim(nslots))
-			call omp_set_num_threads(slots) 
-		endif
-	endif
+			call omp_set_num_threads(slots)
+		else
+			call output("  WARNING: NSLOTS present but could not parse: '" // trim(nslots) // "'")
+		end if
+	end if
 
 	return
 	end
-	
 	
 	
 	subroutine ReadRetrieval(key)
