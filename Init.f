@@ -2648,6 +2648,7 @@ c number of cloud/nocloud combinations
 	end
 	
 	subroutine DetectGrid()
+	use GlobalSetup
 	use omp_lib
 	implicit none
 
