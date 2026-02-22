@@ -214,7 +214,7 @@ c===============================================================================
 	real*8 planetform_fdust,planetform_fplan,planetform_Mstart,planetform_SolidC,vrot0,vrot_max
 	real*8,allocatable :: velocity(:),Kzz_convect(:),Kzz_g(:),Kzz_b(:)
 	real*8 planetform_Macc,planetform_Dmigrate,planetform_Rend,TeffPoutput,Hydrogenloss,taurexsmooth
-	logical planetform,massprior,retrievestar,simAb_converge,log_emis,randomstart,logTprofile,taurexprofile
+	logical planetform,massprior,radprior,retrievestar,simAb_converge,log_emis,randomstart,logTprofile,taurexprofile
 c for exchange when computing secondary atmosphere
 	real*8 Toutgas,Poutgas
 	real*8 molfracs_atoms_outgas(41),MMW0,fH2O	! fH2O is the total mass fraction in Water compared to the mass of the planet
@@ -233,7 +233,7 @@ c for exchange when computing secondary atmosphere
 	real*8,allocatable :: mixrat_optEC_r(:)
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb,surf_lam1,surf_lam2,surf_alb1,surf_alb2,surf_alb3
-	real*8 fit_albedo_sigma,fit_albedo_l
+	real*8 fit_albedo_sigma,fit_albedo_l,Rp_prior,dRp_prior
 	logical fit_albedo
 	character*20 surfacetype
 	character*500 surfacefile,Full3Ddir

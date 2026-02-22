@@ -1521,6 +1521,12 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) Mp_prior
 		case("dmp_prior")
 			read(key%value,*) dMp_prior
+		case("radprior")
+			read(key%value,*) radprior
+		case("rp_prior")
+			read(key%value,*) Rp_prior
+		case("drp_prior")
+			read(key%value,*) dRp_prior
 		case("nboot")
 			read(key%value,*) nboot
 		case("npew")
@@ -2447,6 +2453,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 	writefiles=.true.
 	nscaleR=-1
 	massprior=.false.
+	radprior=.false.
 	useobsgrid=.false.
 	eps_dup=0.1
 	log_emis=.true.

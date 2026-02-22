@@ -945,6 +945,10 @@ c	linear
 		lnew=lnew-(((Mplanet/Mjup-Mp_prior)/dMp_prior)**2)/2d0
 		tot=tot-log(sqrt(2d0*pi)*dMp_prior)
 	endif
+	if(radprior) then
+		lnew=lnew-(((Rplanet/Rjup-Rp_prior)/dRp_prior)**2)/2d0
+		tot=tot-log(sqrt(2d0*pi)*dRp_prior)
+	endif
 	if(IsNaN(global_chi2)) global_chi2=1d50
 
 	if(free_tprofile.and.wiggle_err.gt.0d0) then

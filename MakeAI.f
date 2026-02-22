@@ -104,6 +104,10 @@
 					lnew=lnew+((Mplanet/Mjup-Mp_prior)/dMp_prior)**2
 					tot=tot-log(sqrt(2d0*pi)*dMp_prior)
 				endif
+				if(radprior) then
+					lnew=lnew+((Rplanet/Rjup-Rp_prior)/dRp_prior)**2
+					tot=tot-log(sqrt(2d0*pi)*dRp_prior)
+				endif
 				lnew=-lnew/2d0+tot
 			endif
 			if(modelsucces) then
