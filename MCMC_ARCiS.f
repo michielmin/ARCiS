@@ -29,11 +29,11 @@
 				nburn_use=NBURN
 				n_unique_use=N_UNIQUE
 			else
-				nburn_use=max(500,NBURN/2)
+				nburn_use=max(min(500,NBURN),NBURN/2)
 				if(i.gt.n_beta/2) then
-					n_unique_use=max(100,N_UNIQUE/10)
+					n_unique_use=max(min(100,N_UNIQUE),N_UNIQUE/10)
 				else
-					n_unique_use=max(250,N_UNIQUE/4)
+					n_unique_use=max(min(250,N_UNIQUE),N_UNIQUE/4)
 				endif
 			endif
 			ndone=ndone+n_unique_use+nburn_use
