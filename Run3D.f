@@ -11,6 +11,7 @@
 	logical recomputeopac
 	logical,allocatable :: hit(:,:)
 	real*8,allocatable :: rtrace(:),ftot(:),rphi_image(:,:,:),xy_image(:,:,:),cloud3D(:,:),wrtrace(:),mutrace(:)
+	integer,allocatable :: ipoint_image_ir(:,:),ipoint_image_ip(:,:)
 	real*8 x,y,z,vx,vy,vz,v,w1,w2,ComputeBDREFscatt,wscatt(180)
 	external ComputeBDREFscatt
 	integer edgeNR,i1,i2,i3,i1next,i2next,i3next,edgenext
@@ -554,6 +555,10 @@ c Now call the setup for the readFull3D part
 	if(makeimage) then
 		allocate(rphi_image(nlam,nrtrace,nptrace))
 		allocate(xy_image(nx_im,nx_im,nlam))
+		allocate(ipoint_image_ir(nrtrace,nptrace))
+		allocate(ipoint_image_ip(nrtrace,nptrace))
+		ipoint_image_ir=0
+		ipoint_image_ip=0
 	endif
 
 	allocate(rtrace(nrtrace),wrtrace(nrtrace),mutrace(nrtrace))
@@ -686,6 +691,7 @@ c Now call the setup for the readFull3D part
 		else
 			phishift=0.5
 		endif
+		if(makeimage) phishift=0.5
 		do iptrace=1,nptrace
 c Note we are here using the symmetry between North and South
 			if(nptrace.eq.1) then
@@ -745,6 +751,10 @@ c Note we are here using the symmetry between North and South
 			i=ibeta(i2,i3)
 			if(done_ipath(i,inu,irtrace).ne.0.and.lambertsurface.and.nRTatm.eq.0) then
 				Path(done_ipath(i,inu,irtrace))%A=Path(done_ipath(i,inu,irtrace))%A+A
+				if(makeimage) then
+					ipoint_image_ir(irtrace,iptrace)=Path(done_ipath(i,inu,irtrace))%irtrace
+					ipoint_image_ip(irtrace,iptrace)=Path(done_ipath(i,inu,irtrace))%iptrace
+				endif
 			else
 				npath=npath+1
 				Path(npath)%x=x
@@ -761,6 +771,10 @@ c Note we are here using the symmetry between North and South
 				Path(npath)%irtrace=irtrace
 				Path(npath)%iptrace=iptrace
 				done_ipath(i,inu,irtrace)=npath
+				if(makeimage) then
+					ipoint_image_ir(irtrace,iptrace)=irtrace
+					ipoint_image_ip(irtrace,iptrace)=iptrace
+				endif
 			endif
 		enddo
 	enddo
@@ -944,7 +958,7 @@ c Note we are here using the symmetry between North and South
 		if(j.lt.nr*2*max(nlatt,nlong)) goto 1
 2		continue
 		fluxp_omp(1:nlam)=fluxp_omp(1:nlam)+ftot(1:nlam)
-		if(makeimage) rphi_image(1:nlam,irtrace,iptrace)=ftot(1:nlam)
+		if(makeimage) rphi_image(1:nlam,irtrace,iptrace)=ftot(1:nlam)/A
 	enddo
 !$OMP END DO
 !$OMP CRITICAL
@@ -988,6 +1002,7 @@ c	print*,theta_phase(ipc),tot/(2d0*pi*(((pi*kb*Tstar)**4)/(15d0*hplanck**3*cligh
 c	print*,Tstar*(Rstar/Dplanet)**0.5
 
 	if(makeimage) then
+		allocate(ftot(nlam))
 		file=trim(outputdir) // "image" //  trim(int2string(int(theta_phase(ipc)),'(i0.3)')) // ".fits"
 		call output("Creating image: " // trim(file))
 		Rmin_im=0d0
@@ -998,6 +1013,7 @@ c	print*,Tstar*(Rstar/Dplanet)**0.5
 			Rmax_im=sqrt((A+pi*Rmin_im**2)/pi)
 			do iptrace=1,nptrace
 				ni=125d0*real(nx_im*nx_im)/real(nrtrace*nptrace)
+				ftot(1:nlam)=A*rphi_image(1:nlam,ipoint_image_ir(irtrace,iptrace),ipoint_image_ip(irtrace,iptrace))/real(ni*2)
 				do i=1,ni
 					rr=sqrt(Rmin_im**2+random(idum)*(Rmax_im**2-Rmin_im**2))
 					phi=2d0*pi*(real(iptrace)-random(idum))/real(nptrace)
@@ -1009,14 +1025,14 @@ c	print*,Tstar*(Rstar/Dplanet)**0.5
 					if(iy.lt.1) iy=1
 					if(ix.gt.nx_im) ix=nx_im
 					if(iy.gt.nx_im) iy=nx_im
-					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,iptrace)/real(ni*2)
+					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+ftot(1:nlam)
 c					ix=(x+Rmax)*real(nx_im)/(2d0*Rmax)+1
 c					iy=(-y+Rmax)*real(nx_im)/(2d0*Rmax)+1
 c					if(ix.lt.1) ix=1
 c					if(iy.lt.1) iy=1
 c					if(ix.gt.nx_im) ix=nx_im
 c					if(iy.gt.nx_im) iy=nx_im
-c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,iptrace)/real(ni*2)
+c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+ftot(1:nlam)
 				enddo
 			enddo
 			Rmin_im=Rmax_im
@@ -1098,6 +1114,7 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 		file=trim(outputdir) // "imageRGB" //  trim(int2string(int(theta_phase(ipc)),'(i0.3)')) // ".ppm"
 		call output("Creating image: " // trim(file))
 		call writeppmfile(file,xy_image,ni,nx_im)
+		deallocate(ftot)
 	endif
 
 	enddo
@@ -1118,6 +1135,8 @@ c					xy_image(ix,iy,1:nlam)=xy_image(ix,iy,1:nlam)+rphi_image(1:nlam,irtrace,ip
 	if(makeimage) then
 		deallocate(rphi_image)
 		deallocate(xy_image)
+		deallocate(ipoint_image_ir)
+		deallocate(ipoint_image_ip)
 	endif
 	deallocate(rtrace)
 	deallocate(wrtrace)

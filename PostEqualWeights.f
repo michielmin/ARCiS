@@ -213,6 +213,10 @@
 	do i=1,n_add_ret
 		write(21,'(a)') trim(line_add_ret(i))
 	enddo
+	if(fit_albedo) then
+		write(21,'("surfacetype=FILE")')
+		write(21,'("surfacefile=",a)') trim(outputdir) // "albedo_mpm.dat"
+	endif
 	close(unit=21)	
 
 	done=.false.
@@ -413,7 +417,7 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
      &								(spec_albedo(2,iobs,ilam)-spec_albedo(1,iobs,ilam))*spectemp(ilam)
 							enddo
 						enddo
-						call AddPostDraw(ObsSpec(iobs)%ndata,spec_albedo(1:2,iobs,1:ObsSpec(iobs)%ndata),surfacealbedo,Kalb,Cov,
+						if(i.ne.0) call AddPostDraw(ObsSpec(iobs)%ndata,spec_albedo(1:2,iobs,1:ObsSpec(iobs)%ndata),surfacealbedo,Kalb,Cov,
      &							fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata),idum)
 						do j=1,ObsSpec(iobs)%ndata
 							fitted_albedo(i,iobs,j)=1d0/(1d0+exp(-fitted_albedo(i,iobs,j)))
@@ -532,6 +536,14 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 				enddo
 			endif
 		enddo
+		if(i.eq.0) then
+			open(unit=26,file=trim(outputdir) // "albedo_mpm.dat",FORM="FORMATTED",ACCESS="STREAM")
+			write(26,'("# ",a13,a15)') "lam[mu]","albedo[%]"
+			do ilam=1,nlam
+				write(26,'(se15.5,se15.5)') lam(ilam)*1d4,surf_albedo(i,ilam)*100d0
+			enddo
+			close(unit=26)
+		endif
 	else
 		surf_albedo(i,1:nlam)=1d0-surface_emis(1:nlam)
 		refl_surf(i,1:nlam)=(Rplanet/Rearth)**2*surf_albedo(i,1:nlam)
