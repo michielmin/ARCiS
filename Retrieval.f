@@ -884,7 +884,7 @@ c	linear
 						do j=1,ObsSpec(i)%ndata
 							do ii=1,ObsSpec(i)%ndata
 								d=(log(ObsSpec(i)%lam(j))-log(ObsSpec(i)%lam(ii)))
-								Kalb(j,ii)=(fit_albedo_sigma*surfacealbedo*4d0)**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+								Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
 							enddo
 						enddo
 						call RemoveOffset(Kalb,ObsSpec(i)%ndata,ObsSpec(i)%R(1:ObsSpec(i)%ndata))

@@ -387,8 +387,8 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 						do j=1,ObsSpec(iobs)%ndata
 							do ilam=1,ObsSpec(iobs)%ndata
 								d=(log(ObsSpec(iobs)%lam(j))-log(ObsSpec(iobs)%lam(ilam)))
-! the factor 4 in the fit_albedo_sigma accounts for the mapping onto the logit function for the albedo
-								Kalb(j,ilam)=(fit_albedo_sigma*4d0)**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+! the factor 1/(1-w) in the fit_albedo_sigma accounts for the mapping onto the logit function for the albedo
+								Kalb(j,ilam)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
 							enddo
 						enddo
 						call RemoveOffset(Kalb,ObsSpec(iobs)%ndata,ObsSpec(iobs)%R(1:ObsSpec(iobs)%ndata))
