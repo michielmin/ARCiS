@@ -152,8 +152,6 @@
 		if (nacc > NBURN/2 .and. nacc <= NBURN) then
 			call compute_mean(samples(1:NDIM,NBURN/2:nacc), weights(NBURN/2:nacc), mean, NDIM, nacc+1-NBURN/2)
 			call compute_cov(samples(1:NDIM,NBURN/2:nacc), weights(NBURN/2:nacc), mean, cov, NDIM, nacc+1-NBURN/2, EPS)
-		else if(nacc <= 4) then
-			cov=cov/2d0
 		endif
 		if (nacc <= NBURN) then
 			lambda=lambda*exp(((curr_acc)-acc_aim)/(real(step)**0.6))
