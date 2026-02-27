@@ -1,0 +1,25 @@
+\documentclass[12pt]{article}
+\begin{document}
+
+\title{MCMC computation of Bayesian evidence}
+\author{Michiel Min}
+\date{\today}
+\maketitle
+
+We compute the log evidence from the equation
+\begin{equation}
+\log Z = \int_0^1 \left<\log L\right>_\beta d\beta
+\end{equation}
+where $\left<\log L\right>_\beta$ is the MCMC posterior chain obtained by using the probability $p^\beta$ for constructing the chain in stead of $p$. We sample $beta$ to construct the integral numerically (i=1...N)
+\begin{equation}
+\beta_i=\beta_\mathrm{min}\left(\frac{1}{\beta_\mathrm{min}}\right)^\frac{i-1}{N-1}
+\end{equation}
+the weights, $w_i$, are simply determined from the trapezoidal integration rule to integrate $\beta$ from 0 to 1.
+
+The uncertainty of the sampled $\left<\log L\right>_\beta$ is given by
+\begin{equation}
+\sigma_{\log Z}^2=\mathrm{Var}(\log Z) = \sum_{i=1}^N w_i^2\frac{\mathrm{Var}_\beta(\log L)}{N_\mathrm{post}}
+\end{equation}
+where $N_\mathrm{post}$ is the number of samples in the posterior distribution MCMC chain.
+
+\end{document}

@@ -1,0 +1,12 @@
+gridTPfile=.true.		! use the atmospheric grid of the TPfile
+TPfile='HD189_S_ARCIS.txt'
+mixratfile=.true.		! this specifies that the TPfile also contains the mixing ratios
+nr=150					! this number needs to match the number of atmospheric layers in the TPfile
+
+lmin=0.2d0
+lmax=20d0
+
+specres=150
+
+planetname=HD_189733b
+
