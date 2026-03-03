@@ -22,7 +22,6 @@
 	if(Cloud(ii)%coverage.gt.1d0) then
 		print*,Cloud(ii)%coverage
 		print*,'WEIRD!!!'
-		read*
 	endif
 	select case(Cloud(ii)%type)
 		case("DIFFUSE")
