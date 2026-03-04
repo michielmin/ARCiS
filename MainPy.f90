@@ -20,14 +20,23 @@
 	character(*),optional :: cline
 	character(*) pyinputfile,pyoutputdir
 	integer i,nlam,nr,n_ret,nobs
-
+	logical,save :: alreadydone = .false.
+	
+	if(alreadydone) then
+		write(*,'("pyARCiS cannot be re-initialised.")')
+		write(*,'("working with parameters from first init call.")')
+		return
+	endif
+	
 	call pyInitSupport(pyinputfile,pyoutputdir,cline,nlam,nr,n_ret,nobs)
 
 	py_nlam=nlam
 	py_nr=nr
 	py_nret=n_ret
 	py_nobs=nobs
-
+	
+	alreadydone=.true.
+	
 	return
 	end
 
@@ -91,16 +100,6 @@
 
 	return
 	end
-
-!	function pyGetLike() result(lnew)
-!	IMPLICIT NONE
-!	real*8 lnew
-
-!	call ComputeLike(lnew)
-!	if(.not.lnew.gt.-1d100) lnew=-1d100
-
-!	return
-!	end
 
 
 	function pyGetRetrievalNames(n) result(names)
