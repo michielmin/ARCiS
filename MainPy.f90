@@ -92,15 +92,15 @@
 	return
 	end
 
-	function pyGetLike() result(lnew)
-	IMPLICIT NONE
-	real*8 lnew
+!	function pyGetLike() result(lnew)
+!	IMPLICIT NONE
+!	real*8 lnew
 
-	call ComputeLike(lnew)
- 	if(.not.lnew.gt.-1d100) lnew=-1d100
+!	call ComputeLike(lnew)
+!	if(.not.lnew.gt.-1d100) lnew=-1d100
 
-	return
-	end
+!	return
+!	end
 
 
 	function pyGetRetrievalNames(n) result(names)
