@@ -907,6 +907,7 @@ c	linear
 					call dpotrs('L', ObsSpec(i)%ndata, NRHS, Cov, ObsSpec(i)%ndata, specinv, ObsSpec(i)%ndata, info)
 					do j=1,ObsSpec(i)%ndata
 						lnew=lnew-spec(j)*specinv(j,1)
+						ObsSpec(i)%model(j)=ObsSpec(i)%y(j) - specinv(j,1)*(ObsSpec(i)%dy(j))**2
 					enddo
 					if(fit_albedo) then
 						fitted_albedo=-log(1d0/surfacealbedo-1d0)
