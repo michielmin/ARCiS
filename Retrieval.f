@@ -638,16 +638,17 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	use RetrievalMod
 	use Struct3D
 	IMPLICIT NONE
-	integer nvars,i,j,nlamtot,ny,k,maxspec,im,ilam,status,system,ii
+	integer nvars,i,j,nlamtot,ny,k,maxspec,im,ilam,status,system,ii,nk,j0
 	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars),spectemp(nlam),specsave(nobs,nlam)
 	real*8,allocatable :: spec(:),allspec(:,:)
-	logical recomputeopac,truefalse,doscaleR2
+	logical recomputeopac,truefalse,doscaleR2,doCovObs(nobs)
 	real*8 xx,xy,scale,dy(ny),tot
 	character*100 command
 	integer info,NRHS
 	real*8 d,f_ii
-	real*8,allocatable :: Cov(:,:),specinv(:,:)
+	real*8,allocatable :: Cov(:,:),specinv(:,:),lamk(:),Rk(:)
 	real*8,allocatable :: spec_albedo(:,:,:),fitted_albedo(:,:),Kalb(:,:)
+	integer,allocatable :: iobsk(:),jk(:)
 	real*8 fit_albedo0
 
 	doscaleR2=doscaleR
@@ -829,9 +830,11 @@ c	linear
 		tot=0d0
 		global_chi2=0d0
 		k=0
+		nk=0
 		do i=1,nobs
 			select case(ObsSpec(i)%type)
 				case('tprofile','logtp','prior','priors','lightcurve')
+					doCovObs(i)=.false.
 					do j=1,ObsSpec(i)%ndata
 						k=k+1
 						lnew=lnew-(((ymod(k)-ObsSpec(i)%scale*(ObsSpec(i)%y(j)+ObsSpec(i)%offset))
@@ -843,93 +846,134 @@ c	linear
 						tot=tot-log(sqrt(2d0*pi)*ObsSpec(i)%dscale)
 					endif
 				case default
-					allocate(spec(ObsSpec(i)%ndata))
-					allocate(Cov(ObsSpec(i)%ndata,ObsSpec(i)%ndata))
-					allocate(specinv(ObsSpec(i)%ndata,1))
-					if(fit_albedo) allocate(Kalb(ObsSpec(i)%ndata,ObsSpec(i)%ndata))
-					NRHS=1
-					Cov(1:ObsSpec(i)%ndata,1:ObsSpec(i)%ndata)=0d0
-					if(Cov_n_loc .gt. 0) then
-						do ii = 1, Cov_n_loc
-							do j = 1, ObsSpec(i)%ndata
-								d = (ObsSpec(i)%lam(j)*1d4 - Cov_lam_loc(ii)) / Cov_L_loc(ii)
-								spec(j) = Cov_a_loc(ii)*exp(-0.5d0*d**2)
-							enddo
-							call dger(ObsSpec(i)%ndata, ObsSpec(i)%ndata, 1d0, spec, 1, spec, 1, Cov, ObsSpec(i)%ndata)
-						enddo
-					endif
-					if(ObsSpec(i)%Cov_n_loc .gt. 0) then
-						do ii = 1, ObsSpec(i)%Cov_n_loc
-							do j = 1, ObsSpec(i)%ndata
-								d = (ObsSpec(i)%lam(j)*1d4 - ObsSpec(i)%Cov_lam_loc(ii)) / ObsSpec(i)%Cov_L_loc(ii)
-								spec(j) = ObsSpec(i)%Cov_a_loc(ii)*exp(-0.5d0*d**2)
-							enddo
-							call dger(ObsSpec(i)%ndata, ObsSpec(i)%ndata, 1d0, spec, 1, spec, 1, Cov, ObsSpec(i)%ndata)
-						enddo
-					endif
+					doCovObs(i)=.true.
 					do j=1,ObsSpec(i)%ndata
 						k=k+1
-						Cov(j,j)=Cov(j,j)+(dy(k))**2
-						do ii=1,ObsSpec(i)%ndata
-							d=(ObsSpec(i)%lam(j)-ObsSpec(i)%lam(ii))*1d4
-							Cov(j,ii)=Cov(j,ii)+ObsSpec(i)%Cov_a**2*exp(-0.5*(d/ObsSpec(i)%Cov_L)**2)
-						enddo
-						spec(j)=ObsSpec(i)%y(j)+ObsSpec(i)%offset-allspec(i,j)/ObsSpec(i)%scale
+						nk=nk+1
 					enddo
-					Cov=Cov+ObsSpec(i)%Cov_offset**2
-
-					if(fit_albedo.and.
-     &	(ObsSpec(i)%type.eq.'emis'.or.ObsSpec(i)%type.eq.'emisR'.or.
-     &	 ObsSpec(i)%type.eq.'phase'.or.ObsSpec(i)%type.eq.'phaseR')) then
-						do j=1,ObsSpec(i)%ndata
-							do ii=1,ObsSpec(i)%ndata
-								d=(log(ObsSpec(i)%lam(j))-log(ObsSpec(i)%lam(ii)))
-								Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
-							enddo
-						enddo
-						call RemoveOffset(Kalb,ObsSpec(i)%ndata,ObsSpec(i)%R(1:ObsSpec(i)%ndata))
-						do j=1,ObsSpec(i)%ndata
-							do ii=1,ObsSpec(i)%ndata
-								Cov(j,ii)=Cov(j,ii)+(surfacealbedo**2*(1d0-surfacealbedo)**2)*
-     &	(spec_albedo(2,i,j)-spec_albedo(1,i,j))*(spec_albedo(2,i,ii)-spec_albedo(1,i,ii))*Kalb(j,ii)
-							enddo
-						enddo
-					endif
-
-					call dpotrf('L', ObsSpec(i)%ndata, Cov, ObsSpec(i)%ndata, info)
-					specinv(1:ObsSpec(i)%ndata,1)=spec(1:ObsSpec(i)%ndata)
-      ! Compute log(det(A)) = 2 * sum(log(L_ii))
-					do j=1,ObsSpec(i)%ndata
-						tot = tot + log(Cov(j,j))
-					enddo
-					tot=tot+(real(ObsSpec(i)%ndata)*log(2d0*pi))/2d0
-      ! Solve A*x = b using the factorization
-					call dpotrs('L', ObsSpec(i)%ndata, NRHS, Cov, ObsSpec(i)%ndata, specinv, ObsSpec(i)%ndata, info)
-					do j=1,ObsSpec(i)%ndata
-						lnew=lnew-spec(j)*specinv(j,1)
-						ObsSpec(i)%model(j)=ObsSpec(i)%y(j) - specinv(j,1)*(ObsSpec(i)%dy(j))**2
-					enddo
-					if(fit_albedo) then
-						fitted_albedo=-log(1d0/surfacealbedo-1d0)
-						do j=1,ObsSpec(i)%ndata
-							do ii=1,ObsSpec(i)%ndata
-								fitted_albedo(i,j)=fitted_albedo(i,j)+(surfacealbedo*(1d0-surfacealbedo))*
-     &								Kalb(j,ii)*(spec_albedo(2,i,ii)-spec_albedo(1,i,ii))*specinv(ii,1)
-							enddo
-							fitted_albedo(i,j)=1d0/(1d0+exp(-fitted_albedo(i,j)))
-							ObsSpec(i)%model(j)=spec_albedo(1,i,j)+(spec_albedo(2,i,j)-spec_albedo(1,i,j))*fitted_albedo(i,j)
-						enddo
-					endif
-					specinv(1:ObsSpec(i)%ndata,1)=spec(1:ObsSpec(i)%ndata)
-! Solve L * w = spec  (forward substitution)
-					call dtrsv('L','N','N', ObsSpec(i)%ndata, Cov, ObsSpec(i)%ndata, specinv, NRHS)
-! Now sumsq = sum_j w_j^2; expect ~ n - p_eff
-					do j=1,ObsSpec(i)%ndata
-						global_chi2 = global_chi2 + specinv(j,1)*specinv(j,1)
-					enddo
-					deallocate(Cov,spec,specinv)
-					if(fit_albedo) deallocate(Kalb)
 			end select
+		enddo
+
+		allocate(spec(nk))
+		allocate(lamk(nk),Rk(nk),iobsk(nk),jk(nk))
+		allocate(Cov(nk,nk))
+		allocate(specinv(nk,1))
+		if(fit_albedo) allocate(Kalb(nk,nk))
+		k=0
+		do i=1,nobs
+			if(doCovObs(i)) then
+				do j=1,ObsSpec(i)%ndata
+					k=k+1
+					lamk(k)=ObsSpec(i)%lam(j)
+					Rk(k)=ObsSpec(i)%R(j)
+					iobsk(k)=i
+					jk(k)=j
+				enddo
+			endif
+		enddo
+		NRHS=1
+		Cov(1:nk,1:nk)=0d0
+		if(Cov_n_loc .gt. 0) then
+			do ii = 1, Cov_n_loc
+				k=0
+				do i=1,nobs
+					if(doCovObs(i)) then
+						do j = 1, ObsSpec(i)%ndata
+							k=k+1
+							d = (ObsSpec(i)%lam(j)*1d4 - Cov_lam_loc(ii)) / Cov_L_loc(ii)
+							spec(k) = Cov_a_loc(ii)*exp(-0.5d0*d**2)
+						enddo
+					endif
+				enddo
+				call dger(nk, nk, 1d0, spec, 1, spec, 1, Cov, nk)
+			enddo
+		endif
+		k=0
+		do i=1,nobs
+			if(doCovObs(i)) then
+				tot=0d0
+				scale=0d0
+				do j=1,ObsSpec(i)%ndata
+					tot=tot+ObsSpec(i)%y(j)**2
+					scale=scale+allspec(i,j)**2
+				enddo
+				scale=scale/tot
+				j0=k
+				do j=1,ObsSpec(i)%ndata
+					k=k+1
+					Cov(k,k)=Cov(k,k)+(dy(k))**2
+					do ii=1,ObsSpec(i)%ndata
+						d=(ObsSpec(i)%lam(j)-ObsSpec(i)%lam(ii))*1d4
+						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(i)%Cov_a**2*exp(-0.5*(d/ObsSpec(i)%Cov_L)**2)
+						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(i)%Cov_scaling**2*scale*ObsSpec(i)%y(j)*ObsSpec(i)%y(ii)
+						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(i)%Cov_offset**2
+					enddo
+					spec(k)=ObsSpec(i)%y(j)+ObsSpec(i)%offset-allspec(i,j)/ObsSpec(i)%scale
+				enddo
+			endif
+		enddo
+
+		if(fit_albedo) then
+			do j=1,nk
+				do ii=1,nk
+					d=(log(lamk(j))-log(lamk(ii)))
+					Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+				enddo
+			enddo
+			call RemoveOffset(Kalb,nk,Rk(1:nk))
+			do j=1,nk
+				do ii=1,nk
+					Cov(j,ii)=Cov(j,ii)+(surfacealbedo**2*(1d0-surfacealbedo)**2)*
+     &	(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*Kalb(j,ii)
+				enddo
+			enddo
+		endif
+		call dpotrf('L', nk, Cov, nk, info)
+		specinv(1:nk,1)=spec(1:nk)
+      ! Compute log(det(A)) = 2 * sum(log(L_ii))
+		do j=1,nk
+			tot = tot + log(Cov(j,j))
+		enddo
+		tot=tot+(real(nk)*log(2d0*pi))/2d0
+      ! Solve A*x = b using the factorization
+		call dpotrs('L', nk, NRHS, Cov, nk, specinv, nk, info)
+		do j=1,nk
+			lnew=lnew-spec(j)*specinv(j,1)
+		enddo
+		k=0
+		do i=1,nobs
+			if(doCovObs(i)) then
+				do j=1,ObsSpec(i)%ndata
+					k=k+1
+					ObsSpec(i)%model(j)=ObsSpec(i)%y(j) - specinv(k,1)*(ObsSpec(i)%dy(j))**2
+				enddo
+			endif
+		enddo
+
+		if(fit_albedo) then
+			do i=1,nobs
+				do j=1,ObsSpec(i)%ndata
+					fitted_albedo(i,j)=-log(1d0/surfacealbedo-1d0)
+				enddo
+			enddo
+			do j=1,nk
+				do ii=1,nk
+					fitted_albedo(iobsk(j),jk(j))=fitted_albedo(iobsk(j),jk(j))+(surfacealbedo*(1d0-surfacealbedo))*
+     &						Kalb(j,ii)*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*specinv(ii,1)
+				enddo
+				fitted_albedo(iobsk(j),jk(j))=1d0/(1d0+exp(-fitted_albedo(iobsk(j),jk(j))))
+			enddo
+		endif
+		specinv(1:nk,1)=spec(1:nk)
+! Solve L * w = spec  (forward substitution)
+		call dtrsv('L','N','N', nk, Cov, nk, specinv, NRHS)
+! Now sumsq = sum_j w_j^2; expect ~ n - p_eff
+		do j=1,nk
+			global_chi2 = global_chi2 + specinv(j,1)*specinv(j,1)
+		enddo
+		deallocate(Cov,specinv)
+		if(fit_albedo) deallocate(Kalb)
+		do i=1,nobs
 			if(ObsSpec(i)%scaling.and.ObsSpec(i)%dscale.gt.0d0) then
 				lnew=lnew-((ObsSpec(i)%scale-1d0)/ObsSpec(i)%dscale)**2
 				tot=tot+log(sqrt(2d0*pi)*ObsSpec(i)%dscale)
@@ -1024,13 +1068,27 @@ c	linear
 		do i=1,n_add_ret
 			write(21,'(a)') trim(line_add_ret(i))
 		enddo
+		if(fit_albedo) then
+			write(21,'("surfacetype=FILE")')
+			write(21,'("surfacefile=",a)') trim(outputdir) // "albedo_bestfit.dat"
+			do k=1,nk
+				spec(k)=fitted_albedo(iobsk(k),jk(k))
+			enddo
+			call dpquicksort_w(lamk,spec,nk)
+			open(unit=22,file=trim(outputdir) // "albedo_bestfit.dat",RECL=1000)
+			do k=1,nk
+				write(22,*) lamk(k)*1d4,spec(k)*100d0
+			enddo
+			close(unit=22)
+		endif
 		close(unit=21)
 
 		bestlike=lnew
 		bestvar=var
 		bestchi2=global_chi2
 	endif
-	
+	if(fullcovmat) deallocate(lamk,Rk,iobsk,jk,spec)
+
 	deallocate(allspec)
 	
 	return

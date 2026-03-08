@@ -2504,6 +2504,7 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 		ObsSpec(i)%Cov_L=1d-6
 		ObsSpec(i)%Cov_a=0d0
 		ObsSpec(i)%Cov_offset=0d0
+		ObsSpec(i)%Cov_scaling=0d0
 		ObsSpec(i)%filter=' '
 	enddo
 	
@@ -2800,6 +2801,8 @@ c number of cloud/nocloud combinations
 			read(key%value,*) ObsSpec(i)%Cov_a
 		case("c_b","cov_b","cov_offset","c_offset")
 			read(key%value,*) ObsSpec(i)%Cov_offset
+		case("c_s","cov_s","cov_scaling","c_scaling","cov_scale","c_scale")
+			read(key%value,*) ObsSpec(i)%Cov_scaling
 		case("cov_a_loc")
 			read(key%value,*) ObsSpec(i)%Cov_a_loc(key%nr2)
 		case("cov_l_loc")

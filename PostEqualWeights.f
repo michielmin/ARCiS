@@ -378,6 +378,7 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 						do ilam=1,ObsSpec(iobs)%ndata
 							xx=(ObsSpec(iobs)%lam(j)-ObsSpec(iobs)%lam(ilam))*1d4
 							Cov(j,ilam)=Cov(j,ilam)+ObsSpec(iobs)%Cov_a**2*exp(-0.5*(xx/ObsSpec(iobs)%Cov_L)**2)
+							Cov(j,ilam)=Cov(j,ilam)+ObsSpec(iobs)%Cov_scaling**2*ObsSpec(iobs)%y(j)*ObsSpec(i)%y(ilam)
 						enddo
 					enddo
 					Cov=Cov+ObsSpec(iobs)%Cov_offset**2
