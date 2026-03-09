@@ -644,7 +644,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	logical recomputeopac,truefalse,doscaleR2,doCovObs(nobs)
 	real*8 xx,xy,scale,dy(ny),tot
 	character*100 command
-	integer info,NRHS
+	integer info,NRHS,cov_iter
 	real*8 d,f_ii
 	real*8,allocatable :: Cov(:,:),specinv(:,:),lamk(:),Rk(:)
 	real*8,allocatable :: spec_albedo(:,:,:),fitted_albedo(:,:),Kalb(:,:)
@@ -826,6 +826,8 @@ c	linear
 	global_chi2=global_chi2/real(max(1,k-n_ret))
 	
 	if(fullcovmat) then
+		cov_iter=0
+3		continue
 		lnew=0d0
 		tot=0d0
 		global_chi2=0d0
@@ -854,24 +856,26 @@ c	linear
 			end select
 		enddo
 
-		allocate(spec(nk))
-		allocate(lamk(nk),Rk(nk),iobsk(nk),jk(nk))
-		allocate(Cov(nk,nk))
-		allocate(specinv(nk,1))
-		if(fit_albedo) allocate(Kalb(nk,nk))
-		k=0
-		do i=1,nobs
-			if(doCovObs(i)) then
-				do j=1,ObsSpec(i)%ndata
-					k=k+1
-					lamk(k)=ObsSpec(i)%lam(j)
-					Rk(k)=ObsSpec(i)%R(j)
-					iobsk(k)=i
-					jk(k)=j
-				enddo
-			endif
-		enddo
-		NRHS=1
+		if(cov_iter.eq.0) then
+			allocate(spec(nk))
+			allocate(lamk(nk),Rk(nk),iobsk(nk),jk(nk))
+			allocate(Cov(nk,nk))
+			allocate(specinv(nk,1))
+			if(fit_albedo) allocate(Kalb(nk,nk))
+			k=0
+			do i=1,nobs
+				if(doCovObs(i)) then
+					do j=1,ObsSpec(i)%ndata
+						k=k+1
+						lamk(k)=ObsSpec(i)%lam(j)
+						Rk(k)=ObsSpec(i)%R(j)
+						iobsk(k)=i
+						jk(k)=j
+					enddo
+				endif
+			enddo
+			NRHS=1
+		endif
 		Cov(1:nk,1:nk)=0d0
 		if(Cov_n_loc .gt. 0) then
 			do ii = 1, Cov_n_loc
@@ -891,13 +895,6 @@ c	linear
 		k=0
 		do i=1,nobs
 			if(doCovObs(i)) then
-				tot=0d0
-				scale=0d0
-				do j=1,ObsSpec(i)%ndata
-					tot=tot+ObsSpec(i)%y(j)**2
-					scale=scale+allspec(i,j)**2
-				enddo
-				scale=scale/tot
 				j0=k
 				do j=1,ObsSpec(i)%ndata
 					k=k+1
@@ -905,7 +902,7 @@ c	linear
 					do ii=1,ObsSpec(i)%ndata
 						d=(ObsSpec(i)%lam(j)-ObsSpec(i)%lam(ii))*1d4
 						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(i)%Cov_a**2*exp(-0.5*(d/ObsSpec(i)%Cov_L)**2)
-						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(i)%Cov_scaling**2*scale*ObsSpec(i)%y(j)*ObsSpec(i)%y(ii)
+						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(i)%Cov_scaling**2*ObsSpec(i)%model(j)*ObsSpec(i)%model(ii)
 						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(i)%Cov_offset**2
 					enddo
 					spec(k)=ObsSpec(i)%y(j)+ObsSpec(i)%offset-allspec(i,j)/ObsSpec(i)%scale
@@ -951,6 +948,10 @@ c	linear
 		enddo
 
 		if(fit_albedo) then
+			if(cov_iter.eq.0) then
+				cov_iter=cov_iter+1
+				goto 3
+			endif
 			do i=1,nobs
 				do j=1,ObsSpec(i)%ndata
 					fitted_albedo(i,j)=-log(1d0/surfacealbedo-1d0)
