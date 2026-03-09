@@ -645,7 +645,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	real*8 xx,xy,scale,dy(ny),tot,chi2_real,chi2_virtual
 	character*100 command
 	integer info,NRHS,cov_iter,ncov_iter
-	real*8 d,f_ii
+	real*8 d,f_ii,alb1,alb2
 	real*8,allocatable :: Cov(:,:),specinv(:,:),lamk(:),Rk(:),Cov_obs(:,:)
 	real*8,allocatable :: spec_albedo(:,:,:),fitted_albedo(:,:),Kalb(:,:),Ksys(:,:)
 	integer,allocatable :: iobsk(:),jk(:)
@@ -676,6 +676,11 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	allspec=0d0
 	specsave=0d0
 
+	if(fit_albedo) then
+		alb1=max(1d-4,surfacealbedo*min(1d0-2d0*fit_albedo_sigma,0.95d0))
+		alb2=min(1d0-1d-4,surfacealbedo*max(1d0-2d0*fit_albedo_sigma,1.05d0))
+	endif
+
 	ii=1
 1	continue
 	error=0d0
@@ -685,11 +690,11 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	call SetOutputMode(.true.)
 	if(fit_albedo) then
 		if(ii.eq.1) then
-			surfacealbedo=1d-4
-			f_ii=1d0-fit_albedo0
+			surfacealbedo=alb1
+			f_ii=(alb2-surfacealbedo)/(alb2-alb1)
 		else
-			surfacealbedo=1d0-1d-4
-			f_ii=fit_albedo0
+			surfacealbedo=alb2
+			f_ii=(surfacealbedo-alb1)/(alb2-alb1)
 		endif
 	else
 		f_ii=1d0
@@ -827,7 +832,7 @@ c	linear
 	
 	if(fullcovmat) then
 		cov_iter=0
-		ncov_iter=2
+		ncov_iter=1
 3		continue
 		lnew=0d0
 		tot=0d0
@@ -925,7 +930,7 @@ c	linear
 			call RemoveOffset(Kalb,nk,Rk(1:nk))
 			do j=1,nk
 				do ii=1,nk
-					Cov(j,ii)=Cov(j,ii)+(surfacealbedo**2*(1d0-surfacealbedo)**2)*
+					Cov(j,ii)=Cov(j,ii)+(surfacealbedo**2*(1d0-surfacealbedo)**2)*(1d0/(alb2-alb1)**2)*
      &	(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*Kalb(j,ii)
 				enddo
 			enddo
@@ -974,11 +979,11 @@ c	linear
 			do j=1,nk
 				do ii=1,nk
 					fitted_albedo(iobsk(j),jk(j))=fitted_albedo(iobsk(j),jk(j))+(surfacealbedo*(1d0-surfacealbedo))*
-     &						Kalb(j,ii)*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*specinv(ii,1)
+     &						Kalb(j,ii)*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*specinv(ii,1)/(alb2-alb1)
 				enddo
 				fitted_albedo(iobsk(j),jk(j))=1d0/(1d0+exp(-fitted_albedo(iobsk(j),jk(j))))
 				ObsSpec(iobsk(j))%model(jk(j))=spec_albedo(1,iobsk(j),jk(j))+
-     &		(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*fitted_albedo(iobsk(j),jk(j))
+     &		(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*(fitted_albedo(iobsk(j),jk(j))-alb1)/(alb2-alb1)
 			enddo
 			if(cov_iter.lt.ncov_iter) then
 				cov_iter=cov_iter+1
@@ -994,7 +999,7 @@ c	linear
 			do j=1,nk
 				chi2_real=chi2_real+spec(j)*specinv(j,1)
 			enddo
-			lnew=lnew-chi2_real/2d0+chi2_virtual/2d0
+			lnew=lnew-chi2_real+chi2_virtual
 			global_chi2=chi2_real
 			do k=1,nk
 				spec=ObsSpec(iobsk(k))%model(jk(k))
