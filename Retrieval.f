@@ -642,12 +642,12 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars),spectemp(nlam),specsave(nobs,nlam)
 	real*8,allocatable :: spec(:),allspec(:,:)
 	logical recomputeopac,truefalse,doscaleR2,doCovObs(nobs)
-	real*8 xx,xy,scale,dy(ny),tot
+	real*8 xx,xy,scale,dy(ny),tot,chi2_real,chi2_virtual
 	character*100 command
-	integer info,NRHS,cov_iter
+	integer info,NRHS,cov_iter,ncov_iter
 	real*8 d,f_ii
-	real*8,allocatable :: Cov(:,:),specinv(:,:),lamk(:),Rk(:)
-	real*8,allocatable :: spec_albedo(:,:,:),fitted_albedo(:,:),Kalb(:,:)
+	real*8,allocatable :: Cov(:,:),specinv(:,:),lamk(:),Rk(:),Cov_obs(:,:)
+	real*8,allocatable :: spec_albedo(:,:,:),fitted_albedo(:,:),Kalb(:,:),Ksys(:,:)
 	integer,allocatable :: iobsk(:),jk(:)
 	real*8 fit_albedo0
 
@@ -827,6 +827,7 @@ c	linear
 	
 	if(fullcovmat) then
 		cov_iter=0
+		ncov_iter=2
 3		continue
 		lnew=0d0
 		tot=0d0
@@ -859,9 +860,9 @@ c	linear
 		if(cov_iter.eq.0) then
 			allocate(spec(nk))
 			allocate(lamk(nk),Rk(nk),iobsk(nk),jk(nk))
-			allocate(Cov(nk,nk))
+			allocate(Cov(nk,nk),Ksys(nk,nk))
 			allocate(specinv(nk,1))
-			if(fit_albedo) allocate(Kalb(nk,nk))
+			if(fit_albedo) allocate(Kalb(nk,nk),Cov_obs(nk,nk))
 			k=0
 			do i=1,nobs
 				if(doCovObs(i)) then
@@ -898,7 +899,6 @@ c	linear
 				j0=k
 				do j=1,ObsSpec(i)%ndata
 					k=k+1
-					Cov(k,k)=Cov(k,k)+(dy(k))**2
 					do ii=1,ObsSpec(i)%ndata
 						d=(ObsSpec(i)%lam(j)-ObsSpec(i)%lam(ii))*1d4
 						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(i)%Cov_a**2*exp(-0.5*(d/ObsSpec(i)%Cov_L)**2)
@@ -909,8 +909,13 @@ c	linear
 				enddo
 			endif
 		enddo
+		Ksys=Cov
+		do k=1,nk
+			Cov(k,k)=Cov(k,k)+(dy(k))**2
+		enddo
 
 		if(fit_albedo) then
+			Cov_obs=Cov
 			do j=1,nk
 				do ii=1,nk
 					d=(log(lamk(j))-log(lamk(ii)))
@@ -948,9 +953,18 @@ c	linear
 		enddo
 
 		if(fit_albedo) then
-			if(cov_iter.eq.0) then
-				cov_iter=cov_iter+1
-				goto 3
+! first compute the virtual chi2
+			if(cov_iter.eq.ncov_iter) then
+				chi2_virtual=0d0
+				call dpotrf('L', nk, Cov_obs, nk, info)
+				do j=1,nk
+					spec(j)=ObsSpec(iobsk(j))%y(jk(j))+ObsSpec(iobsk(j))%offset-ObsSpec(iobsk(j))%model(jk(j))/ObsSpec(iobsk(j))%scale
+				enddo
+				specinv(1:nk,1)=spec(1:nk)
+				call dpotrs('L', nk, NRHS, Cov_obs, nk, specinv, nk, info)
+				do j=1,nk
+					chi2_virtual=chi2_virtual+spec(j)*specinv(j,1)
+				enddo
 			endif
 			do i=1,nobs
 				do j=1,ObsSpec(i)%ndata
@@ -963,17 +977,48 @@ c	linear
      &						Kalb(j,ii)*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*specinv(ii,1)
 				enddo
 				fitted_albedo(iobsk(j),jk(j))=1d0/(1d0+exp(-fitted_albedo(iobsk(j),jk(j))))
+				ObsSpec(iobsk(j))%model(jk(j))=spec_albedo(1,iobsk(j),jk(j))+
+     &		(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*fitted_albedo(iobsk(j),jk(j))
+			enddo
+			if(cov_iter.lt.ncov_iter) then
+				cov_iter=cov_iter+1
+				goto 3
+			endif
+! next compute the real chi2
+			chi2_real=0d0
+			do j=1,nk
+				spec(j)=ObsSpec(iobsk(j))%y(jk(j))+ObsSpec(iobsk(j))%offset-ObsSpec(iobsk(j))%model(jk(j))/ObsSpec(iobsk(j))%scale
+			enddo
+			specinv(1:nk,1)=spec(1:nk)
+			call dpotrs('L', nk, NRHS, Cov_obs, nk, specinv, nk, info)
+			do j=1,nk
+				chi2_real=chi2_real+spec(j)*specinv(j,1)
+			enddo
+			lnew=lnew-chi2_real/2d0+chi2_virtual/2d0
+			global_chi2=chi2_real
+			do k=1,nk
+				spec=ObsSpec(iobsk(k))%model(jk(k))
+				do j=1,nk
+					spec(k)=spec(k)+Ksys(j,k)*specinv(j,1)
+				enddo
+				ObsSpec(iobsk(k))%model(jk(k))=spec(k)
+			enddo
+		else
+			specinv(1:nk,1)=spec(1:nk)
+			call dpotrs('L', nk, NRHS, Cov, nk, specinv, nk, info)
+			do j=1,nk
+				global_chi2 = global_chi2 + spec(j)*specinv(j,1)
+			enddo
+			do k=1,nk
+				spec=ObsSpec(iobsk(k))%model(jk(k))
+				do j=1,nk
+					spec(k)=spec(k)+Ksys(j,k)*specinv(j,1)
+				enddo
+				ObsSpec(iobsk(k))%model(jk(k))=spec(k)
 			enddo
 		endif
-		specinv(1:nk,1)=spec(1:nk)
-! Solve L * w = spec  (forward substitution)
-		call dtrsv('L','N','N', nk, Cov, nk, specinv, NRHS)
-! Now sumsq = sum_j w_j^2; expect ~ n - p_eff
-		do j=1,nk
-			global_chi2 = global_chi2 + specinv(j,1)*specinv(j,1)
-		enddo
-		deallocate(Cov,specinv)
-		if(fit_albedo) deallocate(Kalb)
+		deallocate(Cov,Ksys,specinv)
+		if(fit_albedo) deallocate(Kalb,Cov_obs)
 		do i=1,nobs
 			if(ObsSpec(i)%scaling.and.ObsSpec(i)%dscale.gt.0d0) then
 				lnew=lnew-((ObsSpec(i)%scale-1d0)/ObsSpec(i)%dscale)**2
