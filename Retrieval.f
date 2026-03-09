@@ -691,10 +691,10 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	if(fit_albedo) then
 		if(ii.eq.1) then
 			surfacealbedo=alb1
-			f_ii=(alb2-surfacealbedo)/(alb2-alb1)
+			f_ii=(alb2-fit_albedo0)/(alb2-alb1)
 		else
 			surfacealbedo=alb2
-			f_ii=(surfacealbedo-alb1)/(alb2-alb1)
+			f_ii=(fit_albedo0-alb1)/(alb2-alb1)
 		endif
 	else
 		f_ii=1d0
