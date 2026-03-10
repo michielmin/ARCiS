@@ -99,7 +99,9 @@ c	call cpu_time(starttime)
 		call SetupStructure(computeopac)
 		if(modelfail) return
 		if(domakeai.and..not.modelsucces) return
+		includemol=includemol_raytrace
 		if(computeopac) call SetupOpacities()
+		includemol=includemol_default
 		if(modelfail) return
 	endif
 	call cpu_time(stoptime)
