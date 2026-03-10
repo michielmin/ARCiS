@@ -678,7 +678,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 
 	if(fit_albedo) then
 		alb1=max(1d-4,surfacealbedo*min(1d0-2d0*fit_albedo_sigma,0.95d0))
-		alb2=min(1d0-1d-4,surfacealbedo*max(1d0-2d0*fit_albedo_sigma,1.05d0))
+		alb2=min(1d0-1d-4,surfacealbedo*max(1d0+2d0*fit_albedo_sigma,1.05d0))
 	endif
 
 	ii=1
