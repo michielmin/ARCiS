@@ -21,6 +21,11 @@
 	integer ipmin,ipmax,ii
 	real*8 fit_albedo0,spec_albedo(2,nobs,nlam),f_ii,d
 	real*8,allocatable :: fitted_albedo(:,:,:),Kalb(:,:),aver_albedo(:,:),refl_surface(:,:,:)
+	real*8 alb1,alb2
+	integer nk,cov_iter,ncov_iter,j0
+	logical doCovObs(nobs)
+	real*8,allocatable :: spec(:),lamk(:),Rk(:),Cov_obs(:,:),Ksys(:,:),specinv(:),dy(:)
+	integer,allocatable :: iobsk(:),jk(:)
 	
 	writefiles=.false.
 	
@@ -281,14 +286,18 @@ c		call cpu_time(stoptime)
 	error=0d0
 	call SetOutputMode(.false.)
 	if(i.ne.0) call MapRetrievalMN(var(imodel,1:n_ret),error)
-	if(ii.eq.1) fit_albedo0=surfacealbedo
+	if(ii.eq.1) then
+		fit_albedo0=surfacealbedo
+		alb1=max(1d-4,fit_albedo0*min(1d0-2d0*fit_albedo_sigma,0.95d0))
+		alb2=min(1d0-1d-4,fit_albedo0*max(1d0+2d0*fit_albedo_sigma,1.05d0))
+	endif
 	if(fit_albedo) then
 		if(ii.eq.1) then
-			surfacealbedo=1d-4
-			f_ii=1d0-fit_albedo0
+			surfacealbedo=alb1
+			f_ii=(alb2-fit_albedo0)/(alb2-alb1)
 		else
-			surfacealbedo=1d0-1d-4
-			f_ii=fit_albedo0
+			surfacealbedo=alb2
+			f_ii=(fit_albedo0-alb1)/(alb2-alb1)
 		endif
 	else
 		f_ii=1d0
@@ -330,107 +339,191 @@ c		call cpu_time(stoptime)
 	surfacealbedo=fit_albedo0
 	call ComputeSurface()
 
-	if(useobsgrid) then
+	do iobs=1,nobs
+		select case(ObsSpec(iobs)%type)
+			case("trans","transmission","transC","transM","transE","emisr","emisR","emisa","emis","emission")
+				ObsSpec(iobs)%scale=1d0
+				if(ObsSpec(iobs)%scaling) then
+					xy=0d0
+					xx=0d0
+					do ilam=1,ObsSpec(iobs)%ndata
+						xy=xy+specobs(i,iobs,ilam)*(ObsSpec(iobs)%y(ilam)+ObsSpec(iobs)%offset)/ObsSpec(iobs)%dy(ilam)**2
+						xx=xx+specobs(i,iobs,ilam)*specobs(i,iobs,ilam)/ObsSpec(iobs)%dy(ilam)**2
+					enddo
+					if(ObsSpec(iobs)%dscale.gt.0d0) then
+						xx=xx+1d0/ObsSpec(iobs)%dscale**2
+						xy=xy+1d0/ObsSpec(iobs)%dscale**2
+					endif
+					ObsSpec(iobs)%scale=1d0
+					if(xx.gt.0d0) ObsSpec(iobs)%scale=xx/xy
+				endif
+				specobs(i,iobs,1:ObsSpec(iobs)%ndata)=specobs(i,iobs,1:ObsSpec(iobs)%ndata)/ObsSpec(iobs)%scale
+		end select
+		ObsSpec(iobs)%model(1:ObsSpec(iobs)%ndata)=specobs(i,iobs,1:ObsSpec(iobs)%ndata)
+	enddo
+
+	if(fullcovmat) then
+		cov_iter=0
+		ncov_iter=1
+13		continue
+		nk=0
 		do iobs=1,nobs
 			select case(ObsSpec(iobs)%type)
-				case("trans","transmission","transC","transM","transE","emisr","emisR","emisa","emis","emission")
-c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
-					ObsSpec(iobs)%scale=1d0
-					if(ObsSpec(iobs)%scaling) then
-						xy=0d0
-						xx=0d0
-						do ilam=1,ObsSpec(iobs)%ndata
-							xy=xy+specobs(i,iobs,ilam)*(ObsSpec(iobs)%y(ilam)+ObsSpec(iobs)%offset)/ObsSpec(iobs)%dy(ilam)**2
-							xx=xx+specobs(i,iobs,ilam)*specobs(i,iobs,ilam)/ObsSpec(iobs)%dy(ilam)**2
-						enddo
-						if(ObsSpec(iobs)%dscale.gt.0d0) then
-							xx=xx+1d0/ObsSpec(iobs)%dscale**2
-							xy=xy+1d0/ObsSpec(iobs)%dscale**2
-						endif
-						ObsSpec(iobs)%scale=1d0
-						if(xx.gt.0d0) ObsSpec(iobs)%scale=xx/xy
-					endif
-					specobs(i,iobs,1:ObsSpec(iobs)%ndata)=specobs(i,iobs,1:ObsSpec(iobs)%ndata)/ObsSpec(iobs)%scale
-
-					allocate(Cov(ObsSpec(iobs)%ndata,ObsSpec(iobs)%ndata))
-					allocate(Kalb(ObsSpec(iobs)%ndata,ObsSpec(iobs)%ndata))
-					Cov(1:ObsSpec(iobs)%ndata,1:ObsSpec(iobs)%ndata)=0d0
-					if(Cov_n_loc .gt. 0) then
-						do j = 1, Cov_n_loc
-							do ilam = 1, ObsSpec(iobs)%ndata
-								xx = (ObsSpec(iobs)%lam(ilam)*1d4 - Cov_lam_loc(j)) / Cov_L_loc(j)
-								spectemp(ilam) = Cov_a_loc(j)*exp(-0.5d0*xx**2)
-							enddo
-							call dger(ObsSpec(iobs)%ndata, ObsSpec(iobs)%ndata, 1d0, spectemp, 1, spectemp, 1, Cov, ObsSpec(iobs)%ndata)
-						enddo
-					endif
-					if(ObsSpec(iobs)%Cov_n_loc .gt. 0) then
-						do j = 1, ObsSpec(iobs)%Cov_n_loc
-							do ilam = 1, ObsSpec(iobs)%ndata
-								xx = (ObsSpec(iobs)%lam(ilam)*1d4 - ObsSpec(iobs)%Cov_lam_loc(j)) / ObsSpec(iobs)%Cov_L_loc(j)
-								spectemp(ilam) = ObsSpec(iobs)%Cov_a_loc(j)*exp(-0.5d0*xx**2)
-							enddo
-							call dger(ObsSpec(iobs)%ndata, ObsSpec(iobs)%ndata, 1d0, spectemp, 1, spectemp, 1, Cov, ObsSpec(iobs)%ndata)
-						enddo
-					endif
+				case('tprofile','logtp','prior','priors','lightcurve')
+					doCovObs(iobs)=.false.
+				case default
+					doCovObs(iobs)=.true.
 					do j=1,ObsSpec(iobs)%ndata
-						Cov(j,j)=Cov(j,j)+(ObsSpec(iobs)%dy(j))**2
-						do ilam=1,ObsSpec(iobs)%ndata
-							xx=(ObsSpec(iobs)%lam(j)-ObsSpec(iobs)%lam(ilam))*1d4
-							Cov(j,ilam)=Cov(j,ilam)+ObsSpec(iobs)%Cov_a**2*exp(-0.5*(xx/ObsSpec(iobs)%Cov_L)**2)
-							Cov(j,ilam)=Cov(j,ilam)+ObsSpec(iobs)%Cov_scaling**2*ObsSpec(iobs)%y(j)*ObsSpec(i)%y(ilam)
-						enddo
+						nk=nk+1
 					enddo
-					Cov=Cov+ObsSpec(iobs)%Cov_offset**2
-					if(fit_albedo.and.
-     &	(ObsSpec(iobs)%type.eq.'emis'.or.ObsSpec(iobs)%type.eq.'emisR'.or.
-     &	 ObsSpec(iobs)%type.eq.'phase'.or.ObsSpec(iobs)%type.eq.'phaseR')) then
-						do j=1,ObsSpec(iobs)%ndata
-							do ilam=1,ObsSpec(iobs)%ndata
-								d=(log(ObsSpec(iobs)%lam(j))-log(ObsSpec(iobs)%lam(ilam)))
-! the factor 1/(1-w) in the fit_albedo_sigma accounts for the mapping onto the logit function for the albedo
-								Kalb(j,ilam)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
-							enddo
-						enddo
-						call RemoveOffset(Kalb,ObsSpec(iobs)%ndata,ObsSpec(iobs)%R(1:ObsSpec(iobs)%ndata))
-						do j=1,ObsSpec(iobs)%ndata
-							do ilam=1,ObsSpec(iobs)%ndata
-								Cov(j,ilam)=Cov(j,ilam)+(surfacealbedo**2*(1d0-surfacealbedo)**2)*
-     &	(spec_albedo(2,iobs,j)-spec_albedo(1,iobs,j))*(spec_albedo(2,iobs,ilam)-spec_albedo(1,iobs,ilam))*Kalb(j,ilam)
-							enddo
+			end select
+		enddo
+		if(cov_iter.eq.0) then
+			allocate(spec(nk))
+			allocate(lamk(nk),Rk(nk),iobsk(nk),jk(nk))
+			allocate(Cov(nk,nk),Ksys(nk,nk))
+			allocate(specinv(nk),dy(nk))
+			if(fit_albedo) allocate(Kalb(nk,nk),Cov_obs(nk,nk))
+			k=0
+			do iobs=1,nobs
+				if(doCovObs(iobs)) then
+					do j=1,ObsSpec(iobs)%ndata
+						k=k+1
+						lamk(k)=ObsSpec(iobs)%lam(j)
+						Rk(k)=ObsSpec(iobs)%R(j)
+						iobsk(k)=iobs
+						jk(k)=j
+						dy(k)=ObsSpec(iobs)%dy(j)
+					enddo
+				endif
+			enddo
+			NRHS=1
+		endif
+		Cov(1:nk,1:nk)=0d0
+		if(Cov_n_loc .gt. 0) then
+			do ii = 1, Cov_n_loc
+				k=0
+				do iobs=1,nobs
+					if(doCovObs(iobs)) then
+						do j = 1, ObsSpec(iobs)%ndata
+							k=k+1
+							d = (ObsSpec(iobs)%lam(j)*1d4 - Cov_lam_loc(ii)) / Cov_L_loc(ii)
+							specinv(k) = Cov_a_loc(ii)*exp(-0.5d0*d**2)
 						enddo
 					endif
-					call dpotrf('L', ObsSpec(iobs)%ndata, Cov, ObsSpec(iobs)%ndata, info)
-					do ilam = 1, ObsSpec(iobs)%ndata
-						spectemp(ilam) = ObsSpec(iobs)%y(ilam) - specobs(i,iobs,ilam)
+				enddo
+				call dger(nk, nk, 1d0, specinv, 1, specinv, 1, Cov, nk)
+			enddo
+		endif
+		k=0
+		do iobs=1,nobs
+			if(doCovObs(iobs)) then
+				j0=k
+				do j=1,ObsSpec(iobs)%ndata
+					k=k+1
+					do ii=1,ObsSpec(iobs)%ndata
+						d=(ObsSpec(iobs)%lam(j)-ObsSpec(iobs)%lam(ii))*1d4
+						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(iobs)%Cov_a**2*exp(-0.5*(d/ObsSpec(iobs)%Cov_L)**2)
+						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(iobs)%Cov_scaling**2*ObsSpec(iobs)%model(j)*ObsSpec(iobs)%model(ii)
+						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(iobs)%Cov_offset**2
 					enddo
-					NRHS = 1
-					call dpotrs('L', ObsSpec(iobs)%ndata, NRHS, Cov, ObsSpec(iobs)%ndata, spectemp, ObsSpec(iobs)%ndata, info)
-					do ilam = 1, ObsSpec(iobs)%ndata
-						sysobs(i,iobs,ilam) = ObsSpec(iobs)%y(ilam) - spectemp(ilam)*(ObsSpec(iobs)%dy(ilam))**2 - specobs(i,iobs,ilam)
-						specobs(i,iobs,ilam) = ObsSpec(iobs)%y(ilam) - spectemp(ilam)*(ObsSpec(iobs)%dy(ilam))**2
+					spec(k)=ObsSpec(iobs)%y(j)+ObsSpec(iobs)%offset-specobs(i,iobs,j)/ObsSpec(iobs)%scale
+				enddo
+			endif
+		enddo
+		Ksys=Cov
+		do k=1,nk
+			Cov(k,k)=Cov(k,k)+(dy(k))**2
+		enddo
+
+		if(fit_albedo) then
+			Cov_obs=Cov
+			do j=1,nk
+				do ii=1,nk
+					d=(log(lamk(j))-log(lamk(ii)))
+					Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+				enddo
+			enddo
+			call RemoveOffset(Kalb,nk,Rk(1:nk))
+			do j=1,nk
+				do ii=1,nk
+					Cov(j,ii)=Cov(j,ii)+(surfacealbedo**2*(1d0-surfacealbedo)**2)*(1d0/(alb2-alb1)**2)*
+     &	(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*Kalb(j,ii)
+				enddo
+			enddo
+
+			call dpotrf('L', nk, Cov, nk, info)
+			specinv=spec
+			call dpotrs('L', nk, NRHS, Cov, nk, specinv, nk, info)
+			do iobs=1,nobs
+				do j=1,ObsSpec(iobs)%ndata
+					fitted_albedo(i,iobs,j)=-log(1d0/surfacealbedo-1d0)
+				enddo
+			enddo
+			do j=1,nk
+				do ii=1,nk
+					fitted_albedo(i,iobsk(j),jk(j))=fitted_albedo(i,iobsk(j),jk(j))+(surfacealbedo*(1d0-surfacealbedo))*
+     &						Kalb(j,ii)*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*specinv(ii)/(alb2-alb1)
+				enddo
+				fitted_albedo(i,iobsk(j),jk(j))=1d0/(1d0+exp(-fitted_albedo(i,iobsk(j),jk(j))))
+				ObsSpec(iobsk(j))%model(jk(j))=spec_albedo(1,iobsk(j),jk(j))+
+     &		(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*(fitted_albedo(i,iobsk(j),jk(j))-alb1)/(alb2-alb1)
+			enddo
+			if(cov_iter.lt.ncov_iter) then
+				cov_iter=cov_iter+1
+				goto 13
+			endif
+			do iobs=1,nobs
+				specobs(i,iobs,1:ObsSpec(iobs)%ndata)=ObsSpec(iobs)%model(1:ObsSpec(iobs)%ndata)
+				refl_surface(i,iobs,1:ObsSpec(iobs)%ndata)=(Rplanet/Rearth)**2*fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata)
+				aver_albedo(i,iobs)=surfacealbedo
+			enddo
+			do j=1,nk
+				spec(j)=ObsSpec(iobsk(j))%y(jk(j))+ObsSpec(iobsk(j))%offset-ObsSpec(iobsk(j))%model(jk(j))/ObsSpec(iobsk(j))%scale
+			enddo
+			call dpotrf('L', nk, Cov_obs, nk, info)
+			specinv=spec
+			call dpotrs('L', nk, NRHS, Cov_obs, nk, specinv, nk, info)
+			do k=1,nk
+				spec(k)=ObsSpec(iobsk(k))%model(jk(k))
+				do j=1,nk
+					spec(k)=spec(k)+Ksys(j,k)*specinv(j)
+				enddo
+				sysobs(i,iobsk(k),jk(k))=spec(k)
+			enddo
+		else
+			call dpotrf('L', nk, Cov, nk, info)
+			do j=1,nk
+				spec(j)=ObsSpec(iobsk(j))%y(jk(j))+ObsSpec(iobsk(j))%offset-ObsSpec(iobsk(j))%model(jk(j))/ObsSpec(iobsk(j))%scale
+			enddo
+			specinv=spec
+			call dpotrs('L', nk, NRHS, Cov, nk, specinv, nk, info)
+			do k=1,nk
+				spec=ObsSpec(iobsk(k))%model(jk(k))
+				do j=1,nk
+					spec(k)=spec(k)+Ksys(j,k)*specinv(j)
+				enddo
+				sysobs(i,iobsk(k),jk(k))=spec(k)
+			enddo
+		endif
+		deallocate(spec)
+		deallocate(lamk,Rk,iobsk,jk)
+		deallocate(Cov,Ksys,specinv,dy)
+		if(fit_albedo) deallocate(Kalb,Cov_obs)
+		do iobs=1,nobs
+			select case(ObsSpec(iobs)%type)
+				case('emisr','emisR')
+					do j=1,ObsSpec(iobs)%ndata
+						specemisR(i,ObsSpec(iobs)%ilam(j))=specobs(i,iobs,j)
 					enddo
-					if(fit_albedo) then
-						fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata)=-log(1d0/surfacealbedo-1d0)
-						do j=1,ObsSpec(iobs)%ndata
-							do ilam=1,ObsSpec(iobs)%ndata
-								fitted_albedo(i,iobs,j)=fitted_albedo(i,iobs,j)+Kalb(j,ilam)*(surfacealbedo*(1d0-surfacealbedo))*
-     &								(spec_albedo(2,iobs,ilam)-spec_albedo(1,iobs,ilam))*spectemp(ilam)
-							enddo
-						enddo
-						if(i.ne.0) call AddPostDraw(ObsSpec(iobs)%ndata,spec_albedo(1:2,iobs,1:ObsSpec(iobs)%ndata),surfacealbedo,Kalb,Cov,
-     &							fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata),idum)
-						do j=1,ObsSpec(iobs)%ndata
-							fitted_albedo(i,iobs,j)=1d0/(1d0+exp(-fitted_albedo(i,iobs,j)))
-							if(surfacetype.eq.'GREYLAND'.or.surfacetype.eq.'greyland') then
-								fitted_albedo(i,iobs,j)=(1d0-surface_emis(ObsSpec(iobs)%ilam(j)))
-     &								+(1d0-f_water)*(fitted_albedo(i,iobs,j)-surfacealbedo)
-							endif
-						enddo
-						refl_surface(i,iobs,1:ObsSpec(iobs)%ndata)=(Rplanet/Rearth)**2*fitted_albedo(i,iobs,1:ObsSpec(iobs)%ndata)
-						aver_albedo(i,iobs)=surfacealbedo
-					endif
-					deallocate(Cov,Kalb)
+				case('emis')
+					do j=1,ObsSpec(iobs)%ndata
+						specemis(i,ObsSpec(iobs)%ilam(j))=specobs(i,iobs,j)
+					enddo
+				case('trans')
+					do j=1,ObsSpec(iobs)%ndata
+						spectrans(i,ObsSpec(iobs)%ilam(j))=specobs(i,iobs,j)
+					enddo
 			end select
 		enddo
 	endif
@@ -460,7 +553,7 @@ c					call RemapObs(iobs,specobs(i,iobs,1:ObsSpec(iobs)%ndata),spectemp)
 			do j=1,n_ret
 				write(21,'(a," = ",es14.7)') trim(RetPar(j)%keyword),RetPar(j)%value
 			enddo
-			close(unit=21)	
+			close(unit=21)
 		endif
 	endif	
 	endif
