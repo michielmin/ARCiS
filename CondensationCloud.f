@@ -2310,7 +2310,13 @@ c Elemental abundances
 	itimecloud=itimecloud+itime
 
 c	open(unit=20,file=trim(outputdir) // '/atoms.dat',FORM="FORMATTED",ACCESS="STREAM")
-	if(dochemistry) then
+	if(dochemistry.and.usePhotoAI) then
+		call SetAbun
+		call output("==================================================================")
+		call output("Computing chemistry using PhotoAI by Rick van Gompel")
+		call output("Ignoring adjusted abundances from cloud formation")
+		call PhotoAI()
+	else if(dochemistry) then
 		dochemR=.false.
 		dochemR(1)=.true.
 		dochemR(nr)=.true.

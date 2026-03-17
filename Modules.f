@@ -189,7 +189,7 @@ c===============================================================================
 	integer idum,maxiter,miniter,Nphot0,idum0,iWolk
 !$OMP THREADPRIVATE(idum)
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,anisoscattstar,lambertsurface,computeT,computecontrib
-	logical do_rayleigh,isoFstar,writefiles
+	logical do_rayleigh,isoFstar,writefiles,usePhotoAI
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS,modelfail,projectedD
 	logical,allocatable :: includemol(:),diseqmol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	logical,allocatable :: includemol_raytrace(:),includemol_default(:)

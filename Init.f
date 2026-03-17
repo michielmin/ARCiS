@@ -1040,6 +1040,7 @@ c select at least the species relevant for disequilibrium chemistry
 		doit=condensates.or.secondary_atmosphere
 		call init_GGchem(molname,nmol,doit)
 		dobackgroundgas=.false.
+		if(usePhotoAI) call InitPhotoAI()
 	endif
 	if(useEOS) then
 		call getenv('HOME',homedir)
@@ -1439,6 +1440,8 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) dochemistry
 		case("diseq")
 			read(key%value,*) disequilibrium
+		case("dophotoai","usephotoai","photoai")
+			read(key%value,*) usePhotoAI
 		case("ggchem_piter")
 			read(key%value,*) GGCHEM_P_iter
 		case("ggchem_tfast")

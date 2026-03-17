@@ -171,7 +171,10 @@ OBJS	= Modules.o \
 		Formation.o \
 		ComputePAH.o \
 		BDREF.o \
-		EOS.o
+		EOS.o \
+		PhotoAI.o \
+		pyIO.o \
+		pybridge.o
 
 # program name and install location
 PROGRAM       = ARCiS

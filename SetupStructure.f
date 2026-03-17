@@ -267,7 +267,12 @@ c			if(domakeai.or.retrieval) return
 	enddo
 
 	if(dochemistry.and.j.eq.1) then
-	if(compute_mixrat) then
+	if(usePhotoAI) then
+		call SetAbun
+		call output("==================================================================")
+		call output("Computing chemistry using PhotoAI by Rick van Gompel")
+		call PhotoAI()
+	else if(compute_mixrat) then
 		call SetAbun
 		call output("==================================================================")
 c		call output("Computing chemistry using easy_chem by Paul Molliere")
