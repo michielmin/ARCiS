@@ -29,13 +29,13 @@
 	init=1
 	
 	x(1)=log10(Mplanet)
-	xname(1)="Planet mass"
+	xname(1)="log10(Planet mass)"
 	x(2)=loggPlanet
-	xname(2)="Planet log(g)"
+	xname(2)="Planet log10(g)"
 	x(3)=log10(sqrt(Rstar/(2d0*Dplanet))*Tstar)
 	xname(3)="log10(Tplanet)"
 	x(4)=log10(Dplanet/AU)
-	xname(4)="Planet orbit"
+	xname(4)="log10(Planet orbit)"
 	Z=10d0**metallicity
 	x(5)=Z
 	xname(5)="metallicity"
@@ -63,10 +63,10 @@
 	MASK=1
 	do i=0,nx-1
 		if(AND(info, ISHFT(MASK, i)).gt.0) then
-			write(*,'("PhotoAI WARNING: ",a20," too low")') trim(xname(i+1))
+			write(*,'("PhotoAI WARNING: ",a20," too low  (",es10.3,")")') trim(xname(i+1)),x(i+1)
 		endif
 		if(AND(info, ISHFT(MASK, i+nx)).gt.0) then
-			write(*,'("PhotoAI WARNING: ",a20," too high")') trim(xname(i+1))
+			write(*,'("PhotoAI WARNING: ",a20," too high (",es10.3,")")') trim(xname(i+1)),x(i+1)
 		endif
 	enddo
 
