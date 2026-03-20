@@ -3,7 +3,7 @@
 	use AtomsModule
 	use Constants
 	IMPLICIT NONE
-	integer nPvulc,i,j,k,nmol_ex
+	integer nPvulc,i,j,k,nmol_ex,info,MASK
 	parameter(nmol_ex=11)
 	parameter(nPvulc=150)
 	real*8 x(10),N_H,n_H_Solar,Z,Pvulc(nPvulc),y(nPvulc*nmol_ex)
@@ -14,6 +14,7 @@
 	character*4 cmol_ex(nmol_ex)
 	parameter(cmol_ex = (/ "H2O ","CO  ","CO2 ","CH4 ","NH3 ","H2S ","HCN ","C2H2","NS  ","OCS ","SO2 " /))
 	character*500 command
+	character*20 xname(10)
 
 	do i=1,nmol_ex
 		do j=1,nmol
@@ -28,26 +29,46 @@
 	init=1
 	
 	x(1)=log10(Mplanet)
+	xname(1)="Planet mass"
 	x(2)=loggPlanet
+	xname(2)="Planet log(g)"
 	x(3)=log10(sqrt(Rstar/(2d0*Dplanet))*Tstar)
+	xname(3)="log10(Tplanet)"
 	x(4)=log10(Dplanet/AU)
+	xname(4)="Planet orbit"
 	Z=10d0**metallicity
 	x(5)=Z
+	xname(5)="metallicity"
 	C_O=molfracs_atoms(3)/molfracs_atoms(5)
 	C_O_Solar=0.0002478241/0.0004509658
 	S_O=molfracs_atoms(11)/molfracs_atoms(5)
 	S_O_Solar=1.2137900734604e-05/0.0004509658
 	x(6)=C_O/C_O_Solar	! C/O compared to Solar
+	xname(6)="C/O"
 	N_H=molfracs_atoms(4)/molfracs_atoms(1)
 	N_H_Solar=6.22506056949881e-05/0.9207539305
 	x(7)=(N_H/N_H_Solar-1d0)/(Z-1d0)
+	xname(7)="N/H"
 	x(8)=S_O/S_O_Solar	! C/O compared to Solar
+	xname(8)="S/O"
 	x(9)=Tstar
+	xname(9)="Stellar temperature"
 	x(10)=Rstar/Rsun
+	xname(10)="Stellar radius"
 
 	nx=10
 	ny=nPvulc*nmol_ex
-	call ask_python(x,nx,y,ny,init,command)
+	call ask_python(x,nx,y,ny,init,command,info)
+	
+	MASK=1
+	do i=0,nx-1
+		if(AND(info, ISHFT(MASK, i)).gt.0) then
+			write(*,'("PhotoAI WARNING: ",a20," too low")') trim(xname(i+1))
+		endif
+		if(AND(info, ISHFT(MASK, i+nx)).gt.0) then
+			write(*,'("PhotoAI WARNING: ",a20," too high")') trim(xname(i+1))
+		endif
+	enddo
 
 	do i=1,nPvulc
 		Pvulc(i)=10d0**(3d0-11d0*real(i-1)/real(nPvulc-1))
@@ -85,7 +106,7 @@
 	use AtomsModule
 	IMPLICIT NONE
 	real*8 x(10),y(10)
-	integer nx,ny,init
+	integer nx,ny,init,info
 	character*500 command,homedir
 
 	call getenv('HOME',homedir) 
@@ -94,7 +115,7 @@
 	nx=10
 	ny=10
 	init=0
-	call ask_python(x,nx,y,ny,init,command)
+	call ask_python(x,nx,y,ny,init,command,info)
 
 	return
 	end
@@ -102,7 +123,7 @@
 	subroutine ClosePhotoAI()
 	IMPLICIT NONE
 	real*8 x(10),y(10)
-	integer nx,ny,init
+	integer nx,ny,init,info
 	character*500 command,homedir
 
 	command=' '
@@ -110,7 +131,7 @@
 	nx=10
 	ny=10
 	init=2
-	call ask_python(x,nx,y,ny,init,command)
+	call ask_python(x,nx,y,ny,init,command,info)
 
 	return
 	end

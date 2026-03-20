@@ -1,4 +1,4 @@
-subroutine ask_python(x,nx,y,ny,init,command)
+subroutine ask_python(x,nx,y,ny,init,command,info)
   use iso_c_binding
   implicit none
 
@@ -90,10 +90,7 @@ subroutine ask_python(x,nx,y,ny,init,command)
   	do i = 1, ny
      	rc = py_read_double(fp, y(i))
   	end do
-!	rc = py_read_int(fp, info)
-!	if(info.ne.0) then
-!		write(*,'(a,i,a)') 'parameter ',info,' out of range'
-!	endif
+	rc = py_read_int(fp, info)
   endif
 
   if(init.eq.2) then
