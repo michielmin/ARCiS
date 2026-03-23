@@ -1,0 +1,89 @@
+Output dir: ref_Earth/
+==================================================================
+         ARtful modelling code for exoplanet Science - ARCiS
+==================================================================
+By using ARCiS you agree to the terms of use.
+It basically means you consult with any of the authors before
+publication if there is any doubt on the outcome of the results.
+==================================================================
+Let's get the show on the road!!
+ARCiS version b01a70f4c77b7ade9b8725f52508d93e6ac371ff
+==================================================================
+input file: Earth.in
+Number of molecules:          7                
+Number of clouds:             1                
+Number of collision pairs:    5                
+Number of observations:       0                
+Planet logg:    3.013            
+==================================================================
+Setting up cloud:    1
+==================================================================
+Reading in correlated k-tables for H2O
+   wavelength range: 2.38E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 2.90E+03 K
+reading UV opacities for lambda < 2.42E-01 micron
+Reading in correlated k-tables for CO2
+   wavelength range: 5.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 3.50E+03 K
+Reading in correlated k-tables for O3
+   wavelength range: 1.43E+00 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 3.50E+03 K
+reading UV opacities for lambda < 1.44E+00 micron
+Reading in correlated k-tables for CH4
+   wavelength range: 8.34E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 2.90E+03 K
+reading UV opacities for lambda < 8.41E-01 micron
+Reading in correlated k-tables for O2
+   wavelength range: 2.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 4.50E+03 K
+reading UV opacities for lambda < 2.03E-01 micron
+Reading in correlated k-tables for N2
+   wavelength range: 5.00E-01 - 3.50E+01 micron
+     pressure range: 1.00E-07 - 1.00E+03 bar
+  temperature range: 7.10E+01 - 2.90E+03 K
+reading UV opacities for lambda < 5.06E-01 micron
+Opacity file not available: /Users/michielm/ARCiS/Data/Opacities/opacity_He.fits.gz
+setting opacities to 0
+Reading CIA opacities
+Reading file:/Users/michielm/ARCiS/Data/CIA/CO2-CO2_combined.cia
+CIA: CO2-CO2
+Reading file:/Users/michielm/ARCiS/Data/CIA/N2-N2_ordered.cia
+CIA: N2-N2
+Reading file:/Users/michielm/ARCiS/Data/CIA/O2-O2_ordered.cia
+CIA: O2-O2
+Reading file:/Users/michielm/ARCiS/Data/CIA/H2-H2_combined.cia
+CIA: H2-H2
+Reading file:/Users/michielm/ARCiS/Data/CIA/H2-He_2011.cia
+CIA: H2-He
+==================================================================
+Initialisation time:      51.77 s
+==================================================================
+hotspot shift:   0.00               degrees
+Computing multiple 1D structures
+
+Day-side albedo: 0.286
+Raytracing over the planet disk in 3D
+
+Teff:     254.96          K
+Model runtime:           380.49 s
+==================================================================
+Writing spectrum to: ref_Earth/star
+Writing spectrum to: ref_Earth/irradiation
+Writing spectrum to: ref_Earth/emis
+Writing spectrum to: ref_Earth/emisR
+Writing spectrum to: ref_Earth/trans
+Writing spectrum to: ref_Earth/trans_split
+Writing spectrum to: ref_Earth/phase
+Writing phasecurve to: ref_Earth/phasecurve
+Writing tau1depth to: ref_Earth/tau1depth
+Writing cloud optical depth to: ref_Earth/cloudtau
+==================================================================
+==================================================================
+Total runtime:           432.43 s
+All done!
+==================================================================

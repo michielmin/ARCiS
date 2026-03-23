@@ -1,0 +1,103 @@
+Output dir: ref_test2/
+==================================================================
+         ARtful modelling code for exoplanet Science - ARCiS
+==================================================================
+By using ARCiS you agree to the terms of use.
+It basically means you consult with any of the authors before
+publication if there is any doubt on the outcome of the results.
+==================================================================
+Let's get the show on the road!!
+ARCiS version 8364978ae865f683eb40848c3bdd1b149f3cc406
+==================================================================
+input file: test2.dat
+Number of molecules:         10                
+Number of clouds:             0                
+Number of collision pairs:    2                
+Number of observations:       0                
+Stellar mass:      0.6830           Msun
+Stellar T:      4425.0000           K
+Stellar radius:    0.6700           Rsun
+Stellar logg:      4.6330           
+Metallicity:       0.0000           
+Planet orbit:    0.0553             AU
+Planet radius:     0.9240           Rjup
+Planet mass:       0.0960           Mjup
+Mass uncert.:      0.0071           Mjup
+Blackbody T:     742.6066           K
+Orbital period:    5.7210           days
+Planet logg:    2.465            
+==================================================================
+Reading in correlated k-tables for H2O
+   wavelength range: 2.38E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 2.90E+03 K
+reading UV opacities for lambda < 2.50E-01 micron
+Reading in correlated k-tables for CO2
+   wavelength range: 5.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 3.50E+03 K
+Reading in correlated k-tables for CO
+   wavelength range: 4.35E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 2.90E+03 K
+Reading in correlated k-tables for CH4
+   wavelength range: 8.34E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 2.90E+03 K
+reading UV opacities for lambda < 8.38E-01 micron
+Reading in correlated k-tables for NH3
+   wavelength range: 5.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 1.90E+03 K
+reading UV opacities for lambda < 5.02E-01 micron
+Reading in correlated k-tables for H2
+   wavelength range: 5.00E-01 - 3.50E+01 micron
+     pressure range: 1.00E-07 - 1.00E+03 bar
+  temperature range: 7.10E+01 - 2.90E+03 K
+reading UV opacities for lambda < 5.02E-01 micron
+Opacity file not available: /Users/michielm/ARCiS/Data/Opacities/opacity_He.fits.gz
+setting opacities to 0
+Reading in correlated k-tables for SiO
+   wavelength range: 1.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for Na
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for K
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading CIA opacities
+Reading file:/Users/michielm/ARCiS/Data/CIA/H2-H2_combined.cia
+CIA: H2-H2
+Reading file:/Users/michielm/ARCiS/Data/CIA/H2-He_2011.cia
+CIA: H2-He
+==================================================================
+Initialisation time:      20.87 s
+==================================================================
+hotspot shift:   0.00               degrees
+Computing multiple 1D structures
+
+Day-side albedo: 0.500
+Raytracing over the planet disk in 3D
+
+Teff:     720.43          K
+Model runtime:             1.78 s
+==================================================================
+Writing spectrum to: ref_test2/star
+Writing spectrum to: ref_test2/irradiation
+Writing spectrum to: ref_test2/emis
+Writing spectrum to: ref_test2/emisR
+Writing spectrum to: ref_test2/trans
+Writing spectrum to: ref_test2/trans_split
+Writing spectrum to: ref_test2/phase
+Writing phasecurve to: ref_test2/phasecurve
+Writing tau1depth to: ref_test2/tau1depth
+Writing cloud optical depth to: ref_test2/cloudtau
+==================================================================
+==================================================================
+Total runtime:            22.68 s
+All done!
+==================================================================

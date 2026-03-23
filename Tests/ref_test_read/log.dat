@@ -1,0 +1,189 @@
+Output dir: ref_test_read/
+==================================================================
+         ARtful modelling code for exoplanet Science - ARCiS
+==================================================================
+By using ARCiS you agree to the terms of use.
+It basically means you consult with any of the authors before
+publication if there is any doubt on the outcome of the results.
+==================================================================
+Let's get the show on the road!!
+ARCiS version b01a70f4c77b7ade9b8725f52508d93e6ac371ff
+==================================================================
+input file: test_read.dat
+Number of molecules:         29                
+Number of clouds:             0                
+Number of collision pairs:    2                
+Number of observations:       0                
+Stellar mass:      0.7830           Msun
+Stellar T:      4969.0000           K
+Stellar radius:    0.7840           Rsun
+Stellar logg:      4.5100           
+Metallicity:       0.0000           
+Planet orbit:    0.0314             AU
+Planet radius:     1.1510           Rjup
+Planet mass:       1.1500           Mjup
+Mass uncert.:      0.0552           Mjup
+Blackbody T:    1196.7257           K
+Orbital period:    2.2190           days
+Planet logg:    3.352            
+==================================================================
+Reading in correlated k-tables for H2O
+   wavelength range: 2.38E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 2.90E+03 K
+reading UV opacities for lambda < 2.43E-01 micron
+Reading in correlated k-tables for CO2
+   wavelength range: 5.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 3.50E+03 K
+Reading in correlated k-tables for N2O
+   wavelength range: 5.00E-01 - 3.50E+01 micron
+     pressure range: 1.00E-07 - 1.00E+03 bar
+  temperature range: 7.10E+01 - 2.90E+03 K
+Reading in correlated k-tables for CO
+   wavelength range: 4.35E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 2.90E+03 K
+Reading in correlated k-tables for CH4
+   wavelength range: 8.34E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 2.90E+03 K
+reading UV opacities for lambda < 8.40E-01 micron
+Reading in correlated k-tables for O2
+   wavelength range: 2.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 4.50E+03 K
+reading UV opacities for lambda < 2.01E-01 micron
+Reading in correlated k-tables for NO
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for SO2
+   wavelength range: 1.25E+00 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 1.90E+03 K
+reading UV opacities for lambda < 1.26E+00 micron
+Reading in correlated k-tables for NO2
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for NH3
+   wavelength range: 5.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 1.90E+03 K
+reading UV opacities for lambda < 5.04E-01 micron
+Reading in correlated k-tables for OH
+   wavelength range: 1.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for H2CO
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for N2
+   wavelength range: 5.00E-01 - 3.50E+01 micron
+     pressure range: 1.00E-07 - 1.00E+03 bar
+  temperature range: 7.10E+01 - 2.90E+03 K
+reading UV opacities for lambda < 5.04E-01 micron
+Reading in correlated k-tables for HCN
+   wavelength range: 5.56E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 2.90E+03 K
+Reading in correlated k-tables for H2O2
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for C2H2
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for H2S
+   wavelength range: 2.86E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 2.90E+03 K
+reading UV opacities for lambda < 2.88E-01 micron
+Reading in correlated k-tables for O
+   wavelength range: 5.00E-01 - 3.50E+01 micron
+     pressure range: 1.00E-07 - 1.00E+03 bar
+  temperature range: 7.10E+01 - 2.90E+03 K
+Reading in correlated k-tables for C2H4
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for H2
+   wavelength range: 5.00E-01 - 3.50E+01 micron
+     pressure range: 1.00E-07 - 1.00E+03 bar
+  temperature range: 7.10E+01 - 2.90E+03 K
+reading UV opacities for lambda < 5.04E-01 micron
+Reading in correlated k-tables for CS
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Opacity file not available: /Users/michielm/ARCiS/Data/Opacities/opacity_He.fits.gz
+setting opacities to 0
+Reading in correlated k-tables for C2
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for NH
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for CH
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for CN
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for NH
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for NS
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading in correlated k-tables for SH
+   wavelength range: 1.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading CIA opacities
+Reading file:/Users/michielm/ARCiS/Data/CIA/H2-H2_combined.cia
+CIA: H2-H2
+Reading file:/Users/michielm/ARCiS/Data/CIA/H2-He_2011.cia
+CIA: H2-He
+==================================================================
+Initialisation time:      69.52 s
+==================================================================
+log(g) [cgs]:    3.352            
+Mean molecular weight:    2.351            
+log(g) [cgs]:    3.352            
+Mean molecular weight:    2.351            
+log(g) [cgs]:    3.352            
+Mean molecular weight:    2.351            
+C/O:    0.465            
+[O]:    0.085            
+[C]:    0.013            
+....................
+....................
+Opacity computation:      71.51 s
+==================================================================
+Raytracing over the planet disk
+Teff:    1229.98          K
+==================================================================
+Writing spectrum to: ref_test_read/star
+Writing spectrum to: ref_test_read/irradiation
+Writing spectrum to: ref_test_read/emis
+Writing spectrum to: ref_test_read/emisR
+Writing spectrum to: ref_test_read/trans
+Writing spectrum to: ref_test_read/phase
+Writing phasecurve to: ref_test_read/phasecurve
+Writing tau1depth to: ref_test_read/tau1depth
+Writing cloud optical depth to: ref_test_read/cloudtau
+==================================================================
+==================================================================
+Total runtime:            99.48 s
+All done!
+==================================================================

@@ -72,10 +72,11 @@
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
 		if(lamemis(i).and.computelam(i)) then
-		write(30,form) lam_out(i),
-c     &					flux(0:ncc,i)
-c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam(i+1))
-     &					(phase(1,j,i)+flux(j,i),j=0,ncc)
+			if(nclouds.gt.0) then
+				write(30,form) lam_out(i),(phase(1,j,i)+flux(j,i),j=0,ncc)
+			else
+				write(30,form) lam_out(i),phase(1,0,i)+flux(0,i)
+			endif
 		endif
 	enddo
 	close(unit=30)
@@ -94,9 +95,11 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
 		if(lamemis(i).and.computelam(i)) then
-		write(30,form) lam_out(i),
-c     &					flux(0:ncc,i)/(Fstar(i)*1d23/distance**2)
-     &					((phase(1,j,i)+flux(j,i))/(Fstar(i)*1d23/distance**2),j=0,ncc)
+			if(nclouds.gt.0) then
+				write(30,form) lam_out(i),((phase(1,j,i)+flux(j,i))/(Fstar(i)*1d23/distance**2),j=0,ncc)
+			else
+				write(30,form) lam_out(i),(phase(1,0,i)+flux(0,i))/(Fstar(i)*1d23/distance**2)
+			endif
 		endif
 	enddo
 	close(unit=30)
@@ -143,8 +146,11 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 	form='(f14.6,' // int2string(ncc+1,'(i3)') // 'es19.7E3)'
 	do i=1,nlam_out
 		if(computelam(i)) then
-			write(30,form) lam_out(i),
-     &					obsA(0:ncc,i)/(pi*Rstar**2)
+			if(nclouds.gt.0) then
+				write(30,form) lam_out(i),obsA(0:ncc,i)/(pi*Rstar**2)
+			else
+				write(30,form) lam_out(i),obsA(0,i)/(pi*Rstar**2)
+			endif
     	endif
 	enddo
 	close(unit=30)

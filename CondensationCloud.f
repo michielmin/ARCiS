@@ -1126,7 +1126,7 @@ c	print*,xv_bot(1:7)
 	endif
 
 	if(writefiles) then
-		open(unit=20,file='Tevap.dat',RECL=6000)
+		open(unit=20,file=trim(outputdir) // 'Tevap.dat',RECL=6000)
 		form='("#",a18,' // trim(int2string(nCS,'(i4)')) // 'a23)'
 		write(20,form) "T[K]",(trim(CSname(i)),i=1,nCS)
 		form='(es19.7E3,' // trim(int2string(nCS,'(i4)')) // 'es23.7E3)'
