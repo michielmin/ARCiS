@@ -86,7 +86,10 @@ def compare_files(output_file, reference_file, tolerance):
         return (True, maxerr)
 
 def main():
-    # Configuration
+	# ANSI color codes
+	GREEN = "\033[92m"
+	RED = "\033[91m"
+	RESET = "\033[0m"
 
 	all_passed = True
 	for test in tests:
@@ -102,30 +105,30 @@ def main():
 			reference_file = os.path.join(test["reference_dir"], filename)
 
 			if not os.path.exists(output_file):
-				print(f"Error: {output_file} not generated.")
+				print(f"{RED}Error: {RESET}{output_file} not generated.")
 				all_passed = False
 				continue
 
 			if not os.path.exists(reference_file):
-				print(f"Error: Reference file {reference_file} not found.")
+				print(f"{RED}Error: {RESET}Reference file {reference_file} not found.")
 				all_passed = False
 				continue
 
 			result, maxerr = compare_files(output_file, reference_file, test["tolerance"])
 			if not result:
-				print(f"FAIL: {filename} does not match reference.")
-				print(f"       maximum error = {maxerr:.2e}")
+				print(f"{RED}FAIL: {RESET}{filename} does not match reference.")
+				print(f"      maximum error = {RED}{maxerr:.2e}{RESET}")
 				all_passed = False
 			else:
-				print(f"PASS: {filename} matches reference.")
+				print(f"{GREEN}PASS: {RESET}{filename} matches reference.")
 				if maxerr > 0:
-					print(f"       maximum error = {maxerr:.2e}")
+					print(f"      maximum error = {GREEN}{maxerr:.2e}{RESET}")
 
 	print("==========================================")
 	if all_passed:
-		print("All tests passed!")
+		print(f"{GREEN}All tests passed!{RESET}")
 	else:
-		print("Some tests failed.")
+		print(f"{RED}Some tests failed.{RESET}")
 
 if __name__ == "__main__":
     main()
