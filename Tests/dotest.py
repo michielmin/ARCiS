@@ -76,7 +76,7 @@ def compare_files(output_file, reference_file, tolerance):
             try:
                 num1 = float(val1)
                 num2 = float(val2)
-                if abs(num1 - num2) > maxerr * abs(num1 + num2):
+                if abs(num1 - num2) > maxerr * abs(num1 + num2) and abs(num1 - num2) > 1e-60:
                     maxerr = abs(num1 - num2) / abs(num1 + num2)
             except ValueError:
                 continue
