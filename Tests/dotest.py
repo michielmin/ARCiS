@@ -7,6 +7,27 @@ from pathlib import Path
 
 tests = [
     {
+        "name": "SAG26_tau0.1",
+        "input_file": "SAG26_tau0.1.in",
+        "reference_dir": "ref_SAG26_tau0.1",
+        "files_to_compare": ["phase"],
+        "tolerance": 1e-6,
+    },
+    {
+        "name": "SAG26_tau1.0",
+        "input_file": "SAG26_tau1.0.in",
+        "reference_dir": "ref_SAG26_tau1.0",
+        "files_to_compare": ["phase"],
+        "tolerance": 1e-6,
+    },
+    {
+        "name": "SAG26_tau10.0",
+        "input_file": "SAG26_tau10.0.in",
+        "reference_dir": "ref_SAG26_tau10.0",
+        "files_to_compare": ["phase"],
+        "tolerance": 1e-6,
+    },
+    {
         "name": "test_read",
         "input_file": "test_read.dat",
         "reference_dir": "ref_test_read",

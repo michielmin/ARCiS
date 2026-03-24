@@ -1,0 +1,73 @@
+Output dir: ref_SAG26_tau0.1/
+==================================================================
+         ARtful modelling code for exoplanet Science - ARCiS
+==================================================================
+By using ARCiS you agree to the terms of use.
+It basically means you consult with any of the authors before
+publication if there is any doubt on the outcome of the results.
+==================================================================
+Let's get the show on the road!!
+ARCiS version 1c8f7b155b2ae7decdd4a3d263d69e61bad8ad27
+==================================================================
+input file: SAG26_tau0.1.in
+Number of molecules:          2                
+Number of clouds:             1                
+Number of collision pairs:    0                
+Number of observations:       0                
+Stellar mass:      1.0000           Msun
+Stellar T:      5777.0000           K
+Stellar radius:    1.0000           Rsun
+Stellar logg:      4.4300           
+Metallicity:       0.0000           
+Planet orbit:    1.0000             AU
+Planet radius:     0.0892           Rjup
+Planet mass:       0.0031           Mjup
+Mass uncert.:      0.0000           Mjup
+Blackbody T:     278.5307           K
+Orbital period:   -1.0000           days
+Planet mass:    0.003             Mjup
+Planet mass:    0.976             Mearth
+==================================================================
+Setting up cloud:    1
+==================================================================
+Cross sections not available: /Users/michielm/ARCiS/Data/Opacities/xs_H2O.fits.gz
+Switching to low res k-tables
+Reading in correlated k-tables for H2O
+   wavelength range: 2.38E-01 - 5.00E+01 micron
+     pressure range: 1.00E-08 - 1.00E+03 bar
+  temperature range: 5.00E+01 - 2.90E+03 K
+reading UV opacities for lambda < 4.00E-01 micron
+Cross sections not available: /Users/michielm/ARCiS/Data/Opacities/xs_N2.fits.gz
+Switching to low res k-tables
+Reading in correlated k-tables for N2
+   wavelength range: 5.00E-01 - 3.50E+01 micron
+     pressure range: 1.00E-07 - 1.00E+03 bar
+  temperature range: 7.10E+01 - 2.90E+03 K
+reading UV opacities for lambda < 5.03E-01 micron
+==================================================================
+Initialisation time:       5.05 s
+==================================================================
+hotspot shift:   0.00               degrees
+Computing multiple 1D structures
+
+Day-side albedo: 0.500
+Raytracing over the planet disk in 3D
+
+Teff:     243.17          K
+Model runtime:            12.60 s
+==================================================================
+Writing spectrum to: ref_SAG26_tau0.1/star
+Writing spectrum to: ref_SAG26_tau0.1/irradiation
+Writing spectrum to: ref_SAG26_tau0.1/emis
+Writing spectrum to: ref_SAG26_tau0.1/emisR
+Writing spectrum to: ref_SAG26_tau0.1/trans
+Writing spectrum to: ref_SAG26_tau0.1/trans_split
+Writing spectrum to: ref_SAG26_tau0.1/phase
+Writing phasecurve to: ref_SAG26_tau0.1/phasecurve
+Writing tau1depth to: ref_SAG26_tau0.1/tau1depth
+Writing cloud optical depth to: ref_SAG26_tau0.1/cloudtau
+==================================================================
+==================================================================
+Total runtime:            17.68 s
+All done!
+==================================================================
