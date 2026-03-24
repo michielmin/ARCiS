@@ -4,7 +4,7 @@
 	use Constants
 	IMPLICIT NONE
 	integer nPvulc,i,j,k,nmol_ex,info,MASK
-	parameter(nmol_ex=11)
+	parameter(nmol_ex=12)
 	parameter(nPvulc=150)
 	real*8 x(10),N_H,n_H_Solar,Z,Pvulc(nPvulc),y(nPvulc*nmol_ex)
 	real*8 C_O,S_O,S_O_Solar,C_O_Solar
@@ -12,7 +12,7 @@
 	integer nx,ny,init,imol
 	integer imol_ex(nmol_ex)
 	character*4 cmol_ex(nmol_ex)
-	parameter(cmol_ex = (/ "H2O ","CO  ","CO2 ","CH4 ","NH3 ","H2S ","HCN ","C2H2","NS  ","OCS ","SO2 " /))
+	parameter(cmol_ex = (/ "H2O ","CO  ","CO2 ","CH4 ","NH3 ","H2S ","HCN ","C2H2","NS  ","OCS ","SO2 ","CS2 " /))
 	character*500 command
 	character*20 xname(10)
 
