@@ -419,6 +419,40 @@ C	 create the new empty FITS file
 	allocate(lamF(Ktable(imol)%nlam+1))
 	call ftgpvd(unit,group,firstpix,npixels,nullval,lamF(1:Ktable(imol)%nlam),anynull,status)
 
+
+	!  Check for any error, and if so print out error messages
+	!  Get the text string which describes the error
+	if (status > 0) then
+	   call ftgerr(status,errtext)
+	   call output('error in reading fits file' // int2string(status,'(i6)'))
+
+	   !  Read and print out all the error messages on the FITSIO stack
+	   call ftgmsg(errmessage)
+	   do while (errmessage .ne. ' ')
+		  print *,errmessage
+		  call ftgmsg(errmessage)
+	   end do
+	endif
+
+	!------------------------------------------------------------------------
+	! HDU 4: weights for the correlated-k points (if available)
+	!------------------------------------------------------------------------
+	!  move to next hdu
+	call ftmrhd(unit,1,hdutype,status)	
+	if(status.eq.0) then
+		call output("Found specific weights for the correlated-k points")
+		! Check dimensions
+		call ftgknj(unit,'NAXIS',1,1,naxes,nfound,status)
+
+		npixels=naxes(1)
+		if(npixels.eq.Ktable(imol)%ng) then
+			! read_image
+			call ftgpvd(unit,group,firstpix,npixels,nullval,Ktable(imol)%wg,anynull,status)
+		else
+			call output("weights for correlated-k points corrupted")
+		endif
+	endif
+
 	lamF(Ktable(imol)%nlam+1)=lamF(Ktable(imol)%nlam)**2/sqrt(lamF(Ktable(imol)%nlam)*lamF(Ktable(imol)%nlam-1))
 	do ilam=Ktable(imol)%nlam,2,-1
 		lamF(ilam)=sqrt(lamF(ilam)*lamF(ilam-1))
@@ -497,20 +531,6 @@ C	 create the new empty FITS file
 	!  Close the file and free the unit number.
 	call ftclos(unit, status)
 	call ftfiou(unit, status)
-
-	!  Check for any error, and if so print out error messages
-	!  Get the text string which describes the error
-	if (status > 0) then
-	   call ftgerr(status,errtext)
-	   call output('error in reading fits file' // int2string(status,'(i6)'))
-
-	   !  Read and print out all the error messages on the FITSIO stack
-	   call ftgmsg(errmessage)
-	   do while (errmessage .ne. ' ')
-		  print *,errmessage
-		  call ftgmsg(errmessage)
-	   end do
-	endif
 
 100	continue
 	if(.true.) then
