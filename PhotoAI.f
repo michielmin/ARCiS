@@ -16,6 +16,7 @@
 	character*500 command
 	character*20 xname(10)
 
+	imol_ex=0
 	do i=1,nmol_ex
 		do j=1,nmol
 			if(trim(molname(j)).eq.trim(cmol_ex(i))) then
@@ -76,12 +77,14 @@
 
 	k=0
 	do i=1,nmol_ex
-		do j=1,nPvulc
-			k=k+1
-			mixrat_ex(j)=y(k)
-		enddo
-		call regridarray(-log(Pvulc(1:nPvulc)),log(mixrat_ex(1:nPvulc)),nPvulc,-log(P(1:nr)),mixrat_r(1:nr,imol_ex(i)),nr)
-		mixrat_r(1:nr,imol_ex(i))=exp(mixrat_r(1:nr,imol_ex(i)))
+		if(imol_ex(i).gt.0) then
+			do j=1,nPvulc
+				k=k+1
+				mixrat_ex(j)=y(k)
+			enddo
+			call regridarray(-log(Pvulc(1:nPvulc)),log(mixrat_ex(1:nPvulc)),nPvulc,-log(P(1:nr)),mixrat_r(1:nr,imol_ex(i)),nr)
+			mixrat_r(1:nr,imol_ex(i))=exp(mixrat_r(1:nr,imol_ex(i)))
+		endif
 	enddo
 
 	if(useEOS) then
