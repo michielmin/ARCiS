@@ -2667,6 +2667,7 @@ c number of cloud/nocloud combinations
 	integer :: slots
 	character(len=256) :: nslots, queue
 
+#ifdef USE_OPENMP
 	nslots = ''
 	queue  = ''
 	slots  = 0
@@ -2690,6 +2691,7 @@ c number of cloud/nocloud combinations
 			call output("  WARNING: NSLOTS present but could not parse: '" // trim(nslots) // "'")
 		end if
 	end if
+#endif
 
 	return
 	end
