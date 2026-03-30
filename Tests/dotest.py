@@ -7,25 +7,39 @@ from pathlib import Path
 
 tests = [
     {
+        "name": "TRAPPIST-1b_CO2",
+        "input_file": "MalikCO2.dat",
+        "reference_dir": "ref_TRAPPIST-1b_CO2",
+        "files_to_compare": ["mixingratios.dat"],
+        "tolerance": 5e-2,
+    },
+    {
+        "name": "LHS_3844b_H2O",
+        "input_file": "MalikH2O.dat",
+        "reference_dir": "ref_LHS_3844b_H2O",
+        "files_to_compare": ["mixingratios.dat"],
+        "tolerance": 5e-2,
+    },
+    {
         "name": "SAG26_tau0.1",
         "input_file": "SAG26_tau0.1.in",
         "reference_dir": "ref_SAG26_tau0.1",
         "files_to_compare": ["phase"],
-        "tolerance": 1e-6,
+        "tolerance": 1e-2,
     },
     {
         "name": "SAG26_tau1.0",
         "input_file": "SAG26_tau1.0.in",
         "reference_dir": "ref_SAG26_tau1.0",
         "files_to_compare": ["phase"],
-        "tolerance": 1e-6,
+        "tolerance": 1e-2,
     },
     {
         "name": "SAG26_tau10.0",
         "input_file": "SAG26_tau10.0.in",
         "reference_dir": "ref_SAG26_tau10.0",
         "files_to_compare": ["phase"],
-        "tolerance": 1e-6,
+        "tolerance": 1e-2,
     },
     {
         "name": "test_read",

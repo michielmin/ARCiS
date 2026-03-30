@@ -682,9 +682,11 @@ c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(
 	write(30,'("# Temperature: ",f10.3," K")') T(ir)
 	write(30,'("#",a13,a19)') "lambda [mu]","kappa [cm^2/mol]"
 	do i=1,nnu0
+		if(computelam(i)) then
 		do j=1,ng0
 			write(30,'(f12.6,es19.7E3)') 1d4/nu0(i),kappa0(i,j)
 		enddo
+		endif
 	enddo
 	close(unit=30)
 	

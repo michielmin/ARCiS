@@ -285,7 +285,7 @@ c			call sortidx_2(kappa_tot(1:nfull),ifull(1:nfull),nfull)
 				enddo
 			enddo
 			call WriteOpacity(ir,"aver",freq,kaver(1:nlam),nlam,1)
-			call WriteOpacity(ir,"scat",freq,Csca(ir,1:nlam)*Ndens(ir)/dens(ir),nlam,1)
+			call WriteOpacity(ir,"scat",freq,Csca(ir,1:nlam),nlam,1)
 		endif
 	enddo
 

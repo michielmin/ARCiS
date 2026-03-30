@@ -1,0 +1,84 @@
+Output dir: LHS_3844b_H2O/
+==================================================================
+         ARtful modelling code for exoplanet Science - ARCiS
+==================================================================
+By using ARCiS you agree to the terms of use.
+It basically means you consult with any of the authors before
+publication if there is any doubt on the outcome of the results.
+==================================================================
+Let's get the show on the road!!
+ARCiS version 4056aa2951b3a98251140b3865d3190d41190778
+==================================================================
+input file: Malik.dat
+Command line argument: H2O=1d0
+Command line argument: CO2=0d0
+Command line argument: planetname=LHS_3844b
+Number of molecules:          4                
+Number of clouds:             0                
+Number of collision pairs:    3                
+Number of observations:       0                
+Stellar mass:      0.0898           Msun
+Stellar T:      2566.0000           K
+Stellar radius:    0.1192           Rsun
+Stellar logg:      5.2396           
+Metallicity:       0.0000           
+Planet orbit:    0.0115             AU
+Planet radius:     0.0996           Rjup
+Planet mass:       0.0043           Mjup
+Mass uncert.:      0.0003           Mjup
+Blackbody T:     397.6148           K
+Orbital period:    1.5110           days
+Stellar mass:      0.1510           Msun
+Stellar T:      3036.0000           K
+Stellar radius:    0.1890           Rsun
+Stellar logg:      5.0600           
+Metallicity:       0.0000           
+Planet orbit:    0.0062             AU
+Planet radius:     0.1180           Rjup
+Planet mass:       0.0130           Mjup
+Mass uncert.:      1.4142           Mjup
+Blackbody T:     806.2307           K
+Orbital period:    0.4630           days
+Planet logg:    3.384            
+==================================================================
+Reading in correlated k-tables for H2O
+   wavelength range: 1.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+reading UV opacities for lambda < 2.36E-01 micron
+Reading in correlated k-tables for CO2
+   wavelength range: 3.00E-01 - 5.00E+01 micron
+     pressure range: 1.00E-05 - 1.00E+02 bar
+  temperature range: 1.00E+02 - 3.40E+03 K
+Reading CIA opacities
+Reading file:/Users/michielm/ARCiS/Data/CIA/CO2-CO2_combined.cia
+CIA: CO2-CO2
+Reading file:/Users/michielm/ARCiS/Data/CIA/H2-H2_combined.cia
+CIA: H2-H2
+Reading file:/Users/michielm/ARCiS/Data/CIA/H2-He_2011.cia
+CIA: H2-He
+==================================================================
+Initialisation time:      36.05 s
+==================================================================
+hotspot shift:   0.00               degrees
+Computing multiple 1D structures
+
+Day-side albedo: 0.005
+Raytracing over the planet disk in 3D
+
+Teff:     804.19          K
+==================================================================
+Writing spectrum to: LHS_3844b_H2O/star
+Writing spectrum to: LHS_3844b_H2O/irradiation
+Writing spectrum to: LHS_3844b_H2O/emis
+Writing spectrum to: LHS_3844b_H2O/emisR
+Writing spectrum to: LHS_3844b_H2O/trans
+Writing spectrum to: LHS_3844b_H2O/trans_split
+Writing spectrum to: LHS_3844b_H2O/phase
+Writing tau1depth to: LHS_3844b_H2O/tau1depth
+Writing cloud optical depth to: LHS_3844b_H2O/cloudtau
+==================================================================
+==================================================================
+Total runtime:           187.06 s
+All done!
+==================================================================

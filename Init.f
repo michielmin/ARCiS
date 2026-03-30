@@ -2046,8 +2046,18 @@ c k is proportional to Rplanet and grav
 					endif
 				endif
 			enddo
+5			if(j.gt.2) then
+				call sort(P0,j-1)
+				do i=1,j-2
+					if(P0(i).eq.P0(i+1)) then
+						P0(i:j-2)=P0(i+1:j-1)
+						j=j-1
+						goto 5
+					endif
+				enddo
+			endif
 			do i=j,nr
-				P0(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-1)/real(nr-1))
+				P0(i)=exp(log(Pmin)+log(Pmax/Pmin)*real(i-j)/real(nr-j))
 			enddo
 			call sort(P0,nr)
 		else
