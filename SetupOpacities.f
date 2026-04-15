@@ -320,55 +320,55 @@ c For other than H2 from Sneep & Ubachs (2005)
 	Cs=0d0
 	do j=1,nmol
 		if(mixrat_r(ir,j).gt.0d0) then
-			select case(j)
-				case(2) !CO2
+			select case(molname(j))
+				case("CO2")
 c Sneep & Ubachs (2005)
 					Cs=Cs+28.499d-45*mixrat_r(ir,j)*ll2**(4.1343/4.0)
-				case(4) !N2O
+				case("N2O")
 c Sneep & Ubachs (2005)
 					Cs=Cs+15.90e-27*mixrat_r(ir,j)*(ll2/18788.4**4)
-				case(5) !CO
+				case("CO")
 c Sneep & Ubachs (2005)
 					Cs=Cs+6.19e-27*mixrat_r(ir,j)*(ll2/18788.4**4)
-				case(6) !CH4
+				case("CH4")
 c Sneep & Ubachs (2005)
 					Cs=Cs+12.47e-27*mixrat_r(ir,j)*(ll2/18788.4**4)
-				case(22) !N2
+				case("N2")
 c Sneep & Ubachs (2005)
 					Cs=Cs+16.31d-45*mixrat_r(ir,j)*ll2**(4.0974/4.0)
-				case(30) !SF6
+				case("SF6")
 c Sneep & Ubachs (2005)
 					Cs=Cs+32.3e-27*mixrat_r(ir,j)*(ll2/18788.4**4)
-				case(45) ! H2
+				case("H2")
 c Dalgarno & Williams (1962)
 					Cs=Cs+mixrat_r(ir,j)*(8.14d-45*ll2+1.28d-54*ll2*ll+1.61d-64*ll2*ll2)
-				case(1) !H2O
+				case("H2O")
 					Cs=Cs+3.555040361134916e-44*mixrat_r(ir,j)*ll2
-				case(48) ! He
+				case("He")
 c https://www.climate-policy-watcher.org/surface-temperature/scattering-by-molecules-rayleigh-scattering.html
 					Cs=Cs+0.0641*mixrat_r(ir,j)*(8.14d-45*ll2+1.28d-54*ll2*ll+1.61d-64*ll2*ll2)
-				case(64) ! H
+				case("H")
 c from Helios source code
 					Cs=Cs+mixrat_r(ir,j)*RayleighHatom(lam(i))
-				case(11) ! NH3
+				case("NH3")
 c https://www.climate-policy-watcher.org/surface-temperature/scattering-by-molecules-rayleigh-scattering.html
 					Cs=Cs+7.3427*mixrat_r(ir,j)*(8.14d-45*ll2+1.28d-54*ll2*ll+1.61d-64*ll2*ll2)
-				case(13) ! OH
+				case("OH")
 c Tarafdar and Vardya 1973
 					Cs=Cs+(12.41**2)*mixrat_r(ir,j)*13056.839884384113d-50*ll2
-				case(54) ! SiO
+				case("SiO")
 c Tarafdar and Vardya 1973
 					Cs=Cs+(26.41**2)*mixrat_r(ir,j)*13056.839884384113d-50*ll2
-				case(23) ! HCN
+				case("HCN")
 c Tarafdar and Vardya 1973
 					Cs=Cs+(25.54**2)*mixrat_r(ir,j)*13056.839884384113d-50*ll2
-				case(31) ! H2S
+				case("H2S")
 c Tarafdar and Vardya 1973
 					Cs=Cs+(32.14**2)*mixrat_r(ir,j)*13056.839884384113d-50*ll2
-				case(38) ! C2H4
+				case("C2H4")
 c Tarafdar and Vardya 1973
 					Cs=Cs+(42.61**2)*mixrat_r(ir,j)*13056.839884384113d-50*ll2
-c				case(9) ! SO2 (but taken the value from CO2 as a poor-man's solution)
+c				case("SO2") (but taken the value from CO2 as a poor-man's solution)
 c Sneep & Ubachs (2005)
 c					Cs=Cs+28.499d-47*mixrat_r(ir,j)*ll2**(4.1343/4.0)
 			end select

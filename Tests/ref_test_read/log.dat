@@ -1,4 +1,4 @@
-Output dir: ref_test_read/
+Output dir: run_test_read/
 ==================================================================
          ARtful modelling code for exoplanet Science - ARCiS
 ==================================================================
@@ -7,7 +7,7 @@ It basically means you consult with any of the authors before
 publication if there is any doubt on the outcome of the results.
 ==================================================================
 Let's get the show on the road!!
-ARCiS version b01a70f4c77b7ade9b8725f52508d93e6ac371ff
+ARCiS version 55a2b794a3e364547e8eb08ddb81c17ecc96f99c
 ==================================================================
 input file: test_read.dat
 Number of molecules:         29                
@@ -137,10 +137,6 @@ Reading in correlated k-tables for CN
    wavelength range: 3.00E-01 - 5.00E+01 micron
      pressure range: 1.00E-05 - 1.00E+02 bar
   temperature range: 1.00E+02 - 3.40E+03 K
-Reading in correlated k-tables for NH
-   wavelength range: 3.00E-01 - 5.00E+01 micron
-     pressure range: 1.00E-05 - 1.00E+02 bar
-  temperature range: 1.00E+02 - 3.40E+03 K
 Reading in correlated k-tables for NS
    wavelength range: 3.00E-01 - 5.00E+01 micron
      pressure range: 1.00E-05 - 1.00E+02 bar
@@ -155,7 +151,7 @@ CIA: H2-H2
 Reading file:/Users/michielm/ARCiS/Data/CIA/H2-He_2011.cia
 CIA: H2-He
 ==================================================================
-Initialisation time:      69.52 s
+Initialisation time:      70.28 s
 ==================================================================
 log(g) [cgs]:    3.352            
 Mean molecular weight:    2.351            
@@ -168,22 +164,22 @@ C/O:    0.465
 [C]:    0.013            
 ....................
 ....................
-Opacity computation:      71.51 s
+Opacity computation:      72.33 s
 ==================================================================
 Raytracing over the planet disk
 Teff:    1229.98          K
 ==================================================================
-Writing spectrum to: ref_test_read/star
-Writing spectrum to: ref_test_read/irradiation
-Writing spectrum to: ref_test_read/emis
-Writing spectrum to: ref_test_read/emisR
-Writing spectrum to: ref_test_read/trans
-Writing spectrum to: ref_test_read/phase
-Writing phasecurve to: ref_test_read/phasecurve
-Writing tau1depth to: ref_test_read/tau1depth
-Writing cloud optical depth to: ref_test_read/cloudtau
+Writing spectrum to: run_test_read/star
+Writing spectrum to: run_test_read/irradiation
+Writing spectrum to: run_test_read/emis
+Writing spectrum to: run_test_read/emisR
+Writing spectrum to: run_test_read/trans
+Writing spectrum to: run_test_read/phase
+Writing phasecurve to: run_test_read/phasecurve
+Writing tau1depth to: run_test_read/tau1depth
+Writing cloud optical depth to: run_test_read/cloudtau
 ==================================================================
 ==================================================================
-Total runtime:            99.48 s
+Total runtime:            99.34 s
 All done!
 ==================================================================
