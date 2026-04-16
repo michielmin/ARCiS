@@ -10,7 +10,7 @@
 	logical,allocatable :: docloud0(:,:)
 	real*8,allocatable :: spec(:,:),specR(:),lamR(:),specRexp(:),specErr(:),Fstar_obs(:)
 	real*8 x,specres_obs,expspecres_obs,gasdev,tot,Dmirror,f_phot,noisefloor,molweight(nmol),Tweight,Pweight
-	real*8 lam_out(nlam),spec_out(nlam),Ca,Cs,tau,tautot,F11(180),G
+	real*8 lam_out(nlam),spec_out(nlam),Ca,Cs,tau,tautot,F11(180),G,scalestar
 	integer nlam_out
 	integer ilam,j,nj,nlamR,i_instr,k,ir
 	character*1000 line,instr_add
@@ -296,6 +296,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 	do i_instr=1,n_instr
 	
 	instr_add=instrument(i_instr)
+	scalestar=1d0
 	select case(instrument(i_instr))
 		case("ARIEL")
 			nlamR=52
@@ -347,6 +348,32 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 			Dmirror=2.4d0
 			f_phot=0.1d0
 			noisefloor=100d-6
+		case("HWO")
+			nlam_out=0
+			do i=1,nlam
+				if(computelam(i)) then
+					nlam_out=nlam_out+1
+				endif
+			enddo
+			nlamR=nlam_out
+			allocate(lamR(nlamR))
+			allocate(specR(nlamR))
+			allocate(specRexp(nlamR))
+			allocate(specErr(nlamR))
+			nlam_out=0
+			do i=1,nlam
+				if(computelam(i)) then
+					nlam_out=nlam_out+1
+					lamR(nlam_out)=lam(i)
+				endif
+			enddo
+			specR=specres
+			specRexp=2d0
+			Dmirror=7d0
+			f_phot=0.25d0
+			noisefloor=1d-12
+			scalestar=1d-10
+			instr_ntrans(i_instr)=instr_tint(i_instr)/(2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)/3600d0)
 		case("obs","OBS")
 			instr_add="obs" // trim(int2string(instr_nobs(i_instr),'(i0.3)'))
 			instr_ntrans(i_instr)=1d0
@@ -371,6 +398,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 			allocate(specErr(nlamR))
 			call ReadSimInstrument(instrument(i_instr),lamR,specR,specRexp,specErr,nlamR)
 	end select
+	instr_tint(i_instr)=(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
 	allocate(spec(nphase,nlamR))
 	allocate(Fstar_obs(nlamR))
 	nlam_out=0
@@ -378,18 +406,18 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 		if(computelam(i)) then
 			nlam_out=nlam_out+1
 			lam_out(nlam_out)=lam(i)
-			spec_out(nlam_out)=Fstar(i)
+			spec_out(nlam_out)=scalestar*Fstar(i)*1d23/distance**2+phase(i,0,j)+flux(0,j)
 		endif
 	enddo
 	call regridspecres(lam_out,spec_out,nlam_out,
      &						lamR,Fstar_obs(1:nlamR),specR,specRexp,nlamR)
 	if(instr_add.ne."simulated".and.instr_add(1:3).ne."obs") then
 		do i=1,nlamR
-			tot=1.51d7*(Fstar_obs(i)*1d23/distance**2)
+			tot=1.51d7*(Fstar_obs(i))
 			tot=tot*(pi*(Dmirror/2d0)**2)
 			tot=tot*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
-			tot=tot*max(1d0,instr_ntrans(i_instr))*f_phot/specR(i)
-			specErr(i)=1d0/sqrt(tot)
+			tot=tot*instr_ntrans(i_instr)*f_phot/specR(i)
+			specErr(i)=scalestar/sqrt(tot)
 			if(specErr(i).lt.noisefloor) specErr(i)=noisefloor
 		enddo
 	endif
@@ -516,36 +544,22 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
      &					lamR,spec(1,1:nlamR),specR,specRexp,nlamR)
 	spec=spec/(pi*Rstar**2)
 
-	k=1
-	if(instr_ntrans(i_instr).lt.1d0) then
-		do ir=1,nr
-			if(P(ir).gt.1d0.and.P(ir+1).le.1d0) exit
-		enddo
-		x=(sqrt(Rstar/(2d0*Dplanet))*Tstar*kb)/((Ggrav*Mplanet/(Rplanet**2))*mp*2.3d0)
-		do i=1,nlamR
-			do while((sqrt(real(k))*(5d0*x*Rplanet/(Rstar**2))/specErr(i)).lt.(7d0*0.9d0))
-				k=k+1
-			enddo
-		enddo
-		call output("assuming " // trim(int2string(k,'(i5)')) // " orbits")
-	endif
 	filename=trim(outputdir) // "obs_trans_" // trim(instr_add) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
 	if(instr_add.ne."simulated") then
 		write(30,'("# transit time       : ",f10.3," sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
 		write(30,'("# number of transits : ",f10.3)') instr_ntrans(i_instr)
-		write(30,'("# integration time   : ",f10.3," hours")') 
-     &			(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
+		write(30,'("# integration time   : ",f10.3," hours")') instr_tint(i_instr)
 	endif
 	write(30,'("#",a13,4a19)') "lambda [mu]","Rp^2/Rstar^2","error","R"
 	form='(f14.6,4es19.7E3)'
 	do i=1,nlamR
-		write(30,form) lamR(i)/micron,spec(1,i),specErr(i)/sqrt(real(k)),specR(i)
+		write(30,form) lamR(i)/micron,spec(1,i),specErr(i),specR(i)
 	enddo
 	close(unit=30)
 	do i=1,nlamR
-		spec(1,i)=spec(1,i)+gasdev(idum)*specErr(i)/sqrt(real(k))
+		spec(1,i)=spec(1,i)+gasdev(idum)*specErr(i)
 	enddo
 	filename=trim(outputdir) // "obs_trans_noise_" // trim(instr_add) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
@@ -553,13 +567,12 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 	if(instr_add.ne."simulated") then
 		write(30,'("# transit time       : ",f10.3," sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
 		write(30,'("# number of transits : ",f10.3)') instr_ntrans(i_instr)
-		write(30,'("# integration time   : ",f10.3," hours")') 
-     &			(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
+		write(30,'("# integration time   : ",f10.3," hours")') instr_tint(i_instr)
 	endif
 	write(30,'("#",a13,4a19)') "lambda [mu]","Rp^2/Rstar^2","error","R"
 	form='(f14.6,4es19.7E3)'
 	do i=1,nlamR
-		write(30,form) lamR(i)/micron,spec(1,i),specErr(i)/sqrt(real(k)),specR(i)
+		write(30,form) lamR(i)/micron,spec(1,i),specErr(i),specR(i)
 	enddo
 	close(unit=30)
 
@@ -591,15 +604,14 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 	if(instr_add.ne."simulated") then
 		write(30,'("# transit time       : ",es19.7E3, "sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
 		write(30,'("# number of transits : ",es19.7E3)') instr_ntrans(i_instr)
-		write(30,'("# integration time   : ",es19.7E3,"hours")') 
-     &		2d0*(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
+		write(30,'("# integration time   : ",f10.3," hours")') instr_tint(i_instr)
 	endif
 	form='("#",a13,"        flux [Jy]","         error","             R")'
 	write(30,form) "lambda [mu]"
 	form='(f14.6,3es19.7E3)'
 	do i=1,nlamR
-c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(i)**2,specErr(i)/sqrt(real(k)),specR(i)
-		write(30,form) lamR(i)/micron,spec(1,i),specErr(i)/sqrt(real(k)),specR(i)
+c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(i)**2,specErr(i),specR(i)
+		write(30,form) lamR(i)/micron,spec(1,i),specErr(i),specR(i)
 	enddo
 	close(unit=30)
 	do j=1,nphase
@@ -611,20 +623,19 @@ c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(
 	if(instr_add.ne."simulated") then
 		write(30,'("# transit time       : ",es19.7E3, "sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
 		write(30,'("# number of transits : ",es19.7E3)') instr_ntrans(i_instr)
-		write(30,'("# integration time   : ",es19.7E3,"hours")') 
-     &		2d0*(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
+		write(30,'("# integration time   : ",f10.3," hours")') instr_tint(i_instr)
 	endif
 	form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         error","             R")'
 	write(30,form) "lambda [mu]",theta(1:nphase)
 	form='(f14.6,' // trim(int2string(nphase+2,'(i4)')) // 'es19.7E3)'
 	do i=1,nlamR
-		write(30,form) lamR(i)/micron,spec(1:nphase,i),specErr(i)/sqrt(real(k)),specR(i)
+		write(30,form) lamR(i)/micron,spec(1:nphase,i),specErr(i),specR(i)
 	enddo
 	close(unit=30)
 	do j=1,nphase
 		do i=1,nlamR
-			spec(j,i)=spec(j,i)+gasdev(idum)*specErr(i)/sqrt(real(k))
+			spec(j,i)=spec(j,i)+gasdev(idum)*specErr(i)
 		enddo
 	enddo
 	filename=trim(outputdir) // "obs_emisR_noise_" // trim(instr_add) // trim(side)
@@ -633,15 +644,14 @@ c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(
 	if(instr_add.ne."simulated") then
 		write(30,'("# transit time       : ",es19.7E3, "sec")') 2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
 		write(30,'("# number of transits : ",es19.7E3)') instr_ntrans(i_instr)
-		write(30,'("# integration time   : ",es19.7E3,"hours")') 
-     &		2d0*(instr_ntrans(i_instr)*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet))/3600d0
+		write(30,'("# integration time   : ",f10.3," hours")') instr_tint(i_instr)
 	endif
 	form='("#",a13,' // trim(int2string(nphase,'(i4)')) // 
      &				 '("   flux(",f5.1,") [Jy]"),"         error","             R")'
 	write(30,form) "lambda [mu]",theta(1:nphase)
 	form='(f14.6,' // trim(int2string(nphase+2,'(i4)')) // 'es19.7E3)'
 	do i=1,nlamR
-		write(30,form) lamR(i)/micron,spec(1:nphase,i),specErr(i)/sqrt(real(k)),specR(i)
+		write(30,form) lamR(i)/micron,spec(1:nphase,i),specErr(i),specR(i)
 	enddo
 	close(unit=30)
 

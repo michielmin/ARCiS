@@ -233,7 +233,8 @@ c for exchange when computing secondary atmosphere
 	real*8,allocatable :: mixrat_optEC_r(:)
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb,surf_lam1,surf_lam2,surf_alb1,surf_alb2,surf_alb3
-	real*8 fit_albedo_sigma,fit_albedo_l,Rp_prior,dRp_prior
+	real*8 fit_albedo_sigma,fit_albedo_l,fit_albedo_alpha,Rp_prior,dRp_prior
+	character*2 fit_albedo_kernel
 	logical fit_albedo
 	character*20 surfacetype
 	character*500 surfacefile,Full3Ddir
@@ -399,7 +400,7 @@ c for exchange when computing secondary atmosphere
 	integer nPom,nTom
 	character*500 opacitydir,specresfile,starfile
 	character*500,allocatable :: instrument(:)
-	real*8,allocatable :: instr_ntrans(:)
+	real*8,allocatable :: instr_ntrans(:),instr_tint(:)
 	real*8 Tmin,Tmax,minTprofile,maxTprofile,chimax,PphotMol(nmol_data)
 	real*8 sintheta(360),costheta(360)
 	logical,allocatable :: do_dB(:)

@@ -20,7 +20,7 @@
 	character*500 lowkey
 	integer ipmin,ipmax,ii
 	real*8 fit_albedo0,spec_albedo(2,nobs,nlam),f_ii,d
-	real*8,allocatable :: fitted_albedo(:,:,:),Kalb(:,:),aver_albedo(:,:),refl_surface(:,:,:)
+	real*8,allocatable :: fitted_albedo(:,:,:),Kalb(:,:),aver_albedo(:,:),refl_surface(:,:,:),Neff_fitalbedo(:)
 	real*8 alb1,alb2
 	integer nk,cov_iter,ncov_iter,j0
 	logical doCovObs(nobs)
@@ -87,6 +87,7 @@
 	if(useobsgrid) allocate(specobs(0:nmodels,nobs,nlam),sysobs(0:nmodels,nobs,nlam),
      &						fitted_albedo(0:nmodels,nobs,nlam),aver_albedo(0:nmodels,nobs),
      &						refl_surface(0:nmodels,nobs,nlam))
+	allocate(Neff_fitalbedo(0:nmodels))
 
 	spectrans=0d0
 	specemis=0d0
@@ -427,7 +428,7 @@ c		call cpu_time(stoptime)
 						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(iobs)%Cov_scaling**2*ObsSpec(iobs)%model(j)*ObsSpec(iobs)%model(ii)
 						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(iobs)%Cov_offset**2
 					enddo
-					spec(k)=ObsSpec(iobs)%y(j)+ObsSpec(iobs)%offset-specobs(i,iobs,j)/ObsSpec(iobs)%scale
+					spec(k)=ObsSpec(iobs)%y(j)+gasdev(idum)*ObsSpec(iobs)%dy(j)+ObsSpec(iobs)%offset-specobs(i,iobs,j)/ObsSpec(iobs)%scale
 				enddo
 			endif
 		enddo
@@ -441,16 +442,21 @@ c		call cpu_time(stoptime)
 			do j=1,nk
 				do ii=1,nk
 					d=(log(lamk(j))-log(lamk(ii)))
-					Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+					if(fit_albedo_kernel.eq.'RQ') then
+						Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*(1d0+((d/fit_albedo_l)**2)/(2d0*fit_albedo_alpha))**-fit_albedo_alpha
+					else
+						Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+					endif
 				enddo
 			enddo
-			call RemoveOffset(Kalb,nk,Rk(1:nk))
+c			call RemoveOffset(Kalb,nk,Rk(1:nk))
 			do j=1,nk
 				do ii=1,nk
 					Cov(j,ii)=Cov(j,ii)+(surfacealbedo**2*(1d0-surfacealbedo)**2)*(1d0/(alb2-alb1)**2)*
      &	(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*Kalb(j,ii)
 				enddo
 			enddo
+			call compute_neff(Cov, Cov_obs, nk, Neff_fitalbedo(i))
 
 			call dpotrf('L', nk, Cov, nk, info)
 			specinv=spec
@@ -465,6 +471,8 @@ c		call cpu_time(stoptime)
 					fitted_albedo(i,iobsk(j),jk(j))=fitted_albedo(i,iobsk(j),jk(j))+(surfacealbedo*(1d0-surfacealbedo))*
      &						Kalb(j,ii)*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*specinv(ii)/(alb2-alb1)
 				enddo
+			enddo
+			do j=1,nk
 				fitted_albedo(i,iobsk(j),jk(j))=1d0/(1d0+exp(-fitted_albedo(i,iobsk(j),jk(j))))
 				ObsSpec(iobsk(j))%model(jk(j))=spec_albedo(1,iobsk(j),jk(j))+
      &		(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*(fitted_albedo(i,iobsk(j),jk(j))-alb1)/(alb2-alb1)
@@ -964,6 +972,11 @@ c		call cpu_time(stoptime)
 		sorted(1:i)=MMW_der(1:i)
 		call sort(sorted,i)
 		write(26,'(a10,3es12.4,"  (",2es12.4")")') "MMW",sorted(ime),sorted(im1),sorted(ip1),sorted(im3),sorted(ip3)
+		if(fit_albedo) then
+			sorted(1:i)=Neff_fitalbedo(1:i)
+			call sort(sorted,i)
+			write(26,'(a10,3es12.4,"  (",2es12.4")")') "N GP alb",sorted(ime),sorted(im1),sorted(ip1),sorted(im3),sorted(ip3)
+		endif
 
 		close(unit=26)
 
@@ -1116,6 +1129,62 @@ c		call cpu_time(stoptime)
 		a_med(i) = a_med(i) + delta(i)
 	enddo
 
+	return
+	end
+
+
+
+	subroutine compute_neff(Cov, Cov_obs, nk, Neff)
+	implicit none
+	integer, intent(in) :: nk
+	double precision, intent(in) :: Cov(nk, nk), Cov_obs(nk, nk)
+	double precision, intent(out) :: Neff
+	double precision :: Cov_inv(nk, nk), temp(nk, nk)
+	integer :: i, j, k, info
+	double precision :: trace_val
+	
+	! Copy Cov to temp to avoid overwriting
+	temp = Cov
+	
+	! Compute the Cholesky decomposition of Cov
+	call dpotrf('L', nk, temp, nk, info)
+	if (info /= 0) then
+	    print *, "Cholesky decomposition failed, info =", info
+	    return
+	end if
+	
+	! Compute the inverse of Cov using dpotri
+	call dpotri('L', nk, temp, nk, info)
+	if (info /= 0) then
+	    print *, "Matrix inversion failed, info =", info
+	    return
+	end if
+	
+	! Copy the lower triangle to the upper triangle for full matrix
+	do i = 1, nk
+	    do j = i+1, nk
+	        temp(i, j) = temp(j, i)
+	    end do
+	end do
+	
+	! Compute Cov_inv = C^{-1}
+	Cov_inv = temp
+	
+	! Compute the trace of (I - C_obs * C^{-1})
+	trace_val = 0.0d0
+	do i = 1, nk
+	    do j = 1, nk
+	        temp(i, j) = 0.0d0
+	        do k = 1, nk
+	            temp(i, j) = temp(i, j) + Cov_obs(i, k) * Cov_inv(k, j)
+	        end do
+	    end do
+	    trace_val = trace_val + (1.0d0 - temp(i, i))
+	end do
+	
+	! Assign the effective number of parameters
+	Neff = trace_val
+	
 	return
 	end
 	

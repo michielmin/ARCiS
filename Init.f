@@ -416,6 +416,7 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(Tin(nr))
 	allocate(instrument(max(n_instr,1)))
 	allocate(instr_ntrans(max(n_instr,1)))
+	allocate(instr_tint(max(n_instr,1)))
 	allocate(instr_nobs(max(n_instr,1)))
 	allocate(Par3D(max(n_Par3D,1)))
 	allocate(theta_phase(max(nphase,1)))
@@ -1778,6 +1779,10 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) fit_albedo_sigma
 		case("fit_albedo_l")
 			read(key%value,*) fit_albedo_l
+		case("fit_albedo_alpha")
+			read(key%value,*) fit_albedo_alpha
+		case("fit_albedo_kernel")
+			read(key%value,*) fit_albedo_kernel
 		case("ncpah","nc_pah")
 			read(key%value,*) nC_PAH
 		case("pah")
@@ -2262,7 +2267,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 	f_grass=0.5
 	fit_albedo_sigma=0.25d0
 	fit_albedo_l=0.08d0
+	fit_albedo_alpha=1d0
 	fit_albedo=.false.
+	fit_albedo_kernel='SE'
 
 	dochemistry=.false.
 	elements_ARCiS= 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V F Cr el'
@@ -3103,6 +3110,8 @@ c				includemol(i)=.true.
 			instrument(i)=key%value
 		case("ntrans")
 			read(key%value,*) instr_ntrans(i)
+		case("tint") ! in hours
+			read(key%value,*) instr_tint(i)
 		case("nobs","nr")
 			read(key%value,*) instr_nobs(i)
 		case default
