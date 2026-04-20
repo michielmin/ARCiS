@@ -648,12 +648,14 @@ c allocate the arrays
 	do while(.not.key%last)
 
 		do i=1,n_ret
-			line=trim(RetPar(i)%keyword) // "=0d0"
-			call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%orkey1,keyret%orkey2,
+			if(RetPar(i)%x0.lt.-1d150) then
+				line=trim(RetPar(i)%keyword) // "=0d0"
+				call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%orkey1,keyret%orkey2,
      &						keyret%value,keyret%nr1,keyret%nr2,keyret%hasnr1,keyret%hasnr2)
-			if(trim(keyret%key1).eq.trim(key%key1).and.trim(keyret%key2).eq.trim(key%key2).and.
+				if(trim(keyret%key1).eq.trim(key%key1).and.trim(keyret%key2).eq.trim(key%key2).and.
      &		   keyret%nr1.eq.key%nr1.and.keyret%nr2.eq.key%nr2) then
-				read(key%value,*) RetPar(i)%x0
+					read(key%value,*) RetPar(i)%x0
+				endif
 			endif
 		enddo
 
@@ -1012,13 +1014,6 @@ c select at least the species relevant for disequilibrium chemistry
 					RetPar(i)%x0=sqrt(RetPar(i)%xmax*RetPar(i)%xmin)
 				else
 					RetPar(i)%x0=0.5d0*(RetPar(i)%xmax+RetPar(i)%xmin)
-				endif
-			endif
-			if(RetPar(i)%dx.lt.0d0) then
-				if(RetPar(i)%logscale) then
-					RetPar(i)%dx=5d0*(RetPar(i)%xmax/RetPar(i)%xmin)
-				else
-					RetPar(i)%dx=5d0*(RetPar(i)%xmax-RetPar(i)%xmin)
 				endif
 			endif
 			if(RetPar(i)%keyword.eq.'Tstar'.or.RetPar(i)%keyword.eq.'tstar'.or.RetPar(i)%keyword.eq.'Rstar'

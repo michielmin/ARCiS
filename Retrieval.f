@@ -825,6 +825,17 @@ c	linear
 			tot=tot-log(sqrt(2d0*pi)*ObsSpec(i)%dscale)
 		endif
 	enddo
+	do i=1,n_ret
+		if(RetPar(i)%dx.gt.0d0) then
+			if(RetPar(i)%logscale) then
+				global_chi2=global_chi2+(log(RetPar(i)%value/RetPar(i)%x0)/log(RetPar(i)%dx))**2				
+				tot=tot-log(sqrt(2d0*pi)*log(RetPar(i)%dx))
+			else
+				global_chi2=global_chi2+((RetPar(i)%value-RetPar(i)%x0)/RetPar(i)%dx)**2
+				tot=tot-log(sqrt(2d0*pi)*RetPar(i)%dx)
+			endif
+		endif
+	enddo
 	if(modelfail) global_chi2=global_chi2*1d50
 	lnew=-global_chi2/2d0+tot
 	global_chi2=global_chi2/real(max(1,k-n_ret))
@@ -860,6 +871,18 @@ c	linear
 						dy(nk)=dy(k)
 					enddo
 			end select
+		enddo
+
+		do i=1,n_ret
+			if(RetPar(i)%dx.gt.0d0) then
+				if(RetPar(i)%logscale) then
+					lnew=lnew-0.5d0*(log(RetPar(i)%value/RetPar(i)%x0)/log(RetPar(i)%dx))**2				
+					tot=tot-log(sqrt(2d0*pi)*log(RetPar(i)%dx))
+				else
+					lnew=lnew-0.5d0*((RetPar(i)%value-RetPar(i)%x0)/RetPar(i)%dx)**2
+					tot=tot-log(sqrt(2d0*pi)*RetPar(i)%dx)
+				endif
+			endif
 		enddo
 
 		if(cov_iter.eq.0) then
@@ -934,7 +957,7 @@ c	linear
 c			call RemoveOffset(Kalb,nk,Rk(1:nk))
 			do j=1,nk
 				do ii=1,nk
-					Cov(j,ii)=Cov(j,ii)+(surfacealbedo**2*(1d0-surfacealbedo)**2)*(1d0/(alb2-alb1)**2)*
+					Cov(j,ii)=Cov(j,ii)+((1d0-surfacealbedo)**2)*(1d0/(alb2-alb1)**2)*
      &	(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*Kalb(j,ii)
 				enddo
 			enddo
@@ -967,7 +990,7 @@ c			call RemoveOffset(Kalb,nk,Rk(1:nk))
 			enddo
 			do j=1,nk
 				do ii=1,nk
-					fitted_albedo(iobsk(j),jk(j))=fitted_albedo(iobsk(j),jk(j))+(surfacealbedo*(1d0-surfacealbedo))*
+					fitted_albedo(iobsk(j),jk(j))=fitted_albedo(iobsk(j),jk(j))+((1d0-surfacealbedo))*
      &						Kalb(j,ii)*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*specinv(ii)/(alb2-alb1)
 				enddo
 				fitted_albedo(iobsk(j),jk(j))=1d0/(1d0+exp(-fitted_albedo(iobsk(j),jk(j))))
@@ -2448,7 +2471,7 @@ c	linear
 	do i=1,n_ret
 		if(RetPar(i)%logscale) then
 c	log
-			sig=log(RetPar(i)%value/RetPar(i)%x0)/RetPar(i)%dx
+			sig=log(RetPar(i)%value/RetPar(i)%x0)/log(RetPar(i)%dx)
 			write(20,'(a15," = ",es14.7," x/: ",es11.4,es11.4,f9.2)') trim(RetPar(i)%keyword),RetPar(i)%value,
      &					RetPar(i)%error2,RetPar(i)%error1,sig
  		else
