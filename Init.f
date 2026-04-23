@@ -648,14 +648,12 @@ c allocate the arrays
 	do while(.not.key%last)
 
 		do i=1,n_ret
-			if(RetPar(i)%x0.lt.-1d150) then
-				line=trim(RetPar(i)%keyword) // "=0d0"
-				call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%orkey1,keyret%orkey2,
+			line=trim(RetPar(i)%keyword) // "=0d0"
+			call get_key_value(line,keyret%key,keyret%key1,keyret%key2,keyret%orkey1,keyret%orkey2,
      &						keyret%value,keyret%nr1,keyret%nr2,keyret%hasnr1,keyret%hasnr2)
-				if(trim(keyret%key1).eq.trim(key%key1).and.trim(keyret%key2).eq.trim(key%key2).and.
+			if(trim(keyret%key1).eq.trim(key%key1).and.trim(keyret%key2).eq.trim(key%key2).and.
      &		   keyret%nr1.eq.key%nr1.and.keyret%nr2.eq.key%nr2) then
-					read(key%value,*) RetPar(i)%x0
-				endif
+				read(key%value,*) RetPar(i)%x0
 			endif
 		enddo
 
