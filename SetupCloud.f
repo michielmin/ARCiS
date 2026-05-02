@@ -98,7 +98,8 @@ c 90% MgSiO3
 		case("LAYER")
 			Cloud(ii)%nlam=nlam+1
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
-			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
+! convert reff to sigma
+			Cloud(ii)%sigma(1:nr)=exp(sqrt(log(1d0+Cloud(ii)%veff)))
 			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			do i=1,nr
 				Cloud(ii)%frac(i,1:60)=Cloud(ii)%abun(1:60)
@@ -142,10 +143,11 @@ c 90% MgSiO3
 					cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*Cloud(ii)%tau/tot
 				endif
 			endif
+			call doCloudCR(ii,CPmin,CPmax)
 		case("SLAB")
 			Cloud(ii)%nlam=nlam+1
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
-			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
+			Cloud(ii)%sigma(1:nr)=exp(sqrt(log(1d0+Cloud(ii)%veff)))
 			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			do i=1,nr
 				Cloud(ii)%frac(i,1:60)=Cloud(ii)%abun(1:60)
@@ -169,10 +171,11 @@ c 90% MgSiO3
 				endif
 			enddo
 			cloud_dens(1:nr,ii)=cloud_dens(1:nr,ii)*dens(1:nr)
+			call doCloudCR(ii,CPmin,CPmax)
 		case("DECK")
 			Cloud(ii)%nlam=nlam+1
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
-			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
+			Cloud(ii)%sigma(1:nr)=exp(sqrt(log(1d0+Cloud(ii)%veff)))
 			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			do i=1,nr
 				Cloud(ii)%frac(i,1:60)=Cloud(ii)%abun(1:60)
@@ -194,7 +197,7 @@ c 90% MgSiO3
 				endif
 			enddo
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
-			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
+			Cloud(ii)%sigma(1:nr)=exp(sqrt(log(1d0+Cloud(ii)%veff)))
 			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			do i=1,nr
 				Cloud(ii)%frac(i,1:60)=Cloud(ii)%abun(1:60)
@@ -203,7 +206,7 @@ c 90% MgSiO3
 		case("GAUSS","HALFGAUSS")
 			Cloud(ii)%nlam=nlam+1
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%rnuc+(Cloud(ii)%reff-Cloud(ii)%rnuc)*(P(1:nr)/Cloud(ii)%Pref)**Cloud(ii)%rpow
-			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
+			Cloud(ii)%sigma(1:nr)=exp(sqrt(log(1d0+Cloud(ii)%veff)))
 			Cloud(ii)%onepart=(Cloud(ii)%rpow.eq.0d0)
 			do i=1,nr
 				Cloud(ii)%frac(i,1:60)=Cloud(ii)%abun(1:60)
@@ -232,7 +235,7 @@ c 90% MgSiO3
 		case("RING")
 			Cloud(ii)%nlam=nlam+1
 			Cloud(ii)%rv(1:nr)=Cloud(ii)%reff
-			Cloud(ii)%sigma(1:nr)=Cloud(ii)%veff
+			Cloud(ii)%sigma(1:nr)=exp(sqrt(log(1d0+Cloud(ii)%veff)))
 			Cloud(ii)%onepart=.true.
 			do i=1,nr
 				Cloud(ii)%frac(i,1:60)=Cloud(ii)%abun(1:60)
@@ -804,4 +807,25 @@ c-----------------------------------------------------------------------
 	
 	return
 	end
+
+
+	subroutine doCloudCR(ii,CPmin,CPmax)
+	use GlobalSetup
+	IMPLICIT NONE
+	integer ii,i
+	real*8 CPmin,CPmax,f
 	
+	if(Cloud(ii)%iCR.gt.0) then
+		do i=1,nr
+			if(P(i).lt.CPmin) then
+				mixrat_r(i,Cloud(ii)%iCR)=mixrat_r(i,Cloud(ii)%iCR)*Cloud(ii)%CR
+			else if(P(i).gt.CPmin.and.P(i).lt.CPmax) then
+				f=log(P(i)/CPmax)/log(CPmin/CPmax)
+				f=exp(f*log(Cloud(ii)%CR))
+				mixrat_r(i,Cloud(ii)%iCR)=mixrat_r(i,Cloud(ii)%iCR)*f
+			endif
+		enddo
+	endif
+	
+	return
+	end

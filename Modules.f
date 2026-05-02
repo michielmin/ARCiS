@@ -468,6 +468,8 @@ c			Setting it to 0 means the cloud is always recomputed every iteration.
 		integer,allocatable :: nax(:)
 		logical usefsed,computeJn,EqChemBoundary,globalGasMixing
 		real*8 fsed_alpha,fsed_beta,Srainout,fstick,x_slider
+		real*8 CR ! condensation ratio
+		integer iCR ! which species condenses
 	end type CloudType
 
 	type(CloudType),allocatable :: Cloud(:) 

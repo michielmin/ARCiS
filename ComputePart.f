@@ -16,7 +16,7 @@
 	real,allocatable :: r0(:),nr0(:,:),f(:),wf(:),rho(:)
 	real,allocatable :: e1(:,:),e2(:,:)
 	complex*16,allocatable :: m12(:)
-	real*8 e1blend,e2blend,amin,amax
+	real*8 e1blend,e2blend,amin,amax,r_center
 	real*8,allocatable :: frac(:),dbl_r0(:),dbl_nr0(:)
 	real,allocatable :: e1d(:,:),e2d(:,:)
 	integer i,j,k,l,na,nf,ns,nm,ilam,Err,spheres,toolarge
@@ -156,14 +156,15 @@
 
 	allocate(r0(ns),nr0(nm,ns),dbl_r0(ns),dbl_nr0(ns))
 	do l=1,nm
-		if(ns.gt.1.and.log(C%sigma(isize)).gt.1d-4) then
+		if(ns.gt.1.and.C%sigma(isize).gt.1d0) then
 			tot=0d0
 			call GaussHermite(ns,dbl_r0,dbl_nr0,3d0)! GHERMITE(ns,dbl_r0,dbl_nr0)
 			k=0
+			r_center=C%rv(isize) * exp(-2.5d0 * log(C%sigma(isize))**2)
 			do j=1,ns
 				if(dbl_r0(j).gt.-3d0.and.dbl_r0(j).lt.3d0) then
 					k=k+1
-					r0(k)=exp(dbl_r0(j)*log(C%sigma(isize))+log(C%rv(isize)))
+					r0(k)=exp(dbl_r0(j)*log(C%sigma(isize))+log(r_center))
 					nr0(l,k)=dbl_nr0(j)
 					tot=tot+nr0(l,k)*r0(k)**3
 				endif

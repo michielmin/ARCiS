@@ -2452,6 +2452,8 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 		Cloud(i)%xv_bot=1d-5
 		Cloud(i)%x_slider=0d0
 		Cloud(i)%fixcloud=0
+		Cloud(i)%CR=1d0
+		Cloud(i)%iCR=0
 	enddo
 	nspike=0
 	useDLMie=.false.
@@ -3562,8 +3564,20 @@ c				includemol(i)=.true.
 			call checkfile(Cloud(j)%lnkfile(i,3))
 			Cloud(j)%nax(i)=3
 		case default
+			do i=1,nmol_data
+				if(key%orkey2.eq.molname(i)) then
+					read(key%value,*) Cloud(j)%CR
+					Cloud(j)%iCR=i
+					if(i.gt.nmol) then
+						print*,"Cloud condensation species not in list of molecules"
+						stop
+					endif
+					goto 1
+				endif
+			enddo
 			call output("Unknown cloud keyword: " // trim(key%key2))
 			stop
+1			continue
 	end select
 	enddo
 
