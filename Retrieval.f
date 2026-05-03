@@ -957,7 +957,7 @@ c	linear
 c			call RemoveOffset(Kalb,nk,Rk(1:nk))
 			do j=1,nk
 				do ii=1,nk
-					Cov(j,ii)=Cov(j,ii)+((1d0-surfacealbedo)**2)*(1d0/(alb2-alb1)**2)*
+					Cov(j,ii)=Cov(j,ii)+((surfacealbedo*(1d0-surfacealbedo))**2)*(1d0/(alb2-alb1)**2)*
      &	(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*Kalb(j,ii)
 				enddo
 			enddo
@@ -990,7 +990,7 @@ c			call RemoveOffset(Kalb,nk,Rk(1:nk))
 			enddo
 			do j=1,nk
 				do ii=1,nk
-					fitted_albedo(iobsk(j),jk(j))=fitted_albedo(iobsk(j),jk(j))+((1d0-surfacealbedo))*
+					fitted_albedo(iobsk(j),jk(j))=fitted_albedo(iobsk(j),jk(j))+(surfacealbedo*(1d0-surfacealbedo))*
      &						Kalb(j,ii)*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*specinv(ii)/(alb2-alb1)
 				enddo
 				fitted_albedo(iobsk(j),jk(j))=1d0/(1d0+exp(-fitted_albedo(iobsk(j),jk(j))))
