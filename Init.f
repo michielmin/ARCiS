@@ -1776,6 +1776,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) fit_albedo_alpha
 		case("fit_albedo_kernel")
 			read(key%value,*) fit_albedo_kernel
+		case("lam_re",'l_re','lamre')
+			read(key%value,*) surf_lam1
 		case("ncpah","nc_pah")
 			read(key%value,*) nC_PAH
 		case("pah")

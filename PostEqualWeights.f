@@ -442,11 +442,17 @@ c		call cpu_time(stoptime)
 			do j=1,nk
 				do ii=1,nk
 					d=(log(lamk(j))-log(lamk(ii)))
-					if(fit_albedo_kernel.eq.'RQ') then
-						Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*(1d0+((d/fit_albedo_l)**2)/(2d0*fit_albedo_alpha))**-fit_albedo_alpha
-					else
-						Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
-					endif
+					select case(fit_albedo_kernel)
+						case('RQ')
+							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*(1d0+((d/fit_albedo_l)**2)/(2d0*fit_albedo_alpha))**-fit_albedo_alpha
+						case('EDGE')
+							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+							if((lamk(j).gt.surf_lam1.and.lamk(ii).gt.surf_lam1).or.(lamk(j).le.surf_lam1.and.lamk(ii).le.surf_lam1)) then
+								Kalb(j,ii)=Kalb(j,ii)+(fit_albedo_sigma/(1d0-surfacealbedo))**2
+							endif
+						case default
+							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+					end select
 				enddo
 			enddo
 c			call RemoveOffset(Kalb,nk,Rk(1:nk))

@@ -234,7 +234,7 @@ c for exchange when computing secondary atmosphere
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb,surf_lam1,surf_lam2,surf_alb1,surf_alb2,surf_alb3
 	real*8 fit_albedo_sigma,fit_albedo_l,fit_albedo_alpha,Rp_prior,dRp_prior
-	character*2 fit_albedo_kernel
+	character*10 fit_albedo_kernel
 	logical fit_albedo
 	character*20 surfacetype
 	character*500 surfacefile,Full3Ddir
