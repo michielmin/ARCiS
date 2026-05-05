@@ -21,7 +21,7 @@
 	integer ipmin,ipmax,ii
 	real*8 fit_albedo0,spec_albedo(2,nobs,nlam),f_ii,d
 	real*8,allocatable :: fitted_albedo(:,:,:),Kalb(:,:),aver_albedo(:,:),refl_surface(:,:,:),Neff_fitalbedo(:)
-	real*8 alb1,alb2
+	real*8 alb1,alb2,Sigmoid1,Sigmoid2
 	integer nk,cov_iter,ncov_iter,j0
 	logical doCovObs(nobs)
 	real*8,allocatable :: spec(:),lamk(:),Rk(:),Cov_obs(:,:),Ksys(:,:),specinv(:),dy(:)
