@@ -645,7 +645,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	real*8 xx,xy,scale,dy(ny),tot,chi2_real,chi2_virtual
 	character*100 command
 	integer info,NRHS,cov_iter,ncov_iter
-	real*8 d,f_ii,alb1,alb2
+	real*8 d,f_ii,alb1,alb2,Sigmoid1,Sigmoid2
 	real*8,allocatable :: Cov(:,:),specinv(:),lamk(:),Rk(:),Cov_obs(:,:)
 	real*8,allocatable :: spec_albedo(:,:,:),fitted_albedo(:,:),Kalb(:,:),Ksys(:,:)
 	integer,allocatable :: iobsk(:),jk(:)
@@ -951,12 +951,13 @@ c	linear
 						case('RQ')
 							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*(1d0+((d/fit_albedo_l)**2)/(2d0*fit_albedo_alpha))**-fit_albedo_alpha
 						case('EDGE')
-							if((lamk(j).gt.surf_lam1*1d-4.and.lamk(ii).gt.surf_lam1*1d-4).or.(lamk(j).le.surf_lam1*1d-4.and.lamk(ii).le.surf_lam1*1d-4)) then
-								Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
-								Kalb(j,ii)=Kalb(j,ii)+(fit_albedo_sigma/(1d0-surfacealbedo))**2
-							else
-								Kalb(j,ii)=0d0
-							endif
+							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+							d=(log(lamk(j))-log(surf_lam1*1d-4))
+							Sigmoid1=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
+							d=(log(lamk(ii))-log(surf_lam1*1d-4))
+							Sigmoid2=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
+							d=Sigmoid1*Sigmoid2+(1d0-Sigmoid1)*(1d0-Sigmoid2)
+							Kalb(j,ii)=Kalb(j,ii)+(fit_albedo_sigma/(1d0-surfacealbedo))**2*d
 						case default
 							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
 					end select

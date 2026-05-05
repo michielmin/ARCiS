@@ -447,9 +447,12 @@ c		call cpu_time(stoptime)
 							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*(1d0+((d/fit_albedo_l)**2)/(2d0*fit_albedo_alpha))**-fit_albedo_alpha
 						case('EDGE')
 							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
-							if((lamk(j).gt.surf_lam1.and.lamk(ii).gt.surf_lam1).or.(lamk(j).le.surf_lam1.and.lamk(ii).le.surf_lam1)) then
-								Kalb(j,ii)=Kalb(j,ii)+(fit_albedo_sigma/(1d0-surfacealbedo))**2
-							endif
+							d=(log(lamk(j))-log(surf_lam1*1d-4))
+							Sigmoid1=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
+							d=(log(lamk(ii))-log(surf_lam1*1d-4))
+							Sigmoid2=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
+							d=Sigmoid1*Sigmoid2+(1d0-Sigmoid1)*(1d0-Sigmoid2)
+							Kalb(j,ii)=Kalb(j,ii)+(fit_albedo_sigma/(1d0-surfacealbedo))**2*d
 						case default
 							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
 					end select
