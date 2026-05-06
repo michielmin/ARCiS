@@ -446,15 +446,25 @@ c		call cpu_time(stoptime)
 						case('RQ')
 							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*(1d0+((d/fit_albedo_l)**2)/(2d0*fit_albedo_alpha))**-fit_albedo_alpha
 						case('EDGE')
-							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
-							d=(log(lamk(j))-log(surf_lam1*1d-4))
-							Sigmoid1=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
-							d=(log(lamk(ii))-log(surf_lam1*1d-4))
-							Sigmoid2=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
-							d=Sigmoid1*Sigmoid2+(1d0-Sigmoid1)*(1d0-Sigmoid2)
-							Kalb(j,ii)=Kalb(j,ii)+(fit_albedo_sigma/(1d0-surfacealbedo))**2*d
+							Kalb(j,ii)=0d0
+							do k=1,nEdge
+								d=(log(lamk(j))-log(lamEdge(k)*1d-4))
+								Sigmoid1=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
+								d=(log(lamk(ii))-log(lamEdge(k)*1d-4))
+								Sigmoid2=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
+								d=Sigmoid1*Sigmoid2+(1d0-Sigmoid1)*(1d0-Sigmoid2)
+								Kalb(j,ii)=Kalb(j,ii)+(fit_albedo_sigma/(1d0-surfacealbedo))**2*d
+							enddo
 						case default
 							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
+							do k=1,nEdge
+								d=(log(lamk(j))-log(lamEdge(k)*1d-4))
+								Sigmoid1=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
+								d=(log(lamk(ii))-log(lamEdge(k)*1d-4))
+								Sigmoid2=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
+								d=Sigmoid1*Sigmoid2+(1d0-Sigmoid1)*(1d0-Sigmoid2)
+								Kalb(j,ii)=Kalb(j,ii)+(fit_albedo_sigma/(1d0-surfacealbedo))**2*d
+							enddo
 					end select
 				enddo
 			enddo

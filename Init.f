@@ -224,6 +224,7 @@ c===============================================================================
 	nPhotoReacts=0
 	nmodel_err=1
 	Cov_n_loc=0
+	nEdge=0
 	j=0
 	mixratfile=.false.
 	Pmin=1d-6
@@ -295,6 +296,10 @@ c===============================================================================
 				if(key%nr1.eq.0) key%nr1=1
 				if(key%nr2.eq.0) key%nr2=1
 				if(key%nr1.gt.n_instr) n_instr=key%nr1
+			case("lamedge","lam_edge")
+				if(key%nr1.eq.0) key%nr1=1
+				if(key%nr2.eq.0) key%nr2=1
+				if(key%nr1.gt.nEdge) nEdge=key%nr1
 			case("cia")
 				if(key%key2.eq.' ') then
 					read(key%value,*) do_cia
@@ -418,6 +423,7 @@ c select at least the species relevant for disequilibrium chemistry
 	allocate(instr_ntrans(max(n_instr,1)))
 	allocate(instr_tint(max(n_instr,1)))
 	allocate(instr_nobs(max(n_instr,1)))
+	allocate(lamEdge(max(nEdge,1)))
 	allocate(Par3D(max(n_Par3D,1)))
 	allocate(theta_phase(max(nphase,1)))
 	allocate(model_err_abs(max(nmodel_err,1)))
@@ -1776,6 +1782,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) fit_albedo_alpha
 		case("fit_albedo_kernel")
 			read(key%value,*) fit_albedo_kernel
+		case("lamedge","lam_edge")
+			read(key%value,*) lamEdge(key%nr1)
 		case("lam_re",'l_re','lamre')
 			read(key%value,*) surf_lam1
 		case("ncpah","nc_pah")
@@ -2265,6 +2273,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	fit_albedo_alpha=1d0
 	fit_albedo=.false.
 	fit_albedo_kernel='SE'
+	lamEdge=0.7
 
 	dochemistry=.false.
 	elements_ARCiS= 'H He C N O Na Mg Si Fe Al Ca Ti S Cl K Li P V F Cr el'
