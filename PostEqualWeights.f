@@ -21,7 +21,7 @@
 	integer ipmin,ipmax,ii
 	real*8 fit_albedo0,spec_albedo(2,nobs,nlam),f_ii,d
 	real*8,allocatable :: fitted_albedo(:,:,:),Kalb(:,:),aver_albedo(:,:),refl_surface(:,:,:),Neff_fitalbedo(:)
-	real*8 alb1,alb2,Sigmoid1,Sigmoid2
+	real*8 alb1,alb2,Sigmoid1,Sigmoid2,amplitude
 	integer nk,cov_iter,ncov_iter,j0
 	logical doCovObs(nobs)
 	real*8,allocatable :: spec(:),lamk(:),Rk(:),Cov_obs(:,:),Ksys(:,:),specinv(:),dy(:)
@@ -439,33 +439,28 @@ c		call cpu_time(stoptime)
 
 		if(fit_albedo) then
 			Cov_obs=Cov
+			amplitude=(fit_albedo_sigma/(1d0-surfacealbedo))**2
 			do j=1,nk
 				do ii=1,nk
 					d=(log(lamk(j))-log(lamk(ii)))
-					select case(fit_albedo_kernel)
-						case('RQ')
-							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*(1d0+((d/fit_albedo_l)**2)/(2d0*fit_albedo_alpha))**-fit_albedo_alpha
-						case('EDGE')
-							Kalb(j,ii)=0d0
-							do k=1,nEdge
-								d=(log(lamk(j))-log(lamEdge(k)*1d-4))
-								Sigmoid1=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
-								d=(log(lamk(ii))-log(lamEdge(k)*1d-4))
-								Sigmoid2=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
-								d=Sigmoid1*Sigmoid2+(1d0-Sigmoid1)*(1d0-Sigmoid2)
-								Kalb(j,ii)=Kalb(j,ii)+(fit_albedo_sigma/(1d0-surfacealbedo))**2*d
-							enddo
-						case default
-							Kalb(j,ii)=(fit_albedo_sigma/(1d0-surfacealbedo))**2*exp(-0.5d0*(d/fit_albedo_l)**2)
-							do k=1,nEdge
-								d=(log(lamk(j))-log(lamEdge(k)*1d-4))
-								Sigmoid1=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
-								d=(log(lamk(ii))-log(lamEdge(k)*1d-4))
-								Sigmoid2=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
-								d=Sigmoid1*Sigmoid2+(1d0-Sigmoid1)*(1d0-Sigmoid2)
-								Kalb(j,ii)=Kalb(j,ii)+(fit_albedo_sigma/(1d0-surfacealbedo))**2*d
-							enddo
-					end select
+					Kalb(j,ii)=0d0
+					if(fit_albedo_GP) then
+						Kalb(j,ii)=Kalb(j,ii)+amplitude*exp(-0.5d0*(d/fit_albedo_l)**2)
+					endif
+					if(fit_albedo_step) then
+						do k=1,nStep
+							d=(log(lamk(j))-log(lamStep(k)*1d-4))
+							Sigmoid1=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
+							d=(log(lamk(ii))-log(lamStep(k)*1d-4))
+							Sigmoid2=1d0 / (1d0 + exp(-2d0*d/fit_albedo_l))
+							d=Sigmoid1*Sigmoid2+(1d0-Sigmoid1)*(1d0-Sigmoid2)
+							Kalb(j,ii)=Kalb(j,ii)+amplitude*d
+						enddo
+					endif
+					if(fit_albedo_slope) then
+						d=sqrt(lam(1)*lam(nlam))
+						Kalb(j,ii)=Kalb(j,ii)+amplitude*log(lamk(j)/d)*log(lamk(ii)/d)
+					endif
 				enddo
 			enddo
 c			call RemoveOffset(Kalb,nk,Rk(1:nk))
