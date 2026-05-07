@@ -336,6 +336,9 @@ c Sneep & Ubachs (2005)
 				case("N2")
 c Sneep & Ubachs (2005)
 					Cs=Cs+16.31d-45*mixrat_r(ir,j)*ll2**(4.0974/4.0)
+				case("O2")
+c Fit to PSG O2 Rayleigh scattering
+					Cs=Cs+3.66e-44*mixrat_r(ir,j)*ll2
 				case("SF6")
 c Sneep & Ubachs (2005)
 					Cs=Cs+32.3e-27*mixrat_r(ir,j)*(ll2/18788.4**4)
