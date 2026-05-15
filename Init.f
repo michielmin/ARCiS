@@ -1494,6 +1494,12 @@ c starfile should be in W/(m^2 Hz) at the stellar surface
 			read(key%value,*) alphaZ
 		case("nspike")
 			read(key%value,*) nspike
+		case("interior_f_core")
+			read(key%value,*) interior_f_core
+		case("interior_f_ice","interior_f_h2o")
+			read(key%value,*) interior_f_ice
+		case("rp_from_interior","interior")
+			read(key%value,*) Rp_from_interior
 		case("dlmie")
 			read(key%value,*) useDLMie
 		case("nphot")
@@ -1871,7 +1877,12 @@ c			read(key%value,*) nTpoints
 	Rplanet=Rplanet*Rjup
 	Mplanet=Mplanet*Mjup
 
-	if(Mp_from_logg) then
+	if(Rp_from_interior) then
+		call RockMetal(interior_f_core,interior_f_ice,Mplanet/Mearth,Rplanet)
+		Rplanet=Rplanet*Rearth
+		call output("Planet radius: " // dbl2string(Rplanet/Rjup,'(f8.3)') // " Rjup")
+		call output("Planet radius: " // dbl2string(Rplanet/Rearth,'(f8.3)') // " Rearth")
+	else if(Mp_from_logg) then
 		Mplanet=(Rplanet**2)*(10d0**(loggPlanet))/Ggrav
 		call output("Planet mass: " // dbl2string(Mplanet/Mjup,'(f8.3)') // " Mjup")
 		call output("Planet mass: " // dbl2string(Mplanet/Mearth,'(f8.3)') // " Mearth")
@@ -2206,6 +2217,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 	fixMMW=.false.
 	MMW0=2.2
 	Psurf=10d0
+	interior_f_core=0.325
+	interior_f_ice=0.005
+	Rp_from_interior=.false.
 	
 	Tstar=5777d0
 	Rstar=1d0
@@ -4064,3 +4078,205 @@ c	Lstar=Lstar*Lsun
 	end
 
 
+	subroutine RockMetal(f_core,f_h2o,Mp,Rp)
+	IMPLICIT NONE
+	integer nr
+	parameter(nr=100)
+	real*8 G,Mearth,Rearth,pi,EoS,f_core,f_h2o,Mp,m0
+	parameter(G=6.67408e-11)! m3 kg-1 s-2
+	parameter(Mearth=5.972e24)! kg
+	parameter(Rearth=6371d3)! m
+	parameter(pi=3.14159265358979323846264338328d0)
+	parameter(m0=1.660539040d-24*6.022136736d23)
+	real*8,allocatable :: P(:),R(:),rhor(:)
+	real*8 Mtot,Madd,rho,Rp,Rmin,Rmax,K0(10),K0t(10),rho0(10)
+	real*8 Mm(10),M,Mlay,MW,V0
+	integer nm,i,j,k,ii,l,nlay
+	logical last,lay(10,10)
+
+!	Ice
+c@ARTICLE{1993JChPh..99.5369F,
+c       author = {{Fei}, Yingwei and {Mao}, Ho-Kwang and {Hemley}, Russell J.},
+c        title = "{Thermal expansivity, bulk modulus, and melting curve of H$_{2}$O-ice VII to 20 GPa}",
+c      journal = {\jcp},
+c     keywords = {Ice, Melting, Microstructure, Thermal Expansion, Pressure Effects, Temperature Effects, X Ray Diffraction, Thermodynamics and Statistical Physics},
+c         year = 1993,
+c        month = oct,
+c       volume = {99},
+c       number = {7},
+c        pages = {5369-5373},
+c          doi = {10.1063/1.465980},
+c       adsurl = {https://ui.adsabs.harvard.edu/abs/1993JChPh..99.5369F},
+c      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+c}
+	i=1
+	K0(i)=24.1d0
+	K0t(i)=4.1d0
+	V0=12.3
+	MW=17.8851
+	rho0(i)=m0*MW/V0
+
+c Mantle materials from:
+c@ARTICLE{2005GeoJI.162..610S,
+c       author = {{Stixrude}, Lars and {Lithgow-Bertelloni}, Carolina},
+c        title = "{Thermodynamics of mantle minerals - I. Physical properties}",
+c      journal = {Geophysical Journal International},
+c     keywords = {bulk modulus, mantle, shear modulus, thermodynamics},
+c         year = 2005,
+c        month = aug,
+c       volume = {162},
+c       number = {2},
+c        pages = {610-632},
+c          doi = {10.1111/j.1365-246X.2005.02642.x},
+c       adsurl = {https://ui.adsabs.harvard.edu/abs/2005GeoJI.162..610S},
+c      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+c}
+!	SiO2
+	i=2
+	K0(i)=314d0
+	K0t(i)=4.4d0
+	V0=14.02
+	MW=60.084
+	rho0(i)=m0*MW/V0
+	
+!	MgO
+	i=3
+	K0(i)=161d0
+	K0t(i)=3.9d0
+	V0=11.24
+	MW=40.304
+	rho0(i)=m0*MW/V0
+
+!	MgSiO3
+	i=4
+	K0(i)=211d0
+	K0t(i)=4.5d0
+	V0=26.35
+	MW=100.39
+	rho0(i)=m0*MW/V0
+
+!	Fe
+c@ARTICLE{2006PhRvL..97u5504D,
+c       author = {{Dewaele}, Agn{\`e}s and {Loubeyre}, Paul and {Occelli}, Florent and {Mezouar}, Mohamed and {Dorogokupets}, Peter I. and {Torrent}, Marc},
+c        title = "{Quasihydrostatic Equation of State of Iron above 2Mbar}",
+c      journal = {\prl},
+c     keywords = {62.50.+p, 07.35.+k, 64.30.+t, High-pressure and shock wave effects in solids and liquids, High-pressure apparatus, shock tubes, diamond anvil cells, Equations of state of specific substances},
+c         year = 2006,
+c        month = nov,
+c       volume = {97},
+c       number = {21},
+c          eid = {215504},
+c        pages = {215504},
+c          doi = {10.1103/PhysRevLett.97.215504},
+c       adsurl = {https://ui.adsabs.harvard.edu/abs/2006PhRvL..97u5504D},
+c      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+c}
+	i=5
+	K0(i)=165d0
+	K0t(i)=4.97d0
+	V0=11.234*1e-24*6.022136736d23
+	MW=55.840
+	rho0(i)=m0*MW/V0
+
+	nm=i
+
+!	Case of 3 layers (H2O, mixed MgO&SiO2&MgSiO3, Fe)
+	nlay=3
+	lay=.false.
+	lay(1,1)=.true.
+	lay(2,2:4)=.true.
+	lay(3,5)=.true.
+
+	Mm(1)=f_h2o
+	Mm(2)=(1d0-f_h2o)*(1d0-f_core)*0.05
+	Mm(3)=(1d0-f_h2o)*(1d0-f_core)*0.20
+	Mm(4)=(1d0-f_h2o)*(1d0-f_core)*0.75
+	Mm(5)=(1d0-f_h2o)*f_core
+
+	M=Mp*Mearth
+
+	Mm(1:nm)=Mm(1:nm)/sum(Mm(1:nm))
+
+	allocate(R(0:nm*nr))
+	allocate(P(0:nm*nr))
+	allocate(rhor(nm*nr))
+
+	Rmax=5d0*Rearth
+	Rmin=0d0*Rearth
+	Rp=(Rmax+Rmin)/2d0
+
+	last=.true.
+	do while((Rmax-Rmin).gt.1d-3*Rp.or.last)
+		Rp=(Rmax+Rmin)/2d0
+		if((Rmax-Rmin).le.1d-3*Rp) then
+			Rp=Rmax
+			last=.false.
+		endif
+		ii=nr*nm
+		R=0d0
+		R(ii)=Rp
+		P(ii)=0d0
+		Mtot=0d0
+		do j=1,nlay
+			Mlay=0d0
+			do k=1,nm
+				if(lay(j,k)) Mlay=Mlay+Mm(k)
+			enddo
+			if(Mlay.gt.0d0) then
+				do i=1,nr
+					rho=0d0
+					do k=1,nm
+						if(lay(j,k)) rho=rho+Mm(k)/EoS(P(ii),K0(k),K0t(k),rho0(k))
+					enddo
+					rho=Mlay*1d3/rho
+					rhor(ii)=rho
+					Madd=Mlay*M/real(nr)
+					ii=ii-1
+					R(ii)=(R(ii+1)**3-Madd*3d0/(4d0*pi*rho))**(1d0/3d0)
+					Mtot=Mtot+Madd
+					if(.not.R(ii).gt.0d0) then
+						Rmin=Rp
+						goto 10
+					endif
+					P(ii)=P(ii+1)+G*(M-Mtot)*rho*
+     &			abs(R(ii+1)-R(ii))/(0.5d0*(R(ii)+R(ii+1)))**2
+				enddo
+			endif
+		enddo
+		Rmax=Rp
+10		continue
+	enddo
+
+	Rp=Rp/Rearth
+
+	deallocate(R,P,rhor)
+	
+	end
+
+
+
+	real*8 function EoS(P,K0,K0t,rho0)
+	IMPLICIT NONE
+	real*8 P,K0,K0t,rho0,rhomin,rhomax,eps,P0,f,rho
+	rhomin=0.5d0*rho0
+	rhomax=5d0*rho0
+	
+	eps=1d0
+	do while(eps.gt.1d-3)
+		rho=(rhomin+rhomax)/2d0
+		f=rho/rho0
+		P0=(3d0*K0/2d0)*(f**(7d0/3d0)-f**(5d0/3d0))*
+     &		(1d0-3d0*(4d0-K0t)*(f**(2d0/3d0)-1d0)/4d0)
+		P0=P0*1d9
+		if(P0.gt.P) then
+			rhomax=rho
+		else
+			rhomin=rho
+		endif
+		eps=(rhomax-rhomin)/(rhomax+rhomin)
+	enddo
+	EoS=rho
+
+	return
+	end
+	
