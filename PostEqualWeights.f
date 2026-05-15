@@ -24,7 +24,7 @@
 	real*8 alb1,alb2,Sigmoid1,Sigmoid2,amplitude
 	integer nk,cov_iter,ncov_iter,j0
 	logical doCovObs(nobs)
-	real*8,allocatable :: spec(:),lamk(:),Rk(:),Cov_obs(:,:),Ksys(:,:),specinv(:),dy(:)
+	real*8,allocatable :: spec(:),lamk(:),Rk(:),Cov_obs(:,:),Ksys(:,:),specinv(:),dy(:),Rp_interior(:)
 	integer,allocatable :: iobsk(:),jk(:)
 	
 	writefiles=.false.
@@ -88,6 +88,7 @@
      &						fitted_albedo(0:nmodels,nobs,nlam),aver_albedo(0:nmodels,nobs),
      &						refl_surface(0:nmodels,nobs,nlam))
 	allocate(Neff_fitalbedo(0:nmodels))
+	if(Rp_from_interior) allocate(Rp_interior(0:nmodels))
 
 	spectrans=0d0
 	specemis=0d0
@@ -246,8 +247,13 @@ c	call cpu_time(starttime)
 			write(line(i*12-11:i*12+1),'(" ",a11)') RetPar(i)%keyword
 		endif
 	enddo
-	write(line(n_ret*12+1:6000),'(4a12)') "C/O","[Z]","Teff","MMW"
-	write(83,'(a)') trim(line)
+	if(Rp_from_interior) then
+		write(line(n_ret*12+1:6000),'(5a12)') "C/O","[Z]","Teff","MMW","Rp[Rearth]"
+		write(83,'(a)') trim(line)
+	else
+		write(line(n_ret*12+1:6000),'(4a12)') "C/O","[Z]","Teff","MMW"
+		write(83,'(a)') trim(line)
+	endif
 
 	do i=0,donmodels
 
@@ -674,6 +680,7 @@ c			call RemoveOffset(Kalb,nk,Rk(1:nk))
 		endif
 	enddo
 	Tplanet(i)=TeffPoutput
+	if(Rp_from_interior) Rp_interior(i)=Rplanet/Rearth
 	if(do3D.and.fulloutput3D) then
 		PTstruct3D(i,0:nphase,1:nr)=PTaverage3D(0:nphase,1:nr)
 		dPTstruct3D(i,0:nphase,1)=log(PTaverage3D(0:nphase,2)/PTaverage3D(0:nphase,1))/log(P(2)/P(1))
@@ -705,8 +712,13 @@ c			call RemoveOffset(Kalb,nk,Rk(1:nk))
 		enddo
 	endif
 	if(i.ne.0) then
-		write(line,'("(",i0.4,"es12.4)")') n_ret+4
-		write(83,line) var(imodel,1:n_ret),COratio_der(i),Z_der(i),Tplanet(i),MMW_der(i)
+		if(Rp_from_interior) then
+			write(line,'("(",i0.4,"es12.4)")') n_ret+5
+			write(83,line) var(imodel,1:n_ret),COratio_der(i),Z_der(i),Tplanet(i),MMW_der(i),Rplanet/Rearth
+		else
+			write(line,'("(",i0.4,"es12.4)")') n_ret+4
+			write(83,line) var(imodel,1:n_ret),COratio_der(i),Z_der(i),Tplanet(i),MMW_der(i)
+		endif
 	endif
 	if(i.gt.0.and.(100*(i/100).eq.i.or.i.eq.donmodels.or.i.le.10)) then
 		im1=real(i)/2d0-real(i)*0.682689492137086/2d0+0.5d0
@@ -994,6 +1006,11 @@ c			call RemoveOffset(Kalb,nk,Rk(1:nk))
 			sorted(1:i)=Neff_fitalbedo(1:i)
 			call sort(sorted,i)
 			write(26,'(a10,3es12.4,"  (",2es12.4")")') "N GP alb",sorted(ime),sorted(im1),sorted(ip1),sorted(im3),sorted(ip3)
+		endif
+		if(Rp_from_interior) then
+			sorted(1:i)=Rp_interior(1:i)
+			call sort(sorted,i)
+			write(26,'(a10,3es12.4,"  (",2es12.4")")') "Rp[Rearth]",sorted(ime),sorted(im1),sorted(ip1),sorted(im3),sorted(ip3)
 		endif
 
 		close(unit=26)
