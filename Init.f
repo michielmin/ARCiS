@@ -4131,16 +4131,8 @@ c          doi = {10.1111/j.1365-246X.2005.02642.x},
 c       adsurl = {https://ui.adsabs.harvard.edu/abs/2005GeoJI.162..610S},
 c      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 c}
-!	SiO2
-	i=2
-	K0(i)=314d0
-	K0t(i)=4.4d0
-	V0=14.02
-	MW=60.084
-	rho0(i)=m0*MW/V0
-	
 !	MgO
-	i=3
+	i=2
 	K0(i)=161d0
 	K0t(i)=3.9d0
 	V0=11.24
@@ -4148,7 +4140,7 @@ c}
 	rho0(i)=m0*MW/V0
 
 !	MgSiO3
-	i=4
+	i=3
 	K0(i)=211d0
 	K0t(i)=4.5d0
 	V0=26.35
@@ -4171,7 +4163,7 @@ c          doi = {10.1103/PhysRevLett.97.215504},
 c       adsurl = {https://ui.adsabs.harvard.edu/abs/2006PhRvL..97u5504D},
 c      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 c}
-	i=5
+	i=4
 	K0(i)=165d0
 	K0t(i)=4.97d0
 	V0=11.234*1e-24*6.022136736d23
@@ -4180,18 +4172,17 @@ c}
 
 	nm=i
 
-!	Case of 3 layers (H2O, mixed MgO&SiO2&MgSiO3, Fe)
+!	Case of 3 layers (H2O, mixed MgO&MgSiO3, Fe)
 	nlay=3
 	lay=.false.
 	lay(1,1)=.true.
-	lay(2,2:4)=.true.
-	lay(3,5)=.true.
+	lay(2,2:3)=.true.
+	lay(3,4)=.true.
 
 	Mm(1)=f_h2o
-	Mm(2)=(1d0-f_h2o)*(1d0-f_core)*0.05
-	Mm(3)=(1d0-f_h2o)*(1d0-f_core)*0.20
-	Mm(4)=(1d0-f_h2o)*(1d0-f_core)*0.75
-	Mm(5)=(1d0-f_h2o)*f_core
+	Mm(2)=(1d0-f_h2o)*(1d0-f_core)*0.1
+	Mm(3)=(1d0-f_h2o)*(1d0-f_core)*0.9
+	Mm(4)=(1d0-f_h2o)*f_core
 
 	M=Mp*Mearth
 
