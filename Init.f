@@ -4088,11 +4088,10 @@ c	Lstar=Lstar*Lsun
 	parameter(Rearth=6371d3)! m
 	parameter(pi=3.14159265358979323846264338328d0)
 	parameter(m0=1.660539040d-24*6.022136736d23)
-	real*8,allocatable :: P(:),R(:),rhor(:)
 	real*8 Mtot,Madd,rho,Rp,Rmin,Rmax,K0(10),K0t(10),rho0(10)
-	real*8 Mm(10),M,Mlay,MW,V0
-	integer nm,i,j,k,ii,l,nlay
-	logical last,lay(10,10)
+	real*8 Mm(10),M,Mlay,MW,V0,P1,R1,P2,R2
+	integer nm,i,j,k,l,nlay
+	logical last
 
 !	Ice
 c@ARTICLE{1993JChPh..99.5369F,
@@ -4131,16 +4130,8 @@ c          doi = {10.1111/j.1365-246X.2005.02642.x},
 c       adsurl = {https://ui.adsabs.harvard.edu/abs/2005GeoJI.162..610S},
 c      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 c}
-!	MgO
-	i=2
-	K0(i)=161d0
-	K0t(i)=3.9d0
-	V0=11.24
-	MW=40.304
-	rho0(i)=m0*MW/V0
-
 !	MgSiO3
-	i=3
+	i=2
 	K0(i)=211d0
 	K0t(i)=4.5d0
 	V0=26.35
@@ -4163,7 +4154,7 @@ c          doi = {10.1103/PhysRevLett.97.215504},
 c       adsurl = {https://ui.adsabs.harvard.edu/abs/2006PhRvL..97u5504D},
 c      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 c}
-	i=4
+	i=3
 	K0(i)=165d0
 	K0t(i)=4.97d0
 	V0=11.234*1e-24*6.022136736d23
@@ -4172,25 +4163,16 @@ c}
 
 	nm=i
 
-!	Case of 3 layers (H2O, mixed MgO&MgSiO3, Fe)
+!	Case of 3 layers (H2O, MgSiO3, Fe)
 	nlay=3
-	lay=.false.
-	lay(1,1)=.true.
-	lay(2,2:3)=.true.
-	lay(3,4)=.true.
 
 	Mm(1)=f_h2o
-	Mm(2)=(1d0-f_h2o)*(1d0-f_core)*0.1
-	Mm(3)=(1d0-f_h2o)*(1d0-f_core)*0.9
-	Mm(4)=(1d0-f_h2o)*f_core
+	Mm(2)=(1d0-f_h2o)*(1d0-f_core)
+	Mm(3)=(1d0-f_h2o)*f_core
 
 	M=Mp*Mearth
 
 	Mm(1:nm)=Mm(1:nm)/sum(Mm(1:nm))
-
-	allocate(R(0:nm*nr))
-	allocate(P(0:nm*nr))
-	allocate(rhor(nm*nr))
 
 	Rmax=5d0*Rearth
 	Rmin=0d0*Rearth
@@ -4203,34 +4185,25 @@ c}
 			Rp=Rmax
 			last=.false.
 		endif
-		ii=nr*nm
-		R=0d0
-		R(ii)=Rp
-		P(ii)=0d0
+		R2=Rp
+		P2=0d0
 		Mtot=0d0
 		do j=1,nlay
-			Mlay=0d0
-			do k=1,nm
-				if(lay(j,k)) Mlay=Mlay+Mm(k)
-			enddo
+			Mlay=Mm(j)
 			if(Mlay.gt.0d0) then
 				do i=1,nr
-					rho=0d0
-					do k=1,nm
-						if(lay(j,k)) rho=rho+Mm(k)/EoS(P(ii),K0(k),K0t(k),rho0(k))
-					enddo
-					rho=Mlay*1d3/rho
-					rhor(ii)=rho
+					rho=EoS(P2,K0(j),K0t(j),rho0(j))*1d3
 					Madd=Mlay*M/real(nr)
-					ii=ii-1
-					R(ii)=(R(ii+1)**3-Madd*3d0/(4d0*pi*rho))**(1d0/3d0)
+					R1=(R2**3-Madd*3d0/(4d0*pi*rho))**(1d0/3d0)
 					Mtot=Mtot+Madd
-					if(.not.R(ii).gt.0d0) then
+					if(.not.R1.gt.0d0) then
 						Rmin=Rp
 						goto 10
 					endif
-					P(ii)=P(ii+1)+G*(M-Mtot)*rho*
-     &			abs(R(ii+1)-R(ii))/(0.5d0*(R(ii)+R(ii+1)))**2
+					P1=P2+G*(M-Mtot)*rho*
+     &			abs(R2-R1)/(0.5d0*(R1+R2))**2
+					R2=R1
+					P2=P1
 				enddo
 			endif
 		enddo
@@ -4239,8 +4212,6 @@ c}
 	enddo
 
 	Rp=Rp/Rearth
-
-	deallocate(R,P,rhor)
 	
 	end
 
