@@ -1790,6 +1790,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) fit_albedo_slope
 		case("fit_albedo_gp")
 			read(key%value,*) fit_albedo_GP
+		case("fit_albedo_matern")
+			read(key%value,*) fit_albedo_Matern
 		case("fit_albedo_step")
 			read(key%value,*) fit_albedo_step
 		case("lamstep","lam_step")
@@ -2291,6 +2293,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	fit_albedo_alpha=1d0
 	fit_albedo=.false.
 	fit_albedo_GP=.true.
+	fit_albedo_Matern=.false.
 	fit_albedo_slope=.false.
 	fit_albedo_step=.false.
 	lamStep=0.7

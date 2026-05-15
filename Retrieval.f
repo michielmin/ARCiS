@@ -947,10 +947,14 @@ c	linear
 			amplitude=(fit_albedo_sigma/(1d0-surfacealbedo))**2
 			do j=1,nk
 				do ii=1,nk
-					d=(log(lamk(j))-log(lamk(ii)))
 					Kalb(j,ii)=0d0
+					d=(log(lamk(j))-log(lamk(ii)))
 					if(fit_albedo_GP) then
 						Kalb(j,ii)=Kalb(j,ii)+amplitude*exp(-0.5d0*(d/fit_albedo_l)**2)
+					endif
+					if(fit_albedo_Matern) then
+						d=sqrt(3d0)*abs(d)/fit_albedo_l
+						Kalb(j,ii)=Kalb(j,ii)+amplitude*(1d0+d)*exp(-d)
 					endif
 					if(fit_albedo_step) then
 						do k=1,nStep
