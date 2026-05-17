@@ -4177,7 +4177,7 @@ c}
 
 	Mm(1:nm)=Mm(1:nm)/sum(Mm(1:nm))
 
-	Rmax=5d0*Rearth
+	Rmax=Rearth*(M/Mearth)**(1d0/3d0)
 	Rmin=0d0*Rearth
 	Rp=(Rmax+Rmin)/2d0
 
@@ -4201,6 +4201,8 @@ c}
 					Mtot=Mtot+Madd
 					if(.not.R1.gt.0d0) then
 						Rmin=Rp
+						Rp=Rp*(M/Mtot)**(1d0/3d0)
+						if(Rp.gt.Rmax) Rmax=Rp
 						goto 10
 					endif
 					P1=P2+G*(M-Mtot)*rho*
