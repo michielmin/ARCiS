@@ -371,7 +371,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 			specRexp=2d0
 			Dmirror=7d0
 			f_phot=0.25d0
-			noisefloor=1d-12
+			noisefloor=1d-13
 			scalestar=1d-10
 			instr_ntrans(i_instr)=instr_tint(i_instr)/(2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)/3600d0)
 		case("obs","OBS")
@@ -406,7 +406,7 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 		if(computelam(i)) then
 			nlam_out=nlam_out+1
 			lam_out(nlam_out)=lam(i)
-			spec_out(nlam_out)=scalestar*Fstar(i)*1d23/distance**2+phase(i,0,j)+flux(0,j)
+			spec_out(nlam_out)=scalestar*Fstar(i)*1d23/distance**2+phase(1,0,i)+flux(0,i)
 		endif
 	enddo
 	call regridspecres(lam_out,spec_out,nlam_out,

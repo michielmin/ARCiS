@@ -460,11 +460,11 @@ c		call cpu_time(stoptime)
 					if(fit_albedo_step) then
 						do k=1,nStep
 							d=(log(lamk(j))-log(lamStep(k)*1d-4))
-							Sigmoid1=1d0 / (1d0 + exp(-4d0*d/fit_albedo_l))
+							Sigmoid1=1d0 / (1d0 + exp(-d/fit_albedo_l_step))
 							d=(log(lamk(ii))-log(lamStep(k)*1d-4))
-							Sigmoid2=1d0 / (1d0 + exp(-4d0*d/fit_albedo_l))
+							Sigmoid2=1d0 / (1d0 + exp(-d/fit_albedo_l_step))
 							d=Sigmoid1*Sigmoid2+(1d0-Sigmoid1)*(1d0-Sigmoid2)
-							Kalb(j,ii)=Kalb(j,ii)+amplitude*d
+							Kalb(j,ii)=Kalb(j,ii)+(fit_albedo_sigma_step/(1d0-surfacealbedo))**2*d
 						enddo
 					endif
 					if(fit_albedo_slope) then

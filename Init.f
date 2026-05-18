@@ -1782,10 +1782,15 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) fit_albedo
 		case("fit_albedo_sigma")
 			read(key%value,*) fit_albedo_sigma
+			fit_albedo_sigma_step=fit_albedo_sigma
+		case("fit_albedo_sigma_gp")
+			read(key%value,*) fit_albedo_sigma
+		case("fit_albedo_sigma_step")
+			read(key%value,*) fit_albedo_sigma_step
 		case("fit_albedo_l")
 			read(key%value,*) fit_albedo_l
-		case("fit_albedo_alpha")
-			read(key%value,*) fit_albedo_alpha
+		case("fit_albedo_l_step")
+			read(key%value,*) fit_albedo_l_step
 		case("fit_albedo_slope")
 			read(key%value,*) fit_albedo_slope
 		case("fit_albedo_gp")
@@ -2289,8 +2294,9 @@ c	if(par_tprofile) call ComputeParamT(T)
 	f_snow=0.2
 	f_grass=0.5
 	fit_albedo_sigma=0.25d0
+	fit_albedo_sigma_step=0.25d0
 	fit_albedo_l=0.08d0
-	fit_albedo_alpha=1d0
+	fit_albedo_l_step=0.02d0
 	fit_albedo=.false.
 	fit_albedo_GP=.true.
 	fit_albedo_Matern=.false.
