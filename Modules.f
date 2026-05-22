@@ -233,12 +233,12 @@ c for exchange when computing secondary atmosphere
 	real*8,allocatable :: mixrat_optEC_r(:)
 
 	real*8 Mp_prior,dMp_prior,surfacealbedo,MSimAb,surf_lam1,surf_lam2,surf_alb1,surf_alb2,surf_alb3
-	real*8 fit_albedo_sigma,fit_albedo_sigma_step,fit_albedo_l,fit_albedo_l_step,Rp_prior,dRp_prior
+	real*8 fit_albedo_sigma,fit_albedo_sigma_step,fit_albedo_sigma_slope,fit_albedo_l,fit_albedo_l_step,Rp_prior,dRp_prior
 	real*8 interior_f_core,interior_f_ice
 	logical Rp_from_interior
 	real*8,allocatable :: lamStep(:)
 	integer nStep
-	logical fit_albedo,fit_albedo_GP,fit_albedo_slope,fit_albedo_step,fit_albedo_Matern,fit_albedo_LS
+	logical fit_albedo,fit_albedo_GP,fit_albedo_slope,fit_albedo_step,fit_albedo_Matern,fit_albedo_LS.fit_albedo_remove_lin
 	character*20 surfacetype
 	character*500 surfacefile,Full3Ddir
 	integer nTZ,nspike,nai,nboot,npew,nscaleR

@@ -975,7 +975,17 @@ c	linear
 					endif
 				enddo
 			enddo
+			call RemoveOffsetSlope(Kalb,nk,lamk(1:nk),Rk(1:nk))
 c			call RemoveOffset(Kalb,nk,Rk(1:nk))
+			if(fit_albedo_slope) then
+				amplitude=(fit_albedo_sigma_slope/(1d0-surfacealbedo))**2
+				d=sqrt(lam(1)*lam(nlam))
+				do j=1,nk
+					do ii=1,nk
+						Kalb(j,ii)=Kalb(j,ii)+amplitude*log(lamk(j)/d)*log(lamk(ii)/d)
+					enddo
+				enddo
+			endif
 			do j=1,nk
 				do ii=1,nk
 					Cov(j,ii)=Cov(j,ii)+((surfacealbedo*(1d0-surfacealbedo))**2)*(1d0/(alb2-alb1)**2)*

@@ -1607,6 +1607,63 @@ C
 	return
 	end
 
+	subroutine RemoveOffsetSlope(A,n,x,R)
+	IMPLICIT NONE
+	integer n,i,j
+	real*8 A(n,n),R(n),x(n)
+	real*8 H(n),KH(n),HKH,alpha,beta,cx
+	
+	! --- Remove offset: H_a = 1/R(i), normalised ---
+	HKH=0d0
+	do i=1,n
+		H(i)=1d0/R(i)
+	enddo
+	! KH = A * H
+	do i=1,n
+		KH(i)=0d0
+		do j=1,n
+			KH(i)=KH(i)+A(i,j)*H(j)
+		enddo
+	enddo
+	! HKH = H^T * KH
+	HKH=0d0
+	do i=1,n
+		HKH=HKH+H(i)*KH(i)
+	enddo
+	! A <- A - KH * KH^T / HKH
+	do i=1,n
+		do j=1,n
+			A(i,j)=A(i,j)-KH(i)*KH(j)/HKH
+		enddo
+	enddo
+	
+	! --- Remove slope: H_b = lambda(i)/R(i), here lambda(i)=i ---
+	! First re-orthogonalise against offset: subtract projection onto H_a
+	cx=sqrt(x(1)*x(n))
+	do i=1,n
+		H(i)=log(x(i)/cx)/R(i)
+	enddo
+	! KH = A * H  (A has already been offset-projected)
+	do i=1,n
+		KH(i)=0d0
+		do j=1,n
+			KH(i)=KH(i)+A(i,j)*H(j)
+		enddo
+	enddo
+	! HKH = H^T * KH
+	HKH=0d0
+	do i=1,n
+		HKH=HKH+H(i)*KH(i)
+	enddo
+	! A <- A - KH * KH^T / HKH
+	do i=1,n
+		do j=1,n
+			A(i,j)=A(i,j)-KH(i)*KH(j)/HKH
+		enddo
+	enddo
+	
+	return
+	end
 
 	subroutine GaussHermite(n,x,w,xmax)
 	IMPLICIT NONE
