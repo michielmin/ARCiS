@@ -238,7 +238,7 @@ c for exchange when computing secondary atmosphere
 	logical Rp_from_interior
 	real*8,allocatable :: lamStep(:)
 	integer nStep
-	logical fit_albedo,fit_albedo_GP,fit_albedo_slope,fit_albedo_step,fit_albedo_Matern
+	logical fit_albedo,fit_albedo_GP,fit_albedo_slope,fit_albedo_step,fit_albedo_Matern,fit_albedo_LS
 	character*20 surfacetype
 	character*500 surfacefile,Full3Ddir
 	integer nTZ,nspike,nai,nboot,npew,nscaleR

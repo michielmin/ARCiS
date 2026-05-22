@@ -952,6 +952,9 @@ c	linear
 					if(fit_albedo_GP) then
 						Kalb(j,ii)=Kalb(j,ii)+amplitude*exp(-0.5d0*(d/fit_albedo_l)**2)
 					endif
+					if(fit_albedo_LS) then
+						Kalb(j,ii)=Kalb(j,ii)+amplitude*max(0d0,1d0-abs(d/fit_albedo_l))
+					endif
 					if(fit_albedo_Matern) then
 						d=sqrt(3d0)*abs(d)/fit_albedo_l
 						Kalb(j,ii)=Kalb(j,ii)+amplitude*(1d0+d)*exp(-d)
