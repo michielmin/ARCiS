@@ -460,33 +460,29 @@ c		call cpu_time(stoptime)
 						d=sqrt(3d0)*abs(d)/fit_albedo_l
 						Kalb(j,ii)=Kalb(j,ii)+amplitude*(1d0+d)*exp(-d)
 					endif
+				enddo
+			enddo
+			if(fit_albedo_remove_lin) call RemoveOffsetSlope(Kalb,nk,lamk(1:nk),Rk(1:nk))
+			do j=1,nk
+				do ii=1,nk
 					if(fit_albedo_step) then
+						amplitude=(fit_albedo_sigma_step/(1d0-surfacealbedo))**2
 						do k=1,nStep
 							d=(log(lamk(j))-log(lamStep(k)*1d-4))
 							Sigmoid1=1d0 / (1d0 + exp(-d/fit_albedo_l_step))
 							d=(log(lamk(ii))-log(lamStep(k)*1d-4))
 							Sigmoid2=1d0 / (1d0 + exp(-d/fit_albedo_l_step))
 							d=Sigmoid1*Sigmoid2+(1d0-Sigmoid1)*(1d0-Sigmoid2)
-							Kalb(j,ii)=Kalb(j,ii)+(fit_albedo_sigma_step/(1d0-surfacealbedo))**2*d
+							Kalb(j,ii)=Kalb(j,ii)+amplitude*d
 						enddo
 					endif
 					if(fit_albedo_slope) then
+						amplitude=(fit_albedo_sigma_slope/(1d0-surfacealbedo))**2
 						d=sqrt(lam(1)*lam(nlam))
 						Kalb(j,ii)=Kalb(j,ii)+amplitude*log(lamk(j)/d)*log(lamk(ii)/d)
 					endif
 				enddo
 			enddo
-			if(fit_albedo_remove_lin) call RemoveOffsetSlope(Kalb,nk,lamk(1:nk),Rk(1:nk))
-c			call RemoveOffset(Kalb,nk,Rk(1:nk))
-			if(fit_albedo_slope) then
-				amplitude=(fit_albedo_sigma_slope/(1d0-surfacealbedo))**2
-				do j=1,nk
-					do ii=1,nk
-						d=sqrt(lam(1)*lam(nlam))
-						Kalb(j,ii)=Kalb(j,ii)+amplitude*log(lamk(j)/d)*log(lamk(ii)/d)
-					enddo
-				enddo
-			endif
 			do j=1,nk
 				do ii=1,nk
 					Cov(j,ii)=Cov(j,ii)+((surfacealbedo*(1d0-surfacealbedo))**2)*(1d0/(alb2-alb1)**2)*
