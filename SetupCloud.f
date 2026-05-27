@@ -108,6 +108,11 @@ c 90% MgSiO3
 			CPmin=Cloud(ii)%Pmin
 			CPmax=Cloud(ii)%Pmax
 			CPtau=Cloud(ii)%Ptau
+			if(Cloud(ii)%Prelative) then
+				CPmax=CPmax*P(1)
+				CPmin=CPmin*CPmax
+				CPtau=CPtau*CPmax
+			endif
 			if(CPmin.gt.CPmax) then
 				x=CPmin
 				CPmin=CPmax
@@ -156,6 +161,11 @@ c 90% MgSiO3
 			CPmin=Cloud(ii)%Pmin
 			CPmax=Cloud(ii)%Pmax
 			CPtau=Cloud(ii)%Ptau
+			if(Cloud(ii)%Prelative) then
+				CPmax=CPmax*P(1)
+				CPmin=CPmin*CPmax
+				CPtau=CPtau*CPmax
+			endif
 			if(CPmin.gt.CPmax) then
 				x=CPmin
 				CPmin=CPmax

@@ -446,6 +446,8 @@ c		call cpu_time(stoptime)
 		if(fit_albedo) then
 			Cov_obs=Cov
 			amplitude=(fit_albedo_sigma/(1d0-surfacealbedo))**2
+			Kalb=0d0
+			if(fit_albedo_GP.or.fit_albedo_LS.or.fit_albedo_Matern) then
 			do j=1,nk
 				do ii=1,nk
 					Kalb(j,ii)=0d0
@@ -463,6 +465,7 @@ c		call cpu_time(stoptime)
 				enddo
 			enddo
 			if(fit_albedo_remove_lin) call RemoveOffsetSlope(Kalb,nk,lamk(1:nk),Rk(1:nk))
+			endif
 			do j=1,nk
 				do ii=1,nk
 					if(fit_albedo_step) then

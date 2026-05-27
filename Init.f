@@ -1997,6 +1997,7 @@ c k is proportional to Rplanet and grav
 	IMPLICIT NONE
 	integer i,j,k,n,nrsurf_tot
 	real*8 g,dp,dz,P0(nr),T0(nr),pp,tt,mr0(nr,nmol),mm(nmol),yp1,ypn
+	real*8 CPmin,CPmax,x
 	real*8,allocatable :: y2(:)
 	character*10 names(nmol)
 	integer imol(nmol)
@@ -2054,28 +2055,39 @@ c k is proportional to Rplanet and grav
 			j=1
 			do i=1,nclouds
 				if(Cloud(i)%type.eq."LAYER".or.Cloud(i)%type.eq."SLAB".or.Cloud(i)%type.eq."HOMOGENEOUS") then
-					pp=Cloud(i)%Pmin/1.01
+					CPmin=Cloud(i)%Pmin
+					CPmax=Cloud(i)%Pmax
+					if(Cloud(i)%Prelative) then
+						CPmax=CPmax*P(1)
+						CPmin=CPmin*CPmax
+					endif
+					if(CPmin.gt.CPmax) then
+						x=CPmin
+						CPmin=CPmax
+						CPmax=x
+					endif
+					pp=CPmin/1.01
 					if(pp.gt.Pmin.and.pp.lt.Pmax.and.j.lt.nr) then
 						P0(j)=pp
 						j=j+1
 					endif
-					pp=Cloud(i)%Pmin*1.01
+					pp=CPmin*1.01
 					if(pp.gt.Pmin.and.pp.lt.Pmax.and.j.lt.nr) then
 						P0(j)=pp
 						j=j+1
 					endif
 					if(Cloud(i)%type.ne."HOMOGENEOUS") then
-						pp=Cloud(i)%Pmax/1.01
+						pp=CPmax/1.01
 						if(pp.gt.Pmin.and.pp.lt.Pmax.and.j.lt.nr) then
 							P0(j)=pp
 							j=j+1
 						endif
-						pp=Cloud(i)%Pmax*1.01
+						pp=CPmax*1.01
 						if(pp.gt.Pmin.and.pp.lt.Pmax.and.j.lt.nr) then
 							P0(j)=pp
 							j=j+1
 						endif
-						pp=sqrt(Cloud(i)%Pmax*Cloud(i)%Pmin)
+						pp=sqrt(CPmax*CPmin)
 						if(pp.gt.Pmin.and.pp.lt.Pmax.and.j.lt.nr) then
 							P0(j)=pp
 							j=j+1
@@ -2443,6 +2455,7 @@ c  GGchem was still implemented slightly wrong.
 		Cloud(i)%Pmax=1d10
 		Cloud(i)%Pmin=0d0
 		Cloud(i)%Ptau=1d0
+		Cloud(i)%Prelative=.false.
 		Cloud(i)%Phi=2d0
 		Cloud(i)%coverage=1d0
 		Cloud(i)%abun=1d0
@@ -3472,6 +3485,8 @@ c				includemol(i)=.true.
 			read(key%value,*) Cloud(j)%Pmax
 		case("ptau")
 			read(key%value,*) Cloud(j)%Ptau
+		case("prel","prelative")
+			read(key%value,*) Cloud(j)%Prelative
 		case("xi")
 			read(key%value,*) Cloud(j)%xi
 		case("dlogp")
