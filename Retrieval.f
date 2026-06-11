@@ -944,7 +944,7 @@ c	linear
 
 		if(fit_albedo) then
 			Cov_obs=Cov
-			amplitude=(fit_albedo_sigma/(1d0-surfacealbedo))**2
+			amplitude=(fit_albedo_sigma*surfacealbedo)**2
 			do j=1,nk
 				do ii=1,nk
 					Kalb(j,ii)=0d0
@@ -965,7 +965,7 @@ c	linear
 			do j=1,nk
 				do ii=1,nk
 					if(fit_albedo_step) then
-						amplitude=(fit_albedo_sigma_step/(1d0-surfacealbedo))**2
+						amplitude=(fit_albedo_sigma_step*surfacealbedo)**2
 						do k=1,nStep
 							d=(log(lamk(j))-log(lamStep(k)*1d-4))
 							Sigmoid1=1d0 / (1d0 + exp(-d/fit_albedo_l_step))
@@ -976,7 +976,7 @@ c	linear
 						enddo
 					endif
 					if(fit_albedo_slope) then
-						amplitude=(fit_albedo_sigma_slope/(1d0-surfacealbedo))**2
+						amplitude=(fit_albedo_sigma_slope*surfacealbedo)**2
 						d=sqrt(lam(1)*lam(nlam))
 						Kalb(j,ii)=Kalb(j,ii)+amplitude*log(lamk(j)/d)*log(lamk(ii)/d)
 					endif
@@ -984,7 +984,7 @@ c	linear
 			enddo
 			do j=1,nk
 				do ii=1,nk
-					Cov(j,ii)=Cov(j,ii)+((surfacealbedo*(1d0-surfacealbedo))**2)*(1d0/(alb2-alb1)**2)*
+					Cov(j,ii)=Cov(j,ii)+(1d0/(alb2-alb1)**2)*
      &	(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*Kalb(j,ii)
 				enddo
 			enddo
@@ -1012,15 +1012,15 @@ c	linear
 			endif
 			do i=1,nobs
 				do j=1,ObsSpec(i)%ndata
-					fitted_albedo(i,j)=-log(1d0/surfacealbedo-1d0)
+					fitted_albedo(i,j)=surfacealbedo
 				enddo
 			enddo
 			do j=1,nk
 				do ii=1,nk
-					fitted_albedo(iobsk(j),jk(j))=fitted_albedo(iobsk(j),jk(j))+(surfacealbedo*(1d0-surfacealbedo))*
+					fitted_albedo(iobsk(j),jk(j))=fitted_albedo(iobsk(j),jk(j))+
      &						Kalb(j,ii)*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*specinv(ii)/(alb2-alb1)
 				enddo
-				fitted_albedo(iobsk(j),jk(j))=1d0/(1d0+exp(-fitted_albedo(iobsk(j),jk(j))))
+				fitted_albedo(iobsk(j),jk(j))=min(max(fitted_albedo(iobsk(j),jk(j)),0d0),1d0)
 				ObsSpec(iobsk(j))%model(jk(j))=spec_albedo(1,iobsk(j),jk(j))+
      &		(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*(fitted_albedo(iobsk(j),jk(j))-alb1)/(alb2-alb1)
 			enddo

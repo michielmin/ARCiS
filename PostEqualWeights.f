@@ -445,7 +445,7 @@ c		call cpu_time(stoptime)
 
 		if(fit_albedo) then
 			Cov_obs=Cov
-			amplitude=(fit_albedo_sigma/(1d0-surfacealbedo))**2
+			amplitude=(fit_albedo_sigma*surfacealbedo)**2
 			Kalb=0d0
 			if(fit_albedo_GP.or.fit_albedo_LS.or.fit_albedo_Matern) then
 			do j=1,nk
@@ -469,7 +469,7 @@ c		call cpu_time(stoptime)
 			do j=1,nk
 				do ii=1,nk
 					if(fit_albedo_step) then
-						amplitude=(fit_albedo_sigma_step/(1d0-surfacealbedo))**2
+						amplitude=(fit_albedo_sigma_step*surfacealbedo)**2
 						do k=1,nStep
 							d=(log(lamk(j))-log(lamStep(k)*1d-4))
 							Sigmoid1=1d0 / (1d0 + exp(-d/fit_albedo_l_step))
@@ -480,7 +480,7 @@ c		call cpu_time(stoptime)
 						enddo
 					endif
 					if(fit_albedo_slope) then
-						amplitude=(fit_albedo_sigma_slope/(1d0-surfacealbedo))**2
+						amplitude=(fit_albedo_sigma_slope*surfacealbedo)**2
 						d=sqrt(lam(1)*lam(nlam))
 						Kalb(j,ii)=Kalb(j,ii)+amplitude*log(lamk(j)/d)*log(lamk(ii)/d)
 					endif
@@ -488,7 +488,7 @@ c		call cpu_time(stoptime)
 			enddo
 			do j=1,nk
 				do ii=1,nk
-					Cov(j,ii)=Cov(j,ii)+((surfacealbedo*(1d0-surfacealbedo))**2)*(1d0/(alb2-alb1)**2)*
+					Cov(j,ii)=Cov(j,ii)+(1d0/(alb2-alb1)**2)*
      &	(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*Kalb(j,ii)
 				enddo
 			enddo
@@ -499,17 +499,17 @@ c		call cpu_time(stoptime)
 			call dpotrs('L', nk, NRHS, Cov, nk, specinv, nk, info)
 			do iobs=1,nobs
 				do j=1,ObsSpec(iobs)%ndata
-					fitted_albedo(i,iobs,j)=-log(1d0/surfacealbedo-1d0)
+					fitted_albedo(i,iobs,j)=surfacealbedo
 				enddo
 			enddo
 			do j=1,nk
 				do ii=1,nk
-					fitted_albedo(i,iobsk(j),jk(j))=fitted_albedo(i,iobsk(j),jk(j))+(surfacealbedo*(1d0-surfacealbedo))*
+					fitted_albedo(i,iobsk(j),jk(j))=fitted_albedo(i,iobsk(j),jk(j))+
      &						Kalb(j,ii)*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*specinv(ii)/(alb2-alb1)
 				enddo
 			enddo
 			do j=1,nk
-				fitted_albedo(i,iobsk(j),jk(j))=1d0/(1d0+exp(-fitted_albedo(i,iobsk(j),jk(j))))
+				fitted_albedo(i,iobsk(j),jk(j))=min(max(fitted_albedo(i,iobsk(j),jk(j)),0d0),1d0)
 				ObsSpec(iobsk(j))%model(jk(j))=spec_albedo(1,iobsk(j),jk(j))+
      &		(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))*(fitted_albedo(i,iobsk(j),jk(j))-alb1)/(alb2-alb1)
 			enddo
