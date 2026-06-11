@@ -571,6 +571,7 @@ c==============================================================================
 	use Struct3D
 	use TimingModule
 	use ARCiS_GGCHEM
+	use mod_references
 	IMPLICIT NONE
 	type(SettingKey),pointer :: key,first
 	type(SettingKey) keyret
@@ -588,6 +589,12 @@ c==============================================================================
      &						  "CH3OH     ","C2H2      ","H         ","O         ","OH        ",
      &						  "N         ","NH        ","NH2       ","NO        ","N2H3      " /))
 
+	call getenv('HOME',homedir)
+	file=trim(homedir) // "/ARCiS/Data/latex/biblist.dat"
+	call references_init(file)
+
+	call register_ref("ARCiS")
+	
 	allocate(key)
 	first => key
 
@@ -774,168 +781,212 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/SiO2_amorph.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("SiO2(s)")
 								case('MgSiO3','CaSiO3') ! for now use MgSiO3 optical properties also for CaSiO3
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/MgSiO3_amorph_glass.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("MgSiO3(s)")
 								case('CaO') ! optical properties of CaCO3 (Calcite)
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/CalEpz300.txt'
 									Cloud(i)%lnkfile(j,2)=trim(homedir) // '/ARCiS/Data/refind/CalEsz300.txt'
 									Cloud(i)%lnkfile(j,3)=trim(homedir) // '/ARCiS/Data/refind/CalEsz300.txt'
 									Cloud(i)%nax(j)=3
+									call register_ref("CaO(s)")
 								case('ENSTATITE')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/enst_x.lnk'
 									Cloud(i)%lnkfile(j,2)=trim(homedir) // '/ARCiS/Data/refind/enst_y.lnk'
 									Cloud(i)%lnkfile(j,3)=trim(homedir) // '/ARCiS/Data/refind/enst_z.lnk'
 									Cloud(i)%nax(j)=3
+									call register_ref("Enstatite(s)")
 								case('Mg2SiO4')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Mg2SiO4_amorph_sol-gel.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("Mg2SiO4(s)")
 								case('FORSTERITE')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/for_x.lnk'
 									Cloud(i)%lnkfile(j,2)=trim(homedir) // '/ARCiS/Data/refind/for_y.lnk'
 									Cloud(i)%lnkfile(j,3)=trim(homedir) // '/ARCiS/Data/refind/for_z.lnk'
 									Cloud(i)%nax(j)=3
+									call register_ref("Forsterite(s)")
 								case('FeSiO3','FERROSILITE')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/pyrmg40.lnk'
 									Cloud(i)%nax(j)=1
+									call register_ref("FeSiO3(s)")
 								case('Fe2SiO4')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/olmg40.lnk'
 									Cloud(i)%nax(j)=1
+									call register_ref("Fe2SiO4(s)")
 								case('FAYALITE')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/fay_x.lnk'
 									Cloud(i)%lnkfile(j,2)=trim(homedir) // '/ARCiS/Data/refind/fay_y.lnk'
 									Cloud(i)%lnkfile(j,3)=trim(homedir) // '/ARCiS/Data/refind/fay_z.lnk'
 									Cloud(i)%nax(j)=3
+									call register_ref("Fayalite(s)")
 								case('NaAlSi3O8')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/naalsi3o8_02.36_0000_001.lnk'
 									Cloud(i)%nax(j)=1
+									call register_ref("NaAlSi3O8(s)")
 								case('MgO')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/MgO.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("MgO(s)")
 								case('H2O','WATER')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/H2O_s.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("H2O(s)")
 								case('Fe','IRON')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Fe.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("Fe(s)")
 								case('FeS','TROILITE')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/FeS.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("FeS(s)")
 								case('FeO')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/FeO.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("FeO(s)")
 								case('Fe2O3')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Fe2O3.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("Fe2O3(s)")
 								case('Fe3O4')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Fe3O4.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("Fe3O4(s)")
 								case('Al2O3','CORRUNDUM')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Al2O3.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("Al2O3(s)")
+									call register_ref("Al2O3-midIR(s)")
 								case('MgAl2O4','SPINEL')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/mgal2o4_natural.lnk'
 									Cloud(i)%nax(j)=1
+									call register_ref("MgAl2O4(s)")
 								case("NaNO3")
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/NaNO3.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("NaNO3(s)")
 								case("NaCl")
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/NaCl.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("NaCl(s)")
 								case("KCl")
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/KCl.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("KCl(s)")
 								case("Na2S")
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Na2S.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("Na2S(s)1")
+									call register_ref("Na2S(s)2")
 								case("NH3","AMONIA","NH4SH") ! for now use NH3 refind for NH4SH
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/NH3.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("NH3(s)")
 								case("CH4")
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/CH4.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("CH4(s)")
 								case('TiO2','MgTi2O5','Ti4O7')! for now use TiO2 refind for all Ti oxides
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/TiO2_anatase.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("TiO2(s)")
+									call register_ref("TiO2-NIR(s)")
 								case('CaTiO3')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/CaTiO3.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("CaTiO3(s)")
 								case('H2SO4')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/H2SO4.lnk'
 									Cloud(i)%nax(j)=1
+									call register_ref("H2SO4(s)")
 								case('ZnS')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/ZnS.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("ZnS(s)")
 								case('MnS')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/MnS.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("MnS(s)")
 								case('Zn')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Zn.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("Zn(s)")
 								case('Mn')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Mn.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("Mn(s)")
 								case('Cr')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Cr.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("Cr(s)")
 								case('NH4Cl')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/NH4Cl.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("NH4Cl(s)")
 								case('SiO')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/SiO.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("SiO(s)")
 								case('W')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/W.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("W(s)1")
+									call register_ref("W(s)2")
 								case('S')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/FeS.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("FeS(s)")
 								case('Ni')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Ni.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("Ni(s)")
 								case('optEC')
 									Cloud(i)%material(j)='optEC'
+									call register_ref("optEC")
 								case('THOLIN')
 									Cloud(i)%material(j)='FILE'
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Titan_tholin.dat'
 									Cloud(i)%nax(j)=1
+									call register_ref("Tholin(s)")
 								case default
 									call output("Unknown condensate")
 									stop
@@ -1103,17 +1154,22 @@ c select at least the species relevant for disequilibrium chemistry
 	select case(surfacetype)
 		case("FILE","file")
 			call regridSimple(surfacefile,lam*1d4,surface_props(1:nlam,1),nlam)
+			call register_ref("Surface-file")
 			surface_props(1:nlam,1)=1d0-surface_props(1:nlam,1)/100d0
 		case("Earth","EARTH","earth","WATER","water","SAND","sand","ICE","ice","GRASS","grass","SNOW","snow")
 			n_surface=5
 			call getenv('HOME',homedir)
 			file=trim(homedir) // '/ARCiS/Data/Surface/Ice.dat'
+			call register_ref("Ice-surface")
 			call regridSimple(file,lam*1d4,surface_props(1:nlam,1),nlam)
 			file=trim(homedir) // '/ARCiS/Data/Surface/Snow.dat'
+			call register_ref("Snow-surface")
 			call regridSimple(file,lam*1d4,surface_props(1:nlam,2),nlam)
 			file=trim(homedir) // '/ARCiS/Data/Surface/Grass.dat'
+			call register_ref("Grass-surface")
 			call regridSimple(file,lam*1d4,surface_props(1:nlam,3),nlam)
 			file=trim(homedir) // '/ARCiS/Data/Surface/brown-darkbrown-sand.dat'
+			call register_ref("brown-darkbrown-sand-surface")
 			call regridSimple(file,lam*1d4,surface_props(1:nlam,4),nlam)
 			surface_props(1:nlam,1:4)=1d0-surface_props(1:nlam,1:4)/100d0
 			if(anisoscattstar.and..not.lambertsurface) then
@@ -1129,6 +1185,7 @@ c				bdrf_args(2,5)=1.33		! refractive index (wavelength dependent)
 				bdrf_args(3,5)=1		! do shadowing
 			else
 				file=trim(homedir) // '/ARCiS/Data/Surface/Water.dat'
+				call register_ref("Water-surface")
 				call regridSimple(file,lam*1d4,surface_props(1:nlam,5),nlam)
 				surface_props(1:nlam,5)=1d0-surface_props(1:nlam,5)/100d0
 				bdrf_type(1:5)=0
@@ -1146,6 +1203,7 @@ c				bdrf_args(2,1)=1.33		! refractive index (wavelength dependent)
 				bdrf_type(2)=0
 			else
 				file=trim(homedir) // '/ARCiS/Data/Surface/Water.dat'
+				call register_ref("Water-surface")
 				call regridSimple(file,lam*1d4,surface_props(1:nlam,1),nlam)
 				surface_props(1:nlam,1)=1d0-surface_props(1:nlam,1)/100d0
 				bdrf_type(1:2)=0
@@ -1206,6 +1264,39 @@ c In this case the beta map should be the static one. Make sure this is set prop
 	do i=1,nmol
 		if(.not.includemol(i)) includemol_raytrace(i)=.false.
 	enddo
+
+
+	if(par_tprofile.and..not.computeT) call register_ref("Guillot-profile")
+	if(fit_albedo) call register_ref("GP-albedo")
+	if(dochemistry) call register_ref("GGchem")
+	if(disequilibrium) call register_ref("Diseq.Chem.")
+	if(ComputeTeff) call register_ref("Compute-Tint")
+	if((dopostequalweights.or.retrieval).and.(retrievaltype.eq.'MN')) then
+		call register_ref("MultiNest1")
+		call register_ref("MultiNest2")
+		call register_ref("MultiNest3")
+	endif
+	if(do3D.and.((night2day.ne.1d0.or.
+     &   (hotspotshift0.gt.-180d0.and.hotspotshift0.lt.180d0.and.hotspotshift0.ne.0d0).or.pole2eq.ne.1d0).or.
+     &    fixnight2day)) call register_ref("3D-structure")
+	if(useDLMie) call register_ref("DeepLearningMie")
+	if(useEOS) call register_ref("EOS")
+	if(planetform) call register_ref("SimAb")
+	do i=1,nclouds
+		if(Cloud(i)%fmax.gt.0d0) call register_ref("DHS-dust-opacities")
+		if(Cloud(i)%type.eq.'DIFFUSE') call register_ref("Cloudform-original")
+		if(Cloud(i)%type.eq.'CONDENSATION') then
+			call register_ref("Condensation-curves")
+			call register_ref("Cloudform-original")
+			call register_ref("ExoLyn")
+		endif
+	enddo
+	do i=1,nmol
+		if(includemol(i)) call register_ref(trim(molname(i)))
+	enddo
+
+	file=trim(homedir) // "/ARCiS/Data/latex/"
+	call write_latex_reftable(trim(outputdir) // "refs.tex",file)
 	
 	return
 	end

@@ -161,6 +161,7 @@ OBJS	= Modules.o \
 		nasa_polynomial.o \
 		GGchem_linpack_q.o \
 		GGchem_is_nan.o \
+		MakeBibList.o \
 		Init.o \
 		Run3D.o \
 		ReadFull3D.o \
