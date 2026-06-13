@@ -840,7 +840,7 @@ c	linear
 	lnew=-global_chi2/2d0+tot
 	global_chi2=global_chi2/real(max(1,k-n_ret))
 	
-	if(fullcovmat) then
+	if(fullcovmat.and.useobsgrid) then
 		cov_iter=0
 		ncov_iter=1
 3		continue
@@ -1178,7 +1178,7 @@ c	linear
 		bestvar=var
 		bestchi2=global_chi2
 	endif
-	if(fullcovmat) deallocate(lamk,Rk,iobsk,jk,spec)
+	if(fullcovmat.and.useobsgrid) deallocate(lamk,Rk,iobsk,jk,spec)
 
 	deallocate(allspec)
 	

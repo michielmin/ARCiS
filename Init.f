@@ -691,6 +691,11 @@ c allocate the arrays
 	
 	call ConvertUnits()
 
+	if(fit_albedo.and..not.useobsgrid.and.(dopostequalweights.or.retrieval)) then
+		call output("FitAlbedo currently only works when setting useobsgrid=.true.")
+		stop
+	endif
+
 c	condensates=(condensates.or.cloudcompute)
 
 	allocate(gg(ng),wgg(ng))

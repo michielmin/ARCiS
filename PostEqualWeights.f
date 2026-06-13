@@ -84,9 +84,9 @@
 		allocate(phase3DR(0:nmodels,1:nphase,nlam))
 		allocate(var3D(0:nmodels,1:nlong,0:n_Par3D))
 	endif
-	if(useobsgrid) allocate(specobs(0:nmodels,nobs,nlam),sysobs(0:nmodels,nobs,nlam),
-     &						fitted_albedo(0:nmodels,nobs,nlam),aver_albedo(0:nmodels,nobs),
-     &						refl_surface(0:nmodels,nobs,nlam))
+	allocate(specobs(0:nmodels,nobs,nlam),sysobs(0:nmodels,nobs,nlam),
+     &				fitted_albedo(0:nmodels,nobs,nlam),aver_albedo(0:nmodels,nobs),
+     &				refl_surface(0:nmodels,nobs,nlam))
 	allocate(Neff_fitalbedo(0:nmodels))
 	if(Rp_from_interior) allocate(Rp_interior(0:nmodels))
 
@@ -369,7 +369,7 @@ c		call cpu_time(stoptime)
 		ObsSpec(iobs)%model(1:ObsSpec(iobs)%ndata)=specobs(i,iobs,1:ObsSpec(iobs)%ndata)
 	enddo
 
-	if(fullcovmat) then
+	if(fullcovmat.and.useobsgrid) then
 		cov_iter=0
 		ncov_iter=1
 13		continue
@@ -664,7 +664,7 @@ c		call cpu_time(stoptime)
 	do j=1,ncc
 		speccloudtau(i,1:nlam)=speccloudtau(i,1:nlam)+cloudtau(j,1:nlam)
 	enddo
-	if(fit_albedo) then
+	if(fit_albedo.and.useobsgrid) then
 		do iobs=1,nobs
 			if(ObsSpec(iobs)%type.eq.'emis'.or.ObsSpec(iobs)%type.eq.'emisR'.or.
      &	 ObsSpec(iobs)%type.eq.'phase'.or.ObsSpec(iobs)%type.eq.'phaseR') then
