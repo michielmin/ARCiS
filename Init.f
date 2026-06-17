@@ -1297,7 +1297,15 @@ c In this case the beta map should be the static one. Make sure this is set prop
 		endif
 	enddo
 	do i=1,nmol
-		if(includemol(i)) call register_ref(trim(molname(i)))
+		if(includemol(i)) then
+			call register_ref(trim(molname(i)))
+			select case(molname(i))
+				case("Mg","Al","Li","Fe","V","Ti","Si","O")
+					call register_ref("pyROX")
+				case default
+					call register_ref("ExoMolOP")
+			end select
+		endif
 	enddo
 
 	file=trim(homedir) // "/ARCiS/Data/latex/"
