@@ -1307,6 +1307,7 @@ c In this case the beta map should be the static one. Make sure this is set prop
 			end select
 		endif
 	enddo
+	if(do_cia) call register_ref("CIA")
 
 	file=trim(homedir) // "/ARCiS/Data/latex/"
 	call write_latex_reftable(trim(outputdir) // "refs.tex",file)
@@ -1952,6 +1953,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) tauRing
 		case("doring")
 			read(key%value,*) doRing
+		case("exozodi")
+			read(key%value,*) ExoZodi
 		case("adderr")
 			do i=key%nr1,key%nr2
 				read(key%value,*) ObsSpec(i)%adderr
@@ -2722,6 +2725,8 @@ c Rooney et al. 2002: https://ui.adsabs.harvard.edu/abs/2022ApJ...925...33R/abst
 	scattstar=.false.
 	anisoscattstar=.false.
 	lambertsurface=.true.
+	
+	ExoZodi=3d0
 	
 	opacitymode=.false.
 	opacitydir=trim(homedir) // '/ARCiS/Data/Opacities'

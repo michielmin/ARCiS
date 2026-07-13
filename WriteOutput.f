@@ -10,7 +10,7 @@
 	logical,allocatable :: docloud0(:,:)
 	real*8,allocatable :: spec(:,:),specR(:),lamR(:),specRexp(:),specErr(:),Fstar_obs(:)
 	real*8 x,specres_obs,expspecres_obs,gasdev,tot,Dmirror,f_phot,noisefloor,molweight(nmol),Tweight,Pweight
-	real*8 lam_out(nlam),spec_out(nlam),Ca,Cs,tau,tautot,F11(180),G,scalestar
+	real*8 lam_out(nlam),spec_out(nlam),Ca,Cs,tau,tautot,F11(180),G,scalestar,zodi
 	integer nlam_out
 	integer ilam,j,nj,nlamR,i_instr,k,ir
 	character*1000 line,instr_add
@@ -349,28 +349,27 @@ c     &					4d0*pi*1d-34*(phase(1,0,i)+flux(0,i))*clight*distance**2/(lam(i)*lam
 			f_phot=0.1d0
 			noisefloor=100d-6
 		case("HWO")
-			nlam_out=0
-			do i=1,nlam
-				if(computelam(i)) then
-					nlam_out=nlam_out+1
+			allocate(lamR(1),specR(1))
+			lamR(1)=0.25d-4
+			specR(1)=7.0
+			i=1
+			do while(lamR(i).lt.1.85d-4)
+				if(lamR(i)*(1d0+0.5d0/specR(i)+0.5/7d0).lt.0.5d-4) then
+					specR=[specR,7d0]
+				else if(lamR(i)*(1d0+0.5d0/specR(i)+0.5/140d0).le.1.0d-4) then
+					specR=[specR,140d0]
+				else
+					specR=[specR,70d0]
 				endif
+				lamR=[lamR,lamR(i)*(1d0+0.5d0/specR(i)+0.5/specR(i+1))]
+				i=i+1
 			enddo
-			nlamR=nlam_out
-			allocate(lamR(nlamR))
-			allocate(specR(nlamR))
+			nlamR=i
 			allocate(specRexp(nlamR))
 			allocate(specErr(nlamR))
-			nlam_out=0
-			do i=1,nlam
-				if(computelam(i)) then
-					nlam_out=nlam_out+1
-					lamR(nlam_out)=lam(i)
-				endif
-			enddo
-			specR=specres
-			specRexp=2d0
+			specRexp=20d0
 			Dmirror=7d0
-			f_phot=0.25d0
+			f_phot=0.2d0
 			noisefloor=1d-13
 			scalestar=1d-10
 			instr_ntrans(i_instr)=instr_tint(i_instr)/(2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)/3600d0)
@@ -617,6 +616,20 @@ c		write(30,form) lamR(i)/micron,4d0*pi*1d-34*spec(1,i)*clight*distance**2/lamR(
 	do j=1,nphase
 		spec(j,1:nlamR)=spec(j,1:nlamR)/(Fstar_obs(1:nlamR)*1d23/distance**2)
 	enddo
+	do i=1,nlamR
+		tot=1.51d7*(Fstar_obs(i)*1d23/distance**2)
+		tot=tot*(pi*(Dmirror/2d0)**2)
+		tot=tot*2d0*pi*sqrt(Dplanet**3/(Ggrav*Mstar))*Rstar/(pi*Dplanet)
+		tot=tot*instr_ntrans(i_instr)*f_phot/specR(i)
+c according to Hu et al. 2021 the zodiacal dust in the HZ of a solar type star with 3 zodi has half the surface 
+c brightness of a planet assuming a 7m mirror and a distance of 6 parsec.
+c This equation just scales that
+		zodi=0.5d-10*(ExoZodi/3d0)*(lamR(i)/(micron*0.7))**2*(7.0/Dmirror)**2*(distance/(6d0*parsec))**2
+c	print*,lamR(i)/micron,tot*(scalestar+zodi+spec(1,i)),tot*spec(1,i)
+		specErr(i)=sqrt((scalestar+zodi+spec(1,i))/tot)
+		if(specErr(i).lt.noisefloor) specErr(i)=noisefloor
+	enddo
+
 	filename=trim(outputdir) // "obs_emisR_" // trim(instr_add) // trim(side)
 	call output("Writing spectrum to: " // trim(filename))
 	open(unit=30,file=filename,FORM="FORMATTED",ACCESS="STREAM")
