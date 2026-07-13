@@ -733,11 +733,38 @@ c===============================================================================
 
 	if(.not.allocated(Tdist)) allocate(Tdist(nr,maxiter))
 	Tdist(1:nr,nTiter)=T(1:nr)
-	call output("Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f6.2)') // "%")
-	if(converged.and.maxErr.gt.epsiter) call output("      90% of values below: " // dbl2string(error(j)*100d0,'(f6.2)') // "%")
+	call output("Maximum error on T-struct: " // trim(dbl2string(maxErr*100d0,'(f6.2)')) // " %")
+	if(converged.and.maxErr.gt.epsiter) call output("      90% of values below: " // trim(dbl2string(error(j)*100d0,'(f6.2)')) // " %")
 	if(do3D.and..not.retrieval.and..not.dopostequalweights) then
-		print*,"Maximum error on T-struct: " // dbl2string(maxErr*100d0,'(f6.2)') // "%"
-		if(converged.and.maxErr.gt.epsiter) print*,"      90% of values below: " // dbl2string(error(j)*100d0,'(f6.2)') // "%"
+		print*,"Maximum error on T-struct: " // trim(dbl2string(maxErr*100d0,'(f6.2)')) // " %"
+		if(converged.and.maxErr.gt.epsiter) print*,"      90% of values below: " // trim(dbl2string(error(j)*100d0,'(f6.2)')) // " %"
+	endif
+
+	if(Tsurface0.gt.0d0) then
+		E0=Esurface*(15d0*hplanck**3*clight**3)/(2d0*(pi*kb)**4) ! in K^4
+		call output("Fixed surface temperature solution:")
+		call output("  effective internal temparture: " // trim(dbl2string(sign(1d0,E0)*abs(E0)**0.25,'(f8.2)')) // " K")
+		if(do3D.and..not.retrieval.and..not.dopostequalweights) then
+			print*,"Fixed surface temperature solution:"
+			print*,"  effective internal temparture: " // trim(dbl2string(sign(1d0,E0)*abs(E0)**0.25,'(f8.2)')) // " K"
+		endif
+		E0=sigma*1d-7*E0 ! in W/cm^2
+		E0=E0*4d0*pi*Rplanet**2 ! in W
+		if(E0.gt.0d0) then
+			call output("  effective energy loss:        " // trim(dbl2string(E0,'(es10.2)')) // " W")
+			call output("  simplified cooling rate:      " // trim(dbl2string(year*E0/(0.8d0*Mplanet),'(es10.2)')) // " K/year")
+			if(do3D.and..not.retrieval.and..not.dopostequalweights) then
+				print*,"  effective energy loss:        " // trim(dbl2string(E0,'(es10.2)')) // " W"
+				print*,"  simplified cooling rate:      " // trim(dbl2string(year*E0/(0.8d0*Mplanet),'(es10.2)')) // " K/year"
+			endif
+		else
+			call output("  effective energy gain:        " // trim(dbl2string(-E0,'(es10.2)')) // " W")
+			call output("  simplified heating rate:      " // trim(dbl2string(-year*E0/(0.8d0*Mplanet),'(es10.2)')) // " K/year")
+			if(do3D.and..not.retrieval.and..not.dopostequalweights) then
+				print*,"  effective energy gain:        " // trim(dbl2string(-E0,'(es10.2)')) // " W"
+				print*,"  simplified heating rate:      " // trim(dbl2string(-year*E0/(0.8d0*Mplanet),'(es10.2)')) // " K/year"
+			endif
+		endif
 	endif
 
 	deltaT(1:nr,nTiter)=T(1:nr)-Tinp(1:nr)
@@ -767,8 +794,8 @@ c===============================================================================
 	maxerr_prev=maxErr
 
 	Tsurface=T(1)
-	call output("Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K")
-	if(do3D.and..not.retrieval.and..not.dopostequalweights) print*,"Surface temperature: " // dbl2string(Tsurface,'(f8.2)') // " K"
+	call output("Surface temperature: " // trim(dbl2string(Tsurface,'(f8.2)')) // " K")
+	if(do3D.and..not.retrieval.and..not.dopostequalweights) print*,"Surface temperature: " // trim(dbl2string(Tsurface,'(f8.2)')) // " K"
 
 	if(writefiles) then
 		open(unit=26,file=trim(outputdir) // 'convection.dat',FORM="FORMATTED",ACCESS="STREAM")
