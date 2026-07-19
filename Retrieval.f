@@ -980,6 +980,25 @@ c	linear
 						d=sqrt(lam(1)*lam(nlam))
 						Kalb(j,ii)=Kalb(j,ii)+amplitude*log(lamk(j)/d)*log(lamk(ii)/d)
 					endif
+					if(fit_albedo_GP3) then
+						amplitude=surfacealbedo**2
+						if(lamk(j).lt.fit_albedo_GP3_lam1*1d-4) then
+							amplitude=amplitude*fit_albedo_sigma_GP1
+						else if(lamk(j).lt.fit_albedo_GP3_lam2*1d-4) then
+							amplitude=amplitude*fit_albedo_sigma_GP2
+						else
+							amplitude=amplitude*fit_albedo_sigma_GP3
+						endif
+						if(lamk(ii).lt.fit_albedo_GP3_lam1*1d-4) then
+							amplitude=amplitude*fit_albedo_sigma_GP1
+						else if(lamk(ii).lt.fit_albedo_GP3_lam2*1d-4) then
+							amplitude=amplitude*fit_albedo_sigma_GP2
+						else
+							amplitude=amplitude*fit_albedo_sigma_GP3
+						endif
+						d=(log(lamk(j))-log(lamk(ii)))
+						Kalb(j,ii)=Kalb(j,ii)+amplitude*exp(-0.5d0*(d/fit_albedo_l)**2)
+					endif
 				enddo
 			enddo
 			do j=1,nk

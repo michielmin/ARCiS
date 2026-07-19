@@ -1890,7 +1890,20 @@ c			read(key%value,*) nTpoints
 			fit_albedo_sigma_step=fit_albedo_sigma
 			fit_albedo_sigma_slope=fit_albedo_sigma
 		case("fit_albedo_sigma_gp")
-			read(key%value,*) fit_albedo_sigma
+			if(key%nr1.eq.1) then
+				read(key%value,*) fit_albedo_sigma
+				read(key%value,*) fit_albedo_sigma_GP1
+			else if(key%nr1.eq.2) then
+				read(key%value,*) fit_albedo_sigma_GP2
+			else
+				read(key%value,*) fit_albedo_sigma_GP3
+			endif
+		case("fit_albedo_gp3_lam")
+			if(key%nr1.eq.1) then
+				read(key%value,*) fit_albedo_GP3_lam1
+			else
+				read(key%value,*) fit_albedo_GP3_lam2
+			endif
 		case("fit_albedo_sigma_step")
 			read(key%value,*) fit_albedo_sigma_step
 		case("fit_albedo_sigma_slope")
@@ -1902,7 +1915,11 @@ c			read(key%value,*) nTpoints
 		case("fit_albedo_slope")
 			read(key%value,*) fit_albedo_slope
 		case("fit_albedo_gp")
-			read(key%value,*) fit_albedo_GP
+			if(key%nr1.eq.3) then
+				read(key%value,*) fit_albedo_GP3
+			else
+				read(key%value,*) fit_albedo_GP
+			endif
 		case("fit_albedo_ls")
 			read(key%value,*) fit_albedo_LS
 		case("fit_albedo_matern")
@@ -2422,10 +2439,16 @@ c	if(par_tprofile) call ComputeParamT(T)
 	fit_albedo_sigma=0.25d0
 	fit_albedo_sigma_step=0.25d0
 	fit_albedo_sigma_slope=1d0
+	fit_albedo_sigma_GP1=0.25d0
+	fit_albedo_sigma_GP2=0.25d0
+	fit_albedo_sigma_GP3=0.25d0
+	fit_albedo_GP3_lam1=0.7d0
+	fit_albedo_GP3_lam2=1.2d0
 	fit_albedo_l=0.08d0
 	fit_albedo_l_step=0.02d0
 	fit_albedo=.false.
 	fit_albedo_GP=.true.
+	fit_albedo_GP3=.false.
 	fit_albedo_LS=.false.
 	fit_albedo_Matern=.false.
 	fit_albedo_slope=.false.
