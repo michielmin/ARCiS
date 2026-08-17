@@ -312,6 +312,8 @@
 		do j=1,n_mol_in
 			call To_upper_ARCiS(mol_names_in(j),uppername)
 			if(uppername.eq.'OCS') uppername='COS'
+			if(uppername.eq.'SH') uppername='HS'
+			if(uppername.eq.'NS') uppername='SN' 
 			do i=1,NMOLE
 				if(uppername.eq.cmol(i)) then
 					linkmol(j)=i
