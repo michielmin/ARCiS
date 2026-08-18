@@ -473,9 +473,6 @@ c          print '("p-it=",i3,"  mu=",2(1pE20.12))',it,mu/amu,dmu/mu
 		MMW=0d0
 		do i=1,NMOLE
 			MMW=MMW+nmol(i)*mmol(i)/tot
-			if(nmol(i)/tot.gt.0.1) then
-				print*,trim(cmol(i)),nmol(i)/tot
-			endif
 		enddo
 		do i=1,NELEM
 			MMW=MMW+nat(i)*mass(i)/tot
