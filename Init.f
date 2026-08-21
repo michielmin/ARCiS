@@ -1094,7 +1094,7 @@ c select at least the species relevant for disequilibrium chemistry
 		allocate(usemolGGchem(nmol))
 		usemolGGchem(1:nmol)=includemol(1:nmol)
 		doit=condensates.or.secondary_atmosphere
-		call init_GGchem(molname,nmol,doit)
+		call init_GGchem(molname,nmol,doit,usemolGGchem)
 		dobackgroundgas=.false.
 		if(usePhotoAI) call InitPhotoAI()
 	endif
