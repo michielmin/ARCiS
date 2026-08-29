@@ -274,15 +274,18 @@ c fractal dimension created by coagulating collisions
 		P_CO=1d0
 		call call_chemistry(T_CO,P_CO,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
      &				XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),MMW(1),didcondens(1),includemol,.false.,useEOS,x_el(1))
-		tot=0d0
-		tot1=0d0
+		tot=0d0 ! total O abun
+		tot1=0d0 ! total C abun
+		COabun=Oatoms(5)*mixrat_r(1,5) ! O in CO
+		CO2abun=Oatoms(2)*mixrat_r(1,2) ! O in CO2
+		CH4abun=Catoms(6)*mixrat_r(1,6) ! C in CH4
 		do i=1,nmol
-			tot=tot+mixrat_r(1,i)*tot_atoms(i)
-			tot1=tot1+mixrat_r(1,i)
+			tot=tot+Oatoms(i)*mixrat_r(1,i)
+			tot1=tot1+Catoms(i)*mixrat_r(1,i)
 		enddo
-		COabun=mixrat_r(1,5)*tot1/tot
-		CO2abun=mixrat_r(1,2)*tot1/tot
-		CH4abun=mixrat_r(1,6)*tot1/tot
+		COabun=min(molfracs_atoms(5)*COabun/tot,molfracs_atoms(3)*(1d0-CH4abun/tot1))
+		CO2abun=min(0.5d0*molfracs_atoms(5)*CO2abun/tot,molfracs_atoms(3)*(1d0-CH4abun/tot1))
+		CH4abun=molfracs_atoms(5)*CH4abun/tot1
 	else
 		COabun=min(molfracs_atoms(3),molfracs_atoms(5))
 		CO2abun=0d0
@@ -291,6 +294,18 @@ c fractal dimension created by coagulating collisions
 	molfracs_atoms(1)=molfracs_atoms(1)-4d0*CH4abun
 	molfracs_atoms(3)=molfracs_atoms(3)-COabun-CO2abun-CH4abun
 	molfracs_atoms(5)=molfracs_atoms(5)-COabun-2d0*CO2abun
+	if(molfracs_atoms(1).lt.0d0) then
+		print*,'WARNING: H abundance < 0 (correcting)',molfracs_atoms(1)
+		molfracs_atoms(1)=0d0
+	endif
+	if(molfracs_atoms(3).lt.0d0) then
+		print*,'WARNING: C abundance < 0 (correcting)',molfracs_atoms(3)
+		molfracs_atoms(3)=0d0
+	endif
+	if(molfracs_atoms(5).lt.0d0) then
+		print*,'WARNING: O abundance < 0 (correcting)',molfracs_atoms(5)
+		molfracs_atoms(5)=0d0
+	endif
 
 	atoms_cloud=0
 	v_cloud=0d0
