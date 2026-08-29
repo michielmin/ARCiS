@@ -32,7 +32,7 @@
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
 	real*8,allocatable :: xv_out(:),Jn_xv(:,:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:),Jn_out(:)
 	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),rmono(:),ac(:,:,:),Tfit(:,:),tinv_seed(:)
-	integer jSiO,jTiO,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi,jH2SO4,jCa,jCH4
+	integer jSiO,jTiO,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi,jH2SO4,jCa,jCH4,jSiC
 
 	logical dochemR(nr)
 
@@ -45,7 +45,7 @@ c fractal dimension created by coagulating collisions
 	itimecloud=itimecloud-itime
 	ctimecloud=ctimecloud+1
 
-	nVS=19
+	nVS=20
 	allocate(v_names(nVS),v_atoms(nVS,N_atoms),v_include(nVS))
 	allocate(bv(nVS,0:4),bH2(0:4))
 	bv=0d0
@@ -191,6 +191,17 @@ c fractal dimension created by coagulating collisions
 	jCa=i
 	v_names(i)="Ca"
 	v_atoms(i,14)=1
+
+	i=i+1
+	jSiC=i
+	v_names(i)="SiC"
+	v_atoms(i,3)=1
+	v_atoms(i,9)=1
+	bv(i,0)=5.38781E+04
+	bv(i,1)=4.16289E-01
+	bv(i,2)=-1.62625E+01
+	bv(i,3)=-2.85599E-04
+	bv(i,4)=1.44412E-08
 
 	i=i+1
 	jCH4=i
@@ -631,6 +642,18 @@ c fractal dimension created by coagulating collisions
 				bc(i,2)=1.70429E+03
 				bc(i,3)=-4.67044E-02
 				bc(i,4)=4.71514E-06
+				ifit(i)=2
+			case('SiC')
+				CSname(i)='SiC'
+				atoms_cloud(i,3)=1
+				atoms_cloud(i,9)=1
+				v_cloud(i,jSiC)=1
+				rhodust(i)=3.21
+				bc(i,0)=6.73337E+05
+				bc(i,1)=-1.24381E+06
+				bc(i,2)=3.21779E+02
+				bc(i,3)=-4.54405E-03
+				bc(i,4)=2.69711E-07 
 				ifit(i)=2
 			case('H2SO4')
 				CSname(i)='H2SO4'

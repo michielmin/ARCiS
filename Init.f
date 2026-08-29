@@ -984,6 +984,11 @@ c	condensates=(condensates.or.cloudcompute)
 									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/Ni.dat'
 									Cloud(i)%nax(j)=1
 									call register_ref("Ni(s)")
+								case('SiC')
+									Cloud(i)%material(j)='FILE'
+									Cloud(i)%lnkfile(j,1)=trim(homedir) // '/ARCiS/Data/refind/SiC.dat'
+									Cloud(i)%nax(j)=1
+									call register_ref("SiC(s)")
 								case('optEC')
 									Cloud(i)%material(j)='optEC'
 									call register_ref("optEC")
