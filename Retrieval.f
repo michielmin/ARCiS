@@ -645,7 +645,7 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	real*8 xx,xy,scale,dy(ny),tot,chi2_real,chi2_virtual
 	character*100 command
 	integer info,NRHS,cov_iter,ncov_iter
-	real*8 d,f_ii,alb1,alb2,Sigmoid1,Sigmoid2,amplitude
+	real*8 d,f_ii,alb1,alb2,Sigmoid1,Sigmoid2,amplitude,scaleRk
 	real*8,allocatable :: Cov(:,:),specinv(:),lamk(:),Rk(:),Cov_obs(:,:)
 	real*8,allocatable :: spec_albedo(:,:,:),fitted_albedo(:,:),Kalb(:,:),Ksys(:,:)
 	integer,allocatable :: iobsk(:),jk(:)
@@ -962,6 +962,13 @@ c	linear
 				enddo
 			enddo
 			if(fit_albedo_remove_lin) call RemoveOffsetSlope(Kalb,nk,lamk(1:nk),Rk(1:nk))
+			if(fit_albedo_slope) then
+				scaleRk=0d0
+				d=sqrt(lam(1)*lam(nlam))
+				do j=1,nk
+					scaleRk=scaleRk+(log(lamk(j)/d)/Rk(j))**2
+				enddo
+			endif
 			do j=1,nk
 				do ii=1,nk
 					if(fit_albedo_step) then
@@ -976,9 +983,9 @@ c	linear
 						enddo
 					endif
 					if(fit_albedo_slope) then
-						amplitude=(fit_albedo_sigma_slope*surfacealbedo)**2
+						amplitude=((fit_albedo_sigma_slope*surfacealbedo)**2)/scaleRk
 						d=sqrt(lam(1)*lam(nlam))
-						Kalb(j,ii)=Kalb(j,ii)+amplitude*log(lamk(j)/d)*log(lamk(ii)/d)
+						Kalb(j,ii)=Kalb(j,ii)+amplitude*log(lamk(j)/d)*log(lamk(ii)/d)/(Rk(j)*Rk(ii))
 					endif
 					if(fit_albedo_GP3) then
 						amplitude=surfacealbedo**2

@@ -19,7 +19,7 @@
 	real*8 Pgrid(nr),Pg1(nr),Pg2(nr),yy(nr),Pmin0,Pmax0,xx,xy
 	character*500 lowkey
 	integer ipmin,ipmax,ii
-	real*8 fit_albedo0,spec_albedo(2,nobs,nlam),f_ii,d
+	real*8 fit_albedo0,spec_albedo(2,nobs,nlam),f_ii,d,scaleRk
 	real*8,allocatable :: fitted_albedo(:,:,:),Kalb(:,:),aver_albedo(:,:),refl_surface(:,:,:),Neff_fitalbedo(:)
 	real*8 alb1,alb2,Sigmoid1,Sigmoid2,amplitude
 	integer nk,cov_iter,ncov_iter,j0
@@ -466,6 +466,13 @@ c		call cpu_time(stoptime)
 			enddo
 			if(fit_albedo_remove_lin) call RemoveOffsetSlope(Kalb,nk,lamk(1:nk),Rk(1:nk))
 			endif
+			if(fit_albedo_slope) then
+				scaleRk=0d0
+				d=sqrt(lam(1)*lam(nlam))
+				do j=1,nk
+					scaleRk=scaleRk+(log(lamk(j)/d)/Rk(j))**2
+				enddo
+			endif
 			do j=1,nk
 				do ii=1,nk
 					if(fit_albedo_step) then
@@ -480,9 +487,9 @@ c		call cpu_time(stoptime)
 						enddo
 					endif
 					if(fit_albedo_slope) then
-						amplitude=(fit_albedo_sigma_slope*surfacealbedo)**2
+						amplitude=((fit_albedo_sigma_slope*surfacealbedo)**2)/scaleRk
 						d=sqrt(lam(1)*lam(nlam))
-						Kalb(j,ii)=Kalb(j,ii)+amplitude*log(lamk(j)/d)*log(lamk(ii)/d)
+						Kalb(j,ii)=Kalb(j,ii)+amplitude*log(lamk(j)/d)*log(lamk(ii)/d)/(Rk(j)*Rk(ii))
 					endif
 					if(fit_albedo_GP3) then
 						amplitude=surfacealbedo**2
