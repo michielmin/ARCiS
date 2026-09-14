@@ -898,6 +898,7 @@ c				Nf_nuc(i)=1d0
 				print*,'unknown condensate: ', trim(Cloud(ii)%condensate(i))
 				stop
 		end select
+		Cloud(ii)%rho_mat(i)=rhodust(i)
 	enddo
 	
 	if(.not.include_phothaze) Cloud(ii)%rnuc_phot=Cloud(ii)%rnuc

@@ -105,12 +105,12 @@
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
-			rho_av=0d0
-			do j=1,C%nmat+1
-				rho_av=rho_av+frac(j)*rho(j)
-			enddo
-			rho(i)=rho_av
 		enddo
+		rho_av=0d0
+		do j=1,C%nmat+1
+			rho_av=rho_av+frac(j)*rho(j)
+		enddo
+		rho(1:nm)=rho_av
 		frac(1:nm)=1d0/real(nm)
 		deallocate(e1d)
 		deallocate(e2d)
