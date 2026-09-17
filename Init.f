@@ -200,7 +200,7 @@ c===============================================================================
 	type(SettingKey),target :: firstkey
 	type(SettingKey),pointer :: key
 	integer i,j,ncia0,n
-	character*500 homedir,h2h2file,h2hefile,h2ch4file
+	character*500 homedir,h2h2file,h2hefile,cia_name
 	integer ndiseq_list
 	parameter(ndiseq_list=20)
 	character*10 names(nmol_data),diseq_list(20)
@@ -208,7 +208,7 @@ c===============================================================================
      &						  "NH3       ","N2        ","C         ","CH2OH     ","CH3       ",
      &						  "CH3OH     ","C2H2      ","H         ","O         ","OH        ",
      &						  "N         ","NH        ","NH2       ","NO        ","N2H3      " /))
-	logical existh2h2,existh2he,existh2ch4
+	logical existh2h2,existh2he,cia_h2h2,cia_h2he
 
 
 	nmol=6
@@ -232,6 +232,8 @@ c===============================================================================
 	freePT_fitT=.false.
 	freePT_fitP=.true.
 	Rp_range=20d0
+	cia_h2h2=.false.
+	cia_h2he=.false.
 
 	nr=20
 	nrsurf=0
@@ -307,6 +309,15 @@ c===============================================================================
 					if(key%nr1.eq.0) key%nr1=1
 					if(key%nr2.eq.0) key%nr2=1
 					if(key%nr1.gt.ncia) ncia=key%nr1
+					cia_name=key%value
+					call checkfile(cia_name)
+					open(unit=92,file=cia_name)
+					read(92,*) cia_name
+					close(unit=92)
+					i=index(cia_name,'-')
+					if(cia_name(1:i-1).eq.'H2'.and.cia_name(i+1:20).eq.'H2') cia_h2h2=.true.
+					if(cia_name(1:i-1).eq.'H2'.and.cia_name(i+1:20).eq.'He') cia_h2he=.true.
+					if(cia_name(1:i-1).eq.'He'.and.cia_name(i+1:20).eq.'H2') cia_h2he=.true.
 				endif
 			case("mixratfile")
 				read(key%value,*) mixratfile
@@ -450,9 +461,9 @@ c select at least the species relevant for disequilibrium chemistry
 	ncia0=0
 	existh2h2=.false.
 	existh2he=.false.
-	existh2ch4=.false.
 	if(do_cia) then
 		call getenv('HOME',homedir)
+		if(.not.cia_h2h2) then
 c find H2-H2 cia file
 		h2h2file=trim(homedir) // '/HITRAN/H2-H2_combined.cia'
 		inquire(file=h2h2file,exist=existh2h2)
@@ -477,6 +488,8 @@ c find H2-H2 cia file
 				endif
 			endif
 		endif
+		endif
+		if(.not.cia_h2he) then
 c find H2-He cia file
 		h2hefile=trim(homedir) // '/HITRAN/H2-He_2011.cia'
 		inquire(file=h2hefile,exist=existh2he)
@@ -495,25 +508,8 @@ c find H2-He cia file
 				endif
 			endif
 		endif
-c find H2-CH4 cia file
-c		h2ch4file=trim(homedir) // '/HITRAN/H2-CH4_eq_2011.cia'
-c		inquire(file=h2ch4file,exist=existh2ch4)
-c		if(existh2ch4) then
-c			ncia0=ncia0+1
-c		else
-c			h2ch4file=trim(homedir) // '/HITRAN/CIA/H2-CH4_eq_2011.cia'
-c			inquire(file=h2ch4file,exist=existh2ch4)
-c			if(existh2ch4) then
-c				ncia0=ncia0+1
-c			else
-c				h2ch4file=trim(homedir) // '/CIA/H2-CH4_eq_2011.cia'
-c				inquire(file=h2ch4file,exist=existh2ch4)
-c				if(existh2ch4) then
-c					ncia0=ncia0+1
-c				endif
-c			endif
-c		endif
-		if(ncia0.eq.0) then
+		endif
+		if(ncia0.eq.0.and..not.cia_h2h2.and..not.cia_h2he) then
 			call output("NO CIA FILES FOUND: rerun with cia=.false.")
 			stop
 		endif
@@ -528,10 +524,6 @@ c		endif
 	if(existh2he) then
 		ncia=ncia+1
 		CIA(ncia)%filename=h2hefile
-	endif
-	if(existh2ch4) then
-		ncia=ncia+1
-		CIA(ncia)%filename=h2ch4file
 	endif
 
 	call output('Number of molecules:       ' // int2string(j,'(i4)'))
