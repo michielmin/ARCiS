@@ -89,7 +89,7 @@
 
 	if(useEOS) then
 		do i=1,nr
-			call GetNablaEOS(P(i),T(i),molfracs_atoms(1)/(molfracs_atoms(1)+molfracs_atoms(2)),nabla_ad(i))
+			call GetNablaEOS(P(i),T(i),i,nabla_ad(i))
 		enddo
 	endif
 

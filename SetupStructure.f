@@ -994,7 +994,7 @@ c	close(unit=50)
 	Tg=min(max(Tin,100d0),30000d0)
 
 	if(useEOS) then
-		call GetNablaEOS(Pin,Tg,molfracs_atoms(1)/(molfracs_atoms(1)+molfracs_atoms(2)),nabla_ad)
+		call GetNablaEOS(Pin,Tg,1,nabla_ad)
 	endif
 
 	mol_abun=0d0
