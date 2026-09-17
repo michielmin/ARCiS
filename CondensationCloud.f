@@ -296,7 +296,7 @@ c fractal dimension created by coagulating collisions
 		enddo
 		COabun=min(molfracs_atoms(5)*COabun/tot,molfracs_atoms(3)*(1d0-CH4abun/tot1))
 		CO2abun=min(0.5d0*molfracs_atoms(5)*CO2abun/tot,molfracs_atoms(3)*(1d0-CH4abun/tot1))
-		CH4abun=molfracs_atoms(5)*CH4abun/tot1
+		CH4abun=molfracs_atoms(3)*CH4abun/tot1
 	else
 		COabun=min(molfracs_atoms(3),molfracs_atoms(5))
 		CO2abun=0d0

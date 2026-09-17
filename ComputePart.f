@@ -70,7 +70,7 @@
 		nm=maxval(C%nax(1:C%nmat))
 		allocate(e1d(C%nmat+1,C%nlam))
 		allocate(e2d(C%nmat+1,C%nlam))
-		frac(1:C%nmat)=C%frac(isize,1:C%nmat)
+		frac(1:C%nmat)=C%frac(isize,1:C%nmat)/C%rho_mat(1:C%nmat)
 		tot=0d0
 		do i=1,C%nmat
 			tot=tot+frac(i)
