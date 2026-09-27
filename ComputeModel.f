@@ -6,6 +6,9 @@
 	
 	TeffPoutput=TeffP
 	modelfail=.false.
+	temperature_solve_count=0
+	temperature_failed_count=0
+	temperature_converged_all=.true.
 	i_alb=0
 	if(do3D) then
 		call Run3D(recomputeopacities)
@@ -21,7 +24,32 @@
 		flux(0,i)=flux(0,i)+FRing(i)
 	enddo
 	endif
+
+	if(.not.retrieval.and..not.domakeai.and..not.dopostequalweights) then
+		call WriteTemperatureConvergence()
+	endif
 	
+	return
+	end
+
+
+	subroutine WriteTemperatureConvergence()
+	use GlobalSetup
+	IMPLICIT NONE
+
+	if(temperature_solve_count.eq.0.or.modelfail) temperature_converged_all=.false.
+
+	open(unit=97,file=trim(outputdir) // "temperature_convergence.dat",
+     &		FORM="FORMATTED",STATUS="REPLACE",ACTION="WRITE")
+	if(temperature_converged_all) then
+		write(97,'(a)') "converged=true"
+	else
+		write(97,'(a)') "converged=false"
+	endif
+	write(97,'(a,i0)') "temperature_solves=",temperature_solve_count
+	write(97,'(a,i0)') "failed_solves=",temperature_failed_count
+	close(unit=97)
+
 	return
 	end
 
@@ -74,6 +102,11 @@ c	call cpu_time(starttime)
 			if(modelfail) return
 			if(Tconverged.and.nTiter.ge.miniter) exit
 		enddo
+		temperature_solve_count=temperature_solve_count+1
+		if(.not.(Tconverged.and.nTiter.ge.miniter.and.nTiter.le.maxiter)) then
+			temperature_failed_count=temperature_failed_count+1
+			temperature_converged_all=.false.
+		endif
 		nvel=nvel_temp
 		if(.not.init3D) then
 			computelam=.not.RTgridpoint

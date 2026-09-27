@@ -53,6 +53,7 @@
 
 	call InitDens()
 	call ComputeModel(.true.)
+	call flushoutput()
 	
 	return
 	end
@@ -62,6 +63,7 @@
 
 	call WriteStructure()
 	call WriteOutput()
+	call flushoutput()
 
 	return
 	end
@@ -212,4 +214,3 @@
 	return
 	end
 	
-

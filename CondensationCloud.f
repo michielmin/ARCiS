@@ -1,4 +1,4 @@
-	subroutine CondensationCloud(ii)
+		subroutine CondensationCloud(ii)
 	use GlobalSetup
 	use Constants
 	use AtomsModule
@@ -32,7 +32,7 @@
 	real*8,allocatable :: v_atoms(:,:),muC(:),muV(:),v_cloud(:,:),Sat(:,:),Sat0(:,:),fSat(:,:),v_H2(:)
 	real*8,allocatable :: xv_out(:),Jn_xv(:,:),sigma_nuc(:),r0_nuc(:),Nf_nuc(:),Nc_nuc(:,:),Jn_out(:)
 	real*8,allocatable :: bv(:,:),bc(:,:),bH2(:),rmono(:),ac(:,:,:),Tfit(:,:),tinv_seed(:)
-	integer jSiO,jTiO,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi,jH2SO4,jCa,jCH4
+	integer jSiO,jTiO,jMg,jH2O,jH2S,jFe,jAl,jNa,jK,jHCl,jNH3,jZn,jMn,jCr,jW,jNi,jH2SO4,jCa,jCH4,jSiC
 
 	logical dochemR(nr)
 
@@ -45,7 +45,7 @@ c fractal dimension created by coagulating collisions
 	itimecloud=itimecloud-itime
 	ctimecloud=ctimecloud+1
 
-	nVS=19
+	nVS=20
 	allocate(v_names(nVS),v_atoms(nVS,N_atoms),v_include(nVS))
 	allocate(bv(nVS,0:4),bH2(0:4))
 	bv=0d0
@@ -193,6 +193,17 @@ c fractal dimension created by coagulating collisions
 	v_atoms(i,14)=1
 
 	i=i+1
+	jSiC=i
+	v_names(i)="SiC"
+	v_atoms(i,3)=1
+	v_atoms(i,9)=1
+	bv(i,0)=5.38781E+04
+	bv(i,1)=4.16289E-01
+	bv(i,2)=-1.62625E+01
+	bv(i,3)=-2.85599E-04
+	bv(i,4)=1.44412E-08
+
+	i=i+1
 	jCH4=i
 	v_names(i)="CH4"
 	v_atoms(i,3)=1
@@ -274,15 +285,18 @@ c fractal dimension created by coagulating collisions
 		P_CO=1d0
 		call call_chemistry(T_CO,P_CO,mixrat_r(1,1:nmol),molname(1:nmol),nmol,ini,.false.,cloudspecies,
      &				XeqCloud(1,1:nclouds),nclouds,nabla_ad(1),MMW(1),didcondens(1),includemol,.false.,useEOS,x_el(1))
-		tot=0d0
-		tot1=0d0
+		tot=0d0 ! total O abun
+		tot1=0d0 ! total C abun
+		COabun=Oatoms(5)*mixrat_r(1,5) ! O in CO
+		CO2abun=Oatoms(2)*mixrat_r(1,2) ! O in CO2
+		CH4abun=Catoms(6)*mixrat_r(1,6) ! C in CH4
 		do i=1,nmol
-			tot=tot+mixrat_r(1,i)*tot_atoms(i)
-			tot1=tot1+mixrat_r(1,i)
+			tot=tot+Oatoms(i)*mixrat_r(1,i)
+			tot1=tot1+Catoms(i)*mixrat_r(1,i)
 		enddo
-		COabun=mixrat_r(1,5)*tot1/tot
-		CO2abun=mixrat_r(1,2)*tot1/tot
-		CH4abun=mixrat_r(1,6)*tot1/tot
+		COabun=min(molfracs_atoms(5)*COabun/tot,molfracs_atoms(3)*(1d0-CH4abun/tot1))
+		CO2abun=min(0.5d0*molfracs_atoms(5)*CO2abun/tot,molfracs_atoms(3)*(1d0-CH4abun/tot1))
+		CH4abun=molfracs_atoms(3)*CH4abun/tot1
 	else
 		COabun=min(molfracs_atoms(3),molfracs_atoms(5))
 		CO2abun=0d0
@@ -291,6 +305,18 @@ c fractal dimension created by coagulating collisions
 	molfracs_atoms(1)=molfracs_atoms(1)-4d0*CH4abun
 	molfracs_atoms(3)=molfracs_atoms(3)-COabun-CO2abun-CH4abun
 	molfracs_atoms(5)=molfracs_atoms(5)-COabun-2d0*CO2abun
+	if(molfracs_atoms(1).lt.0d0) then
+		print*,'WARNING: H abundance < 0 (correcting)',molfracs_atoms(1)
+		molfracs_atoms(1)=0d0
+	endif
+	if(molfracs_atoms(3).lt.0d0) then
+		print*,'WARNING: C abundance < 0 (correcting)',molfracs_atoms(3)
+		molfracs_atoms(3)=0d0
+	endif
+	if(molfracs_atoms(5).lt.0d0) then
+		print*,'WARNING: O abundance < 0 (correcting)',molfracs_atoms(5)
+		molfracs_atoms(5)=0d0
+	endif
 
 	atoms_cloud=0
 	v_cloud=0d0
@@ -617,6 +643,18 @@ c fractal dimension created by coagulating collisions
 				bc(i,3)=-4.67044E-02
 				bc(i,4)=4.71514E-06
 				ifit(i)=2
+			case('SiC')
+				CSname(i)='SiC'
+				atoms_cloud(i,3)=1
+				atoms_cloud(i,9)=1
+				v_cloud(i,jSiC)=1
+				rhodust(i)=3.21
+				bc(i,0)=6.73337E+05
+				bc(i,1)=-1.24381E+06
+				bc(i,2)=3.21779E+02
+				bc(i,3)=-4.54405E-03
+				bc(i,4)=2.69711E-07 
+				ifit(i)=2
 			case('H2SO4')
 				CSname(i)='H2SO4'
 				atoms_cloud(i,1)=2
@@ -860,6 +898,7 @@ c				Nf_nuc(i)=1d0
 				print*,'unknown condensate: ', trim(Cloud(ii)%condensate(i))
 				stop
 		end select
+		Cloud(ii)%rho_mat(i)=rhodust(i)
 	enddo
 	
 	if(.not.include_phothaze) Cloud(ii)%rnuc_phot=Cloud(ii)%rnuc
@@ -2949,4 +2988,6 @@ c			input/output:	mixrat_r(1:nr,1:nmol) : number densities inside each layer. No
 	
 	return
 	end
+	
+	
 	

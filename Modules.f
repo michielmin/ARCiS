@@ -183,6 +183,7 @@ c===============================================================================
 	real*8,allocatable :: Jscat(:,:)						! radius, angle
 	integer nT,np,nr,nmol,nlam		! #T, #P, #radial points, #molecules, #wavelength bins, #obs
 	integer nlines,ng,ncia,nclouds,nTiter,i3D,i_alb,nest_update
+	integer temperature_solve_count,temperature_failed_count
 	character*1000 outputdir
 	character*1000,allocatable :: commandargs(:),line_add_ret(:)
 	integer ncommandargs,n_add_ret
@@ -191,6 +192,7 @@ c===============================================================================
 	logical retrieval,outputopacity,do_cia,gridTPfile,scattering,scattstar,anisoscattstar,lambertsurface,computeT,computecontrib
 	logical do_rayleigh,isoFstar,writefiles,usePhotoAI
 	logical dochemistry,free_tprofile,condensates,faircoverage,speclimits,mapCOratio,randomseed,useXS,modelfail,projectedD
+	logical temperature_converged_all
 	logical,allocatable :: includemol(:),diseqmol(:),didcondens(:),lamemis(:),lamtrans(:),opacitymol(:)
 	logical,allocatable :: includemol_raytrace(:),includemol_default(:)
 	real*8 lam1,lam2,specres,Pmin,Pmax,epsCk,distance,TP0,dTP,TeffP,twind,epsiter,specres_LR

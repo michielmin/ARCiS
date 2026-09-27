@@ -7,11 +7,14 @@
 
 FC	  = ifort
 LINKER  = ifort
+PYTHON  ?= python3
 
 ifeq ($(gfort),true)
 	FC	  = gfortran
 	LINKER	  = gfortran
 #	F2PYC  = --fcompiler=gfortran
+	F2PY_F90FLAGS = --f90flags="-ffree-form"
+	F2PY_F77FLAGS = --f77flags="-cpp"
 else
 	F2PYC  = -c --fcompiler=intel
 endif
@@ -79,6 +82,9 @@ ifeq ($(shell uname),Linux)
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) $(FLAG_PROF)
   LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) $(FLAG_FITS) $(DEBUGGING) $(FLAG_PROF) 
+  RPATH_FLAGS = -Wl,-rpath,/usr/local/lib
+  FIX_ARCIS_MULTINEST = install_name_tool -change libmultinest.3.10.dylib @rpath/libmultinest.3.10.dylib $(PROGRAM)
+  FIX_PYARCIS_MULTINEST = for extension in pyARCiS*.so; do install_name_tool -change libmultinest.3.10.dylib @rpath/libmultinest.3.10.dylib "$$extension"; done
   LIBS    =  -L/usr/local/lib $(LIBS_FITS) $(LIBS_MN) -llapack -lm
 endif
 
@@ -189,8 +195,11 @@ install:	$(PROGRAM)
 		mv $(PROGRAM) $(DEST)
 pylib:		$(PYLIB)
 
-# how to compile program 
-.SUFFIXES : .o .f .f90 .F
+# how to compile program
+# Clear built-in suffixes so make cannot select the Modula-2 .mod -> .o rule
+# for Fortran module files such as params_multinest.mod.
+.SUFFIXES:
+.SUFFIXES: .o .f .f90 .F .c
 
 .f.o:
 	$(FC) $(LDFLAGS) -c $< -o $@ 
@@ -201,19 +210,22 @@ pylib:		$(PYLIB)
 .F.o:
 	$(FC) $(LDFLAGS) -c $< -o $@ 
 
+.c.o:
+	$(CC) -O3 -fPIC -c $< -o $@
+
 $(PROGRAM):     version  $(OBJS) $(MAINF)
-		$(LINKER) $(LDFLAGS) $(OBJS) $(MAINF) $(LIBS) Version.f -o $(PROGRAM)
+		$(LINKER) $(LDFLAGS) $(OBJS) $(MAINF) $(LIBS) $(RPATH_FLAGS) Version.f -o $(PROGRAM)
+		$(FIX_ARCIS_MULTINEST)
 
 $(PYLIB):     version  $(OBJS)
 		$(FC) $(LDFLAGS) -c SupportPy.f
 		ar cr libARCiS.a $(OBJS) SupportPy.o
-		python3 -m numpy.f2py -m pyARCiS $(F2PYC) -c MainPy.f90 Version.f -L$(PWD) -lARCiS $(LIBS) $(LGOMP) -I$(PWD)
-		pip3 install --break-system-packages -e $(PWD)
+		LDFLAGS="$(RPATH_FLAGS)" $(PYTHON) -m numpy.f2py -m pyARCiS $(F2PYC) $(F2PY_F90FLAGS) $(F2PY_F77FLAGS) -c MainPy.f90 Version.f -L$(PWD) -lARCiS $(LIBS) $(LGOMP) -I$(PWD)
+		$(FIX_PYARCIS_MULTINEST)
+		$(PYTHON) -m pip install --no-build-isolation --no-deps --force-reinstall $(PWD)
 
 # recompile everything if Modules.f has changed 
 $(OBJS):	Modules.f
 
 # recompile everything if InputOutput.f has changed 
 $(OBJS):	InputOutput.f
-
-

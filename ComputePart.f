@@ -70,7 +70,7 @@
 		nm=maxval(C%nax(1:C%nmat))
 		allocate(e1d(C%nmat+1,C%nlam))
 		allocate(e2d(C%nmat+1,C%nlam))
-		frac(1:C%nmat)=C%frac(isize,1:C%nmat)
+		frac(1:C%nmat)=C%frac(isize,1:C%nmat)/C%rho_mat(1:C%nmat)
 		tot=0d0
 		do i=1,C%nmat
 			tot=tot+frac(i)
@@ -105,12 +105,12 @@
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
-			rho_av=0d0
-			do j=1,C%nmat+1
-				rho_av=rho_av+frac(j)*rho(j)
-			enddo
-			rho(i)=rho_av
 		enddo
+		rho_av=0d0
+		do j=1,C%nmat+1
+			rho_av=rho_av+frac(j)*rho(j)
+		enddo
+		rho(1:nm)=rho_av
 		frac(1:nm)=1d0/real(nm)
 		deallocate(e1d)
 		deallocate(e2d)
@@ -3623,6 +3623,7 @@ c      endif
 * END DEBUG
       return
       end
+
 
 
 
