@@ -42,6 +42,7 @@ c==============================================================================
 
 	call system("cp " // trim(inputfile) // " " // trim(outputdir) // "input.dat")
 	open(unit=21,file=trim(outputdir) // "input.dat",FORM="FORMATTED",ACCESS="APPEND")
+	write(21,*)
 	write(21,'("*** command line keywords ***")')
 	
 	ncla=0
