@@ -1,71 +1,85 @@
-N2=78d-2
-O2=21d-2
-CO2=4d-4
-He=5d-6
-CH4=1.8d-6
-H2O=2d-2
-
 Tstar=5777d0
 Rstar=1d0
 Dplanet=1d0
-distance=3d0
+distance=10d0
 
 TeffP=1d0
 
 Rp=0.089d0
 Mp=0.00315d0
 
+interior=.true.
+interior_f_core=0.31
+interior_f_ice=0.005
+
+chemistry=.false.
+condensates=.false.
+
+pmin=1d-7
+pmax=1d0
+Pp=1d0
+
 nr=50
 
-TP=300d0
-dTP=0d0
+lmin=0.2d0
+lmax=2d0
+ng=10
 
-lmin=0.3d0
-lmax=29d0
+specres=500
+useXS=.false.
 
-specres=50
+cia=.true.
+cia1:file="/Users/michielm/ARCiS/Data/CIA/O2-O2_ordered.cia"
+cia2:file="/Users/michielm/ARCiS/Data/CIA/N2-N2_ordered.cia"
+cia3:file="/Users/michielm/ARCiS/Data/CIA/O2-N2_ordered.cia"
+cia4:file="/Users/michielm/ARCiS/Data/CIA/O2-CO2_ordered.cia"
+cia5:file="/Users/michielm/ARCiS/Data/CIA/CO2-CO2_combined.cia"
 
-pmin=1d-8
-pmax=1d0
+computeT=.false.
+par_tprofile=.false.
+
+TP0=300d0
+dTP0=0d0
+
+emisspec=.true.
+
+run3D=.true.
+night2day=1d0
+fDay=1d0
+isoFstar=.true.
+n3D=3
+nRTatm=0
 
 scattering=.true.
 scattstar=.true.
+anisoscattstar=.true.
 
-compute=.false.
-
-cloud1:column=1d-1
-cloud1:coverage=0.3d0
-cloud1:reff=2.0
+cloud1:type='LAYER'
+cloud1:opacitytype='MATERIAL'
+cloud1:reff=10.0		! effective radius of the size distribution
 cloud1:veff=0.1
-cloud1:P=0.5
-cloud1:dP=10.0
-cloud1:standard='WATER'
-cloud1:amin=0.01
-cloud1:amax=100
-cloud1:nsize=50
-cloud1:fmax=0d0
+cloud1:nsize=10
+cloud1:fmax=0d0		! irregularity parameter of the cloud particles
+cloud1:coverage=0.3d0
+cloud1:lam_ref=0.55d0
+cloud1:tau=30d0
+cloud1:Ptop=0.353
+cloud1:Pbottom=0.85
+cloud1:Ptau=1d6
+cloud1:Prelative=.true.
+cloud1:xi=1d0
+cloud1:material01='FILE'
+cloud1:lnkfile01="/Users/michielm/ARCiS/Data/refind/H2O_l.dat"
 
-cloud2:column=1d-2
-cloud2:coverage=0.7d0
-cloud2:reff=0.1
-cloud2:veff=0.1
-cloud2:P=0.5
-cloud2:dP=10.0
-cloud2:standard='WATER'
-cloud2:amin=0.01
-cloud2:amax=100
-cloud2:nsize=50
-cloud2:fmax=0d0
+phase01=90.0
 
+setsurfP=.true.
 
+H2O=0.01
+N2=0.78
+O2=0.21
+O3=6E-07
+CO2=380d-6
+CH4=1.9e-06
 
-instrument1:name="ARIEL"
-instrument1:ntrans=1
-instrument2:name="MIRI"
-instrument2:ntrans=1
-instrument3:name="NIRSPEC"
-instrument3:ntrans=1
-instrument4:name="WFC3"
-instrument4:ntrans=1
-
-
+surfacetype='Earth'
