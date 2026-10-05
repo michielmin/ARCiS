@@ -1,4 +1,4 @@
-Output dir: ref_Earth/
+Output dir: run_Earth/
 ==================================================================
          ARtful modelling code for exoplanet Science - ARCiS
 ==================================================================
@@ -7,7 +7,7 @@ It basically means you consult with any of the authors before
 publication if there is any doubt on the outcome of the results.
 ==================================================================
 Let's get the show on the road!!
-ARCiS version b01a70f4c77b7ade9b8725f52508d93e6ac371ff
+ARCiS version d8d6344cccf9d90f023e35e42613e9b60c769f56
 ==================================================================
 input file: Earth.in
 Number of molecules:          7                
@@ -61,29 +61,29 @@ CIA: H2-H2
 Reading file:/Users/michielm/ARCiS/Data/CIA/H2-He_2011.cia
 CIA: H2-He
 ==================================================================
-Initialisation time:      51.77 s
+Initialisation time:      51.23 s
 ==================================================================
 hotspot shift:   0.00               degrees
 Computing multiple 1D structures
 
-Day-side albedo: 0.286
+Day-side albedo: 0.292
 Raytracing over the planet disk in 3D
 
-Teff:     254.96          K
-Model runtime:           380.49 s
+Teff:     256.39          K
+Model runtime:           376.20 s
 ==================================================================
-Writing spectrum to: ref_Earth/star
-Writing spectrum to: ref_Earth/irradiation
-Writing spectrum to: ref_Earth/emis
-Writing spectrum to: ref_Earth/emisR
-Writing spectrum to: ref_Earth/trans
-Writing spectrum to: ref_Earth/trans_split
-Writing spectrum to: ref_Earth/phase
-Writing phasecurve to: ref_Earth/phasecurve
-Writing tau1depth to: ref_Earth/tau1depth
-Writing cloud optical depth to: ref_Earth/cloudtau
+Writing spectrum to: run_Earth/star
+Writing spectrum to: run_Earth/irradiation
+Writing spectrum to: run_Earth/emis
+Writing spectrum to: run_Earth/emisR
+Writing spectrum to: run_Earth/trans
+Writing spectrum to: run_Earth/trans_split
+Writing spectrum to: run_Earth/phase
+Writing phasecurve to: run_Earth/phasecurve
+Writing tau1depth to: run_Earth/tau1depth
+Writing cloud optical depth to: run_Earth/cloudtau
 ==================================================================
 ==================================================================
-Total runtime:           432.43 s
+Total runtime:           427.60 s
 All done!
 ==================================================================
