@@ -820,6 +820,14 @@ c		call cpu_time(stoptime)
 						call sort(sorted,i)
 						write(28,*) ObsSpec(iobs)%lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 						sorted(1:i)=fitted_albedo(1:i,iobs,ilam)-aver_albedo(1:i,iobs)
+						if(ilam.eq.1) then
+							sorted(1:i)=1d-4*(fitted_albedo(1:i,iobs,2)-fitted_albedo(1:i,iobs,1))/(ObsSpec(iobs)%lam(2)-ObsSpec(iobs)%lam(1))
+						else if(ilam.eq.ObsSpec(iobs)%ndata) then
+							sorted(1:i)=1d-4*(fitted_albedo(1:i,iobs,ObsSpec(iobs)%ndata)-fitted_albedo(1:i,iobs,ObsSpec(iobs)%ndata-1))/
+     &									(ObsSpec(iobs)%lam(ObsSpec(iobs)%ndata)-ObsSpec(iobs)%lam(ObsSpec(iobs)%ndata-1))
+						else
+							sorted(1:i)=1d-4*(fitted_albedo(1:i,iobs,ilam+1)-fitted_albedo(1:i,iobs,ilam-1))/(ObsSpec(iobs)%lam(ilam+1)-ObsSpec(iobs)%lam(ilam-1))
+						endif
 						call sort(sorted,i)
 						write(29,*) ObsSpec(iobs)%lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 						sorted(1:i)=refl_surface(1:i,iobs,ilam)
@@ -904,6 +912,21 @@ c		call cpu_time(stoptime)
 		do ilam=1,nlam
 			if(computelam(ilam)) then
 			sorted(1:i)=refl_surf(1:i,ilam)
+			call sort(sorted,i)
+			write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
+			endif
+		enddo
+		close(unit=26)
+		open(unit=26,file=trim(outputdir) // "surfacealbedo_deriv_limits",FORM="FORMATTED",ACCESS="STREAM")
+		do ilam=1,nlam
+			if(computelam(ilam)) then
+			if(ilam.eq.1) then
+				sorted(1:i)=1d-4*(surf_albedo(1:i,2)-surf_albedo(1:i,1))/(lam(2)-lam(1))
+			else if(ilam.eq.nlam) then
+				sorted(1:i)=1d-4*(surf_albedo(1:i,nlam)-surf_albedo(1:i,nlam-1))/(lam(nlam)-lam(nlam-1))
+			else
+				sorted(1:i)=1d-4*(surf_albedo(1:i,ilam+1)-surf_albedo(1:i,ilam-1))/(lam(ilam+1)-lam(ilam-1))
+			endif
 			call sort(sorted,i)
 			write(26,*) lam(ilam)*1d4,sorted(im3),sorted(im2),sorted(im1),sorted(ime),sorted(ip1),sorted(ip2),sorted(ip3)
 			endif
@@ -1260,4 +1283,4 @@ c		call cpu_time(stoptime)
 	
 	return
 	end
-	
+
