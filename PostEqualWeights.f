@@ -397,7 +397,11 @@ c		call cpu_time(stoptime)
 					do j=1,ObsSpec(iobs)%ndata
 						k=k+1
 						lamk(k)=ObsSpec(iobs)%lam(j)
-						Rk(k)=ObsSpec(iobs)%R(j)/(spec_albedo(2,iobs,j)-spec_albedo(1,iobs,j))
+						if(fit_albedo) then
+							Rk(k)=ObsSpec(iobs)%R(j)/(spec_albedo(2,iobs,j)-spec_albedo(1,iobs,j))
+						else
+							Rk(k)=ObsSpec(iobs)%R(j)
+						endif
 						iobsk(k)=iobs
 						jk(k)=j
 						dy(k)=ObsSpec(iobs)%dy(j)

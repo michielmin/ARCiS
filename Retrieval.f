@@ -897,7 +897,11 @@ c	linear
 					do j=1,ObsSpec(i)%ndata
 						k=k+1
 						lamk(k)=ObsSpec(i)%lam(j)
-						Rk(k)=ObsSpec(i)%R(j)/(spec_albedo(2,i,j)-spec_albedo(1,i,j))
+						if(fit_albedo) then
+							Rk(k)=ObsSpec(i)%R(j)/(spec_albedo(2,i,j)-spec_albedo(1,i,j))
+						else
+							Rk(k)=ObsSpec(i)%R(j)
+						endif						
 						iobsk(k)=i
 						jk(k)=j
 					enddo
