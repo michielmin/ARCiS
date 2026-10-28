@@ -642,11 +642,11 @@ c		print*,"Iteration: ",iboot,ii,i,chi2
 	real*8 var(nvars),ymod(ny),error(2,nvars),lnew,var_in(nvars),spectemp(nlam),specsave(nobs,nlam)
 	real*8,allocatable :: spec(:),allspec(:,:)
 	logical recomputeopac,truefalse,doscaleR2,doCovObs(nobs)
-	real*8 xx,xy,scale,dy(ny),tot,chi2_real,chi2_virtual
+	real*8 xx,xy,scale,dy(ny),tot,chi2_real,chi2_virtual,Cs
 	character*100 command
 	integer info,NRHS,cov_iter,ncov_iter
 	real*8 d,f_ii,alb1,alb2,Sigmoid1,Sigmoid2,amplitude,scaleRk
-	real*8,allocatable :: Cov(:,:),specinv(:),lamk(:),Rk(:),Cov_obs(:,:)
+	real*8,allocatable :: Cov(:,:),specinv(:),lamk(:),Rk(:),Cov_obs(:,:),Dvec(:),tauRay(:),phasevec(:)
 	real*8,allocatable :: spec_albedo(:,:,:),fitted_albedo(:,:),Kalb(:,:),Ksys(:,:)
 	integer,allocatable :: iobsk(:),jk(:)
 	real*8 fit_albedo0
@@ -966,6 +966,22 @@ c	linear
 				enddo
 			enddo
 			if(fit_albedo_remove_lin) call RemoveOffsetSlope(Kalb,nk,lamk(1:nk),Rk(1:nk))
+			if(fit_albedo_remove_ray) then
+				allocate(Dvec(nk),tauRay(nk),phasevec(nk))
+				do j=1,nk
+					Dvec(j)=(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))
+					tauRay(j)=0d0
+					ilam=ObsSpec(iobsk(j))%ilam(jk(j))
+					do i=1,nr-1
+						call RayleighScattering(Cs,i,ilam)
+						tauRay(j) = tauRay(j) + Cs*Ndens(i)*abs(R(i+1)-R(i))
+					enddo
+					phasevec(j)=pi*theta_phase(ObsSpec(iobsk(j))%iphase)/180d0
+					phasevec(j)=2d0*pi-phasevec(j)
+				enddo
+				call RemoveRayleigh(Kalb,nk,Dvec,Cov,tauRay,phasevec)
+				deallocate(Dvec,tauRay,phasevec)
+			endif
 			if(fit_albedo_slope) then
 				scaleRk=0d0
 				d=sqrt(lam(1)*lam(nlam))

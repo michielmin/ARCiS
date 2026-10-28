@@ -1926,6 +1926,8 @@ c			read(key%value,*) nTpoints
 			read(key%value,*) fit_albedo_step
 		case("fit_albedo_remove_lin")
 			read(key%value,*) fit_albedo_remove_lin
+		case("fit_albedo_remove_ray")
+			read(key%value,*) fit_albedo_remove_ray
 		case("lamstep","lam_step")
 			read(key%value,*) lamStep(key%nr1)
 		case("lam_re",'l_re','lamre')
@@ -2452,6 +2454,7 @@ c	if(par_tprofile) call ComputeParamT(T)
 	fit_albedo_slope=.false.
 	fit_albedo_step=.false.
 	fit_albedo_remove_lin=.false.
+	fit_albedo_remove_ray=.false.
 	lamStep=0.7
 
 	dochemistry=.false.
