@@ -8,7 +8,7 @@
 	real*8,allocatable :: PTstruct(:,:),var(:,:),values(:,:),COratio_der(:),Z_der(:),cloudstruct(:,:),MMW_der(:)
 	integer i,nmodels,ilam,im3,im1,ime,ip1,ip3,im2,ip2,ir,imodel,iobs,donmodels,j,iphase,imol,k
 	logical,allocatable :: done(:)
-	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:),Dvec(:),tauRay(:),phasevec(:)
+	real*8,allocatable :: PTstruct3D(:,:,:),mixrat3D(:,:,:,:),phase3D(:,:,:),phase3DR(:,:,:),var3D(:,:,:),Dvec(:),M0vec(:)
 	real*8,allocatable :: dPTstruct3D(:,:,:),dPTstruct(:,:),Kzz_struct(:,:),mol_struct(:,:,:),like(:),Tplanet(:)
 	real*8,allocatable :: speccloudtau(:,:),speccloudK(:,:,:),specobs(:,:,:),Cov(:,:),sysobs(:,:,:),surf_albedo(:,:),refl_surf(:,:)
 	real*8 lbest,x1(n_ret),x2(n_ret),ctrans,cmax,lm1,cmin,spectemp(nlam),gasdev,specobstemp(nlam)
@@ -470,19 +470,14 @@ c		call cpu_time(stoptime)
 			enddo
 			if(fit_albedo_remove_lin) call RemoveOffsetSlope(Kalb,nk,lamk(1:nk),Rk(1:nk))
 			if(fit_albedo_remove_ray) then
-				allocate(Dvec(nk),tauRay(nk),phasevec(nk))
+				allocate(Dvec(nk),M0vec(nk))
 				do j=1,nk
 					Dvec(j)=(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))
-					tauRay(j)=0d0
-					ilam=ObsSpec(iobsk(j))%ilam(jk(j))
-					do ir=1,nr-1
-						call RayleighScattering(Cs,ir,ilam)
-						tauRay(j) = tauRay(j) + Cs*Ndens(ir)*abs(R(ir+1)-R(ir))
-					enddo
-					phasevec(j)=abs(pi-pi*theta_phase(ObsSpec(iobsk(j))%iphase)/180d0)
+     &						/(alb2-alb1)
+					M0vec(j)=spec_albedo(1,iobsk(j),jk(j))-alb1*Dvec(j)
 				enddo
-				call RemoveRayleigh(Kalb,nk,Dvec,Cov,tauRay,phasevec)
-				deallocate(Dvec,tauRay,phasevec)
+				call RemoveDirection(Kalb,nk,Dvec,Cov_obs,M0vec)
+				deallocate(Dvec,M0vec)
 			endif
 			endif
 			if(fit_albedo_slope) then

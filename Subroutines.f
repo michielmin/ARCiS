@@ -1667,27 +1667,16 @@ C
 
 
 
-	subroutine RemoveRayleigh(A,n,D,Cov,tauR,alpha)
-	! Condition the GP covariance A (albedo space) on having no
-	! data-space component along the Rayleigh template, in the Cov^-1 metric:
-	!     r^T Cov^-1 (D dw) = 0  ->  H = D * (Cov^-1 r),   r_i = D_i (1-F_i)
-	! F_i = 3 E4(2 tauR_i meff(alpha_i)/3): disk-averaged two-way transmission
-	! Cov  : observational covariance (noise + systematics), n x n
-	! alpha: phase angle (radians) per point; points may span several phases
+	subroutine RemoveDirection(A,n,D,Cov,r)
+	! Condition GP covariance A on  r^T Cov^-1 D dw = 0
 	IMPLICIT NONE
 	integer n,i,j,info
-	real*8 A(n,n),D(n),Cov(n,n),tauR(n),alpha(n)
-	real*8 H(n),KH(n),y(n),HKH,F,expint4,Rayleigh_meff
+	real*8 A(n,n),D(n),Cov(n,n),r(n)
+	real*8 H(n),KH(n),y(n),HKH
 	real*8,allocatable :: Cwork(:,:)
 	logical diag
 
-	! --- Rayleigh template r (stored in y, overwritten by Cov^-1 r) ---
-	do i=1,n
-		F=3d0*expint4(2d0*tauR(i)*Rayleigh_meff(alpha(i))/3d0)
-		y(i)=D(i)*(1d0-F)
-	enddo
-
-	! --- y <- Cov^-1 r (shortcut if Cov is diagonal) ---
+	y=r
 	diag=.true.
 	do i=1,n
 		do j=1,n
@@ -1705,109 +1694,35 @@ C
 		call dpotrf('U',n,Cwork,n,info)
 		if(info.eq.0) call dpotrs('U',n,1,Cwork,n,y,n,info)
 		deallocate(Cwork)
-		if(info.ne.0) then
-			! Cholesky failed: rebuild r and fall back to diagonal
-			do i=1,n
-				F=3d0*expint4(2d0*tauR(i)*Rayleigh_meff(alpha(i))/3d0)
-				y(i)=D(i)*(1d0-F)
-			enddo
-		endif
+		if(info.ne.0) y=r
 	endif
 	if(info.ne.0) then
 		do i=1,n
 			y(i)=y(i)/Cov(i,i)
 		enddo
 	endif
-
-	! --- Constraint vector in albedo space ---
 	do i=1,n
 		H(i)=D(i)*y(i)
 	enddo
-	! KH = A * H
 	do i=1,n
 		KH(i)=0d0
 		do j=1,n
 			KH(i)=KH(i)+A(i,j)*H(j)
 		enddo
 	enddo
-	! HKH = H^T * KH
 	HKH=0d0
 	do i=1,n
 		HKH=HKH+H(i)*KH(i)
 	enddo
 	if(HKH.le.0d0) return
-	! A <- A - KH * KH^T / HKH
 	do i=1,n
 		do j=1,n
 			A(i,j)=A(i,j)-KH(i)*KH(j)/HKH
 		enddo
 	enddo
-
 	return
 	end
-
-
-	real*8 function Rayleigh_meff(alpha)
-	! Disk-averaged two-way airmass, weighted by Lambert surface
-	! contribution mu0*mu over the illuminated and visible disk
-	IMPLICIT NONE
-	real*8 alpha,a,pi,den
-	parameter(pi=3.14159265358979323846d0)
-	a=min(abs(alpha),pi-1d-3)
-	den=sin(a)+(pi-a)*cos(a)
-	Rayleigh_meff=3d0*pi*(1d0+cos(a))/(2d0*den)
-	return
-	end
-
-
-	real*8 function expint4(x)
-	! Exponential integral E_4(x): series for x<=1,
-	! continued fraction (modified Lentz) for x>1
-	IMPLICIT NONE
-	real*8 x,b,c,d,h,del,an,fact,psi,eps,fpmin,euler
-	integer i,ii,n,nm1
-	parameter(eps=1d-12,fpmin=1d-300,euler=0.5772156649015329d0)
-	n=4
-	nm1=n-1
-	if(x.le.0d0) then
-		expint4=1d0/dble(nm1)
-	else if(x.gt.500d0) then
-		expint4=0d0
-	else if(x.gt.1d0) then
-		b=x+dble(n)
-		c=1d0/fpmin
-		d=1d0/b
-		h=d
-		do i=1,1000
-			an=-dble(i*(nm1+i))
-			b=b+2d0
-			d=1d0/(an*d+b)
-			c=b+an/c
-			del=c*d
-			h=h*del
-			if(abs(del-1d0).lt.eps) exit
-		enddo
-		expint4=h*exp(-x)
-	else
-		expint4=1d0/dble(nm1)
-		fact=1d0
-		do i=1,1000
-			fact=-fact*x/dble(i)
-			if(i.ne.nm1) then
-				del=-fact/dble(i-nm1)
-			else
-				psi=-euler
-				do ii=1,nm1
-					psi=psi+1d0/dble(ii)
-				enddo
-				del=fact*(-log(x)+psi)
-			endif
-			expint4=expint4+del
-			if(abs(del).lt.abs(expint4)*eps) exit
-		enddo
-	endif
-	return
-	end	
+	
 
 	subroutine GaussHermite(n,x,w,xmax)
 	IMPLICIT NONE
