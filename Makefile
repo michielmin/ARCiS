@@ -43,7 +43,7 @@ endif
 ifeq ($(multinest),false)
   LIBS_MN      = -DNO_MULTINEST
 else
-  LIBS_MN      = -lmultinest -DUSE_MULTINEST
+  LIBS_MN      = -lmultinest -DUSE_MULTINEST -Wl,-rpath,/usr/local/lib
 endif
 
 ifeq ($(mcmc),true)
