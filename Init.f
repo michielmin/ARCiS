@@ -3564,8 +3564,8 @@ c				includemol(i)=.true.
 
 	if(lam(nlam).lt.5e-7) then
 		call output("Wavelength range incorrect:")
-		call output("    minimum wavelenght:" // dbl2string(lam(1)*1e4,'(se10.2)') // "micron")
-		call output("    maximum wavelenght:" // dbl2string(lam(nlam)*1e4,'(se10.2)') // "micron")
+		call output("    minimum wavelenght:" // dbl2string(lam(1)*1e4,'(es10.2)') // "micron")
+		call output("    maximum wavelenght:" // dbl2string(lam(nlam)*1e4,'(es10.2)') // "micron")
 		stop
 	endif
 

@@ -1287,7 +1287,7 @@ c	linear
 	nk=n_ret*2500
 	if(ioflag) then
 		open(unit=35,file=trim(outputdir) // "error_cloud.dat",FORM="FORMATTED",ACCESS="STREAM")
-		form='("#"' // trim(int2string(n_ret+2,'(i4)')) // 'a19)'
+		form='("#",' // trim(int2string(n_ret+2,'(i4)')) // 'a19)'
 		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
      &	,(trim(int2string(n_ret+1,'(i4)')) // " COratio"),(trim(int2string(n_ret+2,'(i4)')) // " metallicity")
 		form='(' // int2string(n_ret+2,'(i4)') // 'es19.7)'
@@ -1503,7 +1503,7 @@ c	linear
 	nk=n_ret*2500
 	if(ioflag) then
 		open(unit=35,file=trim(outputdir) // "error_cloud.dat",FORM="FORMATTED",ACCESS="STREAM")
-		form='("#"' // trim(int2string(n_ret+2,'(i4)')) // 'a19)'
+		form='("#",' // trim(int2string(n_ret+2,'(i4)')) // 'a19)'
 		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
      &	,(trim(int2string(n_ret+1,'(i4)')) // " COratio"),(trim(int2string(n_ret+2,'(i4)')) // " metallicity")
 		form='(' // int2string(n_ret+2,'(i4)') // 'es19.7)'
@@ -1717,7 +1717,7 @@ c			vec(i)=gasdev(idum)
 
 	if(ioflag) then
 		open(unit=35,file=trim(outputdir) // "error_cloud.dat",FORM="FORMATTED",ACCESS="STREAM")
-		form='("#"' // trim(int2string(n_ret+2,'(i4)')) // 'a19)'
+		form='("#",' // trim(int2string(n_ret+2,'(i4)')) // 'a19)'
 		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
      &	,(trim(int2string(n_ret+1,'(i4)')) // " COratio"),(trim(int2string(n_ret+2,'(i4)')) // " metallicity")
 		form='(' // int2string(n_ret+3,'(i4)') // 'es19.7)'
@@ -1833,7 +1833,7 @@ c			vec(i)=gasdev(idum)
 	nk=n_ret*1000
 	if(ioflag) then
 		open(unit=35,file=trim(outputdir) // "error_cloud.dat",FORM="FORMATTED",ACCESS="STREAM")
-		form='("#"' // trim(int2string(n_ret,'(i4)')) // 'a19)'
+		form='("#",' // trim(int2string(n_ret,'(i4)')) // 'a19)'
 		write(35,form) (trim(int2string(i,'(i4)')) // " " // RetPar(i)%keyword,i=1,n_ret)
 		form='(' // int2string(n_ret,'(i4)') // 'es19.7)'
 	endif

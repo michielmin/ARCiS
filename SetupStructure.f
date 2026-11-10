@@ -833,7 +833,7 @@ c Setup names and weights of the elements
 	call Formation(Mplanet,Mcore,Rstart,Rend,planetform_fdust,planetform_fplan,simAb_converge,MSimAb)
 	if(.not.simAb_converge) then
 		call output("WARNING: SimAb did not converge!")
-		call output("WARNING: final mass of the planet:" // dbl2string(MSimAb/Mjup,'(se10.3)') // " Mjup")
+		call output("WARNING: final mass of the planet:" // dbl2string(MSimAb/Mjup,'(es10.3)') // " Mjup")
 	endif
 
 	molfracs_atoms(1)=molfracs_atoms(1)*Hydrogenloss
@@ -867,7 +867,7 @@ c Setup names and weights of the elements
 	write(50,'(a6,f7.3)') "[Z]:",Z
 	write(50,'("=============")')
 	do i=1,N_atoms
-		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
+		write(50,'(a5,es18.6)') names_atoms(i),molfracs_atoms(i)
 	enddo
 	close(unit=50)
 	endif
@@ -903,7 +903,7 @@ c	adjust metallicity
 
 c	open(unit=50,file='atomic.dat',FORM="FORMATTED",ACCESS="STREAM")
 c	do i=1,N_atoms
-c		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
+c		write(50,'(a5,es18.6)') names_atoms(i),molfracs_atoms(i)
 c	enddo
 c	close(unit=50)
 
@@ -954,7 +954,7 @@ c	close(unit=50)
 
 c	open(unit=50,file='atomic.dat',FORM="FORMATTED",ACCESS="STREAM")
 c	do i=1,N_atoms
-c		write(50,'(a5,se18.6)') names_atoms(i),molfracs_atoms(i)
+c		write(50,'(a5,es18.6)') names_atoms(i),molfracs_atoms(i)
 c	enddo
 c	close(unit=50)
 

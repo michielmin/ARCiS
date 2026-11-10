@@ -574,7 +574,7 @@ c SiC
 				if(Sat(i).gt.SatRat(j)) SatRat(j)=Sat(i)
 			endif
 		enddo
-		write(*,'(a10,se20.4)') CSname(j),SatRat(j)
+		write(*,'(a10,es20.4)') CSname(j),SatRat(j)
 	enddo
 
 	return
