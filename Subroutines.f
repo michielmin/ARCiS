@@ -1668,18 +1668,31 @@ C
 
 
 	subroutine RemoveDirection(A,n,D,Cov,r)
-	! Condition GP covariance A on  r^T Cov^-1 D dw = 0
+	! Condition the GP covariance A (albedo space) such that the surface
+	! signal D*dw has no component along r in the Cov^-1 metric:
+	!     r^T Cov^-1 D dw = h^T dw = 0,   h = D Cov^-1 r
+	!     A <- A - (A h)(A h)^T / (h^T A h)
+	! A   : GP covariance matrix (n x n), modified on output
+	! D   : M1-M0 at the observed points (overall scaling irrelevant)
+	! Cov : observational covariance, WITHOUT the GP term
+	! r   : direction to remove in data space (e.g. M0), scaling irrelevant
+	! Can be called repeatedly; each call removes one more direction.
+	! A direction that is already absent from A is skipped.
 	IMPLICIT NONE
 	integer n,i,j,info
 	real*8 A(n,n),D(n),Cov(n,n),r(n)
-	real*8 H(n),KH(n),y(n),HKH
+	real*8 H(n),KH(n),y(n),HKH,Hnorm,Amax,eps
+	parameter(eps=1d-10)
 	real*8,allocatable :: Cwork(:,:)
-	logical diag
+	logical diag,warned
+	save warned
+	data warned/.false./
 
-	y=r
+	! --- y = Cov^-1 r (shortcut for diagonal Cov) ---
+	y(1:n)=r(1:n)
 	diag=.true.
-	do i=1,n
-		do j=1,n
+	do j=1,n
+		do i=1,n
 			if(i.ne.j.and.Cov(i,j).ne.0d0) then
 				diag=.false.
 				exit
@@ -1690,40 +1703,70 @@ C
 	info=1
 	if(.not.diag) then
 		allocate(Cwork(n,n))
-		Cwork=Cov
+		Cwork(1:n,1:n)=Cov(1:n,1:n)
 		call dpotrf('U',n,Cwork,n,info)
 		if(info.eq.0) call dpotrs('U',n,1,Cwork,n,y,n,info)
 		deallocate(Cwork)
-		if(info.ne.0) y=r
+		if(info.ne.0) then
+			if(.not.warned) then
+				write(*,'("RemoveDirection: Cholesky failed, using diagonal of Cov")')
+				warned=.true.
+			endif
+			y(1:n)=r(1:n)
+		endif
 	endif
 	if(info.ne.0) then
 		do i=1,n
-			y(i)=y(i)/Cov(i,i)
+			if(Cov(i,i).gt.0d0) then
+				y(i)=y(i)/Cov(i,i)
+			else
+				y(i)=0d0
+			endif
 		enddo
 	endif
+
+	! --- h = D Cov^-1 r, normalised to unit length ---
+	Hnorm=0d0
 	do i=1,n
 		H(i)=D(i)*y(i)
+		Hnorm=Hnorm+H(i)**2
 	enddo
+	if(Hnorm.le.0d0) return
+	Hnorm=sqrt(Hnorm)
+	do i=1,n
+		H(i)=H(i)/Hnorm
+	enddo
+
+	! --- KH = A h,  HKH = h^T A h ---
 	do i=1,n
 		KH(i)=0d0
-		do j=1,n
+	enddo
+	do j=1,n
+		do i=1,n
 			KH(i)=KH(i)+A(i,j)*H(j)
 		enddo
 	enddo
 	HKH=0d0
+	Amax=0d0
 	do i=1,n
 		HKH=HKH+H(i)*KH(i)
+		Amax=max(Amax,A(i,i))
 	enddo
-	if(HKH.le.0d0) return
-	do i=1,n
-		do j=1,n
+	! Direction not present in A (zero, or already removed): nothing to do
+	if(HKH.le.eps*Amax) return
+
+	! --- A <- A - KH KH^T / HKH, kept exactly symmetric ---
+	do j=1,n
+		do i=1,j
 			A(i,j)=A(i,j)-KH(i)*KH(j)/HKH
+			A(j,i)=A(i,j)
 		enddo
 	enddo
+
 	return
 	end
 	
-
+	
 	subroutine GaussHermite(n,x,w,xmax)
 	IMPLICIT NONE
 	integer n,nn,i,j,k,nmin,nmax

@@ -21,6 +21,7 @@
 	integer ipmin,ipmax,ii
 	real*8 fit_albedo0,spec_albedo(2,nobs,nlam),f_ii,d,scaleRk
 	real*8,allocatable :: fitted_albedo(:,:,:),Kalb(:,:),aver_albedo(:,:),refl_surface(:,:,:),Neff_fitalbedo(:)
+	real*8,allocatable :: Dk(:),ak(:)
 	real*8 alb1,alb2,Sigmoid1,Sigmoid2,amplitude
 	integer nk,cov_iter,ncov_iter,j0
 	logical doCovObs(nobs)
@@ -438,7 +439,7 @@ c		call cpu_time(stoptime)
 						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(iobs)%Cov_scaling**2*ObsSpec(iobs)%model(j)*ObsSpec(iobs)%model(ii)
 						Cov(k,j0+ii)=Cov(k,j0+ii)+ObsSpec(iobs)%Cov_offset**2
 					enddo
-					spec(k)=ObsSpec(iobs)%y(j)+gasdev(idum)*ObsSpec(iobs)%dy(j)+ObsSpec(iobs)%offset-specobs(i,iobs,j)/ObsSpec(iobs)%scale
+					spec(k)=ObsSpec(iobs)%y(j)+ObsSpec(iobs)%offset-specobs(i,iobs,j)/ObsSpec(iobs)%scale
 				enddo
 			endif
 		enddo
@@ -548,6 +549,20 @@ c		call cpu_time(stoptime)
      &						Kalb(j,ii)*(spec_albedo(2,iobsk(ii),jk(ii))-spec_albedo(1,iobsk(ii),jk(ii)))*specinv(ii)/(alb2-alb1)
 				enddo
 			enddo
+c	Draw from N(mu_omega, Sigma_omega) around the posterior mean (only in the final cov iteration).
+c	Cov holds the Cholesky factor of C at this point (dpotrf above).
+			if(cov_iter.eq.ncov_iter) then
+				allocate(Dk(nk),ak(nk))
+				do j=1,nk
+					Dk(j)=(spec_albedo(2,iobsk(j),jk(j))-spec_albedo(1,iobsk(j),jk(j)))/(alb2-alb1)
+					ak(j)=fitted_albedo(i,iobsk(j),jk(j))
+				enddo
+				call AddPostDraw(nk,Dk,Kalb,Cov,ak,idum)
+				do j=1,nk
+					fitted_albedo(i,iobsk(j),jk(j))=ak(j)
+				enddo
+				deallocate(Dk,ak)
+			endif
 			do j=1,nk
 				fitted_albedo(i,iobsk(j),jk(j))=min(max(fitted_albedo(i,iobsk(j),jk(j)),0d0),1d0)
 				ObsSpec(iobsk(j))%model(jk(j))=spec_albedo(1,iobsk(j),jk(j))+
@@ -1139,106 +1154,83 @@ c		call cpu_time(stoptime)
 	end
 
 
-	subroutine AddPostDraw(n,M,a_aver,K,C,a_med,idum)
+	subroutine AddPostDraw(n,D,K,Lc,a_draw,idum)
+c	Adds a draw from N(0, Kpost) to a_draw, with Kpost = K - K D C^{-1} D K.
+c	On input:  D(n)    = (M2-M1)/(alb2-alb1), the linear surface response in data space
+c	           K(n,n)  = albedo kernel Kalb (after any projections)
+c	           Lc(n,n) = Cholesky factor (lower, from dpotrf) of C = Cov_obs + D K D
+c	           a_draw  = posterior mean of the albedo
+c	On output: a_draw  = one posterior draw (unchanged if a Cholesky fails)
 	IMPLICIT NONE
 	integer n,idum
-	real*8 M(2,n),a_aver,K(n,n),C(n,n),a_med(n)
-	
-	integer i, j, info, nrhs
-	real*8 alpha, beta, jitter, dj
-	real*8 deff(n), B(n,n), X(n,n), Y(n,n), V(n,n), Kpost(n,n), Lc(n,n), Lp(n,n)
-	real*8 z(n), delta(n), gasdev
+	real*8 D(n),K(n,n),Lc(n,n),a_draw(n)
+	integer i,j,it,info
+	real*8 jitter,dj,gasdev
+	real*8,allocatable :: X(:,:),Kpost(:,:),z(:)
 
-	alpha = 1d0
-	beta  = 0d0
+	allocate(X(n,n),Kpost(n,n),z(n))
 
-  ! ---- D_eff vector in *data* space: deff(i) = A0*(1-A0) * (M1-M0)
-  ! Here A0 is the average albedo a_aver (constant linearization point).
-	do i=1,n
-		deff(i) = (a_aver*(1d0-a_aver)) * (M(2,i) - M(1,i))
+c	X = C^{-1} diag(D) K
+	do j=1,n
+		do i=1,n
+			X(i,j)=D(i)*K(i,j)
+		enddo
 	enddo
+	call dpotrs('L',n,n,Lc,n,X,n,info)
+	if(info.ne.0) goto 1
 
-  ! ---- B = diag(deff) * K   (scale rows of K)
-	do i=1,n
-		do j=1,n
-			B(i,j) = deff(i) * K(i,j)
+c	X = diag(D) C^{-1} diag(D) K
+	do j=1,n
+		do i=1,n
+			X(i,j)=D(i)*X(i,j)
 		enddo
 	enddo
 
-  ! ---- Solve X = C^{-1} * B using Cholesky of C (copy C -> Lc, factorize)
-	Lc = C
-	call dpotrf('L', n, Lc, n, info)
-	if (info.ne.0) return
+c	Kpost = K - K X
+	Kpost=K
+	call dgemm('N','N',n,n,n,-1d0,K,n,X,n,1d0,Kpost,n)
 
-	nrhs = n
-	X = B
-	call dpotrs('L', n, nrhs, Lc, n, X, n, info)
-	if (info /= 0) then
-		return
-	endif
-
-  ! ---- Y = diag(deff) * X   (scale rows)
-	do i=1,n
-		do j=1,n
-			Y(i,j) = deff(i) * X(i,j)
-		enddo
-	enddo
-
-  ! ---- V = K * Y = K * diag(deff) * C^{-1} * diag(deff) * K
-	call dgemm('N','N', n, n, n, alpha, K, n, Y, n, beta, V, n)
-
-  ! ---- Kpost = K - V
-	do i=1,n
-		do j=1,n
-			Kpost(i,j) = K(i,j) - V(i,j)
-		enddo
-	enddo
-
-  ! ---- enforce symmetry (numerical)
+c	enforce symmetry (numerical)
 	do i=1,n
 		do j=i+1,n
-			dj = 0.5d0*(Kpost(i,j) + Kpost(j,i))
-			Kpost(i,j) = dj
-			Kpost(j,i) = dj
+			dj=0.5d0*(Kpost(i,j)+Kpost(j,i))
+			Kpost(i,j)=dj
+			Kpost(j,i)=dj
 		enddo
 	enddo
 
-  ! ---- Kpost may be PSD (especially if you projected out a mode); add tiny jitter for Cholesky
-	jitter = 1d-12
+c	Kpost is only positive semi-definite (e.g. after projecting out a direction):
+c	add a jitter relative to the largest variance, increase it if Cholesky fails.
+	jitter=0d0
 	do i=1,n
-		Kpost(i,i) = Kpost(i,i) + jitter
+		jitter=max(jitter,Kpost(i,i))
 	enddo
-
-	Lp = Kpost
-	call dpotrf('L', n, Lp, n, info)
-	if(info.ne.0) then ! If Cholesky fails, try a bit more jitter (robust fallback)
-		jitter = 1d-9
-		Lp = Kpost
+	jitter=1d-10*jitter
+	do it=1,4
+		X=Kpost
 		do i=1,n
-			Lp(i,i) = Lp(i,i) + jitter
+			X(i,i)=X(i,i)+jitter
 		enddo
-		call dpotrf('L', n, Lp, n, info)
-		if (info.ne.0) return
+		call dpotrf('L',n,X,n,info)
+		if(info.eq.0) exit
+		jitter=jitter*100d0
+	enddo
+	if(info.ne.0) then
+		print*,'AddPostDraw: Cholesky of Kpost failed, using the posterior mean'
+		goto 1
 	endif
 
-  ! ---- draw z ~ N(0,I)
+c	z ~ N(0,I), a_draw = a_draw + Lp z  (Lp = lower triangle of X)
 	do i=1,n
-		z=gasdev(idum)
+		z(i)=gasdev(idum)
 	enddo
-
-  ! ---- delta = Lp * z (Lp is lower-triangular from dpotrf)
 	do i=1,n
-		delta(i) = 0d0
 		do j=1,i
-			delta(i) = delta(i) + Lp(i,j) * z(j)
+			a_draw(i)=a_draw(i)+X(i,j)*z(j)
 		enddo
 	enddo
 
-  ! ---- a_draw = a_med + delta   (a_med was posterior mean on input)
-	do i=1,n
-		a_med(i) = a_med(i) + delta(i)
-	enddo
-
+1	deallocate(X,Kpost,z)
 	return
 	end
 
